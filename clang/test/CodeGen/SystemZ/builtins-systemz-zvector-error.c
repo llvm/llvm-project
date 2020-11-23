@@ -67,7 +67,7 @@ void test_core(void) {
   len = __lcbb(cptr, 8192);  // expected-error {{no matching function}}
                              // expected-note@vecintrin.h:* {{must be a constant power of 2 from 64 to 4096}}
 
-  vsl = vec_permi(vsl, vsl, idx); // expected-error {{no matching function}}
+  vsl = vec_permi(vsl, vsl, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vpdi' must be a constant integer}}
                                   // expected-note@vecintrin.h:* 3 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
   vsl = vec_permi(vsl, vsl, -1);  // expected-error {{no matching function}}
@@ -76,7 +76,7 @@ void test_core(void) {
   vsl = vec_permi(vsl, vsl, 4);   // expected-error {{no matching function}}
                                   // expected-note@vecintrin.h:* 3 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vul = vec_permi(vul, vul, idx); // expected-error {{no matching function}}
+  vul = vec_permi(vul, vul, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vpdi' must be a constant integer}}
                                   // expected-note@vecintrin.h:* 2 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 3}}
   vul = vec_permi(vul, vul, -1);  // expected-error {{no matching function}}
@@ -85,7 +85,7 @@ void test_core(void) {
   vul = vec_permi(vul, vul, 4);   // expected-error {{no matching function}}
                                   // expected-note@vecintrin.h:* 2 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 3}}
-  vbl = vec_permi(vbl, vbl, idx); // expected-error {{no matching function}}
+  vbl = vec_permi(vbl, vbl, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vpdi' must be a constant integer}}
                                   // expected-note@vecintrin.h:* 2 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 3}}
   vbl = vec_permi(vbl, vbl, -1);  // expected-error {{no matching function}}
@@ -94,7 +94,7 @@ void test_core(void) {
   vbl = vec_permi(vbl, vbl, 4);   // expected-error {{no matching function}}
                                   // expected-note@vecintrin.h:* 2 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 3}}
-  vd = vec_permi(vd, vd, idx);    // expected-error {{no matching function}}
+  vd = vec_permi(vd, vd, idx);    // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vpdi' must be a constant integer}}
                                   // expected-note@vecintrin.h:* 3 {{candidate function not viable}}
                                   // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
   vd = vec_permi(vd, vd, -1);     // expected-error {{no matching function}}
@@ -232,28 +232,28 @@ void test_core(void) {
                                              // expected-note@vecintrin.h:* 6 {{candidate function not viable}}
                                              // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 1}}
 
-  vsc = vec_load_bndry(cptrsc, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vsc = vec_load_bndry(cptrsc, 200);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vsc = vec_load_bndry(cptrsc, 32);    // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vsc = vec_load_bndry(cptrsc, 8192);  // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vuc = vec_load_bndry(cptruc, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vss = vec_load_bndry(cptrss, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vus = vec_load_bndry(cptrus, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vsi = vec_load_bndry(cptrsi, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vui = vec_load_bndry(cptrui, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vsl = vec_load_bndry(cptrsl, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
-  vul = vec_load_bndry(cptrul, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsc = vec_load_bndry(cptrsc, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsc = vec_load_bndry(cptrsc, 200);  // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsc = vec_load_bndry(cptrsc, 32);   // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsc = vec_load_bndry(cptrsc, 8192); // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vuc = vec_load_bndry(cptruc, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vss = vec_load_bndry(cptrss, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vus = vec_load_bndry(cptrus, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsi = vec_load_bndry(cptrsi, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vui = vec_load_bndry(cptrui, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vsl = vec_load_bndry(cptrsl, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
+  vul = vec_load_bndry(cptrul, idx);  // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vlbb' must be a constant integer}}
+                                      // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
 
   vuc = vec_genmask(idx);  // expected-error {{no matching function}}
                            // expected-note@vecintrin.h:* {{must be a constant integer}}
@@ -420,108 +420,140 @@ void test_core(void) {
 }
 
 void test_integer(void) {
-  vsc = vec_rl_mask(vsc, vuc, idx); // expected-error {{no matching function}}
+  vsc = vec_rl_mask(vsc, vuc, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vuc = vec_rl_mask(vuc, vuc, idx); // expected-error {{no matching function}}
+  vuc = vec_rl_mask(vuc, vuc, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vss = vec_rl_mask(vss, vus, idx); // expected-error {{no matching function}}
+  vss = vec_rl_mask(vss, vus, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vus = vec_rl_mask(vus, vus, idx); // expected-error {{no matching function}}
+  vus = vec_rl_mask(vus, vus, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vsi = vec_rl_mask(vsi, vui, idx); // expected-error {{no matching function}}
+  vsi = vec_rl_mask(vsi, vui, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vui = vec_rl_mask(vui, vui, idx); // expected-error {{no matching function}}
+  vui = vec_rl_mask(vui, vui, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vsl = vec_rl_mask(vsl, vul, idx); // expected-error {{no matching function}}
+  vsl = vec_rl_mask(vsl, vul, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
-  vul = vec_rl_mask(vul, vul, idx); // expected-error {{no matching function}}
+  vul = vec_rl_mask(vul, vul, idx); // expected-error {{no matching function}} \
+                                    // expected-error {{argument to '__builtin_s390_verimb' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimh' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimf' must be a constant integer}} \
+                                    // expected-error {{argument to '__builtin_s390_verimg' must be a constant integer}}
                                     // expected-note@vecintrin.h:* 7 {{candidate function not viable}}
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
 
-  vsc = vec_sld(vsc, vsc, idx); // expected-error {{no matching function}}
+  vsc = vec_sld(vsc, vsc, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vsc = vec_sld(vsc, vsc, -1);  // expected-error {{no matching function}}
+  vsc = vec_sld(vsc, vsc, -1);  // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vsc = vec_sld(vsc, vsc, 16);  // expected-error {{no matching function}}
+  vsc = vec_sld(vsc, vsc, 16);  // expected-error {{no matching function}} expected-error {{argument value 16 is outside the valid range [0, 15]}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vuc = vec_sld(vuc, vuc, idx); // expected-error {{no matching function}}
+  vuc = vec_sld(vuc, vuc, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vuc = vec_sld(vuc, vuc, -1);  // expected-error {{no matching function}}
+  vuc = vec_sld(vuc, vuc, -1);  // expected-error {{no matching function}} expected-error {{argument value -1 is outside the valid range [0, 15]}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vuc = vec_sld(vuc, vuc, 16);  // expected-error {{no matching function}}
+  vuc = vec_sld(vuc, vuc, 16);  // expected-error {{no matching function}} expected-error {{argument value 16 is outside the valid range [0, 15]}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vss = vec_sld(vss, vss, idx); // expected-error {{no matching function}}
+  vss = vec_sld(vss, vss, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vus = vec_sld(vus, vus, idx); // expected-error {{no matching function}}
+  vus = vec_sld(vus, vus, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vsi = vec_sld(vsi, vsi, idx); // expected-error {{no matching function}}
+  vsi = vec_sld(vsi, vsi, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vui = vec_sld(vui, vui, idx); // expected-error {{no matching function}}
+  vui = vec_sld(vui, vui, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vsl = vec_sld(vsl, vsl, idx); // expected-error {{no matching function}}
+  vsl = vec_sld(vsl, vsl, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
-  vul = vec_sld(vul, vul, idx); // expected-error {{no matching function}}
+  vul = vec_sld(vul, vul, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
-  vd = vec_sld(vd, vd, idx);    // expected-error {{no matching function}}
+  vd = vec_sld(vd, vd, idx);    // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                 // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
 
-  vsc = vec_sldw(vsc, vsc, idx); // expected-error {{no matching function}}
+  vsc = vec_sldw(vsc, vsc, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vsc = vec_sldw(vsc, vsc, -1);  // expected-error {{no matching function}}
+  vsc = vec_sldw(vsc, vsc, -1);  // expected-error {{no matching function}} expected-error {{argument value -4 is outside the valid range [0, 15]}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vsc = vec_sldw(vsc, vsc, 4);   // expected-error {{no matching function}}
+  vsc = vec_sldw(vsc, vsc, 4);   // expected-error {{no matching function}} expected-error {{argument value 16 is outside the valid range [0, 15]}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vuc = vec_sldw(vuc, vuc, idx); // expected-error {{no matching function}}
+  vuc = vec_sldw(vuc, vuc, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vuc = vec_sldw(vuc, vuc, -1);  // expected-error {{no matching function}}
+  vuc = vec_sldw(vuc, vuc, -1);  // expected-error {{no matching function}} expected-error {{argument value -4 is outside the valid range [0, 15]}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vuc = vec_sldw(vuc, vuc, 4);   // expected-error {{no matching function}}
+  vuc = vec_sldw(vuc, vuc, 4);   // expected-error {{no matching function}} expected-error {{argument value 16 is outside the valid range [0, 15]}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vss = vec_sldw(vss, vss, idx); // expected-error {{no matching function}}
+  vss = vec_sldw(vss, vss, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vus = vec_sldw(vus, vus, idx); // expected-error {{no matching function}}
+  vus = vec_sldw(vus, vus, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vsi = vec_sldw(vsi, vsi, idx); // expected-error {{no matching function}}
+  vsi = vec_sldw(vsi, vsi, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vui = vec_sldw(vui, vui, idx); // expected-error {{no matching function}}
+  vui = vec_sldw(vui, vui, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vsl = vec_sldw(vsl, vsl, idx); // expected-error {{no matching function}}
+  vsl = vec_sldw(vsl, vsl, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vul = vec_sldw(vul, vul, idx); // expected-error {{no matching function}}
+  vul = vec_sldw(vul, vul, idx); // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
-  vd = vec_sldw(vd, vd, idx);    // expected-error {{no matching function}}
+  vd = vec_sldw(vd, vd, idx);    // expected-error {{no matching function}} expected-error {{argument to '__builtin_s390_vsldb' must be a constant integer}}
                                  // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
                                  // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 3}}
 }
