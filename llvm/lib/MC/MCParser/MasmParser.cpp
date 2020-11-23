@@ -734,7 +734,7 @@ private:
     DK_MACRO,
     DK_EXITM,
     DK_ENDM,
-    DK_PURGEM,
+    DK_PURGE,
     DK_ERR,
     DK_ERRB,
     DK_ERRNB,
@@ -2311,7 +2311,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ENDM:
       Info.ExitValue = "";
       return parseDirectiveEndMacro(IDVal);
-    case DK_PURGEM:
+    case DK_PURGE:
       return parseDirectivePurgeMacro(IDLoc);
     case DK_END:
       return parseDirectiveEnd(IDLoc);
@@ -5544,23 +5544,27 @@ bool MasmParser::parseDirectiveEndMacro(StringRef Directive) {
 }
 
 /// parseDirectivePurgeMacro
-/// ::= .purgem
+/// ::= purge identifier ( , identifier )*
 bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
   StringRef Name;
-  SMLoc Loc;
-  if (parseTokenLoc(Loc) ||
-      check(parseIdentifier(Name), Loc,
-            "expected identifier in '.purgem' directive") ||
-      parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.purgem' directive"))
-    return true;
+  while (true) {
+    SMLoc NameLoc;
+    if (parseTokenLoc(NameLoc) ||
+        check(parseIdentifier(Name), NameLoc,
+              "expected identifier in 'purge' directive"))
+      return true;
 
-  if (!getContext().lookupMacro(Name))
-    return Error(DirectiveLoc, "macro '" + Name + "' is not defined");
+    DEBUG_WITH_TYPE("asm-macros", dbgs()
+                                      << "Un-defining macro: " << Name << "\n");
+    if (!getContext().lookupMacro(Name))
+      return Error(NameLoc, "macro '" + Name + "' is not defined");
+    getContext().undefineMacro(Name);
 
-  getContext().undefineMacro(Name);
-  DEBUG_WITH_TYPE("asm-macros", dbgs()
-                                    << "Un-defining macro: " << Name << "\n");
+    if (!parseOptionalToken(AsmToken::Comma))
+      break;
+    parseOptionalToken(AsmToken::EndOfStatement);
+  }
+
   return false;
 }
 
@@ -6322,7 +6326,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["macro"] = DK_MACRO;
   DirectiveKindMap["exitm"] = DK_EXITM;
   DirectiveKindMap["endm"] = DK_ENDM;
-  // DirectiveKindMap[".purgem"] = DK_PURGEM;
+  DirectiveKindMap["purge"] = DK_PURGE;
   DirectiveKindMap[".err"] = DK_ERR;
   DirectiveKindMap[".errb"] = DK_ERRB;
   DirectiveKindMap[".errnb"] = DK_ERRNB;
