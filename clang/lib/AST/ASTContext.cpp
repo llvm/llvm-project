@@ -8586,9 +8586,19 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
 
     const auto *VecTy = SecondType->getAs<VectorType>();
     if (VecTy &&
-        VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector) {
+        (VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+         VecTy->getVectorKind() == VectorType::GenericVector)) {
       const LangOptions::LaxVectorConversionKind LVCKind =
           getLangOpts().getLaxVectorConversions();
+
+      // If __ARM_FEATURE_SVE_BITS != N do not allow GNU vector lax conversion.
+      // "Whenever __ARM_FEATURE_SVE_BITS==N, GNUT implicitly
+      // converts to VLAT and VLAT implicitly converts to GNUT."
+      // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
+      // predicates.
+      if (VecTy->getVectorKind() == VectorType::GenericVector &&
+          getTypeSize(SecondType) != getLangOpts().ArmSveVectorBits)
+        return false;
 
       // If -flax-vector-conversions=all is specified, the types are
       // certainly compatible.

@@ -7611,8 +7611,6 @@ ScalarEvolution::computeExitLimitFromCondFromBinOpHelper(
   } else {
     // Both conditions must be same at the same time for the loop to exit.
     // For now, be conservative.
-    if (EL0.MaxNotTaken == EL1.MaxNotTaken)
-      MaxBECount = EL0.MaxNotTaken;
     if (EL0.ExactNotTaken == EL1.ExactNotTaken)
       BECount = EL0.ExactNotTaken;
   }

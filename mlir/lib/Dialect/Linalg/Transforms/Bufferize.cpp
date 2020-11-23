@@ -14,25 +14,12 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace ::mlir;
 using namespace ::mlir::linalg;
-
-static SmallVector<Range, 4> computeLoopRanges(Location loc, LinalgOp linalgOp,
-                                               OpBuilder &b) {
-  auto indexingMaps = llvm::to_vector<4>(
-      linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>());
-  auto inputIndexingMaps =
-      llvm::makeArrayRef(indexingMaps).take_front(linalgOp.getNumInputs());
-
-  mlir::edsc::ScopedContext scope(b, loc);
-  return emitLoopRanges(scope.getBuilderRef(), loc,
-                        concatAffineMaps(inputIndexingMaps),
-                        getShape(b, linalgOp));
-}
 
 static Value maybeConvertToIndex(Location loc, Value val, OpBuilder &b) {
   if (val.getType().isIndex())
@@ -97,11 +84,9 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
     auto resultIndexingMap = linalgOp.getOutputIndexingMap(resultIndex);
     for (auto shapeElement : llvm::enumerate(tensorType.getShape())) {
       if (loopRanges.empty())
-        loopRanges = computeLoopRanges(loc, linalgOp, b);
-
+        loopRanges = linalgOp.createLoopRanges(b, loc);
       if (shapeElement.value() != ShapedType::kDynamicSize)
         continue;
-
       AffineExpr expr = resultIndexingMap.getResult(shapeElement.index());
       switch (expr.getKind()) {
       case AffineExprKind::DimId: {
@@ -284,7 +269,7 @@ public:
 
 /// Convert `subtensor_insert %source into %dest [offsets][sizes][strides] ->
 /// %t` to an tensor_to_memref + subview + copy + tensor_load pattern.
-/// tensor_to_memref and tensor_load are inserted automatically by the 
+/// tensor_to_memref and tensor_load are inserted automatically by the
 /// conversion infra:
 /// ```
 ///   %sv = subview %dest [offsets][sizes][strides]

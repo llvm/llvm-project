@@ -272,9 +272,6 @@ TEST_CAST_COMMON(bool)
 // Test the implicit conversion only applies to valid types
 fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
 
-svint64_t to_svint64_t__from_gnu_int32_t(gnu_int32_t x) { return x; } // expected-error-re {{returning 'gnu_int32_t' (vector of {{[0-9]+}} 'int32_t' values) from a function with incompatible result type 'svint64_t' (aka '__SVInt64_t')}}
-gnu_int32_t from_svint64_t__to_gnu_int32_t(svint64_t x) { return x; } // expected-error-re {{returning 'svint64_t' (aka '__SVInt64_t') from a function with incompatible result type 'gnu_int32_t' (vector of {{[0-9]+}} 'int32_t' values)}}
-
 // Test implicit conversion between SVE and GNU vector is invalid when
 // __ARM_FEATURE_SVE_BITS != N
 #if defined(__ARM_FEATURE_SVE_BITS) && __ARM_FEATURE_SVE_BITS == 512
