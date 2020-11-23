@@ -169,7 +169,7 @@ static void eraseDeadBBsAndChildren(const Container &BBs, DomTreeUpdater *DTU) {
   SmallVector<BasicBlock *, 8> WL(BBs.begin(), BBs.end());
   while (!WL.empty()) {
     auto *BB = WL.pop_back_val();
-    if (pred_begin(BB) != pred_end(BB))
+    if (!pred_empty(BB))
       continue;
     WL.append(succ_begin(BB), succ_end(BB));
     DeleteDeadBlock(BB, DTU);
