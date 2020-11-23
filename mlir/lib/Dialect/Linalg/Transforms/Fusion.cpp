@@ -542,10 +542,6 @@ static AffineMap pruneReductionDimsFromMap(ArrayRef<Attribute> iteratorTypes,
   return getProjectedMap(map, projectedDims);
 }
 
-using FusableOpDependencesTy = llvm::MapVector<
-    Operation *,
-    SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
-
 /// Returns the mapping from iterations in the consumer that write to the same
 /// location as the iterations in the producer. To do so use
 /// - indexing map of the fused view in the consumer : consumerIndexMap
@@ -729,10 +725,9 @@ collectFusableLoops(ArrayRef<LinalgOp> ops,
   return fusableLoops;
 }
 
-/// Find all dependences that are to be fusable.
-static FusableOpDependencesTy
-findAllFusableDependences(ArrayRef<LinalgOp> ops,
-                          const LinalgDependenceGraph &dependenceGraph) {
+/// Find all dependences that are fusable.
+FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
+    ArrayRef<LinalgOp> ops, const LinalgDependenceGraph &dependenceGraph) {
   FusableOpDependencesTy fusableDependences;
   // TODO: Currently fusion would not be legal if the fusable dependence is to
   // the same producer but different indexing map in the consumer. Fix this, but
@@ -836,6 +831,7 @@ fuseOperations(OpBuilder &builder, LinalgOp tiledOp,
     fusedLoopsAndRanges[loop] = getRangeFromOperandShape(
         builder, tiledOp.getLoc(), shapeDim.shape, shapeDim.dimension);
   }
+
   SmallVector<LinalgOp, 1> fusedOps(fusionCandidates.size());
   for (auto candidate : enumerate(llvm::reverse(fusionCandidates))) {
     LinalgOp fusedOp = fuse(builder, candidate.value(), fusedLoopsAndRanges);
