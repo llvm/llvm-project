@@ -14,9 +14,9 @@ a = b ? : 0;  // expected-warning {{type specifier missing, defaults to 'int'}} 
               // expected-error {{use of undeclared identifier 'b'}}
 
 int foobar;  // expected-note {{'foobar' declared here}}
-a = goobar ?: 4;  // expected-warning {{type specifier missing, defaults to 'int'}} \
-                  // expected-error {{use of undeclared identifier 'goobar'; did you mean 'foobar'?}} \
-                  // expected-error {{initializer element is not a compile-time constant}}
+new_a = goobar ?: 4; // expected-warning {{type specifier missing, defaults to 'int'}} \
+                      // expected-error {{use of undeclared identifier 'goobar'; did you mean 'foobar'?}} \
+                      // expected-error {{initializer element is not a compile-time constant}}
 
 struct ContainerStuct {
   enum { SOME_ENUM }; // expected-note {{'SOME_ENUM' declared here}}
@@ -50,10 +50,10 @@ void fn1() {
   cabs(errij);  // expected-error {{use of undeclared identifier 'errij'}}
 }
 
-extern long afunction(int); // expected-note {{'afunction' declared here}}
+extern long afunction(int);
 void fn2() {
-  f(THIS_IS_AN_ERROR, // expected-error {{use of undeclared identifier 'THIS_IS_AN_ERROR'}}
-    afunction(afunction_));  // expected-error {{use of undeclared identifier 'afunction_'; did you mean 'afunction'?}}
+  f(THIS_IS_AN_ERROR,       // expected-error {{use of undeclared identifier 'THIS_IS_AN_ERROR'}}
+    afunction(afunction_)); // expected-error {{use of undeclared identifier 'afunction_'}}
 }
 
 int d = X ? d : L; // expected-error 2 {{use of undeclared identifier}}
