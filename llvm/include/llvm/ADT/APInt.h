@@ -1403,6 +1403,12 @@ public:
   /// extended, truncated, or left alone to make it that width.
   APInt zextOrTrunc(unsigned width) const;
 
+  /// Truncate to width
+  ///
+  /// Make this APInt have the bit width given by \p width. The value is
+  /// truncated or left alone to make it that width.
+  APInt truncOrSelf(unsigned width) const;
+
   /// Sign extend or truncate to width
   ///
   /// Make this APInt have the bit width given by \p width. The value is sign
