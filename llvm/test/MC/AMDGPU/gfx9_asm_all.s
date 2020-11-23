@@ -34899,10 +34899,10 @@ v_sub_u16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x27,0xd1,0xc1,0x04,0x02,0x00]
 
 v_sub_u16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_u16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_u16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x27,0xd1,0x01,0xff,0x03,0x00]
@@ -34941,10 +34941,10 @@ v_sub_u16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x27,0xd1,0x01,0x83,0x01,0x00]
 
 v_sub_u16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_u16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_subrev_u16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x50]
@@ -35046,10 +35046,10 @@ v_subrev_u16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x28,0xd1,0xc1,0x04,0x02,0x00]
 
 v_subrev_u16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_subrev_u16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_subrev_u16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x28,0xd1,0x01,0xff,0x03,0x00]
@@ -35187,10 +35187,10 @@ v_mul_lo_u16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x29,0xd1,0xc1,0x04,0x02,0x00]
 
 v_mul_lo_u16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mul_lo_u16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mul_lo_u16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x29,0xd1,0x01,0xff,0x03,0x00]
@@ -35229,10 +35229,10 @@ v_mul_lo_u16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x29,0xd1,0x01,0x83,0x01,0x00]
 
 v_mul_lo_u16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mul_lo_u16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshlrev_b16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x54]
@@ -35334,10 +35334,10 @@ v_lshlrev_b16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x2a,0xd1,0xc1,0x04,0x02,0x00]
 
 v_lshlrev_b16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshlrev_b16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshlrev_b16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x2a,0xd1,0x01,0xff,0x03,0x00]
@@ -35376,10 +35376,10 @@ v_lshlrev_b16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x2a,0xd1,0x01,0x83,0x01,0x00]
 
 v_lshlrev_b16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshlrev_b16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshrrev_b16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x56]
@@ -35481,10 +35481,10 @@ v_lshrrev_b16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x2b,0xd1,0xc1,0x04,0x02,0x00]
 
 v_lshrrev_b16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshrrev_b16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshrrev_b16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x2b,0xd1,0x01,0xff,0x03,0x00]
@@ -35523,10 +35523,10 @@ v_lshrrev_b16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x2b,0xd1,0x01,0x83,0x01,0x00]
 
 v_lshrrev_b16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_lshrrev_b16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_ashrrev_i16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x58]
@@ -35628,10 +35628,10 @@ v_ashrrev_i16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x2c,0xd1,0xc1,0x04,0x02,0x00]
 
 v_ashrrev_i16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_ashrrev_i16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_ashrrev_i16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x2c,0xd1,0x01,0xff,0x03,0x00]
@@ -35670,10 +35670,10 @@ v_ashrrev_i16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x2c,0xd1,0x01,0x83,0x01,0x00]
 
 v_ashrrev_i16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_ashrrev_i16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_f16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x5a]
@@ -36111,10 +36111,10 @@ v_max_u16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x2f,0xd1,0xc1,0x04,0x02,0x00]
 
 v_max_u16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_u16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_u16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x2f,0xd1,0x01,0xff,0x03,0x00]
@@ -36153,10 +36153,10 @@ v_max_u16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x2f,0xd1,0x01,0x83,0x01,0x00]
 
 v_max_u16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_u16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_i16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x60]
@@ -36258,10 +36258,10 @@ v_max_i16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x30,0xd1,0xc1,0x04,0x02,0x00]
 
 v_max_i16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_i16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_i16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x30,0xd1,0x01,0xff,0x03,0x00]
@@ -36300,10 +36300,10 @@ v_max_i16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x30,0xd1,0x01,0x83,0x01,0x00]
 
 v_max_i16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max_i16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_u16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x62]
@@ -36405,10 +36405,10 @@ v_min_u16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x31,0xd1,0xc1,0x04,0x02,0x00]
 
 v_min_u16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_u16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_u16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x31,0xd1,0x01,0xff,0x03,0x00]
@@ -36447,10 +36447,10 @@ v_min_u16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x31,0xd1,0x01,0x83,0x01,0x00]
 
 v_min_u16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_u16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_i16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x64]
@@ -36552,10 +36552,10 @@ v_min_i16_e64 v5, -1, v2
 // CHECK: [0x05,0x00,0x32,0xd1,0xc1,0x04,0x02,0x00]
 
 v_min_i16_e64 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_i16_e64 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_i16_e64 v5, v1, v255
 // CHECK: [0x05,0x00,0x32,0xd1,0x01,0xff,0x03,0x00]
@@ -36594,10 +36594,10 @@ v_min_i16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x32,0xd1,0x01,0x83,0x01,0x00]
 
 v_min_i16_e64 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min_i16_e64 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_ldexp_f16 v5, v1, v2
 // CHECK: [0x01,0x05,0x0a,0x66]
@@ -43764,10 +43764,10 @@ v_mad_u32_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf1,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_mad_u32_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u32_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u32_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf1,0xd1,0x01,0xff,0x0f,0x04]
@@ -43806,10 +43806,10 @@ v_mad_u32_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf1,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_u32_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u32_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u32_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf1,0xd1,0x01,0x05,0xfe,0x07]
@@ -43917,10 +43917,10 @@ v_mad_i32_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf2,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_mad_i32_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i32_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i32_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf2,0xd1,0x01,0xff,0x0f,0x04]
@@ -43959,10 +43959,10 @@ v_mad_i32_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf2,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_i32_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i32_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i32_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf2,0xd1,0x01,0x05,0xfe,0x07]
@@ -44379,10 +44379,10 @@ v_min3_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf5,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_min3_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf5,0xd1,0x01,0xff,0x0f,0x04]
@@ -44421,10 +44421,10 @@ v_min3_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf5,0xd1,0x01,0x83,0x0d,0x04]
 
 v_min3_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf5,0xd1,0x01,0x05,0xfe,0x07]
@@ -44463,10 +44463,10 @@ v_min3_i16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xf5,0xd1,0x01,0x05,0x06,0x03]
 
 v_min3_i16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xf5,0xd1,0x01,0x05,0x0e,0x04]
@@ -44529,10 +44529,10 @@ v_min3_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf6,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_min3_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf6,0xd1,0x01,0xff,0x0f,0x04]
@@ -44571,10 +44571,10 @@ v_min3_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf6,0xd1,0x01,0x83,0x0d,0x04]
 
 v_min3_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf6,0xd1,0x01,0x05,0xfe,0x07]
@@ -44613,10 +44613,10 @@ v_min3_u16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xf6,0xd1,0x01,0x05,0x06,0x03]
 
 v_min3_u16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_min3_u16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xf6,0xd1,0x01,0x05,0x0e,0x04]
@@ -44856,10 +44856,10 @@ v_max3_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf8,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_max3_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf8,0xd1,0x01,0xff,0x0f,0x04]
@@ -44898,10 +44898,10 @@ v_max3_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf8,0xd1,0x01,0x83,0x0d,0x04]
 
 v_max3_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf8,0xd1,0x01,0x05,0xfe,0x07]
@@ -44940,10 +44940,10 @@ v_max3_i16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xf8,0xd1,0x01,0x05,0x06,0x03]
 
 v_max3_i16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_i16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xf8,0xd1,0x01,0x05,0x0e,0x04]
@@ -45006,10 +45006,10 @@ v_max3_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xf9,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_max3_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xf9,0xd1,0x01,0xff,0x0f,0x04]
@@ -45048,10 +45048,10 @@ v_max3_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xf9,0xd1,0x01,0x83,0x0d,0x04]
 
 v_max3_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xf9,0xd1,0x01,0x05,0xfe,0x07]
@@ -45090,10 +45090,10 @@ v_max3_u16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xf9,0xd1,0x01,0x05,0x06,0x03]
 
 v_max3_u16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_max3_u16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xf9,0xd1,0x01,0x05,0x0e,0x04]
@@ -45333,10 +45333,10 @@ v_med3_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xfb,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_med3_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xfb,0xd1,0x01,0xff,0x0f,0x04]
@@ -45375,10 +45375,10 @@ v_med3_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xfb,0xd1,0x01,0x83,0x0d,0x04]
 
 v_med3_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xfb,0xd1,0x01,0x05,0xfe,0x07]
@@ -45417,10 +45417,10 @@ v_med3_i16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xfb,0xd1,0x01,0x05,0x06,0x03]
 
 v_med3_i16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_i16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xfb,0xd1,0x01,0x05,0x0e,0x04]
@@ -45483,10 +45483,10 @@ v_med3_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0xfc,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_med3_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0xfc,0xd1,0x01,0xff,0x0f,0x04]
@@ -45525,10 +45525,10 @@ v_med3_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0xfc,0xd1,0x01,0x83,0x0d,0x04]
 
 v_med3_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0xfc,0xd1,0x01,0x05,0xfe,0x07]
@@ -45567,10 +45567,10 @@ v_med3_u16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0xfc,0xd1,0x01,0x05,0x06,0x03]
 
 v_med3_u16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_med3_u16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0xfc,0xd1,0x01,0x05,0x0e,0x04]
@@ -46602,10 +46602,10 @@ v_mad_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0x04,0xd2,0xc1,0x04,0x0e,0x04]
 
 v_mad_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0x04,0xd2,0x01,0xff,0x0f,0x04]
@@ -46644,10 +46644,10 @@ v_mad_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0x04,0xd2,0x01,0x83,0x0d,0x04]
 
 v_mad_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0x04,0xd2,0x01,0x05,0xfe,0x07]
@@ -46686,10 +46686,10 @@ v_mad_u16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0x04,0xd2,0x01,0x05,0x06,0x03]
 
 v_mad_u16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0x04,0xd2,0x01,0x05,0x0e,0x04]
@@ -46755,10 +46755,10 @@ v_mad_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x00,0x05,0xd2,0xc1,0x04,0x0e,0x04]
 
 v_mad_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x00,0x05,0xd2,0x01,0xff,0x0f,0x04]
@@ -46797,10 +46797,10 @@ v_mad_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x00,0x05,0xd2,0x01,0x83,0x0d,0x04]
 
 v_mad_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x00,0x05,0xd2,0x01,0x05,0xfe,0x07]
@@ -46839,10 +46839,10 @@ v_mad_i16 v5, v1, v2, -1
 // CHECK: [0x05,0x00,0x05,0xd2,0x01,0x05,0x06,0x03]
 
 v_mad_i16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_mad_i16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // CHECK: [0x05,0x00,0x05,0xd2,0x01,0x05,0x0e,0x04]
@@ -50052,10 +50052,10 @@ v_add_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x9e,0xd2,0xc1,0x04,0x02,0x00]
 
 v_add_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_add_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_add_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x9e,0xd2,0x01,0xff,0x03,0x00]
@@ -50094,10 +50094,10 @@ v_add_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x9e,0xd2,0x01,0x83,0x01,0x00]
 
 v_add_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_add_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_add_i16 v5, v1, v2 op_sel:[0,0,0]
 // CHECK: [0x05,0x00,0x9e,0xd2,0x01,0x05,0x02,0x00]
@@ -50160,10 +50160,10 @@ v_sub_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x9f,0xd2,0xc1,0x04,0x02,0x00]
 
 v_sub_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x9f,0xd2,0x01,0xff,0x03,0x00]
@@ -50202,10 +50202,10 @@ v_sub_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x9f,0xd2,0x01,0x83,0x01,0x00]
 
 v_sub_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_sub_i16 v5, v1, v2 op_sel:[0,0,0]
 // CHECK: [0x05,0x00,0x9f,0xd2,0x01,0x05,0x02,0x00]
@@ -50391,10 +50391,10 @@ v_pk_mad_i16 v5, -1, v2, v3
 // CHECK: [0x05,0x40,0x80,0xd3,0xc1,0x04,0x0e,0x1c]
 
 v_pk_mad_i16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, v1, v255, v3
 // CHECK: [0x05,0x40,0x80,0xd3,0x01,0xff,0x0f,0x1c]
@@ -50433,10 +50433,10 @@ v_pk_mad_i16 v5, v1, -1, v3
 // CHECK: [0x05,0x40,0x80,0xd3,0x01,0x83,0x0d,0x1c]
 
 v_pk_mad_i16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, v1, v2, v255
 // CHECK: [0x05,0x40,0x80,0xd3,0x01,0x05,0xfe,0x1f]
@@ -50475,10 +50475,10 @@ v_pk_mad_i16 v5, v1, v2, -1
 // CHECK: [0x05,0x40,0x80,0xd3,0x01,0x05,0x06,0x1b]
 
 v_pk_mad_i16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_i16 v5, v1, v2, v3 op_sel:[1,0,0]
 // CHECK: [0x05,0x48,0x80,0xd3,0x01,0x05,0x0e,0x1c]
@@ -50550,10 +50550,10 @@ v_pk_mul_lo_u16 v5, -1, v2
 // CHECK: [0x05,0x00,0x81,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_mul_lo_u16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mul_lo_u16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mul_lo_u16 v5, v1, v255
 // CHECK: [0x05,0x00,0x81,0xd3,0x01,0xff,0x03,0x18]
@@ -50595,10 +50595,10 @@ v_pk_mul_lo_u16 v5, v1, -1
 // CHECK: [0x05,0x00,0x81,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_mul_lo_u16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mul_lo_u16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mul_lo_u16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x81,0xd3,0x01,0x05,0x02,0x18]
@@ -50664,10 +50664,10 @@ v_pk_add_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x82,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_add_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x82,0xd3,0x01,0xff,0x03,0x18]
@@ -50709,10 +50709,10 @@ v_pk_add_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x82,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_add_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_i16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x82,0xd3,0x01,0x05,0x02,0x18]
@@ -50781,10 +50781,10 @@ v_pk_sub_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x83,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_sub_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x83,0xd3,0x01,0xff,0x03,0x18]
@@ -50826,10 +50826,10 @@ v_pk_sub_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x83,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_sub_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_i16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x83,0xd3,0x01,0x05,0x02,0x18]
@@ -50898,10 +50898,10 @@ v_pk_lshlrev_b16 v5, -1, v2
 // CHECK: [0x05,0x00,0x84,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_lshlrev_b16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshlrev_b16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshlrev_b16 v5, v1, v255
 // CHECK: [0x05,0x00,0x84,0xd3,0x01,0xff,0x03,0x18]
@@ -50943,10 +50943,10 @@ v_pk_lshlrev_b16 v5, v1, -1
 // CHECK: [0x05,0x00,0x84,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_lshlrev_b16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshlrev_b16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshlrev_b16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x84,0xd3,0x01,0x05,0x02,0x18]
@@ -51012,10 +51012,10 @@ v_pk_lshrrev_b16 v5, -1, v2
 // CHECK: [0x05,0x00,0x85,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_lshrrev_b16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshrrev_b16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshrrev_b16 v5, v1, v255
 // CHECK: [0x05,0x00,0x85,0xd3,0x01,0xff,0x03,0x18]
@@ -51057,10 +51057,10 @@ v_pk_lshrrev_b16 v5, v1, -1
 // CHECK: [0x05,0x00,0x85,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_lshrrev_b16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshrrev_b16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_lshrrev_b16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x85,0xd3,0x01,0x05,0x02,0x18]
@@ -51126,10 +51126,10 @@ v_pk_ashrrev_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x86,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_ashrrev_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_ashrrev_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_ashrrev_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x86,0xd3,0x01,0xff,0x03,0x18]
@@ -51171,10 +51171,10 @@ v_pk_ashrrev_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x86,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_ashrrev_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_ashrrev_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_ashrrev_i16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x86,0xd3,0x01,0x05,0x02,0x18]
@@ -51240,10 +51240,10 @@ v_pk_max_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x87,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_max_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x87,0xd3,0x01,0xff,0x03,0x18]
@@ -51285,10 +51285,10 @@ v_pk_max_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x87,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_max_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_i16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x87,0xd3,0x01,0x05,0x02,0x18]
@@ -51354,10 +51354,10 @@ v_pk_min_i16 v5, -1, v2
 // CHECK: [0x05,0x00,0x88,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_min_i16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_i16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_i16 v5, v1, v255
 // CHECK: [0x05,0x00,0x88,0xd3,0x01,0xff,0x03,0x18]
@@ -51399,10 +51399,10 @@ v_pk_min_i16 v5, v1, -1
 // CHECK: [0x05,0x00,0x88,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_min_i16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_i16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_i16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x88,0xd3,0x01,0x05,0x02,0x18]
@@ -51468,10 +51468,10 @@ v_pk_mad_u16 v5, -1, v2, v3
 // CHECK: [0x05,0x40,0x89,0xd3,0xc1,0x04,0x0e,0x1c]
 
 v_pk_mad_u16 v5, 0.5, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, -4.0, v2, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, v1, v255, v3
 // CHECK: [0x05,0x40,0x89,0xd3,0x01,0xff,0x0f,0x1c]
@@ -51510,10 +51510,10 @@ v_pk_mad_u16 v5, v1, -1, v3
 // CHECK: [0x05,0x40,0x89,0xd3,0x01,0x83,0x0d,0x1c]
 
 v_pk_mad_u16 v5, v1, 0.5, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, v1, -4.0, v3
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, v1, v2, v255
 // CHECK: [0x05,0x40,0x89,0xd3,0x01,0x05,0xfe,0x1f]
@@ -51552,10 +51552,10 @@ v_pk_mad_u16 v5, v1, v2, -1
 // CHECK: [0x05,0x40,0x89,0xd3,0x01,0x05,0x06,0x1b]
 
 v_pk_mad_u16 v5, v1, v2, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, v1, v2, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_mad_u16 v5, v1, v2, v3 op_sel:[1,0,0]
 // CHECK: [0x05,0x48,0x89,0xd3,0x01,0x05,0x0e,0x1c]
@@ -51627,10 +51627,10 @@ v_pk_add_u16 v5, -1, v2
 // CHECK: [0x05,0x00,0x8a,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_add_u16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_u16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_u16 v5, v1, v255
 // CHECK: [0x05,0x00,0x8a,0xd3,0x01,0xff,0x03,0x18]
@@ -51672,10 +51672,10 @@ v_pk_add_u16 v5, v1, -1
 // CHECK: [0x05,0x00,0x8a,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_add_u16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_u16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_add_u16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x8a,0xd3,0x01,0x05,0x02,0x18]
@@ -51744,10 +51744,10 @@ v_pk_sub_u16 v5, -1, v2
 // CHECK: [0x05,0x00,0x8b,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_sub_u16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_u16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_u16 v5, v1, v255
 // CHECK: [0x05,0x00,0x8b,0xd3,0x01,0xff,0x03,0x18]
@@ -51789,10 +51789,10 @@ v_pk_sub_u16 v5, v1, -1
 // CHECK: [0x05,0x00,0x8b,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_sub_u16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_u16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_sub_u16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x8b,0xd3,0x01,0x05,0x02,0x18]
@@ -51861,10 +51861,10 @@ v_pk_max_u16 v5, -1, v2
 // CHECK: [0x05,0x00,0x8c,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_max_u16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_u16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_u16 v5, v1, v255
 // CHECK: [0x05,0x00,0x8c,0xd3,0x01,0xff,0x03,0x18]
@@ -51906,10 +51906,10 @@ v_pk_max_u16 v5, v1, -1
 // CHECK: [0x05,0x00,0x8c,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_max_u16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_u16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_max_u16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x8c,0xd3,0x01,0x05,0x02,0x18]
@@ -51975,10 +51975,10 @@ v_pk_min_u16 v5, -1, v2
 // CHECK: [0x05,0x00,0x8d,0xd3,0xc1,0x04,0x02,0x18]
 
 v_pk_min_u16 v5, 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_u16 v5, -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_u16 v5, v1, v255
 // CHECK: [0x05,0x00,0x8d,0xd3,0x01,0xff,0x03,0x18]
@@ -52020,10 +52020,10 @@ v_pk_min_u16 v5, v1, -1
 // CHECK: [0x05,0x00,0x8d,0xd3,0x01,0x83,0x01,0x18]
 
 v_pk_min_u16 v5, v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_u16 v5, v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_pk_min_u16 v5, v1, v2 op_sel:[1,0]
 // CHECK: [0x05,0x08,0x8d,0xd3,0x01,0x05,0x02,0x18]
@@ -69471,10 +69471,10 @@ v_cmp_f_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa0,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_f_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa0,0xd0,0x01,0xff,0x03,0x00]
@@ -69513,10 +69513,10 @@ v_cmp_f_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa0,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_f_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x42,0x7d]
@@ -69624,10 +69624,10 @@ v_cmp_lt_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa1,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_lt_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa1,0xd0,0x01,0xff,0x03,0x00]
@@ -69666,10 +69666,10 @@ v_cmp_lt_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa1,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_lt_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x44,0x7d]
@@ -69777,10 +69777,10 @@ v_cmp_eq_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa2,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_eq_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa2,0xd0,0x01,0xff,0x03,0x00]
@@ -69819,10 +69819,10 @@ v_cmp_eq_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa2,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_eq_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x46,0x7d]
@@ -69930,10 +69930,10 @@ v_cmp_le_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa3,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_le_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa3,0xd0,0x01,0xff,0x03,0x00]
@@ -69972,10 +69972,10 @@ v_cmp_le_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa3,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_le_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x48,0x7d]
@@ -70083,10 +70083,10 @@ v_cmp_gt_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa4,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_gt_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa4,0xd0,0x01,0xff,0x03,0x00]
@@ -70125,10 +70125,10 @@ v_cmp_gt_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa4,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_gt_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x4a,0x7d]
@@ -70236,10 +70236,10 @@ v_cmp_ne_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa5,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_ne_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa5,0xd0,0x01,0xff,0x03,0x00]
@@ -70278,10 +70278,10 @@ v_cmp_ne_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa5,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_ne_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x4c,0x7d]
@@ -70389,10 +70389,10 @@ v_cmp_ge_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa6,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_ge_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa6,0xd0,0x01,0xff,0x03,0x00]
@@ -70431,10 +70431,10 @@ v_cmp_ge_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa6,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_ge_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x4e,0x7d]
@@ -70542,10 +70542,10 @@ v_cmp_t_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa7,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_t_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa7,0xd0,0x01,0xff,0x03,0x00]
@@ -70584,10 +70584,10 @@ v_cmp_t_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa7,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_t_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x50,0x7d]
@@ -70695,10 +70695,10 @@ v_cmp_f_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa8,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_f_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa8,0xd0,0x01,0xff,0x03,0x00]
@@ -70737,10 +70737,10 @@ v_cmp_f_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa8,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_f_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x52,0x7d]
@@ -70848,10 +70848,10 @@ v_cmp_lt_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xa9,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_lt_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xa9,0xd0,0x01,0xff,0x03,0x00]
@@ -70890,10 +70890,10 @@ v_cmp_lt_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xa9,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_lt_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_lt_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x54,0x7d]
@@ -71001,10 +71001,10 @@ v_cmp_eq_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xaa,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_eq_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xaa,0xd0,0x01,0xff,0x03,0x00]
@@ -71043,10 +71043,10 @@ v_cmp_eq_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xaa,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_eq_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_eq_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x56,0x7d]
@@ -71154,10 +71154,10 @@ v_cmp_le_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xab,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_le_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xab,0xd0,0x01,0xff,0x03,0x00]
@@ -71196,10 +71196,10 @@ v_cmp_le_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xab,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_le_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_le_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x58,0x7d]
@@ -71307,10 +71307,10 @@ v_cmp_gt_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xac,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_gt_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xac,0xd0,0x01,0xff,0x03,0x00]
@@ -71349,10 +71349,10 @@ v_cmp_gt_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xac,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_gt_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_gt_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x5a,0x7d]
@@ -71460,10 +71460,10 @@ v_cmp_ne_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xad,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_ne_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xad,0xd0,0x01,0xff,0x03,0x00]
@@ -71502,10 +71502,10 @@ v_cmp_ne_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xad,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_ne_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ne_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x5c,0x7d]
@@ -71613,10 +71613,10 @@ v_cmp_ge_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xae,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_ge_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xae,0xd0,0x01,0xff,0x03,0x00]
@@ -71655,10 +71655,10 @@ v_cmp_ge_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xae,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_ge_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_ge_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x5e,0x7d]
@@ -71766,10 +71766,10 @@ v_cmp_t_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xaf,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmp_t_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xaf,0xd0,0x01,0xff,0x03,0x00]
@@ -71808,10 +71808,10 @@ v_cmp_t_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xaf,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmp_t_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_t_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x60,0x7d]
@@ -71922,10 +71922,10 @@ v_cmpx_f_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb0,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_f_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb0,0xd0,0x01,0xff,0x03,0x00]
@@ -71964,10 +71964,10 @@ v_cmpx_f_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb0,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_f_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x62,0x7d]
@@ -72078,10 +72078,10 @@ v_cmpx_lt_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb1,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_lt_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb1,0xd0,0x01,0xff,0x03,0x00]
@@ -72120,10 +72120,10 @@ v_cmpx_lt_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb1,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_lt_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x64,0x7d]
@@ -72234,10 +72234,10 @@ v_cmpx_eq_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb2,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_eq_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb2,0xd0,0x01,0xff,0x03,0x00]
@@ -72276,10 +72276,10 @@ v_cmpx_eq_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb2,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_eq_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x66,0x7d]
@@ -72390,10 +72390,10 @@ v_cmpx_le_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb3,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_le_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb3,0xd0,0x01,0xff,0x03,0x00]
@@ -72432,10 +72432,10 @@ v_cmpx_le_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb3,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_le_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x68,0x7d]
@@ -72546,10 +72546,10 @@ v_cmpx_gt_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb4,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_gt_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb4,0xd0,0x01,0xff,0x03,0x00]
@@ -72588,10 +72588,10 @@ v_cmpx_gt_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb4,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_gt_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x6a,0x7d]
@@ -72702,10 +72702,10 @@ v_cmpx_ne_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb5,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_ne_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb5,0xd0,0x01,0xff,0x03,0x00]
@@ -72744,10 +72744,10 @@ v_cmpx_ne_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb5,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_ne_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x6c,0x7d]
@@ -72858,10 +72858,10 @@ v_cmpx_ge_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb6,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_ge_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb6,0xd0,0x01,0xff,0x03,0x00]
@@ -72900,10 +72900,10 @@ v_cmpx_ge_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb6,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_ge_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_i16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x6e,0x7d]
@@ -73014,10 +73014,10 @@ v_cmpx_t_i16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb7,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_t_i16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_i16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_i16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb7,0xd0,0x01,0xff,0x03,0x00]
@@ -73056,10 +73056,10 @@ v_cmpx_t_i16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb7,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_t_i16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_i16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x70,0x7d]
@@ -73170,10 +73170,10 @@ v_cmpx_f_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb8,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_f_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb8,0xd0,0x01,0xff,0x03,0x00]
@@ -73212,10 +73212,10 @@ v_cmpx_f_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb8,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_f_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_f_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x72,0x7d]
@@ -73326,10 +73326,10 @@ v_cmpx_lt_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xb9,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_lt_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xb9,0xd0,0x01,0xff,0x03,0x00]
@@ -73368,10 +73368,10 @@ v_cmpx_lt_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xb9,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_lt_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_lt_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x74,0x7d]
@@ -73482,10 +73482,10 @@ v_cmpx_eq_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xba,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_eq_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xba,0xd0,0x01,0xff,0x03,0x00]
@@ -73524,10 +73524,10 @@ v_cmpx_eq_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xba,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_eq_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_eq_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x76,0x7d]
@@ -73638,10 +73638,10 @@ v_cmpx_le_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xbb,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_le_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xbb,0xd0,0x01,0xff,0x03,0x00]
@@ -73680,10 +73680,10 @@ v_cmpx_le_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xbb,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_le_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_le_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x78,0x7d]
@@ -73794,10 +73794,10 @@ v_cmpx_gt_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xbc,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_gt_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xbc,0xd0,0x01,0xff,0x03,0x00]
@@ -73836,10 +73836,10 @@ v_cmpx_gt_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xbc,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_gt_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_gt_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x7a,0x7d]
@@ -73950,10 +73950,10 @@ v_cmpx_ne_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xbd,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_ne_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xbd,0xd0,0x01,0xff,0x03,0x00]
@@ -73992,10 +73992,10 @@ v_cmpx_ne_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xbd,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_ne_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ne_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x7c,0x7d]
@@ -74106,10 +74106,10 @@ v_cmpx_ge_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xbe,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_ge_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xbe,0xd0,0x01,0xff,0x03,0x00]
@@ -74148,10 +74148,10 @@ v_cmpx_ge_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xbe,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_ge_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_ge_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_u16 vcc, v1, v2
 // CHECK: [0x01,0x05,0x7e,0x7d]
@@ -74262,10 +74262,10 @@ v_cmpx_t_u16_e64 s[10:11], -1, v2
 // CHECK: [0x0a,0x00,0xbf,0xd0,0xc1,0x04,0x02,0x00]
 
 v_cmpx_t_u16_e64 s[10:11], 0.5, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_u16_e64 s[10:11], -4.0, v2
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_u16_e64 s[10:11], v1, v255
 // CHECK: [0x0a,0x00,0xbf,0xd0,0x01,0xff,0x03,0x00]
@@ -74304,10 +74304,10 @@ v_cmpx_t_u16_e64 s[10:11], v1, -1
 // CHECK: [0x0a,0x00,0xbf,0xd0,0x01,0x83,0x01,0x00]
 
 v_cmpx_t_u16_e64 s[10:11], v1, 0.5
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmpx_t_u16_e64 s[10:11], v1, -4.0
-// CHECK-ERR: error: invalid literal operand
+// CHECK-ERR: error: literal operands are not supported
 
 v_cmp_f_i32 vcc, v1, v2
 // CHECK: [0x01,0x05,0x80,0x7d]
