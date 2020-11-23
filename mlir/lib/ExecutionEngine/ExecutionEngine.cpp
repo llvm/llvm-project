@@ -130,6 +130,10 @@ bool ExecutionEngine::setupTargetTriple(Module *llvmModule) {
 
   std::unique_ptr<llvm::TargetMachine> machine(target->createTargetMachine(
       targetTriple, cpu, features.getString(), {}, {}));
+  if (!machine) {
+    errs() << "Unable to create target machine\n";
+    return true;
+  }
   llvmModule->setDataLayout(machine->createDataLayout());
   llvmModule->setTargetTriple(targetTriple);
   return false;

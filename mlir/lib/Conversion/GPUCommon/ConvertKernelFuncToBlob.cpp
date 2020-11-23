@@ -130,6 +130,10 @@ OwnedBlob GpuKernelToBlobPass::convertModuleToBlob(llvm::Module &llvmModule,
     }
     targetMachine.reset(target->createTargetMachine(triple.str(), targetChip,
                                                     features, {}, {}));
+    if (targetMachine == nullptr) {
+      emitError(loc, "connot initialize target machine");
+      return {};
+    }
   }
 
   llvmModule.setDataLayout(targetMachine->createDataLayout());
