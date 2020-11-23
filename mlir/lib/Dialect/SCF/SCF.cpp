@@ -521,6 +521,13 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
+    // If the upper bound is the same as the lower bound, the loop does not
+    // iterate, just remove it.
+    if (op.lowerBound() == op.upperBound()) {
+      rewriter.replaceOp(op, op.getIterOperands());
+      return success();
+    }
+
     auto lb = op.lowerBound().getDefiningOp<ConstantOp>();
     auto ub = op.upperBound().getDefiningOp<ConstantOp>();
     if (!lb || !ub)
@@ -1066,11 +1073,30 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
     return success();
   }
 };
+
+/// Removes parallel loops in which at least one lower/upper bound pair consists
+/// of the same values - such loops have an empty iteration domain.
+struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
+  using OpRewritePattern<ParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    for (auto dim : llvm::zip(op.lowerBound(), op.upperBound())) {
+      if (std::get<0>(dim) == std::get<1>(dim)) {
+        rewriter.replaceOp(op, op.initVals());
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                              MLIRContext *context) {
-  results.insert<CollapseSingleIterationLoops>(context);
+  results.insert<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
