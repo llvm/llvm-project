@@ -1248,31 +1248,37 @@ int registerOnlyStd() {
 }
 
 // Wraps a diagnostic into additional text we can match against.
-MlirLogicalResult errorHandler(MlirDiagnostic diagnostic) {
-  fprintf(stderr, "processing diagnostic <<\n");
+MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
+  fprintf(stderr, "processing diagnostic (userData: %d) <<\n", (int)userData);
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   mlirLocationPrint(loc, printToStderr, NULL);
   assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
-  fprintf(stderr, ">> end of diagnostic\n");
+  fprintf(stderr, ">> end of diagnostic (userData: %d)\n", (int)userData);
   return mlirLogicalResultSuccess();
+}
+
+// Logs when the delete user data callback is called
+static void deleteUserData(void *userData) {
+  fprintf(stderr, "deleting user data (userData: %d)\n", (int)userData);
 }
 
 void testDiagnostics() {
   MlirContext ctx = mlirContextCreate();
-  MlirDiagnosticHandlerID id =
-      mlirContextAttachDiagnosticHandler(ctx, errorHandler);
+  MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
+      ctx, errorHandler, (void *)42, deleteUserData);
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   fprintf(stderr, "@test_diagnostics\n");
   mlirEmitError(loc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(loc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
-  // CHECK: processing diagnostic <<
+  // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
-  // CHECK: >> end of diagnostic
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
 }
