@@ -120,8 +120,7 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
       /*outputBuffers=*/outputs,
       /*initTensors=*/llvm::None, genericOp.indexing_maps(),
       genericOp.iterator_types(), genericOp.docAttr(),
-      genericOp.library_callAttr(), genericOp.sparseAttr(),
-      genericOp.symbol_sourceAttr());
+      genericOp.library_callAttr(), genericOp.sparseAttr());
 
   // Create a new block in the region of the new Generic Op.
   Block *oldBlock = genericOp.getBody();
@@ -322,7 +321,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<AffineDialect, StandardOpsDialect>();
     target.addIllegalOp<SubTensorOp, SubTensorInsertOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.

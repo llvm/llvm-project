@@ -147,15 +147,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
   SmallVector<Value, 4> indexedValues;
   indexedValues.reserve(nInputs + nOutputs);
 
-  auto attr = linalgOp.template getAttrOfType<IntegerAttr>("symbol_source");
   auto allIvsPlusDims = SmallVector<Value, 4>(allIvs.begin(), allIvs.end());
-  if (attr) {
-    auto operand = linalgOp.getOperation()->getOperand(attr.getInt());
-    auto shapedType = operand.getType().template cast<ShapedType>();
-    allIvsPlusDims.reserve(allIvs.size() + shapedType.getRank());
-    for (unsigned idx = 0, e = shapedType.getRank(); idx < e; ++idx)
-      allIvsPlusDims.push_back(b.create<DimOp>(loc, operand, idx));
-  }
 
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.

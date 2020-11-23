@@ -64,7 +64,7 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
 def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
+  let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
 }
 
 def LinalgLowerToParallelLoops
