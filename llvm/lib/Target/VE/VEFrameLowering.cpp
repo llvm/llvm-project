@@ -323,8 +323,8 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   // Get the number of bytes to allocate from the FrameInfo
   uint64_t NumBytes = MFI.getStackSize();
 
-  // The VE ABI requires a reserved 176 bytes area at the top
-  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  // The VE ABI requires a reserved area at the top of stack as described
+  // in VESubtarget.cpp.  So, we adjust it here.
   NumBytes = STI.getAdjustedFrameSize(NumBytes);
 
   // Finally, ensure that the size is sufficiently aligned for the

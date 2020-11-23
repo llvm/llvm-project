@@ -50,9 +50,10 @@ VESubtarget::VESubtarget(const Triple &TT, const std::string &CPU,
 uint64_t VESubtarget::getAdjustedFrameSize(uint64_t FrameSize) const {
   // Calculate adjusted frame size by adding the size of RSA frame,
   // return address, and frame poitner as described in VEFrameLowering.cpp.
+  const VEFrameLowering *TFL = getFrameLowering();
 
-  FrameSize += 176;                   // For RSA, RA, and FP.
-  FrameSize = alignTo(FrameSize, 16); // Requires 16 bytes alignment.
+  FrameSize += getRsaSize();
+  FrameSize = alignTo(FrameSize, TFL->getStackAlign());
 
   return FrameSize;
 }
