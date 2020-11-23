@@ -341,7 +341,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Get the base offset of the incoming arguments stack space.
-  unsigned ArgsBaseOffset = 176;
+  unsigned ArgsBaseOffset = Subtarget->getRsaSize();
   // Get the size of the preserved arguments area
   unsigned ArgsPreserved = 64;
 
@@ -411,7 +411,7 @@ SDValue VETargetLowering::LowerFormalArguments(
     // The registers are exhausted. This argument was passed on the stack.
     assert(VA.isMemLoc());
     // The CC_VE_Full/Half functions compute stack offsets relative to the
-    // beginning of the arguments area at %fp+176.
+    // beginning of the arguments area at %fp + the size of reserved area.
     unsigned Offset = VA.getLocMemOffset() + ArgsBaseOffset;
     unsigned ValSize = VA.getValVT().getSizeInBits() / 8;
 
@@ -446,7 +446,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   // TODO: need to calculate offset correctly once we support f128.
   unsigned ArgOffset = ArgLocs.size() * 8;
   VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
-  // Skip the 176 bytes of register save area.
+  // Skip the reserved area at the top of stack.
   FuncInfo->setVarArgsFrameOffset(ArgOffset + ArgsBaseOffset);
 
   return Chain;
@@ -489,7 +489,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CLI.IsTailCall = false;
 
   // Get the base offset of the outgoing arguments stack space.
-  unsigned ArgsBaseOffset = 176;
+  unsigned ArgsBaseOffset = Subtarget->getRsaSize();
   // Get the size of the preserved arguments area
   unsigned ArgsPreserved = 8 * 8u;
 
@@ -631,8 +631,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Create a store off the stack pointer for this argument.
     SDValue StackPtr = DAG.getRegister(VE::SX11, PtrVT);
-    // The argument area starts at %fp+176 in the callee frame,
-    // %sp+176 in ours.
+    // The argument area starts at %fp/%sp + the size of reserved area.
     SDValue PtrOff =
         DAG.getIntPtrConstant(VA.getLocMemOffset() + ArgsBaseOffset, DL);
     PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);

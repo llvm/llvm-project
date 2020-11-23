@@ -70,9 +70,13 @@ public:
   VESubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
 
   /// Given a actual stack size as determined by FrameInfo, this function
-  /// returns adjusted framesize which includes space for register window
-  /// spills and arguments.
+  /// returns adjusted framesize which includes space for RSA, return
+  /// address, and frame poitner.
   uint64_t getAdjustedFrameSize(uint64_t FrameSize) const;
+
+  /// Get the size of RSA, return address, and frame pointer as described
+  /// in VEFrameLowering.cpp.
+  unsigned getRsaSize(void) const { return 176; };
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };
