@@ -3595,7 +3595,7 @@ static StringRef tryGetSectionName(const ELFFile<ELFT> &Obj,
 }
 
 template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
-  auto GetSignature = [&](const Elf_Sym &Sym,
+  auto GetSignature = [&](const Elf_Sym &Sym, unsigned SymNdx,
                           const Elf_Shdr &Symtab) -> StringRef {
     Expected<StringRef> StrTableOrErr = Obj.getStringTableForSymtab(Symtab);
     if (!StrTableOrErr) {
@@ -3605,8 +3605,16 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
       return "<?>";
     }
 
-    // TODO: this might lead to a crash or produce a wrong result, when the
-    // st_name goes past the end of the string table.
+    StringRef Strings = *StrTableOrErr;
+    if (Sym.st_name >= Strings.size()) {
+      reportUniqueWarning(createError(
+          "unable to get the name of the symbol with index " + Twine(SymNdx) +
+          ": st_name (0x" + Twine::utohexstr(Sym.st_name) +
+          ") is past the end of the string table of size 0x" +
+          Twine::utohexstr(Strings.size())));
+      return "<?>";
+    }
+
     return StrTableOrErr->data() + Sym.st_name;
   };
 
@@ -3621,7 +3629,7 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
     if (Expected<const Elf_Shdr *> SymtabOrErr = Obj.getSection(Sec.sh_link)) {
       if (Expected<const Elf_Sym *> SymOrErr =
               Obj.template getEntry<Elf_Sym>(**SymtabOrErr, Sec.sh_info))
-        Signature = GetSignature(**SymOrErr, **SymtabOrErr);
+        Signature = GetSignature(**SymOrErr, Sec.sh_info, **SymtabOrErr);
       else
         reportUniqueWarning(createError(
             "unable to get the signature symbol for " + describe(Obj, Sec) +
