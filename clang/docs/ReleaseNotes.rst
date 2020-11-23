@@ -234,6 +234,9 @@ AST Matchers
   has been changed to no longer match on template instantiations or on
   implicit nodes which are not spelled in the source.
 
+- The TK_IgnoreImplicitCastsAndParentheses traversal kind was removed. It
+  is recommended to use TK_IgnoreUnlessSpelledInSource instead.
+
 - The behavior of the forEach() matcher was changed to not internally ignore
   implicit and parenthesis nodes.
 
