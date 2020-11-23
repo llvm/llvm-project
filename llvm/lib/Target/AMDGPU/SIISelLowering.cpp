@@ -2031,7 +2031,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchIDReg);
   }
 
-  if (Info.hasFlatScratchInit()) {
+  if (Info.hasFlatScratchInit() && !getSubtarget()->isAmdPalOS()) {
     Register FlatScratchInitReg = Info.addFlatScratchInit(TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
@@ -8644,7 +8644,8 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         return SplitVectorStore(Op, DAG);
       return SDValue();
     case 16:
-      if (NumElements > 4 || NumElements == 3)
+      if (NumElements > 4 ||
+          (NumElements == 3 && !Subtarget->enableFlatScratch()))
         return SplitVectorStore(Op, DAG);
       return SDValue();
     default:

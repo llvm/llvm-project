@@ -325,16 +325,24 @@ public:
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;
 
+  /// Return all SGPR64 which satisfy the waves per execution unit requirement
+  /// of the subtarget.
+  ArrayRef<MCPhysReg> getAllSGPR64(const MachineFunction &MF) const;
+
   /// Return all SGPR32 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR32(const MachineFunction &MF) const;
 
 private:
-  void buildSpillLoadStore(MachineBasicBlock::iterator MI, unsigned LoadStoreOp,
-                           int Index, Register ValueReg, bool ValueIsKill,
-                           MCRegister ScratchRsrcReg,
-                           MCRegister ScratchOffsetReg, int64_t InstrOffset,
-                           MachineMemOperand *MMO, RegScavenger *RS,
+  void buildSpillLoadStore(MachineBasicBlock::iterator MI,
+                           unsigned LoadStoreOp,
+                           int Index,
+                           Register ValueReg,
+                           bool ValueIsKill,
+                           MCRegister ScratchOffsetReg,
+                           int64_t InstrOffset,
+                           MachineMemOperand *MMO,
+                           RegScavenger *RS,
                            bool NeedsCFI = false) const;
 };
 
