@@ -286,6 +286,74 @@ uint32_t RegisterContextPOSIX_x86::g_invalidate_fip[] = {
 uint32_t RegisterContextPOSIX_x86::g_invalidate_fdp[] = {
     lldb_fdp_x86_64, lldb_fooff_x86_64, lldb_foseg_x86_64, LLDB_INVALID_REGNUM};
 
+uint32_t RegisterContextPOSIX_x86::g_contained_st0_32[] = {lldb_st0_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st1_32[] = {lldb_st1_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st2_32[] = {lldb_st2_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st3_32[] = {lldb_st3_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st4_32[] = {lldb_st4_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st5_32[] = {lldb_st5_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st6_32[] = {lldb_st6_i386,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st7_32[] = {lldb_st7_i386,
+                                                           LLDB_INVALID_REGNUM};
+
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st0_32[] = {
+    lldb_st0_i386, lldb_mm0_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st1_32[] = {
+    lldb_st1_i386, lldb_mm1_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st2_32[] = {
+    lldb_st2_i386, lldb_mm2_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st3_32[] = {
+    lldb_st3_i386, lldb_mm3_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st4_32[] = {
+    lldb_st4_i386, lldb_mm4_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st5_32[] = {
+    lldb_st5_i386, lldb_mm5_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st6_32[] = {
+    lldb_st6_i386, lldb_mm6_i386, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st7_32[] = {
+    lldb_st7_i386, lldb_mm7_i386, LLDB_INVALID_REGNUM};
+
+uint32_t RegisterContextPOSIX_x86::g_contained_st0_64[] = {lldb_st0_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st1_64[] = {lldb_st1_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st2_64[] = {lldb_st2_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st3_64[] = {lldb_st3_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st4_64[] = {lldb_st4_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st5_64[] = {lldb_st5_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st6_64[] = {lldb_st6_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_st7_64[] = {lldb_st7_x86_64,
+                                                           LLDB_INVALID_REGNUM};
+
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st0_64[] = {
+    lldb_st0_x86_64, lldb_mm0_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st1_64[] = {
+    lldb_st1_x86_64, lldb_mm1_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st2_64[] = {
+    lldb_st2_x86_64, lldb_mm2_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st3_64[] = {
+    lldb_st3_x86_64, lldb_mm3_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st4_64[] = {
+    lldb_st4_x86_64, lldb_mm4_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st5_64[] = {
+    lldb_st5_x86_64, lldb_mm5_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st6_64[] = {
+    lldb_st6_x86_64, lldb_mm6_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_st7_64[] = {
+    lldb_st7_x86_64, lldb_mm7_x86_64, LLDB_INVALID_REGNUM};
+
 // Number of register sets provided by this context.
 enum { k_num_extended_register_sets = 1, k_num_register_sets = 3 };
 
