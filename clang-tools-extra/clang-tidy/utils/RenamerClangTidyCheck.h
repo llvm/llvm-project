@@ -59,6 +59,9 @@ public:
     /// automatically.
     ConflictsWithMacroDefinition,
 
+    /// The fixup results in an identifier that is not a valid c/c++ identifier.
+    FixInvalidIdentifier,
+
     /// Values pass this threshold will be ignored completely
     /// i.e no message, no fixup.
     IgnoreFailureThreshold,
