@@ -229,11 +229,13 @@ TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
-  Parm.Path = "/foo/bar/baz.h";
+  auto BazPath = testPath("foo/bar/baz.h", llvm::sys::path::Style::posix);
+  Parm.Path = BazPath;
   Frag.Index.Background.emplace("Build");
   Fragment::IndexBlock::ExternalBlock External;
-  External.File.emplace("/foo");
-  External.MountPoint.emplace("/foo/bar");
+  External.File.emplace(testPath("foo"));
+  External.MountPoint.emplace(
+      testPath("foo/bar", llvm::sys::path::Style::posix));
   Frag.Index.External = std::move(External);
   compileAndApply();
   EXPECT_EQ(Conf.Index.Background, Config::BackgroundPolicy::Skip);
@@ -245,14 +247,15 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
     Fragment Frag;
     Frag.Source.Directory = Directory.str();
     Fragment::IndexBlock::ExternalBlock External;
-    External.File.emplace("/foo");
+    External.File.emplace(testPath("foo"));
     if (MountPoint)
       External.MountPoint.emplace(*MountPoint);
     Frag.Index.External = std::move(External);
     return Frag;
   };
 
-  Parm.Path = "/foo/bar.h";
+  auto BarPath = testPath("foo/bar.h", llvm::sys::path::Style::posix);
+  Parm.Path = BarPath;
   // Non-absolute MountPoint without a directory raises an error.
   Frag = GetFrag("", "foo");
   compileAndApply();
@@ -264,41 +267,44 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
                 DiagKind(llvm::SourceMgr::DK_Error))));
   ASSERT_FALSE(Conf.Index.External);
 
+  auto FooPath = testPath("foo/", llvm::sys::path::Style::posix);
   // Ok when relative.
-  Frag = GetFrag("/", "foo");
+  Frag = GetFrag(testRoot(), "foo/");
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, "/foo");
+  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
 
   // None defaults to ".".
-  Frag = GetFrag("/", llvm::None);
+  Frag = GetFrag(FooPath, llvm::None);
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, "/");
+  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
 
   // Without a file, external index is empty.
   Parm.Path = "";
-  Frag = GetFrag("", "/foo");
+  Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_FALSE(Conf.Index.External);
 
   // File outside MountPoint, no index.
-  Parm.Path = "/bar/baz.h";
-  Frag = GetFrag("", "/foo");
+  auto BazPath = testPath("bar/baz.h", llvm::sys::path::Style::posix);
+  Parm.Path = BazPath;
+  Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_FALSE(Conf.Index.External);
 
   // File under MountPoint, index should be set.
-  Parm.Path = "/foo/baz.h";
-  Frag = GetFrag("", "/foo");
+  BazPath = testPath("foo/baz.h", llvm::sys::path::Style::posix);
+  Parm.Path = BazPath;
+  Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, "/foo");
+  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
 }
 } // namespace
 } // namespace config
