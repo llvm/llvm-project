@@ -234,6 +234,20 @@ struct LinalgPromotionOptions {
   }
 };
 
+/// Creates a new buffer using the `allocationFn` provided. The size of this
+/// buffer is the smallest constant bounding size along each dimension that can
+/// be computed for the size of the result of `subView`. Returns the allocated
+/// buffer as `fullLocalView` and the view that matches the size of the result
+/// of subview operation as `partialLocalView`.
+struct PromotionInfo {
+  Value fullLocalView;
+  Value partialLocalView;
+};
+Optional<PromotionInfo>
+promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, SubViewOp subView,
+                          AllocBufferCallbackFn allocationFn,
+                          OperationFolder *folder = nullptr);
+
 /// Promotes the `subViews` into a new buffer allocated at the insertion point
 /// `b`. Promotion occurs in 3 steps:
 ///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
