@@ -207,17 +207,21 @@ def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
   let description = [{
     This pass implements a simple algorithm to convert heap-based memory
     allocations to stack-based ones. It uses a built-in heuristic to decide
-    whether it makes sense to convert an allocation.
+    whether it makes sense to convert an allocation. Furthermore, dynamic
+    shaped buffers that are limited by the rank of the tensor can be
+    converted. They are only transformed if they are considered to be small.
   }];
   let constructor = "mlir::createPromoteBuffersToStackPass()";
   let options = [
     Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
            /*default=*/"1024",
-           "Define the maximum size in bytes to promote allocations to stack.">,
+           "Maximal size in bytes to promote allocations to stack.">,
     Option<"bitwidthOfIndexType", "bitwidth-of-index-type", "unsigned",
            /*default=*/"64",
-           "Define the bitwidth of the index type. Used for size estimation.">,
-
+           "Bitwidth of the index type. Used for size estimation.">,
+    Option<"maxRankOfAllocatedMemRef", "max-rank-of-allocated-memref", "unsigned",
+           /*default=*/"1",
+           "Maximal memref rank to promote dynamic buffers.">,
   ];
 }
 
