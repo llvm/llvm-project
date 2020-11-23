@@ -18,7 +18,7 @@
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t.o -x ir %t1.bc -c -fthinlto-index=%t.o.thinlto.bc -mllvm -lto-embed-bitcode=post-merge-pre-opt
 ; RUN: llvm-readelf -S %t.o | FileCheck %s --check-prefixes=CHECK-ELF,CHECK-ELF-CMD
 ; RUN: llvm-objcopy --dump-section=.llvmcmd=%t-embedded.cmd %t.o /dev/null
-; RUN: grep x86_64-unknown-linux-gnu %t-embedded.cmd | count 1
+; RUN: grep --text x86_64-unknown-linux-gnu %t-embedded.cmd | count 1
 ; RUN: llvm-objcopy --dump-section=.llvmbc=%t-embedded.bc %t.o /dev/null
 ; RUN: llvm-dis %t-embedded.bc -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
 ; We should only need the index and the post-thinlto merged module to generate 
