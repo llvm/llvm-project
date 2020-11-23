@@ -254,8 +254,17 @@ void VETargetLowering::initSPUActions() {
 }
 
 void VETargetLowering::initVPUActions() {
-  for (MVT LegalVecVT : AllVectorVTs)
+  for (MVT LegalVecVT : AllVectorVTs) {
     setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
+    // Translate all vector instructions with legal element types to VVP_*
+    // nodes.
+    // TODO We will custom-widen into VVP_* nodes in the future. While we are
+    // buildling the infrastructure for this, we only do this for legal vector
+    // VTs.
+#define ADD_VVP_OP(VVP_NAME, ISD_NAME)                                         \
+  setOperationAction(ISD::ISD_NAME, LegalVecVT, Custom);
+#include "VVPNodes.def"
+  }
 }
 
 SDValue
@@ -846,6 +855,10 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(VEC_BROADCAST)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
+
+    // Register the VVP_* SDNodes.
+#define ADD_VVP_OP(VVP_NAME, ...) TARGET_NODE_CASE(VVP_NAME)
+#include "VVPNodes.def"
   }
 #undef TARGET_NODE_CASE
   return nullptr;
@@ -1403,6 +1416,10 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerVASTART(Op, DAG);
   case ISD::VAARG:
     return lowerVAARG(Op, DAG);
+
+#define ADD_BINARY_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
+#include "VVPNodes.def"
+    return lowerToVVP(Op, DAG);
   }
 }
 /// } Custom Lower
@@ -1664,4 +1681,54 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
 
   // It's ok for generic registers.
   return true;
+}
+
+/// \returns the VVP_* SDNode opcode corresponsing to \p OC.
+static Optional<unsigned> getVVPOpcode(unsigned OC) {
+  switch (OC) {
+#define ADD_VVP_OP(VVPNAME, SDNAME)                                            \
+  case VEISD::VVPNAME:                                                         \
+  case ISD::SDNAME:                                                            \
+    return VEISD::VVPNAME;
+#include "VVPNodes.def"
+  }
+  return None;
+}
+
+SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
+  // Can we represent this as a VVP node.
+  auto OCOpt = getVVPOpcode(Op->getOpcode());
+  if (!OCOpt.hasValue())
+    return SDValue();
+  unsigned VVPOC = OCOpt.getValue();
+
+  // The representative and legalized vector type of this operation.
+  EVT OpVecVT = Op.getValueType();
+  EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
+
+  // Materialize the VL parameter.
+  SDLoc DL(Op);
+  SDValue AVL = DAG.getConstant(OpVecVT.getVectorNumElements(), DL, MVT::i32);
+  MVT MaskVT = MVT::v256i1;
+  SDValue ConstTrue = DAG.getConstant(1, DL, MVT::i32);
+  SDValue Mask = DAG.getNode(VEISD::VEC_BROADCAST, DL, MaskVT,
+                             ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+
+  // Categories we are interested in.
+  bool IsBinaryOp = false;
+
+  switch (VVPOC) {
+#define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \
+  case VEISD::VVPNAME:                                                         \
+    IsBinaryOp = true;                                                         \
+    break;
+#include "VVPNodes.def"
+  }
+
+  if (IsBinaryOp) {
+    assert(LegalVecVT.isSimple());
+    return DAG.getNode(VVPOC, DL, LegalVecVT, Op->getOperand(0),
+                       Op->getOperand(1), Mask, AVL);
+  }
+  llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }

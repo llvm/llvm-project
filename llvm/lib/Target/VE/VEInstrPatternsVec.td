@@ -15,10 +15,6 @@
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
 
-// Custom intermediate ISDs.
-class IsVLVT<int OpIdx> : SDTCisVT<OpIdx,i32>;
-def vec_broadcast   : SDNode<"VEISD::VEC_BROADCAST", SDTypeProfile<1, 2,  [SDTCisVec<0>, IsVLVT<2>]>>;
-
 multiclass vbrd_elem32<ValueType v32, ValueType s32, SDPatternOperator ImmOp, SDNodeXForm ImmCast, int SubRegIdx> {
   // VBRDil
   def : Pat<(v32 (vec_broadcast (s32 ImmOp:$sy), i32:$vl)),
