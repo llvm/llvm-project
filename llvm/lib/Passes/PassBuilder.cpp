@@ -233,26 +233,7 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> MaxDevirtIterations("pm-max-devirt-iterations",
-                                             cl::ReallyHidden, cl::init(4));
-static cl::opt<bool>
-    RunPartialInlining("enable-npm-partial-inlining", cl::init(false),
-                       cl::Hidden, cl::ZeroOrMore,
-                       cl::desc("Run Partial inlinining pass"));
-
-static cl::opt<int> PreInlineThreshold(
-    "npm-preinline-threshold", cl::Hidden, cl::init(75), cl::ZeroOrMore,
-    cl::desc("Control the amount of inlining in pre-instrumentation inliner "
-             "(default = 75)"));
-
-static cl::opt<bool>
-    RunNewGVN("enable-npm-newgvn", cl::init(false),
-              cl::Hidden, cl::ZeroOrMore,
-              cl::desc("Run NewGVN instead of GVN"));
-
-static cl::opt<bool> EnableGVNHoist(
-    "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
-    cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
+extern cl::opt<unsigned> MaxDevirtIterations;
 
 static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
     "enable-ml-inliner", cl::init(InliningAdvisorMode::Default), cl::Hidden,
@@ -264,18 +245,6 @@ static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
                clEnumValN(InliningAdvisorMode::Release, "release",
                           "Use release mode (AOT-compiled model).")));
 
-static cl::opt<bool> EnableGVNSink(
-    "enable-npm-gvn-sink", cl::init(false), cl::Hidden,
-    cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
-
-static cl::opt<bool> EnableUnrollAndJam(
-    "enable-npm-unroll-and-jam", cl::init(false), cl::Hidden,
-    cl::desc("Enable the Unroll and Jam pass for the new PM (default = off)"));
-
-static cl::opt<bool> EnableLoopFlatten(
-    "enable-npm-loop-flatten", cl::init(false), cl::Hidden,
-    cl::desc("Enable the Loop flattening pass for the new PM (default = off)"));
-
 static cl::opt<bool> EnableSyntheticCounts(
     "enable-npm-synthetic-counts", cl::init(false), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Run synthetic function entry count generation "
@@ -283,12 +252,6 @@ static cl::opt<bool> EnableSyntheticCounts(
 
 static const Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
-
-// This option is used in simplifying testing SampleFDO optimizations for
-// profile loading.
-static cl::opt<bool>
-    EnableCHR("enable-chr-npm", cl::init(true), cl::Hidden,
-              cl::desc("Enable control height reduction optimization (CHR)"));
 
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
@@ -313,8 +276,15 @@ PipelineTuningOptions::PipelineTuningOptions() {
 }
 
 extern cl::opt<bool> EnableConstraintElimination;
+extern cl::opt<bool> EnableGVNHoist;
+extern cl::opt<bool> EnableGVNSink;
 extern cl::opt<bool> EnableHotColdSplit;
 extern cl::opt<bool> EnableOrderFileInstrumentation;
+extern cl::opt<bool> EnableCHR;
+extern cl::opt<bool> EnableUnrollAndJam;
+extern cl::opt<bool> EnableLoopFlatten;
+extern cl::opt<bool> RunNewGVN;
+extern cl::opt<bool> RunPartialInlining;
 
 extern cl::opt<bool> FlattenedProfileUsed;
 
@@ -324,6 +294,7 @@ extern cl::opt<bool> EnableKnowledgeRetention;
 extern cl::opt<bool> EnableMatrix;
 
 extern cl::opt<bool> DisablePreInliner;
+extern cl::opt<int> PreInlineThreshold;
 
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
