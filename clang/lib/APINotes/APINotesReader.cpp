@@ -371,7 +371,7 @@ namespace {
                                           const uint8_t *&data) {
       ObjCMethodInfo info;
       uint8_t payload = *data++;
-      info.Required = payload & 0x01;
+      info.RequiredInit = payload & 0x01;
       payload >>= 1;
       info.DesignatedInit = payload & 0x01;
       payload >>= 1;
