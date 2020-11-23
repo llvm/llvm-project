@@ -409,7 +409,12 @@ class RegisterCommandsTestCase(TestBase):
             for registerSet in registerSets:
                 if 'advanced vector extensions' in registerSet.GetName().lower():
                     has_avx = True
-                if 'memory protection extension' in registerSet.GetName().lower():
+                # FreeBSD/NetBSD reports missing register sets differently
+                # at the moment and triggers false positive here.
+                # TODO: remove FreeBSD/NetBSD exception when we make unsupported
+                # register groups correctly disappear.
+                if ('memory protection extension' in registerSet.GetName().lower()
+                        and self.getPlatform() not in ["freebsd", "netbsd"]):
                     has_mpx = True
 
             if has_avx:
