@@ -802,6 +802,7 @@ public:
   virtual void printMipsPLT(const MipsGOTParser<ELFT> &Parser) = 0;
   virtual void printMipsABIFlags() = 0;
   const ELFDumper<ELFT> &dumper() const { return Dumper; }
+  void reportUniqueWarning(Error Err) const;
 
 protected:
   std::vector<GroupSection> getGroups();
@@ -826,8 +827,6 @@ protected:
                                        const DynRegionInfo &Reg){};
 
   StringRef getPrintableSectionName(const Elf_Shdr &Sec) const;
-
-  void reportUniqueWarning(Error Err) const;
 
   StringRef FileName;
   const ELFFile<ELFT> &Obj;
@@ -3582,6 +3581,19 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   printFields(OS, "Section header string table index:", Str);
 }
 
+template <class ELFT>
+static StringRef tryGetSectionName(const ELFFile<ELFT> &Obj,
+                                   const typename ELFT::Shdr &Sec,
+                                   DumpStyle<ELFT> &Dump) {
+  if (Expected<StringRef> SecNameOrErr = Obj.getSectionName(Sec))
+    return *SecNameOrErr;
+  else
+    Dump.reportUniqueWarning(createError("unable to get the name of the " +
+                                         describe(Obj, Sec) + ": " +
+                                         toString(SecNameOrErr.takeError())));
+  return "<?>";
+}
+
 template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
   auto GetSignature = [&](const Elf_Sym &Sym,
                           const Elf_Shdr &Symtab) -> StringRef {
@@ -3605,30 +3617,59 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
     if (Sec.sh_type != ELF::SHT_GROUP)
       continue;
 
-    const Elf_Shdr *Symtab =
-        unwrapOrError(FileName, Obj.getSection(Sec.sh_link));
+    StringRef Signature = "<?>";
+    if (Expected<const Elf_Shdr *> SymtabOrErr = Obj.getSection(Sec.sh_link)) {
+      if (Expected<const Elf_Sym *> SymOrErr =
+              Obj.template getEntry<Elf_Sym>(**SymtabOrErr, Sec.sh_info))
+        Signature = GetSignature(**SymOrErr, **SymtabOrErr);
+      else
+        reportUniqueWarning(createError(
+            "unable to get the signature symbol for " + describe(Obj, Sec) +
+            ": " + toString(SymOrErr.takeError())));
+    } else {
+      reportUniqueWarning(createError("unable to get the symbol table for " +
+                                      describe(Obj, Sec) + ": " +
+                                      toString(SymtabOrErr.takeError())));
+    }
 
-    const Elf_Sym *Sym = unwrapOrError(
-        FileName, Obj.template getEntry<Elf_Sym>(*Symtab, Sec.sh_info));
-    auto Data = unwrapOrError(
-        FileName, Obj.template getSectionContentsAsArray<Elf_Word>(Sec));
+    ArrayRef<Elf_Word> Data;
+    if (Expected<ArrayRef<Elf_Word>> ContentsOrErr =
+            Obj.template getSectionContentsAsArray<Elf_Word>(Sec)) {
+      if (ContentsOrErr->empty())
+        reportUniqueWarning(
+            createError("unable to read the section group flag from the " +
+                        describe(Obj, Sec) + ": the section is empty"));
+      else
+        Data = *ContentsOrErr;
+    } else {
+      reportUniqueWarning(createError("unable to get the content of the " +
+                                      describe(Obj, Sec) + ": " +
+                                      toString(ContentsOrErr.takeError())));
+    }
 
-    StringRef Name = unwrapOrError(FileName, Obj.getSectionName(Sec));
-    StringRef Signature = GetSignature(*Sym, *Symtab);
-    Ret.push_back({Name,
+    Ret.push_back({tryGetSectionName(Obj, Sec, *this),
                    maybeDemangle(Signature),
                    Sec.sh_name,
                    I - 1,
                    Sec.sh_link,
                    Sec.sh_info,
-                   Data[0],
+                   Data.empty() ? Elf_Word(0) : Data[0],
                    {}});
+
+    if (Data.empty())
+      continue;
 
     std::vector<GroupMember> &GM = Ret.back().Members;
     for (uint32_t Ndx : Data.slice(1)) {
-      const Elf_Shdr &Sec = *unwrapOrError(FileName, Obj.getSection(Ndx));
-      const StringRef Name = unwrapOrError(FileName, Obj.getSectionName(Sec));
-      GM.push_back({Name, Ndx});
+      if (Expected<const Elf_Shdr *> SecOrErr = Obj.getSection(Ndx)) {
+        GM.push_back({tryGetSectionName(Obj, **SecOrErr, *this), Ndx});
+      } else {
+        reportUniqueWarning(
+            createError("unable to get the section with index " + Twine(Ndx) +
+                        " when dumping the " + describe(Obj, Sec) + ": " +
+                        toString(SecOrErr.takeError())));
+        GM.push_back({"<?>", Ndx});
+      }
     }
   }
   return Ret;
