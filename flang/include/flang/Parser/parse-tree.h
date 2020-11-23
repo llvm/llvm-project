@@ -3701,8 +3701,8 @@ struct OpenMPCancelConstruct {
 // memory-order-clause -> acq_rel
 //                        release
 //                        acquire
-struct OmpFlushMemoryClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpFlushMemoryClause, llvm::omp::Clause);
+struct OmpMemoryOrderClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
   CharBlock source;
 };
 
@@ -3710,7 +3710,7 @@ struct OmpFlushMemoryClause {
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpFlushMemoryClause>,
+  std::tuple<Verbatim, std::optional<OmpMemoryOrderClause>,
       std::optional<OmpObjectList>>
       t;
 };

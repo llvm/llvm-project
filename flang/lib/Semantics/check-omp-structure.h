@@ -150,6 +150,12 @@ public:
   void Enter(const parser::OmpClause::Uniform &);
   void Enter(const parser::OmpClause::UseDevicePtr &);
   void Enter(const parser::OmpClause::IsDevicePtr &);
+  // Memory-order-clause
+  void Enter(const parser::OmpClause::SeqCst &);
+  void Enter(const parser::OmpClause::AcqRel &);
+  void Enter(const parser::OmpClause::Release &);
+  void Enter(const parser::OmpClause::Acquire &);
+  void Enter(const parser::OmpClause::Relaxed &);
 
   void Enter(const parser::OmpAlignedClause &);
   void Enter(const parser::OmpAllocateClause &);
