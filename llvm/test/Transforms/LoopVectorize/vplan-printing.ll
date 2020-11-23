@@ -123,8 +123,8 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ;
 ; CHECK:       N7 [label =
 ; CHECK-NEXT:    "for.inc:\n" +
-; CHECK-NEXT:      "EMIT vp<%0> = not ir<%cmp>\l" +
-; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%0> ir<%tmp4>/ir<%cmp>\l" +
+; CHECK-NEXT:      "EMIT vp<%4> = not ir<%cmp>\l" +
+; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%4> ir<%tmp4>/ir<%cmp>\l" +
 ; CHECK-NEXT:      "CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>\l" +
 ; CHECK-NEXT:      "WIDEN store ir<%idx>, ir<%d>\l"
 ; CHECK-NEXT:  ]

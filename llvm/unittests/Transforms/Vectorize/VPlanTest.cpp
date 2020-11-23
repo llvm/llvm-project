@@ -346,9 +346,10 @@ TEST(VPBasicBlockTest, print) {
   {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
-    I3->print(OS);
+    VPSlotTracker SlotTracker;
+    I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("br <badref> <badref>", I3Dump);
+    EXPECT_EQ("EMIT br <badref> <badref>", I3Dump);
   }
 
   VPlan Plan;
@@ -370,8 +371,8 @@ compound=true
   N0 -> N1 [ label=""]
   N1 [label =
     ":\n" +
-      "EMIT vp<%2> = mul vp<%1> vp<%0>\l" +
-      "EMIT ret vp<%2>\l"
+      "EMIT vp<%3> = mul vp<%1> vp<%0>\l" +
+      "EMIT ret vp<%3>\l"
   ]
 }
 )";
@@ -380,9 +381,10 @@ compound=true
   {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
-    I3->print(OS);
+    VPSlotTracker SlotTracker(&Plan);
+    I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("br vp<%0> vp<%1>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%0> vp<%1>", I3Dump);
   }
 
   {
@@ -390,7 +392,7 @@ compound=true
     raw_string_ostream OS(I4Dump);
     OS << *I4;
     OS.flush();
-    EXPECT_EQ("vp<%2> = mul vp<%1> vp<%0>", I4Dump);
+    EXPECT_EQ("EMIT vp<%3> = mul vp<%1> vp<%0>", I4Dump);
   }
 }
 
@@ -577,6 +579,62 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDef()));
 
   delete Load;
+}
+
+TEST(VPRecipeTest, dump) {
+  VPlan Plan;
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  Plan.setEntry(VPBB1);
+
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *AI =
+      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  AI->setName("a");
+  SmallVector<VPValue *, 2> Args;
+  VPValue *ExtVPV1 = new VPValue();
+  VPValue *ExtVPV2 = new VPValue();
+  Plan.addExternalDef(ExtVPV1);
+  Plan.addExternalDef(ExtVPV2);
+  Args.push_back(ExtVPV1);
+  Args.push_back(ExtVPV2);
+  VPWidenRecipe *WidenR =
+      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
+  VPBB1->appendRecipe(WidenR);
+
+  {
+    // Use EXPECT_EXIT to capture stderr and compare against expected output.
+    //
+    // Test VPValue::dump().
+    VPValue *VPV = WidenR;
+    EXPECT_EXIT(
+        {
+          VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+
+    // Test VPRecipeBase::dump().
+    VPRecipeBase *R = WidenR;
+    EXPECT_EXIT(
+        {
+          R->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+
+    // Test VPDef::dump().
+    VPDef *D = WidenR;
+    EXPECT_EXIT(
+        {
+          D->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+  }
+
+  delete AI;
 }
 
 TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {

@@ -645,13 +645,6 @@ public:
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(struct VPTransformState &State) = 0;
 
-  /// Each recipe prints itself.
-  virtual void print(raw_ostream &O, const Twine &Indent,
-                     VPSlotTracker &SlotTracker) const = 0;
-
-  /// Dump the recipe to stderr (for debugging).
-  void dump() const;
-
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);
@@ -777,13 +770,12 @@ public:
   /// provided.
   void execute(VPTransformState &State) override;
 
-  /// Print the Recipe.
+  /// Print the VPInstruction to \p O.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 
-  /// Print the VPInstruction.
-  void print(raw_ostream &O) const;
-  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+  /// Print the VPInstruction to dbgs() (for debugging).
+  void dump() const;
 
   /// Return true if this instruction may modify memory.
   bool mayWriteToMemory() const {
@@ -1244,7 +1236,7 @@ public:
              VPSlotTracker &SlotTracker) const override {
     O << " +\n" << Indent << "\"BRANCH-ON-MASK ";
     if (VPValue *Mask = getMask())
-      Mask->print(O, SlotTracker);
+      Mask->printAsOperand(O, SlotTracker);
     else
       O << " All-One";
     O << "\\l\"";

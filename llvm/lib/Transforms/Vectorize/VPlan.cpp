@@ -71,22 +71,24 @@ VPValue::~VPValue() {
 }
 
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPInstruction *Instr = dyn_cast<VPInstruction>(this))
-    Instr->print(OS, SlotTracker);
+  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+    R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPInstruction *Instr = dyn_cast<VPInstruction>(this);
+  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
   dbgs() << "\n";
 }
 
-void VPRecipeBase::dump() const {
-  VPSlotTracker SlotTracker(nullptr);
+void VPDef::dump() const {
+  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this);
+  VPSlotTracker SlotTracker(
+      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
@@ -500,18 +502,15 @@ void VPInstruction::execute(VPTransformState &State) {
     generateInstruction(State, Part);
 }
 
+void VPInstruction::dump() const {
+  VPSlotTracker SlotTracker(getParent()->getPlan());
+  print(dbgs(), "", SlotTracker);
+}
+
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << "EMIT ";
-  print(O, SlotTracker);
-}
 
-void VPInstruction::print(raw_ostream &O) const {
-  VPSlotTracker SlotTracker(getParent()->getPlan());
-  print(O, SlotTracker);
-}
-
-void VPInstruction::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
     O << " = ";
@@ -1087,13 +1086,6 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 
 void VPSlotTracker::assignSlot(const VPValue *V) {
   assert(Slots.find(V) == Slots.end() && "VPValue already has a slot!");
-  const Value *UV = V->getUnderlyingValue();
-  if (UV)
-    return;
-  const auto *VPI = dyn_cast<VPInstruction>(V);
-  if (VPI && !VPI->hasResult())
-    return;
-
   Slots[V] = NextSlot++;
 }
 
@@ -1112,10 +1104,8 @@ void VPSlotTracker::assignSlots(const VPRegionBlock *Region) {
 
 void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &Recipe : *VPBB) {
-    if (const auto *VPI = dyn_cast<VPInstruction>(&Recipe))
-      assignSlot(VPI);
-    else if (const auto *VPIV = dyn_cast<VPWidenCanonicalIVRecipe>(&Recipe))
-      assignSlot(VPIV->getVPValue());
+    for (VPValue *Def : Recipe.definedValues())
+      assignSlot(Def);
   }
 }
 
@@ -1123,10 +1113,6 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
 
   for (const VPValue *V : Plan.VPExternalDefs)
     assignSlot(V);
-
-  for (auto &E : Plan.Value2VPValue)
-    if (!isa<VPInstruction>(E.second))
-      assignSlot(E.second);
 
   for (const VPValue *V : Plan.VPCBVs)
     assignSlot(V);
