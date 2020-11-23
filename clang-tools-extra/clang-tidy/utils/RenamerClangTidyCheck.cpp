@@ -10,6 +10,7 @@
 #include "ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -463,6 +464,8 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
         Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
       else if (Ident->hasMacroDefinition())
         Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
+    } else if (!isValidIdentifier(Info.Fixup)) {
+      Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
     }
 
     Failure.Info = std::move(Info);
@@ -503,7 +506,8 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
 static std::string
 getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
                     const std::string &Fixup) {
-  if (Fixup.empty())
+  if (Fixup.empty() ||
+      FixStatus == RenamerClangTidyCheck::ShouldFixStatus::FixInvalidIdentifier)
     return "; cannot be fixed automatically";
   if (FixStatus == RenamerClangTidyCheck::ShouldFixStatus::ShouldFix)
     return {};
@@ -517,7 +521,6 @@ getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
       RenamerClangTidyCheck::ShouldFixStatus::ConflictsWithMacroDefinition)
     return "; cannot be fixed because '" + Fixup +
            "' would conflict with a macro definition";
-
   llvm_unreachable("invalid ShouldFixStatus");
 }
 
