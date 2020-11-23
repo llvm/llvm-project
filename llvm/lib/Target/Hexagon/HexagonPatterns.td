@@ -1708,8 +1708,6 @@ def: Pat<(fma F32:$Rs, F32:$Rt, F32:$Rx),
          (F2_sffma F32:$Rx, F32:$Rs, F32:$Rt)>;
 def: Pat<(fma (fneg F32:$Rs), F32:$Rt, F32:$Rx),
          (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
-def: Pat<(fma F32:$Rs, (fneg F32:$Rt), F32:$Rx),
-         (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
 
 def: Pat<(mul V2I32:$Rs, V2I32:$Rt),
          (PS_vmulw V2I32:$Rs, V2I32:$Rt)>;

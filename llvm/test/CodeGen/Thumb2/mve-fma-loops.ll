@@ -403,8 +403,8 @@ define arm_aapcs_vfpcc void @fmss3(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    vfms.f32 q3, q2, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB6_2
