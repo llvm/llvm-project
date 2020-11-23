@@ -17,9 +17,9 @@ v_add_co_u32 v84, s[4:5], v13, v31 clamp
 // CHECK-NEXT:{{^}}                                   ^
 
 //==============================================================================
-// invalid literal operand
+// literal operands are not supported
 
 v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
-// CHECK: error: invalid literal operand
+// CHECK: error: literal operands are not supported
 // CHECK-NEXT:{{^}}v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                  ^
