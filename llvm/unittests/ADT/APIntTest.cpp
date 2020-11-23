@@ -2598,6 +2598,13 @@ TEST(APIntTest, sext) {
   EXPECT_EQ(63U, i32_neg1.countPopulation());
 }
 
+TEST(APIntTest, truncOrSelf) {
+  APInt val(32, 0xFFFFFFFF);
+  EXPECT_EQ(0xFFFF, val.truncOrSelf(16));
+  EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(32));
+  EXPECT_EQ(0xFFFFFFFF, val.truncOrSelf(64));
+}
+
 TEST(APIntTest, multiply) {
   APInt i64(64, 1234);
 
