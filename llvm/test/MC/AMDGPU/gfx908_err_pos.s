@@ -1,6 +1,14 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
+// inline constants are not allowed for this operand
+
+v_mfma_f32_32x32x1f32 a[0:31], v0, v1, 0
+// CHECK: error: inline constants are not allowed for this operand
+// CHECK-NEXT:{{^}}v_mfma_f32_32x32x1f32 a[0:31], v0, v1, 0
+// CHECK-NEXT:{{^}}                                       ^
+
+//==============================================================================
 // invalid neg_hi value
 
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,2]
