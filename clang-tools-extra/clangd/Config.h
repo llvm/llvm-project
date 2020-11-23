@@ -97,4 +97,24 @@ struct Config {
 } // namespace clangd
 } // namespace clang
 
+namespace llvm {
+template <> struct DenseMapInfo<clang::clangd::Config::ExternalIndexSpec> {
+  using ExternalIndexSpec = clang::clangd::Config::ExternalIndexSpec;
+  static inline ExternalIndexSpec getEmptyKey() {
+    return {ExternalIndexSpec::File, "", ""};
+  }
+  static inline ExternalIndexSpec getTombstoneKey() {
+    return {ExternalIndexSpec::File, "TOMB", "STONE"};
+  }
+  static unsigned getHashValue(const ExternalIndexSpec &Val) {
+    return llvm::hash_combine(Val.Kind, Val.Location, Val.MountPoint);
+  }
+  static bool isEqual(const ExternalIndexSpec &LHS,
+                      const ExternalIndexSpec &RHS) {
+    return std::tie(LHS.Kind, LHS.Location, LHS.MountPoint) ==
+           std::tie(RHS.Kind, RHS.Location, RHS.MountPoint);
+  }
+};
+} // namespace llvm
+
 #endif
