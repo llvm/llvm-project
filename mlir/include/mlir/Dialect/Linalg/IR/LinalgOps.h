@@ -11,12 +11,13 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgTraits.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -32,9 +33,28 @@ namespace mlir {
 namespace linalg {
 
 class ConvOp;
+class LinalgOp;
 class PoolingMaxOp;
 class PoolingMinOp;
 class PoolingSumOp;
+
+// TOFO: allow an extra ValueRange to specify an indexing and allow
+// non-hyperrectangular shapes.
+using LoopRangeBuilder =
+    std::function<SmallVector<Range, 4>(OpBuilder &, Location)>;
+
+/// Returns the values obtained by applying `map` to the list of values.
+SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
+                                       AffineMap map, ValueRange values);
+
+/// Provide a very simple inference procedure to build the loop ranges from the
+/// op and its operands. This only works with permutation affine maps and
+/// patterns of the form `(m, n)[s] -> (m + n - s floordiv 2)`.
+/// A more advanced Tensor-Comprehension like inference is possible but has
+/// proven to be ambiguous in unfavorable case.
+/// As a consequence, we relax the default behavior very conservatively and
+/// provide an op-specified hook so that Linalg ops may override the behavior.
+LoopRangeBuilder defaultLoopRangesBuilder(LinalgOp op);
 
 using ReassociationIndices = SmallVector<int64_t, 2>;
 using ReassociationExprs = SmallVector<AffineExpr, 2>;

@@ -766,6 +766,59 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
 
     //===------------------------------------------------------------------===//
+    // Linalg generalization hooks.
+    //===------------------------------------------------------------------===//
+    InterfaceMethod<
+      /*desc=*/[{
+        Hook to provide a custom AffineMap used to compute all the operand
+        subshapes given loop bounds. This is used to answer the question: "given
+        an iteration space over the codomain, what are the subshapes of the
+        operands involved in the computation".
+        The default behavior is to just concatenate all the indexing maps.
+        A custom AffineMap allows providing a map that can be used to
+        compute subshapes even in cases where the concatenation of indexing maps
+        (i.e. the data traversal order) is not a simple permutation of the loop
+        traversal order. It is then possible to define ops with skewed data
+        traversal order for which we can still easily compute hyperrectangular
+        loop bounds and subviews.
+      }],
+      /*retTy=*/"AffineMap",
+      /*methodName=*/"getLoopsToShapesMap",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto r = $_op.indexing_maps().template getAsRange<AffineMapAttr>();
+        auto maps = llvm::to_vector<8>(
+            llvm::map_range(r, [](AffineMapAttr a) { return a.getValue(); }));
+        return concatAffineMaps(maps);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Hook to provide a custom AffineMap used to construct the
+        hyperrectangular loop iteration space given all the operand subshapes.
+        This is used to answer the question:
+        "Given a list of operand ranges, what is the subportion of the iteration
+        space involved in the computation".
+        This is the inverse problem of `getLoopsToShapesMap`.
+        Return the empty AffineMap when such an AffineMap cannot be constructed.
+        The default behavior is based on a very simple inference procedure that
+        only works with permutation affine maps.
+        A more advanced Tensor-Comprehension like inference is possible but has
+        proven to be ambiguous in unfavorable case.
+        A safer and more robust alternative is to allow each each op to define
+        its own AffineMap.
+      }],
+      /*retTy=*/"AffineMap",
+      /*methodName=*/"getShapesToLoopsMap",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return inversePermutation(getLoopsToShapesMap());
+      }]
+    >,
+
+    //===------------------------------------------------------------------===//
     // Other static interface methods.
     //===------------------------------------------------------------------===//
     StaticInterfaceMethod<
@@ -818,6 +871,15 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   ];
 
   let extraClassDeclaration = [{
+    /// Return the flat list of all operand dimension sizes in the order they 
+    /// appear in the operands.
+    SmallVector<Value, 4> createFlatListOfOperandDims(OpBuilder &, Location);
+
+    /// Create the loop ranges to materialize the computation over the current
+    /// operands. This is done by applying `getShapesToLoopsMap` to
+    /// `createFlatListOfOperandDims`.
+    SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
+
     /// Returns all the operands past the inputs, output_buffers and
     /// init_tensors operands. Asserts that these operands are value types to
     /// allow transformations like tiling to just use the values when cloning
