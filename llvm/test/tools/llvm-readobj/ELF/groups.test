@@ -81,11 +81,16 @@ Sections:
   - Name: .symtab
     Type: SHT_SYMTAB
     Link: [[SYMTABLINK=.strtab]]
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: [[STRTABCONTENT=<none>]]
 Symbols:
   - Name:    foo
     Section: .text.foo
+    StName:  [[SYM1STNAME=<none>]]
   - Name:    bar
     Section: .text.bar
+    StName:  [[SYM2STNAME=<none>]]
 
 ## Check that we report a warning and continue dumping when a section is included
 ## in two group sections at the same time.
@@ -379,3 +384,37 @@ Symbols:
 # MEMBER-GNU-NEXT:     [Index]    Name
 # MEMBER-GNU-NEXT:     [  255]   <?>
 # MEMBER-GNU-NEXT:     [    6]   .rela.text.bar
+
+## Check warnings that are reported when the st_name field of the signature symbol goes past the end of the string table.
+
+## We set the content of the string table to '0061626300' ('\0abc\0') to fixup the size of the string table.
+## This makes it easier to test the boundary conditions.
+# RUN: yaml2obj %s -DSTRTABCONTENT="0061626300" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame.o
+# RUN: llvm-readobj --elf-section-groups %t.signame.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.signame.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-GNU --implicit-check-not=warning:
+
+# SIGNAME1-WARN: warning: '[[FILE]]': unable to get the name of the symbol with index 2: st_name (0x5) is past the end of the string table of size 0x5
+
+# SIGNAME1-LLVM: Signature: {{$}}
+# SIGNAME1-LLVM: Signature: <?>
+
+# SIGNAME1-GNU: COMDAT group section [    1] `.group' [] contains 2 sections:
+# SIGNAME1-GNU: COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
+
+## Chech we report a warning when the string table that contains the signature symbol name is not null-terminated.
+
+# RUN: yaml2obj %s -DSTRTABCONTENT="0061626361" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame2.o
+# RUN: llvm-readobj --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-GNU --implicit-check-not=warning:
+
+# SIGNAME2-WARN: warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: SHT_STRTAB string table section [index 8] is non-null terminated
+
+# SIGNAME2-LLVM: Signature: <?>
+# SIGNAME2-LLVM: Signature: <?>
+
+# SIGNAME2-GNU: COMDAT group section [    1] `.group' [<?>] contains 2 sections:
+# SIGNAME2-GNU: COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
