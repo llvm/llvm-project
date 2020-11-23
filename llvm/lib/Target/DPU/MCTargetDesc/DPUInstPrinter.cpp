@@ -114,7 +114,13 @@ void DPUInstPrinter::printPCImm(const MCInst *MI, unsigned OpNo, raw_ostream &O,
   if (Op.isImm()) {
     O << formatHex(Op.getImm());
   } else if (Op.isExpr()) {
-    Op.getExpr()->print(O, &MAI);
+    const MCExpr *Expr = Op.getExpr();
+    int64_t Value;
+    if (Expr->evaluateAsAbsolute(Value)) {
+      O << formatHex(Value);
+    } else {
+      Op.getExpr()->print(O, &MAI);
+    }
   } else {
     llvm_unreachable("print pc invoked with non-immediate/expression operand");
   }
