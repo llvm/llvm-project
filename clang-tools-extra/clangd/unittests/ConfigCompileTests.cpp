@@ -176,6 +176,26 @@ TEST_F(ConfigCompileTests, PathSpecMatch) {
     ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   }
 }
+
+TEST_F(ConfigCompileTests, Tidy) {
+  Frag.ClangTidy.Add.emplace_back("bugprone-use-after-move");
+  Frag.ClangTidy.Add.emplace_back("llvm-*");
+  Frag.ClangTidy.Remove.emplace_back("llvm-include-order");
+  Frag.ClangTidy.Remove.emplace_back("readability-*");
+  Frag.ClangTidy.CheckOptions.emplace_back(
+      std::make_pair(std::string("StrictMode"), std::string("true")));
+  Frag.ClangTidy.CheckOptions.emplace_back(std::make_pair(
+      std::string("example-check.ExampleOption"), std::string("0")));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(
+      Conf.ClangTidy.Checks,
+      "bugprone-use-after-move,llvm-*,-llvm-include-order,-readability-*");
+  EXPECT_EQ(Conf.ClangTidy.CheckOptions.size(), 2U);
+  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("StrictMode"), "true");
+  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("example-check.ExampleOption"),
+            "0");
+}
+
 } // namespace
 } // namespace config
 } // namespace clangd

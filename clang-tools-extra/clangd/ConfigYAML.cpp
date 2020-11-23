@@ -40,6 +40,7 @@ public:
     Dict.handle("CompileFlags", [&](Node &N) { parse(F.CompileFlags, N); });
     Dict.handle("Index", [&](Node &N) { parse(F.Index, N); });
     Dict.handle("Style", [&](Node &N) { parse(F.Style, N); });
+    Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -47,8 +48,10 @@ public:
 private:
   void parse(Fragment::IfBlock &F, Node &N) {
     DictParser Dict("If", this);
-    Dict.unrecognized(
-        [&](llvm::StringRef) { F.HasUnrecognizedCondition = true; });
+    Dict.unrecognized([&](Located<std::string>, Node &) {
+      F.HasUnrecognizedCondition = true;
+      return true; // Emit a warning for the unrecognized key.
+    });
     Dict.handle("PathMatch", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.PathMatch = std::move(*Values);
@@ -82,6 +85,28 @@ private:
     Dict.parse(N);
   }
 
+  void parse(Fragment::ClangTidyBlock &F, Node &N) {
+    DictParser Dict("ClangTidy", this);
+    Dict.handle("Add", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.Add = std::move(*Values);
+    });
+    Dict.handle("Remove", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.Remove = std::move(*Values);
+    });
+    Dict.handle("CheckOptions", [&](Node &N) {
+      DictParser CheckOptDict("CheckOptions", this);
+      CheckOptDict.unrecognized([&](Located<std::string> &&Key, Node &Val) {
+        if (auto Value = scalarValue(Val, *Key))
+          F.CheckOptions.emplace_back(std::move(Key), std::move(*Value));
+        return false; // Don't emit a warning
+      });
+      CheckOptDict.parse(N);
+    });
+    Dict.parse(N);
+  }
+
   void parse(Fragment::IndexBlock &F, Node &N) {
     DictParser Dict("Index", this);
     Dict.handle("Background",
@@ -94,7 +119,7 @@ private:
   class DictParser {
     llvm::StringRef Description;
     std::vector<std::pair<llvm::StringRef, std::function<void(Node &)>>> Keys;
-    std::function<void(llvm::StringRef)> Unknown;
+    std::function<bool(Located<std::string>, Node &)> UnknownHandler;
     Parser *Outer;
 
   public:
@@ -112,10 +137,12 @@ private:
       Keys.emplace_back(Key, std::move(Parse));
     }
 
-    // Fallback is called when a Key is not matched by any handle().
-    // A warning is also automatically emitted.
-    void unrecognized(std::function<void(llvm::StringRef)> Fallback) {
-      Unknown = std::move(Fallback);
+    // Handler is called when a Key is not matched by any handle().
+    // If this is unset or the Handler returns true, a warning is emitted for
+    // the unknown key.
+    void
+    unrecognized(std::function<bool(Located<std::string>, Node &)> Handler) {
+      UnknownHandler = std::move(Handler);
     }
 
     // Process a mapping node and call handlers for each key/value pair.
@@ -135,6 +162,8 @@ private:
           continue;
         if (!Seen.insert(**Key).second) {
           Outer->warning("Duplicate key " + **Key + " is ignored", *K);
+          if (auto *Value = KV.getValue())
+            Value->skip();
           continue;
         }
         auto *Value = KV.getValue();
@@ -149,9 +178,12 @@ private:
           }
         }
         if (!Matched) {
-          Outer->warning("Unknown " + Description + " key " + **Key, *K);
-          if (Unknown)
-            Unknown(**Key);
+          bool Warn = !UnknownHandler;
+          if (UnknownHandler)
+            Warn = UnknownHandler(
+                Located<std::string>(**Key, K->getSourceRange()), *Value);
+          if (Warn)
+            Outer->warning("Unknown " + Description + " key " + **Key, *K);
         }
       }
     }
