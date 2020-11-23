@@ -38,4 +38,4 @@ v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[2,0]
 v_accvgpr_write a2, execz
 // CHECK: error: source operand must be either a VGPR or an inline constant
 // CHECK-NEXT:{{^}}v_accvgpr_write a2, execz
-// CHECK-NEXT:{{^}}                         ^
+// CHECK-NEXT:{{^}}                    ^
