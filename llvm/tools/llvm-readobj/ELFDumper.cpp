@@ -126,9 +126,9 @@ template <class ELFT> struct RelSymbol {
 /// the size, entity size and virtual address are different entries in arbitrary
 /// order (DT_REL, DT_RELSZ, DT_RELENT for example).
 struct DynRegionInfo {
-  DynRegionInfo(StringRef ObjName) : FileName(ObjName) {}
-  DynRegionInfo(const uint8_t *A, uint64_t S, uint64_t ES, StringRef ObjName)
-      : Addr(A), Size(S), EntSize(ES), FileName(ObjName) {}
+  DynRegionInfo(const Binary &Owner) : Obj(&Owner) {}
+  DynRegionInfo(const Binary &Owner, const uint8_t *A, uint64_t S, uint64_t ES)
+      : Addr(A), Size(S), EntSize(ES), Obj(&Owner) {}
 
   /// Address in current address space.
   const uint8_t *Addr = nullptr;
@@ -137,8 +137,8 @@ struct DynRegionInfo {
   /// Size of each entity in the region.
   uint64_t EntSize = 0;
 
-  /// Name of the file. Used for error reporting.
-  StringRef FileName;
+  /// Owner object. Used for error reporting.
+  const Binary *Obj;
   /// Error prefix. Used for error reporting to provide more information.
   std::string Context;
   /// Region size name. Used for error reporting.
@@ -151,6 +151,22 @@ struct DynRegionInfo {
     const Type *Start = reinterpret_cast<const Type *>(Addr);
     if (!Start)
       return {Start, Start};
+
+    const uint64_t Offset =
+        Addr - (const uint8_t *)Obj->getMemoryBufferRef().getBufferStart();
+    const uint64_t ObjSize = Obj->getMemoryBufferRef().getBufferSize();
+
+    if (Size > ObjSize - Offset) {
+      reportWarning(
+          createError("unable to read data at 0x" + Twine::utohexstr(Offset) +
+                      " of size 0x" + Twine::utohexstr(Size) + " (" +
+                      SizePrintName +
+                      "): it goes past the end of the file of size 0x" +
+                      Twine::utohexstr(ObjSize)),
+          Obj->getFileName());
+      return {Start, Start};
+    }
+
     if (EntSize == sizeof(Type) && (Size % EntSize == 0))
       return {Start, Start + (Size / EntSize)};
 
@@ -165,7 +181,7 @@ struct DynRegionInfo {
           (" or " + EntSizePrintName + " (0x" + Twine::utohexstr(EntSize) + ")")
               .str();
 
-    reportWarning(createError(Msg.c_str()), FileName);
+    reportWarning(createError(Msg.c_str()), Obj->getFileName());
     return {Start, Start};
   }
 };
@@ -296,8 +312,7 @@ private:
                          ") + size (0x" + Twine::utohexstr(Size) +
                          ") is greater than the file size (0x" +
                          Twine::utohexstr(Obj.getBufSize()) + ")");
-    return DynRegionInfo(Obj.base() + Offset, Size, EntSize,
-                         ObjF.getFileName());
+    return DynRegionInfo(ObjF, Obj.base() + Offset, Size, EntSize);
   }
 
   void printAttributes();
@@ -1927,7 +1942,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   if (!DynamicPhdr && !DynamicSec)
     return;
 
-  DynRegionInfo FromPhdr(ObjF.getFileName());
+  DynRegionInfo FromPhdr(ObjF);
   bool IsPhdrTableValid = false;
   if (DynamicPhdr) {
     // Use cantFail(), because p_offset/p_filesz fields of a PT_DYNAMIC are
@@ -1943,7 +1958,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   // Ignore sh_entsize and use the expected value for entry size explicitly.
   // This allows us to dump dynamic sections with a broken sh_entsize
   // field.
-  DynRegionInfo FromSec(ObjF.getFileName());
+  DynRegionInfo FromSec(ObjF);
   bool IsSecTableValid = false;
   if (DynamicSec) {
     Expected<DynRegionInfo> RegOrErr =
@@ -2005,10 +2020,8 @@ void ELFDumper<ELFT>::loadDynamicTable() {
 template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
-    : ObjDumper(Writer), ObjF(O), Obj(*O.getELFFile()),
-      DynRelRegion(O.getFileName()), DynRelaRegion(O.getFileName()),
-      DynRelrRegion(O.getFileName()), DynPLTRelRegion(O.getFileName()),
-      DynamicTable(O.getFileName()) {
+    : ObjDumper(Writer), ObjF(O), Obj(*O.getELFFile()), DynRelRegion(O),
+      DynRelaRegion(O), DynRelrRegion(O), DynPLTRelRegion(O), DynamicTable(O) {
   // Dumper reports all non-critical errors as warnings.
   // It does not print the same warning more than once.
   WarningHandler = [this](const Twine &Msg) {
@@ -2125,7 +2138,7 @@ void ELFDumper<ELFT>::parseDynamicTable() {
       // If we can't map the DT_SYMTAB value to an address (e.g. when there are
       // no program headers), we ignore its value.
       if (const uint8_t *VA = toMappedAddr(Dyn.getTag(), Dyn.getPtr())) {
-        DynSymFromTable.emplace(ObjF.getFileName());
+        DynSymFromTable.emplace(ObjF);
         DynSymFromTable->Addr = VA;
         DynSymFromTable->EntSize = sizeof(Elf_Sym);
         DynSymFromTable->EntSizePrintName = "";
