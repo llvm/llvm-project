@@ -23,8 +23,20 @@ class MemoryBuffer;
 
 namespace elfabi {
 
+enum class ELFTarget { ELF32LE, ELF32BE, ELF64LE, ELF64BE };
+
 /// Attempt to read a binary ELF file from a MemoryBuffer.
 Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf);
+
+/// Attempt to write a binary ELF stub.
+/// This function determines appropriate ELFType using the passed ELFTarget and
+/// then writes a binary ELF stub to a specified file path.
+///
+/// @param FilePath File path for writing the ELF binary.
+/// @param Stub Source ELFStub to generate a binary ELF stub from.
+/// @param OutputFormat Target ELFType to write binary as.
+Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
+                      ELFTarget OutputFormat);
 
 } // end namespace elfabi
 } // end namespace llvm
