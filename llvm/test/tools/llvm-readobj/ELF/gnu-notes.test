@@ -112,7 +112,7 @@ ProgramHeaders:
 ## Test tools report an error if a note section has an invalid offset
 ## that goes past the end of file.
 
-# RUN: yaml2obj --docnum=2 %s -o %t2.so
+# RUN: yaml2obj --docnum=2 -DSHOFFSET=0xffff0000 %s -o %t2.so
 # RUN: not llvm-readelf --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 # RUN: not llvm-readobj --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 
@@ -127,32 +127,22 @@ Sections:
   - Name:     .note
     Type:     SHT_NOTE
     Notes:    []
-    ShOffset: 0xffff0000
+    ShOffset: [[SHOFFSET=<none>]]
+    ShSize:   [[SHSIZE=<none>]]
 
 ## Test tools report an error if a note section has invalid size
 ## that goes past the end of file.
 
-# RUN: yaml2obj --docnum=3 %s -o %t3.so
+# RUN: yaml2obj --docnum=2 -DSHSIZE=0xffff0000 %s -o %t3.so
 # RUN: not llvm-readelf --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 # RUN: not llvm-readobj --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 
 # ERR2: error: '[[FILE]]': SHT_NOTE section [index 1] has invalid offset (0x40) or size (0xffff0000)
 
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name:   .note
-    Type:   SHT_NOTE
-    ShSize: 0xffff0000
-    Notes:  []
-
 ## Test tools report an error if a note program header has an invalid offset that
 ## goes past the end of file.
 
-# RUN: yaml2obj --docnum=4 %s -o %t4.so
+# RUN: yaml2obj --docnum=3 -DPHOFFSET=0xffff0000 %s -o %t4.so
 # RUN: not llvm-readelf --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 # RUN: not llvm-readobj --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 
@@ -164,32 +154,18 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_CORE
 ProgramHeaders:
-  - Type:   PT_NOTE
-    Offset: 0xffff0000
+  - Type:     PT_NOTE
+    Offset:   [[PHOFFSET=<none>]]
+    FileSize: [[PHFILESIZE=<none>]]
 
 ## Test tools report an error if a note program header has an invalid size that
 ## goes past the end of file.
 
-# RUN: yaml2obj --docnum=5 %s -o %t5.so
+# RUN: yaml2obj --docnum=3 -DPHFILESIZE=0xffff0000 %s -o %t5.so
 # RUN: not llvm-readelf --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so  %s --check-prefix=ERR4
 # RUN: not llvm-readobj --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4
 
-# ERR4: error: '[[FILE]]': PT_NOTE header has invalid offset (0x78) or size (0xffff0000)
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_CORE
-Sections:
-  - Name:  .note
-    Type:  SHT_NOTE
-    Notes: []
-ProgramHeaders:
-  - Type:     PT_NOTE
-    FileSize: 0xffff0000
-    FirstSec: .note
-    LastSec:  .note
+# ERR4: error: '[[FILE]]': PT_NOTE header has invalid offset (0x0) or size (0xffff0000)
 
 ## Check we report a warning when we are unable to locate the PT_NOTE
 ## segment because of broken program headers.
