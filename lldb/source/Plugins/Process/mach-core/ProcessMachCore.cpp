@@ -61,9 +61,10 @@ void ProcessMachCore::Terminate() {
 
 lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
                                                 ListenerSP listener_sp,
-                                                const FileSpec *crash_file) {
+                                                const FileSpec *crash_file,
+                                                bool can_connect) {
   lldb::ProcessSP process_sp;
-  if (crash_file) {
+  if (crash_file && !can_connect) {
     const size_t header_size = sizeof(llvm::MachO::mach_header);
     auto data_sp = FileSystem::Instance().CreateDataBuffer(
         crash_file->GetPath(), header_size, 0);
