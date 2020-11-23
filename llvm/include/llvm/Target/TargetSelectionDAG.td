@@ -440,8 +440,8 @@ def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
 def fmul       : SDNode<"ISD::FMUL"       , SDTFPBinOp, [SDNPCommutative]>;
 def fdiv       : SDNode<"ISD::FDIV"       , SDTFPBinOp>;
 def frem       : SDNode<"ISD::FREM"       , SDTFPBinOp>;
-def fma        : SDNode<"ISD::FMA"        , SDTFPTernaryOp>;
-def fmad       : SDNode<"ISD::FMAD"       , SDTFPTernaryOp>;
+def fma        : SDNode<"ISD::FMA"        , SDTFPTernaryOp, [SDNPCommutative]>;
+def fmad       : SDNode<"ISD::FMAD"       , SDTFPTernaryOp, [SDNPCommutative]>;
 def fabs       : SDNode<"ISD::FABS"       , SDTFPUnaryOp>;
 def fminnum    : SDNode<"ISD::FMINNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
@@ -498,7 +498,7 @@ def strict_fdiv       : SDNode<"ISD::STRICT_FDIV",
 def strict_frem       : SDNode<"ISD::STRICT_FREM",
                                SDTFPBinOp, [SDNPHasChain]>;
 def strict_fma        : SDNode<"ISD::STRICT_FMA",
-                               SDTFPTernaryOp, [SDNPHasChain]>;
+                               SDTFPTernaryOp, [SDNPHasChain, SDNPCommutative]>;
 def strict_fsqrt      : SDNode<"ISD::STRICT_FSQRT",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fsin       : SDNode<"ISD::STRICT_FSIN",
