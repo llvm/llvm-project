@@ -74,6 +74,7 @@ void registerTestLinalgCodegenStrategy();
 void registerTestLinalgFusionTransforms();
 void registerTestLinalgGreedyFusion();
 void registerTestLinalgHoisting();
+void registerTestLinalgTileAndFuseSequencePass();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
@@ -141,6 +142,7 @@ void registerTestPasses() {
   test::registerTestLinalgFusionTransforms();
   test::registerTestLinalgGreedyFusion();
   test::registerTestLinalgHoisting();
+  test::registerTestLinalgTileAndFuseSequencePass();
   test::registerTestLinalgTransforms();
   test::registerTestLivenessPass();
   test::registerTestLoopFusion();

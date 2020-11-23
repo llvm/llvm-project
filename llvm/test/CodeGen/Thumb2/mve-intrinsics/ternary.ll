@@ -82,7 +82,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vfmsq_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-LABEL: test_vfmsq_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vfms.f16 q0, q1, q2
+; CHECK-NEXT:    vfms.f16 q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = fneg <8 x half> %c
@@ -93,7 +93,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vfmsq_f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test_vfmsq_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vfms.f32 q0, q1, q2
+; CHECK-NEXT:    vfms.f32 q0, q2, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = fneg <4 x float> %c

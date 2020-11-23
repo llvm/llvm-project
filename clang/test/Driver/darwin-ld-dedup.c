@@ -29,7 +29,7 @@
 // Do *not* add -no_deduplicate when no -O option is specified and this is just a link
 // (since we can't imply -O0)
 // RUN: rm -f %t.o %t.bin
-// RUN: %clang -target x86_64-apple-darwin10 -c -o %t.o %s
+// RUN: yaml2obj %S/Inputs/empty-x86_64-apple-darwin.yaml -o %t.o
 // RUN: %clang -target x86_64-apple-darwin10 %t.o -### -mlinker-version=262 \
 // RUN:   -o %t.bin 2>&1 | FileCheck -check-prefix=LINK_DEDUP %s
 // RUN: %clang -target x86_64-apple-darwin10 %t.o -### -mlinker-version=262 \
