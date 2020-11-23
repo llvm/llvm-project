@@ -3430,6 +3430,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                        Known, getMachineFunction());
     break;
 
+  case ISD::FREEZE: {
+    SDValue Value = Op.getOperand(0);
+    if (!Value.isUndef()) {
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    }
+    break;
+  }
   default:
     if (Opcode < ISD::BUILTIN_OP_END)
       break;
