@@ -140,7 +140,6 @@ clang_target_link_libraries(clangDaemon
   clangTooling
   clangToolingCore
   clangToolingInclusions
-  clangToolingRefactoring
   clangToolingSyntax
   )
 
