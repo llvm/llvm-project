@@ -100,7 +100,8 @@ int CheckPR4515[PR4515b==0?1:-1];
 // PR7911
 extern enum PR7911T PR7911V; // expected-warning{{ISO C forbids forward references to 'enum' types}}
 void PR7911F() {
-  switch (PR7911V); // expected-error {{statement requires expression of integer type}}
+  switch (PR7911V) // expected-error {{statement requires expression of integer type}}
+    ;
 }
 
 char test5[__has_feature(enumerator_attributes) ? 1 : -1];
