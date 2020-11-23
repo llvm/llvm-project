@@ -212,9 +212,6 @@ public:
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
 
-  /// The thread model to use
-  std::string ThreadModel;
-
   /// If not an empty string, trap intrinsics are lowered to calls to this
   /// function instead of to trap instructions.
   std::string TrapFuncName;

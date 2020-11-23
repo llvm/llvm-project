@@ -403,6 +403,12 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__STDCPP_DEFAULT_NEW_ALIGNMENT__",
                         Twine(TI.getNewAlign() / TI.getCharWidth()) +
                             TI.getTypeConstantSuffix(TI.getSizeType()));
+
+    //   -- __STDCPP_­THREADS__
+    //      Defined, and has the value integer literal 1, if and only if a
+    //      program can have more than one thread of execution.
+    if (LangOpts.getThreadModel() == LangOptions::ThreadModelKind::POSIX)
+      Builder.defineMacro("__STDCPP_THREADS__", "1");
   }
 
   // In C11 these are environment macros. In C++11 they are only defined
