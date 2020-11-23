@@ -68,8 +68,9 @@ MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
   SmallVector<NamedAttribute, 8> attributes;
   attributes.reserve(numElements);
   for (intptr_t i = 0; i < numElements; ++i)
-    attributes.emplace_back(Identifier::get(elements[i].name, unwrap(ctx)),
-                            unwrap(elements[i].attribute));
+    attributes.emplace_back(
+        Identifier::get(unwrap(elements[i].name), unwrap(ctx)),
+        unwrap(elements[i].attribute));
   return wrap(DictionaryAttr::get(attributes, unwrap(ctx)));
 }
 
@@ -81,7 +82,7 @@ MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
                                                 intptr_t pos) {
   NamedAttribute attribute =
       unwrap(attr).cast<DictionaryAttr>().getValue()[pos];
-  return {attribute.first.c_str(), wrap(attribute.second)};
+  return {wrap(attribute.first.strref()), wrap(attribute.second)};
 }
 
 MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,

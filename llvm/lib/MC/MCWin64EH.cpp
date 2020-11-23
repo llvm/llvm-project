@@ -238,8 +238,9 @@ void llvm::Win64EH::UnwindEmitter::Emit(MCStreamer &Streamer) const {
   }
 }
 
-void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(
-    MCStreamer &Streamer, WinEH::FrameInfo *info) const {
+void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
+                                                  WinEH::FrameInfo *info,
+                                                  bool HandlerData) const {
   // Switch sections (the static function above is meant to be called from
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
@@ -1107,8 +1108,9 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
   }
 }
 
-void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(
-    MCStreamer &Streamer, WinEH::FrameInfo *info) const {
+void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
+                                                       WinEH::FrameInfo *info,
+                                                       bool HandlerData) const {
   // Called if there's an .seh_handlerdata directive before the end of the
   // function. This forces writing the xdata record already here - and
   // in this case, the function isn't actually ended already, but the xdata
@@ -1123,5 +1125,5 @@ void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
   Streamer.SwitchSection(XData);
-  ARM64EmitUnwindInfo(Streamer, info, false);
+  ARM64EmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
 }

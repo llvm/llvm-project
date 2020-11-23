@@ -5,5 +5,8 @@ static_library("APINotes") {
     "//clang/lib/Basic",
     "//llvm/lib/Support",
   ]
-  sources = [ "APINotesYAMLCompiler.cpp" ]
+  sources = [
+    "APINotesTypes.cpp",
+    "APINotesYAMLCompiler.cpp",
+  ]
 }

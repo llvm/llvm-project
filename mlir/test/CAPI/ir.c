@@ -30,23 +30,27 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   MlirValue iv = mlirBlockGetArgument(loopBody, 0);
   MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
   MlirValue funcArg1 = mlirBlockGetArgument(funcBody, 1);
-  MlirType f32Type = mlirTypeParseGet(ctx, "f32");
+  MlirType f32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("f32"));
 
-  MlirOperationState loadLHSState = mlirOperationStateGet("std.load", location);
+  MlirOperationState loadLHSState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.load"), location);
   MlirValue loadLHSOperands[] = {funcArg0, iv};
   mlirOperationStateAddOperands(&loadLHSState, 2, loadLHSOperands);
   mlirOperationStateAddResults(&loadLHSState, 1, &f32Type);
   MlirOperation loadLHS = mlirOperationCreate(&loadLHSState);
   mlirBlockAppendOwnedOperation(loopBody, loadLHS);
 
-  MlirOperationState loadRHSState = mlirOperationStateGet("std.load", location);
+  MlirOperationState loadRHSState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.load"), location);
   MlirValue loadRHSOperands[] = {funcArg1, iv};
   mlirOperationStateAddOperands(&loadRHSState, 2, loadRHSOperands);
   mlirOperationStateAddResults(&loadRHSState, 1, &f32Type);
   MlirOperation loadRHS = mlirOperationCreate(&loadRHSState);
   mlirBlockAppendOwnedOperation(loopBody, loadRHS);
 
-  MlirOperationState addState = mlirOperationStateGet("std.addf", location);
+  MlirOperationState addState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.addf"), location);
   MlirValue addOperands[] = {mlirOperationGetResult(loadLHS, 0),
                              mlirOperationGetResult(loadRHS, 0)};
   mlirOperationStateAddOperands(&addState, 2, addOperands);
@@ -54,13 +58,15 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   MlirOperation add = mlirOperationCreate(&addState);
   mlirBlockAppendOwnedOperation(loopBody, add);
 
-  MlirOperationState storeState = mlirOperationStateGet("std.store", location);
+  MlirOperationState storeState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.store"), location);
   MlirValue storeOperands[] = {mlirOperationGetResult(add, 0), funcArg0, iv};
   mlirOperationStateAddOperands(&storeState, 3, storeOperands);
   MlirOperation store = mlirOperationCreate(&storeState);
   mlirBlockAppendOwnedOperation(loopBody, store);
 
-  MlirOperationState yieldState = mlirOperationStateGet("scf.yield", location);
+  MlirOperationState yieldState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("scf.yield"), location);
   MlirOperation yield = mlirOperationCreate(&yieldState);
   mlirBlockAppendOwnedOperation(loopBody, yield);
 }
@@ -69,31 +75,39 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirModule moduleOp = mlirModuleCreateEmpty(location);
   MlirBlock moduleBody = mlirModuleGetBody(moduleOp);
 
-  MlirType memrefType = mlirTypeParseGet(ctx, "memref<?xf32>");
+  MlirType memrefType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("memref<?xf32>"));
   MlirType funcBodyArgTypes[] = {memrefType, memrefType};
   MlirRegion funcBodyRegion = mlirRegionCreate();
   MlirBlock funcBody = mlirBlockCreate(
       sizeof(funcBodyArgTypes) / sizeof(MlirType), funcBodyArgTypes);
   mlirRegionAppendOwnedBlock(funcBodyRegion, funcBody);
 
-  MlirAttribute funcTypeAttr =
-      mlirAttributeParseGet(ctx, "(memref<?xf32>, memref<?xf32>) -> ()");
-  MlirAttribute funcNameAttr = mlirAttributeParseGet(ctx, "\"add\"");
+  MlirAttribute funcTypeAttr = mlirAttributeParseGet(
+      ctx,
+      mlirStringRefCreateFromCString("(memref<?xf32>, memref<?xf32>) -> ()"));
+  MlirAttribute funcNameAttr =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
-      mlirNamedAttributeGet("type", funcTypeAttr),
-      mlirNamedAttributeGet("sym_name", funcNameAttr)};
-  MlirOperationState funcState = mlirOperationStateGet("func", location);
+      mlirNamedAttributeGet(mlirStringRefCreateFromCString("type"),
+                            funcTypeAttr),
+      mlirNamedAttributeGet(mlirStringRefCreateFromCString("sym_name"),
+                            funcNameAttr)};
+  MlirOperationState funcState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
   mlirOperationStateAddOwnedRegions(&funcState, 1, &funcBodyRegion);
   MlirOperation func = mlirOperationCreate(&funcState);
   mlirBlockInsertOwnedOperation(moduleBody, 0, func);
 
-  MlirType indexType = mlirTypeParseGet(ctx, "index");
-  MlirAttribute indexZeroLiteral = mlirAttributeParseGet(ctx, "0 : index");
-  MlirNamedAttribute indexZeroValueAttr =
-      mlirNamedAttributeGet("value", indexZeroLiteral);
-  MlirOperationState constZeroState =
-      mlirOperationStateGet("std.constant", location);
+  MlirType indexType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("index"));
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
+      mlirStringRefCreateFromCString("value"), indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
@@ -102,7 +116,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
   MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
   MlirValue dimOperands[] = {funcArg0, constZeroValue};
-  MlirOperationState dimState = mlirOperationStateGet("std.dim", location);
+  MlirOperationState dimState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.dim"), location);
   mlirOperationStateAddOperands(&dimState, 2, dimOperands);
   mlirOperationStateAddResults(&dimState, 1, &indexType);
   MlirOperation dim = mlirOperationCreate(&dimState);
@@ -112,11 +127,12 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirBlock loopBody = mlirBlockCreate(/*nArgs=*/1, &indexType);
   mlirRegionAppendOwnedBlock(loopBodyRegion, loopBody);
 
-  MlirAttribute indexOneLiteral = mlirAttributeParseGet(ctx, "1 : index");
-  MlirNamedAttribute indexOneValueAttr =
-      mlirNamedAttributeGet("value", indexOneLiteral);
-  MlirOperationState constOneState =
-      mlirOperationStateGet("std.constant", location);
+  MlirAttribute indexOneLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
+  MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
+      mlirStringRefCreateFromCString("value"), indexOneLiteral);
+  MlirOperationState constOneState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
   mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
   MlirOperation constOne = mlirOperationCreate(&constOneState);
@@ -125,7 +141,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirValue dimValue = mlirOperationGetResult(dim, 0);
   MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
   MlirValue loopOperands[] = {constZeroValue, dimValue, constOneValue};
-  MlirOperationState loopState = mlirOperationStateGet("scf.for", location);
+  MlirOperationState loopState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("scf.for"), location);
   mlirOperationStateAddOperands(&loopState, 3, loopOperands);
   mlirOperationStateAddOwnedRegions(&loopState, 1, &loopBodyRegion);
   MlirOperation loop = mlirOperationCreate(&loopState);
@@ -133,7 +150,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
 
   populateLoopBody(ctx, loopBody, location, funcBody);
 
-  MlirOperationState retState = mlirOperationStateGet("std.return", location);
+  MlirOperationState retState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.return"), location);
   MlirOperation ret = mlirOperationCreate(&retState);
   mlirBlockAppendOwnedOperation(funcBody, ret);
 
@@ -280,9 +298,9 @@ int collectStats(MlirOperation operation) {
   return 0;
 }
 
-static void printToStderr(const char *str, intptr_t len, void *userData) {
+static void printToStderr(MlirStringRef str, void *userData) {
   (void)userData;
-  fwrite(str, 1, len, stderr);
+  fwrite(str.data, 1, str.length, stderr);
 }
 
 static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
@@ -366,8 +384,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Get a non-existing attribute and assert that it is null (sanity).
   fprintf(stderr, "does_not_exist is null: %d\n",
-          mlirAttributeIsNull(
-              mlirOperationGetAttributeByName(operation, "does_not_exist")));
+          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+              operation, mlirStringRefCreateFromCString("does_not_exist"))));
   // CHECK: does_not_exist is null: 1
 
   // Get result 0 and its type.
@@ -386,7 +404,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // CHECK: Result 0 type: index
 
   // Set a custom attribute.
-  mlirOperationSetAttributeByName(operation, "custom_attr",
+  mlirOperationSetAttributeByName(operation,
+                                  mlirStringRefCreateFromCString("custom_attr"),
                                   mlirBoolAttrGet(ctx, 1));
   fprintf(stderr, "Op with set attr: ");
   mlirOperationPrint(operation, printToStderr, NULL);
@@ -395,12 +414,14 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Remove the attribute.
   fprintf(stderr, "Remove attr: %d\n",
-          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+          mlirOperationRemoveAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Remove attr again: %d\n",
-          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+          mlirOperationRemoveAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Removed attr is null: %d\n",
-          mlirAttributeIsNull(
-              mlirOperationGetAttributeByName(operation, "custom_attr")));
+          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr"))));
   // CHECK: Remove attr: 1
   // CHECK: Remove attr again: 0
   // CHECK: Removed attr is null: 1
@@ -409,7 +430,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   int64_t eltsShape[] = {4};
   int32_t eltsData[] = {1, 2, 3, 4};
   mlirOperationSetAttributeByName(
-      operation, "elts",
+      operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
           mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32)), 4,
           eltsData));
@@ -421,7 +442,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Op print with all flags: ");
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // clang-format on
 
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -450,7 +473,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
 
   MlirRegion owningRegion = mlirRegionCreate();
   MlirBlock nullBlock = mlirRegionGetFirstBlock(owningRegion);
-  MlirOperationState state = mlirOperationStateGet("insertion.order.test", loc);
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("insertion.order.test"), loc);
   mlirOperationStateAddOwnedRegions(&state, 1, &owningRegion);
   MlirOperation op = mlirOperationCreate(&state);
   MlirRegion region = mlirOperationGetRegion(op, 0);
@@ -471,13 +495,20 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   mlirRegionInsertOwnedBlockAfter(region, nullBlock, block1);
   mlirRegionInsertOwnedBlockAfter(region, block3, block4);
 
-  MlirOperationState op1State = mlirOperationStateGet("dummy.op1", loc);
-  MlirOperationState op2State = mlirOperationStateGet("dummy.op2", loc);
-  MlirOperationState op3State = mlirOperationStateGet("dummy.op3", loc);
-  MlirOperationState op4State = mlirOperationStateGet("dummy.op4", loc);
-  MlirOperationState op5State = mlirOperationStateGet("dummy.op5", loc);
-  MlirOperationState op6State = mlirOperationStateGet("dummy.op6", loc);
-  MlirOperationState op7State = mlirOperationStateGet("dummy.op7", loc);
+  MlirOperationState op1State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op1"), loc);
+  MlirOperationState op2State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op2"), loc);
+  MlirOperationState op3State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op3"), loc);
+  MlirOperationState op4State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op4"), loc);
+  MlirOperationState op5State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op5"), loc);
+  MlirOperationState op6State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op6"), loc);
+  MlirOperationState op7State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op7"), loc);
   MlirOperation op1 = mlirOperationCreate(&op1State);
   MlirOperation op2 = mlirOperationCreate(&op2State);
   MlirOperation op3 = mlirOperationCreate(&op3State);

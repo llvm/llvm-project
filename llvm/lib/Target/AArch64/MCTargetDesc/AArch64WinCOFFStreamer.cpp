@@ -28,6 +28,7 @@ public:
 
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
+  void EmitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
   void finishImpl() override;
 };
 
@@ -36,7 +37,12 @@ void AArch64WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section!
-  EHStreamer.EmitUnwindInfo(*this, getCurrentWinFrameInfo());
+  EHStreamer.EmitUnwindInfo(*this, getCurrentWinFrameInfo(),
+                            /* HandlerData = */ true);
+}
+
+void AArch64WinCOFFStreamer::EmitWindowsUnwindTables(WinEH::FrameInfo *Frame) {
+  EHStreamer.EmitUnwindInfo(*this, Frame, /* HandlerData = */ false);
 }
 
 void AArch64WinCOFFStreamer::EmitWindowsUnwindTables() {
