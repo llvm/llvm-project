@@ -26,6 +26,7 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include <string>
 #include <vector>
@@ -58,10 +59,22 @@ struct Config {
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
+  /// Describes an external index configuration.
+  struct ExternalIndexSpec {
+    enum { File, Server } Kind;
+    /// This is one of:
+    /// - Address of a clangd-index-server, in the form of "ip:port".
+    /// - Absolute path to an index produced by clangd-indexer.
+    std::string Location;
+    /// Absolute path to source root this index is associated with, uses
+    /// forward-slashes.
+    std::string MountPoint;
+  };
   /// Controls background-index behavior.
   struct {
     /// Whether this TU should be indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
+    llvm::Optional<ExternalIndexSpec> External;
   } Index;
 
   /// Style of the codebase.
