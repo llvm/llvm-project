@@ -514,20 +514,13 @@ IntInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   return BitsInit::get(NewBits);
 }
 
-CodeInit *CodeInit::get(StringRef V, const SMLoc &Loc) {
-  static StringSet<BumpPtrAllocator &> ThePool(Allocator);
+CodeInit *CodeInit::get(StringRef V) {
+  static StringMap<CodeInit*, BumpPtrAllocator &> ThePool(Allocator);
 
-  CodeInitsConstructed++;
-
-  // Unlike StringMap, StringSet doesn't accept empty keys.
-  if (V.empty())
-    return new (Allocator) CodeInit("", Loc);
-
-  // Location tracking prevents us from de-duping CodeInits as we're never
-  // called with the same string and same location twice. However, we can at
-  // least de-dupe the strings for a modest saving.
-  auto &Entry = *ThePool.insert(V).first;
-  return new(Allocator) CodeInit(Entry.getKey(), Loc);
+  auto &Entry = *ThePool.insert(std::make_pair(V, nullptr)).first;
+  if (!Entry.second)
+    Entry.second = new(Allocator) CodeInit(Entry.getKey());
+  return Entry.second;
 }
 
 StringInit *StringInit::get(StringRef V) {
@@ -543,7 +536,7 @@ Init *StringInit::convertInitializerTo(RecTy *Ty) const {
   if (isa<StringRecTy>(Ty))
     return const_cast<StringInit *>(this);
   if (isa<CodeRecTy>(Ty))
-    return CodeInit::get(getValue(), SMLoc());
+    return CodeInit::get(getValue());
 
   return nullptr;
 }
@@ -1046,8 +1039,6 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       default: llvm_unreachable("unhandled comparison");
       }
       return BitInit::get(Result);
-////      bool Equal = LHSs->getValue() == RHSs->getValue();
-////      return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
     }
 
     // Finally, !eq and !ne can be used with records.
@@ -2170,7 +2161,7 @@ bool RecordVal::setValue(Init *V) {
   return false;
 }
 
-// This version of setValue takes an source location and resets the
+// This version of setValue takes a source location and resets the
 // location in the RecordVal.
 bool RecordVal::setValue(Init *V, SMLoc NewLoc) {
   Loc = NewLoc;
@@ -2349,6 +2340,14 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
       OS << Val;
 
   return OS << "}\n";
+}
+
+SMLoc Record::getFieldLoc(StringRef FieldName) const {
+  const RecordVal *R = getValue(FieldName);
+  if (!R)
+    PrintFatalError(getLoc(), "Record `" + getName() +
+      "' does not have a field named `" + FieldName + "'!\n");
+  return R->getLoc();
 }
 
 Init *Record::getValueInit(StringRef FieldName) const {
