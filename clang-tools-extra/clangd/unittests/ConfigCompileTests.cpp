@@ -255,6 +255,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   };
 
   auto BarPath = testPath("foo/bar.h", llvm::sys::path::Style::posix);
+  BarPath = llvm::sys::path::convert_to_slash(BarPath);
   Parm.Path = BarPath;
   // Non-absolute MountPoint without a directory raises an error.
   Frag = GetFrag("", "foo");
@@ -268,6 +269,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   ASSERT_FALSE(Conf.Index.External);
 
   auto FooPath = testPath("foo/", llvm::sys::path::Style::posix);
+  FooPath = llvm::sys::path::convert_to_slash(FooPath);
   // Ok when relative.
   Frag = GetFrag(testRoot(), "foo/");
   compileAndApply();
@@ -291,6 +293,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
 
   // File outside MountPoint, no index.
   auto BazPath = testPath("bar/baz.h", llvm::sys::path::Style::posix);
+  BazPath = llvm::sys::path::convert_to_slash(BazPath);
   Parm.Path = BazPath;
   Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
@@ -299,6 +302,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
 
   // File under MountPoint, index should be set.
   BazPath = testPath("foo/baz.h", llvm::sys::path::Style::posix);
+  BazPath = llvm::sys::path::convert_to_slash(BazPath);
   Parm.Path = BazPath;
   Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
