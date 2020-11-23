@@ -1,6 +1,6 @@
-; RUN: opt %s -dot-callgraph -callgraph-multigraph -callgraph-dot-filename-prefix=%t 2>/dev/null
+; RUN: opt -enable-new-pm=0 %s -dot-callgraph -callgraph-multigraph -callgraph-dot-filename-prefix=%t -disable-output
 ; RUN: FileCheck %s -input-file=%t.callgraph.dot --check-prefix=CHECK-MULTIGRAPH
-; RUN: opt %s -dot-callgraph -callgraph-dot-filename-prefix=%t 2>/dev/null
+; RUN: opt -enable-new-pm=0 %s -dot-callgraph -callgraph-dot-filename-prefix=%t -disable-output
 ; RUN: FileCheck %s -input-file=%t.callgraph.dot --check-prefix=CHECK
 
 ; CHECK-MULTIGRAPH: {external caller}
