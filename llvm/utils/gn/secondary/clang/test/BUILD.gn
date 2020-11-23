@@ -168,6 +168,7 @@ group("test") {
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/tools/yaml2obj",
   ]
   if (clang_enable_arcmt) {
     deps += [

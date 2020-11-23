@@ -125,6 +125,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-readobj
     llvm-symbolizer
     opt
+    yaml2obj
     )
 
   if(TARGET llvm-lto)

@@ -64,7 +64,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
     'apinotes-test', 'c-index-test', 'clang-diff', 'clang-format',
-    'clang-tblgen', 'opt', 'llvm-ifs',
+    'clang-tblgen', 'opt', 'llvm-ifs', 'yaml2obj',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
 ]
