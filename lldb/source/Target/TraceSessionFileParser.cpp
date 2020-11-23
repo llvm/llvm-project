@@ -127,7 +127,8 @@ TraceSessionFileParser::ParseProcess(const JSONProcess &process) {
 
   ProcessSP process_sp = target_sp->CreateProcess(
       /*listener*/ nullptr, "trace",
-      /*crash_file*/ nullptr);
+      /*crash_file*/ nullptr,
+      /*can_connect*/ false);
 
   process_sp->SetID(static_cast<lldb::pid_t>(process.pid));
 

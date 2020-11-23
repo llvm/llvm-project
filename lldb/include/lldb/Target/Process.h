@@ -537,7 +537,8 @@ public:
   static lldb::ProcessSP FindPlugin(lldb::TargetSP target_sp,
                                     llvm::StringRef plugin_name,
                                     lldb::ListenerSP listener_sp,
-                                    const FileSpec *crash_file_path);
+                                    const FileSpec *crash_file_path,
+                                    bool can_connect);
 
   /// Static function that can be used with the \b host function
   /// Host::StartMonitoringChildProcess ().

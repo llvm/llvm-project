@@ -401,7 +401,8 @@ protected:
           target_sp->AppendExecutableSearchPaths(core_file_dir);
 
           ProcessSP process_sp(target_sp->CreateProcess(
-              GetDebugger().GetListener(), llvm::StringRef(), &core_file));
+              GetDebugger().GetListener(), llvm::StringRef(), &core_file,
+              false));
 
           if (process_sp) {
             // Seems weird that we Launch a core file, but that is what we

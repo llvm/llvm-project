@@ -500,7 +500,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
           // The darwin always currently uses the GDB remote debugger plug-in
           // so even when debugging locally we are debugging remotely!
           process_sp = target->CreateProcess(launch_info.GetListener(),
-                                             "gdb-remote", nullptr);
+                                             "gdb-remote", nullptr, true);
 
           if (process_sp) {
             error = process_sp->ConnectRemote(connect_url.c_str());
@@ -587,7 +587,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
           // so even when debugging locally we are debugging remotely!
           process_sp =
               target->CreateProcess(attach_info.GetListenerForProcess(debugger),
-                                    "gdb-remote", nullptr);
+                                    "gdb-remote", nullptr, true);
           if (process_sp) {
             error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success()) {

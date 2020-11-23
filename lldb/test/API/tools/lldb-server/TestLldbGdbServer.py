@@ -433,7 +433,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             "Advanced Vector Extensions" in register_sets)
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["netbsd"])
     @llgs_test
     def test_qRegisterInfo_contains_avx_registers_llgs(self):
         self.init_llgs_test()
@@ -585,9 +585,15 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
 
+            # Skip erraneous (unsupported) registers.
+            # TODO: remove this once we make unsupported registers disappear.
+            if p_response.startswith("E") and len(p_response) == 3:
+                continue
+
             if "dynamic_size_dwarf_expr_bytes" in reg_info:
                 self.updateRegInfoBitsize(reg_info, byte_order)
-            self.assertEqual(len(p_response), 2 * int(reg_info["bitsize"]) / 8)
+            self.assertEqual(len(p_response), 2 * int(reg_info["bitsize"]) / 8,
+                             reg_info)
 
             # Increment loop
             reg_index += 1
@@ -601,7 +607,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["netbsd"])
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
             self):
@@ -619,7 +625,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["netbsd"])
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
             self):

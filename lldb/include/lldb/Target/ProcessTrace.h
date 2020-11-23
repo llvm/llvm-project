@@ -77,7 +77,8 @@ protected:
 private:
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
-                                        const FileSpec *crash_file_path);
+                                        const FileSpec *crash_file_path,
+                                        bool can_connect);
 };
 
 } // namespace lldb_private
