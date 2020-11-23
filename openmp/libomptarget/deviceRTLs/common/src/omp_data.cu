@@ -42,6 +42,7 @@ EXTERN uint64_t const constexpr omptarget_nvptx_device_State_size =
                                  OMP_STATE_COUNT>[MAX_SM]);
 
 // Initialized to point to omptarget_nvptx_device_State_size bytes by plugin
+__attribute__((section(".data")))
 DEVICE
 omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
     *omptarget_nvptx_device_State;
