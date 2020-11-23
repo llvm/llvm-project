@@ -48,6 +48,10 @@ private:
   NestedNameSpecifierLoc QualifierToRemove;
   // The name following QualifierToRemove.
   llvm::StringRef Name;
+  // If valid, the insertion point for "using" statement must come after this.
+  // This is relevant when the type is defined in the main file, to make sure
+  // the type/function is already defined at the point where "using" is added.
+  SourceLocation MustInsertAfterLoc;
 };
 REGISTER_TWEAK(AddUsing)
 
@@ -120,7 +124,8 @@ struct InsertionPointData {
 llvm::Expected<InsertionPointData>
 findInsertionPoint(const Tweak::Selection &Inputs,
                    const NestedNameSpecifierLoc &QualifierToRemove,
-                   const llvm::StringRef Name) {
+                   const llvm::StringRef Name,
+                   const SourceLocation MustInsertAfterLoc) {
   auto &SM = Inputs.AST->getSourceManager();
 
   // Search for all using decls that affect this point in file. We need this for
@@ -131,6 +136,11 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   UsingFinder(Usings, &Inputs.ASTSelection.commonAncestor()->getDeclContext(),
               SM)
       .TraverseAST(Inputs.AST->getASTContext());
+
+  auto IsValidPoint = [&](const SourceLocation Loc) {
+    return MustInsertAfterLoc.isInvalid() ||
+           SM.isBeforeInTranslationUnit(MustInsertAfterLoc, Loc);
+  };
 
   bool AlwaysFullyQualify = true;
   for (auto &U : Usings) {
@@ -149,12 +159,13 @@ findInsertionPoint(const Tweak::Selection &Inputs,
         U->getName() == Name) {
       return InsertionPointData();
     }
+
     // Insertion point will be before last UsingDecl that affects cursor
     // position. For most cases this should stick with the local convention of
     // add using inside or outside namespace.
     LastUsingLoc = U->getUsingLoc();
   }
-  if (LastUsingLoc.isValid()) {
+  if (LastUsingLoc.isValid() && IsValidPoint(LastUsingLoc)) {
     InsertionPointData Out;
     Out.Loc = LastUsingLoc;
     Out.AlwaysFullyQualify = AlwaysFullyQualify;
@@ -175,7 +186,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
       return error("Namespace with no {");
     }
-    if (!Tok->endLocation().isMacroID()) {
+    if (!Tok->endLocation().isMacroID() && IsValidPoint(Tok->endLocation())) {
       InsertionPointData Out;
       Out.Loc = Tok->endLocation();
       Out.Suffix = "\n";
@@ -183,15 +194,17 @@ findInsertionPoint(const Tweak::Selection &Inputs,
     }
   }
   // No using, no namespace, no idea where to insert. Try above the first
-  // top level decl.
+  // top level decl after MustInsertAfterLoc.
   auto TLDs = Inputs.AST->getLocalTopLevelDecls();
-  if (TLDs.empty()) {
-    return error("Cannot find place to insert \"using\"");
+  for (const auto &TLD : TLDs) {
+    if (!IsValidPoint(TLD->getBeginLoc()))
+      continue;
+    InsertionPointData Out;
+    Out.Loc = SM.getExpansionLoc(TLD->getBeginLoc());
+    Out.Suffix = "\n\n";
+    return Out;
   }
-  InsertionPointData Out;
-  Out.Loc = SM.getExpansionLoc(TLDs[0]->getBeginLoc());
-  Out.Suffix = "\n\n";
-  return Out;
+  return error("Cannot find place to insert \"using\"");
 }
 
 bool isNamespaceForbidden(const Tweak::Selection &Inputs,
@@ -254,6 +267,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
     if (auto *II = D->getDecl()->getIdentifier()) {
       QualifierToRemove = D->getQualifierLoc();
       Name = II->getName();
+      MustInsertAfterLoc = D->getDecl()->getBeginLoc();
     }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
     if (auto E = T->getAs<ElaboratedTypeLoc>()) {
@@ -271,6 +285,15 @@ bool AddUsing::prepare(const Selection &Inputs) {
           QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
       if (!Name.consume_front(QualifierToRemoveStr))
         return false; // What's spelled doesn't match the qualifier.
+
+      if (const auto *ET = E.getTypePtr()) {
+        if (const auto *TDT =
+                dyn_cast<TypedefType>(ET->getNamedType().getTypePtr())) {
+          MustInsertAfterLoc = TDT->getDecl()->getBeginLoc();
+        } else if (auto *TD = ET->getAsTagDecl()) {
+          MustInsertAfterLoc = TD->getBeginLoc();
+        }
+      }
     }
   }
 
@@ -312,7 +335,8 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
     return std::move(Err);
   }
 
-  auto InsertionPoint = findInsertionPoint(Inputs, QualifierToRemove, Name);
+  auto InsertionPoint =
+      findInsertionPoint(Inputs, QualifierToRemove, Name, MustInsertAfterLoc);
   if (!InsertionPoint) {
     return InsertionPoint.takeError();
   }
