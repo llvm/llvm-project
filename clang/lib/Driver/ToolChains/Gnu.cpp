@@ -2672,7 +2672,13 @@ void Generic_GCC::printVerboseInfo(raw_ostream &OS) const {
 }
 
 bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
-  return getArch() == llvm::Triple::x86_64;
+  switch (getArch()) {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::x86_64:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool Generic_GCC::isPICDefault() const {
