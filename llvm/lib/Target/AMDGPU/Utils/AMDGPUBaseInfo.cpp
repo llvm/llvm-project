@@ -1120,7 +1120,7 @@ bool isGFX10(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
-  return isGFX10(STI) || isGFX11(STI);
+  return isGFX10(STI) || isGFX11Plus(STI);
 }
 
 bool isGFX11(const MCSubtargetInfo &STI) {
@@ -1478,11 +1478,11 @@ bool isArgPassedInSGPR(const Argument *A) {
 }
 
 static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
-  return isGCN3Encoding(ST) || isGFX10(ST);
+  return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
 static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9(ST) || isGFX10(ST);
+  return isGFX9Plus(ST);
 }
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
