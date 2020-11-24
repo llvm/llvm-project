@@ -1446,20 +1446,20 @@ static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
   OS << Buffer;
 }
 
+static bool isTruePredicate(const Record *Rec) {
+  return Rec->isSubClassOf("MCSchedPredicate") &&
+         Rec->getValueAsDef("Pred")->isSubClassOf("MCTrue");
+}
+
 static void emitPredicates(const CodeGenSchedTransition &T,
                            const CodeGenSchedClass &SC, PredicateExpander &PE,
                            raw_ostream &OS) {
   std::string Buffer;
   raw_string_ostream SS(Buffer);
 
-  auto IsTruePredicate = [](const Record *Rec) {
-    return Rec->isSubClassOf("MCSchedPredicate") &&
-           Rec->getValueAsDef("Pred")->isSubClassOf("MCTrue");
-  };
-
   // If not all predicates are MCTrue, then we need an if-stmt.
   unsigned NumNonTruePreds =
-      T.PredTerm.size() - count_if(T.PredTerm, IsTruePredicate);
+      T.PredTerm.size() - count_if(T.PredTerm, isTruePredicate);
 
   SS.indent(PE.getIndentLevel() * 2);
 
@@ -1471,7 +1471,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
 
     for (const Record *Rec : T.PredTerm) {
       // Skip predicates that evaluate to "true".
-      if (IsTruePredicate(Rec))
+      if (isTruePredicate(Rec))
         continue;
 
       if (FirstNonTruePredicate) {
@@ -1559,6 +1559,11 @@ static void collectProcessorIndices(const CodeGenSchedClass &SC,
   }
 }
 
+static bool isAlwaysTrue(const CodeGenSchedTransition &T) {
+  return llvm::all_of(T.PredTerm,
+                      [](const Record *R) { return isTruePredicate(R); });
+}
+
 void SubtargetEmitter::emitSchedModelHelpersImpl(
     raw_ostream &OS, bool OnlyExpandMCInstPredicates) {
   IdxVec VariantClasses;
@@ -1601,6 +1606,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
       }
 
       // Now emit transitions associated with processor PI.
+      const CodeGenSchedTransition *FinalT = nullptr;
       for (const CodeGenSchedTransition &T : SC.Transitions) {
         if (PI != 0 && !count(T.ProcIndices, PI))
           continue;
@@ -1615,9 +1621,17 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
         if (OnlyExpandMCInstPredicates && !hasMCSchedPredicates(T))
           continue;
 
+        // If transition is folded to 'return X' it should be the last one.
+        if (isAlwaysTrue(T)) {
+          FinalT = &T;
+          continue;
+        }
         PE.setIndentLevel(3);
         emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
       }
+      if (FinalT)
+        emitPredicates(*FinalT, SchedModels.getSchedClass(FinalT->ToClassIdx),
+                       PE, OS);
 
       OS << "    }\n";
 
