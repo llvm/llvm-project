@@ -3209,6 +3209,19 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // 0 - X --> X if X is 0 or the minimum signed value.
       return N1;
     }
+
+    // Convert 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y)).
+    if (N1->getOpcode() == ISD::ABS &&
+        !TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+      SDValue X = N1->getOperand(0);
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, DL, VT, X,
+                      DAG.getConstant(BitWidth - 1, DL, getShiftAmountTy(VT)));
+      SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, Shift);
+      AddToWorklist(Shift.getNode());
+      AddToWorklist(Xor.getNode());
+      return DAG.getNode(ISD::SUB, DL, VT, Shift, Xor);
+    }
   }
 
   // Canonicalize (sub -1, x) -> ~x, i.e. (xor x, -1)
