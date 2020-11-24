@@ -126,6 +126,10 @@ static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
 
+static cl::opt<unsigned>
+MaxVFOption("slp-max-vf", cl::init(0), cl::Hidden,
+    cl::desc("Maximum SLP vectorization factor (0=unlimited)"));
+
 static cl::opt<int>
 MaxStoreLookup("slp-max-store-lookup", cl::init(32), cl::Hidden,
     cl::desc("Maximum depth of the lookup for consecutive stores."));
@@ -739,6 +743,12 @@ public:
   // \returns minimum vector register size as set by cl::opt.
   unsigned getMinVecRegSize() const {
     return MinVecRegSize;
+  }
+
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
+    unsigned MaxVF = MaxVFOption.getNumOccurrences() ?
+      MaxVFOption : TTI->getMaximumVF(ElemWidth, Opcode);
+    return MaxVF ? MaxVF : UINT_MAX;
   }
 
   /// Check if homogeneous aggregate is isomorphic to some VectorType.
@@ -6191,6 +6201,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
+  MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
       return OptimizationRemarkMissed(SV_NAME, "SmallVF", I0)
@@ -7633,7 +7644,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
-  unsigned MaxVecRegSize = R.getMaxVecRegSize();
 
   bool HaveVectorizedPhiNodes = true;
   while (HaveVectorizedPhiNodes) {
@@ -7660,27 +7670,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       // Look for the next elements with the same type.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
-      Type *EltTy = (*IncIt)->getType();
-
-      assert(EltTy->isSized() &&
-             "Instructions should all be sized at this point");
-      TypeSize EltTS = DL->getTypeSizeInBits(EltTy);
-      if (EltTS.isScalable()) {
-        // For now, just ignore vectorizing scalable types.
-        ++IncIt;
-        continue;
-      }
-
-      unsigned EltSize = EltTS.getFixedSize();
-      unsigned MaxNumElts = MaxVecRegSize / EltSize;
-      if (MaxNumElts < 2) {
-        ++IncIt;
-        continue;
-      }
-
       while (SameTypeIt != E &&
-             (*SameTypeIt)->getType() == EltTy &&
-             static_cast<unsigned>(SameTypeIt - IncIt) < MaxNumElts) {
+             (*SameTypeIt)->getType() == (*IncIt)->getType()) {
         VisitedInstrs.insert(*SameTypeIt);
         ++SameTypeIt;
       }
