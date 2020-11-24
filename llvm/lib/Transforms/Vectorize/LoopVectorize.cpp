@@ -5119,7 +5119,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
         addToWorklistIfAllowed(&I);
 
       // True if all users of Ptr are memory accesses that have Ptr as their
-      // pointer operand.
+      // pointer operand.  Since loops are assumed to be in LCSSA form, this
+      // disallows uses outside the loop as well.
       auto UsersAreMemAccesses =
           llvm::all_of(Ptr->users(), [&](User *U) -> bool {
             return getLoadStorePointerOperand(U) == Ptr;
