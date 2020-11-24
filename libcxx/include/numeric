@@ -336,7 +336,7 @@ _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
     for (; __first != __last; ++__first, (void) ++__result) {
         __init = __b(__init, *__first);
         *__result = __init;
-        }
+    }
     return __result;
 }
 
@@ -349,7 +349,7 @@ _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
         *__result++ = __init;
         if (++__first != __last)
             return _VSTD::inclusive_scan(__first, __last, __result, __b, __init);
-        }
+    }
 
     return __result;
 }
@@ -404,7 +404,7 @@ _OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator 
         *__result++ = __init;
         if (++__first != __last)
             return _VSTD::transform_inclusive_scan(__first, __last, __result, __b, __u, __init);
-        }
+    }
 
     return __result;
 }
@@ -467,9 +467,9 @@ struct __ct_abs<_Result, _Source, true> {
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     _Result operator()(_Source __t) const noexcept
     {
-    if (__t >= 0) return __t;
-    if (__t == numeric_limits<_Source>::min()) return -static_cast<_Result>(__t);
-    return -__t;
+        if (__t >= 0) return __t;
+        if (__t == numeric_limits<_Source>::min()) return -static_cast<_Result>(__t);
+        return -__t;
     }
 };
 
