@@ -44,6 +44,7 @@ unittest("ClangdTests") {
     "ASTTests.cpp",
     "Annotations.cpp",
     "BackgroundIndexTests.cpp",
+    "CallHierarchyTests.cpp",
     "CanonicalIncludesTests.cpp",
     "ClangdLSPServerTests.cpp",
     "ClangdTests.cpp",
