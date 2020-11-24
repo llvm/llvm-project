@@ -650,7 +650,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        for (auto &Ty : {v2s32, v4s32, v2s64, v16s8, v8s16}) {
+        for (auto &Ty : {v2s32, v4s32, v2s64, v2p0, v16s8, v8s16}) {
           if (DstTy == Ty)
             return true;
         }
