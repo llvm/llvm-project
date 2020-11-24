@@ -41,15 +41,15 @@
 
 #define MAX_ISA_NAME_SIZE 1024
 
-typedef enum {none, off, on, any} mode_t;
+typedef enum {none, off, on, any} feature_mode_t;
 
 typedef struct {
   const char *isa_name;
   bool supported_v2;
   bool sramecc_supported;
-  mode_t sramecc_v2;
+  feature_mode_t sramecc_v2;
   bool xnack_supported;
-  mode_t xnack_v2;
+  feature_mode_t xnack_v2;
 } isa_features_t;
 
 /* Features supported based on https://llvm.org/docs/AMDGPUUsage.html . */
@@ -87,7 +87,7 @@ static isa_features_t isa_features[] = {
   {"amdgcn-amd-amdhsa--gfx1033", false,     false,     none,       false,     none},
 };
 
-static int isa_features_size =
+static size_t isa_features_size =
     sizeof(isa_features) / sizeof(isa_features[0]);
 
 bool has_sub_string(const char *string, const char *sub) {
@@ -102,7 +102,7 @@ bool get_expected_isa_name(unsigned code_object_version, const char *isa_name,
 
   char *token = strtok(tokenized_isa_name, ":");
   isa_features_t *isa = NULL;
-  for (unsigned i = 0; i < isa_features_size; i++) {
+  for (size_t i = 0; i < isa_features_size; i++) {
     if (strncmp(token, isa_features[i].isa_name, MAX_ISA_NAME_SIZE) == 0) {
       isa = &isa_features[i];
       break;
@@ -115,8 +115,8 @@ bool get_expected_isa_name(unsigned code_object_version, const char *isa_name,
 
   strncpy(expected_isa_name, isa->isa_name, MAX_ISA_NAME_SIZE);
 
-  mode_t sramecc = any;
-  mode_t xnack = any;
+  feature_mode_t sramecc = any;
+  feature_mode_t xnack = any;
 
   token = strtok(NULL, ":");
   while (token != NULL) {
@@ -203,8 +203,6 @@ bool get_expected_isa_name(unsigned code_object_version, const char *isa_name,
 
 void check_isa_name(amd_comgr_data_t data, const char *input_isa_name,
                     const char *expected_isa_name) {
-  size_t expected_size = strlen(expected_isa_name) + 1;
-
   size_t size;
   char *isa_name = NULL;
   amd_comgr_status_t status;

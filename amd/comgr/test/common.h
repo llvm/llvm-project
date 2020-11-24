@@ -42,13 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __GNUC__
-#define NORETURN _Noreturn
-#else
-#define NORETURN __declspec(noreturn)
-#endif
-
-NORETURN void fail(const char *format, ...) {
+void fail(const char *format, ...) {
   va_list ap;
   va_start(ap, format);
 

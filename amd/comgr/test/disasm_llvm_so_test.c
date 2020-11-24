@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     // File 2
     status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataIn2);
     checkError(status, "amd_comgr_create_data_2");
-    status = amd_comgr_set_data(dataIn2, size1, buf2);
+    status = amd_comgr_set_data(dataIn2, size2, buf2);
     checkError(status, "amd_comgr_set_data");
     status = amd_comgr_set_data_name(dataIn2, "DO_IN2");
     checkError(status, "amd_comgr_set_data_name_2");
