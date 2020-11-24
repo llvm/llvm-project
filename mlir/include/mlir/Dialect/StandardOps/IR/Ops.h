@@ -33,16 +33,13 @@ class Builder;
 class FuncOp;
 class OpBuilder;
 
-/// Auxiliary range data structure to unpack the offset, size and stride
-/// operands of the SubViewOp / SubTensorOp into a list of triples.
-/// Such a list of triple is sometimes more convenient to manipulate.
-struct Range {
-  Value offset;
-  Value size;
-  Value stride;
-};
-
 raw_ostream &operator<<(raw_ostream &os, Range &range);
+
+/// Return the list of Range (i.e. offset, size, stride). Each Range
+/// entry contains either the dynamic value or a ConstantIndexOp constructed
+/// with `b` at location `loc`.
+SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
+                                        OpBuilder &b, Location loc);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
