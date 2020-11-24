@@ -6,6 +6,7 @@
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "astProvider": true,
+# CHECK-NEXT:      "callHierarchyProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
 # CHECK-NEXT:      "completionProvider": {
 # CHECK-NEXT:        "allCommitCharacters": [

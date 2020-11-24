@@ -674,8 +674,31 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
 void ClangdServer::resolveTypeHierarchy(
     TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
     Callback<llvm::Optional<TypeHierarchyItem>> CB) {
-  clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
-  CB(Item);
+  WorkScheduler.run(
+      "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
+        clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
+        CB(Item);
+      });
+}
+
+void ClangdServer::prepareCallHierarchy(
+    PathRef File, Position Pos, Callback<std::vector<CallHierarchyItem>> CB) {
+  auto Action = [File = File.str(), Pos,
+                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::prepareCallHierarchy(InpAST->AST, Pos, File));
+  };
+  WorkScheduler.runWithAST("Call Hierarchy", File, std::move(Action));
+}
+
+void ClangdServer::incomingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyIncomingCall>> CB) {
+  WorkScheduler.run("Incoming Calls", "",
+                    [CB = std::move(CB), Item, this]() mutable {
+                      CB(clangd::incomingCalls(Item, Index));
+                    });
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

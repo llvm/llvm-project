@@ -38,6 +38,8 @@ class TestProcessConnect(GDBRemoteTestBase):
         """Test the gdb-remote command in synchronous mode"""
         try:
             self.dbg.SetAsync(False)
+            self.expect("platform select remote-gdb-server",
+                        substrs=['Platform: remote-gdb-server', 'Connected: no'])
             self.expect("process connect connect://" +
                         self.server.get_connect_address(),
                         substrs=['Process', 'stopped'])
@@ -50,6 +52,8 @@ class TestProcessConnect(GDBRemoteTestBase):
         """Test the gdb-remote command in asynchronous mode"""
         try:
             self.dbg.SetAsync(True)
+            self.expect("platform select remote-gdb-server",
+                        substrs=['Platform: remote-gdb-server', 'Connected: no'])
             self.expect("process connect connect://" +
                         self.server.get_connect_address(),
                         matching=False,
