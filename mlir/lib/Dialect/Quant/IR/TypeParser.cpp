@@ -416,7 +416,7 @@ static void printUniformQuantizedPerAxisType(UniformQuantizedPerAxisType type,
 static void printCalibratedQuantizedType(CalibratedQuantizedType type,
                                          DialectAsmPrinter &out) {
   out << "calibrated<" << type.getExpressedType();
-  out << "<" << type.getMin() << ", " << type.getMax() << ">";
+  out << "<" << type.getMin() << ":" << type.getMax() << ">";
   out << ">";
 }
 
