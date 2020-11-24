@@ -1106,6 +1106,56 @@ func @sum_reduction(%arga: tensor<10x20xf32>, %argx: tensor<f32>) -> tensor<f32>
   return %0 : tensor<f32>
 }
 
+#trait_scale = {
+  indexing_maps = [
+    affine_map<(i,j) -> (i,j)>,  // A
+    affine_map<(i,j) -> (i,j)>   // X (out)
+  ],
+  sparse = [
+    [ "D", "S" ],  // A
+    [ "D", "D" ]   // X
+  ],
+  iterator_types = ["parallel", "parallel"],
+  doc = "X(i,j) = A(i,j) * SCALE"
+}
+
+// CHECK-LABEL:   func @scale(
+// CHECK-SAME:                %[[VAL_0:.*]]: tensor<?x?xf64>) -> tensor<?x?xf64> {
+// CHECK:           %[[VAL_1:.*]] = constant 2.000000e+00 : f64
+// CHECK:           %[[VAL_2:.*]] = constant 999 : index
+// CHECK:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf64>
+// CHECK:           %[[VAL_6:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64>
+// CHECK:           %[[VAL_9:.*]] = alloca(%[[VAL_2]]) : memref<?xf64>
+// CHECK:           %[[VAL_10:.*]] = alloca(%[[VAL_5]], %[[VAL_8]]) : memref<?x?xf64>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_12:.*]] = load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
+// CHECK:             %[[VAL_13:.*]] = addi %[[VAL_11]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_14:.*]] = load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex>
+// CHECK:             scf.for %[[VAL_15:.*]] = %[[VAL_12]] to %[[VAL_14]] step %[[VAL_4]] {
+// CHECK:               %[[VAL_16:.*]] = load %[[VAL_7]]{{\[}}%[[VAL_15]]] : memref<?xindex>
+// CHECK:               %[[VAL_17:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_15]]] : memref<?xf64>
+// CHECK:               %[[VAL_18:.*]] = mulf %[[VAL_17]], %[[VAL_1]] : f64
+// CHECK:               store %[[VAL_18]], %[[VAL_10]]{{\[}}%[[VAL_11]], %[[VAL_16]]] : memref<?x?xf64>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[VAL_19:.*]] = tensor_load %[[VAL_10]] : memref<?x?xf64>
+// CHECK:           return %[[VAL_19]] : tensor<?x?xf64>
+// CHECK:         }
+func @scale(%arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
+  %0 = constant 2.0 : f64
+  %1 = linalg.generic #trait_scale
+    ins(%arga: tensor<?x?xf64>) {
+      ^bb(%a: f64):
+        %2 = mulf %a, %0  : f64
+        linalg.yield %2 : f64
+  } -> tensor<?x?xf64>
+  return %1 : tensor<?x?xf64>
+}
+
 #trait_sampled_dense_dense = {
   indexing_maps = [
     affine_map<(i,j,k) -> (i,j)>,  // S
