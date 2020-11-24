@@ -33,8 +33,8 @@ void LazySymbol::fetchArchiveMember() { file->fetch(sym); }
 
 // Returns a symbol for an error message.
 std::string lld::toString(const Symbol &sym) {
-  if (Optional<std::string> s = demangleItanium(sym.getName()))
-    return *s;
+  if (config->demangle)
+    return demangleItanium(sym.getName());
   return std::string(sym.getName());
 }
 

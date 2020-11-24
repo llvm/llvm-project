@@ -320,11 +320,10 @@ parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
 }
 
 /// Verify that a particular offset/size/stride static attribute is well-formed.
-template <typename OpType>
 static LogicalResult verifyOpWithOffsetSizesAndStridesPart(
-    OpType op, StringRef name, unsigned expectedNumElements, StringRef attrName,
-    ArrayAttr attr, llvm::function_ref<bool(int64_t)> isDynamic,
-    ValueRange values) {
+    OffsetSizeAndStrideOpInterface op, StringRef name,
+    unsigned expectedNumElements, StringRef attrName, ArrayAttr attr,
+    llvm::function_ref<bool(int64_t)> isDynamic, ValueRange values) {
   /// Check static and dynamic offsets/sizes/strides breakdown.
   if (attr.size() != expectedNumElements)
     return op.emitError("expected ")
@@ -345,27 +344,6 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
         return a.cast<IntegerAttr>().getInt();
       }));
-}
-
-/// Verify static attributes offsets/sizes/strides.
-template <typename OpType>
-static LogicalResult verifyOpWithOffsetSizesAndStrides(OpType op) {
-  unsigned srcRank = op.getSourceRank();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "offset", srcRank, op.getStaticOffsetsAttrName(),
-          op.static_offsets(), ShapedType::isDynamicStrideOrOffset,
-          op.offsets())))
-    return failure();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "size", srcRank, op.getStaticSizesAttrName(), op.static_sizes(),
-          ShapedType::isDynamic, op.sizes())))
-    return failure();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "stride", srcRank, op.getStaticStridesAttrName(),
-          op.static_strides(), ShapedType::isDynamicStrideOrOffset,
-          op.strides())))
-    return failure();
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2481,10 +2459,7 @@ static void print(OpAsmPrinter &p, MemRefReinterpretCastOp op) {
                                 ShapedType::isDynamicStrideOrOffset);
   p.printOptionalAttrDict(
       op.getAttrs(),
-      /*elidedAttrs=*/{MemRefReinterpretCastOp::getOperandSegmentSizeAttr(),
-                       MemRefReinterpretCastOp::getStaticOffsetsAttrName(),
-                       MemRefReinterpretCastOp::getStaticSizesAttrName(),
-                       MemRefReinterpretCastOp::getStaticStridesAttrName()});
+      /*elidedAttrs=*/MemRefReinterpretCastOp::getSpecialAttrNames());
   p << ": " << op.source().getType() << " to " << op.getType();
 }
 
@@ -2508,7 +2483,8 @@ static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
   if (parser.parseKeyword("to") || parser.parseKeyword("offset") ||
       parser.parseColon() ||
       parseListOfOperandsOrIntegers(
-          parser, result, MemRefReinterpretCastOp::getStaticOffsetsAttrName(),
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
           ShapedType::kDynamicStrideOrOffset, offset) ||
       parser.parseComma())
     return failure();
@@ -2517,7 +2493,8 @@ static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> sizes;
   if (parser.parseKeyword("sizes") || parser.parseColon() ||
       parseListOfOperandsOrIntegers(
-          parser, result, MemRefReinterpretCastOp::getStaticSizesAttrName(),
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
           ShapedType::kDynamicSize, sizes) ||
       parser.parseComma())
     return failure();
@@ -2526,7 +2503,8 @@ static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> strides;
   if (parser.parseKeyword("strides") || parser.parseColon() ||
       parseListOfOperandsOrIntegers(
-          parser, result, MemRefReinterpretCastOp::getStaticStridesAttrName(),
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
           ShapedType::kDynamicStrideOrOffset, strides))
     return failure();
 
@@ -2563,23 +2541,6 @@ static LogicalResult verify(MemRefReinterpretCastOp op) {
   if (srcType.getElementType() != resultType.getElementType())
     return op.emitError("different element types specified for source type ")
            << srcType << " and result memref type " << resultType;
-
-  // Verify that dynamic and static offset/sizes/strides arguments/attributes
-  // are consistent.
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "offset", 1, op.getStaticOffsetsAttrName(), op.static_offsets(),
-          ShapedType::isDynamicStrideOrOffset, op.offsets())))
-    return failure();
-  unsigned resultRank = op.getResultRank();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "size", resultRank, op.getStaticSizesAttrName(),
-          op.static_sizes(), ShapedType::isDynamic, op.sizes())))
-    return failure();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "stride", resultRank, op.getStaticStridesAttrName(),
-          op.static_strides(), ShapedType::isDynamicStrideOrOffset,
-          op.strides())))
-    return failure();
 
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto &en :
@@ -3289,13 +3250,16 @@ static ParseResult parseOpWithOffsetsSizesAndStrides(
   if (parseExtraOperand && parseExtraOperand(parser, dstInfo))
     return failure();
   if (parseListOfOperandsOrIntegers(
-          parser, result, OpType::getStaticOffsetsAttrName(),
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
           ShapedType::kDynamicStrideOrOffset, offsetsInfo) ||
-      parseListOfOperandsOrIntegers(parser, result,
-                                    OpType::getStaticSizesAttrName(),
-                                    ShapedType::kDynamicSize, sizesInfo) ||
       parseListOfOperandsOrIntegers(
-          parser, result, OpType::getStaticStridesAttrName(),
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
+          ShapedType::kDynamicSize, sizesInfo) ||
+      parseListOfOperandsOrIntegers(
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
           ShapedType::kDynamicStrideOrOffset, stridesInfo))
     return failure();
 
@@ -3532,7 +3496,6 @@ static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
   llvm_unreachable("unexpected subview verification result");
 }
 
-
 /// Verifier for SubViewOp.
 static LogicalResult verify(SubViewOp op) {
   MemRefType baseType = op.getSourceType();
@@ -3547,9 +3510,6 @@ static LogicalResult verify(SubViewOp op) {
   // Verify that the base memref type has a strided layout map.
   if (!isStrided(baseType))
     return op.emitError("base type ") << baseType << " is not strided";
-
-  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
-    return failure();
 
   // Verify result type against inferred type.
   auto expectedType = SubViewOp::inferResultType(
@@ -3569,11 +3529,13 @@ raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
 /// Return the list of Range (i.e. offset, size, stride). Each Range
 /// entry contains either the dynamic value or a ConstantIndexOp constructed
 /// with `b` at location `loc`.
-template <typename OpType>
-static SmallVector<Range, 8> getOrCreateRangesImpl(OpType op, OpBuilder &b,
-                                                   Location loc) {
+SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
+                                              OpBuilder &b, Location loc) {
+  std::array<unsigned, 3> ranks = op.getArrayAttrRanks();
+  assert(ranks[0] == ranks[1] && "expected offset and sizes of equal ranks");
+  assert(ranks[1] == ranks[2] && "expected sizes and strides of equal ranks");
   SmallVector<Range, 8> res;
-  unsigned rank = op.getSourceRank();
+  unsigned rank = ranks[0];
   res.reserve(rank);
   for (unsigned idx = 0; idx < rank; ++idx) {
     Value offset =
@@ -3590,10 +3552,6 @@ static SmallVector<Range, 8> getOrCreateRangesImpl(OpType op, OpBuilder &b,
     res.emplace_back(Range{offset, size, stride});
   }
   return res;
-}
-
-SmallVector<Range, 8> SubViewOp::getOrCreateRanges(OpBuilder &b, Location loc) {
-  return ::getOrCreateRangesImpl(*this, b, loc);
 }
 
 namespace {
@@ -3658,20 +3616,22 @@ public:
     SmallVector<Value, 8> newOffsets(op.offsets());
     SmallVector<int64_t, 8> newStaticOffsets =
         extractFromI64ArrayAttr(op.static_offsets());
-    assert(newStaticOffsets.size() == op.getSourceRank());
+    std::array<unsigned, 3> ranks = op.getArrayAttrRanks();
+    (void)ranks;
+    assert(newStaticOffsets.size() == ranks[0]);
     canonicalizeSubViewPart(newOffsets, newStaticOffsets,
                             ShapedType::isDynamicStrideOrOffset);
 
     SmallVector<Value, 8> newSizes(op.sizes());
     SmallVector<int64_t, 8> newStaticSizes =
         extractFromI64ArrayAttr(op.static_sizes());
-    assert(newStaticOffsets.size() == op.getSourceRank());
+    assert(newStaticSizes.size() == ranks[1]);
     canonicalizeSubViewPart(newSizes, newStaticSizes, ShapedType::isDynamic);
 
     SmallVector<Value, 8> newStrides(op.strides());
     SmallVector<int64_t, 8> newStaticStrides =
         extractFromI64ArrayAttr(op.static_strides());
-    assert(newStaticOffsets.size() == op.getSourceRank());
+    assert(newStaticStrides.size() == ranks[2]);
     canonicalizeSubViewPart(newStrides, newStaticStrides,
                             ShapedType::isDynamicStrideOrOffset);
 
@@ -3890,7 +3850,8 @@ void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
-  if (getResultRank() == 0 && getSourceRank() == 0)
+  if (getResult().getType().cast<ShapedType>().getRank() == 0 &&
+      source().getType().cast<ShapedType>().getRank() == 0)
     return getViewSource();
 
   return {};
@@ -3961,16 +3922,8 @@ void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
-SmallVector<Range, 8> SubTensorOp::getOrCreateRanges(OpBuilder &b,
-                                                     Location loc) {
-  return ::getOrCreateRangesImpl(*this, b, loc);
-}
-
 /// Verifier for SubTensorOp.
 static LogicalResult verify(SubTensorOp op) {
-  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
-    return failure();
-
   // Verify result type against inferred type.
   auto expectedType = SubTensorOp::inferResultType(
       op.getSourceType(), extractFromI64ArrayAttr(op.static_offsets()),
@@ -4039,15 +3992,8 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
-SmallVector<Range, 8> SubTensorInsertOp::getOrCreateRanges(OpBuilder &b,
-                                                           Location loc) {
-  return ::getOrCreateRangesImpl(*this, b, loc);
-}
-
 /// Verifier for SubViewOp.
 static LogicalResult verify(SubTensorInsertOp op) {
-  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
-    return failure();
   if (op.getType() != op.dest().getType())
     return op.emitError("expected result type to be ") << op.dest().getType();
   return success();
