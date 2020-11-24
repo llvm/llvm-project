@@ -69,7 +69,7 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
  * a string.
  */
 struct MlirNamedAttribute {
-  const char *name;
+  MlirStringRef name;
   MlirAttribute attribute;
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
@@ -143,10 +143,8 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
 //===----------------------------------------------------------------------===//
 
 /// Creates an File/Line/Column location owned by the given context.
-MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(MlirContext context,
-                                                           const char *filename,
-                                                           unsigned line,
-                                                           unsigned col);
+MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
+    MlirContext context, MlirStringRef filename, unsigned line, unsigned col);
 
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
@@ -170,7 +168,7 @@ MLIR_CAPI_EXPORTED MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /// Parses a module from the string and transfers ownership to the caller.
 MLIR_CAPI_EXPORTED MlirModule mlirModuleCreateParse(MlirContext context,
-                                                    const char *module);
+                                                    MlirStringRef module);
 
 /// Gets the context that a module was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirModuleGetContext(MlirModule module);
@@ -202,7 +200,7 @@ MLIR_CAPI_EXPORTED MlirOperation mlirModuleGetOperation(MlirModule module);
  * mlirOperationState* functions instead.
  */
 struct MlirOperationState {
-  const char *name;
+  MlirStringRef name;
   MlirLocation location;
   intptr_t nResults;
   MlirType *results;
@@ -218,16 +216,16 @@ struct MlirOperationState {
 typedef struct MlirOperationState MlirOperationState;
 
 /// Constructs an operation state from a name and a location.
-MLIR_CAPI_EXPORTED MlirOperationState mlirOperationStateGet(const char *name,
+MLIR_CAPI_EXPORTED MlirOperationState mlirOperationStateGet(MlirStringRef name,
                                                             MlirLocation loc);
 
 /// Adds a list of components to the operation state.
 MLIR_CAPI_EXPORTED void mlirOperationStateAddResults(MlirOperationState *state,
                                                      intptr_t n,
                                                      MlirType const *results);
-MLIR_CAPI_EXPORTED void mlirOperationStateAddOperands(MlirOperationState *state,
-                                                      intptr_t n,
-                                                      MlirValue const *operands);
+MLIR_CAPI_EXPORTED void
+mlirOperationStateAddOperands(MlirOperationState *state, intptr_t n,
+                              MlirValue const *operands);
 MLIR_CAPI_EXPORTED void
 mlirOperationStateAddOwnedRegions(MlirOperationState *state, intptr_t n,
                                   MlirRegion const *regions);
@@ -349,18 +347,18 @@ mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
 /// Returns an attribute attached to the operation given its name.
 MLIR_CAPI_EXPORTED MlirAttribute
-mlirOperationGetAttributeByName(MlirOperation op, const char *name);
+mlirOperationGetAttributeByName(MlirOperation op, MlirStringRef name);
 
 /** Sets an attribute by name, replacing the existing if it exists or
  * adding a new one otherwise. */
 MLIR_CAPI_EXPORTED void mlirOperationSetAttributeByName(MlirOperation op,
-                                                        const char *name,
+                                                        MlirStringRef name,
                                                         MlirAttribute attr);
 
 /** Removes an attribute by name. Returns 0 if the attribute was not found
  * and !0 if removed. */
 MLIR_CAPI_EXPORTED int mlirOperationRemoveAttributeByName(MlirOperation op,
-                                                          const char *name);
+                                                          MlirStringRef name);
 
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -425,7 +423,8 @@ MLIR_CAPI_EXPORTED void mlirRegionInsertOwnedBlockBefore(MlirRegion region,
 
 /** Creates a new empty block with the given argument types and transfers
  * ownership to the caller. */
-MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args);
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs,
+                                             MlirType const *args);
 
 /// Takes a block owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirBlockDestroy(MlirBlock block);
@@ -538,7 +537,7 @@ mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 
 /// Parses a type. The type is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirTypeParseGet(MlirContext context,
-                                             const char *type);
+                                             MlirStringRef type);
 
 /// Gets the context that a type was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirTypeGetContext(MlirType type);
@@ -564,7 +563,7 @@ MLIR_CAPI_EXPORTED void mlirTypeDump(MlirType type);
 
 /// Parses an attribute. The attribute is owned by the context.
 MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeParseGet(MlirContext context,
-                                                       const char *attr);
+                                                       MlirStringRef attr);
 
 /// Gets the context that an attribute was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirAttributeGetContext(MlirAttribute attribute);
@@ -589,7 +588,7 @@ MLIR_CAPI_EXPORTED void mlirAttributePrint(MlirAttribute attr,
 MLIR_CAPI_EXPORTED void mlirAttributeDump(MlirAttribute attr);
 
 /// Associates an attribute with the name. Takes ownership of neither.
-MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(const char *name,
+MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(MlirStringRef name,
                                                             MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
