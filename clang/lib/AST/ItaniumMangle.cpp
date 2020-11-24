@@ -479,8 +479,6 @@ private:
                           const AbiTagList *AdditionalAbiTags);
   void mangleUnscopedTemplateName(GlobalDecl GD,
                                   const AbiTagList *AdditionalAbiTags);
-  void mangleUnscopedTemplateName(TemplateName,
-                                  const AbiTagList *AdditionalAbiTags);
   void mangleSourceName(const IdentifierInfo *II);
   void mangleRegCallName(const IdentifierInfo *II);
   void mangleDeviceStubName(const IdentifierInfo *II);
@@ -992,29 +990,6 @@ void CXXNameMangler::mangleUnscopedTemplateName(
   }
 
   addSubstitution(ND);
-}
-
-void CXXNameMangler::mangleUnscopedTemplateName(
-    TemplateName Template, const AbiTagList *AdditionalAbiTags) {
-  //     <unscoped-template-name> ::= <unscoped-name>
-  //                              ::= <substitution>
-  if (TemplateDecl *TD = Template.getAsTemplateDecl())
-    return mangleUnscopedTemplateName(TD, AdditionalAbiTags);
-
-  if (mangleSubstitution(Template))
-    return;
-
-  assert(!AdditionalAbiTags &&
-         "dependent template name cannot have abi tags");
-
-  DependentTemplateName *Dependent = Template.getAsDependentTemplateName();
-  assert(Dependent && "Not a dependent template name?");
-  if (const IdentifierInfo *Id = Dependent->getIdentifier())
-    mangleSourceName(Id);
-  else
-    mangleOperatorName(Dependent->getOperator(), UnknownArity);
-
-  addSubstitution(Template);
 }
 
 void CXXNameMangler::mangleFloat(const llvm::APFloat &f) {
@@ -1944,21 +1919,28 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   if (TemplateDecl *TD = Template.getAsTemplateDecl())
     return mangleTemplatePrefix(TD);
 
-  if (QualifiedTemplateName *Qualified = Template.getAsQualifiedTemplateName())
-    manglePrefix(Qualified->getQualifier());
-
-  if (OverloadedTemplateStorage *Overloaded
-                                      = Template.getAsOverloadedTemplate()) {
-    mangleUnqualifiedName(GlobalDecl(), (*Overloaded->begin())->getDeclName(),
-                          UnknownArity, nullptr);
-    return;
-  }
-
   DependentTemplateName *Dependent = Template.getAsDependentTemplateName();
-  assert(Dependent && "Unknown template name kind?");
+  assert(Dependent && "unexpected template name kind");
+
+  // Clang 11 and before mangled the substitution for a dependent template name
+  // after already having emitted (a substitution for) the prefix.
+  bool Clang11Compat = getASTContext().getLangOpts().getClangABICompat() <=
+                       LangOptions::ClangABI::Ver11;
+  if (!Clang11Compat && mangleSubstitution(Template))
+    return;
+
   if (NestedNameSpecifier *Qualifier = Dependent->getQualifier())
     manglePrefix(Qualifier);
-  mangleUnscopedTemplateName(Template, /* AdditionalAbiTags */ nullptr);
+
+  if (Clang11Compat && mangleSubstitution(Template))
+    return;
+
+  if (const IdentifierInfo *Id = Dependent->getIdentifier())
+    mangleSourceName(Id);
+  else
+    mangleOperatorName(Dependent->getOperator(), UnknownArity);
+
+  addSubstitution(Template);
 }
 
 void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
