@@ -47,6 +47,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1339,9 +1340,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LocatedSymbol &S) {
   return OS;
 }
 
-// FIXME(nridge): Reduce duplication between this function and declToSym().
-static llvm::Optional<TypeHierarchyItem>
-declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
+template <typename HierarchyItem>
+static llvm::Optional<HierarchyItem> declToHierarchyItem(const NamedDecl &ND) {
+  ASTContext &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
   SourceLocation NameLoc = nameLocation(ND, Ctx.getSourceManager());
   SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
@@ -1365,54 +1366,84 @@ declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
   // correctly.
   SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
 
-  TypeHierarchyItem THI;
-  THI.name = printName(Ctx, ND);
-  THI.kind = SK;
-  THI.deprecated = ND.isDeprecated();
-  THI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
-                    sourceLocToPosition(SM, DeclRange->getEnd())};
-  THI.selectionRange = Range{NameBegin, NameEnd};
-  if (!THI.range.contains(THI.selectionRange)) {
+  HierarchyItem HI;
+  HI.name = printName(Ctx, ND);
+  HI.kind = SK;
+  HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
+                   sourceLocToPosition(SM, DeclRange->getEnd())};
+  HI.selectionRange = Range{NameBegin, NameEnd};
+  if (!HI.range.contains(HI.selectionRange)) {
     // 'selectionRange' must be contained in 'range', so in cases where clang
     // reports unrelated ranges we need to reconcile somehow.
-    THI.range = THI.selectionRange;
+    HI.range = HI.selectionRange;
   }
 
-  THI.uri = URIForFile::canonicalize(*FilePath, *TUPath);
+  HI.uri = URIForFile::canonicalize(*FilePath, *TUPath);
 
   // Compute the SymbolID and store it in the 'data' field.
   // This allows typeHierarchy/resolve to be used to
   // resolve children of items returned in a previous request
   // for parents.
   if (auto ID = getSymbolID(&ND))
-    THI.data = ID.str();
+    HI.data = ID.str();
 
-  return THI;
+  return HI;
 }
 
-static Optional<TypeHierarchyItem>
-symbolToTypeHierarchyItem(const Symbol &S, const SymbolIndex *Index,
-                          PathRef TUPath) {
+static llvm::Optional<TypeHierarchyItem>
+declToTypeHierarchyItem(const NamedDecl &ND) {
+  auto Result = declToHierarchyItem<TypeHierarchyItem>(ND);
+  if (Result)
+    Result->deprecated = ND.isDeprecated();
+  return Result;
+}
+
+static llvm::Optional<CallHierarchyItem>
+declToCallHierarchyItem(const NamedDecl &ND) {
+  auto Result = declToHierarchyItem<CallHierarchyItem>(ND);
+  if (Result && ND.isDeprecated())
+    Result->tags.push_back(SymbolTag::Deprecated);
+  return Result;
+}
+
+template <typename HierarchyItem>
+static llvm::Optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
+                                                           PathRef TUPath) {
   auto Loc = symbolToLocation(S, TUPath);
   if (!Loc) {
-    log("Type hierarchy: {0}", Loc.takeError());
+    elog("Failed to convert symbol to hierarchy item: {0}", Loc.takeError());
     return llvm::None;
   }
-  TypeHierarchyItem THI;
-  THI.name = std::string(S.Name);
-  THI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
-  THI.deprecated = (S.Flags & Symbol::Deprecated);
-  THI.selectionRange = Loc->range;
+  HierarchyItem HI;
+  HI.name = std::string(S.Name);
+  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).
-  THI.range = THI.selectionRange;
-  THI.uri = Loc->uri;
+  HI.range = HI.selectionRange;
+  HI.uri = Loc->uri;
   // Store the SymbolID in the 'data' field. The client will
-  // send this back in typeHierarchy/resolve, allowing us to
-  // continue resolving additional levels of the type hierarchy.
-  THI.data = S.ID.str();
+  // send this back in requests to resolve additional levels
+  // of the hierarchy.
+  HI.data = S.ID.str();
 
-  return std::move(THI);
+  return HI;
+}
+
+static llvm::Optional<TypeHierarchyItem>
+symbolToTypeHierarchyItem(const Symbol &S, PathRef TUPath) {
+  auto Result = symbolToHierarchyItem<TypeHierarchyItem>(S, TUPath);
+  if (Result)
+    Result->deprecated = (S.Flags & Symbol::Deprecated);
+  return Result;
+}
+
+static llvm::Optional<CallHierarchyItem>
+symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
+  auto Result = symbolToHierarchyItem<CallHierarchyItem>(S, TUPath);
+  if (Result && (S.Flags & Symbol::Deprecated))
+    Result->tags.push_back(SymbolTag::Deprecated);
+  return Result;
 }
 
 static void fillSubTypes(const SymbolID &ID,
@@ -1423,7 +1454,7 @@ static void fillSubTypes(const SymbolID &ID,
   Req.Predicate = RelationKind::BaseOf;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
     if (Optional<TypeHierarchyItem> ChildSym =
-            symbolToTypeHierarchyItem(Object, Index, TUPath)) {
+            symbolToTypeHierarchyItem(Object, TUPath)) {
       if (Levels > 1) {
         ChildSym->children.emplace();
         fillSubTypes(Object.ID, *ChildSym->children, Index, Levels - 1, TUPath);
@@ -1452,7 +1483,7 @@ static void fillSuperTypes(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
 
   for (const CXXRecordDecl *ParentDecl : typeParents(&CXXRD)) {
     if (Optional<TypeHierarchyItem> ParentSym =
-            declToTypeHierarchyItem(ASTCtx, *ParentDecl)) {
+            declToTypeHierarchyItem(*ParentDecl)) {
       ParentSym->parents.emplace();
       fillSuperTypes(*ParentDecl, ASTCtx, *ParentSym->parents, RPSet);
       SuperTypes.emplace_back(std::move(*ParentSym));
@@ -1574,8 +1605,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
       CXXRD = CTSD->getTemplateInstantiationPattern();
   }
 
-  Optional<TypeHierarchyItem> Result =
-      declToTypeHierarchyItem(AST.getASTContext(), *CXXRD);
+  Optional<TypeHierarchyItem> Result = declToTypeHierarchyItem(*CXXRD);
   if (!Result)
     return Result;
 
@@ -1615,6 +1645,78 @@ void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
       fillSubTypes(*ID, *Item.children, Index, ResolveLevels, Item.uri.file());
     }
   }
+}
+
+std::vector<CallHierarchyItem>
+prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
+  std::vector<CallHierarchyItem> Result;
+  const auto &SM = AST.getSourceManager();
+  auto Loc = sourceLocationInMainFile(SM, Pos);
+  if (!Loc) {
+    elog("prepareCallHierarchy failed to convert position to source location: "
+         "{0}",
+         Loc.takeError());
+    return Result;
+  }
+  for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
+    if (!Decl->isFunctionOrFunctionTemplate())
+      continue;
+    if (auto CHI = declToCallHierarchyItem(*Decl))
+      Result.emplace_back(std::move(*CHI));
+  }
+  return Result;
+}
+
+std::vector<CallHierarchyIncomingCall>
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+  std::vector<CallHierarchyIncomingCall> Results;
+  if (!Index || Item.data.empty())
+    return Results;
+  auto ID = SymbolID::fromStr(Item.data);
+  if (!ID) {
+    elog("incomingCalls failed to find symbol: {0}", ID.takeError());
+    return Results;
+  }
+  // In this function, we find incoming calls based on the index only.
+  // In principle, the AST could have more up-to-date information about
+  // occurrences within the current file. However, going from a SymbolID
+  // to an AST node isn't cheap, particularly when the declaration isn't
+  // in the main file.
+  // FIXME: Consider also using AST information when feasible.
+  RefsRequest Request;
+  Request.IDs.insert(*ID);
+  // We could restrict more specifically to calls by introducing a new RefKind,
+  // but non-call references (such as address-of-function) can still be
+  // interesting as they can indicate indirect calls.
+  Request.Filter = RefKind::Reference;
+  // Initially store the ranges in a map keyed by SymbolID of the caller.
+  // This allows us to group different calls with the same caller
+  // into the same CallHierarchyIncomingCall.
+  llvm::DenseMap<SymbolID, std::vector<Range>> CallsIn;
+  // We can populate the ranges based on a refs request only. As we do so, we
+  // also accumulate the container IDs into a lookup request.
+  LookupRequest ContainerLookup;
+  Index->refs(Request, [&](const Ref &R) {
+    auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
+    if (!Loc) {
+      elog("incomingCalls failed to convert location: {0}", Loc.takeError());
+      return;
+    }
+    auto It = CallsIn.try_emplace(R.Container, std::vector<Range>{}).first;
+    It->second.push_back(Loc->range);
+
+    ContainerLookup.IDs.insert(R.Container);
+  });
+  // Perform the lookup request and combine its results with CallsIn to
+  // get complete CallHierarchyIncomingCall objects.
+  Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
+    auto It = CallsIn.find(Caller.ID);
+    assert(It != CallsIn.end());
+    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file()))
+      Results.push_back(
+          CallHierarchyIncomingCall{std::move(*CHI), std::move(It->second)});
+  });
+  return Results;
 }
 
 llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
