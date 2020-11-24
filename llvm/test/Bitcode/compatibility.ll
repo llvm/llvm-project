@@ -41,10 +41,10 @@ $comdat.samesize = comdat samesize
 ; CHECK: @const.float = constant double 0.0
 @const.null = constant i8* null
 ; CHECK: @const.null = constant i8* null
-%const.struct.type = type { i32, i8 }
+%const.struct.type = type { i32, i8, i64 }
 %const.struct.type.packed = type <{ i32, i8 }>
-@const.struct = constant %const.struct.type { i32 -1, i8 undef }
-; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef }
+@const.struct = constant %const.struct.type { i32 -1, i8 undef, i64 poison }
+; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef, i64 poison }
 @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 ; CHECK: @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 
@@ -1075,6 +1075,8 @@ exc:
 
   resume i32 undef
   ; CHECK: resume i32 undef
+  resume i32 poison
+  ; CHECK: resume i32 poison
   unreachable
   ; CHECK: unreachable
 
@@ -1354,6 +1356,14 @@ define void @instructions.conversions() {
   ; CHECK: fptoui float undef to i32
   fptosi float undef to i32
   ; CHECK: fptosi float undef to i32
+  fptrunc float poison to half
+  ; CHECK: fptrunc float poison to half
+  fpext half poison to float
+  ; CHECK: fpext half poison to float
+  fptoui float poison to i32
+  ; CHECK: fptoui float poison to i32
+  fptosi float poison to i32
+  ; CHECK: fptosi float poison to i32
   uitofp i32 1 to float
   ; CHECK: uitofp i32 1 to float
   sitofp i32 -1 to float

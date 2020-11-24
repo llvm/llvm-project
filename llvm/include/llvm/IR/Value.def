@@ -88,6 +88,7 @@ HANDLE_CONSTANT(ConstantVector)
 
 // ConstantData.
 HANDLE_CONSTANT(UndefValue)
+HANDLE_CONSTANT(PoisonValue)
 HANDLE_CONSTANT(ConstantAggregateZero)
 HANDLE_CONSTANT(ConstantDataArray)
 HANDLE_CONSTANT(ConstantDataVector)
