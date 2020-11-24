@@ -294,8 +294,8 @@ Symbols:
 # RUN:   FileCheck -DFILE=%t.name.o %s --check-prefix=NAME-GNU --implicit-check-not=warning:
 
 # NAME-LLVM:      Groups {
-# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of the SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
-# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of the SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
+# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
+# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
 # NAME-LLVM-NEXT:   Group {
 # NAME-LLVM-NEXT:     Name: <?> (43690)
 # NAME-LLVM-NEXT:     Index: 1
@@ -322,8 +322,8 @@ Symbols:
 # NAME-LLVM-NEXT:   }
 # NAME-LLVM-NEXT: }
 
-# NAME-GNU:        warning: '[[FILE]]': unable to get the name of the SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
-# NAME-GNU-NEXT:   warning: '[[FILE]]': unable to get the name of the SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
+# NAME-GNU:        warning: '[[FILE]]': unable to get the name of SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
+# NAME-GNU-NEXT:   warning: '[[FILE]]': unable to get the name of SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
 # NAME-GNU-EMPTY:
 # NAME-GNU-NEXT:   COMDAT group section [    1] `<?>' [foo] contains 2 sections:
 # NAME-GNU-NEXT:      [Index]    Name
