@@ -794,8 +794,9 @@ public:
                               Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
-  void printStackSize(RelocationRef Rel, const Elf_Shdr *FunctionSec,
-                      const Elf_Shdr &StackSizeSec,
+  void printStackSize(const Relocation<ELFT> &R, const Elf_Shdr &RelocSec,
+                      unsigned Ndx, const Elf_Shdr *SymTab,
+                      const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
   virtual void printStackSizeEntry(uint64_t Size, StringRef FuncName) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -5877,44 +5878,47 @@ void GNUStyle<ELFT>::printStackSizeEntry(uint64_t Size, StringRef FuncName) {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printStackSize(RelocationRef Reloc,
+void DumpStyle<ELFT>::printStackSize(const Relocation<ELFT> &R,
+                                     const Elf_Shdr &RelocSec, unsigned Ndx,
+                                     const Elf_Shdr *SymTab,
                                      const Elf_Shdr *FunctionSec,
                                      const Elf_Shdr &StackSizeSec,
                                      const RelocationResolver &Resolver,
                                      DataExtractor Data) {
   // This function ignores potentially erroneous input, unless it is directly
   // related to stack size reporting.
-  object::symbol_iterator RelocSym = Reloc.getSymbol();
+  const Elf_Sym *Sym = nullptr;
+  Expected<RelSymbol<ELFT>> TargetOrErr =
+      this->dumper().getRelocationTarget(R, SymTab);
+  if (!TargetOrErr)
+    reportUniqueWarning(
+        createError("unable to get the target of relocation with index " +
+                    Twine(Ndx) + " in " + describe(Obj, RelocSec) + ": " +
+                    toString(TargetOrErr.takeError())));
+  else
+    Sym = TargetOrErr->Sym;
+
   uint64_t RelocSymValue = 0;
-  if (RelocSym != ElfObj.symbol_end()) {
-    // Ensure that the relocation symbol is in the function section, i.e. the
-    // section where the functions whose stack sizes we are reporting are
-    // located.
-    auto SectionOrErr = RelocSym->getSection();
+  if (Sym) {
+    Expected<const Elf_Shdr *> SectionOrErr =
+        this->Obj.getSection(*Sym, SymTab, this->dumper().getShndxTable());
     if (!SectionOrErr) {
-      reportWarning(
-          createError("cannot identify the section for relocation symbol '" +
-                      getSymbolName(*RelocSym) + "'"),
-          FileName);
-      consumeError(SectionOrErr.takeError());
-    } else if (*SectionOrErr != ElfObj.toSectionRef(FunctionSec)) {
-      reportWarning(createError("relocation symbol '" +
-                                getSymbolName(*RelocSym) +
-                                "' is not in the expected section"),
-                    FileName);
+      reportUniqueWarning(createError(
+          "cannot identify the section for relocation symbol '" +
+          (*TargetOrErr).Name + "': " + toString(SectionOrErr.takeError())));
+    } else if (*SectionOrErr != FunctionSec) {
+      reportUniqueWarning(createError("relocation symbol '" +
+                                      (*TargetOrErr).Name +
+                                      "' is not in the expected section"));
       // Pretend that the symbol is in the correct section and report its
       // stack size anyway.
-      FunctionSec = ElfObj.getSection((*SectionOrErr)->getRawDataRefImpl());
+      FunctionSec = *SectionOrErr;
     }
 
-    Expected<uint64_t> RelocSymValueOrErr = RelocSym->getValue();
-    if (RelocSymValueOrErr)
-      RelocSymValue = *RelocSymValueOrErr;
-    else
-      consumeError(RelocSymValueOrErr.takeError());
+    RelocSymValue = Sym->st_value;
   }
 
-  uint64_t Offset = Reloc.getOffset();
+  uint64_t Offset = R.Offset;
   if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
     reportUniqueWarning(createStringError(
         object_error::parse_failed,
@@ -5924,8 +5928,9 @@ void DumpStyle<ELFT>::printStackSize(RelocationRef Reloc,
     return;
   }
 
-  uint64_t Addend = Data.getAddress(&Offset);
-  uint64_t SymValue = resolveRelocation(Resolver, Reloc, RelocSymValue, Addend);
+  uint64_t SymValue =
+      Resolver(R.Type, Offset, RelocSymValue, Data.getAddress(&Offset),
+               R.Addend.getValueOr(0));
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
@@ -6031,21 +6036,26 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
         unwrapOrError(this->FileName, Obj.getSectionContents(*StackSizesELFSec));
     DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
 
-    size_t I = 0;
-    for (const RelocationRef &Reloc :
-         ElfObj.toSectionRef(RelocSec).relocations()) {
-      ++I;
-      if (!IsSupportedFn || !IsSupportedFn(Reloc.getType())) {
-        reportUniqueWarning(createStringError(
-            object_error::parse_failed,
-            describe(Obj, *RelocSec) +
-                " contains an unsupported relocation with index " + Twine(I) +
-                ": " + Obj.getRelocationTypeName(Reloc.getType())));
-        continue;
-      }
-      this->printStackSize(Reloc, FunctionSec, *StackSizesELFSec, Resolver,
-                           Data);
-    }
+    forEachRelocationDo(
+        *RelocSec, /*RawRelr=*/false,
+        [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
+            const Elf_Shdr *SymTab) {
+          if (!IsSupportedFn || !IsSupportedFn(R.Type)) {
+            reportUniqueWarning(createStringError(
+                object_error::parse_failed,
+                describe(Obj, *RelocSec) +
+                    " contains an unsupported relocation with index " +
+                    Twine(Ndx) + ": " + Obj.getRelocationTypeName(R.Type)));
+            return;
+          }
+
+          this->printStackSize(R, *RelocSec, Ndx, SymTab, FunctionSec,
+                               *StackSizesELFSec, Resolver, Data);
+        },
+        [](const Elf_Relr &) {
+          llvm_unreachable("can't get here, because we only support "
+                           "SHT_REL/SHT_RELA sections");
+        });
   }
 }
 
