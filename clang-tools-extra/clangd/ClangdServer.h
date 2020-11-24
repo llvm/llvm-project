@@ -106,7 +106,7 @@ public:
     bool BackgroundIndex = false;
 
     /// Store refs to main-file symbols in the index.
-    bool CollectMainFileRefs = false;
+    bool CollectMainFileRefs = true;
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
