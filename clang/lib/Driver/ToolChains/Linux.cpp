@@ -185,17 +185,18 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
     return Triple.isArch32Bit() ? "lib" : "lib64";
   }
 
-  // It happens that only x86 and PPC use the 'lib32' variant of oslibdir, and
-  // using that variant while targeting other architectures causes problems
-  // because the libraries are laid out in shared system roots that can't cope
-  // with a 'lib32' library search path being considered. So we only enable
-  // them when we know we may need it.
+  // It happens that only x86, PPC and SPARC use the 'lib32' variant of
+  // oslibdir, and using that variant while targeting other architectures causes
+  // problems because the libraries are laid out in shared system roots that
+  // can't cope with a 'lib32' library search path being considered. So we only
+  // enable them when we know we may need it.
   //
   // FIXME: This is a bit of a hack. We should really unify this code for
   // reasoning about oslibdir spellings with the lib dir spellings in the
   // GCCInstallationDetector, but that is a more significant refactoring.
   if (Triple.getArch() == llvm::Triple::x86 ||
-      Triple.getArch() == llvm::Triple::ppc)
+      Triple.getArch() == llvm::Triple::ppc ||
+      Triple.getArch() == llvm::Triple::sparc)
     return "lib32";
 
   if (Triple.getArch() == llvm::Triple::x86_64 &&
