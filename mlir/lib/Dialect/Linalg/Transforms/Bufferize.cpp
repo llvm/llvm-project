@@ -104,16 +104,18 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
   return success();
 }
 
-// Specialization for `linalg::GenericOp`.
+/// Specialization for `linalg::GenericOp` and `linalg::IndexedGenericOp`.
 /// A pattern to convert Generic Linalg operations which work on tensors to
 /// use buffers. BufferPlacement pass should be later used to move
 /// Alloc operations to the correct positions and insert the missing Dealloc
 /// operations in the correct places.
-static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
-                                     linalg::GenericOp genericOp,
-                                     ValueRange inputs, ValueRange outputs) {
+template <typename GenericOpTy>
+static void
+finalizeBufferAllocationForGenericOp(ConversionPatternRewriter &rewriter,
+                                     GenericOpTy genericOp, ValueRange inputs,
+                                     ValueRange outputs) {
   // Generate a new linalg operation that works on buffers.
-  auto newGenericOp = rewriter.create<linalg::GenericOp>(
+  auto newGenericOp = rewriter.create<GenericOpTy>(
       genericOp.getLoc(),
       /*resultTensorTypes=*/llvm::None,
       /*inputs=*/inputs,
@@ -147,9 +149,7 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
   rewriter.replaceOp(genericOp, outputs);
 }
 
-// TODO: Specialization for `linalg::IndexedGenericOp`.
-
-// Specialization for all other `linalg::LinalgOp`.
+/// Specialization for all other `linalg::LinalgOp`.
 static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
                                      linalg::LinalgOp linalgOp,
                                      ValueRange inputs, ValueRange outputs) {
@@ -207,8 +207,15 @@ public:
 
     // Delegate to the linalg generic pattern.
     if (auto genericOp = dyn_cast<linalg::GenericOp>(op)) {
-      finalizeBufferAllocation(rewriter, genericOp, adaptor.inputs(),
-                               newOutputBuffers);
+      finalizeBufferAllocationForGenericOp<GenericOp>(
+          rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
+      return success();
+    }
+
+    // Delegate to the linalg indexed generic pattern.
+    if (auto genericOp = dyn_cast<linalg::IndexedGenericOp>(op)) {
+      finalizeBufferAllocationForGenericOp<IndexedGenericOp>(
+          rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
       return success();
     }
 
