@@ -45,6 +45,8 @@ RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
 const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+    return CSR_NoRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
@@ -191,9 +193,11 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
-                                        CallingConv::ID /*CC*/) const {
+                                        CallingConv::ID CC) const {
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  if (CC == CallingConv::GHC)
+    return CSR_NoRegs_RegMask;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
