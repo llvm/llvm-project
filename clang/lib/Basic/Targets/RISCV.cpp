@@ -115,8 +115,14 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (HasA)
+  if (HasA) {
     Builder.defineMacro("__riscv_atomic");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+    if (Is64Bit)
+      Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+  }
 
   if (HasF || HasD) {
     Builder.defineMacro("__riscv_flen", HasD ? "64" : "32");
