@@ -75,7 +75,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIGeneral) {
 
   EXPECT_FALSE(TT.hasExtensionTable());
   EXPECT_FALSE(TT.hasVectorInfo());
-  EXPECT_EQ(TT.getNumofGPRsSaved(), 0);
+  EXPECT_EQ(TT.getNumOfGPRsSaved(), 0);
 
   EXPECT_EQ(TT.getNumberOfFixedParms(), 1);
 
