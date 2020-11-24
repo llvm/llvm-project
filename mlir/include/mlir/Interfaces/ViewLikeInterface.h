@@ -29,6 +29,24 @@ struct Range {
 
 class OffsetSizeAndStrideOpInterface;
 LogicalResult verify(OffsetSizeAndStrideOpInterface op);
+} // namespace mlir
+
+/// Include the generated interface declarations.
+#include "mlir/Interfaces/ViewLikeInterface.h.inc"
+
+namespace mlir {
+/// Print part of an op of the form:
+/// ```
+///   <optional-offset-prefix>`[` offset-list `]`
+///   <optional-size-prefix>`[` size-list `]`
+///   <optional-stride-prefix>[` stride-list `]`
+/// ```
+void printOffsetsSizesAndStrides(
+    OpAsmPrinter &p, OffsetSizeAndStrideOpInterface op,
+    StringRef offsetPrefix = "", StringRef sizePrefix = " ",
+    StringRef stridePrefix = " ",
+    ArrayRef<StringRef> elidedAttrs =
+        OffsetSizeAndStrideOpInterface::getSpecialAttrNames());
 
 /// Parse trailing part of an op of the form:
 /// ```
@@ -59,10 +77,16 @@ ParseResult parseOffsetsSizesAndStrides(
         nullptr,
     llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix =
         nullptr);
+/// `preResolutionFn`-less version of `parseOffsetsSizesAndStrides`.
+ParseResult parseOffsetsSizesAndStrides(
+    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix =
+        nullptr,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix =
+        nullptr,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix =
+        nullptr);
 
 } // namespace mlir
-
-/// Include the generated interface declarations.
-#include "mlir/Interfaces/ViewLikeInterface.h.inc"
 
 #endif // MLIR_INTERFACES_VIEWLIKEINTERFACE_H_
