@@ -1,7 +1,7 @@
-// RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include -I %S/../../lib/Bindings/Python %s | FileCheck %s
+// RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
-include "Attributes.td"
+include "mlir/Bindings/Python/Attributes.td"
 
 // CHECK: @_cext.register_dialect
 // CHECK: class _Dialect(_ir.Dialect):
