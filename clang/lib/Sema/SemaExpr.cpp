@@ -3778,8 +3778,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 
     if (Ty == Context.DoubleTy) {
       if (getLangOpts().SinglePrecisionConstants) {
-        const BuiltinType *BTy = Ty->getAs<BuiltinType>();
-        if (BTy->getKind() != BuiltinType::Float) {
+        if (Ty->castAs<BuiltinType>()->getKind() != BuiltinType::Float) {
           Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
         }
       } else if (getLangOpts().OpenCL &&
