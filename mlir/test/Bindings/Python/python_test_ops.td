@@ -9,8 +9,8 @@
 #ifndef PYTHON_TEST_OPS
 #define PYTHON_TEST_OPS
 
+include "mlir/Bindings/Python/Attributes.td"
 include "mlir/IR/OpBase.td"
-include "../../../lib/Bindings/Python/Attributes.td"
 
 def Python_Test_Dialect : Dialect {
   let name = "python_test";
