@@ -354,14 +354,6 @@ OPTIONS
 
   Read command-line options from response file `<FILE>`.
 
-WINDOWS/PDB SPECIFIC OPTIONS
------------------------------
-
-.. option:: --dia
-
-  Use the Windows DIA SDK for symbolization. If the DIA SDK is not found,
-  llvm-symbolizer will fall back to the native implementation.
-
 MACH-O SPECIFIC OPTIONS
 -----------------------
 
