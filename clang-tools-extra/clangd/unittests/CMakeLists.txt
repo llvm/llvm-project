@@ -146,7 +146,8 @@ target_link_libraries(ClangdTests
 if (CLANGD_ENABLE_REMOTE)
   target_link_libraries(ClangdTests
     PRIVATE
-    clangdRemoteMarshalling)
+    clangdRemoteMarshalling
+    RemoteIndexProto)
 endif()
 
 if (CLANGD_BUILD_XPC)

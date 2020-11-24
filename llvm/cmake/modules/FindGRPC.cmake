@@ -112,7 +112,7 @@ function(generate_protos LibraryName ProtoFile)
 
   add_clang_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
-    LINK_LIBS grpc++ protobuf)
+    LINK_LIBS PUBLIC grpc++ protobuf)
 
   # Ensure dependency headers are generated before dependent protos are built.
   # DEPENDS arg is a list of "Foo.proto". While they're logically relative to
