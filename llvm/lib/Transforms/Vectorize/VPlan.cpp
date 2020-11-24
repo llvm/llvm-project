@@ -22,6 +22,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -110,11 +111,15 @@ VPUser *VPRecipeBase::toVPUser() {
     return U;
   if (auto *U = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return U;
+  if (auto *U = dyn_cast<VPReductionRecipe>(this))
+    return U;
   return nullptr;
 }
 
 VPValue *VPRecipeBase::toVPValue() {
   if (auto *V = dyn_cast<VPInstruction>(this))
+    return V;
+  if (auto *V = dyn_cast<VPReductionRecipe>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return V;
@@ -129,6 +134,8 @@ VPValue *VPRecipeBase::toVPValue() {
 
 const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPInstruction>(this))
+    return V;
+  if (auto *V = dyn_cast<VPReductionRecipe>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return V;
@@ -932,13 +939,16 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"REDUCE of" << *I << " as ";
-  ChainOp->printAsOperand(O, SlotTracker);
-  O << " + reduce(";
-  VecOp->printAsOperand(O, SlotTracker);
-  if (CondOp) {
+  O << "\"REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " + reduce." << Instruction::getOpcodeName(RdxDesc->getRecurrenceBinOp())
+    << " (";
+  getVecOp()->printAsOperand(O, SlotTracker);
+  if (getCondOp()) {
     O << ", ";
-    CondOp->printAsOperand(O, SlotTracker);
+    getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
 }
