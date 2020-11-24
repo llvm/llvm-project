@@ -1360,6 +1360,23 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
                        DAG.getConstant(~SignBit, DL, MVT::i64));
   }
+  case RISCVISD::GREVI: {
+    // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
+    // non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
+    SDLoc DL(N);
+    auto GREVSrc = N->getOperand(0);
+    uint64_t ShAmt1 = N->getConstantOperandVal(1);
+    if (GREVSrc->getOpcode() != RISCVISD::GREVI)
+      break;
+    uint64_t ShAmt2 = GREVSrc.getConstantOperandVal(1);
+    GREVSrc = GREVSrc->getOperand(0);
+    uint64_t CombinedShAmt = ShAmt1 ^ ShAmt2;
+    if (CombinedShAmt == 0)
+      return GREVSrc;
+    return DAG.getNode(
+        RISCVISD::GREVI, DL, N->getValueType(0), GREVSrc,
+        DAG.getTargetConstant(CombinedShAmt, DL, Subtarget.getXLenVT()));
+  }
   case ISD::OR:
     if (auto GREV = combineORToGREV(SDValue(N, 0), DCI.DAG, Subtarget))
       return GREV;
