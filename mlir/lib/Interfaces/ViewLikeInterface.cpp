@@ -8,8 +8,6 @@
 
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
-#include "mlir/IR/StandardTypes.h"
-
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -57,4 +55,94 @@ LogicalResult mlir::verify(OffsetSizeAndStrideOpInterface op) {
           op.strides())))
     return failure();
   return success();
+}
+
+/// Parse a mixed list with either (1) static integer values or (2) SSA values.
+/// Fill `result` with the integer ArrayAttr named `attrName` where `dynVal`
+/// encode the position of SSA values. Add the parsed SSA values to `ssa`
+/// in-order.
+//
+/// E.g. after parsing "[%arg0, 7, 42, %arg42]":
+///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
+///   2. `ssa` is filled with "[%arg0, %arg1]".
+static ParseResult
+parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
+                              StringRef attrName, int64_t dynVal,
+                              SmallVectorImpl<OpAsmParser::OperandType> &ssa) {
+  if (failed(parser.parseLSquare()))
+    return failure();
+  // 0-D.
+  if (succeeded(parser.parseOptionalRSquare())) {
+    result.addAttribute(attrName, parser.getBuilder().getArrayAttr({}));
+    return success();
+  }
+
+  SmallVector<int64_t, 4> attrVals;
+  while (true) {
+    OpAsmParser::OperandType operand;
+    auto res = parser.parseOptionalOperand(operand);
+    if (res.hasValue() && succeeded(res.getValue())) {
+      ssa.push_back(operand);
+      attrVals.push_back(dynVal);
+    } else {
+      IntegerAttr attr;
+      if (failed(parser.parseAttribute<IntegerAttr>(attr)))
+        return parser.emitError(parser.getNameLoc())
+               << "expected SSA value or integer";
+      attrVals.push_back(attr.getInt());
+    }
+
+    if (succeeded(parser.parseOptionalComma()))
+      continue;
+    if (failed(parser.parseRSquare()))
+      return failure();
+    break;
+  }
+
+  auto arrayAttr = parser.getBuilder().getI64ArrayAttr(attrVals);
+  result.addAttribute(attrName, arrayAttr);
+  return success();
+}
+
+ParseResult mlir::parseOffsetsSizesAndStrides(
+    OpAsmParser &parser,
+    OperationState &result,
+    ArrayRef<int> segmentSizes,
+    llvm::function_ref<ParseResult(OpAsmParser &, OperationState &)>
+        preResolutionFn,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix) {
+  SmallVector<OpAsmParser::OperandType, 4> offsetsInfo, sizesInfo, stridesInfo;
+  auto indexType = parser.getBuilder().getIndexType();
+  if ((parseOptionalOffsetPrefix && parseOptionalOffsetPrefix(parser)) ||
+      parseListOfOperandsOrIntegers(
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
+          ShapedType::kDynamicStrideOrOffset, offsetsInfo) ||
+      (parseOptionalSizePrefix && parseOptionalSizePrefix(parser)) ||
+      parseListOfOperandsOrIntegers(
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
+          ShapedType::kDynamicSize, sizesInfo) ||
+      (parseOptionalStridePrefix && parseOptionalStridePrefix(parser)) ||
+      parseListOfOperandsOrIntegers(
+          parser, result,
+          OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
+          ShapedType::kDynamicStrideOrOffset, stridesInfo))
+    return failure();
+  // Add segment sizes to result
+  SmallVector<int, 4> segmentSizesFinal(segmentSizes.begin(), segmentSizes.end());
+  segmentSizesFinal.append({static_cast<int>(offsetsInfo.size()),
+                                      static_cast<int>(sizesInfo.size()),
+                                      static_cast<int>(stridesInfo.size())});
+  auto b = parser.getBuilder();
+  result.addAttribute(
+      OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+      b.getI32VectorAttr(segmentSizesFinal));
+  return failure(
+      (preResolutionFn && preResolutionFn(parser, result)) ||
+      parser.resolveOperands(offsetsInfo, indexType, result.operands) ||
+      parser.resolveOperands(sizesInfo, indexType, result.operands) ||
+      parser.resolveOperands(stridesInfo, indexType, result.operands));
 }

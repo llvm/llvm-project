@@ -14,7 +14,7 @@
 #define MLIR_INTERFACES_VIEWLIKEINTERFACE_H_
 
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 
 namespace mlir {
@@ -29,6 +29,37 @@ struct Range {
 
 class OffsetSizeAndStrideOpInterface;
 LogicalResult verify(OffsetSizeAndStrideOpInterface op);
+
+/// Parse trailing part of an op of the form:
+/// ```
+///   <optional-offset-prefix>`[` offset-list `]`
+///   <optional-size-prefix>`[` size-list `]`
+///   <optional-stride-prefix>[` stride-list `]`
+/// ```
+/// Each entry in the offset, size and stride list either resolves to an integer
+/// constant or an operand of index type.
+/// Constants are added to the `result` as named integer array attributes with
+/// name `OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName()` (resp.
+/// `getStaticSizesAttrName()`, `getStaticStridesAttrName()`).
+///
+/// Append the number of offset, size and stride operands to `segmentSizes`
+/// before adding it to `result` as the named attribute:
+/// `OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()`.
+///
+/// Offset, size and stride operands resolution occurs after `preResolutionFn`
+/// to give a chance to leading operands to resolve first, after parsing the
+/// types.
+ParseResult parseOffsetsSizesAndStrides(
+    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
+    llvm::function_ref<ParseResult(OpAsmParser &, OperationState &)>
+        preResolutionFn = nullptr,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix =
+        nullptr,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix =
+        nullptr,
+    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix =
+        nullptr);
+
 } // namespace mlir
 
 /// Include the generated interface declarations.
