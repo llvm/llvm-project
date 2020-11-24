@@ -37,6 +37,17 @@ void OpenMPDialect::initialize() {
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
+void ParallelOp::build(OpBuilder &builder, OperationState &state,
+                       ArrayRef<NamedAttribute> attributes) {
+  ParallelOp::build(
+      builder, state, /*if_expr_var=*/nullptr, /*num_threads_var=*/nullptr,
+      /*default_val=*/nullptr, /*private_vars=*/ValueRange(),
+      /*firstprivate_vars=*/ValueRange(), /*shared_vars=*/ValueRange(),
+      /*copyin_vars=*/ValueRange(), /*allocate_vars=*/ValueRange(),
+      /*allocators_vars=*/ValueRange(), /*proc_bind_val=*/nullptr);
+  state.addAttributes(attributes);
+}
+
 /// Parse a list of operands with types.
 ///
 /// operand-and-type-list ::= `(` ssa-id-and-type-list `)`
@@ -360,6 +371,23 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   if (parser.parseRegion(*body, regionArgs, regionArgTypes))
     return failure();
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WsLoopOp
+//===----------------------------------------------------------------------===//
+
+void WsLoopOp::build(OpBuilder &builder, OperationState &state,
+                     ValueRange lowerBound, ValueRange upperBound,
+                     ValueRange step, ArrayRef<NamedAttribute> attributes) {
+  build(builder, state, TypeRange(), lowerBound, upperBound, step,
+        /*private_vars=*/ValueRange(),
+        /*firstprivate_vars=*/ValueRange(), /*lastprivate_vars=*/ValueRange(),
+        /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
+        /*schedule_val=*/nullptr, /*schedule_chunk_var=*/nullptr,
+        /*collapse_val=*/nullptr,
+        /*nowait=*/nullptr, /*ordered_val=*/nullptr, /*order_val=*/nullptr);
+  state.addAttributes(attributes);
 }
 
 #define GET_OP_CLASSES

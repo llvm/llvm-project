@@ -92,6 +92,9 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilderDAG<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+  ];
   let parser = [{ return parseParallelOp(parser, result); }];
   let printer = [{ return printParallelOp(p, *this); }];
   let verifier = [{ return ::verifyParallelOp(*this); }];
@@ -174,6 +177,12 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
              OptionalAttr<UnitAttr>:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKind>:$order_val);
+
+  let builders = [
+    OpBuilderDAG<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
+                  "ValueRange":$step,
+                  CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+  ];
 
   let regions = (region AnyRegion:$region);
 }
