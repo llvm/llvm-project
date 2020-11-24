@@ -408,16 +408,20 @@ Constant *Constant::getAllOnesValue(Type *Ty) {
 }
 
 Constant *Constant::getAggregateElement(unsigned Elt) const {
-  if (const ConstantAggregate *CC = dyn_cast<ConstantAggregate>(this))
+  if (const auto *CC = dyn_cast<ConstantAggregate>(this))
     return Elt < CC->getNumOperands() ? CC->getOperand(Elt) : nullptr;
 
-  if (const ConstantAggregateZero *CAZ = dyn_cast<ConstantAggregateZero>(this))
+  // FIXME: getNumElements() will fail for non-fixed vector types.
+  if (isa<ScalableVectorType>(getType()))
+    return nullptr;
+
+  if (const auto *CAZ = dyn_cast<ConstantAggregateZero>(this))
     return Elt < CAZ->getNumElements() ? CAZ->getElementValue(Elt) : nullptr;
 
-  if (const UndefValue *UV = dyn_cast<UndefValue>(this))
+  if (const auto *UV = dyn_cast<UndefValue>(this))
     return Elt < UV->getNumElements() ? UV->getElementValue(Elt) : nullptr;
 
-  if (const ConstantDataSequential *CDS =dyn_cast<ConstantDataSequential>(this))
+  if (const auto *CDS = dyn_cast<ConstantDataSequential>(this))
     return Elt < CDS->getNumElements() ? CDS->getElementAsConstant(Elt)
                                        : nullptr;
   return nullptr;
