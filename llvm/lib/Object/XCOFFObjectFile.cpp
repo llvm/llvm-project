@@ -1133,7 +1133,7 @@ bool XCOFFTracebackTable::hasVectorInfo() const {
   return GETBITWITHMASK(4, HasVectorInfoMask);
 }
 
-uint8_t XCOFFTracebackTable::getNumofGPRsSaved() const {
+uint8_t XCOFFTracebackTable::getNumOfGPRsSaved() const {
   return GETBITWITHMASKSHIFT(4, GPRSavedMask, GPRSavedShift);
 }
 

@@ -469,7 +469,7 @@ public:
 
   bool hasVectorInfo() const;
   bool hasExtensionTable() const;
-  uint8_t getNumofGPRsSaved() const;
+  uint8_t getNumOfGPRsSaved() const;
 
   uint8_t getNumberOfFixedParms() const;
 
