@@ -97,6 +97,76 @@ public:
   ELFStringTableBuilder() : StringTableBuilder(StringTableBuilder::ELF) {}
 };
 
+template <class ELFT> class ELFSymbolTableBuilder {
+public:
+  using Elf_Sym = typename ELFT::Sym;
+
+  ELFSymbolTableBuilder() { Symbols.push_back({}); }
+
+  void add(size_t StNameOffset, uint64_t StSize, uint8_t StBind, uint8_t StType,
+           uint8_t StOther, uint16_t StShndx) {
+    Elf_Sym S{};
+    S.st_name = StNameOffset;
+    S.st_size = StSize;
+    S.st_info = (StBind << 4) | (StType & 0xf);
+    S.st_other = StOther;
+    S.st_shndx = StShndx;
+    Symbols.push_back(S);
+  }
+
+  size_t getSize() const { return Symbols.size() * sizeof(Elf_Sym); }
+
+  void write(uint8_t *Buf) const {
+    memcpy(Buf, Symbols.data(), sizeof(Elf_Sym) * Symbols.size());
+  }
+
+private:
+  llvm::SmallVector<Elf_Sym, 8> Symbols;
+};
+
+template <class ELFT> class ELFDynamicTableBuilder {
+public:
+  using Elf_Dyn = typename ELFT::Dyn;
+
+  size_t addAddr(uint64_t Tag, uint64_t Addr) {
+    Elf_Dyn Entry;
+    Entry.d_tag = Tag;
+    Entry.d_un.d_ptr = Addr;
+    Entries.push_back(Entry);
+    return Entries.size() - 1;
+  }
+
+  void modifyAddr(size_t Index, uint64_t Addr) {
+    Entries[Index].d_un.d_ptr = Addr;
+  }
+
+  size_t addValue(uint64_t Tag, uint64_t Value) {
+    Elf_Dyn Entry;
+    Entry.d_tag = Tag;
+    Entry.d_un.d_val = Value;
+    Entries.push_back(Entry);
+    return Entries.size() - 1;
+  }
+
+  void modifyValue(size_t Index, uint64_t Value) {
+    Entries[Index].d_un.d_val = Value;
+  }
+
+  size_t getSize() const {
+    // Add DT_NULL entry at the end.
+    return (Entries.size() + 1) * sizeof(Elf_Dyn);
+  }
+
+  void write(uint8_t *Buf) const {
+    memcpy(Buf, Entries.data(), sizeof(Elf_Dyn) * Entries.size());
+    // Add DT_NULL entry at the end.
+    memset(Buf + sizeof(Elf_Dyn) * Entries.size(), 0, sizeof(Elf_Dyn));
+  }
+
+private:
+  llvm::SmallVector<Elf_Dyn, 8> Entries;
+};
+
 template <class ELFT> class ELFStubBuilder {
 public:
   using Elf_Ehdr = typename ELFT::Ehdr;
@@ -110,15 +180,25 @@ public:
   ELFStubBuilder(ELFStubBuilder &&) = default;
 
   explicit ELFStubBuilder(const ELFStub &Stub) {
-    // Populate string tables.
-    ShStrTab.Name = ".shstrtab";
-    ShStrTab.Align = 1;
+    DynSym.Name = ".dynsym";
+    DynSym.Align = sizeof(Elf_Addr);
     DynStr.Name = ".dynstr";
     DynStr.Align = 1;
+    DynTab.Name = ".dynamic";
+    DynTab.Align = sizeof(Elf_Addr);
+    ShStrTab.Name = ".shstrtab";
+    ShStrTab.Align = 1;
+
+    // Populate string tables.
     for (const ELFSymbol &Sym : Stub.Symbols)
       DynStr.Content.add(Sym.Name);
+    for (const std::string &Lib : Stub.NeededLibs)
+      DynStr.Content.add(Lib);
+    if (Stub.SoName)
+      DynStr.Content.add(Stub.SoName.getValue());
 
-    std::vector<OutputSection<ELFT> *> Sections = {&DynStr, &ShStrTab};
+    std::vector<OutputSection<ELFT> *> Sections = {&DynSym, &DynStr, &DynTab,
+                                                   &ShStrTab};
     const OutputSection<ELFT> *LastSection = Sections.back();
     // Now set the Index and put sections names into ".shstrtab".
     uint64_t Index = 1;
@@ -130,6 +210,28 @@ public:
     ShStrTab.Size = ShStrTab.Content.getSize();
     DynStr.Content.finalize();
     DynStr.Size = DynStr.Content.getSize();
+
+    // Populate dynamic symbol table.
+    for (const ELFSymbol &Sym : Stub.Symbols) {
+      uint8_t Bind = Sym.Weak ? STB_WEAK : STB_GLOBAL;
+      // For non-undefined symbols, value of the shndx is not relevant at link
+      // time as long as it is not SHN_UNDEF. Set shndx to 1, which
+      // points to ".dynsym".
+      uint16_t Shndx = Sym.Undefined ? SHN_UNDEF : 1;
+      DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Sym.Size, Bind,
+                         (uint8_t)Sym.Type, 0, Shndx);
+    }
+    DynSym.Size = DynSym.Content.getSize();
+
+    // Poplulate dynamic table.
+    size_t DynSymIndex = DynTab.Content.addAddr(DT_SYMTAB, 0);
+    size_t DynStrIndex = DynTab.Content.addAddr(DT_STRTAB, 0);
+    for (const std::string &Lib : Stub.NeededLibs)
+      DynTab.Content.addValue(DT_NEEDED, DynStr.Content.getOffset(Lib));
+    if (Stub.SoName)
+      DynTab.Content.addValue(DT_SONAME,
+                              DynStr.Content.getOffset(Stub.SoName.getValue()));
+    DynTab.Size = DynTab.Content.getSize();
     // Calculate sections' addresses and offsets.
     uint64_t CurrentOffset = sizeof(Elf_Ehdr);
     for (OutputSection<ELFT> *Sec : Sections) {
@@ -137,9 +239,15 @@ public:
       Sec->Addr = Sec->Offset;
       CurrentOffset = Sec->Offset + Sec->Size;
     }
+    // Fill Addr back to dynamic table.
+    DynTab.Content.modifyAddr(DynSymIndex, DynSym.Addr);
+    DynTab.Content.modifyAddr(DynStrIndex, DynStr.Addr);
     // Write section headers of string tables.
+    fillSymTabShdr(DynSym, SHT_DYNSYM);
     fillStrTabShdr(DynStr, SHF_ALLOC);
+    fillDynTabShdr(DynTab);
     fillStrTabShdr(ShStrTab);
+
     // Finish initializing the ELF header.
     initELFHeader<ELFT>(ElfHeader, Stub.Arch);
     ElfHeader.e_shstrndx = ShStrTab.Index;
@@ -154,9 +262,13 @@ public:
 
   void write(uint8_t *Data) const {
     write(Data, ElfHeader);
+    DynSym.Content.write(Data + DynSym.Shdr.sh_offset);
     DynStr.Content.write(Data + DynStr.Shdr.sh_offset);
+    DynTab.Content.write(Data + DynTab.Shdr.sh_offset);
     ShStrTab.Content.write(Data + ShStrTab.Shdr.sh_offset);
+    writeShdr(Data, DynSym);
     writeShdr(Data, DynStr);
+    writeShdr(Data, DynTab);
     writeShdr(Data, ShStrTab);
   }
 
@@ -164,6 +276,8 @@ private:
   Elf_Ehdr ElfHeader;
   ContentSection<ELFStringTableBuilder, ELFT> DynStr;
   ContentSection<ELFStringTableBuilder, ELFT> ShStrTab;
+  ContentSection<ELFSymbolTableBuilder<ELFT>, ELFT> DynSym;
+  ContentSection<ELFDynamicTableBuilder<ELFT>, ELFT> DynTab;
 
   template <class T> static void write(uint8_t *Data, const T &Value) {
     *reinterpret_cast<T *>(Data) = Value;
@@ -182,7 +296,32 @@ private:
     StrTab.Shdr.sh_entsize = 0;
     StrTab.Shdr.sh_link = 0;
   }
-
+  void fillSymTabShdr(ContentSection<ELFSymbolTableBuilder<ELFT>, ELFT> &SymTab,
+                      uint32_t ShType) const {
+    SymTab.Shdr.sh_type = ShType;
+    SymTab.Shdr.sh_flags = SHF_ALLOC;
+    SymTab.Shdr.sh_addr = SymTab.Addr;
+    SymTab.Shdr.sh_offset = SymTab.Offset;
+    SymTab.Shdr.sh_info = SymTab.Size / sizeof(Elf_Sym) > 1 ? 1 : 0;
+    SymTab.Shdr.sh_size = SymTab.Size;
+    SymTab.Shdr.sh_name = this->ShStrTab.Content.getOffset(SymTab.Name);
+    SymTab.Shdr.sh_addralign = SymTab.Align;
+    SymTab.Shdr.sh_entsize = sizeof(Elf_Sym);
+    SymTab.Shdr.sh_link = this->DynStr.Index;
+  }
+  void fillDynTabShdr(
+      ContentSection<ELFDynamicTableBuilder<ELFT>, ELFT> &DynTab) const {
+    DynTab.Shdr.sh_type = SHT_DYNAMIC;
+    DynTab.Shdr.sh_flags = SHF_ALLOC;
+    DynTab.Shdr.sh_addr = DynTab.Addr;
+    DynTab.Shdr.sh_offset = DynTab.Offset;
+    DynTab.Shdr.sh_info = 0;
+    DynTab.Shdr.sh_size = DynTab.Size;
+    DynTab.Shdr.sh_name = this->ShStrTab.Content.getOffset(DynTab.Name);
+    DynTab.Shdr.sh_addralign = DynTab.Align;
+    DynTab.Shdr.sh_entsize = sizeof(Elf_Dyn);
+    DynTab.Shdr.sh_link = this->DynStr.Index;
+  }
   uint64_t shdrOffset(const OutputSection<ELFT> &Sec) const {
     return ElfHeader.e_shoff + Sec.Index * sizeof(Elf_Shdr);
   }
