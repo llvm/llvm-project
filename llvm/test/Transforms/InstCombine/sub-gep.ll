@@ -123,7 +123,36 @@ define i64 @test_inbounds2_nuw_swapped([0 x i32]* %base, i64 %idx) {
   ret i64 %d
 }
 
-; The sub and shl here could be nuw, but this is harder to handle.
+define i64 @test_inbounds_two_gep([0 x i32]* %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_inbounds_two_gep(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[P1_IDX_NEG]], [[P2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx2
+  %i1 = ptrtoint i32* %p1 to i64
+  %i2 = ptrtoint i32* %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_inbounds_nsw_two_gep([0 x i32]* %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @test_inbounds_nsw_two_gep(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[P1_IDX_NEG]], [[P2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx2
+  %i1 = ptrtoint i32* %p1 to i64
+  %i2 = ptrtoint i32* %p2 to i64
+  %d = sub nsw i64 %i2, %i1
+  ret i64 %d
+}
+
 define i64 @test_inbounds_nuw_two_gep([0 x i32]* %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_two_gep(
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
