@@ -200,28 +200,9 @@ void DwarfExpression::addUnsignedConstant(uint64_t Value) {
   emitConstu(Value);
 }
 
-void DwarfExpression::addUnsignedConstant(APInt Value, const AsmPrinter &AP) {
+void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
-
-  if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE()) {
-    int NumBytes = Value.getBitWidth() / 8;
-    emitOp(dwarf::DW_OP_implicit_value);
-    emitUnsigned(NumBytes /*Size of the block in bytes*/);
-
-    // The loop below is emitting the value starting at least significant
-    // byte, so we need to perform a byte-swap to get the byte order correct
-    // in case of a big-endian target.
-    if (AP.getDataLayout().isBigEndian())
-      Value = Value.byteSwap();
-
-    for (int i = 0; i < NumBytes; ++i) {
-      emitData1(Value.getRawData()[0] & 0xFF);
-      Value = Value.lshr(8);
-    }
-
-    return;
-  }
 
   unsigned Size = Value.getBitWidth();
   const uint64_t *Data = Value.getRawData();
@@ -231,9 +212,9 @@ void DwarfExpression::addUnsignedConstant(APInt Value, const AsmPrinter &AP) {
   unsigned Offset = 0;
   while (Offset < Size) {
     addUnsignedConstant(*Data++);
-    addStackValue();
     if (Offset == 0 && Size <= 64)
       break;
+    addStackValue();
     addOpPiece(std::min(Size - Offset, 64u), Offset);
     Offset += 64;
   }
@@ -243,13 +224,27 @@ void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
   assert(isImplicitLocation() || isUnknownLocation());
   APInt API = APF.bitcastToAPInt();
   int NumBytes = API.getBitWidth() / 8;
-  // FIXME: Add support for `long double`.
-  if (NumBytes <= 8 /*double*/)
-    addUnsignedConstant(API, AP);
-  else
-    LLVM_DEBUG(
-        dbgs() << "Skipped DwarfExpression creation for ConstantFP of size"
-               << API.getBitWidth() << " bits\n");
+  if (NumBytes == 4 /*float*/ || NumBytes == 8 /*double*/) {
+    // FIXME: Add support for `long double`.
+    emitOp(dwarf::DW_OP_implicit_value);
+    emitUnsigned(NumBytes /*Size of the block in bytes*/);
+
+    // The loop below is emitting the value starting at least significant byte,
+    // so we need to perform a byte-swap to get the byte order correct in case
+    // of a big-endian target.
+    if (AP.getDataLayout().isBigEndian())
+      API = API.byteSwap();
+
+    for (int i = 0; i < NumBytes; ++i) {
+      emitData1(API.getZExtValue() & 0xFF);
+      API = API.lshr(8);
+    }
+
+    return;
+  }
+  LLVM_DEBUG(
+      dbgs() << "Skipped DW_OP_implicit_value creation for ConstantFP of size: "
+             << API.getBitWidth() << " bits\n");
 }
 
 bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
