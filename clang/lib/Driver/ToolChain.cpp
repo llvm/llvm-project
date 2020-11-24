@@ -548,9 +548,12 @@ std::string ToolChain::GetProgramPath(const char *Name) const {
   return D.GetProgramPath(Name, *this);
 }
 
-std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
+std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
+                                     bool *LinkerIsLLDDarwinNew) const {
   if (LinkerIsLLD)
     *LinkerIsLLD = false;
+  if (LinkerIsLLDDarwinNew)
+    *LinkerIsLLDDarwinNew = false;
 
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
@@ -603,9 +606,11 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
 
     std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
     if (llvm::sys::fs::can_execute(LinkerPath)) {
+      // FIXME: Remove lld.darwinnew here once it's the only MachO lld.
       if (LinkerIsLLD)
-        // FIXME: Remove lld.darwinnew here once it's the only MachO lld.
         *LinkerIsLLD = UseLinker == "lld" || UseLinker == "lld.darwinnew";
+      if (LinkerIsLLDDarwinNew)
+        *LinkerIsLLDDarwinNew = UseLinker == "lld.darwinnew";
       return LinkerPath;
     }
   }

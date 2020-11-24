@@ -234,6 +234,14 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       return UnaryOperator::getOpcodeStr(UO->getOpcode()).str();
     if (const auto *CCO = dyn_cast<CXXConstructExpr>(S))
       return CCO->getConstructor()->getNameAsString();
+    if (const auto *CTE = dyn_cast<CXXThisExpr>(S)) {
+      bool Const = CTE->getType()->getPointeeType().isLocalConstQualified();
+      if (CTE->isImplicit())
+        return Const ? "const, implicit" : "implicit";
+      if (Const)
+        return "const";
+      return "";
+    }
     if (isa<IntegerLiteral>(S) || isa<FloatingLiteral>(S) ||
         isa<FixedPointLiteral>(S) || isa<CharacterLiteral>(S) ||
         isa<ImaginaryLiteral>(S) || isa<CXXBoolLiteralExpr>(S))

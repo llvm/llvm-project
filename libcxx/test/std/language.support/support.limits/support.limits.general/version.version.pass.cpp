@@ -58,6 +58,7 @@
     __cpp_lib_has_unique_object_representations    201606L [C++17]
     __cpp_lib_hypot                                201603L [C++17]
     __cpp_lib_incomplete_container_elements        201505L [C++17]
+    __cpp_lib_int_pow2                             202002L [C++2a]
     __cpp_lib_integer_sequence                     201304L [C++14]
     __cpp_lib_integral_constant_callable           201304L [C++14]
     __cpp_lib_interpolate                          201902L [C++2a]
@@ -288,6 +289,10 @@
 
 # ifdef __cpp_lib_incomplete_container_elements
 #   error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_int_pow2
+#   error "__cpp_lib_int_pow2 should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_integer_sequence
@@ -682,6 +687,10 @@
 
 # ifdef __cpp_lib_incomplete_container_elements
 #   error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_int_pow2
+#   error "__cpp_lib_int_pow2 should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_integer_sequence
@@ -1226,6 +1235,10 @@
 # endif
 # if __cpp_lib_incomplete_container_elements != 201505L
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
+# endif
+
+# ifdef __cpp_lib_int_pow2
+#   error "__cpp_lib_int_pow2 should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_integer_sequence
@@ -2037,6 +2050,13 @@
 # endif
 # if __cpp_lib_incomplete_container_elements != 201505L
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++2a"
+# endif
+
+# ifndef __cpp_lib_int_pow2
+#   error "__cpp_lib_int_pow2 should be defined in c++2a"
+# endif
+# if __cpp_lib_int_pow2 != 202002L
+#   error "__cpp_lib_int_pow2 should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_integer_sequence

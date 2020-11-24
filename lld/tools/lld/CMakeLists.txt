@@ -25,7 +25,7 @@ install(TARGETS lld
 
 if(NOT LLD_SYMLINKS_TO_CREATE)
   set(LLD_SYMLINKS_TO_CREATE
-      lld-link ld.lld ld64.lld ld64.darwinnew.lld wasm-ld)
+      lld-link ld.lld ld64.lld ld64.lld.darwinnew wasm-ld)
 endif()
 
 foreach(link ${LLD_SYMLINKS_TO_CREATE})

@@ -411,6 +411,10 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
    }, {
+    "name": "__cpp_lib_int_pow2",
+    "values": { "c++2a": int(202002) },
+    "headers": ["bit"],
+   }, {
     "name": "__cpp_lib_interpolate",
     "values": { "c++2a": int(201902) },
     "headers": ["numeric"],
