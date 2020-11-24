@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
-//   constexpr T ceil2(T x) noexcept;
+//   constexpr T bit_ceil(T x) noexcept;
 
 // Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
@@ -28,7 +28,7 @@ enum class E2 : unsigned char { red };
 template <typename T>
 constexpr bool toobig()
 {
-	return 0 == std::ceil2(std::numeric_limits<T>::max());
+	return 0 == std::bit_ceil(std::numeric_limits<T>::max());
 }
 
 int main(int, char**)
