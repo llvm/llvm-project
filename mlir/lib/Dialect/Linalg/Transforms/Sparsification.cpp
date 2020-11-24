@@ -54,13 +54,16 @@ namespace {
 enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
-/// For tensors and invariants, e0 denotes the tensor index. For all binary
-/// operations, e0 and e1 denote the index of the children tensor expressions.
+/// For tensors, e0 denotes the tensor index. For invariants, the IR value is
+/// stored directly. For binary operations, e0 and e1 denote the index of the
+/// children tensor expressions.
 struct TensorExp {
-  TensorExp(Kind k, unsigned x, unsigned y) : kind(k), e0(x), e1(y) {}
+  TensorExp(Kind k, unsigned x, unsigned y, Value v)
+      : kind(k), e0(x), e1(y), val(v) {}
   Kind kind;
   unsigned e0;
   unsigned e1;
+  Value val;
 };
 
 /// Lattice point. Each lattice point consist of a conjunction of tensor
@@ -85,11 +88,12 @@ public:
       : numTensors(t), numLoops(l), isSparse(t, std::vector<bool>(l, false)) {}
 
   /// Adds a tensor expression. Returns its index.
-  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u) {
+  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value()) {
     unsigned e = tensorExps.size();
-    tensorExps.push_back(TensorExp(k, e0, e1));
+    tensorExps.push_back(TensorExp(k, e0, e1, v));
     return e;
   }
+  unsigned addExp(Kind k, Value v) { return addExp(k, -1u, -1u, v); }
 
   /// Adds an iteration lattice point. Returns its index.
   unsigned addLat(unsigned t, unsigned i, unsigned e) {
@@ -339,7 +343,6 @@ static bool computeIterationGraph(linalg::GenericOp op,
 /// building (compared to using the SSA representation everywhere).
 static Optional<unsigned> buildTensorExp(Merger &merger, linalg::GenericOp op,
                                          Value val) {
-  Operation *def = val.getDefiningOp();
   if (auto arg = val.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
     if (arg.getOwner()->getParentOp() == op) {
@@ -348,10 +351,16 @@ static Optional<unsigned> buildTensorExp(Merger &merger, linalg::GenericOp op,
       auto map = op.getIndexingMap(argN);
       if (map.isProjectedPermutation())
         return merger.addExp(Kind::kTensor, argN);
-    } else {
-      // Any parameter of a higher op is invariant in the tensor expression.
-      return merger.addExp(Kind::kInvariant, argN);
+      // Cannot handle (yet).
+      return None;
     }
+    // Any parameter of a higher op is invariant.
+    return merger.addExp(Kind::kInvariant, val);
+  }
+  Operation *def = val.getDefiningOp();
+  if (def->getBlock() != &op.region().front()) {
+    // Something defined outside is invariant.
+    return merger.addExp(Kind::kInvariant, val);
   } else if (def->getNumOperands() == 2) {
     // Construct binary operations if subexpressions could be built.
     auto x = buildTensorExp(merger, op, def->getOperand(0));
@@ -380,9 +389,12 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
   Kind kind = merger.exp(exp).kind;
   if (kind == Kind::kTensor || kind == Kind::kInvariant) {
     // Either the index is really used in the tensor expression, or it it
-    // set to the "non-existing dense index" in that dimension.
+    // set to the "non-existing dense index" in that dimension. Invariant
+    // expressions borrow the output tensor indices.
     unsigned s = merger.addSet();
-    merger.set(s).push_back(merger.addLat(merger.exp(exp).e0, idx, exp));
+    unsigned t = kind == Kind::kTensor ? merger.exp(exp).e0
+                                       : op.getNumInputsAndOutputs() - 1;
+    merger.set(s).push_back(merger.addLat(t, idx, exp));
     return s;
   }
   unsigned s0 = buildLattices(merger, op, merger.exp(exp).e0, idx);
@@ -502,7 +514,7 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   if (merger.exp(exp).kind == Kind::kTensor)
     return genTensorLoad(merger, codegen, rewriter, op, merger.exp(exp).e0);
   else if (merger.exp(exp).kind == Kind::kInvariant)
-    return op.getParentRegion()->front().getArgument(merger.exp(exp).e0);
+    return merger.exp(exp).val;
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e1);
   switch (merger.exp(exp).kind) {
