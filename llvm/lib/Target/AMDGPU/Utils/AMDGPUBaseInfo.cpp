@@ -400,11 +400,15 @@ std::string AMDGPUTargetID::toString() const {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
       // Code object V2 only supported specific processors and had fixed
       // settings for the XNACK.
-      if (Processor == "gfx700") {
+      if (Processor == "gfx600") {
+      } else if (Processor == "gfx601") {
+      } else if (Processor == "gfx602") {
+      } else if (Processor == "gfx700") {
       } else if (Processor == "gfx701") {
       } else if (Processor == "gfx702") {
       } else if (Processor == "gfx703") {
       } else if (Processor == "gfx704") {
+      } else if (Processor == "gfx705") {
       } else if (Processor == "gfx801") {
         if (!isXnackOnOrAny())
           report_fatal_error(
@@ -412,6 +416,7 @@ std::string AMDGPUTargetID::toString() const {
               " without XNACK");
       } else if (Processor == "gfx802") {
       } else if (Processor == "gfx803") {
+      } else if (Processor == "gfx805") {
       } else if (Processor == "gfx810") {
         if (!isXnackOnOrAny())
           report_fatal_error(
