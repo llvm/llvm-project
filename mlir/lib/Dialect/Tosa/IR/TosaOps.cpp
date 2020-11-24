@@ -89,6 +89,24 @@ void TosaDialect::initialize() {
   addInterfaces<TosaInlinerInterface>();
 }
 
+Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
+                                            Type type, Location loc) {
+  // Tosa dialect constants only support ElementsAttr unlike standard dialect
+  // constant which supports all attributes.
+  if (value.isa<ElementsAttr>())
+    return builder.create<tosa::ConstOp>(loc, type, value.cast<ElementsAttr>());
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator Folders.
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.empty() && "constant has no operands");
+  return valueAttr();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
