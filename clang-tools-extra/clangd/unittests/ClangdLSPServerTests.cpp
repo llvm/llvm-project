@@ -37,6 +37,8 @@ protected:
   LSPTest() : LogSession(*this) {
     ClangdServer::Options &Base = Opts;
     Base = ClangdServer::optsForTest();
+    // This is needed to we can test index-based operations like call hierarchy.
+    Base.BuildDynamicSymbolIndex = true;
   }
 
   LSPClient &start() {
@@ -165,6 +167,33 @@ TEST_F(LSPTest, RecordsLatencies) {
   stop();
   EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(1));
 }
+
+TEST_F(LSPTest, IncomingCalls) {
+  Annotations Code(R"cpp(
+    void calle^e(int);
+    void caller1() {
+      [[callee]](42);
+    }
+  )cpp");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/incomingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto FirstCall = *(*Calls.getAsArray())[0].getAsObject();
+  EXPECT_EQ(FirstCall["fromRanges"], llvm::json::Value{Code.range()});
+  auto From = *FirstCall["from"].getAsObject();
+  EXPECT_EQ(From["name"], "caller1");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

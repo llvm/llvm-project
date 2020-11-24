@@ -625,6 +625,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              }},
             {"typeHierarchyProvider", true},
             {"memoryUsageProvider", true}, // clangd extension.
+            {"callHierarchyProvider", true},
         }}}};
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
@@ -1224,6 +1225,26 @@ void ClangdLSPServer::onResolveTypeHierarchy(
                                std::move(Reply));
 }
 
+void ClangdLSPServer::onPrepareCallHierarchy(
+    const CallHierarchyPrepareParams &Params,
+    Callback<std::vector<CallHierarchyItem>> Reply) {
+  Server->prepareCallHierarchy(Params.textDocument.uri.file(), Params.position,
+                               std::move(Reply));
+}
+
+void ClangdLSPServer::onCallHierarchyIncomingCalls(
+    const CallHierarchyIncomingCallsParams &Params,
+    Callback<std::vector<CallHierarchyIncomingCall>> Reply) {
+  Server->incomingCalls(Params.item, std::move(Reply));
+}
+
+void ClangdLSPServer::onCallHierarchyOutgoingCalls(
+    const CallHierarchyOutgoingCallsParams &Params,
+    Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
+  // FIXME: To be implemented.
+  Reply(std::vector<CallHierarchyOutgoingCall>{});
+}
+
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
@@ -1468,6 +1489,9 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
   MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
   MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
+  MsgHandler->bind("textDocument/prepareCallHierarchy", &ClangdLSPServer::onPrepareCallHierarchy);
+  MsgHandler->bind("callHierarchy/incomingCalls", &ClangdLSPServer::onCallHierarchyIncomingCalls);
+  MsgHandler->bind("callHierarchy/outgoingCalls", &ClangdLSPServer::onCallHierarchyOutgoingCalls);
   MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
   MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
   MsgHandler->bind("textDocument/semanticTokens/full", &ClangdLSPServer::onSemanticTokens);
