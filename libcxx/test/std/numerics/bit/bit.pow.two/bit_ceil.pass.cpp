@@ -9,9 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
-//   constexpr T ceil2(T x) noexcept;
+//   constexpr T bit_ceil(T x) noexcept;
 
-// Returns: The minimal value y such that ispow2(y) is true and y >= x;
+// Returns: The minimal value y such that has_single_bit(y) is true and y >= x;
 //    if y is not representable as a value of type T, the result is an unspecified value.
 // Remarks: This function shall not participate in overload resolution unless
 //  T is an unsigned integer type
@@ -30,16 +30,16 @@ enum class E2 : unsigned char { red };
 template <typename T>
 constexpr bool constexpr_test()
 {
-    return std::ceil2(T(0)) == T(1)
-       &&  std::ceil2(T(1)) == T(1)
-       &&  std::ceil2(T(2)) == T(2)
-       &&  std::ceil2(T(3)) == T(4)
-       &&  std::ceil2(T(4)) == T(4)
-       &&  std::ceil2(T(5)) == T(8)
-       &&  std::ceil2(T(6)) == T(8)
-       &&  std::ceil2(T(7)) == T(8)
-       &&  std::ceil2(T(8)) == T(8)
-       &&  std::ceil2(T(9)) == T(16)
+    return std::bit_ceil(T(0)) == T(1)
+       &&  std::bit_ceil(T(1)) == T(1)
+       &&  std::bit_ceil(T(2)) == T(2)
+       &&  std::bit_ceil(T(3)) == T(4)
+       &&  std::bit_ceil(T(4)) == T(4)
+       &&  std::bit_ceil(T(5)) == T(8)
+       &&  std::bit_ceil(T(6)) == T(8)
+       &&  std::bit_ceil(T(7)) == T(8)
+       &&  std::bit_ceil(T(8)) == T(8)
+       &&  std::bit_ceil(T(9)) == T(16)
        ;
 }
 
@@ -47,26 +47,26 @@ constexpr bool constexpr_test()
 template <typename T>
 void runtime_test()
 {
-    ASSERT_SAME_TYPE(T, decltype(std::ceil2(T(0))));
-    LIBCPP_ASSERT_NOEXCEPT(      std::ceil2(T(0)));
+    ASSERT_SAME_TYPE(T, decltype(std::bit_ceil(T(0))));
+    LIBCPP_ASSERT_NOEXCEPT(      std::bit_ceil(T(0)));
 
-    assert( std::ceil2(T(60)) == T( 64));
-    assert( std::ceil2(T(61)) == T( 64));
-    assert( std::ceil2(T(62)) == T( 64));
-    assert( std::ceil2(T(63)) == T( 64));
-    assert( std::ceil2(T(64)) == T( 64));
-    assert( std::ceil2(T(65)) == T(128));
-    assert( std::ceil2(T(66)) == T(128));
-    assert( std::ceil2(T(67)) == T(128));
-    assert( std::ceil2(T(68)) == T(128));
-    assert( std::ceil2(T(69)) == T(128));
+    assert( std::bit_ceil(T(60)) == T( 64));
+    assert( std::bit_ceil(T(61)) == T( 64));
+    assert( std::bit_ceil(T(62)) == T( 64));
+    assert( std::bit_ceil(T(63)) == T( 64));
+    assert( std::bit_ceil(T(64)) == T( 64));
+    assert( std::bit_ceil(T(65)) == T(128));
+    assert( std::bit_ceil(T(66)) == T(128));
+    assert( std::bit_ceil(T(67)) == T(128));
+    assert( std::bit_ceil(T(68)) == T(128));
+    assert( std::bit_ceil(T(69)) == T(128));
 }
 
 int main(int, char**)
 {
 
     {
-    auto lambda = [](auto x) -> decltype(std::ceil2(x)) {};
+    auto lambda = [](auto x) -> decltype(std::bit_ceil(x)) {};
     using L = decltype(lambda);
 
     static_assert( std::is_invocable_v<L, unsigned char>, "");

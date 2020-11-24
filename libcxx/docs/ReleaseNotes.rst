@@ -49,3 +49,10 @@ API Changes
   in both libc++ and libc++abi, which is technically an ODR violation. Also
   note that we couldn't decide to put the operators in libc++ only, because
   they are needed from libc++abi (which would create a circular dependency).
+- During the C++20 standardization process some new low-level bit functions
+  have been renamed. Libc++ has renamed these functions to match the C++20
+  Standard.
+  - ``ispow2`` has been renamed to ``has_single_bit``
+  - ``ceil2`` has been renamed to ``bit_ceil``
+  - ``floor2`` has been renamed to ``bit_floor``
+  - ``log2p1`` has been renamed to ``bit_width``

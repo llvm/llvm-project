@@ -9,15 +9,14 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
-//   constexpr T log2p1(T x) noexcept;
-
-// If x == 0, 0; otherwise one plus the base-2 logarithm of x, with any fractional part discarded.
+//   constexpr bool has_single_bit(T x) noexcept;
 
 // Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
 
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
@@ -29,16 +28,15 @@ enum class E2 : unsigned char { red };
 template <typename T>
 constexpr bool constexpr_test()
 {
-	return std::log2p1(T(0)) == T(0)
-	   &&  std::log2p1(T(1)) == T(1)
-	   &&  std::log2p1(T(2)) == T(2)
-	   &&  std::log2p1(T(3)) == T(2)
-	   &&  std::log2p1(T(4)) == T(3)
-	   &&  std::log2p1(T(5)) == T(3)
-	   &&  std::log2p1(T(6)) == T(3)
-	   &&  std::log2p1(T(7)) == T(3)
-	   &&  std::log2p1(T(8)) == T(4)
-	   &&  std::log2p1(T(9)) == T(4)
+	return  std::has_single_bit(T(1))
+	   &&   std::has_single_bit(T(2))
+	   &&  !std::has_single_bit(T(3))
+	   &&   std::has_single_bit(T(4))
+	   &&  !std::has_single_bit(T(5))
+	   &&  !std::has_single_bit(T(6))
+	   &&  !std::has_single_bit(T(7))
+	   &&   std::has_single_bit(T(8))
+	   &&  !std::has_single_bit(T(9))
 	   ;
 }
 
@@ -46,38 +44,26 @@ constexpr bool constexpr_test()
 template <typename T>
 void runtime_test()
 {
-	ASSERT_SAME_TYPE(T, decltype(std::log2p1(T(0))));
-	ASSERT_NOEXCEPT(             std::log2p1(T(0)));
+	ASSERT_SAME_TYPE(bool, decltype(std::has_single_bit(T(0))));
+	ASSERT_NOEXCEPT(                std::has_single_bit(T(0)));
 
-	assert( std::log2p1(T(0)) == T(0));
-	assert( std::log2p1(T(1)) == T(1));
-	assert( std::log2p1(T(2)) == T(2));
-	assert( std::log2p1(T(3)) == T(2));
-	assert( std::log2p1(T(4)) == T(3));
-	assert( std::log2p1(T(5)) == T(3));
-	assert( std::log2p1(T(6)) == T(3));
-	assert( std::log2p1(T(7)) == T(3));
-	assert( std::log2p1(T(8)) == T(4));
-	assert( std::log2p1(T(9)) == T(4));
-
-
-	assert( std::log2p1(T(121)) == T(7));
-	assert( std::log2p1(T(122)) == T(7));
-	assert( std::log2p1(T(123)) == T(7));
-	assert( std::log2p1(T(124)) == T(7));
-	assert( std::log2p1(T(125)) == T(7));
-	assert( std::log2p1(T(126)) == T(7));
-	assert( std::log2p1(T(127)) == T(7));
-	assert( std::log2p1(T(128)) == T(8));
-	assert( std::log2p1(T(129)) == T(8));
-	assert( std::log2p1(T(130)) == T(8));
+	assert(!std::has_single_bit(T(121)));
+	assert(!std::has_single_bit(T(122)));
+	assert(!std::has_single_bit(T(123)));
+	assert(!std::has_single_bit(T(124)));
+	assert(!std::has_single_bit(T(125)));
+	assert(!std::has_single_bit(T(126)));
+	assert(!std::has_single_bit(T(127)));
+	assert( std::has_single_bit(T(128)));
+	assert(!std::has_single_bit(T(129)));
+	assert(!std::has_single_bit(T(130)));
 }
 
 int main(int, char**)
 {
 
     {
-    auto lambda = [](auto x) -> decltype(std::log2p1(x)) {};
+    auto lambda = [](auto x) -> decltype(std::has_single_bit(x)) {};
     using L = decltype(lambda);
 
     static_assert( std::is_invocable_v<L, unsigned char>, "");
@@ -139,7 +125,6 @@ int main(int, char**)
 	static_assert(constexpr_test<__uint128_t>(),        "");
 #endif
 
-
 	runtime_test<unsigned char>();
 	runtime_test<unsigned>();
 	runtime_test<unsigned short>();
@@ -160,17 +145,17 @@ int main(int, char**)
 	{
 	__uint128_t val = 128;
 	val <<= 32;
-	assert( std::log2p1(val-1) == 39);
-	assert( std::log2p1(val)   == 40);
-	assert( std::log2p1(val+1) == 40);
+	assert(!std::has_single_bit(val-1));
+	assert( std::has_single_bit(val));
+	assert(!std::has_single_bit(val+1));
 	val <<= 2;
-	assert( std::log2p1(val-1) == 41);
-	assert( std::log2p1(val)   == 42);
-	assert( std::log2p1(val+1) == 42);
+	assert(!std::has_single_bit(val-1));
+	assert( std::has_single_bit(val));
+	assert(!std::has_single_bit(val+1));
 	val <<= 3;
-	assert( std::log2p1(val-1) == 44);
-	assert( std::log2p1(val)   == 45);
-	assert( std::log2p1(val+1) == 45);
+	assert(!std::has_single_bit(val-1));
+	assert( std::has_single_bit(val));
+	assert(!std::has_single_bit(val+1));
 	}
 #endif
 
