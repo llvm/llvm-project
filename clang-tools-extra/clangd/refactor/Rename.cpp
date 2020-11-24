@@ -300,6 +300,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
 const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
                                        const NamedDecl &RenamedDecl,
                                        llvm::StringRef Name) {
+  trace::Span Tracer("LookupSiblingWithName");
   const auto &II = Ctx.Idents.get(Name);
   DeclarationName LookupName(&II);
   DeclContextLookupResult LookupResult;
@@ -359,6 +360,7 @@ llvm::Error makeError(InvalidName Reason) {
 // Return details if the rename would produce a conflict.
 llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
                                       llvm::StringRef NewName) {
+  trace::Span Tracer("CheckName");
   auto &ASTCtx = RenameDecl.getASTContext();
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
     return InvalidName{InvalidName::Keywords, NewName.str()};
