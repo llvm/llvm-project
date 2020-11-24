@@ -1716,6 +1716,11 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       Results.push_back(
           CallHierarchyIncomingCall{std::move(*CHI), std::move(It->second)});
   });
+  // Sort results by name of container.
+  llvm::sort(Results, [](const CallHierarchyIncomingCall &A,
+                         const CallHierarchyIncomingCall &B) {
+    return A.from.name < B.from.name;
+  });
   return Results;
 }
 
