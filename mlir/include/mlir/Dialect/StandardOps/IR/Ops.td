@@ -232,15 +232,6 @@ class BaseOpWithOffsetSizesAndStrides<string mnemonic, list<OpTrait> traits = []
     SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
       return mlir::getOrCreateRanges(*this, b, loc);
     }
-
-    static ArrayRef<StringRef> getSpecialAttrNames() {
-      static SmallVector<StringRef, 4> names{
-        OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
-        OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
-        OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
-        getOperandSegmentSizeAttr()};
-      return names;
-   }
   }];
 }
 

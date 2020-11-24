@@ -357,6 +357,14 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     static StringRef getStaticStridesAttrName() {
       return "static_strides";
     }
+    static ArrayRef<StringRef> getSpecialAttrNames() {
+      static SmallVector<StringRef, 4> names{
+        OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
+        OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
+        OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
+        OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()};
+      return names;
+   }
   }];
 
   let verify = [{

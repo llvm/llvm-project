@@ -248,49 +248,6 @@ OpFoldResult AddIOp::fold(ArrayRef<Attribute> operands) {
                                         [](APInt a, APInt b) { return a + b; });
 }
 
-//===----------------------------------------------------------------------===//
-// BaseOpWithOffsetSizesAndStridesOp
-//===----------------------------------------------------------------------===//
-
-/// Print a list with either (1) the static integer value in `arrayAttr` if
-/// `isDynamic` evaluates to false or (2) the next value otherwise.
-/// This allows idiomatic printing of mixed value and integer attributes in a
-/// list. E.g. `[%arg0, 7, 42, %arg42]`.
-static void
-printListOfOperandsOrIntegers(OpAsmPrinter &p, ValueRange values,
-                              ArrayAttr arrayAttr,
-                              llvm::function_ref<bool(int64_t)> isDynamic) {
-  p << '[';
-  unsigned idx = 0;
-  llvm::interleaveComma(arrayAttr, p, [&](Attribute a) {
-    int64_t val = a.cast<IntegerAttr>().getInt();
-    if (isDynamic(val))
-      p << values[idx++];
-    else
-      p << val;
-  });
-  p << ']';
-}
-
-/// Verify that a particular offset/size/stride static attribute is well-formed.
-static LogicalResult verifyOpWithOffsetSizesAndStridesPart(
-    OffsetSizeAndStrideOpInterface op, StringRef name,
-    unsigned expectedNumElements, StringRef attrName, ArrayAttr attr,
-    llvm::function_ref<bool(int64_t)> isDynamic, ValueRange values) {
-  /// Check static and dynamic offsets/sizes/strides breakdown.
-  if (attr.size() != expectedNumElements)
-    return op.emitError("expected ")
-           << expectedNumElements << " " << name << " values";
-  unsigned expectedNumDynamicEntries =
-      llvm::count_if(attr.getValue(), [&](Attribute attr) {
-        return isDynamic(attr.cast<IntegerAttr>().getInt());
-      });
-  if (values.size() != expectedNumDynamicEntries)
-    return op.emitError("expected ")
-           << expectedNumDynamicEntries << " dynamic " << name << " values";
-  return success();
-}
-
 /// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
 static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
   return llvm::to_vector<4>(
@@ -2390,9 +2347,9 @@ void mlir::MemRefReinterpretCastOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offset, sizes, strides, attrs);
 }
 
-/// Print of the form:
+/// Print a memref_reinterpret_cast op of the form:
 /// ```
-///   `name` ssa-name to
+///   `memref_reinterpret_cast` ssa-name to
 ///       offset: `[` offset `]`
 ///       sizes: `[` size-list `]`
 ///       strides:`[` stride-list `]`
@@ -2400,19 +2357,11 @@ void mlir::MemRefReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 /// ```
 static void print(OpAsmPrinter &p, MemRefReinterpretCastOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op.getOperationName().drop_front(stdDotLen) << " " << op.source()
-    << " to offset: ";
-  printListOfOperandsOrIntegers(p, op.offsets(), op.static_offsets(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p << ", sizes: ";
-  printListOfOperandsOrIntegers(p, op.sizes(), op.static_sizes(),
-                                ShapedType::isDynamic);
-  p << ", strides: ";
-  printListOfOperandsOrIntegers(p, op.strides(), op.static_strides(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p.printOptionalAttrDict(
-      op.getAttrs(),
-      /*elidedAttrs=*/MemRefReinterpretCastOp::getSpecialAttrNames());
+  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op.source() << " ";
+  printOffsetsSizesAndStrides(
+      p, op, /*offsetPrefix=*/"to offset: ", /*sizePrefix=*/", sizes: ",
+      /*stridePrefix=*/", strides: ");
   p << ": " << op.source().getType() << " to " << op.getType();
 }
 
@@ -2451,8 +2400,8 @@ static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
                    parser.parseKeywordType("to", dstType) ||
                    parser.resolveOperand(srcInfo, srcType, result.operands));
   };
-  SmallVector<int, 4> segmentSizes{1}; // source memref
-  if (failed(parseOffsetsSizesAndStrides(parser, result, segmentSizes,
+  if (failed(parseOffsetsSizesAndStrides(parser, result,
+                                         /*segmentSizes=*/{1}, // source memref
                                          preResolutionFn, parseOffsetPrefix,
                                          parseSizePrefix, parseStridePrefix)))
     return failure();
@@ -3122,38 +3071,18 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
       sourceMemRefType.getMemorySpace());
 }
 
-/// Print SubViewOp in the form:
+/// Print a subview op of the form:
 /// ```
-///   subview ssa-name `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
+///   `subview` ssa-name
+///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
 ///     `:` strided-memref-type `to` strided-memref-type
 /// ```
-template <typename OpType>
-static void printOpWithOffsetsSizesAndStrides(
-    OpAsmPrinter &p, OpType op,
-    llvm::function_ref<void(OpAsmPrinter &p, OpType op)> printExtraOperands =
-        [](OpAsmPrinter &p, OpType op) {},
-    StringRef resultTypeKeyword = "to") {
+static void print(OpAsmPrinter &p, SubViewOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
   p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source();
-  printExtraOperands(p, op);
-  printListOfOperandsOrIntegers(p, op.offsets(), op.static_offsets(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p << ' ';
-  printListOfOperandsOrIntegers(p, op.sizes(), op.static_sizes(),
-                                ShapedType::isDynamic);
-  p << ' ';
-  printListOfOperandsOrIntegers(p, op.strides(), op.static_strides(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p << ' ';
-  p.printOptionalAttrDict(op.getAttrs(),
-                          /*elidedAttrs=*/{OpType::getSpecialAttrNames()});
-  p << " : " << op.getSourceType() << " " << resultTypeKeyword << " "
-    << op.getType();
-}
-
-static void print(OpAsmPrinter &p, SubViewOp op) {
-  return printOpWithOffsetsSizesAndStrides<SubViewOp>(p, op);
+  printOffsetsSizesAndStrides(p, op);
+  p << " : " << op.getSourceType() << " to " << op.getType();
 }
 
 /// Parse a subview op of the form:
@@ -3173,8 +3102,9 @@ static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
                    parser.parseKeywordType("to", dstType) ||
                    parser.resolveOperand(srcInfo, srcType, result.operands));
   };
-  SmallVector<int, 4> segmentSizes{1}; // source memref
-  if (failed(parseOffsetsSizesAndStrides(parser, result, segmentSizes,
+
+  if (failed(parseOffsetsSizesAndStrides(parser, result,
+                                         /*segmentSizes=*/{1}, // source memref
                                          preResolutionFn)))
     return failure();
   return parser.addTypeToList(dstType, result.types);
@@ -3750,8 +3680,18 @@ OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
 // SubTensorOp
 //===----------------------------------------------------------------------===//
 
+/// Print a subtensor op of the form:
+/// ```
+///   `subtensor` ssa-name
+///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
+///     `:` ranked-tensor-type `to` ranked-tensor-type
+/// ```
 static void print(OpAsmPrinter &p, SubTensorOp op) {
-  return printOpWithOffsetsSizesAndStrides<SubTensorOp>(p, op);
+  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
+  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op.source();
+  printOffsetsSizesAndStrides(p, op);
+  p << " : " << op.getSourceType() << " to " << op.getType();
 }
 
 /// Parse a subtensor op of the form:
@@ -3772,8 +3712,9 @@ static ParseResult parseSubTensorOp(OpAsmParser &parser,
                    parser.parseKeywordType("to", dstType) ||
                    parser.resolveOperand(srcInfo, srcType, result.operands));
   };
-  SmallVector<int, 4> segmentSizes{1}; // source tensor
-  if (failed(parseOffsetsSizesAndStrides(parser, result, segmentSizes,
+
+  if (failed(parseOffsetsSizesAndStrides(parser, result,
+                                         /*segmentSizes=*/{1}, // source tensor
                                          preResolutionFn)))
     return failure();
   return parser.addTypeToList(dstType, result.types);
@@ -3853,11 +3794,18 @@ void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 // SubTensorInsertOp
 //===----------------------------------------------------------------------===//
 
+/// Print a subtensor_insert op of the form:
+/// ```
+///   `subtensor_insert` ssa-name `into` ssa-name
+///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
+///     `:` ranked-tensor-type `into` ranked-tensor-type
+/// ```
 static void print(OpAsmPrinter &p, SubTensorInsertOp op) {
-  return printOpWithOffsetsSizesAndStrides<SubTensorInsertOp>(
-      p, op,
-      [](OpAsmPrinter &p, SubTensorInsertOp op) { p << " into " << op.dest(); },
-      /*resultTypeKeyword=*/"into");
+  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
+  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op.source() << " into " << op.dest();
+  printOffsetsSizesAndStrides(p, op);
+  p << " : " << op.getSourceType() << " into " << op.getType();
 }
 
 /// Parse a subtensor_insert op of the form:
@@ -3880,9 +3828,11 @@ static ParseResult parseSubTensorInsertOp(OpAsmParser &parser,
                    parser.resolveOperand(srcInfo, srcType, result.operands) ||
                    parser.resolveOperand(dstInfo, dstType, result.operands));
   };
-  SmallVector<int, 4> segmentSizes{1, 1}; // source tensor, destination tensor
-  if (failed(parseOffsetsSizesAndStrides(parser, result, segmentSizes,
-                                         preResolutionFn)))
+
+  if (failed(parseOffsetsSizesAndStrides(
+          parser, result,
+          /*segmentSizes=*/{1, 1}, // source tensor, destination tensor
+          preResolutionFn)))
     return failure();
   return parser.addTypeToList(dstType, result.types);
 }
