@@ -1076,6 +1076,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR:
     // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
+  case PPC::GETtlsADDRPCREL:
   case PPC::GETtlsADDR32: {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
@@ -1121,6 +1122,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsldADDR:
     // Transform: %x3 = GETtlsldADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsld)
+  case PPC::GETtlsldADDRPCREL:
   case PPC::GETtlsldADDR32: {
     // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
