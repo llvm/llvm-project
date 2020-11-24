@@ -1741,10 +1741,12 @@ __kmp_unnamed_critical_addr:
     .comm .gomp_critical_user_,32,8
     .data
     .align 8
-    .global __kmp_unnamed_critical_addr
-__kmp_unnamed_critical_addr:
+    .global KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr)
+KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .8byte .gomp_critical_user_
-    .size __kmp_unnamed_critical_addr,8
+#ifdef __ELF__
+    .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
+#endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
           KMP_ARCH_RISCV64 */
 
