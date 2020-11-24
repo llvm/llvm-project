@@ -5423,8 +5423,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
   if (PrevDecl) {
     if (IsStructuralMatch(D, PrevDecl)) {
-      if (D->isThisDeclarationADefinition() && PrevDecl->getDefinition()) {
-        Importer.MapImported(D, PrevDecl->getDefinition());
+      CXXRecordDecl *PrevDefinition = PrevDecl->getDefinition();
+      if (D->isThisDeclarationADefinition() && PrevDefinition) {
+        Importer.MapImported(D, PrevDefinition);
         // Import those default field initializers which have been
         // instantiated in the "From" context, but not in the "To" context.
         for (auto *FromField : D->fields()) {
@@ -5446,7 +5447,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
         //
         // Generally, ASTCommon.h/DeclUpdateKind enum gives a very good hint
         // what else could be fused during an AST merge.
-        return PrevDecl;
+        return PrevDefinition;
       }
     } else { // ODR violation.
       // FIXME HandleNameConflict
