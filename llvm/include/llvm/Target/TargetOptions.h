@@ -124,6 +124,7 @@ namespace llvm {
     TargetOptions()
         : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
           NoTrappingFPMath(true), NoSignedZerosFPMath(false),
+          EnableAIXExtendedAltivecABI(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -174,6 +175,12 @@ namespace llvm {
     /// specifies that optimizations are allowed to treat the sign of a zero
     /// argument or result as insignificant.
     unsigned NoSignedZerosFPMath : 1;
+
+    /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
+    /// specified. The code generator is then able to use both volatile and
+    /// nonvolitle vector regisers. When false, the code generator only uses
+    /// volatile vector registers which is the default setting on AIX.
+    unsigned EnableAIXExtendedAltivecABI : 1;
 
     /// HonorSignDependentRoundingFPMath - This returns true when the
     /// -enable-sign-dependent-rounding-fp-math is specified.  If this returns
