@@ -1722,6 +1722,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Res;
   }
 
+  // Try this before Negator to preserve NSW flag.
+  if (Instruction *R = factorizeMathWithShlOps(I, Builder))
+    return R;
+
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
     Constant *C2;
@@ -1769,9 +1773,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // (A*B)-(A*C) -> A*(B-C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
-
-  if (Instruction *R = factorizeMathWithShlOps(I, Builder))
-    return R;
 
   if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(Op0, Op1);

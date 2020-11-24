@@ -1333,8 +1333,11 @@ public:
   /// a virtual function call could be made which ends up being dispatched to a
   /// member function of this class. This scope can be wider than the visibility
   /// of the class itself when the class has a more-visible dynamic base class.
+  /// The client should pass in an empty Visited set, which is used to prevent
+  /// redundant recursive processing.
   llvm::GlobalObject::VCallVisibility
-  GetVCallVisibilityLevel(const CXXRecordDecl *RD);
+  GetVCallVisibilityLevel(const CXXRecordDecl *RD,
+                          llvm::DenseSet<const CXXRecordDecl *> &Visited);
 
   /// Emit type metadata for the given vtable using the given layout.
   void EmitVTableTypeMetadata(const CXXRecordDecl *RD,

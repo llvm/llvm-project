@@ -8413,6 +8413,13 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
   if (LD->getMemoryVT() != MemVT)
     return false;
 
+  // If the result of the load is an illegal type, then we can't build a
+  // valid chain for reuse since the legalised loads and token factor node that
+  // ties the legalised loads together uses a different output chain then the
+  // illegal load.
+  if (!isTypeLegal(LD->getValueType(0)))
+    return false;
+
   RLI.Ptr = LD->getBasePtr();
   if (LD->isIndexed() && !LD->getOffset().isUndef()) {
     assert(LD->getAddressingMode() == ISD::PRE_INC &&

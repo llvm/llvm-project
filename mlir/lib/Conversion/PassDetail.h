@@ -33,6 +33,10 @@ namespace NVVM {
 class NVVMDialect;
 } // end namespace NVVM
 
+namespace omp {
+class OpenMPDialect;
+} // end namespace omp
+
 namespace pdl_interp {
 class PDLInterpDialect;
 } // end namespace pdl_interp
