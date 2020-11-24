@@ -1514,12 +1514,12 @@ inline void Registers_ppc64::setFloatRegister(int regNum, double value) {
 }
 
 inline bool Registers_ppc64::validVectorRegister(int regNum) const {
-#ifdef PPC64_HAS_VMX
+#if defined(__VSX__)
   if (regNum >= UNW_PPC64_VS0 && regNum <= UNW_PPC64_VS31)
     return true;
   if (regNum >= UNW_PPC64_VS32 && regNum <= UNW_PPC64_VS63)
     return true;
-#else
+#elif defined(__ALTIVEC__)
   if (regNum >= UNW_PPC64_V0 && regNum <= UNW_PPC64_V31)
     return true;
 #endif
