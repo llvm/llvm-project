@@ -8,6 +8,7 @@
 
 // <numeric>
 
+// Became constexpr in C++20
 // template <InputIterator Iter, MoveConstructible T,
 //           Callable<auto, const T&, Iter::reference> BinaryOperation>
 //   requires HasAssign<T, BinaryOperation::result_type>
@@ -23,14 +24,14 @@
 #include "test_iterators.h"
 
 template <class Iter, class T>
-void
+TEST_CONSTEXPR_CXX20 void
 test(Iter first, Iter last, T init, T x)
 {
     assert(std::accumulate(first, last, init, std::multiplies<T>()) == x);
 }
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5, 6};
@@ -45,7 +46,8 @@ test()
     test(Iter(ia), Iter(ia+sa), 10, 7200);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test<input_iterator<const int*> >();
     test<forward_iterator<const int*> >();
@@ -53,5 +55,14 @@ int main(int, char**)
     test<random_access_iterator<const int*> >();
     test<const int*>();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }
