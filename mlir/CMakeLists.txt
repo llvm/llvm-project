@@ -61,7 +61,7 @@ option(MLIR_INCLUDE_INTEGRATION_TESTS
 # Python Bindings Configuration
 # Requires:
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
-#   The python executable is correct (set with -DPYTHON_EXECUTABLE=...)
+#   The python executable is correct (set with -DPython3_EXECUTABLE=...)
 #
 # Version locking
 # ---------------
