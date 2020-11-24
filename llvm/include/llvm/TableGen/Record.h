@@ -58,7 +58,6 @@ public:
   enum RecTyKind {
     BitRecTyKind,
     BitsRecTyKind,
-    CodeRecTyKind,
     IntRecTyKind,
     StringRecTyKind,
     ListRecTyKind,
@@ -136,24 +135,6 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 
   bool typeIsA(const RecTy *RHS) const override;
-};
-
-/// 'code' - Represent a code fragment
-class CodeRecTy : public RecTy {
-  static CodeRecTy Shared;
-
-  CodeRecTy() : RecTy(CodeRecTyKind) {}
-
-public:
-  static bool classof(const RecTy *RT) {
-    return RT->getRecTyKind() == CodeRecTyKind;
-  }
-
-  static CodeRecTy *get() { return &Shared; }
-
-  std::string getAsString() const override { return "code"; }
-
-  bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -306,7 +287,6 @@ protected:
     IK_FirstTypedInit,
     IK_BitInit,
     IK_BitsInit,
-    IK_CodeInit,
     IK_DagInit,
     IK_DefInit,
     IK_FieldInit,
@@ -597,16 +577,18 @@ public:
 
 /// "foo" - Represent an initialization by a string value.
 class StringInit : public TypedInit {
-////  enum StringFormat {
-////    SF_String,  // Format as "text"
-////    SF_Code,    // Format as [{text}]
-////  };
+public:
+  enum StringFormat {
+    SF_String, // Format as "text"
+    SF_Code,   // Format as [{text}]
+  };
 
+private:
   StringRef Value;
-////  StringFormat Format;
+  StringFormat Format;
 
-  explicit StringInit(StringRef V)
-      : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
+  explicit StringInit(StringRef V, StringFormat Fmt)
+      : TypedInit(IK_StringInit, StringRecTy::get()), Value(V), Format(Fmt) {}
 
 public:
   StringInit(const StringInit &) = delete;
@@ -616,48 +598,25 @@ public:
     return I->getKind() == IK_StringInit;
   }
 
-  static StringInit *get(StringRef);
+  static StringInit *get(StringRef, StringFormat Fmt = SF_String);
+
+  static StringFormat determineFormat(StringFormat Fmt1, StringFormat Fmt2) {
+    return (Fmt1 == SF_Code || Fmt2 == SF_Code) ? SF_Code : SF_String;
+  }
 
   StringRef getValue() const { return Value; }
+  StringFormat getFormat() const { return Format; }  
+  bool hasCodeFormat() const { return Format == SF_Code; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   bool isConcrete() const override { return true; }
-  std::string getAsString() const override { return "\"" + Value.str() + "\""; }
 
-  std::string getAsUnquotedString() const override {
-    return std::string(Value);
-  }
-
-  Init *getBit(unsigned Bit) const override {
-    llvm_unreachable("Illegal bit reference off string");
-  }
-};
-
-class CodeInit : public TypedInit {
-  StringRef Value;
-
-  explicit CodeInit(StringRef V)
-      : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
-        Value(V) {}
-
-public:
-  CodeInit(const StringInit &) = delete;
-  CodeInit &operator=(const StringInit &) = delete;
-
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_CodeInit;
-  }
-
-  static CodeInit *get(StringRef);
-
-  StringRef getValue() const { return Value; }
-
-  Init *convertInitializerTo(RecTy *Ty) const override;
-
-  bool isConcrete() const override { return true; }
   std::string getAsString() const override {
-    return "[{" + Value.str() + "}]";
+    if (Format == SF_String)
+      return "\"" + Value.str() + "\"";
+    else
+      return "[{" + Value.str() + "}]";
   }
 
   std::string getAsUnquotedString() const override {
@@ -1438,6 +1397,9 @@ public:
   /// Get the type of the field value as a RecTy.
   RecTy *getType() const { return TyAndPrefix.getPointer(); }
 
+  /// Get the type of the field for printing purposes.
+  std::string getPrintType() const;
+
   /// Get the value of the field as an Init.
   Init *getValue() const { return Value; }
 
@@ -1674,11 +1636,6 @@ public:
   /// its value as a string, throwing an exception if the field if the value is
   /// not a string and llvm::Optional() if the field does not exist.
   llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
-
-  /// This method looks up the specified field and returns
-  /// its value as a string, throwing an exception if the field if the value is
-  /// not a code block and llvm::Optional() if the field does not exist.
-  llvm::Optional<StringRef> getValueAsOptionalCode(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
   /// its value as a BitsInit, throwing an exception if the field does not exist

@@ -52,6 +52,13 @@ void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
 
 // Functions to print fatal notes.
 
+void PrintFatalNote(const Twine &Msg) {
+  PrintNote(Msg);
+  // The following call runs the file cleanup handlers.
+  sys::RunInterruptHandlers();
+  std::exit(1);
+}
+
 void PrintFatalNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   PrintNote(NoteLoc, Msg);
   // The following call runs the file cleanup handlers.
@@ -105,6 +112,12 @@ void PrintError(const char *Loc, const Twine &Msg) {
 // stored in it.
 void PrintError(const Record *Rec, const Twine &Msg) {
   PrintMessage(Rec->getLoc(), SourceMgr::DK_Error, Msg);
+}
+
+// This method takes a RecordVal and uses the source location
+// stored in it.
+void PrintError(const RecordVal *RecVal, const Twine &Msg) {
+  PrintMessage(RecVal->getLoc(), SourceMgr::DK_Error, Msg);
 }
 
 // Functions to print fatal errors.
