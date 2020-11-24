@@ -952,7 +952,7 @@ private:
   std::string getSymbolSectionNdx(const Elf_Sym &Symbol, unsigned SymIndex);
   void printProgramHeaders();
   void printSectionMapping();
-  void printGNUVersionSectionProlog(const typename ELFT::Shdr *Sec,
+  void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
                                     const Twine &Label, unsigned EntriesNum);
 };
 
@@ -4718,26 +4718,25 @@ template <class ELFT> void DumpStyle<ELFT>::printDynamicRelocationsHelper() {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printGNUVersionSectionProlog(
-    const typename ELFT::Shdr *Sec, const Twine &Label, unsigned EntriesNum) {
-  StringRef SecName =
-      unwrapOrError(this->FileName, this->Obj.getSectionName(*Sec));
+    const typename ELFT::Shdr &Sec, const Twine &Label, unsigned EntriesNum) {
+  // Don't inline the SecName, because it might report a warning to stderr and
+  // corrupt the output.
+  StringRef SecName = this->getPrintableSectionName(Sec);
   OS << Label << " section '" << SecName << "' "
      << "contains " << EntriesNum << " entries:\n";
 
-  StringRef SymTabName = "<corrupt>";
-  Expected<const typename ELFT::Shdr *> SymTabOrErr =
-      this->Obj.getSection(Sec->sh_link);
-  if (SymTabOrErr)
-    SymTabName =
-        unwrapOrError(this->FileName, this->Obj.getSectionName(**SymTabOrErr));
+  StringRef LinkedSecName = "<corrupt>";
+  if (Expected<const typename ELFT::Shdr *> LinkedSecOrErr =
+          this->Obj.getSection(Sec.sh_link))
+    LinkedSecName = this->getPrintableSectionName(**LinkedSecOrErr);
   else
-    this->reportUniqueWarning(createError("invalid section linked to " +
-                                          describe(this->Obj, *Sec) + ": " +
-                                          toString(SymTabOrErr.takeError())));
+    this->reportUniqueWarning(
+        createError("invalid section linked to " + describe(this->Obj, Sec) +
+                    ": " + toString(LinkedSecOrErr.takeError())));
 
-  OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
-     << "  Offset: " << format_hex(Sec->sh_offset, 8)
-     << "  Link: " << Sec->sh_link << " (" << SymTabName << ")\n";
+  OS << " Addr: " << format_hex_no_prefix(Sec.sh_addr, 16)
+     << "  Offset: " << format_hex(Sec.sh_offset, 8)
+     << "  Link: " << Sec.sh_link << " (" << LinkedSecName << ")\n";
 }
 
 template <class ELFT>
@@ -4745,7 +4744,7 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  printGNUVersionSectionProlog(Sec, "Version symbols",
+  printGNUVersionSectionProlog(*Sec, "Version symbols",
                                Sec->sh_size / sizeof(Elf_Versym));
   Expected<ArrayRef<Elf_Versym>> VerTableOrErr =
       this->dumper().getVersionTable(*Sec, /*SymTab=*/nullptr,
@@ -4818,7 +4817,7 @@ void GNUStyle<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  printGNUVersionSectionProlog(Sec, "Version definition", Sec->sh_info);
+  printGNUVersionSectionProlog(*Sec, "Version definition", Sec->sh_info);
 
   Expected<std::vector<VerDef>> V = this->dumper().getVersionDefinitions(*Sec);
   if (!V) {
@@ -4846,7 +4845,7 @@ void GNUStyle<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
     return;
 
   unsigned VerneedNum = Sec->sh_info;
-  printGNUVersionSectionProlog(Sec, "Version needs", VerneedNum);
+  printGNUVersionSectionProlog(*Sec, "Version needs", VerneedNum);
 
   Expected<std::vector<VerNeed>> V =
       this->dumper().getVersionDependencies(*Sec);
