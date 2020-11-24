@@ -25,7 +25,7 @@ RegisterContextPOSIXProcessMonitor_arm64::
         lldb_private::Thread &thread,
         std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
-  ::memset(&m_fpr, 0, sizeof m_gpr_arm64);
+  ::memset(&m_gpr_arm64, 0, sizeof m_gpr_arm64);
   ::memset(&m_fpr, 0, sizeof m_fpr);
 }
 
