@@ -10,7 +10,7 @@ function(mlir_detect_pybind11_install)
   else()
     message(CHECK_START "Checking for pybind11 in python path...")
     execute_process(
-      COMMAND "${PYTHON_EXECUTABLE}"
+      COMMAND "${Python3_EXECUTABLE}"
       -c "import pybind11;print(pybind11.get_cmake_dir(), end='')"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       RESULT_VARIABLE STATUS

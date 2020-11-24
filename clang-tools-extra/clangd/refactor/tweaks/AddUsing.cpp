@@ -43,9 +43,10 @@ public:
   }
 
 private:
-  // The qualifier to remove. Set by prepare().
+  // All of the following are set by prepare().
+  // The qualifier to remove.
   NestedNameSpecifierLoc QualifierToRemove;
-  // The name following QualifierToRemove. Set by prepare().
+  // The name following QualifierToRemove.
   llvm::StringRef Name;
 };
 REGISTER_TWEAK(AddUsing)
@@ -206,8 +207,17 @@ bool isNamespaceForbidden(const Tweak::Selection &Inputs,
   return false;
 }
 
+std::string getNNSLAsString(NestedNameSpecifierLoc &NNSL,
+                            const PrintingPolicy &Policy) {
+  std::string Out;
+  llvm::raw_string_ostream OutStream(Out);
+  NNSL.getNestedNameSpecifier()->print(OutStream, Policy);
+  return OutStream.str();
+}
+
 bool AddUsing::prepare(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
+  const auto &TB = Inputs.AST->getTokens();
 
   // Do not suggest "using" in header files. That way madness lies.
   if (isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
@@ -247,11 +257,20 @@ bool AddUsing::prepare(const Selection &Inputs) {
     }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
     if (auto E = T->getAs<ElaboratedTypeLoc>()) {
-      if (auto *BaseTypeIdentifier =
-              E.getType().getUnqualifiedType().getBaseTypeIdentifier()) {
-        Name = BaseTypeIdentifier->getName();
-        QualifierToRemove = E.getQualifierLoc();
-      }
+      QualifierToRemove = E.getQualifierLoc();
+
+      auto SpelledTokens =
+          TB.spelledForExpanded(TB.expandedTokens(E.getSourceRange()));
+      if (!SpelledTokens)
+        return false;
+      auto SpelledRange = syntax::Token::range(SM, SpelledTokens->front(),
+                                               SpelledTokens->back());
+      Name = SpelledRange.text(SM);
+
+      std::string QualifierToRemoveStr = getNNSLAsString(
+          QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
+      if (!Name.consume_front(QualifierToRemoveStr))
+        return false; // What's spelled doesn't match the qualifier.
     }
   }
 
@@ -283,20 +302,13 @@ bool AddUsing::prepare(const Selection &Inputs) {
 
 Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
-  auto &TB = Inputs.AST->getTokens();
 
-  // Determine the length of the qualifier under the cursor, then remove it.
-  auto SpelledTokens = TB.spelledForExpanded(
-      TB.expandedTokens(QualifierToRemove.getSourceRange()));
-  if (!SpelledTokens) {
-    return error("Could not determine length of the qualifier");
-  }
-  unsigned Length =
-      syntax::Token::range(SM, SpelledTokens->front(), SpelledTokens->back())
-          .length();
+  std::string QualifierToRemoveStr = getNNSLAsString(
+      QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
   tooling::Replacements R;
   if (auto Err = R.add(tooling::Replacement(
-          SM, SpelledTokens->front().location(), Length, ""))) {
+          SM, SM.getSpellingLoc(QualifierToRemove.getBeginLoc()),
+          QualifierToRemoveStr.length(), ""))) {
     return std::move(Err);
   }
 
@@ -313,9 +325,8 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
     if (InsertionPoint->AlwaysFullyQualify &&
         !isFullyQualified(QualifierToRemove.getNestedNameSpecifier()))
       UsingTextStream << "::";
-    QualifierToRemove.getNestedNameSpecifier()->print(
-        UsingTextStream, Inputs.AST->getASTContext().getPrintingPolicy());
-    UsingTextStream << Name << ";" << InsertionPoint->Suffix;
+    UsingTextStream << QualifierToRemoveStr << Name << ";"
+                    << InsertionPoint->Suffix;
 
     assert(SM.getFileID(InsertionPoint->Loc) == SM.getMainFileID());
     if (auto Err = R.add(tooling::Replacement(SM, InsertionPoint->Loc, 0,
