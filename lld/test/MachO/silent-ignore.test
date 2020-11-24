@@ -1,5 +1,4 @@
 RUN: %lld -v \
-RUN:   -demangle \
 RUN:   -dynamic \
 RUN:   -no_deduplicate \
 RUN:   -lto_library /lib/foo \
