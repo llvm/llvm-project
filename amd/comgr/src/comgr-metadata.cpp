@@ -392,7 +392,13 @@ static std::string ConvertOldTargetNameToNew(const std::string &old_name, bool i
   assert(!old_name.empty() && "Expecting non-empty old name");
 
   unsigned mach = 0;
-  if (old_name == "AMD:AMDGPU:7:0:0")
+  if (old_name == "AMD:AMDGPU:6:0:0")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX600;
+  else if (old_name == "AMD:AMDGPU:6:0:1")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX601;
+  else if (old_name == "AMD:AMDGPU:6:0:2")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX602;
+  else if (old_name == "AMD:AMDGPU:7:0:0")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX700;
   else if (old_name == "AMD:AMDGPU:7:0:1")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX701;
@@ -402,12 +408,16 @@ static std::string ConvertOldTargetNameToNew(const std::string &old_name, bool i
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX703;
   else if (old_name == "AMD:AMDGPU:7:0:4")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX704;
+  else if (old_name == "AMD:AMDGPU:7:0:5")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX705;
   else if (old_name == "AMD:AMDGPU:8:0:1")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
   else if (old_name == "AMD:AMDGPU:8:0:2")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
   else if (old_name == "AMD:AMDGPU:8:0:3")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
+  else if (old_name == "AMD:AMDGPU:8:0:5")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX805;
   else if (old_name == "AMD:AMDGPU:8:1:0")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX810;
   else if (old_name == "AMD:AMDGPU:9:0:0" || old_name == "AMD:AMDGPU:9:0:1")
