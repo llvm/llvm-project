@@ -1452,10 +1452,15 @@ static bool hasVariant(ArrayRef<PredTransition> Transitions,
   return false;
 }
 
-static std::vector<Record *> getAllPredicates(ArrayRef<TransVariant> Variants) {
+static std::vector<Record *> getAllPredicates(ArrayRef<TransVariant> Variants,
+                                              ArrayRef<unsigned> ProcIndices) {
   std::vector<Record *> Preds;
   for (auto &Variant : Variants) {
     assert(Variant.VarOrSeqDef->isSubClassOf("SchedVar"));
+    if (ProcIndices[0] && Variant.ProcIdx)
+      if (!llvm::count(ProcIndices, Variant.ProcIdx))
+        continue;
+
     Preds.push_back(Variant.VarOrSeqDef->getValueAsDef("Predicate"));
   }
   return Preds;
@@ -1507,7 +1512,8 @@ void PredTransitions::getIntersectingVariants(
     if (AliasProcIdx == 0)
       GenericRW = true;
   }
-  std::vector<Record *> AllPreds = getAllPredicates(Variants);
+  std::vector<Record *> AllPreds =
+      getAllPredicates(Variants, TransVec[TransIdx].ProcIndices);
   for (TransVariant &Variant : Variants) {
     // Don't expand variants if the processor models don't intersect.
     // A zero processor index means any processor.
