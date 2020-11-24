@@ -48,6 +48,7 @@ template <class T> T kill_dependency(T y) noexcept;
 
 #define ATOMIC_BOOL_LOCK_FREE unspecified
 #define ATOMIC_CHAR_LOCK_FREE unspecified
+#define ATOMIC_CHAR8_T_LOCK_FREE unspecified // C++20
 #define ATOMIC_CHAR16_T_LOCK_FREE unspecified
 #define ATOMIC_CHAR32_T_LOCK_FREE unspecified
 #define ATOMIC_WCHAR_T_LOCK_FREE unspecified
@@ -465,6 +466,7 @@ typedef atomic<long>               atomic_long;
 typedef atomic<unsigned long>      atomic_ulong;
 typedef atomic<long long>          atomic_llong;
 typedef atomic<unsigned long long> atomic_ullong;
+typedef atomic<char8_t>            atomic_char8_t; // C++20
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
 typedef atomic<wchar_t>            atomic_wchar_t;
@@ -1125,6 +1127,9 @@ _Tp kill_dependency(_Tp __y) _NOEXCEPT
 #if defined(__CLANG_ATOMIC_BOOL_LOCK_FREE)
 # define ATOMIC_BOOL_LOCK_FREE      __CLANG_ATOMIC_BOOL_LOCK_FREE
 # define ATOMIC_CHAR_LOCK_FREE      __CLANG_ATOMIC_CHAR_LOCK_FREE
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+# define ATOMIC_CHAR8_T_LOCK_FREE   __CLANG_ATOMIC_CHAR8_T_LOCK_FREE
+#endif
 # define ATOMIC_CHAR16_T_LOCK_FREE  __CLANG_ATOMIC_CHAR16_T_LOCK_FREE
 # define ATOMIC_CHAR32_T_LOCK_FREE  __CLANG_ATOMIC_CHAR32_T_LOCK_FREE
 # define ATOMIC_WCHAR_T_LOCK_FREE   __CLANG_ATOMIC_WCHAR_T_LOCK_FREE
@@ -1136,6 +1141,9 @@ _Tp kill_dependency(_Tp __y) _NOEXCEPT
 #elif defined(__GCC_ATOMIC_BOOL_LOCK_FREE)
 # define ATOMIC_BOOL_LOCK_FREE      __GCC_ATOMIC_BOOL_LOCK_FREE
 # define ATOMIC_CHAR_LOCK_FREE      __GCC_ATOMIC_CHAR_LOCK_FREE
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+# define ATOMIC_CHAR8_T_LOCK_FREE   __GCC_ATOMIC_CHAR8_T_LOCK_FREE
+#endif
 # define ATOMIC_CHAR16_T_LOCK_FREE  __GCC_ATOMIC_CHAR16_T_LOCK_FREE
 # define ATOMIC_CHAR32_T_LOCK_FREE  __GCC_ATOMIC_CHAR32_T_LOCK_FREE
 # define ATOMIC_WCHAR_T_LOCK_FREE   __GCC_ATOMIC_WCHAR_T_LOCK_FREE
@@ -1450,6 +1458,9 @@ template<> struct __cxx_is_always_lock_free<bool> { enum { __value = 2 == ATOMIC
 template<> struct __cxx_is_always_lock_free<char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<signed char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<unsigned char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+template<> struct __cxx_is_always_lock_free<char8_t> { enum { __value = 2 == ATOMIC_CHAR8_T_LOCK_FREE }; };
+#endif
 template<> struct __cxx_is_always_lock_free<char16_t> { enum { __value = 2 == ATOMIC_CHAR16_T_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<char32_t> { enum { __value = 2 == ATOMIC_CHAR32_T_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<wchar_t> { enum { __value = 2 == ATOMIC_WCHAR_T_LOCK_FREE }; };
@@ -2721,6 +2732,9 @@ typedef atomic<long>               atomic_long;
 typedef atomic<unsigned long>      atomic_ulong;
 typedef atomic<long long>          atomic_llong;
 typedef atomic<unsigned long long> atomic_ullong;
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef atomic<char8_t>            atomic_char8_t;
+#endif
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
 typedef atomic<wchar_t>            atomic_wchar_t;

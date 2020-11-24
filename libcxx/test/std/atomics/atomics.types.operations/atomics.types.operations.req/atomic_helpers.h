@@ -83,6 +83,9 @@ struct TestEachIntegralType {
         TestFunctor<long long>()();
         TestFunctor<unsigned long long>()();
         TestFunctor<wchar_t>();
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+        TestFunctor<char8_t>()();
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
         TestFunctor<char16_t>()();
         TestFunctor<char32_t>()();

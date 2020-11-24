@@ -21,6 +21,7 @@
 // typedef atomic<unsigned long>      atomic_ulong;
 // typedef atomic<long long>          atomic_llong;
 // typedef atomic<unsigned long long> atomic_ullong;
+// typedef atomic<char8_t>            atomic_char8_t; // C++20
 // typedef atomic<char16_t>           atomic_char16_t;
 // typedef atomic<char32_t>           atomic_char32_t;
 // typedef atomic<wchar_t>            atomic_wchar_t;
@@ -56,6 +57,9 @@ int main(int, char**)
     static_assert((std::is_same<std::atomic<long long>, std::atomic_llong>::value), "");
     static_assert((std::is_same<std::atomic<unsigned long long>, std::atomic_ullong>::value), "");
     static_assert((std::is_same<std::atomic<wchar_t>, std::atomic_wchar_t>::value), "");
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    static_assert((std::is_same<std::atomic<char8_t>, std::atomic_char8_t>::value), "");
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     static_assert((std::is_same<std::atomic<char16_t>, std::atomic_char16_t>::value), "");
     static_assert((std::is_same<std::atomic<char32_t>, std::atomic_char32_t>::value), "");
