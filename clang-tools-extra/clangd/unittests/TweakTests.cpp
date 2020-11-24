@@ -2520,6 +2520,9 @@ public:
   EXPECT_UNAVAILABLE(Header + "void fun() { ::ban::fo^o(); }");
   EXPECT_AVAILABLE(Header + "void fun() { banana::fo^o(); }");
 
+  // Do not offer code action on typo-corrections.
+  EXPECT_UNAVAILABLE(Header + "/*error-ok*/c^c C;");
+
   // Check that we do not trigger in header files.
   FileName = "test.h";
   ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.
@@ -2793,6 +2796,35 @@ using one::two::ff;using one::two::ee;
 
 void fun() {
   ff();
+})cpp"},
+            // using alias; insert using for the spelled name.
+            {R"cpp(
+#include "test.hpp"
+
+void fun() {
+  one::u^u u;
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using one::uu;
+
+void fun() {
+  uu u;
+})cpp"},
+            // using namespace.
+            {R"cpp(
+#include "test.hpp"
+using namespace one;
+namespace {
+two::c^c C;
+})cpp",
+             R"cpp(
+#include "test.hpp"
+using namespace one;
+namespace {using two::cc;
+
+cc C;
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
@@ -2809,6 +2841,7 @@ public:
   static void mm() {}
 };
 }
+using uu = two::cc;
 })cpp";
       EXPECT_EQ(apply(SubCase, &EditedFiles), Case.ExpectedSource);
     }
