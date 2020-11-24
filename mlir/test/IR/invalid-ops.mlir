@@ -981,7 +981,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2>
   // expected-error@+1 {{different memory spaces}}
-  %1 = subview %0[0, 0, 0][%arg2][1, 1, 1]
+  %1 = subview %0[0, 0, 0][%arg2, %arg2, %arg2][1, 1, 1]
     : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2> to
       memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
   return
@@ -992,7 +992,7 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>>
   // expected-error@+1 {{is not strided}}
-  %1 = subview %0[0, 0, 0][%arg2][1, 1, 1]
+  %1 = subview %0[0, 0, 0][%arg2, %arg2, %arg2][1, 1, 1]
     : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>> to
       memref<8x?x4xf32, offset: 0, strides: [?, 4, 1]>
   return
