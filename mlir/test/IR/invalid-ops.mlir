@@ -236,7 +236,7 @@ func @func_with_ops(i32, i32) {
 func @func_with_ops() {
 ^bb0:
   %c = constant dense<0> : vector<42 x i32>
-  // expected-error@+1 {{op requires the same shape for all operands and results}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<41xi1>' and 'vector<42xi32>'}}
   %r = "std.cmpi"(%c, %c) {predicate = 0} : (vector<42 x i32>, vector<42 x i32>) -> vector<41 x i1>
 }
 
@@ -514,7 +514,7 @@ func @cmpf_canonical_wrong_result_type(%a : f32, %b : f32) -> f32 {
 // -----
 
 func @cmpf_result_shape_mismatch(%a : vector<42xf32>) {
-  // expected-error@+1 {{op requires the same shape for all operands and results}}
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'vector<41xi1>' and 'vector<42xf32>'}}
   %r = "std.cmpf"(%a, %a) {predicate = 0} : (vector<42 x f32>, vector<42 x f32>) -> vector<41 x i1>
 }
 
