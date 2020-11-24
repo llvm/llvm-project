@@ -2012,7 +2012,7 @@ static unsigned mapToSinitPriority(int P) {
   if (P < 64512)
     return 2047 + (P - 1124) * 33878;
 
-  return 2147482625 + (P - 64512);
+  return 2147482625u + (P - 64512);
 }
 
 static std::string convertToSinitPriority(int Priority) {
