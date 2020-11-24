@@ -109,9 +109,10 @@ void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
 //===----------------------------------------------------------------------===//
 
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
-                                        const char *filename, unsigned line,
+                                        MlirStringRef filename, unsigned line,
                                         unsigned col) {
-  return wrap(FileLineColLoc::get(filename, line, col, unwrap(context)));
+  return wrap(
+      FileLineColLoc::get(unwrap(filename), line, col, unwrap(context)));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
@@ -136,8 +137,8 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
   return wrap(ModuleOp::create(unwrap(location)));
 }
 
-MlirModule mlirModuleCreateParse(MlirContext context, const char *module) {
-  OwningModuleRef owning = parseSourceString(module, unwrap(context));
+MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
+  OwningModuleRef owning = parseSourceString(unwrap(module), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
@@ -164,7 +165,7 @@ MlirOperation mlirModuleGetOperation(MlirModule module) {
 // Operation state API.
 //===----------------------------------------------------------------------===//
 
-MlirOperationState mlirOperationStateGet(const char *name, MlirLocation loc) {
+MlirOperationState mlirOperationStateGet(MlirStringRef name, MlirLocation loc) {
   MlirOperationState state;
   state.name = name;
   state.location = loc;
@@ -215,7 +216,7 @@ void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
 
 MlirOperation mlirOperationCreate(const MlirOperationState *state) {
   assert(state);
-  OperationState cppState(unwrap(state->location), state->name);
+  OperationState cppState(unwrap(state->location), unwrap(state->name));
   SmallVector<Type, 4> resultStorage;
   SmallVector<Value, 8> operandStorage;
   SmallVector<Block *, 2> successorStorage;
@@ -227,7 +228,7 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
 
   cppState.attributes.reserve(state->nAttributes);
   for (intptr_t i = 0; i < state->nAttributes; ++i)
-    cppState.addAttribute(state->attributes[i].name,
+    cppState.addAttribute(unwrap(state->attributes[i].name),
                           unwrap(state->attributes[i].attribute));
 
   for (intptr_t i = 0; i < state->nRegions; ++i)
@@ -302,21 +303,21 @@ intptr_t mlirOperationGetNumAttributes(MlirOperation op) {
 
 MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos) {
   NamedAttribute attr = unwrap(op)->getAttrs()[pos];
-  return MlirNamedAttribute{attr.first.c_str(), wrap(attr.second)};
+  return MlirNamedAttribute{wrap(attr.first.strref()), wrap(attr.second)};
 }
 
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
-                                              const char *name) {
-  return wrap(unwrap(op)->getAttr(name));
+                                              MlirStringRef name) {
+  return wrap(unwrap(op)->getAttr(unwrap(name)));
 }
 
-void mlirOperationSetAttributeByName(MlirOperation op, const char *name,
+void mlirOperationSetAttributeByName(MlirOperation op, MlirStringRef name,
                                      MlirAttribute attr) {
-  unwrap(op)->setAttr(name, unwrap(attr));
+  unwrap(op)->setAttr(unwrap(name), unwrap(attr));
 }
 
-int mlirOperationRemoveAttributeByName(MlirOperation op, const char *name) {
-  auto removeResult = unwrap(op)->removeAttr(name);
+int mlirOperationRemoveAttributeByName(MlirOperation op, MlirStringRef name) {
+  auto removeResult = unwrap(op)->removeAttr(unwrap(name));
   return removeResult == MutableDictionaryAttr::RemoveResult::Removed;
 }
 
@@ -529,8 +530,8 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
 // Type API.
 //===----------------------------------------------------------------------===//
 
-MlirType mlirTypeParseGet(MlirContext context, const char *type) {
-  return wrap(mlir::parseType(type, unwrap(context)));
+MlirType mlirTypeParseGet(MlirContext context, MlirStringRef type) {
+  return wrap(mlir::parseType(unwrap(type), unwrap(context)));
 }
 
 MlirContext mlirTypeGetContext(MlirType type) {
@@ -550,8 +551,8 @@ void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
 // Attribute API.
 //===----------------------------------------------------------------------===//
 
-MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
-  return wrap(mlir::parseAttribute(attr, unwrap(context)));
+MlirAttribute mlirAttributeParseGet(MlirContext context, MlirStringRef attr) {
+  return wrap(mlir::parseAttribute(unwrap(attr), unwrap(context)));
 }
 
 MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
@@ -574,7 +575,8 @@ void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
 
 void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
 
-MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr) {
+MlirNamedAttribute mlirNamedAttributeGet(MlirStringRef name,
+                                         MlirAttribute attr) {
   return MlirNamedAttribute{name, attr};
 }
 
