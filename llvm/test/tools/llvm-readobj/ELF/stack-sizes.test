@@ -390,29 +390,42 @@ Symbols:
     Binding: STB_GLOBAL
 
 ## Check that we report a warning when a relocation symbol does not belong to a
-## valid section. We expect a stack size entry with an unknown symbol in the 
-## output.
+## valid section or when it has an invalid index. We expect a stack size entry
+## with an unknown symbol in the output.
 
 # RUN: yaml2obj --docnum=7 %s -o %t07
-# RUN: llvm-readelf --stack-sizes %t07 2> %t07-gnu.err | FileCheck %s --check-prefix=BADSECTION-OUT-GNU
-# RUN: FileCheck %s < %t07-gnu.err --check-prefix=BADSECTION-ERR -DFILE=%t07
-# RUN: llvm-readobj --stack-sizes %t07 2> %t07-llvm.err | FileCheck %s --check-prefix=BADSECTION-OUT-LLVM
-# RUN: FileCheck %s < %t07-llvm.err --check-prefix=BADSECTION-ERR -DFILE=%t07
+# RUN: llvm-readelf --stack-sizes %t07 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t07 --check-prefix=BADSECTION-OUT-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t07 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t07 --check-prefix=BADSECTION-OUT-LLVM --implicit-check-not=warning:
 
-# RUN: llvm-readelf --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
-# RUN: llvm-readobj --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
-
-# BADSECTION-OUT-GNU: Size Function
-# BADSECTION-OUT-GNU:    8 ?
+# BADSECTION-OUT-GNU:      Stack Sizes:
+# BADSECTION-OUT-GNU-NEXT:          Size     Function
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry
+# BADSECTION-OUT-GNU-NEXT:             8     ?
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to access section [index 4] data at 0x1880: offset goes past the end of file
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry
+# BADSECTION-OUT-GNU-NEXT:             22    ?
 
 # BADSECTION-OUT-LLVM:      StackSizes [
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Function: ?
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x8
 # BADSECTION-OUT-LLVM-NEXT:   }
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to access section [index 4] data at 0x1880: offset goes past the end of file
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry
+# BADSECTION-OUT-LLVM-NEXT:   Entry {
+# BADSECTION-OUT-LLVM-NEXT:     Function: ?
+# BADSECTION-OUT-LLVM-NEXT:     Size: 0x16
+# BADSECTION-OUT-LLVM-NEXT:   }
 # BADSECTION-OUT-LLVM-NEXT: ]
 
-# BADSECTION-ERR: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof'
+# RUN: llvm-readelf --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
+# RUN: llvm-readobj --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
+
 # BADSECTION-DEMANGLE-ERR: warning: '[[FILE]]': cannot identify the section for relocation symbol 'foo(float)'
 
 --- !ELF
@@ -424,18 +437,23 @@ FileHeader:
 Sections:
   - Name:    .text
     Type:    SHT_PROGBITS
-    Size:    8
+    Size:    16
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
     Link:    .text
     Entries:
       - Size: 0x8
+      - Size: 0x16
   - Name:    .rela.stack_sizes
     Type:    SHT_RELA
     Info:    .stack_sizes
     Relocations:
     - Offset: 0
       Symbol: _Z3foof
+      Type:   R_X86_64_64
+    - Offset: 9
+## An invalid symbol index.
+      Symbol: 0xff
       Type:   R_X86_64_64
 Symbols:
   - Name:    _Z3foof
