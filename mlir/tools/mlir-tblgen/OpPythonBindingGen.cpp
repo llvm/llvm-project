@@ -167,7 +167,7 @@ constexpr const char *optionalAttributeGetterTemplate = R"Py(
     return {1}(self.operation.attributes["{2}"])
 )Py";
 
-/// Template for a accessing a unit operation attribute, returns True of the
+/// Template for a getter of a unit operation attribute, returns True of the
 /// unit attribute is present, False otherwise (unit attributes have meaning
 /// by mere presence):
 ///    {0} is the name of the attribute sanitized for Python,
@@ -176,6 +176,53 @@ constexpr const char *unitAttributeGetterTemplate = R"Py(
   @property
   def {0}(self):
     return "{1}" in self.operation.attributes
+)Py";
+
+/// Template for an operation attribute setter:
+///    {0} is the name of the attribute sanitized for Python;
+///    {1} is the original name of the attribute.
+constexpr const char *attributeSetterTemplate = R"Py(
+  @{0}.setter
+  def {0}(self, value):
+    if value is None:
+      raise ValueError("'None' not allowed as value for mandatory attributes")
+    self.operation.attributes["{1}"] = value
+)Py";
+
+/// Template for a setter of an optional operation attribute, setting to None
+/// removes the attribute:
+///    {0} is the name of the attribute sanitized for Python;
+///    {1} is the original name of the attribute.
+constexpr const char *optionalAttributeSetterTemplate = R"Py(
+  @{0}.setter
+  def {0}(self, value):
+    if value is not None:
+      self.operation.attributes["{1}"] = value
+    elif "{1}" in self.operation.attributes:
+      del self.operation.attributes["{1}"]
+)Py";
+
+/// Template for a setter of a unit operation attribute, setting to None or
+/// False removes the attribute:
+///    {0} is the name of the attribute sanitized for Python;
+///    {1} is the original name of the attribute.
+constexpr const char *unitAttributeSetterTemplate = R"Py(
+  @{0}.setter
+  def {0}(self, value):
+    if bool(value):
+      self.operation.attributes["{1}"] = _ir.UnitAttr.get()
+    elif "{1}" in self.operation.attributes:
+      del self.operation.attributes["{1}"]
+)Py";
+
+/// Template for a deleter of an optional or a unit operation attribute, removes
+/// the attribute from the operation:
+///    {0} is the name of the attribute sanitized for Python;
+///    {1} is the original name of the attribute.
+constexpr const char *attributeDeleterTemplate = R"Py(
+  @{0}.deleter
+  def {0}(self):
+    del self.operation.attributes["{1}"]
 )Py";
 
 static llvm::cl::OptionCategory
@@ -351,10 +398,16 @@ static void emitAttributeAccessors(const Operator &op,
     if (namedAttr.name.empty())
       continue;
 
+    std::string sanitizedName = sanitizeName(namedAttr.name);
+
     // Unit attributes are handled specially.
     if (namedAttr.attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
-      os << llvm::formatv(unitAttributeGetterTemplate,
-                          sanitizeName(namedAttr.name), namedAttr.name);
+      os << llvm::formatv(unitAttributeGetterTemplate, sanitizedName,
+                          namedAttr.name);
+      os << llvm::formatv(unitAttributeSetterTemplate, sanitizedName,
+                          namedAttr.name);
+      os << llvm::formatv(attributeDeleterTemplate, sanitizedName,
+                          namedAttr.name);
       continue;
     }
 
@@ -362,12 +415,22 @@ static void emitAttributeAccessors(const Operator &op,
     if (!attributeClasses.count(namedAttr.attr.getStorageType().trim()))
       continue;
 
-    os << llvm::formatv(
-        namedAttr.attr.isOptional() ? optionalAttributeGetterTemplate
-                                    : attributeGetterTemplate,
-        sanitizeName(namedAttr.name),
-        attributeClasses.lookup(namedAttr.attr.getStorageType()),
-        namedAttr.name);
+    StringRef pythonType =
+        attributeClasses.lookup(namedAttr.attr.getStorageType());
+    if (namedAttr.attr.isOptional()) {
+      os << llvm::formatv(optionalAttributeGetterTemplate, sanitizedName,
+                          pythonType, namedAttr.name);
+      os << llvm::formatv(optionalAttributeSetterTemplate, sanitizedName,
+                          namedAttr.name);
+      os << llvm::formatv(attributeDeleterTemplate, sanitizedName,
+                          namedAttr.name);
+    } else {
+      os << llvm::formatv(attributeGetterTemplate, sanitizedName, pythonType,
+                          namedAttr.name);
+      os << llvm::formatv(attributeSetterTemplate, sanitizedName,
+                          namedAttr.name);
+      // Non-optional attributes cannot be deleted.
+    }
   }
 }
 

@@ -297,7 +297,7 @@ public:
   void addUnsignedConstant(uint64_t Value);
 
   /// Emit an unsigned constant.
-  void addUnsignedConstant(APInt Value, const AsmPrinter &AP);
+  void addUnsignedConstant(const APInt &Value);
 
   /// Emit an floating point constant.
   void addConstantFP(const APFloat &Value, const AsmPrinter &AP);

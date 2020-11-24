@@ -1306,6 +1306,18 @@ public:
     return PyNamedAttribute(namedAttr.attribute, std::string(namedAttr.name));
   }
 
+  void dunderSetItem(const std::string &name, PyAttribute attr) {
+    mlirOperationSetAttributeByName(operation->get(), name.c_str(), attr.attr);
+  }
+
+  void dunderDelItem(const std::string &name) {
+    int removed =
+        mlirOperationRemoveAttributeByName(operation->get(), name.c_str());
+    if (!removed)
+      throw SetPyError(PyExc_KeyError,
+                       "attempt to delete a non-existent attribute");
+  }
+
   intptr_t dunderLen() {
     return mlirOperationGetNumAttributes(operation->get());
   }
@@ -1320,7 +1332,9 @@ public:
         .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed);
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed)
+        .def("__setitem__", &PyOpAttributeMap::dunderSetItem)
+        .def("__delitem__", &PyOpAttributeMap::dunderDelItem);
   }
 
 private:
