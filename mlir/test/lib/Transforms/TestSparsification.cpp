@@ -16,13 +16,63 @@ namespace {
 
 struct TestSparsification
     : public PassWrapper<TestSparsification, FunctionPass> {
+
+  TestSparsification() = default;
+  TestSparsification(const TestSparsification &pass) {}
+
+  Option<int32_t> parallelization{
+      *this, "parallelization-strategy",
+      llvm::cl::desc("Set the parallelization strategy"), llvm::cl::init(0)};
+
+  Option<int32_t> vectorization{
+      *this, "vectorization-strategy",
+      llvm::cl::desc("Set the vectorization strategy"), llvm::cl::init(0)};
+
+  Option<int32_t> vectorLength{
+      *this, "vl", llvm::cl::desc("Set the vector length"), llvm::cl::init(1)};
+
+  /// Registers all dialects required by testing.
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<scf::SCFDialect>();
+    registry.insert<scf::SCFDialect, vector::VectorDialect>();
   }
+
+  /// Returns parallelization strategy given on command line.
+  linalg::SparseParallelizationStrategy parallelOption() {
+    switch (parallelization) {
+    default:
+      return linalg::SparseParallelizationStrategy::kNone;
+    case 1:
+      return linalg::SparseParallelizationStrategy::kDenseOuterLoop;
+    case 2:
+      return linalg::SparseParallelizationStrategy::kAnyStorageOuterLoop;
+    case 3:
+      return linalg::SparseParallelizationStrategy::kDenseAnyLoop;
+    case 4:
+      return linalg::SparseParallelizationStrategy::kAnyStorageAnyLoop;
+    }
+  }
+
+  /// Returns vectorization strategy given on command line.
+  linalg::SparseVectorizationStrategy vectorOption() {
+    switch (vectorization) {
+    default:
+      return linalg::SparseVectorizationStrategy::kNone;
+    case 1:
+      return linalg::SparseVectorizationStrategy::kDenseInnerLoop;
+    case 2:
+      return linalg::SparseVectorizationStrategy::kAnyStorageInnerLoop;
+    }
+  }
+
+  /// Runs the test on a function.
   void runOnFunction() override {
     auto *ctx = &getContext();
     OwningRewritePatternList patterns;
-    linalg::populateSparsificationPatterns(ctx, patterns);
+    // Translate strategy flags to strategy options.
+    linalg::SparsificationOptions options(parallelOption(), vectorOption(),
+                                          vectorLength);
+    // Apply rewriting.
+    linalg::populateSparsificationPatterns(ctx, patterns, options);
     applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
