@@ -28,34 +28,29 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* null, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 24, i32 24, i32 24, i32 24>
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[P:%.*]], align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[P]], align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[P]], align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, i8* [[P]], align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> undef, i8 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i8> [[TMP8]], i8 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i8> [[TMP9]], i8 [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> [[TMP10]], i8 [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i8> [[TMP11]] to <4 x i32>
-; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw <4 x i32> [[TMP12]], <i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[TMP13]], [[TMP3]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, i8* undef, align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP16:%.*]] = load i8, i8* undef, align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP17:%.*]] = load i8, i8* undef, align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, i8* undef, align 1, !tbaa !1
-; CHECK-NEXT:    [[TMP19:%.*]] = or <4 x i32> [[TMP14]], zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = or <4 x i32> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP20]], i32 0
-; CHECK-NEXT:    store i32 [[TMP21]], i32* undef, align 4, !tbaa !4
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP20]], i32 1
-; CHECK-NEXT:    store i32 [[TMP22]], i32* undef, align 4, !tbaa !4
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP20]], i32 2
-; CHECK-NEXT:    store i32 [[TMP23]], i32* undef, align 4, !tbaa !4
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP20]], i32 3
-; CHECK-NEXT:    store i32 [[TMP24]], i32* undef, align 4, !tbaa !4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[P:%.*]], align 1, [[TBAA1:!tbaa !.*]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i8> undef, i8 [[TMP4]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT1]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw <4 x i32> [[TMP5]], <i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i32> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* undef, align 1, [[TBAA1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i8, i8* undef, align 1, [[TBAA1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i8, i8* undef, align 1, [[TBAA1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, i8* undef, align 1, [[TBAA1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i32> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i32 0
+; CHECK-NEXT:    store i32 [[TMP14]], i32* undef, align 4, [[TBAA4:!tbaa !.*]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 1
+; CHECK-NEXT:    store i32 [[TMP15]], i32* undef, align 4, [[TBAA4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i32 2
+; CHECK-NEXT:    store i32 [[TMP16]], i32* undef, align 4, [[TBAA4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    store i32 [[TMP17]], i32* undef, align 4, [[TBAA4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1, 0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[SW_EPILOG:%.*]], label [[SCALAR_PH]]
@@ -66,19 +61,19 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    [[P_359:%.*]] = phi i8* [ [[ADD_PTR86:%.*]], [[FOR_BODY68]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[CONV70:%.*]] = zext i8 [[X]] to i32
 ; CHECK-NEXT:    [[SHL71:%.*]] = shl nuw i32 [[CONV70]], 24
-; CHECK-NEXT:    [[TMP26:%.*]] = load i8, i8* [[P]], align 1, !tbaa !1
-; CHECK-NEXT:    [[CONV73:%.*]] = zext i8 [[TMP26]] to i32
+; CHECK-NEXT:    [[TMP19:%.*]] = load i8, i8* [[P]], align 1, [[TBAA1]]
+; CHECK-NEXT:    [[CONV73:%.*]] = zext i8 [[TMP19]] to i32
 ; CHECK-NEXT:    [[SHL74:%.*]] = shl nuw nsw i32 [[CONV73]], 16
 ; CHECK-NEXT:    [[OR75:%.*]] = or i32 [[SHL74]], [[SHL71]]
-; CHECK-NEXT:    [[TMP27:%.*]] = load i8, i8* undef, align 1, !tbaa !1
+; CHECK-NEXT:    [[TMP20:%.*]] = load i8, i8* undef, align 1, [[TBAA1]]
 ; CHECK-NEXT:    [[SHL78:%.*]] = shl nuw nsw i32 undef, 8
 ; CHECK-NEXT:    [[OR79:%.*]] = or i32 [[OR75]], [[SHL78]]
 ; CHECK-NEXT:    [[CONV81:%.*]] = zext i8 undef to i32
 ; CHECK-NEXT:    [[OR83:%.*]] = or i32 [[OR79]], [[CONV81]]
-; CHECK-NEXT:    store i32 [[OR83]], i32* undef, align 4, !tbaa !4
+; CHECK-NEXT:    store i32 [[OR83]], i32* undef, align 4, [[TBAA4]]
 ; CHECK-NEXT:    [[ADD_PTR86]] = getelementptr inbounds i8, i8* [[P_359]], i64 4
 ; CHECK-NEXT:    [[CMP66:%.*]] = icmp ult i8* [[ADD_PTR86]], undef
-; CHECK-NEXT:    br i1 [[CMP66]], label [[FOR_BODY68]], label [[SW_EPILOG]], !llvm.loop !8
+; CHECK-NEXT:    br i1 [[CMP66]], label [[FOR_BODY68]], label [[SW_EPILOG]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       Exit:
