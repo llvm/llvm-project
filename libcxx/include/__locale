@@ -628,7 +628,7 @@ class _LIBCPP_TYPE_VIS ctype<char>
 public:
     typedef char char_type;
 
-    explicit ctype(const mask* __tab = 0, bool __del = false, size_t __refs = 0);
+    explicit ctype(const mask* __tab = nullptr, bool __del = false, size_t __refs = 0);
 
     _LIBCPP_INLINE_VISIBILITY
     bool is(mask __m, char_type __c) const
