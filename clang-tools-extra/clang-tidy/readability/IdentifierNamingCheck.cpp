@@ -122,14 +122,32 @@ static StringRef const StyleNames[] = {
 #undef NAMING_KEYS
 // clang-format on
 
+IdentifierNamingCheck::NamingStyle::NamingStyle(
+    llvm::Optional<IdentifierNamingCheck::CaseType> Case,
+    const std::string &Prefix, const std::string &Suffix,
+    const std::string &IgnoredRegexpStr)
+    : Case(Case), Prefix(Prefix), Suffix(Suffix),
+      IgnoredRegexpStr(IgnoredRegexpStr) {
+  if (!IgnoredRegexpStr.empty()) {
+    IgnoredRegexp =
+        llvm::Regex(llvm::SmallString<128>({"^", IgnoredRegexpStr, "$"}));
+    if (!IgnoredRegexp.isValid())
+      llvm::errs() << "Invalid IgnoredRegexp regular expression: "
+                   << IgnoredRegexpStr;
+  }
+}
+
 static IdentifierNamingCheck::FileStyle
 getFileStyleFromOptions(const ClangTidyCheck::OptionsView &Options) {
-  SmallVector<llvm::Optional<IdentifierNamingCheck::NamingStyle>, 0> Styles(
-      SK_Count);
+  SmallVector<llvm::Optional<IdentifierNamingCheck::NamingStyle>, 0> Styles;
+  Styles.resize(SK_Count);
   SmallString<64> StyleString;
   for (unsigned I = 0; I < SK_Count; ++I) {
     StyleString = StyleNames[I];
     size_t StyleSize = StyleString.size();
+    StyleString.append("IgnoredRegexp");
+    std::string IgnoredRegexpStr = Options.get(StyleString, "");
+    StyleString.resize(StyleSize);
     StyleString.append("Prefix");
     std::string Prefix(Options.get(StyleString, ""));
     // Fast replacement of [Pre]fix -> [Suf]fix.
@@ -141,9 +159,10 @@ getFileStyleFromOptions(const ClangTidyCheck::OptionsView &Options) {
     auto CaseOptional =
         Options.getOptional<IdentifierNamingCheck::CaseType>(StyleString);
 
-    if (CaseOptional || !Prefix.empty() || !Postfix.empty())
+    if (CaseOptional || !Prefix.empty() || !Postfix.empty() ||
+        !IgnoredRegexpStr.empty())
       Styles[I].emplace(std::move(CaseOptional), std::move(Prefix),
-                        std::move(Postfix));
+                        std::move(Postfix), std::move(IgnoredRegexpStr));
   }
   bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   return {std::move(Styles), IgnoreMainLike};
@@ -175,6 +194,9 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
       continue;
     StyleString = StyleNames[I];
     size_t StyleSize = StyleString.size();
+    StyleString.append("IgnoredRegexp");
+    Options.store(Opts, StyleString, Styles[I]->IgnoredRegexpStr);
+    StyleString.resize(StyleSize);
     StyleString.append("Prefix");
     Options.store(Opts, StyleString, Styles[I]->Prefix);
     // Fast replacement of [Pre]fix -> [Suf]fix.
@@ -194,7 +216,7 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 static bool matchesStyle(StringRef Name,
-                         IdentifierNamingCheck::NamingStyle Style) {
+                         const IdentifierNamingCheck::NamingStyle &Style) {
   static llvm::Regex Matchers[] = {
       llvm::Regex("^.*$"),
       llvm::Regex("^[a-z][a-z0-9_]*$"),
@@ -681,6 +703,9 @@ static llvm::Optional<RenamerClangTidyCheck::FailureInfo> getFailureInfo(
     return None;
 
   const IdentifierNamingCheck::NamingStyle &Style = *NamingStyles[SK];
+  if (Style.IgnoredRegexp.isValid() && Style.IgnoredRegexp.match(Name))
+    return None;
+
   if (matchesStyle(Name, Style))
     return None;
 
