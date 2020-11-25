@@ -1361,9 +1361,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // runtime, because the main executable is always at the beginning of a search
   // list. We can leverage that fact.
   if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
-    if (expr == R_GOT_PC && !isAbsoluteValue(sym)) {
-      expr = target->adjustRelaxExpr(type, relocatedAddr, expr);
-    } else {
+    if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
       if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
@@ -1375,6 +1373,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
             type == R_HEX_GD_PLT_B22_PCREL_X ||
             type == R_HEX_GD_PLT_B32_PCREL_X)))
       expr = fromPlt(expr);
+    } else if (!isAbsoluteValue(sym)) {
+      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
     }
   }
 
