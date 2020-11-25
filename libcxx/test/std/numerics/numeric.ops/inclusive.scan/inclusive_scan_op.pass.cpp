@@ -9,7 +9,6 @@
 // <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Became constexpr in C++20
 // template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
 //     OutputIterator
 //     inclusive_scan(InputIterator first, InputIterator last,
@@ -18,7 +17,6 @@
 
 #include <numeric>
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -26,43 +24,27 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-// FIXME Remove constexpr vector workaround introduced in D90569
-#if TEST_STD_VER > 17
-#include <span>
-#endif
 
-template <class Iter1, class Op, class Iter2>
-TEST_CONSTEXPR_CXX20 void
+template <class Iter1, class T, class Op, class Iter2>
+void
 test(Iter1 first, Iter1 last, Op op, Iter2 rFirst, Iter2 rLast)
 {
-    // C++17 doesn't test constexpr so can use a vector.
-    // C++20 can use vector in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases use a std::span for the test.
-    // FIXME Remove constexpr vector workaround introduced in D90569
-    size_t size = std::distance(first, last);
-#if TEST_STD_VER < 20 || \
-    (defined(__cpp_lib_constexpr_vector) && __cpp_lib_constexpr_vector >= 201907L)
-
-    std::vector<typename std::iterator_traits<Iter1>::value_type> v(size);
-#else
-    assert((size <= 5) && "Increment the size of the array");
-    typename std::iterator_traits<Iter1>::value_type b[5];
-    std::span<typename std::iterator_traits<Iter1>::value_type> v{b, size};
-#endif
+    std::vector<typename std::iterator_traits<Iter1>::value_type> v;
 
 //  Not in place
-    std::inclusive_scan(first, last, v.begin(), op);
+    std::inclusive_scan(first, last, std::back_inserter(v), op);
     assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 
 //  In place
-    std::copy(first, last, v.begin());
+    v.clear();
+    v.assign(first, last);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), op);
     assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 }
 
 
 template <class Iter>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
           int ia[]   = {1, 3,  5,   7,   9};
@@ -78,14 +60,13 @@ test()
         }
 }
 
-constexpr size_t triangle(size_t n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
-TEST_CONSTEXPR_CXX20 void
-basic_tests()
+void basic_tests()
 {
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>());
     for (size_t i = 0; i < v.size(); ++i)
@@ -93,7 +74,7 @@ basic_tests()
     }
 
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>());
     for (size_t i = 0; i < v.size(); ++i)
@@ -101,7 +82,7 @@ basic_tests()
     }
 
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>());
     for (size_t i = 0; i < v.size(); ++i)
@@ -109,43 +90,26 @@ basic_tests()
     }
 
     {
-    // C++17 doesn't test constexpr so can use a vector.
-    // C++20 can use vector in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases use a std::span for the test.
-    // FIXME Remove constexpr vector workaround introduced in D90569
-#if TEST_STD_VER < 20 || \
-    (defined(__cpp_lib_constexpr_vector) && __cpp_lib_constexpr_vector >= 201907L)
     std::vector<size_t> v, res;
     std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>());
-#else
-    std::array<size_t, 0> v, res;
-    std::inclusive_scan(v.begin(), v.end(), res.begin(), std::plus<>());
-#endif
     assert(res.empty());
     }
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
-{
-    basic_tests();
-
-//  All the iterator categories
-    test<input_iterator        <const int*> >();
-    test<forward_iterator      <const int*> >();
-    test<bidirectional_iterator<const int*> >();
-    test<random_access_iterator<const int*> >();
-    test<const int*>();
-    test<      int*>();
-
-    return true;
-}
 
 int main(int, char**)
 {
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+
+    basic_tests();
+
+//  All the iterator categories
+//     test<input_iterator        <const int*> >();
+//     test<forward_iterator      <const int*> >();
+//     test<bidirectional_iterator<const int*> >();
+//     test<random_access_iterator<const int*> >();
+//     test<const int*>();
+//     test<      int*>();
+
+
+  return 0;
 }

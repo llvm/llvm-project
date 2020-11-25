@@ -14,7 +14,6 @@
 // Test the feature test macros defined by <numeric>
 
 /*  Constant                        Value
-    __cpp_lib_constexpr_numeric     201911L [C++2a]
     __cpp_lib_gcd_lcm               201606L [C++17]
     __cpp_lib_interpolate           201902L [C++2a]
     __cpp_lib_parallel_algorithm    201603L [C++17]
@@ -24,10 +23,6 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
-
-# ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
-# endif
 
 # ifdef __cpp_lib_gcd_lcm
 #   error "__cpp_lib_gcd_lcm should not be defined before c++17"
@@ -43,10 +38,6 @@
 
 #elif TEST_STD_VER == 14
 
-# ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
-# endif
-
 # ifdef __cpp_lib_gcd_lcm
 #   error "__cpp_lib_gcd_lcm should not be defined before c++17"
 # endif
@@ -60,10 +51,6 @@
 # endif
 
 #elif TEST_STD_VER == 17
-
-# ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
-# endif
 
 # ifndef __cpp_lib_gcd_lcm
 #   error "__cpp_lib_gcd_lcm should be defined in c++17"
@@ -90,13 +77,6 @@
 # endif
 
 #elif TEST_STD_VER > 17
-
-# ifndef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should be defined in c++2a"
-# endif
-# if __cpp_lib_constexpr_numeric != 201911L
-#   error "__cpp_lib_constexpr_numeric should have the value 201911L in c++2a"
-# endif
 
 # ifndef __cpp_lib_gcd_lcm
 #   error "__cpp_lib_gcd_lcm should be defined in c++2a"

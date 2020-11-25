@@ -9,7 +9,6 @@
 // <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Became constexpr in C++20
 // template<class InputIterator, class OutputIterator, class T,
 //          class BinaryOperation, class UnaryOperation>
 //   OutputIterator transform_exclusive_scan(InputIterator first, InputIterator last,
@@ -20,7 +19,6 @@
 
 #include <numeric>
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -28,10 +26,6 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-// FIXME Remove constexpr vector workaround introduced in D90569
-#if TEST_STD_VER > 17
-#include <span>
-#endif
 
 struct add_one {
     template <typename T>
@@ -41,37 +35,24 @@ struct add_one {
 };
 
 template <class Iter1, class BOp, class UOp, class T, class Iter2>
-TEST_CONSTEXPR_CXX20 void
+void
 test(Iter1 first, Iter1 last, BOp bop, UOp uop, T init, Iter2 rFirst, Iter2 rLast)
 {
-    // C++17 doesn't test constexpr so can use a vector.
-    // C++20 can use vector in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases use a std::span for the test.
-    // FIXME Remove constexpr vector workaround introduced in D90569
-    size_t size = std::distance(first, last);
-#if TEST_STD_VER < 20 || \
-    (defined(__cpp_lib_constexpr_vector) && __cpp_lib_constexpr_vector >= 201907L)
-
-    std::vector<typename std::iterator_traits<Iter1>::value_type> v(size);
-#else
-    assert((size <= 5) && "Increment the size of the array");
-    typename std::iterator_traits<Iter1>::value_type b[5];
-    std::span<typename std::iterator_traits<Iter1>::value_type> v{b, size};
-#endif
-
+    std::vector<typename std::iterator_traits<Iter1>::value_type> v;
 //  Test not in-place
-    std::transform_exclusive_scan(first, last, v.begin(), init, bop, uop);
+    std::transform_exclusive_scan(first, last, std::back_inserter(v), init, bop, uop);
     assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 
 //  Test in-place
-    std::copy(first, last, v.begin());
+    v.clear();
+    v.assign(first, last);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), init, bop, uop);
     assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 }
 
 
 template <class Iter>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
           int ia[]     = { 1,  3,  5,    7,   9 };
@@ -105,14 +86,13 @@ test()
         }
 }
 
-constexpr size_t triangle(size_t n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
-TEST_CONSTEXPR_CXX20 void
-basic_tests()
+void basic_tests()
 {
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{50}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
@@ -120,7 +100,7 @@ basic_tests()
     }
 
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{30}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
@@ -128,7 +108,7 @@ basic_tests()
     }
 
     {
-    std::array<size_t, 10> v;
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), size_t{40}, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
@@ -136,37 +116,17 @@ basic_tests()
     }
 
     {
-    // C++17 doesn't test constexpr so can use a vector.
-    // C++20 can use vector in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases use a std::span for the test.
-    // FIXME Remove constexpr vector workaround introduced in D90569
-#if TEST_STD_VER < 20 || \
-    (defined(__cpp_lib_constexpr_vector) && __cpp_lib_constexpr_vector >= 201907L)
     std::vector<size_t> v, res;
     std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), size_t{40}, std::plus<>(), add_one{});
-#else
-    std::array<size_t, 0> v, res;
-    std::transform_exclusive_scan(v.begin(), v.end(), res.begin(), size_t{40}, std::plus<>(), add_one{});
-#endif
     assert(res.empty());
     }
 
 //  Make sure that the calculations are done using the init typedef
     {
-    std::array<unsigned char, 10> v;
+    std::vector<unsigned char> v(10);
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    // C++17 doesn't test constexpr so can use a vector.
-    // C++20 can use vector in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases use a std::span for the test.
-    // FIXME Remove constexpr vector workaround introduced in D90569
-#if TEST_STD_VER < 20 || \
-    (defined(__cpp_lib_constexpr_vector) && __cpp_lib_constexpr_vector >= 201907L)
     std::vector<size_t> res;
     std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), size_t{1}, std::multiplies<>(), add_one{});
-#else
-    std::array<size_t, 10> res;
-    std::transform_exclusive_scan(v.begin(), v.end(), res.begin(), size_t{1}, std::multiplies<>(), add_one{});
-#endif
 
     assert(res.size() == 10);
     size_t j = 1;
@@ -179,8 +139,7 @@ basic_tests()
     }
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
+int main(int, char**)
 {
     basic_tests();
 
@@ -192,14 +151,5 @@ test()
     test<const int*>();
     test<      int*>();
 
-    return true;
-}
-
-int main(int, char**)
-{
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+  return 0;
 }
