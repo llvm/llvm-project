@@ -8,7 +8,6 @@
 
 // <numeric>
 
-// Became constexpr in C++20
 // template<InputIterator InIter,
 //          OutputIterator<auto, const InIter::value_type&> OutIter,
 //          Callable<auto, const InIter::value_type&, InIter::reference> BinaryOperation>
@@ -26,7 +25,7 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5};
@@ -39,8 +38,7 @@ test()
         assert(ib[i] == ir[i]);
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
+int main(int, char**)
 {
     test<input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, forward_iterator<int*> >();
@@ -72,14 +70,5 @@ test()
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
 
-    return true;
-}
-
-int main(int, char**)
-{
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+  return 0;
 }

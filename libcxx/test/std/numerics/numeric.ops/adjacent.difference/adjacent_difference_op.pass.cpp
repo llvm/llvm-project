@@ -8,7 +8,6 @@
 
 // <numeric>
 
-// Became constexpr in C++20
 // template <InputIterator InIter,
 //           OutputIterator<auto, const InIter::value_type&> OutIter,
 //           Callable<auto, const InIter::value_type&, const InIter::value_type&> BinaryOperation>
@@ -27,7 +26,7 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
     int ia[] = {15, 10, 6, 3, 1};
@@ -49,18 +48,18 @@ class X
 {
     int i_;
 
-    TEST_CONSTEXPR_CXX20 X& operator=(const X&);
+    X& operator=(const X&);
 public:
-    TEST_CONSTEXPR_CXX20 explicit X(int i) : i_(i) {}
-    TEST_CONSTEXPR_CXX20 X(const X& x) : i_(x.i_) {}
-    TEST_CONSTEXPR_CXX20 X& operator=(X&& x)
+    explicit X(int i) : i_(i) {}
+    X(const X& x) : i_(x.i_) {}
+    X& operator=(X&& x)
     {
         i_ = x.i_;
         x.i_ = -1;
         return *this;
     }
 
-    TEST_CONSTEXPR_CXX20 friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
+    friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
 
     friend class Y;
 };
@@ -69,18 +68,17 @@ class Y
 {
     int i_;
 
-    TEST_CONSTEXPR_CXX20 Y& operator=(const Y&);
+    Y& operator=(const Y&);
 public:
-    TEST_CONSTEXPR_CXX20 explicit Y(int i) : i_(i) {}
-    TEST_CONSTEXPR_CXX20 Y(const Y& y) : i_(y.i_) {}
-    TEST_CONSTEXPR_CXX20 void operator=(const X& x) {i_ = x.i_;}
+    explicit Y(int i) : i_(i) {}
+    Y(const Y& y) : i_(y.i_) {}
+    void operator=(const X& x) {i_ = x.i_;}
 };
 
 #endif
 
 
-TEST_CONSTEXPR_CXX20 bool
-test()
+int main(int, char**)
 {
     test<input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, forward_iterator<int*> >();
@@ -118,14 +116,5 @@ test()
     std::adjacent_difference(x, x+3, y, std::minus<X>());
 #endif
 
-    return true;
-}
-
-int main(int, char**)
-{
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+  return 0;
 }

@@ -9,7 +9,6 @@
 // <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Became constexpr in C++20
 // template<class InputIterator, class T, class BinaryOperation>
 //   T reduce(InputIterator first, InputIterator last, T init, BinaryOperation op);
 
@@ -20,7 +19,7 @@
 #include "test_iterators.h"
 
 template <class Iter, class T, class Op>
-TEST_CONSTEXPR_CXX20 void
+void
 test(Iter first, Iter last, T init, Op op, T x)
 {
     static_assert( std::is_same_v<T, decltype(std::reduce(first, last, init, op))>, "" );
@@ -28,7 +27,7 @@ test(Iter first, Iter last, T init, Op op, T x)
 }
 
 template <class Iter>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5, 6};
@@ -44,15 +43,13 @@ test()
 }
 
 template <typename T, typename Init>
-TEST_CONSTEXPR_CXX20 void
-test_return_type()
+void test_return_type()
 {
     T *p = nullptr;
     static_assert( std::is_same_v<Init, decltype(std::reduce(p, p, Init{}, std::plus<>()))>, "" );
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -75,14 +72,5 @@ test()
     assert(res == 40320);       // 8! will not fit into a char
     }
 
-    return true;
-}
-
-int main(int, char**)
-{
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+  return 0;
 }
