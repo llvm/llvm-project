@@ -366,11 +366,13 @@ multiclass NopCast_pat<ValueType Ty1, ValueType Ty2, RegisterClass RC> {
   def: Pat<(Ty2 (bitconvert (Ty1 RC:$Val))), (Ty2 RC:$Val)>;
 }
 
-
 // Frags for commonly used SDNodes.
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
 def Sub: pf2<sub>;    def Or:  pf2<or>;     def Srl: pf2<srl>;
 def Mul: pf2<mul>;    def Xor: pf2<xor>;    def Shl: pf2<shl>;
+
+def Smin: pf2<smin>;  def Smax: pf2<smax>;
+def Umin: pf2<umin>;  def Umax: pf2<umax>;
 
 def Rol: pf2<rotl>;
 
@@ -924,25 +926,14 @@ let AddedComplexity = 200 in {
   defm: SelMinMax16_pats<setult, A2_minu, A2_maxu>;
 }
 
-let AddedComplexity = 200 in {
-  defm: MinMax_pats<A2_min,   A2_max,   select,  setgt, i1, I32>;
-  defm: MinMax_pats<A2_min,   A2_max,   select,  setge, i1, I32>;
-  defm: MinMax_pats<A2_max,   A2_min,   select,  setlt, i1, I32>;
-  defm: MinMax_pats<A2_max,   A2_min,   select,  setle, i1, I32>;
-  defm: MinMax_pats<A2_minu,  A2_maxu,  select, setugt, i1, I32>;
-  defm: MinMax_pats<A2_minu,  A2_maxu,  select, setuge, i1, I32>;
-  defm: MinMax_pats<A2_maxu,  A2_minu,  select, setult, i1, I32>;
-  defm: MinMax_pats<A2_maxu,  A2_minu,  select, setule, i1, I32>;
-
-  defm: MinMax_pats<A2_minp,  A2_maxp,  select,  setgt, i1, I64>;
-  defm: MinMax_pats<A2_minp,  A2_maxp,  select,  setge, i1, I64>;
-  defm: MinMax_pats<A2_maxp,  A2_minp,  select,  setlt, i1, I64>;
-  defm: MinMax_pats<A2_maxp,  A2_minp,  select,  setle, i1, I64>;
-  defm: MinMax_pats<A2_minup, A2_maxup, select, setugt, i1, I64>;
-  defm: MinMax_pats<A2_minup, A2_maxup, select, setuge, i1, I64>;
-  defm: MinMax_pats<A2_maxup, A2_minup, select, setult, i1, I64>;
-  defm: MinMax_pats<A2_maxup, A2_minup, select, setule, i1, I64>;
-}
+def: OpR_RR_pat<A2_min,   Smin, i32, I32, I32>;
+def: OpR_RR_pat<A2_max,   Smax, i32, I32, I32>;
+def: OpR_RR_pat<A2_minu,  Umin, i32, I32, I32>;
+def: OpR_RR_pat<A2_maxu,  Umax, i32, I32, I32>;
+def: OpR_RR_pat<A2_minp,  Smin, i64, I64, I64>;
+def: OpR_RR_pat<A2_maxp,  Smax, i64, I64, I64>;
+def: OpR_RR_pat<A2_minup, Umin, i64, I64, I64>;
+def: OpR_RR_pat<A2_maxup, Umax, i64, I64, I64>;
 
 let AddedComplexity = 100 in {
   defm: MinMax_pats<F2_sfmin, F2_sfmax, select, setogt, i1, F32>;
@@ -958,18 +949,20 @@ let AddedComplexity = 100, Predicates = [HasV67] in {
   defm: MinMax_pats<F2_dfmax, F2_dfmin, select, setole, i1, F64>;
 }
 
-defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setgt,  v8i1,  V8I8>;
-defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setge,  v8i1,  V8I8>;
-defm: MinMax_pats<A2_vminh,  A2_vmaxh,  vselect,  setgt,  v4i1, V4I16>;
-defm: MinMax_pats<A2_vminh,  A2_vmaxh,  vselect,  setge,  v4i1, V4I16>;
-defm: MinMax_pats<A2_vminw,  A2_vmaxw,  vselect,  setgt,  v2i1, V2I32>;
-defm: MinMax_pats<A2_vminw,  A2_vmaxw,  vselect,  setge,  v2i1, V2I32>;
-defm: MinMax_pats<A2_vminub, A2_vmaxub, vselect, setugt,  v8i1,  V8I8>;
-defm: MinMax_pats<A2_vminub, A2_vmaxub, vselect, setuge,  v8i1,  V8I8>;
-defm: MinMax_pats<A2_vminuh, A2_vmaxuh, vselect, setugt,  v4i1, V4I16>;
-defm: MinMax_pats<A2_vminuh, A2_vmaxuh, vselect, setuge,  v4i1, V4I16>;
-defm: MinMax_pats<A2_vminuw, A2_vmaxuw, vselect, setugt,  v2i1, V2I32>;
-defm: MinMax_pats<A2_vminuw, A2_vmaxuw, vselect, setuge,  v2i1, V2I32>;
+def: OpR_RR_pat<A2_vminb,  Smin, v8i8,  V8I8>;
+def: OpR_RR_pat<A2_vmaxb,  Smax, v8i8,  V8I8>;
+def: OpR_RR_pat<A2_vminub, Umin, v8i8,  V8I8>;
+def: OpR_RR_pat<A2_vmaxub, Umax, v8i8,  V8I8>;
+
+def: OpR_RR_pat<A2_vminh,  Smin, v4i16, V4I16>;
+def: OpR_RR_pat<A2_vmaxh,  Smax, v4i16, V4I16>;
+def: OpR_RR_pat<A2_vminuh, Umin, v4i16, V4I16>;
+def: OpR_RR_pat<A2_vmaxuh, Umax, v4i16, V4I16>;
+
+def: OpR_RR_pat<A2_vminw,  Smin, v2i32, V2I32>;
+def: OpR_RR_pat<A2_vmaxw,  Smax, v2i32, V2I32>;
+def: OpR_RR_pat<A2_vminuw, Umin, v2i32, V2I32>;
+def: OpR_RR_pat<A2_vmaxuw, Umax, v2i32, V2I32>;
 
 // --(7) Insert/extract --------------------------------------------------
 //
