@@ -554,6 +554,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
+  Options.EnableAIXExtendedAltivecABI = CodeGenOpts.EnableAIXExtendedAltivecABI;
   Options.ValueTrackingVariableLocations =
       CodeGenOpts.ValueTrackingVariableLocations;
   Options.XRayOmitFunctionIndex = CodeGenOpts.XRayOmitFunctionIndex;

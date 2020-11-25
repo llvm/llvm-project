@@ -2630,7 +2630,8 @@ template <> struct GraphTraits<SDNode*> {
 /// with 4 and 8 byte pointer alignment, respectively.
 using LargestSDNode = AlignedCharArrayUnion<AtomicSDNode, TargetIndexSDNode,
                                             BlockAddressSDNode,
-                                            GlobalAddressSDNode>;
+                                            GlobalAddressSDNode,
+                                            PseudoProbeSDNode>;
 
 /// The SDNode class with the greatest alignment requirement.
 using MostAlignedSDNode = GlobalAddressSDNode;
