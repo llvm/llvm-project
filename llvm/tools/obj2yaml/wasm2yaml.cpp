@@ -31,22 +31,21 @@ public:
 
 } // namespace
 
-static WasmYAML::Table makeTable(const wasm::WasmTable &Table) {
-  WasmYAML::Table T;
-  T.ElemType = Table.ElemType;
-  T.TableLimits.Flags = Table.Limits.Flags;
-  T.TableLimits.Initial = Table.Limits.Initial;
-  T.TableLimits.Maximum = Table.Limits.Maximum;
-  T.Index = Table.Index;
-  return T;
-}
-
 static WasmYAML::Limits makeLimits(const wasm::WasmLimits &Limits) {
   WasmYAML::Limits L;
   L.Flags = Limits.Flags;
   L.Initial = Limits.Initial;
   L.Maximum = Limits.Maximum;
   return L;
+}
+
+static WasmYAML::Table makeTable(uint32_t Index,
+                                 const wasm::WasmTableType &Type) {
+  WasmYAML::Table T;
+  T.Index = Index;
+  T.ElemType = Type.ElemType;
+  T.TableLimits = makeLimits(Type.Limits);
+  return T;
 }
 
 std::unique_ptr<WasmYAML::CustomSection>
@@ -234,7 +233,9 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
           Im.EventImport.SigIndex = Import.Event.SigIndex;
           break;
         case wasm::WASM_EXTERNAL_TABLE:
-          Im.TableImport = makeTable(Import.Table);
+          // FIXME: Currently we always output an index of 0 for any imported
+          // table.
+          Im.TableImport = makeTable(0, Import.Table);
           break;
         case wasm::WASM_EXTERNAL_MEMORY:
           Im.Memory = makeLimits(Import.Memory);
@@ -256,7 +257,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_TABLE: {
       auto TableSec = std::make_unique<WasmYAML::TableSection>();
       for (const wasm::WasmTable &Table : Obj.tables()) {
-        TableSec->Tables.push_back(makeTable(Table));
+        TableSec->Tables.push_back(makeTable(Table.Index, Table.Type));
       }
       S = std::move(TableSec);
       break;

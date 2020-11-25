@@ -67,10 +67,15 @@ struct WasmLimits {
   uint64_t Maximum;
 };
 
-struct WasmTable {
-  uint32_t Index;
+struct WasmTableType {
   uint8_t ElemType;
   WasmLimits Limits;
+};
+
+struct WasmTable {
+  uint32_t Index;
+  WasmTableType Type;
+  StringRef SymbolName; // from the "linking" section
 };
 
 struct WasmInitExpr {
@@ -115,7 +120,7 @@ struct WasmImport {
   union {
     uint32_t SigIndex;
     WasmGlobalType Global;
-    WasmTable Table;
+    WasmTableType Table;
     WasmLimits Memory;
     WasmEventType Event;
   };
