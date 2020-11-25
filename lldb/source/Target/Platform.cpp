@@ -218,15 +218,14 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 //    return PlatformSP();
 //}
 
-Status Platform::GetSharedModule(const ModuleSpec &module_spec,
-                                 Process *process, ModuleSP &module_sp,
-                                 const FileSpecList *module_search_paths_ptr,
-                                 ModuleSP *old_module_sp_ptr,
-                                 bool *did_create_ptr) {
+Status Platform::GetSharedModule(
+    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   if (IsHost())
-    return ModuleList::GetSharedModule(
-        module_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
-        did_create_ptr, false);
+    return ModuleList::GetSharedModule(module_spec, module_sp,
+                                       module_search_paths_ptr, old_modules,
+                                       did_create_ptr, false);
 
   // Module resolver lambda.
   auto resolver = [&](const ModuleSpec &spec) {
@@ -239,17 +238,17 @@ Status Platform::GetSharedModule(const ModuleSpec &module_spec,
       resolved_spec.GetFileSpec().PrependPathComponent(
           m_sdk_sysroot.GetStringRef());
       // Try to get shared module with resolved spec.
-      error = ModuleList::GetSharedModule(
-          resolved_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
-          did_create_ptr, false);
+      error = ModuleList::GetSharedModule(resolved_spec, module_sp,
+                                          module_search_paths_ptr, old_modules,
+                                          did_create_ptr, false);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
-      error = ModuleList::GetSharedModule(
-          resolved_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
-          did_create_ptr, false);
+      error = ModuleList::GetSharedModule(resolved_spec, module_sp,
+                                          module_search_paths_ptr, old_modules,
+                                          did_create_ptr, false);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
@@ -1564,19 +1563,27 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
       if (error.Success() && module_sp)
         break;
     }
-    if (module_sp)
+    if (module_sp) {
+      resolved_module_spec = arch_module_spec;
       got_module_spec = true;
+    }
   }
 
   if (!got_module_spec) {
     // Get module information from a target.
-    if (!GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),
-                       resolved_module_spec)) {
+    if (GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),
+                      resolved_module_spec)) {
       if (!module_spec.GetUUID().IsValid() ||
           module_spec.GetUUID() == resolved_module_spec.GetUUID()) {
-        return module_resolver(module_spec);
+        got_module_spec = true;
       }
     }
+  }
+
+  if (!got_module_spec) {
+    // Fall back to the given module resolver, which may have its own
+    // search logic.
+    return module_resolver(module_spec);
   }
 
   // If we are looking for a specific UUID, make sure resolved_module_spec has

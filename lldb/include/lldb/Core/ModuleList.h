@@ -139,7 +139,13 @@ public:
   ///
   /// \param[in] module_sp
   ///     A shared pointer to a module to replace in this collection.
-  void ReplaceEquivalent(const lldb::ModuleSP &module_sp);
+  ///
+  /// \param[in] old_modules
+  ///     Optional pointer to a vector which, if provided, will have shared
+  ///     pointers to the replaced module(s) appended to it.
+  void ReplaceEquivalent(
+      const lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules = nullptr);
 
   /// Append a module to the module list, if it is not already there.
   ///
@@ -443,12 +449,11 @@ public:
 
   static bool ModuleIsInCache(const Module *module_ptr);
 
-  static Status GetSharedModule(const ModuleSpec &module_spec,
-                                lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr,
-                                lldb::ModuleSP *old_module_sp_ptr,
-                                bool *did_create_ptr,
-                                bool always_create = false);
+  static Status
+  GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                  const FileSpecList *module_search_paths_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                  bool *did_create_ptr, bool always_create = false);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
