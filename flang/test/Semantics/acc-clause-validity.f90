@@ -11,6 +11,7 @@
 !   2.14.3 Set
 !   2.14.4 Update
 !   2.15.1 Routine
+!   2.10 Cache
 !   2.11 Parallel Loop
 !   2.11 Kernels Loop
 !   2.11 Serial Loop
@@ -20,6 +21,11 @@
 program openacc_clause_validity
 
   implicit none
+
+  type atype
+    real(8), dimension(10) :: arr
+    real(8) :: s
+  end type atype
 
   integer :: i, j, b, gang_size, vector_size, worker_size
   integer, parameter :: N = 256
@@ -31,6 +37,8 @@ program openacc_clause_validity
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
   logical :: ifCondition = .TRUE.
+  type(atype) :: t
+  type(atype), dimension(10) :: ta
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
@@ -646,6 +654,28 @@ program openacc_clause_validity
   i = i + 1
   !$acc end atomic
   !$acc end parallel
+  t%arr(i) = 2.0
+
+  !$acc cache(a(i))
+  !$acc cache(a(1:2,3:4))
+  !$acc cache(a)
+  !$acc cache(readonly: a, aa)
+  !$acc cache(readonly: a(i), aa(i, i))
+  !$acc cache(t%arr)
+  !$acc cache(ta(1:2)%arr)
+  !$acc cache(ta(1:2)%arr(1:4))
+
+  !ERROR: Only array element or subarray are allowed in CACHE directive
+  !$acc cache(ta(1:2)%s)
+
+  !ERROR: Only array element or subarray are allowed in CACHE directive
+  !$acc cache(i)
+
+  !ERROR: Only array element or subarray are allowed in CACHE directive
+  !$acc cache(t%s)
+
+  !ERROR: Only array element or subarray are allowed in CACHE directive
+  !$acc cache(/i/)
 
  contains
 
