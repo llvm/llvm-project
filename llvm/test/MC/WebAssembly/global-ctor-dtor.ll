@@ -27,14 +27,6 @@ declare void @func3()
 ; CHECK-NEXT:         Memory:
 ; CHECK-NEXT:           Initial:         0x1
 ; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           Index:           0
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x2
-; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           func3
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
@@ -54,6 +46,14 @@ declare void @func3()
 ; CHECK-NEXT:         Field:           func0
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           __indirect_function_table
+; CHECK-NEXT:         Kind:            TABLE
+; CHECK-NEXT:         Table:
+; CHECK-NEXT:           Index:           0
+; CHECK-NEXT:           ElemType:        FUNCREF
+; CHECK-NEXT:           Limits:
+; CHECK-NEXT:             Initial:         0x2
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1 ]
 ; CHECK-NEXT:   - Type:            ELEM
