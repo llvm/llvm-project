@@ -1,6 +1,6 @@
 // RUN: touch %t.o
 
-// RUN: %clang -target x86_64-apple-macos10.13 \
+// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=0 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-OLD %s
@@ -8,7 +8,7 @@
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=0 \
 // RUN:   -### %t.o -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-NEW %s
-// RUN: %clang -target x86_64-apple-macos10.13 \
+// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-OLD %s
@@ -17,7 +17,7 @@
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-NEW %s
 
-// RUN: %clang -target arm64-apple-macos10.13 \
+// RUN: %clang -target arm64-apple-macos10.13 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_OLD %s
@@ -25,15 +25,15 @@
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 \
 // RUN:   -### %t.o -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
-// RUN: %clang -target arm64-apple-macos10.13 \
+// RUN: %clang -target arm64-apple-macos10.13 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
-// RUN: %clang -target arm64-apple-darwin19 \
+// RUN: %clang -target arm64-apple-darwin19 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
-// RUN: %clang -target arm64-apple-macos11.1 \
+// RUN: %clang -target arm64-apple-macos11.1 -fuse-ld= \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW_1 %s

@@ -218,19 +218,14 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       CALLEE_SAVED_VRS
   };
 
-  static const SpillSlot AIXOffsets32[] = {
-      CALLEE_SAVED_FPRS,
-      CALLEE_SAVED_GPRS32,
-      // Add AIX's extra CSR.
-      {PPC::R13, -76},
-      // TODO: Update when we add vector support for AIX.
-  };
+  static const SpillSlot AIXOffsets32[] = {CALLEE_SAVED_FPRS,
+                                           CALLEE_SAVED_GPRS32,
+                                           // Add AIX's extra CSR.
+                                           {PPC::R13, -76},
+                                           CALLEE_SAVED_VRS};
 
   static const SpillSlot AIXOffsets64[] = {
-      CALLEE_SAVED_FPRS,
-      CALLEE_SAVED_GPRS64,
-      // TODO: Update when we add vector support for AIX.
-  };
+      CALLEE_SAVED_FPRS, CALLEE_SAVED_GPRS64, CALLEE_SAVED_VRS};
 
   if (Subtarget.is64BitELFABI()) {
     NumEntries = array_lengthof(ELFOffsets64);
