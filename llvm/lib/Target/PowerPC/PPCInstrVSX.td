@@ -629,7 +629,8 @@ let hasSideEffects = 0 in {
                          "xstdivdp $crD, $XA, $XB", IIC_FPCompare, []>;
   def XSTSQRTDP : XX2Form_1<60, 106,
                           (outs crrc:$crD), (ins vsfrc:$XB),
-                          "xstsqrtdp $crD, $XB", IIC_FPCompare, []>;
+                          "xstsqrtdp $crD, $XB", IIC_FPCompare,
+                          [(set i32:$crD, (PPCftsqrt f64:$XB))]>;
   def XVTDIVDP : XX3Form_1<60, 125,
                          (outs crrc:$crD), (ins vsrc:$XA, vsrc:$XB),
                          "xvtdivdp $crD, $XA, $XB", IIC_FPCompare, []>;

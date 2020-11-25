@@ -74,6 +74,9 @@ def SDT_PPCcondbr : SDTypeProfile<0, 3, [
   SDTCisVT<0, i32>, SDTCisVT<2, OtherVT>
 ]>;
 
+def SDT_PPCFtsqrt : SDTypeProfile<1, 1, [
+  SDTCisVT<0, i32>]>;
+
 def SDT_PPClbrx : SDTypeProfile<1, 2, [
   SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>
 ]>;
@@ -124,6 +127,7 @@ def SDT_PPCFPMinMax : SDTypeProfile<1, 2, [
 
 def PPCfre    : SDNode<"PPCISD::FRE",     SDTFPUnaryOp, []>;
 def PPCfrsqrte: SDNode<"PPCISD::FRSQRTE", SDTFPUnaryOp, []>;
+def PPCftsqrt : SDNode<"PPCISD::FTSQRT",  SDT_PPCFtsqrt,[]>;
 
 def PPCfcfid  : SDNode<"PPCISD::FCFID",   SDTFPUnaryOp, []>;
 def PPCfcfidu : SDNode<"PPCISD::FCFIDU",  SDTFPUnaryOp, []>;
@@ -2643,7 +2647,8 @@ let isCompare = 1, mayRaiseFPException = 1, hasSideEffects = 0 in {
 def FTDIV: XForm_17<63, 128, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
                       "ftdiv $crD, $fA, $fB", IIC_FPCompare>;
 def FTSQRT: XForm_17a<63, 160, (outs crrc:$crD), (ins f8rc:$fB),
-                      "ftsqrt $crD, $fB", IIC_FPCompare>;
+                      "ftsqrt $crD, $fB", IIC_FPCompare,
+                      [(set i32:$crD, (PPCftsqrt f64:$fB))]>;
 
 let mayRaiseFPException = 1, hasSideEffects = 0 in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in

@@ -276,6 +276,9 @@
 ; RUN: opt -passes-ep-pipeline-start=bad -passes=no-op-function \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-PIPELINESTART-ERR
 ; PASSES-EP-PIPELINESTART-ERR: Could not parse -passes-ep-pipeline-start pipeline: unknown pass name 'bad'
+; RUN: opt -passes-ep-pipeline-early-simplification=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-PIPELINEEARLYSIMPLIFICATION-ERR
+; PASSES-EP-PIPELINEEARLYSIMPLIFICATION-ERR: Could not parse -passes-ep-pipeline-early-simplification pipeline: unknown pass name 'bad'
 
 define void @f() {
 entry:
