@@ -600,8 +600,16 @@ public:
     return getConstant(Ty, -1, /*isSigned=*/true);
   }
 
-  /// Return an expression for sizeof AllocTy that is type IntTy
+  /// Return an expression for sizeof ScalableTy that is type IntTy, where
+  /// ScalableTy is a scalable vector type.
+  const SCEV *getSizeOfScalableVectorExpr(Type *IntTy,
+                                          ScalableVectorType *ScalableTy);
+
+  /// Return an expression for the alloc size of AllocTy that is type IntTy
   const SCEV *getSizeOfExpr(Type *IntTy, Type *AllocTy);
+
+  /// Return an expression for the store size of StoreTy that is type IntTy
+  const SCEV *getStoreSizeOfExpr(Type *IntTy, Type *StoreTy);
 
   /// Return an expression for offsetof on the given field with type IntTy
   const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy, unsigned FieldNo);
