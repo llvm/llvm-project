@@ -291,6 +291,8 @@ def CSR_AIX32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
                                      F27, F28, F29, F30, F31, CR2, CR3, CR4
                                 )>;
 
+def CSR_AIX32_Altivec : CalleeSavedRegs<(add CSR_AIX32, CSR_Altivec)>;
+
 // Common CalleeSavedRegs for SVR4 and AIX.
 def CSR_PPC64   : CalleeSavedRegs<(add X14, X15, X16, X17, X18, X19, X20,
                                         X21, X22, X23, X24, X25, X26, X27, X28,
