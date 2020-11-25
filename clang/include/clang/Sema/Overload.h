@@ -1051,6 +1051,9 @@ class Sema;
 
     void destroyCandidates();
 
+    /// Whether diagnostics should be deferred.
+    bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
+
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})

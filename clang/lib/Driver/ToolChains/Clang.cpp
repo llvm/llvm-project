@@ -5610,6 +5610,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasFlag(options::OPT_fgpu_defer_diag,
                      options::OPT_fno_gpu_defer_diag, false))
       CmdArgs.push_back("-fgpu-defer-diag");
+    if (Args.hasFlag(options::OPT_fgpu_exclude_wrong_side_overloads,
+                     options::OPT_fno_gpu_exclude_wrong_side_overloads,
+                     false)) {
+      CmdArgs.push_back("-fgpu-exclude-wrong-side-overloads");
+      CmdArgs.push_back("-fgpu-defer-diag");
+    }
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {

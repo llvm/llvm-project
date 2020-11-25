@@ -9616,6 +9616,75 @@ bool clang::isBetterOverloadCandidate(
   else if (!Cand1.Viable)
     return false;
 
+  // [CUDA] A function with 'never' preference is marked not viable, therefore
+  // is never shown up here. The worst preference shown up here is 'wrong side',
+  // e.g. an H function called by a HD function in device compilation. This is
+  // valid AST as long as the HD function is not emitted, e.g. it is an inline
+  // function which is called only by an H function. A deferred diagnostic will
+  // be triggered if it is emitted. However a wrong-sided function is still
+  // a viable candidate here.
+  //
+  // If Cand1 can be emitted and Cand2 cannot be emitted in the current
+  // context, Cand1 is better than Cand2. If Cand1 can not be emitted and Cand2
+  // can be emitted, Cand1 is not better than Cand2. This rule should have
+  // precedence over other rules.
+  //
+  // If both Cand1 and Cand2 can be emitted, or neither can be emitted, then
+  // other rules should be used to determine which is better. This is because
+  // host/device based overloading resolution is mostly for determining
+  // viability of a function. If two functions are both viable, other factors
+  // should take precedence in preference, e.g. the standard-defined preferences
+  // like argument conversion ranks or enable_if partial-ordering. The
+  // preference for pass-object-size parameters is probably most similar to a
+  // type-based-overloading decision and so should take priority.
+  //
+  // If other rules cannot determine which is better, CUDA preference will be
+  // used again to determine which is better.
+  //
+  // TODO: Currently IdentifyCUDAPreference does not return correct values
+  // for functions called in global variable initializers due to missing
+  // correct context about device/host. Therefore we can only enforce this
+  // rule when there is a caller. We should enforce this rule for functions
+  // in global variable initializers once proper context is added.
+  //
+  // TODO: We can only enable the hostness based overloading resolution when
+  // -fgpu-exclude-wrong-side-overloads is on since this requires deferring
+  // overloading resolution diagnostics.
+  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function &&
+      S.getLangOpts().GPUExcludeWrongSideOverloads) {
+    if (FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext)) {
+      bool IsCallerImplicitHD = Sema::isCUDAImplicitHostDeviceFunction(Caller);
+      bool IsCand1ImplicitHD =
+          Sema::isCUDAImplicitHostDeviceFunction(Cand1.Function);
+      bool IsCand2ImplicitHD =
+          Sema::isCUDAImplicitHostDeviceFunction(Cand2.Function);
+      auto P1 = S.IdentifyCUDAPreference(Caller, Cand1.Function);
+      auto P2 = S.IdentifyCUDAPreference(Caller, Cand2.Function);
+      assert(P1 != Sema::CFP_Never && P2 != Sema::CFP_Never);
+      // The implicit HD function may be a function in a system header which
+      // is forced by pragma. In device compilation, if we prefer HD candidates
+      // over wrong-sided candidates, overloading resolution may change, which
+      // may result in non-deferrable diagnostics. As a workaround, we let
+      // implicit HD candidates take equal preference as wrong-sided candidates.
+      // This will preserve the overloading resolution.
+      // TODO: We still need special handling of implicit HD functions since
+      // they may incur other diagnostics to be deferred. We should make all
+      // host/device related diagnostics deferrable and remove special handling
+      // of implicit HD functions.
+      auto EmitThreshold =
+          (S.getLangOpts().CUDAIsDevice && IsCallerImplicitHD &&
+           (IsCand1ImplicitHD || IsCand2ImplicitHD))
+              ? Sema::CFP_Never
+              : Sema::CFP_WrongSide;
+      auto Cand1Emittable = P1 > EmitThreshold;
+      auto Cand2Emittable = P2 > EmitThreshold;
+      if (Cand1Emittable && !Cand2Emittable)
+        return true;
+      if (!Cand1Emittable && Cand2Emittable)
+        return false;
+    }
+  }
+
   // C++ [over.match.best]p1:
   //
   //   -- if F is a static member function, ICS1(F) is defined such
@@ -9850,12 +9919,6 @@ bool clang::isBetterOverloadCandidate(
       return Cmp == Comparison::Better;
   }
 
-  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
-    FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
-    return S.IdentifyCUDAPreference(Caller, Cand1.Function) >
-           S.IdentifyCUDAPreference(Caller, Cand2.Function);
-  }
-
   bool HasPS1 = Cand1.Function != nullptr &&
                 functionHasPassObjectSizeParams(Cand1.Function);
   bool HasPS2 = Cand2.Function != nullptr &&
@@ -9863,8 +9926,21 @@ bool clang::isBetterOverloadCandidate(
   if (HasPS1 != HasPS2 && HasPS1)
     return true;
 
-  Comparison MV = isBetterMultiversionCandidate(Cand1, Cand2);
-  return MV == Comparison::Better;
+  auto MV = isBetterMultiversionCandidate(Cand1, Cand2);
+  if (MV == Comparison::Better)
+    return true;
+  if (MV == Comparison::Worse)
+    return false;
+
+  // If other rules cannot determine which is better, CUDA preference is used
+  // to determine which is better.
+  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
+    FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
+    return S.IdentifyCUDAPreference(Caller, Cand1.Function) >
+           S.IdentifyCUDAPreference(Caller, Cand2.Function);
+  }
+
+  return false;
 }
 
 /// Determine whether two declarations are "equivalent" for the purposes of
@@ -9957,7 +10033,11 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // only on their host/device attributes. Specifically, if one
   // candidate call is WrongSide and the other is SameSide, we ignore
   // the WrongSide candidate.
-  if (S.getLangOpts().CUDA) {
+  // We only need to remove wrong-sided candidates here if
+  // -fgpu-exclude-wrong-side-overloads is off. When
+  // -fgpu-exclude-wrong-side-overloads is on, all candidates are compared
+  // uniformly in isBetterOverloadCandidate.
+  if (S.getLangOpts().CUDA && !S.getLangOpts().GPUExcludeWrongSideOverloads) {
     const FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
     bool ContainsSameSideCandidate =
         llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
@@ -11620,26 +11700,34 @@ SmallVector<OverloadCandidate *, 32> OverloadCandidateSet::CompleteCandidates(
   return Cands;
 }
 
-/// When overload resolution fails, prints diagnostic messages containing the
-/// candidates in the candidate set.
-void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
-    Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
-    StringRef Opc, SourceLocation OpLoc,
-    llvm::function_ref<bool(OverloadCandidate &)> Filter) {
-
+bool OverloadCandidateSet::shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args,
+                                            SourceLocation OpLoc) {
   bool DeferHint = false;
   if (S.getLangOpts().CUDA && S.getLangOpts().GPUDeferDiag) {
-    // Defer diagnostic for CUDA/HIP if there are wrong-sided candidates.
+    // Defer diagnostic for CUDA/HIP if there are wrong-sided candidates or
+    // host device candidates.
     auto WrongSidedCands =
         CompleteCandidates(S, OCD_AllCandidates, Args, OpLoc, [](auto &Cand) {
-          return Cand.Viable == false &&
-                 Cand.FailureKind == ovl_fail_bad_target;
+          return (Cand.Viable == false &&
+                  Cand.FailureKind == ovl_fail_bad_target) ||
+                 (Cand.Function->template hasAttr<CUDAHostAttr>() &&
+                  Cand.Function->template hasAttr<CUDADeviceAttr>());
         });
     DeferHint = WrongSidedCands.size();
   }
+  return DeferHint;
+}
+
+/// When overload resolution fails, prints diagnostic messages containing the
+/// candidates in the candidate set.
+void OverloadCandidateSet::NoteCandidates(
+    PartialDiagnosticAt PD, Sema &S, OverloadCandidateDisplayKind OCD,
+    ArrayRef<Expr *> Args, StringRef Opc, SourceLocation OpLoc,
+    llvm::function_ref<bool(OverloadCandidate &)> Filter) {
+
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second, DeferHint);
+  S.Diag(PD.first, PD.second, shouldDeferDiags(S, Args, OpLoc));
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
@@ -11691,7 +11779,9 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   }
 
   if (I != E)
-    S.Diag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
+    S.Diag(OpLoc, diag::note_ovl_too_many_candidates,
+           shouldDeferDiags(S, Args, OpLoc))
+        << int(E - I);
 }
 
 static SourceLocation

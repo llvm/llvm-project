@@ -721,6 +721,9 @@ defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
 defm gpu_defer_diag : OptInFFlag<"gpu-defer-diag",
   "Defer", "Don't defer", " host/device related diagnostic messages"
   " for CUDA/HIP">;
+defm gpu_exclude_wrong_side_overloads : OptInFFlag<"gpu-exclude-wrong-side-overloads",
+  "Always exclude wrong side overloads", "Exclude wrong side overloads only if there are same side overloads",
+  " in overloading resolution for CUDA/HIP", [HelpHidden]>;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;

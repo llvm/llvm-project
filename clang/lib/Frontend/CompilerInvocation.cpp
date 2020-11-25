@@ -2693,6 +2693,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Args.hasArg(OPT_fno_cuda_host_device_constexpr))
     Opts.CUDAHostDeviceConstexpr = 0;
 
+  if (Args.hasArg(OPT_fgpu_exclude_wrong_side_overloads))
+    Opts.GPUExcludeWrongSideOverloads = 1;
+
   if (Args.hasArg(OPT_fgpu_defer_diag))
     Opts.GPUDeferDiag = 1;
 
