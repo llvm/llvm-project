@@ -789,17 +789,9 @@ def : Pat<(sext_inreg GPR:$rs1, i16), (SEXTH GPR:$rs1)>;
 
 let Predicates = [HasStdExtZbb] in {
 def : Pat<(smin GPR:$rs1, GPR:$rs2), (MIN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(riscv_selectcc GPR:$rs1, GPR:$rs2, (XLenVT 20), GPR:$rs1, GPR:$rs2),
-          (MIN  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(smax GPR:$rs1, GPR:$rs2), (MAX  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(riscv_selectcc GPR:$rs2, GPR:$rs1, (XLenVT 20), GPR:$rs1, GPR:$rs2),
-          (MAX  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(umin GPR:$rs1, GPR:$rs2), (MINU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(riscv_selectcc GPR:$rs1, GPR:$rs2, (XLenVT 12), GPR:$rs1, GPR:$rs2),
-          (MINU  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(umax GPR:$rs1, GPR:$rs2), (MAXU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(riscv_selectcc GPR:$rs2, GPR:$rs1, (XLenVT 12), GPR:$rs1, GPR:$rs2),
-          (MAXU  GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
