@@ -104,6 +104,7 @@ static_library("clangd") {
     "SemanticSelection.cpp",
     "SourceCode.cpp",
     "TUScheduler.cpp",
+    "TidyProvider.cpp",
     "URI.cpp",
     "XRefs.cpp",
     "index/Background.cpp",
