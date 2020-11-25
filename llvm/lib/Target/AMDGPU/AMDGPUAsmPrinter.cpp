@@ -456,9 +456,12 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     Info = analyzeResourceUsage(MF);
   }
 
-  if (STM.isAmdPalOS() && MFI->isEntryFunction())
-    EmitPALMetadata(MF, CurrentProgramInfo);
-  else if (!STM.isAmdHsaOS()) {
+  if (STM.isAmdPalOS()) {
+    if (MFI->isEntryFunction())
+      EmitPALMetadata(MF, CurrentProgramInfo);
+    else
+      emitPALFunctionMetadata(MF);
+  } else if (!STM.isAmdHsaOS()) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
   }
 
@@ -1258,6 +1261,12 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   if (STM.isWave32())
     MD->setWave32(MF.getFunction().getCallingConv());
+}
+
+void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
+  auto *MD = getTargetStreamer()->getPALMetadata();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MD->setStackFrameSize(MF, MFI.getStackSize());
 }
 
 // This is supposed to be log2(Size)
