@@ -1016,6 +1016,7 @@ TEST(RenameTest, PrepareRename) {
   auto ServerOpts = ClangdServer::optsForTest();
   ServerOpts.BuildDynamicSymbolIndex = true;
 
+  trace::TestTracer Tracer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ServerOpts);
   runAddDocument(Server, FooHPath, FooH.code());
@@ -1031,7 +1032,6 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(FooCC.ranges(),
               testing::UnorderedElementsAreArray(Results->LocalChanges));
 
-  trace::TestTracer Tracer;
   // Name validation.
   Results =
       runPrepareRename(Server, FooCCPath, FooCC.point(),
