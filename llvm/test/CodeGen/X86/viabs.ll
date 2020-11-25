@@ -132,9 +132,8 @@ define <16 x i8> @test_abs_lt_v16i8(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: test_abs_lt_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm1
-; SSE2-NEXT:    paddb %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    psubb %xmm0, %xmm1
+; SSE2-NEXT:    pminub %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_abs_lt_v16i8:
@@ -363,12 +362,10 @@ define <32 x i8> @test_abs_lt_v32i8(<32 x i8> %a) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm3
-; SSE2-NEXT:    paddb %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
-; SSE2-NEXT:    paddb %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    psubb %xmm0, %xmm3
+; SSE2-NEXT:    pminub %xmm3, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm2
+; SSE2-NEXT:    pminub %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_abs_lt_v32i8:
@@ -874,20 +871,16 @@ define <64 x i8> @test_abs_lt_v64i8(<64 x i8> %a) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm5
-; SSE2-NEXT:    paddb %xmm5, %xmm0
-; SSE2-NEXT:    pxor %xmm5, %xmm0
+; SSE2-NEXT:    psubb %xmm0, %xmm5
+; SSE2-NEXT:    pminub %xmm5, %xmm0
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm5
-; SSE2-NEXT:    paddb %xmm5, %xmm1
-; SSE2-NEXT:    pxor %xmm5, %xmm1
+; SSE2-NEXT:    psubb %xmm1, %xmm5
+; SSE2-NEXT:    pminub %xmm5, %xmm1
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm5
-; SSE2-NEXT:    paddb %xmm5, %xmm2
-; SSE2-NEXT:    pxor %xmm5, %xmm2
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm4
-; SSE2-NEXT:    paddb %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm3
+; SSE2-NEXT:    psubb %xmm2, %xmm5
+; SSE2-NEXT:    pminub %xmm5, %xmm2
+; SSE2-NEXT:    psubb %xmm3, %xmm4
+; SSE2-NEXT:    pminub %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_abs_lt_v64i8:

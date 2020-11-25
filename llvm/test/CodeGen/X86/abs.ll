@@ -474,9 +474,8 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; SSE-LABEL: test_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtb %xmm0, %xmm1
-; SSE-NEXT:    paddb %xmm1, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubb %xmm0, %xmm1
+; SSE-NEXT:    pminub %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8:
