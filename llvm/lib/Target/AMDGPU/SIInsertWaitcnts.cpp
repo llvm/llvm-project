@@ -138,6 +138,7 @@ enum WaitEventType {
   EXP_POS_ACCESS,   // write to export position
   EXP_PARAM_ACCESS, // write to export parameter
   VMW_GPR_LOCK,     // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,   // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
@@ -146,7 +147,8 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
   (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
       (1 << SQ_MESSAGE),
   (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS),
+      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) |
+      (1 << EXP_LDS_ACCESS),
   (1 << VMEM_WRITE_ACCESS)
 };
 
@@ -614,6 +616,12 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
             CurrScore);
       }
+    } else if (TII->isLDSDIR(Inst)) {
+      // LDSDIR instructions attach the score to the destination.
+      setExpScore(
+          &Inst, TII, TRI, MRI,
+          AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdst),
+          CurrScore);
     } else {
       if (TII->isEXP(Inst)) {
         // For export the destination registers are really temps that
@@ -1043,7 +1051,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                   VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
               ScoreBrackets.clearVgprVmemTypes(RegNo);
             }
-            if (Op.isDef()) {
+            if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
               ScoreBrackets.determineWait(
                   EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
             }
@@ -1323,6 +1331,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
+  } else if (SIInstrInfo::isLDSDIR(Inst)) {
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
   } else if (SIInstrInfo::isEXP(Inst)) {
     int Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)

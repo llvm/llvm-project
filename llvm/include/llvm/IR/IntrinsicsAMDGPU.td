@@ -1359,6 +1359,23 @@ def int_amdgcn_interp_p2_f16 :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
+// __builtin_amdgcn_lds_direct_load <m0>
+def int_amdgcn_lds_direct_load :
+  GCCBuiltin<"__builtin_amdgcn_lds_direct_load">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty],
+            [IntrReadMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __builtin_amdgcn_lds_param_load <attr_chan>, <attr>, <m0>
+// Like interp intrinsics, this reads from lds, but the memory values are constant,
+// so it behaves like IntrNoMem.
+def int_amdgcn_lds_param_load :
+  GCCBuiltin<"__builtin_amdgcn_lds_param_load">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
 def int_amdgcn_ps_live : Intrinsic <
