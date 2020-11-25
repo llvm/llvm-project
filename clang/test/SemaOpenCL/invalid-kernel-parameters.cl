@@ -1,9 +1,21 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown -cl-std=CL2.0
 
 kernel void half_arg(half x) { } // expected-error{{declaring function parameter of type '__private half' is not allowed; did you forget * ?}}
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
+// expected-error@+1{{kernel parameter cannot be declared as a pointer to a pointer}}
+kernel void no_ptrptr(global int * global *i) { }
+
+// expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+__kernel void no_privateptr(__private int *i) { }
+
+// expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+__kernel void no_privatearray(__private int i[]) { }
+
+// expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+__kernel void no_addrsp_ptr(int *ptr) { }
 
 // Disallowed: parameters with type
 // bool, half, size_t, ptrdiff_t, intptr_t, and uintptr_t
@@ -65,14 +77,14 @@ kernel void image_in_struct_arg(FooImage2D arg) { } // expected-error{{struct ke
 
 typedef struct Foo // expected-note{{within field of type 'Foo' declared here}}
 {
-  int* ptrField; // expected-note{{field of illegal pointer type '__private int *' declared here}}
+  int* ptrField; // expected-note-re{{field of illegal pointer type '__{{private|generic}} int *' declared here}}
 } Foo;
 
 kernel void pointer_in_struct_arg(Foo arg) { } // expected-error{{struct kernel parameters may not contain pointers}}
 
 typedef union FooUnion // expected-note{{within field of type 'FooUnion' declared here}}
 {
-  int* ptrField; // expected-note{{field of illegal pointer type '__private int *' declared here}}
+  int* ptrField; // expected-note-re{{field of illegal pointer type '__{{private|generic}} int *' declared here}}
 } FooUnion;
 
 kernel void pointer_in_union_arg(FooUnion arg) { }// expected-error{{union kernel parameters may not contain pointers}}
@@ -82,7 +94,7 @@ typedef struct NestedPointer // expected-note 2 {{within field of type 'NestedPo
   int x;
   struct InnerNestedPointer
   {
-    int* ptrField; // expected-note 3 {{field of illegal pointer type '__private int *' declared here}}
+    int* ptrField; // expected-note-re 3 {{field of illegal pointer type '__{{private|generic}} int *' declared here}}
   } inner; // expected-note 3 {{within field of type 'struct InnerNestedPointer' declared here}}
 } NestedPointer;
 
@@ -96,7 +108,7 @@ struct NestedPointerComplex // expected-note{{within field of type 'NestedPointe
   struct InnerNestedPointerComplex
   {
     int innerFoo;
-    int* innerPtrField; // expected-note{{field of illegal pointer type '__private int *' declared here}}
+    int* innerPtrField; // expected-note-re{{field of illegal pointer type '__{{private|generic}} int *' declared here}}
   } inner; // expected-note{{within field of type 'struct InnerNestedPointerComplex' declared here}}
 
   float y;
@@ -167,8 +179,7 @@ kernel void pointer_in_nested_struct_arg_2(struct Valid valid, struct NestedPoin
 
 struct ArrayOfPtr // expected-note{{within field of type 'ArrayOfPtr' declared here}}
 {
-  float *arr[3]; // expected-note{{field of illegal type '__private float *[3]' declared here}}
-                 // expected-note@-1{{field of illegal type '__private float *[3]' declared here}}
+  float *arr[3]; // expected-note-re 2{{field of illegal type '__{{private|generic}} float *[3]' declared here}}
 };
 kernel void array_of_ptr(struct ArrayOfPtr arr) {} // expected-error{{struct kernel parameters may not contain pointers}}
 
