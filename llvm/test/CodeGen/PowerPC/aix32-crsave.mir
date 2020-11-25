@@ -1,4 +1,4 @@
-# RUN: llc -mtriple powerpc-unknown-aix-xcoff -x mir -mcpu=pwr4 \
+# RUN: llc -mtriple powerpc-unknown-aix-xcoff -x mir -mcpu=pwr4 -mattr=-altivec \
 # RUN: -run-pass=prologepilog --verify-machineinstrs < %s | \
 # RUN: FileCheck %s --check-prefixes=CHECK
 
