@@ -2077,26 +2077,27 @@ public:
   QualType TransformTypedefType(TypeLocBuilder &TLB, TypedefTypeLoc TL) {
     ASTContext &Context = SemaRef.getASTContext();
     TypedefNameDecl *OrigDecl = TL.getTypedefNameDecl();
-    TypeLocBuilder InnerTLB;
-    QualType Transformed =
-        TransformType(InnerTLB, OrigDecl->getTypeSourceInfo()->getTypeLoc());
-    TypeSourceInfo *TSI =
-        TransformType(InnerTLB.getTypeSourceInfo(Context, Transformed));
-
-    TypedefNameDecl *Decl = nullptr;
-
-    if (isa<TypeAliasDecl>(OrigDecl))
-      Decl = TypeAliasDecl::Create(
-          Context, Context.getTranslationUnitDecl(), OrigDecl->getBeginLoc(),
-          OrigDecl->getLocation(), OrigDecl->getIdentifier(), TSI);
-    else {
-      assert(isa<TypedefDecl>(OrigDecl) && "Not a Type alias or typedef");
-      Decl = TypedefDecl::Create(
-          Context, Context.getTranslationUnitDecl(), OrigDecl->getBeginLoc(),
-          OrigDecl->getLocation(), OrigDecl->getIdentifier(), TSI);
+    TypedefNameDecl *Decl = OrigDecl;
+    // Transform the underlying type of the typedef and clone the Decl only if
+    // the typedef has a dependent context.
+    if (OrigDecl->getDeclContext()->isDependentContext()) {
+      TypeLocBuilder InnerTLB;
+      QualType Transformed =
+          TransformType(InnerTLB, OrigDecl->getTypeSourceInfo()->getTypeLoc());
+      TypeSourceInfo *TSI =
+          TransformType(InnerTLB.getTypeSourceInfo(Context, Transformed));
+      if (isa<TypeAliasDecl>(OrigDecl))
+        Decl = TypeAliasDecl::Create(
+            Context, Context.getTranslationUnitDecl(), OrigDecl->getBeginLoc(),
+            OrigDecl->getLocation(), OrigDecl->getIdentifier(), TSI);
+      else {
+        assert(isa<TypedefDecl>(OrigDecl) && "Not a Type alias or typedef");
+        Decl = TypedefDecl::Create(
+            Context, Context.getTranslationUnitDecl(), OrigDecl->getBeginLoc(),
+            OrigDecl->getLocation(), OrigDecl->getIdentifier(), TSI);
+      }
+      MaterializedTypedefs.push_back(Decl);
     }
-
-    MaterializedTypedefs.push_back(Decl);
 
     QualType TDTy = Context.getTypedefType(Decl);
     TypedefTypeLoc TypedefTL = TLB.push<TypedefTypeLoc>(TDTy);
