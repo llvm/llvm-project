@@ -487,8 +487,8 @@
 ; GCN-O2-NEXT:       Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:       Scalar Evolution Analysis
 ; GCN-O2-NEXT:       Loop Pass Manager
-; GCN-O2-NEXT:         Induction Variable Simplification
 ; GCN-O2-NEXT:         Recognize loop idioms
+; GCN-O2-NEXT:         Induction Variable Simplification
 ; GCN-O2-NEXT:         Delete dead loops
 ; GCN-O2-NEXT:         Unroll loops
 ; GCN-O2-NEXT:       SROA
@@ -851,8 +851,8 @@
 ; GCN-O3-NEXT:       Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:       Scalar Evolution Analysis
 ; GCN-O3-NEXT:       Loop Pass Manager
-; GCN-O3-NEXT:         Induction Variable Simplification
 ; GCN-O3-NEXT:         Recognize loop idioms
+; GCN-O3-NEXT:         Induction Variable Simplification
 ; GCN-O3-NEXT:         Delete dead loops
 ; GCN-O3-NEXT:         Unroll loops
 ; GCN-O3-NEXT:       SROA
