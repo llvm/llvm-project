@@ -912,7 +912,8 @@ private:
 
   // macro directives
   bool parseDirectivePurgeMacro(SMLoc DirectiveLoc);
-  bool parseDirectiveExitMacro(StringRef Directive, std::string &Value);
+  bool parseDirectiveExitMacro(SMLoc DirectiveLoc, StringRef Directive,
+                               std::string &Value);
   bool parseDirectiveEndMacro(StringRef Directive);
   bool parseDirectiveMacro(StringRef Name, SMLoc NameLoc);
 
@@ -2307,7 +2308,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIWindowSave();
     case DK_EXITM:
       Info.ExitValue = "";
-      return parseDirectiveExitMacro(IDVal, *Info.ExitValue);
+      return parseDirectiveExitMacro(IDLoc, IDVal, *Info.ExitValue);
     case DK_ENDM:
       Info.ExitValue = "";
       return parseDirectiveEndMacro(IDVal);
@@ -3207,7 +3208,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
       // Accept a text-list, not just one text-item.
       auto parseItem = [&]() -> bool {
         if (parseTextItem(Value))
-          return true;
+          return TokError("expected text item");
         Var.TextValue += Value;
         return false;
       };
@@ -3283,8 +3284,38 @@ bool MasmParser::parseAngleBracketString(std::string &Data) {
 
 /// textItem ::= textLiteral | textMacroID | % constExpr
 bool MasmParser::parseTextItem(std::string &Data) {
-  // TODO(epastor): Support textMacroID and % expansion of expressions.
-  return parseAngleBracketString(Data);
+  switch (getTok().getKind()) {
+  default:
+    return true;
+  case AsmToken::Percent: {
+    int64_t Res;
+    if (parseToken(AsmToken::Percent) || parseAbsoluteExpression(Res))
+      return true;
+    Data = std::to_string(Res);
+    return false;
+  }
+  case AsmToken::Less:
+  case AsmToken::LessEqual:
+  case AsmToken::LessLess:
+  case AsmToken::LessGreater:
+    return parseAngleBracketString(Data);
+  case AsmToken::Identifier: {
+    StringRef ID;
+    if (parseIdentifier(ID))
+      return true;
+
+    auto it = Variables.find(ID);
+    if (it == Variables.end())
+      return true;
+
+    const Variable &Var = it->second;
+    if (!Var.IsText)
+      return true;
+    Data = Var.TextValue;
+    return false;
+  }
+  }
+  llvm_unreachable("unhandled token kind");
 }
 
 /// parseDirectiveAscii:
@@ -5503,11 +5534,13 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
 
 /// parseDirectiveExitMacro
 /// ::= "exitm" [textitem]
-bool MasmParser::parseDirectiveExitMacro(StringRef Directive,
+bool MasmParser::parseDirectiveExitMacro(SMLoc DirectiveLoc,
+                                         StringRef Directive,
                                          std::string &Value) {
-  if (getTok().isNot(AsmToken::EndOfStatement)) {
-    parseTextItem(Value);
-  }
+  SMLoc EndLoc = getTok().getLoc();
+  if (getTok().isNot(AsmToken::EndOfStatement) && parseTextItem(Value))
+    return Error(EndLoc,
+                 "unable to parse text item in '" + Directive + "' directive");
   eatToEndOfStatement();
 
   if (!isInsideMacroInstantiation())
@@ -5740,7 +5773,7 @@ bool MasmParser::parseDirectiveIf(SMLoc DirectiveLoc, DirectiveKind DirKind) {
 }
 
 /// parseDirectiveIfb
-/// ::= .ifb string
+/// ::= .ifb textitem
 bool MasmParser::parseDirectiveIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
   TheCondStack.push_back(TheCondState);
   TheCondState.TheCond = AsmCond::IfCond;
@@ -5750,7 +5783,7 @@ bool MasmParser::parseDirectiveIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
   } else {
     std::string Str;
     if (parseTextItem(Str))
-      return TokError("expected string parameter for 'ifb' directive");
+      return TokError("expected text item parameter for 'ifb' directive");
 
     if (parseToken(AsmToken::EndOfStatement,
                    "unexpected token in 'ifb' directive"))
@@ -5764,14 +5797,15 @@ bool MasmParser::parseDirectiveIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
 }
 
 /// parseDirectiveIfidn
-///   ::= ifidn string1, string2
-bool MasmParser::parseDirectiveIfidn(SMLoc DirectiveLoc, bool ExpectEqual, bool CaseInsensitive) {
+///   ::= ifidn textitem, textitem
+bool MasmParser::parseDirectiveIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
+                                     bool CaseInsensitive) {
   std::string String1, String2;
 
   if (parseTextItem(String1)) {
     if (ExpectEqual)
-      return TokError("expected string parameter for 'ifidn' directive");
-    return TokError("expected string parameter for 'ifdif' directive");
+      return TokError("expected text item parameter for 'ifidn' directive");
+    return TokError("expected text item parameter for 'ifdif' directive");
   }
 
   if (Lexer.isNot(AsmToken::Comma)) {
@@ -5784,8 +5818,8 @@ bool MasmParser::parseDirectiveIfidn(SMLoc DirectiveLoc, bool ExpectEqual, bool 
 
   if (parseTextItem(String2)) {
     if (ExpectEqual)
-      return TokError("expected string parameter for 'ifidn' directive");
-    return TokError("expected string parameter for 'ifdif' directive");
+      return TokError("expected text item parameter for 'ifidn' directive");
+    return TokError("expected text item parameter for 'ifdif' directive");
   }
 
   TheCondStack.push_back(TheCondState);
@@ -5879,7 +5913,7 @@ bool MasmParser::parseDirectiveElseIf(SMLoc DirectiveLoc,
 }
 
 /// parseDirectiveElseIfb
-/// ::= elseifb expression
+/// ::= elseifb textitem
 bool MasmParser::parseDirectiveElseIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
   if (TheCondState.TheCond != AsmCond::IfCond &&
       TheCondState.TheCond != AsmCond::ElseIfCond)
@@ -5895,8 +5929,11 @@ bool MasmParser::parseDirectiveElseIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
     eatToEndOfStatement();
   } else {
     std::string Str;
-    if (parseTextItem(Str))
-      return TokError("expected string parameter for 'elseifb' directive");
+    if (parseTextItem(Str)) {
+      if (ExpectBlank)
+        return TokError("expected text item parameter for 'elseifb' directive");
+      return TokError("expected text item parameter for 'elseifnb' directive");
+    }
 
     if (parseToken(AsmToken::EndOfStatement,
                    "unexpected token in 'elseifb' directive"))
@@ -5956,7 +5993,7 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
 }
 
 /// parseDirectiveElseIfidn
-/// ::= elseifidn string1, string2
+/// ::= elseifidn textitem, textitem
 bool MasmParser::parseDirectiveElseIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
                                          bool CaseInsensitive) {
   if (TheCondState.TheCond != AsmCond::IfCond &&
@@ -5976,8 +6013,9 @@ bool MasmParser::parseDirectiveElseIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
 
     if (parseTextItem(String1)) {
       if (ExpectEqual)
-        return TokError("expected string parameter for 'elseifidn' directive");
-      return TokError("expected string parameter for 'elseifdif' directive");
+        return TokError(
+            "expected text item parameter for 'elseifidn' directive");
+      return TokError("expected text item parameter for 'elseifdif' directive");
     }
 
     if (Lexer.isNot(AsmToken::Comma)) {
@@ -5991,8 +6029,9 @@ bool MasmParser::parseDirectiveElseIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
 
     if (parseTextItem(String2)) {
       if (ExpectEqual)
-        return TokError("expected string parameter for 'elseifidn' directive");
-      return TokError("expected string parameter for 'elseifdif' directive");
+        return TokError(
+            "expected text item parameter for 'elseifidn' directive");
+      return TokError("expected text item parameter for 'elseifdif' directive");
     }
 
     if (CaseInsensitive)
@@ -6130,7 +6169,7 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
 }
 
 /// parseDirectiveErrorIfidn
-///   ::= .erridn textitem1, textitem2[, message]
+///   ::= .erridn textitem, textitem[, message]
 bool MasmParser::parseDirectiveErrorIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
                                           bool CaseInsensitive) {
   if (!TheCondStack.empty()) {
