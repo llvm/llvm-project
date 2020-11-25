@@ -8093,9 +8093,9 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Reduction being replicated.");
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     RecurrenceDescriptor::RecurrenceKind Kind = RdxDesc->getRecurrenceKind();
-    Value *NewVecOp = State.get(VecOp, Part);
-    if (CondOp) {
-      Value *NewCond = State.get(CondOp, Part);
+    Value *NewVecOp = State.get(getVecOp(), Part);
+    if (VPValue *Cond = getCondOp()) {
+      Value *NewCond = State.get(Cond, Part);
       VectorType *VecTy = cast<VectorType>(NewVecOp->getType());
       Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
           Kind, RdxDesc->getMinMaxRecurrenceKind(), VecTy->getElementType());
@@ -8106,7 +8106,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     }
     Value *NewRed =
         createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp, NoNaN);
-    Value *PrevInChain = State.get(ChainOp, Part);
+    Value *PrevInChain = State.get(getChainOp(), Part);
     Value *NextInChain;
     if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
         Kind == RecurrenceDescriptor::RK_FloatMinMax) {
@@ -8115,9 +8115,10 @@ void VPReductionRecipe::execute(VPTransformState &State) {
                          NewRed, PrevInChain);
     } else {
       NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)I->getOpcode(), NewRed, PrevInChain);
+          (Instruction::BinaryOps)getUnderlyingInstr()->getOpcode(), NewRed,
+          PrevInChain);
     }
-    State.ValueMap.setVectorValue(I, Part, NextInChain);
+    State.set(this, getUnderlyingInstr(), NextInChain, Part);
   }
 }
 
