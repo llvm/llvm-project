@@ -89,6 +89,9 @@ namespace llvm {
     FRE,
     FRSQRTE,
 
+    /// Test instruction for software square root.
+    FTSQRT,
+
     /// VPERM - The PPC VPERM Instruction.
     ///
     VPERM,
@@ -1283,6 +1286,8 @@ namespace llvm {
                             bool Reciprocal) const override;
     SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
+    SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
+                             const DenormalMode &Mode) const override;
     unsigned combineRepeatedFPDivisors() const override;
 
     SDValue
