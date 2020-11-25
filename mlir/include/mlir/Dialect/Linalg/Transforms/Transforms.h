@@ -783,9 +783,62 @@ LogicalResult applyStagedPatterns(
 
 //===----------------------------------------------------------------------===//
 // Support for sparse tensor code generation.
+//
+// The sparse compiler part of MLIR lowers a tensor expression formulated as a
+// Linalg operation into a sequence of loops depending on what dimensions of the
+// tensors are marked dense or sparse. The generated code distinguishes between:
+// (1) for-loops that iterate over a single dense dimension,
+// (2) for-loops that iterate over a single sparse dimension,
+// (3) while-loops that co-iterate over several sparse dimensions.
+// The for-loops may be subsequently optimized for parallel or vector execution.
+//
+// For more details, the Dialect/Linalg/Transforms/Sparsification.cpp file.
 //===----------------------------------------------------------------------===//
-void populateSparsificationPatterns(MLIRContext *context,
-                                    OwningRewritePatternList &patterns);
+
+/// Defines a parallelization strategy. Any implicit loop in the Linalg
+/// operation that is marked "parallel" (thus not "reduction") is a candidate
+/// for parallelization. The loop is made parallel if (1) allowed by the
+/// strategy (e.g., AnyStorageOuterLoop considers either a dense or sparse
+/// outermost loop only), and (2) the generated code is an actual for-loop
+/// (and not a co-iterating while-loop).
+enum class SparseParallelizationStrategy {
+  kNone,
+  kDenseOuterLoop,
+  kAnyStorageOuterLoop,
+  kDenseAnyLoop,
+  kAnyStorageAnyLoop
+  // TODO: support reduction parallelization too?
+};
+
+/// Defines a vectorization strategy. Any implicit inner loop in the Linalg
+/// operation is a candidate (full SIMD for "parallel" loops and horizontal
+/// SIMD for "reduction" loops). A loop is actually vectorized if (1) allowed
+/// by the strategy, and (2) the emitted code is an actual for-loop (and not
+/// a co-iterating while-loop).
+enum class SparseVectorizationStrategy {
+  kNone,
+  kDenseInnerLoop,
+  kAnyStorageInnerLoop
+};
+
+/// Sparsification options.
+struct SparsificationOptions {
+  SparsificationOptions(SparseParallelizationStrategy p,
+                        SparseVectorizationStrategy v, unsigned vl)
+      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl) {
+  }
+  SparsificationOptions()
+      : SparsificationOptions(SparseParallelizationStrategy::kNone,
+                              SparseVectorizationStrategy::kNone, 1u) {}
+  SparseParallelizationStrategy parallelizationStrategy;
+  SparseVectorizationStrategy vectorizationStrategy;
+  unsigned vectorLength;
+};
+
+/// Set up sparsification rewriting rules with the given options.
+void populateSparsificationPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns,
+    const SparsificationOptions &options = SparsificationOptions());
 
 } // namespace linalg
 } // namespace mlir
