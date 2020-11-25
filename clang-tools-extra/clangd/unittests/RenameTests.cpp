@@ -1031,6 +1031,7 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(FooCC.ranges(),
               testing::UnorderedElementsAreArray(Results->LocalChanges));
 
+  trace::TestTracer Tracer;
   // Name validation.
   Results =
       runPrepareRename(Server, FooCCPath, FooCC.point(),
@@ -1038,6 +1039,8 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("keyword"));
+  EXPECT_THAT(Tracer.takeMetric("rename_name_invalid", "Keywords"),
+              ElementsAre(1));
 
   // Single-file rename on global symbols, we should report an error.
   Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
