@@ -8,7 +8,6 @@
 
 // <numeric>
 
-// Became constexpr in C++20
 // template <InputIterator Iter1, InputIterator Iter2, MoveConstructible T>
 //   requires HasMultiply<Iter1::reference, Iter2::reference>
 //         && HasPlus<T, HasMultiply<Iter1::reference, Iter2::reference>::result_type>
@@ -26,14 +25,14 @@
 #include "test_iterators.h"
 
 template <class Iter1, class Iter2, class T>
-TEST_CONSTEXPR_CXX20 void
+void
 test(Iter1 first1, Iter1 last1, Iter2 first2, T init, T x)
 {
     assert(std::inner_product(first1, last1, first2, init) == x);
 }
 
 template <class Iter1, class Iter2>
-TEST_CONSTEXPR_CXX20 void
+void
 test()
 {
     int a[] = {1, 2, 3, 4, 5, 6};
@@ -49,8 +48,7 @@ test()
     test(Iter1(a), Iter1(a+sa), Iter2(b), 10, 66);
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
+int main(int, char**)
 {
     test<input_iterator<const int*>, input_iterator<const int*> >();
     test<input_iterator<const int*>, forward_iterator<const int*> >();
@@ -82,14 +80,5 @@ test()
     test<const int*, random_access_iterator<const int*> >();
     test<const int*, const int*>();
 
-    return true;
-}
-
-int main(int, char**)
-{
-    test();
-#if TEST_STD_VER > 17
-    static_assert(test());
-#endif
-    return 0;
+  return 0;
 }
