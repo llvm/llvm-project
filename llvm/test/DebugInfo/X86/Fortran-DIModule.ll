@@ -1,5 +1,5 @@
 ; This test checks attributes of a Fortran module.
-; RUN: %llc_dwarf %s -filetype=obj -o - | \
+; RUN: llc %s -filetype=obj -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_module
