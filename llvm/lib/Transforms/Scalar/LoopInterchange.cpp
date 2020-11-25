@@ -452,7 +452,7 @@ struct LoopInterchange {
   bool isComputableLoopNest(LoopVector LoopList) {
     for (Loop *L : LoopList) {
       const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
-      if (ExitCountOuter == SE->getCouldNotCompute()) {
+      if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
         LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
         return false;
       }

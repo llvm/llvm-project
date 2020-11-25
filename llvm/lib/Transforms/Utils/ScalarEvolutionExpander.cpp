@@ -2468,7 +2468,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   const SCEV *ExitCount =
       SE.getPredicatedBackedgeTakenCount(AR->getLoop(), Pred);
 
-  assert(ExitCount != SE.getCouldNotCompute() && "Invalid loop count");
+  assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Invalid loop count");
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *Start = AR->getStart();
