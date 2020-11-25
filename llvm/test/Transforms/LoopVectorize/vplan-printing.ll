@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -68,6 +68,33 @@ for.body:                                         ; preds = %entry, %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
+}
+
+define float @print_reduction(i64 %n, float* noalias %y) {
+; CHECK: N0 [label =
+; CHECK-NEXT: "for.body:\n" +
+; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:       "WIDEN-PHI %red = phi %red.next, 0.000000e+00\l" +
+; CHECK-NEXT:       "CLONE %arrayidx = getelementptr %y, %iv\l" +
+; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
+; CHECK-NEXT:       "REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)\l"
+; CHECK-NEXT:   ]
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %red = phi float [ %red.next, %for.body ], [ 0.0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %y, i64 %iv
+  %lv = load float, float* %arrayidx, align 4
+  %red.next = fadd fast float %lv, %red
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret float %red.next
 }
 
 declare float @llvm.sqrt.f32(float) nounwind readnone
