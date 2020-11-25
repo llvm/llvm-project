@@ -114,40 +114,6 @@ private:
   bool TheiaSemanticHighlighting;
 };
 
-// Set of clang-tidy checks that don't work well in clangd, either due to
-// crashes or false positives.
-// Returns a clang-tidy filter string: -check1,-check2.
-llvm::StringRef getUnusableTidyChecks() {
-  static const std::string FalsePositives =
-      llvm::join_items(", ",
-                       // Check relies on seeing ifndef/define/endif directives,
-                       // clangd doesn't replay those when using a preamble.
-                       "-llvm-header-guard");
-  static const std::string CrashingChecks =
-      llvm::join_items(", ",
-                       // Check can choke on invalid (intermediate) c++ code,
-                       // which is often the case when clangd tries to build an
-                       // AST.
-                       "-bugprone-use-after-move");
-  static const std::string UnusableTidyChecks =
-      llvm::join_items(", ", FalsePositives, CrashingChecks);
-  return UnusableTidyChecks;
-}
-
-// Returns a clang-tidy options string: check1,check2.
-llvm::StringRef getDefaultTidyChecks() {
-  // These default checks are chosen for:
-  //  - low false-positive rate
-  //  - providing a lot of value
-  //  - being reasonably efficient
-  static const std::string DefaultChecks = llvm::join_items(
-      ",", "readability-misleading-indentation", "readability-deleted-default",
-      "bugprone-integer-division", "bugprone-sizeof-expression",
-      "bugprone-suspicious-missing-comma", "bugprone-unused-raii",
-      "bugprone-unused-return-value", "misc-unused-using-decls",
-      "misc-unused-alias-decls", "misc-definitions-in-headers");
-  return DefaultChecks;
-}
 } // namespace
 
 ClangdServer::Options ClangdServer::optsForTest() {
@@ -178,7 +144,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
                                      Opts.CollectMainFileRefs)
                      : nullptr),
-      GetClangTidyOptions(Opts.GetClangTidyOptions),
+      ClangTidyProvider(Opts.ClangTidyProvider),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       BuildRecoveryAST(Opts.BuildRecoveryAST),
       PreserveRecoveryASTType(Opts.PreserveRecoveryASTType),
@@ -236,20 +202,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
   ParseOptions Opts;
-  Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
-  // FIXME: call tidy options builder on the worker thread, it can do IO.
-  if (GetClangTidyOptions)
-    Opts.ClangTidyOpts =
-        GetClangTidyOptions(*TFS.view(/*CWD=*/llvm::None), File);
-  if (Opts.ClangTidyOpts.Checks.hasValue()) {
-    // If the set of checks was configured, make sure clangd incompatible ones
-    // are disabled.
-    Opts.ClangTidyOpts.Checks = llvm::join_items(
-        ", ", *Opts.ClangTidyOpts.Checks, getUnusableTidyChecks());
-  } else {
-    // Otherwise provide a nice set of defaults.
-    Opts.ClangTidyOpts.Checks = getDefaultTidyChecks().str();
-  }
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
@@ -260,6 +212,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
+  Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Opts.BuildRecoveryAST = BuildRecoveryAST;
   Inputs.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
   bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
