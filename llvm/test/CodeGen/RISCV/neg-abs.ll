@@ -24,6 +24,29 @@ define i32 @neg_abs32(i32 %x) {
   ret i32 %neg
 }
 
+define i32 @select_neg_abs32(i32 %x) {
+; RV32-LABEL: select_neg_abs32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    bltz a0, .LBB1_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:  .LBB1_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_neg_abs32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a1, a0
+; RV64-NEXT:    bltz a1, .LBB1_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    negw a0, a0
+; RV64-NEXT:  .LBB1_2:
+; RV64-NEXT:    ret
+  %1 = icmp slt i32 %x, 0
+  %2 = sub nsw i32 0, %x
+  %3 = select i1 %1, i32 %x, i32 %2
+  ret i32 %3
+}
+
 define i64 @neg_abs64(i64 %x) {
 ; RV32-LABEL: neg_abs64:
 ; RV32:       # %bb.0:
@@ -46,3 +69,29 @@ define i64 @neg_abs64(i64 %x) {
   %neg = sub nsw i64 0, %abs
   ret i64 %neg
 }
+
+define i64 @select_neg_abs64(i64 %x) {
+; RV32-LABEL: select_neg_abs64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    bltz a1, .LBB3_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    snez a2, a0
+; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:  .LBB3_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_neg_abs64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB3_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:  .LBB3_2:
+; RV64-NEXT:    ret
+  %1 = icmp slt i64 %x, 0
+  %2 = sub nsw i64 0, %x
+  %3 = select i1 %1, i64 %x, i64 %2
+  ret i64 %3
+}
+
