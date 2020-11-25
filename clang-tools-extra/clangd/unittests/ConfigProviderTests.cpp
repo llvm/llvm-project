@@ -151,6 +151,7 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
 }
 
+// FIXME: delete this test, it's covered by FileCacheTests.
 TEST(ProviderTest, Staleness) {
   MockFS FS;
 
