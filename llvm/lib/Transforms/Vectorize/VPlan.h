@@ -828,20 +828,21 @@ public:
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase, public VPUser {
-  /// Hold the instruction to be widened.
-  Instruction &Ingredient;
-
+class VPWidenRecipe : public VPRecipeBase, public VPValue, public VPUser {
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenSC), VPUser(Operands), Ingredient(I) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenSC), VPValue(VPValue::VPWidenSC, &I),
+        VPUser(Operands) {}
 
   ~VPWidenRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPWidenSC;
+  }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPWidenSC;
   }
 
   /// Produce widened copies of all Ingredients.
@@ -1734,15 +1735,6 @@ public:
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
-  }
-
-  void addOrReplaceVPValue(Value *V, VPValue *VPV) {
-    assert(V && "Trying to add a null Value to VPlan");
-    auto I = Value2VPValue.find(V);
-    if (I == Value2VPValue.end())
-      Value2VPValue[V] = VPV;
-    else
-      I->second = VPV;
   }
 
   VPValue *getVPValue(Value *V) {

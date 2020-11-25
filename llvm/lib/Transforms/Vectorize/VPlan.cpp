@@ -129,6 +129,8 @@ VPValue *VPRecipeBase::toVPValue() {
     return V;
   if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
     return V;
+  if (auto *V = dyn_cast<VPWidenRecipe>(this))
+    return V;
   return nullptr;
 }
 
@@ -144,6 +146,8 @@ const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPWidenSelectRecipe>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenRecipe>(this))
     return V;
   return nullptr;
 }
@@ -883,8 +887,10 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN\\l\"";
-  O << "\"  " << VPlanIngredient(&Ingredient);
+  O << "\"WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << getUnderlyingInstr()->getOpcodeName() << " ";
+  printOperands(O, SlotTracker);
 }
 
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
