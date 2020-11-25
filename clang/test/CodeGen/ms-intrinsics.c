@@ -147,7 +147,7 @@ void *test_AddressOfReturnAddress() {
 #endif
 
 unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
-  return _BitScanForward(Index, Mask);
+  return _BitScanForward(++Index, Mask);
 }
 // CHECK: define{{.*}}i8 @test_BitScanForward(i32* {{[a-z_ ]*}}%Index, i32 {{[a-z_ ]*}}%Mask){{.*}}{
 // CHECK:   [[ISNOTZERO:%[a-z0-9._]+]] = icmp eq i32 %Mask, 0
@@ -156,12 +156,13 @@ unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i32, i32* %Index, {{i64|i32}} 1
 // CHECK:   [[INDEX:%[0-9]+]] = tail call i32 @llvm.cttz.i32(i32 %Mask, i1 true)
-// CHECK:   store i32 [[INDEX]], i32* %Index, align 4
+// CHECK:   store i32 [[INDEX]], i32* [[IDXGEP]], align 4
 // CHECK:   br label %[[END_LABEL]]
 
 unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
-  return _BitScanReverse(Index, Mask);
+  return _BitScanReverse(++Index, Mask);
 }
 // CHECK: define{{.*}}i8 @test_BitScanReverse(i32* {{[a-z_ ]*}}%Index, i32 {{[a-z_ ]*}}%Mask){{.*}}{
 // CHECK:   [[ISNOTZERO:%[0-9]+]] = icmp eq i32 %Mask, 0
@@ -170,9 +171,10 @@ unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i32, i32* %Index, {{i64|i32}} 1
 // CHECK:   [[REVINDEX:%[0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[REVINDEX]], 31
-// CHECK:   store i32 [[INDEX]], i32* %Index, align 4
+// CHECK:   store i32 [[INDEX]], i32* [[IDXGEP]], align 4
 // CHECK:   br label %[[END_LABEL]]
 
 #if defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
@@ -459,19 +461,21 @@ unsigned char test_InterlockedCompareExchange128(
 #endif
 
 short test_InterlockedIncrement16(short volatile *Addend) {
-  return _InterlockedIncrement16(Addend);
+  return _InterlockedIncrement16(++Addend);
 }
 // CHECK: define{{.*}}i16 @test_InterlockedIncrement16(i16*{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: [[TMP:%[0-9]+]] = atomicrmw add i16* %Addend, i16 1 seq_cst
+// CHECK: %incdec.ptr = getelementptr inbounds i16, i16* %Addend, {{i64|i32}} 1
+// CHECK: [[TMP:%[0-9]+]] = atomicrmw add i16* %incdec.ptr, i16 1 seq_cst
 // CHECK: [[RESULT:%[0-9]+]] = add i16 [[TMP]], 1
 // CHECK: ret i16 [[RESULT]]
 // CHECK: }
 
 long test_InterlockedIncrement(long volatile *Addend) {
-  return _InterlockedIncrement(Addend);
+  return _InterlockedIncrement(++Addend);
 }
 // CHECK: define{{.*}}i32 @test_InterlockedIncrement(i32*{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: [[TMP:%[0-9]+]] = atomicrmw add i32* %Addend, i32 1 seq_cst
+// CHECK: %incdec.ptr = getelementptr inbounds i32, i32* %Addend, {{i64|i32}} 1
+// CHECK: [[TMP:%[0-9]+]] = atomicrmw add i32* %incdec.ptr, i32 1 seq_cst
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], 1
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
