@@ -150,8 +150,7 @@ bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
 }
 
-RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,
-                                    RelExpr expr) const {
+RelExpr TargetInfo::adjustTlsExpr(RelType type, RelExpr expr) const {
   return expr;
 }
 
