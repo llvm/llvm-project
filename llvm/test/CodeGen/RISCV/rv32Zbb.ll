@@ -910,34 +910,36 @@ define i64 @min_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: min_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beq a1, a3, .LBB19_2
+; RV32IB-NEXT:    mv a4, a0
+; RV32IB-NEXT:    bge a1, a3, .LBB19_3
 ; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    slt a4, a1, a3
-; RV32IB-NEXT:    beqz a4, .LBB19_3
-; RV32IB-NEXT:    j .LBB19_4
+; RV32IB-NEXT:    beq a1, a3, .LBB19_4
 ; RV32IB-NEXT:  .LBB19_2:
-; RV32IB-NEXT:    sltu a4, a0, a2
-; RV32IB-NEXT:    bnez a4, .LBB19_4
+; RV32IB-NEXT:    min a1, a1, a3
+; RV32IB-NEXT:    ret
 ; RV32IB-NEXT:  .LBB19_3:
 ; RV32IB-NEXT:    mv a0, a2
-; RV32IB-NEXT:    mv a1, a3
+; RV32IB-NEXT:    bne a1, a3, .LBB19_2
 ; RV32IB-NEXT:  .LBB19_4:
+; RV32IB-NEXT:    minu a0, a4, a2
+; RV32IB-NEXT:    min a1, a1, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: min_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beq a1, a3, .LBB19_2
+; RV32IBB-NEXT:    mv a4, a0
+; RV32IBB-NEXT:    bge a1, a3, .LBB19_3
 ; RV32IBB-NEXT:  # %bb.1:
-; RV32IBB-NEXT:    slt a4, a1, a3
-; RV32IBB-NEXT:    beqz a4, .LBB19_3
-; RV32IBB-NEXT:    j .LBB19_4
+; RV32IBB-NEXT:    beq a1, a3, .LBB19_4
 ; RV32IBB-NEXT:  .LBB19_2:
-; RV32IBB-NEXT:    sltu a4, a0, a2
-; RV32IBB-NEXT:    bnez a4, .LBB19_4
+; RV32IBB-NEXT:    min a1, a1, a3
+; RV32IBB-NEXT:    ret
 ; RV32IBB-NEXT:  .LBB19_3:
 ; RV32IBB-NEXT:    mv a0, a2
-; RV32IBB-NEXT:    mv a1, a3
+; RV32IBB-NEXT:    bne a1, a3, .LBB19_2
 ; RV32IBB-NEXT:  .LBB19_4:
+; RV32IBB-NEXT:    minu a0, a4, a2
+; RV32IBB-NEXT:    min a1, a1, a3
 ; RV32IBB-NEXT:    ret
   %cmp = icmp slt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
@@ -991,34 +993,36 @@ define i64 @max_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: max_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beq a1, a3, .LBB21_2
+; RV32IB-NEXT:    mv a4, a0
+; RV32IB-NEXT:    bge a3, a1, .LBB21_3
 ; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    slt a4, a3, a1
-; RV32IB-NEXT:    beqz a4, .LBB21_3
-; RV32IB-NEXT:    j .LBB21_4
+; RV32IB-NEXT:    beq a1, a3, .LBB21_4
 ; RV32IB-NEXT:  .LBB21_2:
-; RV32IB-NEXT:    sltu a4, a2, a0
-; RV32IB-NEXT:    bnez a4, .LBB21_4
+; RV32IB-NEXT:    max a1, a1, a3
+; RV32IB-NEXT:    ret
 ; RV32IB-NEXT:  .LBB21_3:
 ; RV32IB-NEXT:    mv a0, a2
-; RV32IB-NEXT:    mv a1, a3
+; RV32IB-NEXT:    bne a1, a3, .LBB21_2
 ; RV32IB-NEXT:  .LBB21_4:
+; RV32IB-NEXT:    maxu a0, a4, a2
+; RV32IB-NEXT:    max a1, a1, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: max_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beq a1, a3, .LBB21_2
+; RV32IBB-NEXT:    mv a4, a0
+; RV32IBB-NEXT:    bge a3, a1, .LBB21_3
 ; RV32IBB-NEXT:  # %bb.1:
-; RV32IBB-NEXT:    slt a4, a3, a1
-; RV32IBB-NEXT:    beqz a4, .LBB21_3
-; RV32IBB-NEXT:    j .LBB21_4
+; RV32IBB-NEXT:    beq a1, a3, .LBB21_4
 ; RV32IBB-NEXT:  .LBB21_2:
-; RV32IBB-NEXT:    sltu a4, a2, a0
-; RV32IBB-NEXT:    bnez a4, .LBB21_4
+; RV32IBB-NEXT:    max a1, a1, a3
+; RV32IBB-NEXT:    ret
 ; RV32IBB-NEXT:  .LBB21_3:
 ; RV32IBB-NEXT:    mv a0, a2
-; RV32IBB-NEXT:    mv a1, a3
+; RV32IBB-NEXT:    bne a1, a3, .LBB21_2
 ; RV32IBB-NEXT:  .LBB21_4:
+; RV32IBB-NEXT:    maxu a0, a4, a2
+; RV32IBB-NEXT:    max a1, a1, a3
 ; RV32IBB-NEXT:    ret
   %cmp = icmp sgt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
@@ -1072,34 +1076,36 @@ define i64 @minu_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: minu_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beq a1, a3, .LBB23_2
+; RV32IB-NEXT:    mv a4, a0
+; RV32IB-NEXT:    bgeu a1, a3, .LBB23_3
 ; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    sltu a4, a1, a3
-; RV32IB-NEXT:    beqz a4, .LBB23_3
-; RV32IB-NEXT:    j .LBB23_4
+; RV32IB-NEXT:    beq a1, a3, .LBB23_4
 ; RV32IB-NEXT:  .LBB23_2:
-; RV32IB-NEXT:    sltu a4, a0, a2
-; RV32IB-NEXT:    bnez a4, .LBB23_4
+; RV32IB-NEXT:    minu a1, a1, a3
+; RV32IB-NEXT:    ret
 ; RV32IB-NEXT:  .LBB23_3:
 ; RV32IB-NEXT:    mv a0, a2
-; RV32IB-NEXT:    mv a1, a3
+; RV32IB-NEXT:    bne a1, a3, .LBB23_2
 ; RV32IB-NEXT:  .LBB23_4:
+; RV32IB-NEXT:    minu a0, a4, a2
+; RV32IB-NEXT:    minu a1, a1, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: minu_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beq a1, a3, .LBB23_2
+; RV32IBB-NEXT:    mv a4, a0
+; RV32IBB-NEXT:    bgeu a1, a3, .LBB23_3
 ; RV32IBB-NEXT:  # %bb.1:
-; RV32IBB-NEXT:    sltu a4, a1, a3
-; RV32IBB-NEXT:    beqz a4, .LBB23_3
-; RV32IBB-NEXT:    j .LBB23_4
+; RV32IBB-NEXT:    beq a1, a3, .LBB23_4
 ; RV32IBB-NEXT:  .LBB23_2:
-; RV32IBB-NEXT:    sltu a4, a0, a2
-; RV32IBB-NEXT:    bnez a4, .LBB23_4
+; RV32IBB-NEXT:    minu a1, a1, a3
+; RV32IBB-NEXT:    ret
 ; RV32IBB-NEXT:  .LBB23_3:
 ; RV32IBB-NEXT:    mv a0, a2
-; RV32IBB-NEXT:    mv a1, a3
+; RV32IBB-NEXT:    bne a1, a3, .LBB23_2
 ; RV32IBB-NEXT:  .LBB23_4:
+; RV32IBB-NEXT:    minu a0, a4, a2
+; RV32IBB-NEXT:    minu a1, a1, a3
 ; RV32IBB-NEXT:    ret
   %cmp = icmp ult i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
@@ -1153,34 +1159,36 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: maxu_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beq a1, a3, .LBB25_2
+; RV32IB-NEXT:    mv a4, a0
+; RV32IB-NEXT:    bgeu a3, a1, .LBB25_3
 ; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    sltu a4, a3, a1
-; RV32IB-NEXT:    beqz a4, .LBB25_3
-; RV32IB-NEXT:    j .LBB25_4
+; RV32IB-NEXT:    beq a1, a3, .LBB25_4
 ; RV32IB-NEXT:  .LBB25_2:
-; RV32IB-NEXT:    sltu a4, a2, a0
-; RV32IB-NEXT:    bnez a4, .LBB25_4
+; RV32IB-NEXT:    maxu a1, a1, a3
+; RV32IB-NEXT:    ret
 ; RV32IB-NEXT:  .LBB25_3:
 ; RV32IB-NEXT:    mv a0, a2
-; RV32IB-NEXT:    mv a1, a3
+; RV32IB-NEXT:    bne a1, a3, .LBB25_2
 ; RV32IB-NEXT:  .LBB25_4:
+; RV32IB-NEXT:    maxu a0, a4, a2
+; RV32IB-NEXT:    maxu a1, a1, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: maxu_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beq a1, a3, .LBB25_2
+; RV32IBB-NEXT:    mv a4, a0
+; RV32IBB-NEXT:    bgeu a3, a1, .LBB25_3
 ; RV32IBB-NEXT:  # %bb.1:
-; RV32IBB-NEXT:    sltu a4, a3, a1
-; RV32IBB-NEXT:    beqz a4, .LBB25_3
-; RV32IBB-NEXT:    j .LBB25_4
+; RV32IBB-NEXT:    beq a1, a3, .LBB25_4
 ; RV32IBB-NEXT:  .LBB25_2:
-; RV32IBB-NEXT:    sltu a4, a2, a0
-; RV32IBB-NEXT:    bnez a4, .LBB25_4
+; RV32IBB-NEXT:    maxu a1, a1, a3
+; RV32IBB-NEXT:    ret
 ; RV32IBB-NEXT:  .LBB25_3:
 ; RV32IBB-NEXT:    mv a0, a2
-; RV32IBB-NEXT:    mv a1, a3
+; RV32IBB-NEXT:    bne a1, a3, .LBB25_2
 ; RV32IBB-NEXT:  .LBB25_4:
+; RV32IBB-NEXT:    maxu a0, a4, a2
+; RV32IBB-NEXT:    maxu a1, a1, a3
 ; RV32IBB-NEXT:    ret
   %cmp = icmp ugt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
