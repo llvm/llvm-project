@@ -11,6 +11,7 @@
 #include "Features.inc"
 #include "PathMapping.h"
 #include "Protocol.h"
+#include "TidyProvider.h"
 #include "Transport.h"
 #include "index/Background.h"
 #include "index/Index.h"
@@ -837,35 +838,21 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
 
   // Create an empty clang-tidy option.
-  std::mutex ClangTidyOptMu;
-  std::unique_ptr<tidy::ClangTidyOptionsProvider>
-      ClangTidyOptProvider; /*GUARDED_BY(ClangTidyOptMu)*/
+  TidyProvider ClangTidyOptProvider;
   if (EnableClangTidy) {
-    auto EmptyDefaults = tidy::ClangTidyOptions::getDefaults();
-    EmptyDefaults.Checks.reset(); // So we can tell if checks were ever set.
-    EmptyDefaults.User = llvm::sys::Process::GetEnv("USER");
-#ifdef _WIN32
-    if (!EmptyDefaults.User)
-      EmptyDefaults.User = llvm::sys::Process::GetEnv("USERNAME");
-#endif
-    tidy::ClangTidyOptions OverrideClangTidyOptions;
+    std::vector<TidyProvider> Providers;
+    Providers.reserve(4 + EnableConfig);
+    Providers.push_back(provideEnvironment());
+    Providers.push_back(provideClangTidyFiles(TFS));
+    if (EnableConfig)
+      Providers.push_back(provideClangdConfig());
     if (!ClangTidyChecks.empty())
-      OverrideClangTidyOptions.Checks = ClangTidyChecks;
-    ClangTidyOptProvider = std::make_unique<tidy::FileOptionsProvider>(
-        tidy::ClangTidyGlobalOptions(),
-        /* Default */ EmptyDefaults,
-        /* Override */ OverrideClangTidyOptions, TFS.view(/*CWD=*/llvm::None));
-    Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
-                                   llvm::StringRef File) {
-      // This function must be thread-safe and tidy option providers are not.
-      tidy::ClangTidyOptions Opts;
-      {
-        std::lock_guard<std::mutex> Lock(ClangTidyOptMu);
-        // FIXME: use the FS provided to the function.
-        Opts = ClangTidyOptProvider->getOptions(File);
-      }
-      return Opts;
-    };
+      Providers.push_back(addTidyChecks(ClangTidyChecks));
+    else
+      Providers.push_back(provideDefaultChecks());
+    Providers.push_back(disableUnusableChecks());
+    ClangTidyOptProvider = combine(std::move(Providers));
+    Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
   Opts.AsyncPreambleBuilds = AsyncPreamble;
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
