@@ -195,7 +195,7 @@ void writeEvent(raw_ostream &os, const WasmEvent &event) {
   writeEventType(os, event.Type);
 }
 
-void writeTableType(raw_ostream &os, const llvm::wasm::WasmTable &type) {
+void writeTableType(raw_ostream &os, const WasmTableType &type) {
   writeU8(os, WASM_TYPE_FUNCREF, "table type");
   writeLimits(os, type.Limits);
 }

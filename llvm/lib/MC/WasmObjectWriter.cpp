@@ -848,11 +848,11 @@ void WasmObjectWriter::writeTableSection(ArrayRef<wasm::WasmTable> Tables) {
 
   encodeULEB128(Tables.size(), W->OS);
   for (const wasm::WasmTable &Table : Tables) {
-    encodeULEB128(Table.ElemType, W->OS);
-    encodeULEB128(Table.Limits.Flags, W->OS);
-    encodeULEB128(Table.Limits.Initial, W->OS);
-    if (Table.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
-      encodeULEB128(Table.Limits.Maximum, W->OS);
+    encodeULEB128(Table.Type.ElemType, W->OS);
+    encodeULEB128(Table.Type.Limits.Flags, W->OS);
+    encodeULEB128(Table.Type.Limits.Initial, W->OS);
+    if (Table.Type.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
+      encodeULEB128(Table.Type.Limits.Maximum, W->OS);
   }
   endSection(Section);
 }
@@ -1527,10 +1527,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       if (WS.isDefined()) {
         assert(WasmIndices.count(&WS) == 0);
         wasm::WasmTable Table;
-        Table.ElemType = static_cast<uint8_t>(WS.getTableType());
         Table.Index = NumTableImports + Tables.size();
+        Table.Type.ElemType = static_cast<uint8_t>(WS.getTableType());
         // FIXME: Work on custom limits is ongoing
-        Table.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+        Table.Type.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
 
         WasmIndices[&WS] = Table.Index;
         Tables.push_back(Table);

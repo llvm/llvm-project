@@ -214,12 +214,11 @@ static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
   return Result;
 }
 
-static wasm::WasmTable readTable(WasmObjectFile::ReadContext &Ctx) {
-  wasm::WasmTable Table;
-  Table.ElemType = readUint8(Ctx);
-  Table.Limits = readLimits(Ctx);
-  // The caller needs to set Table.Index field for Table
-  return Table;
+static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
+  wasm::WasmTableType TableType;
+  TableType.ElemType = readUint8(Ctx);
+  TableType.Limits = readLimits(Ctx);
+  return TableType;
 }
 
 static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
@@ -597,7 +596,9 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         Info.Name = readString(Ctx);
         unsigned TableIndex = Info.ElementIndex - NumImportedTables;
         wasm::WasmTable &Table = Tables[TableIndex];
-        TableType = Table.ElemType;
+        TableType = Table.Type.ElemType;
+        if (Table.SymbolName.empty())
+          Table.SymbolName = Info.Name;
       } else {
         return make_error<GenericBinaryError>("undefined table symbol",
                                               object_error::parse_failed);
@@ -1014,8 +1015,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
         HasMemory64 = true;
       break;
     case wasm::WASM_EXTERNAL_TABLE: {
-      Im.Table = readTable(Ctx);
-      Im.Table.Index = NumImportedTables + Tables.size();
+      Im.Table = readTableType(Ctx);
       NumImportedTables++;
       auto ElemType = Im.Table.ElemType;
       if (ElemType != wasm::WASM_TYPE_FUNCREF &&
@@ -1063,10 +1063,11 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Tables.reserve(Count);
   while (Count--) {
-    wasm::WasmTable T = readTable(Ctx);
+    wasm::WasmTable T;
+    T.Type = readTableType(Ctx);
     T.Index = NumImportedTables + Tables.size();
     Tables.push_back(T);
-    auto ElemType = Tables.back().ElemType;
+    auto ElemType = Tables.back().Type.ElemType;
     if (ElemType != wasm::WASM_TYPE_FUNCREF &&
         ElemType != wasm::WASM_TYPE_EXTERNREF) {
       return make_error<GenericBinaryError>("Invalid table element type",
