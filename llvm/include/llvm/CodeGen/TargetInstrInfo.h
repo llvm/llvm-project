@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOutliner.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -1076,9 +1077,23 @@ public:
   /// faster sequence.
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Patterns - Vector of possible combination patterns
-  virtual bool getMachineCombinerPatterns(
-      MachineInstr &Root,
-      SmallVectorImpl<MachineCombinerPattern> &Patterns) const;
+  virtual bool
+  getMachineCombinerPatterns(MachineInstr &Root,
+                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
+                             bool DoRegPressureReduce) const;
+
+  /// Return true if target supports reassociation of instructions in machine
+  /// combiner pass to reduce register pressure for a given BB.
+  virtual bool
+  shouldReduceRegisterPressure(MachineBasicBlock *MBB,
+                               RegisterClassInfo *RegClassInfo) const {
+    return false;
+  }
+
+  /// Fix up the placeholder we may add in genAlternativeCodeSequence().
+  virtual void
+  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
