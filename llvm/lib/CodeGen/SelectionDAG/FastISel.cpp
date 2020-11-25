@@ -223,21 +223,6 @@ void FastISel::flushLocalValueMap() {
   LastFlushPoint = FuncInfo.InsertPt;
 }
 
-static bool isTerminatingEHLabel(MachineBasicBlock *MBB, MachineInstr &MI) {
-  // Ignore non-EH labels.
-  if (!MI.isEHLabel())
-    return false;
-
-  // Any EH label outside a landing pad must be for an invoke. Consider it a
-  // terminator.
-  if (!MBB->isEHPad())
-    return true;
-
-  // If this is a landingpad, the first non-phi instruction will be an EH_LABEL.
-  // Don't consider that label to be a terminator.
-  return MI.getIterator() != MBB->getFirstNonPHI();
-}
-
 bool FastISel::hasTrivialKill(const Value *V) {
   // Don't consider constants or arguments to have trivial kills.
   const Instruction *I = dyn_cast<Instruction>(V);
