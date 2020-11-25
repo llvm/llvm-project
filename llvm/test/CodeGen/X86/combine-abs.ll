@@ -55,10 +55,9 @@ define i32 @combine_i32_abs_abs(i32 %a) {
 define <8 x i16> @combine_v8i16_abs_abs(<8 x i16> %a) {
 ; SSE2-LABEL: combine_v8i16_abs_abs:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psraw $15, %xmm1
-; SSE2-NEXT:    paddw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    psubw %xmm0, %xmm1
+; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_v8i16_abs_abs:
