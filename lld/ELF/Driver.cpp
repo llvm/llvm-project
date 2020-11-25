@@ -990,7 +990,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
-      args.hasArg(OPT_lto_whole_program_visibility);
+      args.hasFlag(OPT_lto_whole_program_visibility,
+                   OPT_no_lto_whole_program_visibility, false);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
