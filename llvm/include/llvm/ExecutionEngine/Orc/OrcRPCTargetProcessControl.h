@@ -94,7 +94,7 @@ public:
                  << " bytes to " << ((Prot & orcrpctpc::WPF_Read) ? 'R' : '-')
                  << ((Prot & orcrpctpc::WPF_Write) ? 'W' : '-')
                  << ((Prot & orcrpctpc::WPF_Exec) ? 'X' : '-')
-                 << " segment: local " << (void *)B.Buffer.data()
+                 << " segment: local " << (const void *)B.Buffer.data()
                  << " -> target " << formatv("{0:x16}", B.Address) << "\n";
         }
       });

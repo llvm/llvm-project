@@ -1456,7 +1456,9 @@ static std::vector<Record *> getAllPredicates(ArrayRef<TransVariant> Variants,
                                               ArrayRef<unsigned> ProcIndices) {
   std::vector<Record *> Preds;
   for (auto &Variant : Variants) {
-    assert(Variant.VarOrSeqDef->isSubClassOf("SchedVar"));
+    if (!Variant.VarOrSeqDef->isSubClassOf("SchedVar"))
+      continue;
+
     if (ProcIndices[0] && Variant.ProcIdx)
       if (!llvm::count(ProcIndices, Variant.ProcIdx))
         continue;
@@ -1532,9 +1534,11 @@ void PredTransitions::getIntersectingVariants(
                         " Ensure only one SchedAlias exists per RW.");
       }
     }
-    Record *PredDef = Variant.VarOrSeqDef->getValueAsDef("Predicate");
-    if (mutuallyExclusive(PredDef, AllPreds, TransVec[TransIdx].PredTerm))
-      continue;
+    if (Variant.VarOrSeqDef->isSubClassOf("SchedVar")) {
+      Record *PredDef = Variant.VarOrSeqDef->getValueAsDef("Predicate");
+      if (mutuallyExclusive(PredDef, AllPreds, TransVec[TransIdx].PredTerm))
+        continue;
+    }
 
     if (IntersectingVariants.empty()) {
       // The first variant builds on the existing transition.
