@@ -1194,3 +1194,67 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 }
+
+declare i32 @llvm.abs.i32(i32, i1 immarg)
+
+define i32 @abs_i32(i32 %x) {
+; RV32I-LABEL: abs_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: abs_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    neg a1, a0
+; RV32IB-NEXT:    max a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: abs_i32:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    neg a1, a0
+; RV32IBB-NEXT:    max a0, a0, a1
+; RV32IBB-NEXT:    ret
+  %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %abs
+}
+
+declare i64 @llvm.abs.i64(i64, i1 immarg)
+
+define i64 @abs_i64(i64 %x) {
+; RV32I-LABEL: abs_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bgez a1, .LBB27_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:  .LBB27_2:
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: abs_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    bgez a1, .LBB27_2
+; RV32IB-NEXT:  # %bb.1:
+; RV32IB-NEXT:    snez a2, a0
+; RV32IB-NEXT:    neg a0, a0
+; RV32IB-NEXT:    add a1, a1, a2
+; RV32IB-NEXT:    neg a1, a1
+; RV32IB-NEXT:  .LBB27_2:
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: abs_i64:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    bgez a1, .LBB27_2
+; RV32IBB-NEXT:  # %bb.1:
+; RV32IBB-NEXT:    snez a2, a0
+; RV32IBB-NEXT:    neg a0, a0
+; RV32IBB-NEXT:    add a1, a1, a2
+; RV32IBB-NEXT:    neg a1, a1
+; RV32IBB-NEXT:  .LBB27_2:
+; RV32IBB-NEXT:    ret
+  %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
+  ret i64 %abs
+}
