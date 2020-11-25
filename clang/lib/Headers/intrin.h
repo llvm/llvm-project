@@ -214,10 +214,6 @@ unsigned char _interlockedbittestandreset64(__int64 volatile *, __int64);
 unsigned char _interlockedbittestandset64(__int64 volatile *, __int64);
 long _InterlockedCompareExchange_np(long volatile *_Destination, long _Exchange,
                                     long _Comparand);
-unsigned char _InterlockedCompareExchange128(__int64 volatile *_Destination,
-                                             __int64 _ExchangeHigh,
-                                             __int64 _ExchangeLow,
-                                             __int64 *_CompareandResult);
 unsigned char _InterlockedCompareExchange128_np(__int64 volatile *_Destination,
                                                 __int64 _ExchangeHigh,
                                                 __int64 _ExchangeLow,
@@ -426,6 +422,26 @@ __int64 _InterlockedCompareExchange64_nf(__int64 volatile *_Destination,
                               __int64 _Exchange, __int64 _Comparand);
 __int64 _InterlockedCompareExchange64_rel(__int64 volatile *_Destination,
                               __int64 _Exchange, __int64 _Comparand);
+#endif
+#if defined(__x86_64__) || defined(__aarch64__)
+unsigned char _InterlockedCompareExchange128(__int64 volatile *_Destination,
+                                             __int64 _ExchangeHigh,
+                                             __int64 _ExchangeLow,
+                                             __int64 *_ComparandResult);
+#endif
+#if defined(__aarch64__)
+unsigned char _InterlockedCompareExchange128_acq(__int64 volatile *_Destination,
+                                                 __int64 _ExchangeHigh,
+                                                 __int64 _ExchangeLow,
+                                                 __int64 *_ComparandResult);
+unsigned char _InterlockedCompareExchange128_nf(__int64 volatile *_Destination,
+                                                __int64 _ExchangeHigh,
+                                                __int64 _ExchangeLow,
+                                                __int64 *_ComparandResult);
+unsigned char _InterlockedCompareExchange128_rel(__int64 volatile *_Destination,
+                                                 __int64 _ExchangeHigh,
+                                                 __int64 _ExchangeLow,
+                                                 __int64 *_ComparandResult);
 #endif
 
 /*----------------------------------------------------------------------------*\
