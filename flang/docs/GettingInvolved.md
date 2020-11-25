@@ -52,21 +52,36 @@ To understand the status of various developments in Flang please join the respec
 ### Flang Community Technical Biweekly Call
 
 -   Technical topics call.
--   Join [Flang Community Technical Biweekly Call](https://bluejeans.com/625064848?src=join_info)
+-   Join [Flang Community Technical Biweekly Call](https://bluejeans.com/284530575)
 -   Time: On Mondays 8:30 Pacific Time, on the weeks alternating with regular Flang Community Biweekly Call.
 -   The agenda is in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/).
 
 ### LLVM Alias Analysis Technical Call
 
 -   For people working on improvements to LLVM alias analysis.
--   Join [LLVM Alias Analysis Technical Call](https://bluejeans.com/101176001?src=join_info)
+-   Join [LLVM Alias Analysis Technical Call](https://bluejeans.com/316886064)
 -   Time: Tuesdays 10:00 AM Pacific Time, every 4 weeks.
 -   The agenda is in this [Google Doc](https://docs.google.com/document/d/1ybwEKDVtIbhIhK50qYtwKsL50K-NvB6LfuBsfepBZ9Y/).
 
-### OpenMP Technical Call
+### OpenMP in Flang Technical Call
 
 -   Development updates on OpenMP and OpenACC in the Flang Project.
--   Join [OpenMP Technical Call](https://bit.ly/39eQW3o)
+-   Join [OpenMP in Flang Technical Call](https://bit.ly/39eQW3o)
 -   Time: Weekly call on every Thursdays 8:00 AM Pacific time.
 -   Meeting minutes are [here](https://docs.google.com/document/d/1yA-MeJf6RYY-ZXpdol0t7YoDoqtwAyBhFLr5thu5pFI).
 -   Status tracking [page](https://docs.google.com/spreadsheets/d/1FvHPuSkGbl4mQZRAwCIndvQx9dQboffiD-xD0oqxgU0/edit#gid=0).
+
+### OpenMP in LLVM Technical Call
+
+-   Development updates on OpenMP (and OpenACC) in the LLVM Project, including Clang, optimization, and runtime work.
+-   Join [OpenMP in LLVM Technical Call](https://bluejeans.com/544112769//webrtc)
+-   Time: Weekly call on every Wednesday 7:00 AM Pacific time.
+-   Meeting minutes are [here](https://docs.google.com/document/d/1Tz8WFN13n7yJ-SCE0Qjqf9LmjGUw0dWO9Ts1ss4YOdg/edit).
+-   Status tracking [page](https://openmp.llvm.org/docs).
+
+### Classic Flang Biweekly Technical Call
+
+-   For people working on Classic Flang, the original Flang Fortran 2003/2008 compiler.
+-   Join [Classic Flang Biweekly Technical Call](https://teams.microsoft.com/l/meetup-join/19%3ameeting_YjM5YjlmNGEtMjA0MS00MTRlLTg5ZjUtOTM1ZGIxOTU2NWQy%40thread.v2)
+-   The call is held every other Wednesday in the same week as the LLVM Flang Technical call (alternate week with the Flang Community Biweekly call).
+-   The agenda is available [here](https://docs.google.com/document/d/1-OuiKx4d7O6eLEJDBDKSRnSiUO2rgRR-c2Ga4AkrzOI)
