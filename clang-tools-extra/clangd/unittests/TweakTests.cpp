@@ -3084,6 +3084,12 @@ TEST_F(PopulateSwitchTest, Test) {
           R""(enum Enum {A,B,b=B}; ^switch (A) {case A:case B:break;})"",
           "unavailable",
       },
+      {
+          // Enum is dependent type
+          File,
+          R""(template<typename T> void f() {enum Enum {A}; ^switch (A) {}})"",
+          "unavailable",
+      },
   };
 
   for (const auto &Case : Cases) {
