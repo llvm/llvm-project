@@ -1232,6 +1232,8 @@ public:
     return AMDGPU::isGFX10(getSTI());
   }
 
+  bool isGFX10Plus() const { return AMDGPU::isGFX10Plus(getSTI()); }
+
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
   }
@@ -1248,9 +1250,7 @@ public:
     return !isVI() && !isGFX9();
   }
 
-  bool hasSGPR104_SGPR105() const {
-    return isGFX10();
-  }
+  bool hasSGPR104_SGPR105() const { return isGFX10Plus(); }
 
   bool hasIntClamp() const {
     return getFeatureBits()[AMDGPU::FeatureIntClamp];
@@ -1752,7 +1752,7 @@ bool AMDGPUOperand::isRegClass(unsigned RCID) const {
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
   if (AsmParser->isVI())
     return isVReg32();
-  else if (AsmParser->isGFX9() || AsmParser->isGFX10())
+  else if (AsmParser->isGFX9Plus())
     return isRegClass(AMDGPU::VS_32RegClassID) || isInlinableImm(type);
   else
     return false;
@@ -3028,7 +3028,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
 }
 
 unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
-  if (!isGFX10())
+  if (!isGFX10Plus())
     return 1;
 
   switch (Opcode) {
@@ -3244,7 +3244,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
-  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0 || !isGFX10())
+  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0 || !isGFX10Plus())
     return true;
 
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
@@ -4514,7 +4514,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
   if (ID == "enable_wavefront_size32") {
     if (Header.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
-      if (!isGFX10())
+      if (!isGFX10Plus())
         return TokError("enable_wavefront_size32=1 is only allowed on GFX10+");
       if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
         return TokError("enable_wavefront_size32=1 requires +WavefrontSize32");
@@ -4526,7 +4526,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
   if (ID == "wavefront_size") {
     if (Header.wavefront_size == 5) {
-      if (!isGFX10())
+      if (!isGFX10Plus())
         return TokError("wavefront_size=5 is only allowed on GFX10+");
       if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
         return TokError("wavefront_size=5 requires +WavefrontSize32");
@@ -4537,17 +4537,20 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
   }
 
   if (ID == "enable_wgp_mode") {
-    if (G_00B848_WGP_MODE(Header.compute_pgm_resource_registers) && !isGFX10())
+    if (G_00B848_WGP_MODE(Header.compute_pgm_resource_registers) &&
+        !isGFX10Plus())
       return TokError("enable_wgp_mode=1 is only allowed on GFX10+");
   }
 
   if (ID == "enable_mem_ordered") {
-    if (G_00B848_MEM_ORDERED(Header.compute_pgm_resource_registers) && !isGFX10())
+    if (G_00B848_MEM_ORDERED(Header.compute_pgm_resource_registers) &&
+        !isGFX10Plus())
       return TokError("enable_mem_ordered=1 is only allowed on GFX10+");
   }
 
   if (ID == "enable_fwd_progress") {
-    if (G_00B848_FWD_PROGRESS(Header.compute_pgm_resource_registers) && !isGFX10())
+    if (G_00B848_FWD_PROGRESS(Header.compute_pgm_resource_registers) &&
+        !isGFX10Plus())
       return TokError("enable_fwd_progress=1 is only allowed on GFX10+");
   }
 
@@ -4870,13 +4873,13 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::TMA:
   case AMDGPU::TMA_LO:
   case AMDGPU::TMA_HI:
-    return !isGFX9() && !isGFX10();
+    return !isGFX9Plus();
   case AMDGPU::XNACK_MASK:
   case AMDGPU::XNACK_MASK_LO:
   case AMDGPU::XNACK_MASK_HI:
-    return !isCI() && !isSI() && !isGFX10() && hasXNACK();
+    return !isCI() && !isSI() && !isGFX10Plus() && hasXNACK();
   case AMDGPU::SGPR_NULL:
-    return isGFX10();
+    return isGFX10Plus();
   default:
     break;
   }
@@ -4884,7 +4887,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   if (isCI())
     return true;
 
-  if (isSI() || isGFX10()) {
+  if (isSI() || isGFX10Plus()) {
     // No flat_scr on SI.
     // On GFX10 flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
@@ -4990,7 +4993,7 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   while (!getLexer().is(AsmToken::EndOfStatement)) {
     OperandMode Mode = OperandMode_Default;
-    if (IsMIMG && isGFX10() && Operands.size() == 2)
+    if (IsMIMG && isGFX10Plus() && Operands.size() == 2)
       Mode = OperandMode_NSA;
     OperandMatchResultTy Res = parseOperand(Operands, Name, Mode);
 
@@ -5127,7 +5130,7 @@ AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
     }
   }
 
-  if (!isGFX10() && ImmTy == AMDGPUOperand::ImmTyDLC)
+  if (!isGFX10Plus() && ImmTy == AMDGPUOperand::ImmTyDLC)
     return MatchOperand_ParseFail;
 
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
@@ -5304,7 +5307,7 @@ AMDGPUAsmParser::parseSymbolicSplitFormat(StringRef FormatStr,
   Dfmt = (Dfmt == DFMT_UNDEF) ? DFMT_DEFAULT : Dfmt;
   Nfmt = (Nfmt == NFMT_UNDEF) ? NFMT_DEFAULT : Nfmt;
 
-  if (isGFX10()) {
+  if (isGFX10Plus()) {
     auto Ufmt = convertDfmtNfmt2Ufmt(Dfmt, Nfmt);
     if (Ufmt == UFMT_UNDEF) {
       Error(FormatLoc, "unsupported format");
@@ -5328,7 +5331,7 @@ AMDGPUAsmParser::parseSymbolicUnifiedFormat(StringRef FormatStr,
   if (Id == UFMT_UNDEF)
     return MatchOperand_NoMatch;
 
-  if (!isGFX10()) {
+  if (!isGFX10Plus()) {
     Error(Loc, "unified format is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
@@ -5389,7 +5392,7 @@ AMDGPUAsmParser::parseFORMAT(OperandVector &Operands) {
   SMLoc Loc = getLoc();
 
   // Parse legacy format syntax.
-  Res = isGFX10() ? parseUfmt(Format) : parseDfmtNfmt(Format);
+  Res = isGFX10Plus() ? parseUfmt(Format) : parseDfmtNfmt(Format);
   if (Res == MatchOperand_ParseFail)
     return Res;
 
@@ -5968,14 +5971,14 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > (isGFX10() ? 4 : 3))
+    if (Val > (isGFX10Plus() ? 4 : 3))
       return MatchOperand_ParseFail;
 
     Val += Exp::ET_POS0;
     return MatchOperand_Success;
   }
 
-  if (isGFX10() && Str == "prim") {
+  if (isGFX10Plus() && Str == "prim") {
     Val = Exp::ET_PRIM;
     return MatchOperand_Success;
   }
@@ -6674,7 +6677,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   }
 
-  if (isGFX10())
+  if (isGFX10Plus())
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
 }
 
@@ -6714,7 +6717,7 @@ void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
 
-  if (isGFX10())
+  if (isGFX10Plus())
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
 }
 
@@ -6751,22 +6754,22 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
-  bool IsGFX10 = isGFX10();
+  bool IsGFX10Plus = isGFX10Plus();
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDMask);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDim, -1);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyUNorm);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyA16);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
-  if (!IsGFX10)
+  if (!IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDA);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyD16);
 }
@@ -7267,7 +7270,7 @@ bool AMDGPUOperand::isU16Imm() const {
 }
 
 OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
-  if (!isGFX10())
+  if (!isGFX10Plus())
     return MatchOperand_NoMatch;
 
   SMLoc S = Parser.getTok().getLoc();
@@ -7324,7 +7327,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
 
   if (Prefix != "dpp8")
     return parseDPPCtrl(Operands);
-  if (!isGFX10())
+  if (!isGFX10Plus())
     return MatchOperand_NoMatch;
 
   // dpp8:[%d,%d,%d,%d,%d,%d,%d,%d]
@@ -7404,7 +7407,7 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
       return MatchOperand_NoMatch;
     }
 
-    if (!isGFX10() && (Prefix == "row_share" || Prefix == "row_xmask"))
+    if (!isGFX10Plus() && (Prefix == "row_share" || Prefix == "row_xmask"))
       return MatchOperand_NoMatch;
 
     if (!isVI() && !isGFX9() &&

@@ -310,7 +310,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
   // two SIMDs.
-  if (isGFX10(*STI) && STI->getFeatureBits().test(FeatureCuMode))
+  if (isGFX10Plus(*STI) && STI->getFeatureBits().test(FeatureCuMode))
     return 2;
   // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP contains
   // two CUs, so a total of four SIMDs.
@@ -335,7 +335,7 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
-  if (!isGFX10(*STI))
+  if (!isGFX10Plus(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
 }
@@ -485,7 +485,7 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
-  if (!isGFX10(*STI))
+  if (!isGFX10Plus(*STI))
     return 256;
   return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
 }
@@ -896,11 +896,11 @@ int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt) {
 }
 
 bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI) {
-  return isGFX10(STI) ? (Val <= UFMT_MAX) : (Val <= DFMT_NFMT_MAX);
+  return isGFX10Plus(STI) ? (Val <= UFMT_MAX) : (Val <= DFMT_NFMT_MAX);
 }
 
 unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI) {
-  if (isGFX10(STI))
+  if (isGFX10Plus(STI))
     return UFMT_DEFAULT;
   return DFMT_NFMT_DEFAULT;
 }
@@ -928,7 +928,7 @@ static bool isValidMsgId(int64_t MsgId) {
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
   if (Strict) {
     if (MsgId == ID_GS_ALLOC_REQ || MsgId == ID_GET_DOORBELL)
-      return isGFX9(STI) || isGFX10(STI);
+      return isGFX9Plus(STI);
     else
       return isValidMsgId(MsgId);
   } else {
@@ -1109,12 +1109,14 @@ bool isGFX9(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX9Plus(const MCSubtargetInfo &STI) {
-  return isGFX9(STI) || isGFX10(STI);
+  return isGFX9(STI) || isGFX10Plus(STI);
 }
 
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
+
+bool isGFX10Plus(const MCSubtargetInfo &STI) { return isGFX10(STI); }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
@@ -1455,11 +1457,11 @@ bool isArgPassedInSGPR(const Argument *A) {
 }
 
 static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
-  return isGCN3Encoding(ST) || isGFX10(ST);
+  return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
 static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9(ST) || isGFX10(ST);
+  return isGFX9Plus(ST);
 }
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
@@ -1616,7 +1618,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10(STI)
+  return isGFX10Plus(STI)
              ? getGfx10PlusBufferFormatInfo(BitsPerComp, NumComponents,
                                             NumFormat)
              : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
@@ -1624,8 +1626,8 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10(STI) ? getGfx10PlusBufferFormatInfo(Format)
-                      : getGfx9BufferFormatInfo(Format);
+  return isGFX10Plus(STI) ? getGfx10PlusBufferFormatInfo(Format)
+                          : getGfx9BufferFormatInfo(Format);
 }
 
 } // namespace AMDGPU
