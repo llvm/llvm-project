@@ -835,6 +835,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
 
+  setTargetDAGCombine(ISD::MSCATTER);
+
   setTargetDAGCombine(ISD::MUL);
 
   setTargetDAGCombine(ISD::SELECT);
@@ -13944,6 +13946,44 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performMSCATTERCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      SelectionDAG &DAG) {
+  MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
+  assert(MSC && "Can only combine scatter store nodes");
+
+  SDLoc DL(MSC);
+  SDValue Chain = MSC->getChain();
+  SDValue Scale = MSC->getScale();
+  SDValue Index = MSC->getIndex();
+  SDValue Data = MSC->getValue();
+  SDValue Mask = MSC->getMask();
+  SDValue BasePtr = MSC->getBasePtr();
+  ISD::MemIndexType IndexType = MSC->getIndexType();
+
+  EVT IdxVT = Index.getValueType();
+
+  if (DCI.isBeforeLegalize()) {
+    // SVE gather/scatter requires indices of i32/i64. Promote anything smaller
+    // prior to legalisation so the result can be split if required.
+    if ((IdxVT.getVectorElementType() == MVT::i8) ||
+        (IdxVT.getVectorElementType() == MVT::i16)) {
+      EVT NewIdxVT = IdxVT.changeVectorElementType(MVT::i32);
+      if (MSC->isIndexSigned())
+        Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
+      else
+        Index = DAG.getNode(ISD::ZERO_EXTEND, DL, NewIdxVT, Index);
+
+      SDValue Ops[] = { Chain, Data, Mask, BasePtr, Index, Scale };
+      return DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
+                                  MSC->getMemoryVT(), DL, Ops,
+                                  MSC->getMemOperand(), IndexType,
+                                  MSC->isTruncatingStore());
+    }
+  }
+
+  return SDValue();
+}
 
 /// Target-specific DAG combine function for NEON load/store intrinsics
 /// to merge base address updates.
@@ -15136,6 +15176,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::MSCATTER:
+    return performMSCATTERCombine(N, DCI, DAG);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:
