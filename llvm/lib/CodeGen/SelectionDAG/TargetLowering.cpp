@@ -6822,6 +6822,14 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = N->getOperand(0);
 
+  // abs(x) -> smax(x,sub(0,x))
+  if (isOperationLegal(ISD::SUB, VT) && isOperationLegal(ISD::SMAX, VT)) {
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    Result = DAG.getNode(ISD::SMAX, dl, VT, Op,
+                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
+    return true;
+  }
+
   // Only expand vector types if we have the appropriate vector operations.
   if (VT.isVector() && (!isOperationLegalOrCustom(ISD::SRA, VT) ||
                         !isOperationLegalOrCustom(ISD::ADD, VT) ||
