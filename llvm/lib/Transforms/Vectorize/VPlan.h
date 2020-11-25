@@ -726,6 +726,7 @@ inline bool VPUser::classof(const VPRecipeBase *Recipe) {
          Recipe->getVPRecipeID() == VPRecipeBase::VPBlendSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPInterleaveSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPReductionSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPBranchOnMaskSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPWidenMemoryInstructionSC;
 }
@@ -760,7 +761,7 @@ protected:
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
-      : VPUser(Operands), VPValue(VPValue::VPInstructionSC),
+      : VPUser(Operands), VPValue(VPValue::VPVInstructionSC),
         VPRecipeBase(VPRecipeBase::VPInstructionSC), Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
@@ -768,7 +769,7 @@ public:
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPValue::VPInstructionSC;
+    return V->getVPValueID() == VPValue::VPVInstructionSC;
   }
 
   VPInstruction *clone() const {
@@ -832,7 +833,7 @@ class VPWidenRecipe : public VPRecipeBase, public VPValue, public VPUser {
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPRecipeBase::VPWidenSC), VPValue(VPValue::VPWidenSC, &I),
+      : VPRecipeBase(VPRecipeBase::VPWidenSC), VPValue(VPValue::VPVWidenSC, &I),
         VPUser(Operands) {}
 
   ~VPWidenRecipe() override = default;
@@ -842,7 +843,7 @@ public:
     return V->getVPRecipeID() == VPRecipeBase::VPWidenSC;
   }
   static inline bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPValue::VPWidenSC;
+    return V->getVPValueID() == VPValue::VPVWidenSC;
   }
 
   /// Produce widened copies of all Ingredients.
@@ -1086,7 +1087,7 @@ public:
                     VPValue *VecOp, VPValue *CondOp, bool NoNaN,
                     const TargetTransformInfo *TTI)
       : VPRecipeBase(VPRecipeBase::VPReductionSC),
-        VPValue(VPValue::VPReductionSC, I), VPUser({ChainOp, VecOp}),
+        VPValue(VPValue::VPVReductionSC, I), VPUser({ChainOp, VecOp}),
         RdxDesc(R), NoNaN(NoNaN), TTI(TTI) {
     if (CondOp)
       addOperand(CondOp);
@@ -1096,7 +1097,7 @@ public:
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPValue::VPReductionSC;
+    return V->getVPValueID() == VPValue::VPVReductionSC;
   }
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPReductionSC;
@@ -1257,14 +1258,14 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase,
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask)
       : VPRecipeBase(VPWidenMemoryInstructionSC),
-        VPValue(VPValue::VPMemoryInstructionSC, &Load), VPUser({Addr}) {
+        VPValue(VPValue::VPVMemoryInstructionSC, &Load), VPUser({Addr}) {
     setMask(Mask);
   }
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask)
       : VPRecipeBase(VPWidenMemoryInstructionSC),
-        VPValue(VPValue::VPMemoryInstructionSC, &Store),
+        VPValue(VPValue::VPVMemoryInstructionSC, &Store),
         VPUser({Addr, StoredValue}) {
     setMask(Mask);
   }
