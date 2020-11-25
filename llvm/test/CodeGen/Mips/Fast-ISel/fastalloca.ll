@@ -22,8 +22,8 @@ entry:
   %2 = load i32, i32* %x2, align 4
   store i32 %2, i32* @i, align 4
   %3 = load i32, i32* %retval
-; CHECK:        lw      $[[I_ADDR:[0-9]+]], %got(i)($[[REG_GP:[0-9]+]])
 ; CHECK:        addiu   $[[A_ADDR:[0-9]+]], $sp, 8
+; CHECK-DAG:    lw      $[[I_ADDR:[0-9]+]], %got(i)($[[REG_GP:[0-9]+]])
 ; CHECK-DAG:    sw      $[[A_ADDR]], [[A_ADDR_FI:[0-9]+]]($sp)
 ; CHECK-DAG:    lw      $[[A_ADDR2:[0-9]+]], [[A_ADDR_FI]]($sp)
 ; CHECK-DAG:    lw      $[[A_X:[0-9]+]], 0($[[A_ADDR2]])

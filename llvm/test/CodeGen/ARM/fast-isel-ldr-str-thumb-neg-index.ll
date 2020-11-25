@@ -106,10 +106,12 @@ entry:
 ; THUMB-LABEL: t12:
   %add.ptr = getelementptr inbounds i32, i32* %ptr, i32 -64
   store i32 0, i32* %add.ptr, align 4
+; THUMB: mov [[PTR:r[0-9]+]], r0
+; THUMB: movs [[VAL:r[0-9]+]], #0
 ; THUMB: movw [[REG:r[0-9]+]], #65280
 ; THUMB: movt [[REG]], #65535
-; THUMB: add [[REG]], r0
-; THUMB: str r{{[0-9]}}, {{\[}}[[REG]]]
+; THUMB: add [[PTR]], [[REG]]
+; THUMB: str [[VAL]], {{\[}}[[PTR]]]
   ret void
 }
 
@@ -138,10 +140,12 @@ entry:
 ; THUMB-LABEL: t15:
   %add.ptr = getelementptr inbounds i16, i16* %ptr, i32 -128
   store i16 0, i16* %add.ptr, align 2
+; THUMB: mov [[PTR:r[0-9]+]], r0
+; THUMB: movs [[VAL:r[0-9]+]], #0
 ; THUMB: movw [[REG:r[0-9]+]], #65280
 ; THUMB: movt [[REG]], #65535
-; THUMB: add [[REG]], r0
-; THUMB: strh r{{[0-9]}}, {{\[}}[[REG]]]
+; THUMB: add [[PTR]], [[REG]]
+; THUMB: strh [[VAL]], {{\[}}[[PTR]]]
   ret void
 }
 
@@ -170,9 +174,11 @@ entry:
 ; THUMB-LABEL: t18:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i32 -256
   store i8 0, i8* %add.ptr, align 1
+; THUMB: mov [[PTR:r[0-9]+]], r0
+; THUMB: movs [[VAL]], #0
 ; THUMB: movw [[REG:r[0-9]+]], #65280
 ; THUMB: movt [[REG]], #65535
-; THUMB: add [[REG]], r0
-; THUMB: strb r{{[0-9]}}, {{\[}}[[REG]]]
+; THUMB: add [[PTR]], [[REG]]
+; THUMB: strb [[VAL]], {{\[}}[[PTR]]]
   ret void
 }

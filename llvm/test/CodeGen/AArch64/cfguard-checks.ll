@@ -36,10 +36,10 @@ entry:
 
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_optnone_cf
-	; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        add x9, x8, __guard_check_icall_fptr
 	; CHECK:        adrp x8, target_func
 	; CHECK:        add x8, x8, target_func
+	; CHECK:        adrp x9, __guard_check_icall_fptr
+	; CHECK:        add x9, x9, __guard_check_icall_fptr
 	; CHECK:        ldr x9, [x9]
 	; CHECK:        mov x15, x8
 	; CHECK:        blr x9

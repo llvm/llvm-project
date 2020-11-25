@@ -9,10 +9,10 @@ define void @_Z1av() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $2, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 6
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    movb c, %cl
 ; CHECK-NEXT:    xorb $-1, %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movb %al, (%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_1

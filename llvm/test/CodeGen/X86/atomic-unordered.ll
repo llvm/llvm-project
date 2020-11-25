@@ -366,18 +366,17 @@ define void @store_i256(i256* %ptr, i256 %v) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    subq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-O0-NEXT:    movq %rcx, %rax
-; CHECK-O0-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rsi, %r9
+; CHECK-O0-NEXT:    movq %rdx, %rax
+; CHECK-O0-NEXT:    movq %rsi, (%rsp) # 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rdi, %rsi
 ; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl $32, %edi
+; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    callq __atomic_store
 ; CHECK-O0-NEXT:    addq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
@@ -724,8 +723,8 @@ define i64 @load_fold_sdiv1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_sdiv1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    cqto
 ; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    cqto
 ; CHECK-O0-NEXT:    idivq %rcx
 ; CHECK-O0-NEXT:    retq
 ;
@@ -814,9 +813,9 @@ define i64 @load_fold_udiv1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_udiv1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    movl %ecx, %edx
 ; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    xorl %edx, %edx
+; CHECK-O0-NEXT:    # kill: def $rdx killed $edx
 ; CHECK-O0-NEXT:    divq %rcx
 ; CHECK-O0-NEXT:    retq
 ;
@@ -908,8 +907,8 @@ define i64 @load_fold_srem1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_srem1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    cqto
 ; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    cqto
 ; CHECK-O0-NEXT:    idivq %rcx
 ; CHECK-O0-NEXT:    movq %rdx, %rax
 ; CHECK-O0-NEXT:    retq
@@ -1007,9 +1006,9 @@ define i64 @load_fold_urem1(i64* %p) {
 ; CHECK-O0-LABEL: load_fold_urem1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    movl %ecx, %edx
 ; CHECK-O0-NEXT:    movl $15, %ecx
+; CHECK-O0-NEXT:    xorl %edx, %edx
+; CHECK-O0-NEXT:    # kill: def $rdx killed $edx
 ; CHECK-O0-NEXT:    divq %rcx
 ; CHECK-O0-NEXT:    movq %rdx, %rax
 ; CHECK-O0-NEXT:    retq

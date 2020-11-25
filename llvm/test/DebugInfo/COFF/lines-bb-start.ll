@@ -92,7 +92,6 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: LBB2_{{.*}}:                                 # %if.end
 ; CHECK-NEXT:    .cv_loc {{.*}} # t.c:5:3
 ; CHECK:         leal 4(%esp), %[[reg:[^ ]*]]
-; CHECK:         #DEBUG_VALUE: lea_dbg_value:v <- [DW_OP_deref] $[[reg]]
 ; CHECK:         movl    %[[reg]], (%esp)
 ; CHECK:         calll   _use_i32
 
