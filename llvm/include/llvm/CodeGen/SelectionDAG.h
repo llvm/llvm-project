@@ -1520,6 +1520,9 @@ public:
   SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
                           ArrayRef<SDValue> Ops);
 
+  /// Check if a node exists without modifying its flags.
+  bool doesNodeExist(unsigned Opcode, SDVTList VTList, ArrayRef<SDValue> Ops);
+
   /// Creates a SDDbgValue node.
   SDDbgValue *getDbgValue(DIVariable *Var, DIExpression *Expr, SDNode *N,
                           unsigned R, bool IsIndirect, const DebugLoc &DL,
