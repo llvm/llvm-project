@@ -806,9 +806,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::UMIN, MVT::v2i64, Expand);
     }
 
-    for (auto VT : {MVT::v2i64, MVT::v4i32, MVT::v8i16, MVT::v16i8})
-      setOperationAction(ISD::ABS, VT, Custom);
-
     // We can custom expand all VECTOR_SHUFFLEs to VPERM, others we can handle
     // with merges, splats, etc.
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16i8, Custom);
@@ -840,11 +837,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
     setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
-
-    // Without hasP8Altivec set, v2i64 SMAX isn't available.
-    // But ABS custom lowering requires SMAX support.
-    if (!Subtarget.hasP8Altivec())
-      setOperationAction(ISD::ABS, MVT::v2i64, Expand);
 
     // Custom lowering ROTL v1i128 to VECTOR_SHUFFLE v16i8.
     setOperationAction(ISD::ROTL, MVT::v1i128, Custom);
@@ -10886,44 +10878,6 @@ SDValue PPCTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
-SDValue PPCTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
-
-  assert(Op.getOpcode() == ISD::ABS && "Should only be called for ISD::ABS");
-
-  EVT VT = Op.getValueType();
-  assert(VT.isVector() &&
-         "Only set vector abs as custom, scalar abs shouldn't reach here!");
-  assert((VT == MVT::v2i64 || VT == MVT::v4i32 || VT == MVT::v8i16 ||
-          VT == MVT::v16i8) &&
-         "Unexpected vector element type!");
-  assert((VT != MVT::v2i64 || Subtarget.hasP8Altivec()) &&
-         "Current subtarget doesn't support smax v2i64!");
-
-  // For vector abs, it can be lowered to:
-  // abs x
-  // ==>
-  // y = -x
-  // smax(x, y)
-
-  SDLoc dl(Op);
-  SDValue X = Op.getOperand(0);
-  SDValue Zero = DAG.getConstant(0, dl, VT);
-  SDValue Y = DAG.getNode(ISD::SUB, dl, VT, Zero, X);
-
-  // SMAX patch https://reviews.llvm.org/D47332
-  // hasn't landed yet, so use intrinsic first here.
-  // TODO: Should use SMAX directly once SMAX patch landed
-  Intrinsic::ID BifID = Intrinsic::ppc_altivec_vmaxsw;
-  if (VT == MVT::v2i64)
-    BifID = Intrinsic::ppc_altivec_vmaxsd;
-  else if (VT == MVT::v8i16)
-    BifID = Intrinsic::ppc_altivec_vmaxsh;
-  else if (VT == MVT::v16i8)
-    BifID = Intrinsic::ppc_altivec_vmaxsb;
-
-  return BuildIntrinsicOp(BifID, X, Y, DAG, dl, VT);
-}
-
 // Custom lowering for fpext vf32 to v2f64
 SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
@@ -11059,7 +11013,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SCALAR_TO_VECTOR:   return LowerSCALAR_TO_VECTOR(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:  return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::MUL:                return LowerMUL(Op, DAG);
-  case ISD::ABS:                return LowerABS(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
