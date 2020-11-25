@@ -78,6 +78,7 @@ private:
                          const SIProgramInfo &KernelInfo);
   void EmitPALMetadata(const MachineFunction &MF,
                        const SIProgramInfo &KernelInfo);
+  void emitPALFunctionMetadata(const MachineFunction &MF);
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   Optional<uint32_t> NumAGPR,
                                   uint32_t TotalNumVGPR,

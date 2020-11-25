@@ -12,22 +12,15 @@ target triple = "thumbv6m-none-none-eabi"
 define dso_local void @arm_fill_q7(i8 signext %value, i8* %pDst, i32 %blockSize) #0 {
 ; OLDPM-LABEL: @arm_fill_q7(
 ; OLDPM-NEXT:  entry:
-; OLDPM-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE:%.*]], 2
-; OLDPM-NEXT:    [[CMP_NOT20:%.*]] = icmp eq i32 [[SHR]], 0
+; OLDPM-NEXT:    [[CMP_NOT20:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 4
 ; OLDPM-NEXT:    br i1 [[CMP_NOT20]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; OLDPM:       while.body.preheader:
 ; OLDPM-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; OLDPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false)
-; OLDPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; OLDPM:       while.body:
-; OLDPM-NEXT:    [[BLKCNT_022:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[SHR]], [[WHILE_BODY_PREHEADER]] ]
-; OLDPM-NEXT:    [[PDST_ADDR_021:%.*]] = phi i8* [ [[ADD_PTR_I:%.*]], [[WHILE_BODY]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
-; OLDPM-NEXT:    [[ADD_PTR_I]] = getelementptr inbounds i8, i8* [[PDST_ADDR_021]], i32 4
-; OLDPM-NEXT:    [[DEC]] = add nsw i32 [[BLKCNT_022]], -1
-; OLDPM-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; OLDPM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP3:!llvm.loop !.*]]
+; OLDPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[TMP0]]
+; OLDPM-NEXT:    br label [[WHILE_END]]
 ; OLDPM:       while.end:
-; OLDPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[ADD_PTR_I]], [[WHILE_BODY]] ]
+; OLDPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_BODY_PREHEADER]] ]
 ; OLDPM-NEXT:    [[REM:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; OLDPM-NEXT:    [[CMP14_NOT17:%.*]] = icmp eq i32 [[REM]], 0
 ; OLDPM-NEXT:    br i1 [[CMP14_NOT17]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]
@@ -39,22 +32,15 @@ define dso_local void @arm_fill_q7(i8 signext %value, i8* %pDst, i32 %blockSize)
 ;
 ; NEWPM-LABEL: @arm_fill_q7(
 ; NEWPM-NEXT:  entry:
-; NEWPM-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE:%.*]], 2
-; NEWPM-NEXT:    [[CMP_NOT17:%.*]] = icmp eq i32 [[SHR]], 0
+; NEWPM-NEXT:    [[CMP_NOT17:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 4
 ; NEWPM-NEXT:    br i1 [[CMP_NOT17]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; NEWPM:       while.body.preheader:
 ; NEWPM-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; NEWPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false)
-; NEWPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; NEWPM:       while.body:
-; NEWPM-NEXT:    [[BLKCNT_019:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[SHR]], [[WHILE_BODY_PREHEADER]] ]
-; NEWPM-NEXT:    [[PDST_ADDR_018:%.*]] = phi i8* [ [[ADD_PTR_I:%.*]], [[WHILE_BODY]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
-; NEWPM-NEXT:    [[ADD_PTR_I]] = getelementptr inbounds i8, i8* [[PDST_ADDR_018]], i32 4
-; NEWPM-NEXT:    [[DEC]] = add nsw i32 [[BLKCNT_019]], -1
-; NEWPM-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; NEWPM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP3:!llvm.loop !.*]]
+; NEWPM-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[TMP0]]
+; NEWPM-NEXT:    br label [[WHILE_END]]
 ; NEWPM:       while.end:
-; NEWPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[ADD_PTR_I]], [[WHILE_BODY]] ]
+; NEWPM-NEXT:    [[PDST_ADDR_0_LCSSA:%.*]] = phi i8* [ [[PDST]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_BODY_PREHEADER]] ]
 ; NEWPM-NEXT:    [[REM:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; NEWPM-NEXT:    [[CMP14_NOT20:%.*]] = icmp eq i32 [[REM]], 0
 ; NEWPM-NEXT:    br i1 [[CMP14_NOT20]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]

@@ -150,6 +150,8 @@ public:
 
   virtual RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                                   RelExpr expr) const;
+  virtual RelExpr adjustGotPcExpr(RelType type, int64_t addend,
+                                  const uint8_t *loc) const;
   virtual void relaxGot(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const;
   virtual void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,

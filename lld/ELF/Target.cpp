@@ -155,6 +155,11 @@ RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,
   return expr;
 }
 
+RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
+                                    const uint8_t *data) const {
+  return R_GOT_PC;
+}
+
 void TargetInfo::relaxGot(uint8_t *loc, const Relocation &rel,
                           uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");

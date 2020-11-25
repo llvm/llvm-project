@@ -54,7 +54,7 @@ void writeEventType(raw_ostream &os, const llvm::wasm::WasmEventType &type);
 
 void writeEvent(raw_ostream &os, const llvm::wasm::WasmEvent &event);
 
-void writeTableType(raw_ostream &os, const llvm::wasm::WasmTable &type);
+void writeTableType(raw_ostream &os, const llvm::wasm::WasmTableType &type);
 
 void writeImport(raw_ostream &os, const llvm::wasm::WasmImport &import);
 

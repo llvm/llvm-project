@@ -238,6 +238,15 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
+  const auto &verbatim = std::get<parser::Verbatim>(x.t);
+  PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
+  SetContextDirectiveSource(verbatim.source);
+}
+void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
+  dirContext_.pop_back();
+}
+
 // Clause checkers
 CHECK_REQ_SCALAR_INT_CONSTANT_CLAUSE(Collapse, ACCC_collapse)
 
