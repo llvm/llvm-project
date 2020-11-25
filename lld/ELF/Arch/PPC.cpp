@@ -45,8 +45,7 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   int getTlsGdRelaxSkip(RelType type) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
                       uint64_t val) const override;
@@ -360,8 +359,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-RelExpr PPC::adjustRelaxExpr(RelType type, const uint8_t *data,
-                             RelExpr expr) const {
+RelExpr PPC::adjustTlsExpr(RelType type, RelExpr expr) const {
   if (expr == R_RELAX_TLS_GD_TO_IE)
     return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
   if (expr == R_RELAX_TLS_LD_TO_LE)

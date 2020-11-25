@@ -382,8 +382,7 @@ public:
                   int64_t a) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
   void relaxGot(uint8_t *loc, const Relocation &rel,
@@ -1392,8 +1391,7 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   llvm_unreachable("unsupported relocation type used in branch");
 }
 
-RelExpr PPC64::adjustRelaxExpr(RelType type, const uint8_t *data,
-                               RelExpr expr) const {
+RelExpr PPC64::adjustTlsExpr(RelType type, RelExpr expr) const {
   if (type != R_PPC64_GOT_TLSGD_PCREL34 && expr == R_RELAX_TLS_GD_TO_IE)
     return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
   if (expr == R_RELAX_TLS_LD_TO_LE)
