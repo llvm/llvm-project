@@ -29,9 +29,9 @@ struct X {
   template<typename T> struct C { C(T); };
 };
 
-// CHECK: @_Z1gIiEDaT_DTcv1AfL0p_E1AIS0_E(
+// CHECK: @_Z1gIiEDaT_DTcv1AfL0p_ES1_IS0_E
 template<typename T> auto g(T x, decltype(A(x)), A<T>) {}
-// CHECK: @_Z1hIiEDaT_DTcvN1N1BEfL0p_ENS1_1BIS0_EE(
+// CHECK: @_Z1hIiEDaT_DTcvN1N1BEfL0p_ENS2_IS0_EE
 template<typename T> auto h(T x, decltype(B(x)), B<T>) {}
 // CHECK: @_Z1iI1XiEDaT0_DTcvNT_1CEfL0p_ENS2_1CIS1_EE(
 template<typename U, typename T> auto i(T x, decltype(typename U::C(x)), typename U::template C<T>) {}
