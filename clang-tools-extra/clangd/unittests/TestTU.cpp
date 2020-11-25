@@ -59,8 +59,8 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
     FS.OverlayRealFileSystemForModules = true;
   Inputs.TFS = &FS;
   Inputs.Opts = ParseOptions();
-  Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
-  Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
+  if (ClangTidyProvider)
+    Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Index = ExternalIndex;
   if (Inputs.Index)
     Inputs.Opts.SuggestMissingIncludes = true;
