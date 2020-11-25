@@ -556,12 +556,11 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::Function:
     return "function";
   case HighlightingKind::Method:
-    return "member";
+    return "method";
   case HighlightingKind::StaticMethod:
-    // FIXME: better function/member with static modifier?
+    // FIXME: better method with static modifier?
     return "function";
   case HighlightingKind::Field:
-    // Not "member": https://github.com/clangd/vscode-clangd/issues/105
     return "property";
   case HighlightingKind::Class:
     return "class";
