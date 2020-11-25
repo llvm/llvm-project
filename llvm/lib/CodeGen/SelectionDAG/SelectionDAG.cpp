@@ -8326,6 +8326,19 @@ SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
   return nullptr;
 }
 
+/// doesNodeExist - Check if a node exists without modifying its flags.
+bool SelectionDAG::doesNodeExist(unsigned Opcode, SDVTList VTList,
+                                 ArrayRef<SDValue> Ops) {
+  if (VTList.VTs[VTList.NumVTs - 1] != MVT::Glue) {
+    FoldingSetNodeID ID;
+    AddNodeIDNode(ID, Opcode, VTList, Ops);
+    void *IP = nullptr;
+    if (FindNodeOrInsertPos(ID, SDLoc(), IP))
+      return true;
+  }
+  return false;
+}
+
 /// getDbgValue - Creates a SDDbgValue node.
 ///
 /// SDNode
