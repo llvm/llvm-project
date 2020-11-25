@@ -856,12 +856,18 @@ define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64IB-LABEL: minu_i32:
 ; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.w a1, a1
+; RV64IB-NEXT:    zext.w a0, a0
 ; RV64IB-NEXT:    minu a0, a0, a1
+; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: minu_i32:
 ; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.w a1, a1
+; RV64IBB-NEXT:    zext.w a0, a0
 ; RV64IBB-NEXT:    minu a0, a0, a1
+; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
   %cmp = icmp ult i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
@@ -902,12 +908,18 @@ define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64IB-LABEL: maxu_i32:
 ; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.w a1, a1
+; RV64IB-NEXT:    zext.w a0, a0
 ; RV64IB-NEXT:    maxu a0, a0, a1
+; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: maxu_i32:
 ; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.w a1, a1
+; RV64IBB-NEXT:    zext.w a0, a0
 ; RV64IBB-NEXT:    maxu a0, a0, a1
+; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
   %cmp = icmp ugt i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
@@ -935,6 +947,59 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
   %cmp = icmp ugt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
+}
+
+declare i32 @llvm.abs.i32(i32, i1 immarg)
+
+define i32 @abs_i32(i32 %x) {
+; RV64I-LABEL: abs_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: abs_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    neg a1, a0
+; RV64IB-NEXT:    max a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: abs_i32:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    sext.w a0, a0
+; RV64IBB-NEXT:    neg a1, a0
+; RV64IBB-NEXT:    max a0, a0, a1
+; RV64IBB-NEXT:    ret
+  %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %abs
+}
+
+declare i64 @llvm.abs.i64(i64, i1 immarg)
+
+define i64 @abs_i64(i64 %x) {
+; RV64I-LABEL: abs_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: abs_i64:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    neg a1, a0
+; RV64IB-NEXT:    max a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: abs_i64:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    neg a1, a0
+; RV64IBB-NEXT:    max a0, a0, a1
+; RV64IBB-NEXT:    ret
+  %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
+  ret i64 %abs
 }
 
 ; We select a i32 addi that zero-extends the result on RV64 as addiwu

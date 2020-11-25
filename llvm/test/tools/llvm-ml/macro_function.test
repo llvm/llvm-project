@@ -73,25 +73,34 @@ factorial2 MACRO n
   ENDIF
 ENDM
 
-fibonacci MACRO n
-  IF n LE 2
-    EXITM <(1)>
-  ELSE
-    EXITM <(fibonacci(n-1)+fibonacci(n-2))>
-  ENDIF
-ENDM
-
-recursive_test PROC
-; CHECK-LABEL: recursive_test:
+string_recursive_test PROC
+; CHECK-LABEL: string_recursive_test:
 
   mov eax, factorial(5)
 ; CHECK: mov eax, 120
   mov eax, factorial2(4)
 ; CHECK: mov eax, 24
-  mov eax, 11 + fibonacci(7) - 11
-; CHECK: mov eax, 13
+  mov eax, 11 + factorial(6) - 11
+; CHECK: mov eax, 720
 
   ret
-recursive_test ENDP
+string_recursive_test ENDP
+
+fibonacci MACRO n
+  IF n LE 2
+    EXITM %1
+  ELSE
+    EXITM %fibonacci(n-1)+fibonacci(n-2)
+  ENDIF
+ENDM
+
+expr_recursive_test PROC
+; CHECK-LABEL: expr_recursive_test:
+
+  mov eax, fibonacci(10)
+; CHECK: mov eax, 55
+
+  ret
+expr_recursive_test ENDP
 
 end

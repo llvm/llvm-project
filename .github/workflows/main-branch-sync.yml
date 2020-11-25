@@ -15,5 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: Update branch
+        env:
+          LLVMBOT_TOKEN: ${{ secrets.LLVMBOT_MAIN_SYNC }}
         run: |
-          git push https://${{ github.token }}@github.com/${{ github.repository }} HEAD:temp-test-main
+          git push https://$LLVMBOT_TOKEN@github.com/${{ github.repository }} HEAD:temp-test-main
