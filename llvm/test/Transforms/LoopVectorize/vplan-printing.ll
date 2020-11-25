@@ -42,9 +42,9 @@ define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalia
 ; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:      "WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
 ; CHECK-NEXT:      "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
-; CHECK-NEXT:      "WIDEN\l""  %cmp = icmp %arrayidx, %z\l" +
+; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%arrayidx>, ir<%z>\l" +
 ; CHECK-NEXT:      "WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>\l" +
-; CHECK-NEXT:      "WIDEN\l""  %add = fadd %lv, %sel\l" +
+; CHECK-NEXT:      "WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>\l" +
 ; CHECK-NEXT:      "CLONE %arrayidx2 = getelementptr %x, %iv\l" +
 ; CHECK-NEXT:      "WIDEN store ir<%arrayidx2>, ir<%add>\l"
 ; CHECK-NEXT:   ]

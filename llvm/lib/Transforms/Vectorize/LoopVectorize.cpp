@@ -461,7 +461,7 @@ public:
   BasicBlock *createVectorizedLoopSkeleton();
 
   /// Widen a single instruction within the innermost loop.
-  void widenInstruction(Instruction &I, VPUser &Operands,
+  void widenInstruction(Instruction &I, VPValue *Def, VPUser &Operands,
                         VPTransformState &State);
 
   /// Widen a single call instruction within the innermost loop.
@@ -4512,7 +4512,8 @@ static bool mayDivideByZero(Instruction &I) {
   return !CInt || CInt->isZero();
 }
 
-void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
+void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
+                                           VPUser &User,
                                            VPTransformState &State) {
   assert(!VF.isScalable() && "scalable vectors not yet supported.");
   switch (I.getOpcode()) {
@@ -4555,7 +4556,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
         VecOp->copyIRFlags(&I);
 
       // Use this vector value for all users of the original instruction.
-      VectorLoopValueMap.setVectorValue(&I, Part, V);
+      State.set(Def, &I, V, Part);
       addMetadata(V, &I);
     }
 
@@ -4579,7 +4580,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
       } else {
         C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
       }
-      VectorLoopValueMap.setVectorValue(&I, Part, C);
+      State.set(Def, &I, C, Part);
       addMetadata(C, &I);
     }
 
@@ -4609,7 +4610,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *A = State.get(User.getOperand(0), Part);
       Value *Cast = Builder.CreateCast(CI->getOpcode(), A, DestTy);
-      VectorLoopValueMap.setVectorValue(&I, Part, Cast);
+      State.set(Def, &I, Cast, Part);
       addMetadata(Cast, &I);
     }
     break;
@@ -7262,7 +7263,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   if (!BI->isConditional() || BI->getSuccessor(0) == BI->getSuccessor(1))
     return EdgeMaskCache[Edge] = SrcMask;
 
-  VPValue *EdgeMask = Plan->getVPValue(BI->getCondition());
+  VPValue *EdgeMask = Plan->getOrAddVPValue(BI->getCondition());
   assert(EdgeMask && "No Edge Mask found for condition");
 
   if (BI->getSuccessor(0) != Dst)
@@ -7300,7 +7301,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     // Start by constructing the desired canonical IV.
     VPValue *IV = nullptr;
     if (Legal->getPrimaryInduction())
-      IV = Plan->getVPValue(Legal->getPrimaryInduction());
+      IV = Plan->getOrAddVPValue(Legal->getPrimaryInduction());
     else {
       auto IVRecipe = new VPWidenCanonicalIVRecipe();
       Builder.getInsertBlock()->insert(IVRecipe, NewInsertionPoint);
@@ -7648,24 +7649,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
-  // Collect conditions feeding internal conditional branches; they need to be
-  // represented in VPlan for it to model masking.
-  SmallPtrSet<Value *, 1> NeedDef;
-
-  auto *Latch = OrigLoop->getLoopLatch();
-  for (BasicBlock *BB : OrigLoop->blocks()) {
-    if (BB == Latch)
-      continue;
-    BranchInst *Branch = dyn_cast<BranchInst>(BB->getTerminator());
-    if (Branch && Branch->isConditional())
-      NeedDef.insert(Branch->getCondition());
-  }
-
-  // If the tail is to be folded by masking, the primary induction variable, if
-  // exists needs to be represented in VPlan for it to model early-exit masking.
-  if (CM.foldTailByMasking() && Legal->getPrimaryInduction())
-    NeedDef.insert(Legal->getPrimaryInduction());
-
   // Collect instructions from the original loop that will become trivially dead
   // in the vectorized loop. We don't need to vectorize these instructions. For
   // example, original induction update instructions can become dead because we
@@ -7690,15 +7673,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   auto MaxVFPlusOne = MaxVF.getWithIncrement(1);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFPlusOne);) {
     VFRange SubRange = {VF, MaxVFPlusOne};
-    VPlans.push_back(buildVPlanWithVPRecipes(SubRange, NeedDef,
-                                             DeadInstructions, SinkAfter));
+    VPlans.push_back(
+        buildVPlanWithVPRecipes(SubRange, DeadInstructions, SinkAfter));
     VF = SubRange.End;
   }
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
-    VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions,
+    VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions,
     const DenseMap<Instruction *, Instruction *> &SinkAfter) {
 
   // Hold a mapping from predicated instructions to their recipes, in order to
@@ -7767,10 +7749,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
   Plan->setEntry(VPBB);
 
-  // Represent values that will have defs inside VPlan.
-  for (Value *V : NeedDef)
-    Plan->addVPValue(V);
-
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
   LoopBlocksDFS DFS(OrigLoop);
@@ -7800,12 +7778,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         // Check if the recipe can be converted to a VPValue. We need the extra
         // down-casting step until VPRecipeBase inherits from VPValue.
         VPValue *MaybeVPValue = Recipe->toVPValue();
-        if (!Instr->getType()->isVoidTy() && MaybeVPValue) {
-          if (NeedDef.contains(Instr))
-            Plan->addOrReplaceVPValue(Instr, MaybeVPValue);
-          else
-            Plan->addVPValue(Instr, MaybeVPValue);
-        }
+        if (!Instr->getType()->isVoidTy() && MaybeVPValue)
+          Plan->addVPValue(Instr, MaybeVPValue);
 
         RecipeBuilder.setRecipe(Instr, Recipe);
         VPBB->appendRecipe(Recipe);
@@ -7974,6 +7948,9 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
                          : nullptr;
       VPReductionRecipe *RedRecipe = new VPReductionRecipe(
           &RdxDesc, R, ChainOp, VecOp, CondOp, Legal->hasFunNoNaNAttr(), TTI);
+      WidenRecipe->toVPValue()->replaceAllUsesWith(RedRecipe);
+      Plan->removeVPValueFor(R);
+      Plan->addVPValue(R, RedRecipe);
       WidenRecipe->getParent()->insert(RedRecipe, WidenRecipe->getIterator());
       WidenRecipe->eraseFromParent();
 
@@ -7983,6 +7960,8 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
             RecipeBuilder.getRecipe(cast<Instruction>(R->getOperand(0)));
         assert(isa<VPWidenRecipe>(CompareRecipe) &&
                "Expected to replace a VPWidenSC");
+        assert(CompareRecipe->toVPValue()->getNumUsers() == 0 &&
+               "Expected no remaining users");
         CompareRecipe->eraseFromParent();
       }
       Chain = R;
@@ -8027,7 +8006,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.ILV->widenInstruction(Ingredient, *this, State);
+  State.ILV->widenInstruction(*getUnderlyingInstr(), this, *this, State);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
