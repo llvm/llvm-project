@@ -163,8 +163,8 @@
 ; GCN-O1-NEXT:       Loop-Closed SSA Form Pass
 ; GCN-O1-NEXT:       Scalar Evolution Analysis
 ; GCN-O1-NEXT:       Loop Pass Manager
-; GCN-O1-NEXT:         Induction Variable Simplification
 ; GCN-O1-NEXT:         Recognize loop idioms
+; GCN-O1-NEXT:         Induction Variable Simplification
 ; GCN-O1-NEXT:         Delete dead loops
 ; GCN-O1-NEXT:         Unroll loops
 ; GCN-O1-NEXT:       SROA
