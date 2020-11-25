@@ -1,8 +1,8 @@
 // RUN:  %clang -### -target powerpc-unknown-aix -S -maltivec -mabi=vec-extabi %s 2>&1 | \
 // RUN:  FileCheck %s
 
-// CHECK: {{.*}}clang{{.*}}" "-cc1"
-// CHECK: "-mabi=vec-extabi"
+// CHECK: "-cc1"
+// CHECK-SAME: "-mabi=vec-extabi"
 
 // RUN:  %clang -### -target powerpc-unknown-aix -S -maltivec -mabi=vec-default %s 2>&1 | \
 // RUN:  FileCheck %s --check-prefix=ERROR
