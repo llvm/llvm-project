@@ -384,6 +384,8 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
+  RelExpr adjustGotPcExpr(RelType type, int64_t addend,
+                          const uint8_t *loc) const override;
   void relaxGot(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
@@ -1392,20 +1394,23 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 
 RelExpr PPC64::adjustRelaxExpr(RelType type, const uint8_t *data,
                                RelExpr expr) const {
-  if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
-      config->pcRelOptimize) {
-    // It only makes sense to optimize pld since paddi means that the address
-    // of the object in the GOT is required rather than the object itself.
-    assert(data && "Expecting an instruction encoding here");
-    if ((readPrefixedInstruction(data) & 0xfc000000) == 0xe4000000)
-      return R_PPC64_RELAX_GOT_PC;
-  }
-
   if (type != R_PPC64_GOT_TLSGD_PCREL34 && expr == R_RELAX_TLS_GD_TO_IE)
     return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
   if (expr == R_RELAX_TLS_LD_TO_LE)
     return R_RELAX_TLS_LD_TO_LE_ABS;
   return expr;
+}
+
+RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
+                               const uint8_t *loc) const {
+  if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
+      config->pcRelOptimize) {
+    // It only makes sense to optimize pld since paddi means that the address
+    // of the object in the GOT is required rather than the object itself.
+    if ((readPrefixedInstruction(loc) & 0xfc000000) == 0xe4000000)
+      return R_PPC64_RELAX_GOT_PC;
+  }
+  return R_GOT_PC;
 }
 
 // Reference: 3.7.4.1 of the 64-bit ELF V2 abi supplement.
