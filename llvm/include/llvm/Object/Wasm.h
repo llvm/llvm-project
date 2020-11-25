@@ -299,6 +299,7 @@ private:
   uint32_t DataSection = 0;
   uint32_t EventSection = 0;
   uint32_t GlobalSection = 0;
+  uint32_t TableSection = 0;
 };
 
 class WasmSectionOrderChecker {

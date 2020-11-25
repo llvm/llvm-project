@@ -498,9 +498,11 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
   std::vector<wasm::WasmImport *> ImportedGlobals;
   std::vector<wasm::WasmImport *> ImportedFunctions;
   std::vector<wasm::WasmImport *> ImportedEvents;
+  std::vector<wasm::WasmImport *> ImportedTables;
   ImportedGlobals.reserve(Imports.size());
   ImportedFunctions.reserve(Imports.size());
   ImportedEvents.reserve(Imports.size());
+  ImportedTables.reserve(Imports.size());
   for (auto &I : Imports) {
     if (I.Kind == wasm::WASM_EXTERNAL_FUNCTION)
       ImportedFunctions.emplace_back(&I);
@@ -508,6 +510,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       ImportedGlobals.emplace_back(&I);
     else if (I.Kind == wasm::WASM_EXTERNAL_EVENT)
       ImportedEvents.emplace_back(&I);
+    else if (I.Kind == wasm::WASM_EXTERNAL_TABLE)
+      ImportedTables.emplace_back(&I);
   }
 
   while (Count--) {
@@ -600,8 +604,18 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         if (Table.SymbolName.empty())
           Table.SymbolName = Info.Name;
       } else {
-        return make_error<GenericBinaryError>("undefined table symbol",
-                                              object_error::parse_failed);
+        wasm::WasmImport &Import = *ImportedTables[Info.ElementIndex];
+        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
+          Info.Name = readString(Ctx);
+          Info.ImportName = Import.Field;
+        } else {
+          Info.Name = Import.Field;
+        }
+        TableType = Import.Table.ElemType;
+        // FIXME: Parse limits here too.
+        if (!Import.Module.empty()) {
+          Info.ImportModule = Import.Module;
+        }
       }
       break;
 
@@ -1060,6 +1074,7 @@ Error WasmObjectFile::parseFunctionSection(ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
+  TableSection = Sections.size();
   uint32_t Count = readVaruint32(Ctx);
   Tables.reserve(Count);
   while (Count--) {
@@ -1432,6 +1447,7 @@ uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
   case wasm::WASM_SYMBOL_TYPE_EVENT:
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
     return Sym.Info.ElementIndex;
   case wasm::WASM_SYMBOL_TYPE_DATA: {
     // The value of a data symbol is the segment offset, plus the symbol
@@ -1481,6 +1497,8 @@ WasmObjectFile::getSymbolType(DataRefImpl Symb) const {
     return SymbolRef::ST_Debug;
   case wasm::WASM_SYMBOL_TYPE_EVENT:
     return SymbolRef::ST_Other;
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
+    return SymbolRef::ST_Other;
   }
 
   llvm_unreachable("Unknown WasmSymbol::SymbolType");
@@ -1515,6 +1533,8 @@ uint32_t WasmObjectFile::getSymbolSectionIdImpl(const WasmSymbol &Sym) const {
     return Sym.Info.ElementIndex;
   case wasm::WASM_SYMBOL_TYPE_EVENT:
     return EventSection;
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
+    return TableSection;
   default:
     llvm_unreachable("Unknown WasmSymbol::SymbolType");
   }
