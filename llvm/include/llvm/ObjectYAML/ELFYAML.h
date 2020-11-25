@@ -658,6 +658,9 @@ struct Object {
   unsigned getMachine() const;
 };
 
+bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
+                             const NoBitsSection &S);
+
 } // end namespace ELFYAML
 } // end namespace llvm
 

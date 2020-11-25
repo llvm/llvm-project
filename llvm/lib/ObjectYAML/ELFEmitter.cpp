@@ -1135,8 +1135,8 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
   }
 }
 
-static bool shouldAllocateFileSpace(ArrayRef<ELFYAML::ProgramHeader> Phdrs,
-                                    const ELFYAML::NoBitsSection &S) {
+bool llvm::ELFYAML::shouldAllocateFileSpace(
+    ArrayRef<ELFYAML::ProgramHeader> Phdrs, const ELFYAML::NoBitsSection &S) {
   for (const ELFYAML::ProgramHeader &PH : Phdrs) {
     auto It = llvm::find_if(
         PH.Chunks, [&](ELFYAML::Chunk *C) { return C->Name == S.Name; });

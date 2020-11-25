@@ -116,7 +116,7 @@ ProgramHeaders:
 # RUN: not llvm-readelf --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 # RUN: not llvm-readobj --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 
-# ERR1: error: '[[FILE]]': SHT_NOTE section [index 1] has invalid offset (0xffff0000) or size (0x0)
+# ERR1: error: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
 
 --- !ELF
 FileHeader:
@@ -137,7 +137,7 @@ Sections:
 # RUN: not llvm-readelf --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 # RUN: not llvm-readobj --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 
-# ERR2: error: '[[FILE]]': SHT_NOTE section [index 1] has invalid offset (0x40) or size (0xffff0000)
+# ERR2: error: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
 
 ## Test tools report an error if a note program header has an invalid offset that
 ## goes past the end of file.
@@ -146,7 +146,7 @@ Sections:
 # RUN: not llvm-readelf --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 # RUN: not llvm-readobj --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 
-# ERR3: error: '[[FILE]]': PT_NOTE header has invalid offset (0xffff0000) or size (0x0)
+# ERR3: error: '[[FILE]]': unable to read notes from the PT_NOTE segment: invalid offset (0xffff0000) or size (0x0)
 
 --- !ELF
 FileHeader:
@@ -165,7 +165,7 @@ ProgramHeaders:
 # RUN: not llvm-readelf --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so  %s --check-prefix=ERR4
 # RUN: not llvm-readobj --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4
 
-# ERR4: error: '[[FILE]]': PT_NOTE header has invalid offset (0x0) or size (0xffff0000)
+# ERR4: error: '[[FILE]]': unable to read notes from the PT_NOTE segment: invalid offset (0x0) or size (0xffff0000)
 
 ## Check we report a warning when we are unable to locate the PT_NOTE
 ## segment because of broken program headers.
