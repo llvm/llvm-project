@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o %t/a.o
-; RUN: %llc_dwarf -split-dwarf-file=bar.dwo  %s -filetype=obj -o %t/b.o
+; RUN: llc -split-dwarf-file=foo.dwo  %s -filetype=obj -o %t/a.o
+; RUN: llc -split-dwarf-file=bar.dwo  %s -filetype=obj -o %t/b.o
 ; RUN: llvm-dwarfdump -debug-info %t/a.o %t/b.o | FileCheck %s
 
 ; CHECK: .debug_info contents:

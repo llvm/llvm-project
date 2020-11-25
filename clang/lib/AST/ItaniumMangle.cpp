@@ -2507,6 +2507,12 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
   if (Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver6 &&
       isa<AutoType>(Ty))
     return false;
+  // A placeholder type for class template deduction is substitutable with
+  // its corresponding template name; this is handled specially when mangling
+  // the type.
+  if (auto *DeducedTST = Ty->getAs<DeducedTemplateSpecializationType>())
+    if (DeducedTST->getDeducedType().isNull())
+      return false;
   return true;
 }
 
@@ -3696,16 +3702,16 @@ void CXXNameMangler::mangleType(const AutoType *T) {
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
   QualType Deduced = T->getDeducedType();
   if (!Deduced.isNull())
-    mangleType(Deduced);
-  else if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl())
-    mangleName(GlobalDecl(TD));
-  else {
-    // For an unresolved template-name, mangle it as if it were a template
-    // specialization but leave off the template arguments.
-    Out << 'N';
-    mangleTemplatePrefix(T->getTemplateName());
-    Out << 'E';
-  }
+    return mangleType(Deduced);
+
+  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
+  assert(TD && "shouldn't form deduced TST unless we know we have a template");
+
+  if (mangleSubstitution(TD))
+    return;
+
+  mangleName(GlobalDecl(TD));
+  addSubstitution(TD);
 }
 
 void CXXNameMangler::mangleType(const AtomicType *T) {

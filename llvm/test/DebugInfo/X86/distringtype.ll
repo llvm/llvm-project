@@ -5,7 +5,7 @@
 ;; !DIStringType(name: "character(*)", stringLength: !{{[0-9]+}},
 ;;		stringLengthExpression: !DIExpression(), size: 32)
 
-; RUN: %llc_dwarf -filetype=obj  %s -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj  %s -o - | llvm-dwarfdump - | FileCheck %s
 ; CHECK:       DW_TAG_string_type
 ; CHECK:                          DW_AT_name  ("character(*)!2")
 ; CHECK-NEXT:                     DW_AT_string_length

@@ -52,12 +52,18 @@ public:
     NamingStyle() = default;
 
     NamingStyle(llvm::Optional<CaseType> Case, const std::string &Prefix,
-                const std::string &Suffix)
-        : Case(Case), Prefix(Prefix), Suffix(Suffix) {}
+                const std::string &Suffix, const std::string &IgnoredRegexpStr);
+    NamingStyle(const NamingStyle &O) = delete;
+    NamingStyle &operator=(NamingStyle &&O) = default;
+    NamingStyle(NamingStyle &&O) = default;
 
     llvm::Optional<CaseType> Case;
     std::string Prefix;
     std::string Suffix;
+    // Store both compiled and non-compiled forms so original value can be
+    // serialized
+    llvm::Regex IgnoredRegexp;
+    std::string IgnoredRegexpStr;
   };
 
   struct FileStyle {
