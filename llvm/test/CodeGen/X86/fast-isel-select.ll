@@ -9,12 +9,12 @@
 define i32 @fastisel_select(i1 %exchSub2211_, i1 %trunc_8766) {
 ; CHECK-LABEL: fastisel_select:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movb %sil, %dl
-; CHECK-NEXT:    movb %dil, %cl
+; CHECK-NEXT:    movb %sil, %al
+; CHECK-NEXT:    movb %dil, %dl
+; CHECK-NEXT:    subb %al, %dl
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    subb %dl, %cl
-; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movl $1204476887, %ecx ## imm = 0x47CADBD7
+; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    retq
   %shuffleInternal15257_8932 = sub i1 %exchSub2211_, %trunc_8766

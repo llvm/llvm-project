@@ -133,8 +133,6 @@ public:
         return false;
       }
     }
-    Inputs.Opts.ClangTidyOpts =
-        Opts.GetClangTidyOptions(*TFS.view(llvm::None), File);
     log("Parsing command...");
     Invocation =
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);

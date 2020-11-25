@@ -77,12 +77,15 @@ please refer to :doc:`remarks/OptimizationRemarks`.
    remarks/OptimizationRemarks
 
 
-Support & Frequently Asked Questions (FAQ)
-==========================================
+Support, Getting Involved, and Frequently Asked Questions (FAQ)
+===============================================================
 
 Dealing with OpenMP can be complicated. For help with the setup of an OpenMP
 (offload) capable compiler toolchain, its usage, and common problems, consult
 the :doc:`Support and FAQ <SupportAndFAQ>` page.
+
+We also encourage everyone interested in OpenMP in LLVM to :doc:`get involved
+<SupportAndFAQ>`.
 
 
 .. toctree::

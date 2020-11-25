@@ -81,12 +81,10 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm3
-; SSE2-NEXT:    paddb %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
-; SSE2-NEXT:    paddb %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    psubb %xmm0, %xmm3
+; SSE2-NEXT:    pminub %xmm3, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm2
+; SSE2-NEXT:    pminub %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_v32i8_abs_abs:

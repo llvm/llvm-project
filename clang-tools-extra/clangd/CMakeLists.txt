@@ -81,6 +81,7 @@ add_clang_library(clangDaemon
   SemanticSelection.cpp
   SourceCode.cpp
   QueryDriverDatabase.cpp
+  TidyProvider.cpp
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
