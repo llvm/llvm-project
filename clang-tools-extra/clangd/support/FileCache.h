@@ -71,7 +71,7 @@ private:
   // Time when the cache was known valid (reflected disk state).
   mutable std::chrono::steady_clock::time_point ValidTime;
   // Filesystem metadata corresponding to the currently cached data.
-  mutable std::chrono::system_clock::time_point ModifiedTime;
+  mutable llvm::sys::TimePoint<> ModifiedTime;
   mutable uint64_t Size;
 };
 
