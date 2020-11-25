@@ -1299,6 +1299,11 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
 
+def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+                                                         FeatureBF16,
+                                                         FeatureMatMulInt8,
+                                                         FeaturePerfMon]>;
+
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasRetAddrStack,
                                                          FeatureNEONForFP,
