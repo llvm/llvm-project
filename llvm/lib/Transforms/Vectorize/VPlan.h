@@ -828,20 +828,21 @@ public:
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase, public VPUser {
-  /// Hold the instruction to be widened.
-  Instruction &Ingredient;
-
+class VPWidenRecipe : public VPRecipeBase, public VPValue, public VPUser {
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenSC), VPUser(Operands), Ingredient(I) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenSC), VPValue(VPValue::VPWidenSC, &I),
+        VPUser(Operands) {}
 
   ~VPWidenRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPWidenSC;
+  }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPWidenSC;
   }
 
   /// Produce widened copies of all Ingredients.
@@ -1071,17 +1072,10 @@ public:
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
 /// a vector operand into a scalar value, and adding the result to a chain.
-class VPReductionRecipe : public VPRecipeBase {
+/// The Operands are {ChainOp, VecOp, [Condition]}.
+class VPReductionRecipe : public VPRecipeBase, public VPValue, public VPUser {
   /// The recurrence decriptor for the reduction in question.
   RecurrenceDescriptor *RdxDesc;
-  /// The original instruction being converted to a reduction.
-  Instruction *I;
-  /// The VPValue of the vector value to be reduced.
-  VPValue *VecOp;
-  /// The VPValue of the scalar Chain being accumulated.
-  VPValue *ChainOp;
-  /// The VPValue of the condition for the block.
-  VPValue *CondOp;
   /// Fast math flags to use for the resulting reduction operation.
   bool NoNaN;
   /// Pointer to the TTI, needed to create the target reduction
@@ -1091,12 +1085,19 @@ public:
   VPReductionRecipe(RecurrenceDescriptor *R, Instruction *I, VPValue *ChainOp,
                     VPValue *VecOp, VPValue *CondOp, bool NoNaN,
                     const TargetTransformInfo *TTI)
-      : VPRecipeBase(VPReductionSC), RdxDesc(R), I(I), VecOp(VecOp),
-        ChainOp(ChainOp), CondOp(CondOp), NoNaN(NoNaN), TTI(TTI) {}
+      : VPRecipeBase(VPRecipeBase::VPReductionSC),
+        VPValue(VPValue::VPReductionSC, I), VPUser({ChainOp, VecOp}),
+        RdxDesc(R), NoNaN(NoNaN), TTI(TTI) {
+    if (CondOp)
+      addOperand(CondOp);
+  }
 
   ~VPReductionRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPReductionSC;
+  }
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPReductionSC;
   }
@@ -1107,6 +1108,15 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
+
+  /// The VPValue of the scalar Chain being accumulated.
+  VPValue *getChainOp() const { return getOperand(0); }
+  /// The VPValue of the vector value to be reduced.
+  VPValue *getVecOp() const { return getOperand(1); }
+  /// The VPValue of the condition for the block.
+  VPValue *getCondOp() const {
+    return getNumOperands() > 2 ? getOperand(2) : nullptr;
+  }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
@@ -1725,15 +1735,6 @@ public:
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
-  }
-
-  void addOrReplaceVPValue(Value *V, VPValue *VPV) {
-    assert(V && "Trying to add a null Value to VPlan");
-    auto I = Value2VPValue.find(V);
-    if (I == Value2VPValue.end())
-      Value2VPValue[V] = VPV;
-    else
-      I->second = VPV;
   }
 
   VPValue *getVPValue(Value *V) {

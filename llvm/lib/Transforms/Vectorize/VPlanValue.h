@@ -89,9 +89,11 @@ public:
     VPValueSC,
     VPInstructionSC,
     VPMemoryInstructionSC,
+    VPReductionSC,
+    VPWidenSC,
     VPVWidenCallSC,
+    VPVWidenGEPSC,
     VPVWidenSelectSC,
-    VPVWidenGEPSC
   };
 
   VPValue(Value *UV = nullptr, VPDef *Def = nullptr)
