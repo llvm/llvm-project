@@ -91,7 +91,7 @@ declare i32 @printf(i8*, ...)
 ; SCALE: name: "sum"
 ; SCALE-NEXT: {!"function_entry_count", i64 46}
 ; SCALE: !{!"branch_weights", i32 11, i32 2}
-; SCALE: !{!"branch_weights", i64 20}
+; SCALE: !{!"branch_weights", i32 20}
 ; SCALE: name: "sub"
 ; SCALE-NEXT: {!"function_entry_count", i64 -1}
 
