@@ -483,3 +483,120 @@ define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
   %1 = call float @llvm.fma.f32(float %a, float %negb, float %c)
   ret float %1
 }
+
+define float @fmadd_s_contract(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fmadd_s_contract:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fmadd_s_contract:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %1 = fmul contract float %a, %b
+  %2 = fadd contract float %1, %c
+  ret float %2
+}
+
+define float @fmsub_s_contract(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fmsub_s_contract:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a1
+; RV32IF-NEXT:    fmv.w.x ft1, a0
+; RV32IF-NEXT:    fmv.w.x ft2, a2
+; RV32IF-NEXT:    fmv.w.x ft3, zero
+; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV32IF-NEXT:    fmsub.s ft0, ft1, ft0, ft2
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fmsub_s_contract:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fmv.w.x ft2, a2
+; RV64IF-NEXT:    fmv.w.x ft3, zero
+; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV64IF-NEXT:    fmsub.s ft0, ft1, ft0, ft2
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %c_ = fadd float 0.0, %c ; avoid negation using xor
+  %1 = fmul contract float %a, %b
+  %2 = fsub contract float %1, %c_
+  ret float %2
+}
+
+define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmadd_s_contract:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmv.w.x ft3, zero
+; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV32IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft3
+; RV32IF-NEXT:    fnmadd.s ft0, ft2, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmadd_s_contract:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmv.w.x ft3, zero
+; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV64IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV64IF-NEXT:    fadd.s ft0, ft0, ft3
+; RV64IF-NEXT:    fnmadd.s ft0, ft2, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %a_ = fadd float 0.0, %a ; avoid negation using xor
+  %b_ = fadd float 0.0, %b ; avoid negation using xor
+  %c_ = fadd float 0.0, %c ; avoid negation using xor
+  %1 = fmul contract float %a_, %b_
+  %2 = fneg float %1
+  %3 = fsub contract float %2, %c_
+  ret float %3
+}
+
+define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmsub_s_contract:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmv.w.x ft3, zero
+; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV32IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV32IF-NEXT:    fnmsub.s ft0, ft2, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmsub_s_contract:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmv.w.x ft3, zero
+; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV64IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV64IF-NEXT:    fnmsub.s ft0, ft2, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %a_ = fadd float 0.0, %a ; avoid negation using xor
+  %b_ = fadd float 0.0, %b ; avoid negation using xor
+  %1 = fmul contract float %a_, %b_
+  %2 = fsub contract float %c, %1
+  ret float %2
+}
