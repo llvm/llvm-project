@@ -1553,6 +1553,10 @@ std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
       CXXRD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
   }
 
+  // Can't query bases without a definition.
+  if (!CXXRD->hasDefinition())
+    return Result;
+
   for (auto Base : CXXRD->bases()) {
     const CXXRecordDecl *ParentDecl = nullptr;
 
