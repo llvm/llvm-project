@@ -680,7 +680,7 @@ After:
     When defined, the check will ensure enumeration names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: EnumConstantIgnoredRegexp
+.. option:: EnumIgnoredRegexp
 
     Identifier naming checks won't be enforced for enumeration names
     matching this regular expression.
