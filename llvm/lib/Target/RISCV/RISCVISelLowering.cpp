@@ -181,6 +181,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbt()) {
     setOperationAction(ISD::FSHL, XLenVT, Legal);
     setOperationAction(ISD::FSHR, XLenVT, Legal);
+
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FSHL, MVT::i32, Custom);
+      setOperationAction(ISD::FSHR, MVT::i32, Custom);
+    }
   }
 
   ISD::CondCode FPCCToExtend[] = {
@@ -1091,6 +1096,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, GREVIW));
     break;
   }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           Subtarget.hasStdExtZbt() && "Unexpected custom legalisation");
+    SDValue NewOp0 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue NewOp1 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+    SDValue NewOp2 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+    // FSLW/FSRW take a 6 bit shift amount but i32 FSHL/FSHR only use 5 bits.
+    // Mask the shift amount to 5 bits.
+    NewOp2 = DAG.getNode(ISD::AND, DL, MVT::i64, NewOp2,
+                         DAG.getConstant(0x1f, DL, MVT::i64));
+    unsigned Opc =
+        N->getOpcode() == ISD::FSHL ? RISCVISD::FSLW : RISCVISD::FSRW;
+    SDValue NewOp = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, NewOp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewOp));
+    break;
+  }
   }
 }
 
@@ -1322,6 +1347,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::FSLW:
+  case RISCVISD::FSRW: {
+    // Only the lower 32 bits of Values and lower 6 bits of shift amount are
+    // read.
+    SDValue Op0 = N->getOperand(0);
+    SDValue Op1 = N->getOperand(1);
+    SDValue ShAmt = N->getOperand(2);
+    APInt OpMask = APInt::getLowBitsSet(Op0.getValueSizeInBits(), 32);
+    APInt ShAmtMask = APInt::getLowBitsSet(ShAmt.getValueSizeInBits(), 6);
+    if (SimplifyDemandedBits(Op0, OpMask, DCI) ||
+        SimplifyDemandedBits(Op1, OpMask, DCI) ||
+        SimplifyDemandedBits(ShAmt, ShAmtMask, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+    break;
+  }
   case RISCVISD::GREVIW:
   case RISCVISD::GORCIW: {
     // Only the lower 32 bits of the first operand are read
@@ -1454,6 +1497,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::RORW:
   case RISCVISD::GREVIW:
   case RISCVISD::GORCIW:
+  case RISCVISD::FSLW:
+  case RISCVISD::FSRW:
     // TODO: As the result is sign-extended, this is conservatively correct. A
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
@@ -2951,6 +2996,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(REMUW)
   NODE_NAME_CASE(ROLW)
   NODE_NAME_CASE(RORW)
+  NODE_NAME_CASE(FSLW)
+  NODE_NAME_CASE(FSRW)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
