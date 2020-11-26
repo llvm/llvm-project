@@ -9851,6 +9851,10 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
     assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()) &&
            "This cannot be done on broken IR!");
 
+
+  if (isKnownViaNonRecursiveReasoning(Pred, LHS, RHS))
+    return true;
+
   BasicBlock *Latch = L->getLoopLatch();
   if (!Latch)
     return false;
@@ -9866,7 +9870,7 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   // We don't want more than one activation of the following loops on the stack
   // -- that can lead to O(n!) time complexity.
   if (WalkingBEDominatingConds)
-    return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+    return false;
 
   SaveAndRestore<bool> ClearOnExit(WalkingBEDominatingConds, true);
 
@@ -9907,7 +9911,42 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   if (isImpliedViaGuard(Latch, Pred, LHS, RHS))
     return true;
 
-  return isBasicBlockEntryGuardedByCond(Latch, Pred, LHS, RHS);
+  for (DomTreeNode *DTN = DT[Latch], *HeaderDTN = DT[L->getHeader()];
+       DTN != HeaderDTN; DTN = DTN->getIDom()) {
+    assert(DTN && "should reach the loop header before reaching the root!");
+
+    BasicBlock *BB = DTN->getBlock();
+    if (isImpliedViaGuard(BB, Pred, LHS, RHS))
+      return true;
+
+    BasicBlock *PBB = BB->getSinglePredecessor();
+    if (!PBB)
+      continue;
+
+    BranchInst *ContinuePredicate = dyn_cast<BranchInst>(PBB->getTerminator());
+    if (!ContinuePredicate || !ContinuePredicate->isConditional())
+      continue;
+
+    Value *Condition = ContinuePredicate->getCondition();
+
+    // If we have an edge `E` within the loop body that dominates the only
+    // latch, the condition guarding `E` also guards the backedge.  This
+    // reasoning works only for loops with a single latch.
+
+    BasicBlockEdge DominatingEdge(PBB, BB);
+    if (DominatingEdge.isSingleEdge()) {
+      // We're constructively (and conservatively) enumerating edges within the
+      // loop body that dominate the latch.  The dominator tree better agree
+      // with us on this:
+      assert(DT.dominates(DominatingEdge, Latch) && "should be!");
+
+      if (isImpliedCond(Pred, LHS, RHS, Condition,
+                        BB != ContinuePredicate->getSuccessor(0)))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
