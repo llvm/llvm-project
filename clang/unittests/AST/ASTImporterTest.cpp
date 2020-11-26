@@ -902,6 +902,39 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportBeginLocOfDeclRefExpr) {
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
+       TemplateTemplateParmDeclNoDefaultArg) {
+  Decl *FromTU = getTuDecl(R"(
+                           template<template<typename> typename TT> struct Y {};
+                           )",
+                           Lang_CXX17);
+  auto From = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("TT")));
+  TemplateTemplateParmDecl *To = Import(From, Lang_CXX17);
+  ASSERT_FALSE(To->hasDefaultArgument());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTemplateParmDeclDefaultArg) {
+  Decl *FromTU = getTuDecl(R"(
+                           template<typename T> struct X {};
+                           template<template<typename> typename TT = X> struct Y {};
+                           )",
+                           Lang_CXX17);
+  auto From = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("TT")));
+  TemplateTemplateParmDecl *To = Import(From, Lang_CXX17);
+  ASSERT_TRUE(To->hasDefaultArgument());
+  const TemplateArgument &ToDefaultArg = To->getDefaultArgument().getArgument();
+  ASSERT_TRUE(To->isTemplateDecl());
+  TemplateDecl *ToTemplate = ToDefaultArg.getAsTemplate().getAsTemplateDecl();
+
+  // Find the default argument template 'X' in the AST and compare it against
+  // the default argument we got.
+  auto ToExpectedDecl = FirstDeclMatcher<ClassTemplateDecl>().match(
+      To->getTranslationUnitDecl(), classTemplateDecl(hasName("X")));
+  ASSERT_EQ(ToTemplate, ToExpectedDecl);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
        ImportOfTemplatedDeclOfClassTemplateDecl) {
   Decl *FromTU = getTuDecl("template<class X> struct S{};", Lang_CXX03);
   auto From =
