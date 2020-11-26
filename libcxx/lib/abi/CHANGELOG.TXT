@@ -7,8 +7,8 @@ Each entry should start with the revision number followed by a description of
 the change. The entry should contain a summary of the ABI changes made,
 including what symbols were added, removed, or changed.
 
-To generate a summary use "sym_diff.py" diffing against the appropriate ABI list.
-Afterwards the ABI list should be updated to include the new changes.
+To generate a summary, re-generate the new ABI list using the
+`generate-cxx-abilist` target, and look at the diff.
 
 New entries should be added directly below the "Version" header.
 
