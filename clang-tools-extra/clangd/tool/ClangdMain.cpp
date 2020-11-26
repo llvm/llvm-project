@@ -494,7 +494,7 @@ opt<bool> CollectMainFileRefs{
     "collect-main-file-refs",
     cat(Misc),
     desc("Store references to main-file-only symbols in the index"),
-    init(false),
+    init(ClangdServer::Options().CollectMainFileRefs),
 };
 
 #if CLANGD_ENABLE_REMOTE
