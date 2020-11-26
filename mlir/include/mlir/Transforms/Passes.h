@@ -46,6 +46,10 @@ std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
                                 unsigned bitwidthOfIndexType = 64);
 
+/// Creates a pass that finalizes a partial bufferization by removing remaining
+/// tensor_load and tensor_to_memref operations.
+std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
+
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
