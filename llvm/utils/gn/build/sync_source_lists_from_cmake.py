@@ -34,15 +34,16 @@ def patch_gn_file(gn_file, add, remove):
         tokloc = gn_contents.find(srcs_tok, tokloc + 1)
 
     if tokloc == -1: raise ValueError(gn_file + ': Failed to find source list')
-    if gn_contents.find(srcs_tok, tokloc + 1) != -1:
-        raise ValueError(gn_file + ': Multiple source lists')
-    if gn_contents.find('# NOSORT', 0, tokloc) != -1:
-        raise ValueError(gn_file + ': Found # NOSORT, needs manual merge')
+    if add:
+        if gn_contents.find(srcs_tok, tokloc + 1) != -1:
+            raise ValueError(gn_file + ': Multiple source lists')
+        if gn_contents.find('# NOSORT', 0, tokloc) != -1:
+            raise ValueError(gn_file + ': Found # NOSORT, needs manual merge')
 
-    tokloc += len(srcs_tok)
-    for a in add:
-        gn_contents = (gn_contents[:tokloc] + ('"%s",' % a) +
-                       gn_contents[tokloc:])
+        tokloc += len(srcs_tok)
+        for a in add:
+            gn_contents = (gn_contents[:tokloc] + ('"%s",' % a) +
+                           gn_contents[tokloc:])
     for r in remove:
         gn_contents = gn_contents.replace('"%s",' % r, '')
     with open(gn_file, 'w') as f:
