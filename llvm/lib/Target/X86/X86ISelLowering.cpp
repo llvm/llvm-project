@@ -26959,6 +26959,22 @@ static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
     return splitVectorIntBinary(Op, DAG);
 
+  SDLoc DL(Op);
+  unsigned Opcode = Op.getOpcode();
+  SDValue N0 = Op.getOperand(0);
+  SDValue N1 = Op.getOperand(1);
+
+  // For pre-SSE41, we can perform UMIN/UMAX v8i16 by using psubusw.
+  if (VT == MVT::v8i16) {
+    assert((Opcode == ISD::UMIN || Opcode == ISD::UMAX) &&
+           "Unexpected MIN/MAX opcode");
+    if (Opcode == ISD::UMIN)
+      return DAG.getNode(ISD::SUB, DL, VT, N0,
+                         DAG.getNode(ISD::USUBSAT, DL, VT, N0, N1));
+    return DAG.getNode(ISD::ADD, DL, VT,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, N1, N0), N0);
+  }
+
   // Default to expand.
   return SDValue();
 }
