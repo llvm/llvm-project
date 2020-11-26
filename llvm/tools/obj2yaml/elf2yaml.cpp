@@ -237,6 +237,9 @@ static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
                                ArrayRef<ELFYAML::ProgramHeader> Phdrs,
                                std::vector<std::unique_ptr<ELFYAML::Chunk>> &V,
                                ArrayRef<typename ELFT::Shdr> S) {
+  if (V.empty())
+    return;
+
   uint64_t ExpectedOffset;
   if (Header.e_phoff > 0)
     ExpectedOffset = Header.e_phoff + Header.e_phentsize * Header.e_phnum;
@@ -288,6 +291,14 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     return SectionsOrErr.takeError();
   Sections = *SectionsOrErr;
   SectionNames.resize(Sections.size());
+
+  // Normally an object that does not have sections has e_shnum == 0.
+  // Also, e_shnum might be 0, when the the number of entries in the section
+  // header table is larger than or equal to SHN_LORESERVE (0xff00). In this
+  // case the real number of entries is held in the sh_size member of the
+  // initial entry. We have a section header table when `e_shoff` is not 0.
+  if (Obj.getHeader().e_shoff != 0 && Obj.getHeader().e_shnum == 0)
+    Y->Header.EShNum = 0;
 
   // Dump symbols. We need to do this early because other sections might want
   // to access the deduplicated symbol names that we also create here.
