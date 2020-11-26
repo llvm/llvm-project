@@ -111,26 +111,18 @@ define i64 @f3(i64 %x, i64 %y) {
 define i64 @f4(i64 %x) {
 ; CHECK-LE-LABEL: f4:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
-; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    iselgt r3, r4, r3
+; CHECK-LE-NEXT:    sradi r4, r3, 63
+; CHECK-LE-NEXT:    xor r3, r3, r4
+; CHECK-LE-NEXT:    sub r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f4:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    cmplwi r3, 0
-; CHECK-32-NEXT:    cmpwi cr1, r3, 0
-; CHECK-32-NEXT:    crandc 4*cr5+lt, 4*cr1+gt, eq
-; CHECK-32-NEXT:    cmpwi cr1, r4, 0
-; CHECK-32-NEXT:    subfic r5, r4, 0
-; CHECK-32-NEXT:    crandc 4*cr5+gt, eq, 4*cr1+eq
-; CHECK-32-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; CHECK-32-NEXT:    subfze r6, r3
-; CHECK-32-NEXT:    bc 12, 4*cr5+lt, .LBB4_1
-; CHECK-32-NEXT:    blr
-; CHECK-32-NEXT:  .LBB4_1:
-; CHECK-32-NEXT:    addi r3, r6, 0
-; CHECK-32-NEXT:    addi r4, r5, 0
+; CHECK-32-NEXT:    srawi r5, r3, 31
+; CHECK-32-NEXT:    xor r4, r4, r5
+; CHECK-32-NEXT:    xor r3, r3, r5
+; CHECK-32-NEXT:    subc r4, r5, r4
+; CHECK-32-NEXT:    subfe r3, r3, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp sgt i64 %x, 0
   %x.neg = sub i64 0, %x
@@ -166,20 +158,18 @@ define i64 @f4_sge_0(i64 %x) {
 define i64 @f4_slt_0(i64 %x) {
 ; CHECK-LE-LABEL: f4_slt_0:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
-; CHECK-LE-NEXT:    cmpdi r3, 0
-; CHECK-LE-NEXT:    isellt r3, r3, r4
+; CHECK-LE-NEXT:    sradi r4, r3, 63
+; CHECK-LE-NEXT:    xor r3, r3, r4
+; CHECK-LE-NEXT:    sub r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f4_slt_0:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    subfic r5, r4, 0
-; CHECK-32-NEXT:    subfze r6, r3
-; CHECK-32-NEXT:    cmpwi r3, 0
-; CHECK-32-NEXT:    bclr 12, lt, 0
-; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    ori r3, r6, 0
-; CHECK-32-NEXT:    ori r4, r5, 0
+; CHECK-32-NEXT:    srawi r5, r3, 31
+; CHECK-32-NEXT:    xor r4, r4, r5
+; CHECK-32-NEXT:    xor r3, r3, r5
+; CHECK-32-NEXT:    subc r4, r5, r4
+; CHECK-32-NEXT:    subfe r3, r3, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp slt i64 %x, 0
   %x.neg = sub i64 0, %x
@@ -219,21 +209,18 @@ define i64 @f4_sle_0(i64 %x) {
 define i64 @f4_sgt_m1(i64 %x) {
 ; CHECK-LE-LABEL: f4_sgt_m1:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    neg r4, r3
-; CHECK-LE-NEXT:    cmpdi r3, -1
-; CHECK-LE-NEXT:    iselgt r3, r4, r3
+; CHECK-LE-NEXT:    sradi r4, r3, 63
+; CHECK-LE-NEXT:    xor r3, r3, r4
+; CHECK-LE-NEXT:    sub r3, r4, r3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-32-LABEL: f4_sgt_m1:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    subfic r5, r4, 0
-; CHECK-32-NEXT:    subfze r6, r3
-; CHECK-32-NEXT:    cmpwi r3, -1
-; CHECK-32-NEXT:    bc 12, gt, .LBB8_1
-; CHECK-32-NEXT:    blr
-; CHECK-32-NEXT:  .LBB8_1:
-; CHECK-32-NEXT:    addi r3, r6, 0
-; CHECK-32-NEXT:    addi r4, r5, 0
+; CHECK-32-NEXT:    srawi r5, r3, 31
+; CHECK-32-NEXT:    xor r4, r4, r5
+; CHECK-32-NEXT:    xor r3, r3, r5
+; CHECK-32-NEXT:    subc r4, r5, r4
+; CHECK-32-NEXT:    subfe r3, r3, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp sgt i64 %x, -1
   %x.neg = sub i64 0, %x
