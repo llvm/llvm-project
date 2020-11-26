@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: clang-8
+// constexpr destructors are only supported starting with gcc 10
+// UNSUPPORTED: gcc-8, gcc-9
 
 // <memory>
 
