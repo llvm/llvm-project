@@ -40,6 +40,8 @@ else()
   endif()
   # On macOS the libraries are typically installed via Homebrew and are not on
   # the system path.
+  set(GRPC_OPTS "")
+  set(PROTOBUF_OPTS "")
   if (${APPLE})
     find_program(HOMEBREW brew)
     # If Homebrew is not found, the user might have installed libraries
@@ -57,28 +59,22 @@ else()
       # system path.
       if (GRPC_HOMEBREW_RETURN_CODE EQUAL "0")
         include_directories(${GRPC_HOMEBREW_PATH}/include)
-        find_library(GRPC_LIBRARY
-                     grpc++
-                     PATHS ${GRPC_HOMEBREW_PATH}/lib
-                     NO_DEFAULT_PATH
-                     REQUIRED)
-        add_library(grpc++ UNKNOWN IMPORTED GLOBAL)
-        set_target_properties(grpc++ PROPERTIES
-                              IMPORTED_LOCATION ${GRPC_LIBRARY})
+        list(APPEND GRPC_OPTS PATHS ${GRPC_HOMEBREW_PATH}/lib NO_DEFAULT_PATH)
       endif()
       if (PROTOBUF_HOMEBREW_RETURN_CODE EQUAL "0")
         include_directories(${PROTOBUF_HOMEBREW_PATH}/include)
-        find_library(PROTOBUF_LIBRARY
-                     protobuf
-                     PATHS ${PROTOBUF_HOMEBREW_PATH}/lib
-                     NO_DEFAULT_PATH
-                     REQUIRED)
-        add_library(protobuf UNKNOWN IMPORTED GLOBAL)
-        set_target_properties(protobuf PROPERTIES
-                              IMPORTED_LOCATION ${PROTOBUF_LIBRARY})
+        list(APPEND PROTOBUF_OPTS PATHS ${PROTOBUF_HOMEBREW_PATH}/lib NO_DEFAULT_PATH)
       endif()
     endif()
   endif()
+  find_library(GRPC_LIBRARY grpc++ $GRPC_OPTS REQUIRED)
+  add_library(grpc++ UNKNOWN IMPORTED GLOBAL)
+  message(STATUS "Using grpc++: " ${GRPC_LIBRARY})
+  set_target_properties(grpc++ PROPERTIES IMPORTED_LOCATION ${GRPC_LIBRARY})
+  find_library(PROTOBUF_LIBRARY protobuf $PROTOBUF_OPTS REQUIRED)
+  message(STATUS "Using protobuf: " ${PROTOBUF_LIBRARY})
+  add_library(protobuf UNKNOWN IMPORTED GLOBAL)
+  set_target_properties(protobuf PROPERTIES IMPORTED_LOCATION ${PROTOBUF_LIBRARY})
 endif()
 
 # Proto headers are generated in ${CMAKE_CURRENT_BINARY_DIR}.
