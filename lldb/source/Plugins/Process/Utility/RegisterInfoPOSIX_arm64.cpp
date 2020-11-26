@@ -342,3 +342,5 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }
