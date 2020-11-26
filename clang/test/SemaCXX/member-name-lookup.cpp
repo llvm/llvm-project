@@ -20,14 +20,14 @@ struct B : A {
 
   enum E2 { enumerator2 };
 
-  enum E3 { enumerator3 }; // expected-note 2{{member found by ambiguous name lookup}}
+  enum E3 { enumerator3 }; // expected-note 2{{member type 'B::E3' found by ambiguous name lookup}}
 };
 
 struct C : A {
   int c; // expected-note 2{{member found by ambiguous name lookup}}
   int d; // expected-note 2{{member found by ambiguous name lookup}}
 
-  enum E3 { enumerator3_2 }; // expected-note 2{{member found by ambiguous name lookup}}
+  enum E3 { enumerator3_2 }; // expected-note 2{{member type 'C::E3' found by ambiguous name lookup}}
 };
 
 struct D : B, C {
@@ -71,14 +71,14 @@ struct B2 : virtual A {
 
   enum E2 { enumerator2 };
 
-  enum E3 { enumerator3 }; // expected-note 2 {{member found by ambiguous name lookup}}
+  enum E3 { enumerator3 }; // expected-note 2 {{member type 'B2::E3' found by ambiguous name lookup}}
 };
 
 struct C2 : virtual A {
   int c;
   int d; // expected-note 2{{member found by ambiguous name lookup}}
 
-  enum E3 { enumerator3_2 }; // expected-note 2{{member found by ambiguous name lookup}}
+  enum E3 { enumerator3_2 }; // expected-note 2{{member type 'C2::E3' found by ambiguous name lookup}}
 };
 
 struct D2 : B2, C2 { 
@@ -132,11 +132,11 @@ void G::test_virtual_lookup() {
 
 
 struct HasMemberType1 {
-  struct type { }; // expected-note{{member found by ambiguous name lookup}}
+  struct type { }; // expected-note{{member type 'HasMemberType1::type' found by ambiguous name lookup}}
 };
 
 struct HasMemberType2 {
-  struct type { }; // expected-note{{member found by ambiguous name lookup}}
+  struct type { }; // expected-note{{member type 'HasMemberType2::type' found by ambiguous name lookup}}
 };
 
 struct HasAnotherMemberType : HasMemberType1, HasMemberType2 { 

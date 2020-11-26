@@ -2228,11 +2228,10 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   // Determine whether two sets of members contain the same members, as
   // required by C++ [class.member.lookup]p6.
-  auto HasSameDeclarations = [IDNS,
-                              TemplateNameLookup](DeclContextLookupResult A,
-                                                  DeclContextLookupResult B) {
+  auto HasSameDeclarations = [&](DeclContextLookupResult A,
+                                 DeclContextLookupResult B) {
     using Iterator = DeclContextLookupResult::iterator;
-    using Result = const Decl *;
+    using Result = const void *;
 
     auto Next = [&](Iterator &It, Iterator End) -> Result {
       while (It != End) {
@@ -2252,14 +2251,15 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
           if (auto *TD = getAsTemplateNameDecl(ND))
             ND = TD;
 
-        // FIXME: Per C++ [class.member.lookup]p3:
-        //   type declarations (including injected-class-names are replaced by the
-        //   types they designate
-        // So two different typedef declarations with the same name from two
-        // different base classes declaring the same type do not introduce an
-        // ambiguity.
+        // C++ [class.member.lookup]p3:
+        //   type declarations (including injected-class-names) are replaced by
+        //   the types they designate
+        if (const TypeDecl *TD = dyn_cast<TypeDecl>(ND->getUnderlyingDecl())) {
+          QualType T = Context.getTypeDeclType(TD);
+          return T.getCanonicalType().getAsOpaquePtr();
+        }
 
-        return cast<NamedDecl>(ND->getUnderlyingDecl()->getCanonicalDecl());
+        return ND->getUnderlyingDecl()->getCanonicalDecl();
       }
       return nullptr;
     };
@@ -2509,13 +2509,23 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
       << Name << LookupRange;
 
     CXXBasePaths *Paths = Result.getBasePaths();
-    std::set<Decl *> DeclsPrinted;
+    std::set<const NamedDecl *> DeclsPrinted;
     for (CXXBasePaths::paths_iterator Path = Paths->begin(),
                                       PathEnd = Paths->end();
          Path != PathEnd; ++Path) {
-      Decl *D = Path->Decls.front();
-      if (DeclsPrinted.insert(D).second)
-        Diag(D->getLocation(), diag::note_ambiguous_member_found);
+      const NamedDecl *D = Path->Decls.front();
+      if (!D->isInIdentifierNamespace(Result.getIdentifierNamespace()))
+        continue;
+      if (DeclsPrinted.insert(D).second) {
+        if (const auto *TD = dyn_cast<TypedefNameDecl>(D->getUnderlyingDecl()))
+          Diag(D->getLocation(), diag::note_ambiguous_member_type_found)
+              << TD->getUnderlyingType();
+        else if (const auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
+          Diag(D->getLocation(), diag::note_ambiguous_member_type_found)
+              << Context.getTypeDeclType(TD);
+        else
+          Diag(D->getLocation(), diag::note_ambiguous_member_found);
+      }
     }
     break;
   }
