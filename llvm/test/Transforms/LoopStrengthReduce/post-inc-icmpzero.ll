@@ -69,7 +69,7 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to i16*
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i16, i16* [[LSR_IV810]], align 2
 ; CHECK-NEXT:    store i16 [[TMP29]], i16* [[UGLYGEP2]], align 2
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT3:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i16*
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV8]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP3]] = bitcast i16* [[SCEVGEP9]] to [33 x i16]*
