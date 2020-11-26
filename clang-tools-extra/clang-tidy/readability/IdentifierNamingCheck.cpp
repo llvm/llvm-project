@@ -611,12 +611,10 @@ static StyleKind findStyleKind(
 
     // If this method has the same name as any base method, this is likely
     // necessary even if it's not an override. e.g. CRTP.
-    auto FindHidden = [&](const CXXBaseSpecifier *S, clang::CXXBasePath &P) {
-      return CXXRecordDecl::FindOrdinaryMember(S, P, Decl->getDeclName());
-    };
-    CXXBasePaths UnusedPaths;
-    if (Decl->getParent()->lookupInBases(FindHidden, UnusedPaths))
-      return SK_Invalid;
+    for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
+      if (const auto *RD = Base.getType()->getAsCXXRecordDecl())
+        if (RD->hasMemberName(Decl->getDeclName()))
+          return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])
       return SK_ConstexprMethod;
