@@ -221,7 +221,7 @@ MlirType mlirUnrankedTensorTypeGetChecked(MlirType elementType,
 int mlirTypeIsAMemRef(MlirType type) { return unwrap(type).isa<MemRefType>(); }
 
 MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank, int64_t *shape,
-                           intptr_t numMaps, MlirAffineMap *affineMaps,
+                           intptr_t numMaps, MlirAffineMap const *affineMaps,
                            unsigned memorySpace) {
   SmallVector<AffineMap, 1> maps;
   (void)unwrapList(numMaps, affineMaps, maps);
@@ -285,7 +285,7 @@ unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type) {
 int mlirTypeIsATuple(MlirType type) { return unwrap(type).isa<TupleType>(); }
 
 MlirType mlirTupleTypeGet(MlirContext ctx, intptr_t numElements,
-                          MlirType *elements) {
+                          MlirType const *elements) {
   SmallVector<Type, 4> types;
   ArrayRef<Type> typeRef = unwrapList(numElements, elements, types);
   return wrap(TupleType::get(typeRef, unwrap(ctx)));
@@ -308,8 +308,8 @@ int mlirTypeIsAFunction(MlirType type) {
 }
 
 MlirType mlirFunctionTypeGet(MlirContext ctx, intptr_t numInputs,
-                             MlirType *inputs, intptr_t numResults,
-                             MlirType *results) {
+                             MlirType const *inputs, intptr_t numResults,
+                             MlirType const *results) {
   SmallVector<Type, 4> inputsList;
   SmallVector<Type, 4> resultsList;
   (void)unwrapList(numInputs, inputs, inputsList);

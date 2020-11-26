@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false -verify-machineinstrs -mcpu=cyclone | FileCheck -enable-var-scope %s
+; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false -verify-machineinstrs -mcpu=cyclone -mattr=+outline-atomics | FileCheck -enable-var-scope %s -check-prefix=OUTLINE-ATOMICS
 
 define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_cas4_acq
 ; CHECK-LABEL: val_compare_and_swap:
 ; CHECK-NEXT: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
@@ -19,6 +21,7 @@ define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 }
 
 define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_cas4_acq
 ; CHECK-LABEL: val_compare_and_swap_from_load:
 ; CHECK-NEXT: ldr    [[NEW:w[0-9]+]], [x2]
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
@@ -40,6 +43,7 @@ define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
 }
 
 define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_cas4_acq_rel
 ; CHECK-LABEL: val_compare_and_swap_rel:
 ; CHECK-NEXT: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
@@ -58,6 +62,7 @@ define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
 }
 
 define i64 @val_compare_and_swap_64(i64* %p, i64 %cmp, i64 %new) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_cas8_relax
 ; CHECK-LABEL: val_compare_and_swap_64:
 ; CHECK-NEXT: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
@@ -104,6 +109,7 @@ define i64 @fetch_and_nand_64(i64* %p) #0 {
 }
 
 define i32 @fetch_and_or(i32* %p) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_ldset4_acq_rel
 ; CHECK-LABEL: fetch_and_or:
 ; CHECK: mov   [[OLDVAL_REG:w[0-9]+]], #5
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
@@ -118,6 +124,7 @@ define i32 @fetch_and_or(i32* %p) #0 {
 }
 
 define i64 @fetch_and_or_64(i64* %p) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_ldset8_relax
 ; CHECK: fetch_and_or_64:
 ; CHECK: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
@@ -332,6 +339,7 @@ define void @atomic_store_relaxed_32(i32* %p, i32 %off32, i32 %val) #0 {
 }
 
 define void @atomic_store_relaxed_64(i64* %p, i32 %off32, i64 %val) #0 {
+; OUTLINE-ATOMICS: bl __aarch64_ldadd4_acq_rel
 ; CHECK-LABEL: atomic_store_relaxed_64:
   %ptr_unsigned = getelementptr i64, i64* %p, i32 4095
   store atomic i64 %val, i64* %ptr_unsigned monotonic, align 8

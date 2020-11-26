@@ -759,7 +759,7 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
     DagInit *Applyer = RuleDef.getValueAsDag("Apply");
     if (Applyer->getOperatorAsDef(RuleDef.getLoc())->getName() !=
         "apply") {
-      PrintError(RuleDef.getLoc(), "Expected apply operator");
+      PrintError(RuleDef.getLoc(), "Expected 'apply' operator in Apply DAG");
       return;
     }
 
@@ -800,7 +800,7 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
       OS << Indent << "      && [&]() {\n"
          << Indent << "      "
          << CodeExpander(Rule->getMatchingFixupCode()->getValue(), Expansions,
-                         Rule->getMatchingFixupCode()->getLoc(), ShowExpansions)
+                         RuleDef.getLoc(), ShowExpansions)
          << "\n"
          << Indent << "      return true;\n"
          << Indent << "  }()";
@@ -809,7 +809,7 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
 
     if (const CodeInit *Code = dyn_cast<CodeInit>(Applyer->getArg(0))) {
       OS << CodeExpander(Code->getAsUnquotedString(), Expansions,
-                         Code->getLoc(), ShowExpansions)
+                         RuleDef.getLoc(), ShowExpansions)
          << "\n"
          << Indent << "    return true;\n"
          << Indent << "  }\n";

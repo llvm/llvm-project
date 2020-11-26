@@ -148,7 +148,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
 
   if (const CallInst *CI = isFreeCall(Inst, &TLI)) {
     // calls to free() deallocate the entire structure
-    Loc = MemoryLocation(CI->getArgOperand(0));
+    Loc = MemoryLocation(CI->getArgOperand(0), LocationSize::unknown());
     return ModRefInfo::Mod;
   }
 
@@ -450,14 +450,16 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // because the value is undefined.
       Intrinsic::ID ID = II->getIntrinsicID();
       switch (ID) {
-      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_start: {
         // FIXME: This only considers queries directly on the invariant-tagged
         // pointer, not on query pointers that are indexed off of them.  It'd
         // be nice to handle that at some point (the right approach is to use
         // GetPointerBaseWithConstantOffset).
-        if (BatchAA.isMustAlias(MemoryLocation(II->getArgOperand(1)), MemLoc))
+        MemoryLocation ArgLoc(II->getArgOperand(1), LocationSize::unknown());
+        if (BatchAA.isMustAlias(ArgLoc, MemLoc))
           return MemDepResult::getDef(II);
         continue;
+      }
       case Intrinsic::masked_load:
       case Intrinsic::masked_store: {
         MemoryLocation Loc;

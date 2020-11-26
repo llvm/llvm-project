@@ -70,6 +70,11 @@ bool VETargetLowering::CanLowerReturn(
   return CCInfo.CheckReturn(Outs, RetCC);
 }
 
+static const MVT AllVectorVTs[] = {MVT::v256i32, MVT::v512i32, MVT::v256i64,
+                                   MVT::v256f32, MVT::v512f32, MVT::v256f64};
+
+static const MVT AllMaskVTs[] = {MVT::v256i1, MVT::v512i1};
+
 void VETargetLowering::initRegisterClasses() {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &VE::I32RegClass);
@@ -79,46 +84,10 @@ void VETargetLowering::initRegisterClasses() {
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
   if (Subtarget->enableVPU()) {
-    addRegisterClass(MVT::v2i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v4i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v8i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v16i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v32i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v64i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v128i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v256i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v512i32, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v4i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v8i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v16i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v32i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v64i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v128i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v256i64, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v4f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v8f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v16f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v32f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v64f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v128f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v256f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v512f32, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v4f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v8f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v16f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v32f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v64f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v128f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v256f64, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v256i1, &VE::VMRegClass);
-    addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+    for (MVT VecVT : AllVectorVTs)
+      addRegisterClass(VecVT, &VE::V64RegClass);
+    for (MVT MaskVT : AllMaskVTs)
+      addRegisterClass(MaskVT, &VE::VMRegClass);
   }
 }
 
@@ -285,7 +254,17 @@ void VETargetLowering::initSPUActions() {
 }
 
 void VETargetLowering::initVPUActions() {
-  // TODO upstream vector isel
+  for (MVT LegalVecVT : AllVectorVTs) {
+    setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
+    // Translate all vector instructions with legal element types to VVP_*
+    // nodes.
+    // TODO We will custom-widen into VVP_* nodes in the future. While we are
+    // buildling the infrastructure for this, we only do this for legal vector
+    // VTs.
+#define ADD_VVP_OP(VVP_NAME, ISD_NAME)                                         \
+  setOperationAction(ISD::ISD_NAME, LegalVecVT, Custom);
+#include "VVPNodes.def"
+  }
 }
 
 SDValue
@@ -371,7 +350,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Get the base offset of the incoming arguments stack space.
-  unsigned ArgsBaseOffset = 176;
+  unsigned ArgsBaseOffset = Subtarget->getRsaSize();
   // Get the size of the preserved arguments area
   unsigned ArgsPreserved = 64;
 
@@ -441,7 +420,7 @@ SDValue VETargetLowering::LowerFormalArguments(
     // The registers are exhausted. This argument was passed on the stack.
     assert(VA.isMemLoc());
     // The CC_VE_Full/Half functions compute stack offsets relative to the
-    // beginning of the arguments area at %fp+176.
+    // beginning of the arguments area at %fp + the size of reserved area.
     unsigned Offset = VA.getLocMemOffset() + ArgsBaseOffset;
     unsigned ValSize = VA.getValVT().getSizeInBits() / 8;
 
@@ -476,7 +455,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   // TODO: need to calculate offset correctly once we support f128.
   unsigned ArgOffset = ArgLocs.size() * 8;
   VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
-  // Skip the 176 bytes of register save area.
+  // Skip the reserved area at the top of stack.
   FuncInfo->setVarArgsFrameOffset(ArgOffset + ArgsBaseOffset);
 
   return Chain;
@@ -519,7 +498,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CLI.IsTailCall = false;
 
   // Get the base offset of the outgoing arguments stack space.
-  unsigned ArgsBaseOffset = 176;
+  unsigned ArgsBaseOffset = Subtarget->getRsaSize();
   // Get the size of the preserved arguments area
   unsigned ArgsPreserved = 8 * 8u;
 
@@ -661,8 +640,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // Create a store off the stack pointer for this argument.
     SDValue StackPtr = DAG.getRegister(VE::SX11, PtrVT);
-    // The argument area starts at %fp+176 in the callee frame,
-    // %sp+176 in ours.
+    // The argument area starts at %fp/%sp + the size of reserved area.
     SDValue PtrOff =
         DAG.getIntPtrConstant(VA.getLocMemOffset() + ArgsBaseOffset, DL);
     PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
@@ -831,30 +809,6 @@ bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   return true;
 }
 
-bool VETargetLowering::hasAndNot(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  // VE doesn't have vector and not instruction.
-  if (VT.isVector())
-    return false;
-
-  // VE allows different immediate values for X and Y where ~X & Y.
-  // Only simm7 works for X, and only mimm works for Y on VE.  However, this
-  // function is used to check whether an immediate value is OK for and-not
-  // instruction as both X and Y.  Generating additional instruction to
-  // retrieve an immediate value is no good since the purpose of this
-  // function is to convert a series of 3 instructions to another series of
-  // 3 instructions with better parallelism.  Therefore, we return false
-  // for all immediate values now.
-  // FIXME: Change hasAndNot function to have two operands to make it work
-  //        correctly with Aurora VE.
-  if (isa<ConstantSDNode>(Y))
-    return false;
-
-  // It's ok for generic registers.
-  return true;
-}
-
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
                                    const VESubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -898,8 +852,13 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(GETTLSADDR)
     TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(CALL)
+    TARGET_NODE_CASE(VEC_BROADCAST)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
+
+    // Register the VVP_* SDNodes.
+#define ADD_VVP_OP(VVP_NAME, ...) TARGET_NODE_CASE(VVP_NAME)
+#include "VVPNodes.def"
   }
 #undef TARGET_NODE_CASE
   return nullptr;
@@ -1403,6 +1362,32 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+static SDValue getSplatValue(SDNode *N) {
+  if (auto *BuildVec = dyn_cast<BuildVectorSDNode>(N)) {
+    return BuildVec->getSplatValue();
+  }
+  return SDValue();
+}
+
+SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  unsigned NumEls = Op.getValueType().getVectorNumElements();
+  MVT ElemVT = Op.getSimpleValueType().getVectorElementType();
+
+  if (SDValue ScalarV = getSplatValue(Op.getNode())) {
+    // lower to VEC_BROADCAST
+    MVT LegalResVT = MVT::getVectorVT(ElemVT, 256);
+
+    auto AVL = DAG.getConstant(NumEls, DL, MVT::i32);
+    return DAG.getNode(VEISD::VEC_BROADCAST, DL, LegalResVT, Op.getOperand(0),
+                       AVL);
+  }
+
+  // Expand
+  return SDValue();
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -1423,12 +1408,18 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerJumpTable(Op, DAG);
   case ISD::LOAD:
     return lowerLOAD(Op, DAG);
+  case ISD::BUILD_VECTOR:
+    return lowerBUILD_VECTOR(Op, DAG);
   case ISD::STORE:
     return lowerSTORE(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::VAARG:
     return lowerVAARG(Op, DAG);
+
+#define ADD_BINARY_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
+#include "VVPNodes.def"
+    return lowerToVVP(Op, DAG);
   }
 }
 /// } Custom Lower
@@ -1618,7 +1609,7 @@ SDValue VETargetLowering::PerformDAGCombine(SDNode *N,
 }
 
 //===----------------------------------------------------------------------===//
-//                         VE Inline Assembly Support
+// VE Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
 VETargetLowering::ConstraintType
@@ -1654,4 +1645,90 @@ VETargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+//===----------------------------------------------------------------------===//
+// VE Target Optimization Support
+//===----------------------------------------------------------------------===//
+
+unsigned VETargetLowering::getMinimumJumpTableEntries() const {
+  // Specify 8 for PIC model to relieve the impact of PIC load instructions.
+  if (isJumpTableRelative())
+    return 8;
+
+  return TargetLowering::getMinimumJumpTableEntries();
+}
+
+bool VETargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // VE doesn't have vector and not instruction.
+  if (VT.isVector())
+    return false;
+
+  // VE allows different immediate values for X and Y where ~X & Y.
+  // Only simm7 works for X, and only mimm works for Y on VE.  However, this
+  // function is used to check whether an immediate value is OK for and-not
+  // instruction as both X and Y.  Generating additional instruction to
+  // retrieve an immediate value is no good since the purpose of this
+  // function is to convert a series of 3 instructions to another series of
+  // 3 instructions with better parallelism.  Therefore, we return false
+  // for all immediate values now.
+  // FIXME: Change hasAndNot function to have two operands to make it work
+  //        correctly with Aurora VE.
+  if (isa<ConstantSDNode>(Y))
+    return false;
+
+  // It's ok for generic registers.
+  return true;
+}
+
+/// \returns the VVP_* SDNode opcode corresponsing to \p OC.
+static Optional<unsigned> getVVPOpcode(unsigned OC) {
+  switch (OC) {
+#define ADD_VVP_OP(VVPNAME, SDNAME)                                            \
+  case VEISD::VVPNAME:                                                         \
+  case ISD::SDNAME:                                                            \
+    return VEISD::VVPNAME;
+#include "VVPNodes.def"
+  }
+  return None;
+}
+
+SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
+  // Can we represent this as a VVP node.
+  auto OCOpt = getVVPOpcode(Op->getOpcode());
+  if (!OCOpt.hasValue())
+    return SDValue();
+  unsigned VVPOC = OCOpt.getValue();
+
+  // The representative and legalized vector type of this operation.
+  EVT OpVecVT = Op.getValueType();
+  EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
+
+  // Materialize the VL parameter.
+  SDLoc DL(Op);
+  SDValue AVL = DAG.getConstant(OpVecVT.getVectorNumElements(), DL, MVT::i32);
+  MVT MaskVT = MVT::v256i1;
+  SDValue ConstTrue = DAG.getConstant(1, DL, MVT::i32);
+  SDValue Mask = DAG.getNode(VEISD::VEC_BROADCAST, DL, MaskVT,
+                             ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+
+  // Categories we are interested in.
+  bool IsBinaryOp = false;
+
+  switch (VVPOC) {
+#define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \
+  case VEISD::VVPNAME:                                                         \
+    IsBinaryOp = true;                                                         \
+    break;
+#include "VVPNodes.def"
+  }
+
+  if (IsBinaryOp) {
+    assert(LegalVecVT.isSimple());
+    return DAG.getNode(VVPOC, DL, LegalVecVT, Op->getOperand(0),
+                       Op->getOperand(1), Mask, AVL);
+  }
+  llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }

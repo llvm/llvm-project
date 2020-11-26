@@ -223,7 +223,7 @@ void TableSection::writeBody() {
     limits = {0, tableSize, 0};
   else
     limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
-  writeTableType(os, WasmTable{0, WASM_TYPE_FUNCREF, limits});
+  writeTableType(os, WasmTableType{WASM_TYPE_FUNCREF, limits});
 }
 
 void MemorySection::writeBody() {
@@ -303,6 +303,8 @@ void GlobalSection::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, opcode_ptr_const, "CONST");
       writeSleb128(os, d->getVirtualAddress(), "offset");
     } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+      if (f->isStub)
+        continue;
       // Get __table_base
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, WasmSym::tableBase->getGlobalIndex(), "__table_base");
@@ -329,12 +331,16 @@ void GlobalSection::writeBody() {
   // TODO(wvo): when do these need I64_CONST?
   for (const Symbol *sym : internalGotSymbols) {
     WasmGlobal global;
-    global.Type = {WASM_TYPE_I32, config->isPic};
+    // In the case of dynamic linking, internal GOT entries
+    // need to be mutable since they get updated to the correct
+    // runtime value during `__wasm_apply_relocs`.
+    bool mutable_ = config->isPic & !sym->isStub;
+    global.Type = {WASM_TYPE_I32, mutable_};
     global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     if (auto *d = dyn_cast<DefinedData>(sym))
       global.InitExpr.Value.Int32 = d->getVirtualAddress();
     else if (auto *f = dyn_cast<FunctionSymbol>(sym))
-      global.InitExpr.Value.Int32 = f->getTableIndex();
+      global.InitExpr.Value.Int32 = f->isStub ? 0 : f->getTableIndex();
     else {
       assert(isa<UndefinedData>(sym));
       global.InitExpr.Value.Int32 = 0;
@@ -375,7 +381,10 @@ void StartSection::writeBody() {
 }
 
 void ElemSection::addEntry(FunctionSymbol *sym) {
-  if (sym->hasTableIndex())
+  // Don't add stub functions to the wasm table.  The address of all stub
+  // functions should be zero and they should they don't appear in the table.
+  // They only exist so that the calls to missing functions can validate.
+  if (sym->hasTableIndex() || sym->isStub)
     return;
   sym->setTableIndex(config->tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
@@ -532,8 +541,9 @@ void LinkingSection::addToSymtab(Symbol *sym) {
   symtabEntries.emplace_back(sym);
 }
 
-unsigned NameSection::numNames() const {
+unsigned NameSection::numNamedFunctions() const {
   unsigned numNames = out.importSec->getNumImportedFunctions();
+
   for (const InputFunction *f : out.functionSec->inputFunctions)
     if (!f->getName().empty() || !f->getDebugName().empty())
       ++numNames;
@@ -541,32 +551,74 @@ unsigned NameSection::numNames() const {
   return numNames;
 }
 
+unsigned NameSection::numNamedGlobals() const {
+  unsigned numNames = out.importSec->getNumImportedGlobals();
+
+  for (const InputGlobal *g : out.globalSec->inputGlobals)
+    if (!g->getName().empty())
+      ++numNames;
+
+  numNames += out.globalSec->internalGotSymbols.size();
+  return numNames;
+}
+
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
-  SubSection sub(WASM_NAMES_FUNCTION);
-  writeUleb128(sub.os, numNames(), "name count");
+  unsigned count = numNamedFunctions();
+  if (count) {
+    SubSection sub(WASM_NAMES_FUNCTION);
+    writeUleb128(sub.os, count, "name count");
 
-  // Names must appear in function index order.  As it happens importedSymbols
-  // and inputFunctions are numbered in order with imported functions coming
-  // first.
-  for (const Symbol *s : out.importSec->importedSymbols) {
-    if (auto *f = dyn_cast<FunctionSymbol>(s)) {
-      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-      writeStr(sub.os, toString(*s), "symbol name");
-    }
-  }
-  for (const InputFunction *f : out.functionSec->inputFunctions) {
-    if (!f->getName().empty()) {
-      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-      if (!f->getDebugName().empty()) {
-        writeStr(sub.os, f->getDebugName(), "symbol name");
-      } else {
-        writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+    // Function names appear in function index order.  As it happens
+    // importedSymbols and inputFunctions are numbered in order with imported
+    // functions coming first.
+    for (const Symbol *s : out.importSec->importedSymbols) {
+      if (auto *f = dyn_cast<FunctionSymbol>(s)) {
+        writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+        writeStr(sub.os, toString(*s), "symbol name");
       }
     }
+    for (const InputFunction *f : out.functionSec->inputFunctions) {
+      if (!f->getName().empty()) {
+        writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+        if (!f->getDebugName().empty()) {
+          writeStr(sub.os, f->getDebugName(), "symbol name");
+        } else {
+          writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+        }
+      }
+    }
+    sub.writeTo(bodyOutputStream);
   }
 
-  sub.writeTo(bodyOutputStream);
+  count = numNamedGlobals();
+  if (count) {
+    SubSection sub(WASM_NAMES_GLOBAL);
+    writeUleb128(sub.os, count, "name count");
+
+    for (const Symbol *s : out.importSec->importedSymbols) {
+      if (auto *g = dyn_cast<GlobalSymbol>(s)) {
+        writeUleb128(sub.os, g->getGlobalIndex(), "global index");
+        writeStr(sub.os, toString(*s), "symbol name");
+      }
+    }
+    for (const Symbol *s : out.importSec->gotSymbols) {
+      writeUleb128(sub.os, s->getGOTIndex(), "global index");
+      writeStr(sub.os, toString(*s), "symbol name");
+    }
+    for (const InputGlobal *g : out.globalSec->inputGlobals) {
+      if (!g->getName().empty()) {
+        writeUleb128(sub.os, g->getGlobalIndex(), "global index");
+        writeStr(sub.os, maybeDemangleSymbol(g->getName()), "symbol name");
+      }
+    }
+    for (Symbol *s : out.globalSec->internalGotSymbols) {
+      writeUleb128(sub.os, s->getGOTIndex(), "global index");
+      writeStr(sub.os, toString(*s), "symbol name");
+    }
+
+    sub.writeTo(bodyOutputStream);
+  }
 }
 
 void ProducersSection::addInfo(const WasmProducerInfo &info) {

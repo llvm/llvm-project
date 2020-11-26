@@ -362,8 +362,10 @@ static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
   Instruction *Inst = MD->getMemoryInst();
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_end:
-      return AA.alias(MemoryLocation(II->getArgOperand(1)), Loc) == MustAlias;
+    case Intrinsic::lifetime_end: {
+      MemoryLocation ArgLoc(II->getArgOperand(1), LocationSize::unknown());
+      return AA.alias(ArgLoc, Loc) == MustAlias;
+    }
     default:
       return false;
     }
@@ -376,9 +378,10 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  return isa<LoadInst>(I) && (I->hasMetadata(LLVMContext::MD_invariant_load) ||
-                              AA.pointsToConstantMemory(MemoryLocation(
-                                  cast<LoadInst>(I)->getPointerOperand())));
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return I->hasMetadata(LLVMContext::MD_invariant_load) ||
+           AA.pointsToConstantMemory(MemoryLocation::get(LI));
+  return false;
 }
 
 /// Verifies that `Start` is clobbered by `ClobberAt`, and that nothing

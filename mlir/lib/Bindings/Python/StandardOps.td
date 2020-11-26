@@ -14,7 +14,7 @@
 #ifndef PYTHON_BINDINGS_STANDARD_OPS
 #define PYTHON_BINDINGS_STANDARD_OPS
 
+include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/StandardOps/IR/Ops.td"
-include "Attributes.td"
 
 #endif

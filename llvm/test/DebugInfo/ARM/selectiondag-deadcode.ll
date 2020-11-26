@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
 target triple = "thumbv7-apple-ios7.0.0"
 %class.Matrix3.0.6.10 = type { [9 x float] }
-define arm_aapcscc void @_Z9GetMatrixv(%class.Matrix3.0.6.10* noalias nocapture sret %agg.result) #0 !dbg !39 {
+define arm_aapcscc void @_Z9GetMatrixv(%class.Matrix3.0.6.10* noalias nocapture sret(%class.Matrix3.0.6.10) %agg.result) #0 !dbg !39 {
   br i1 fcmp oeq (float fadd (float fadd (float fmul (float undef, float undef), float fmul (float undef, float undef)), float fmul (float undef, float undef)), float 0.000000e+00), label %_ZN7Vector39NormalizeEv.exit, label %1
   tail call arm_aapcscc void @_ZL4Sqrtd() #3
   br label %_ZN7Vector39NormalizeEv.exit

@@ -16,18 +16,23 @@
 using namespace mlir;
 
 namespace {
-struct ParallelOpConversion : public ConvertToLLVMPattern {
-  explicit ParallelOpConversion(MLIRContext *context,
-                                LLVMTypeConverter &typeConverter)
-      : ConvertToLLVMPattern(omp::ParallelOp::getOperationName(), context,
+/// A pattern that converts the region arguments in a single-region OpenMP
+/// operation to the LLVM dialect. The body of the region is not modified and is
+/// expected to either be processed by the conversion infrastructure or already
+/// contain ops compatible with LLVM dialect types.
+template <typename OpType>
+struct RegionOpConversion : public ConvertToLLVMPattern {
+  explicit RegionOpConversion(MLIRContext *context,
+                              LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(OpType::getOperationName(), context,
                              typeConverter) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto curOp = cast<omp::ParallelOp>(op);
-    auto newOp = rewriter.create<omp::ParallelOp>(curOp.getLoc(), TypeRange(),
-                                                  operands, curOp.getAttrs());
+    auto curOp = cast<OpType>(op);
+    auto newOp = rewriter.create<OpType>(curOp.getLoc(), TypeRange(), operands,
+                                         curOp.getAttrs());
     rewriter.inlineRegionBefore(curOp.region(), newOp.region(),
                                 newOp.region().end());
     if (failed(rewriter.convertRegionTypes(&newOp.region(), typeConverter)))
@@ -42,7 +47,8 @@ struct ParallelOpConversion : public ConvertToLLVMPattern {
 void mlir::populateOpenMPToLLVMConversionPatterns(
     MLIRContext *context, LLVMTypeConverter &converter,
     OwningRewritePatternList &patterns) {
-  patterns.insert<ParallelOpConversion>(context, converter);
+  patterns.insert<RegionOpConversion<omp::ParallelOp>,
+                  RegionOpConversion<omp::WsLoopOp>>(context, converter);
 }
 
 namespace {
@@ -63,8 +69,8 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
   populateOpenMPToLLVMConversionPatterns(context, converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<omp::ParallelOp>(
-      [&](omp::ParallelOp op) { return converter.isLegal(&op.getRegion()); });
+  target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp>(
+      [&](Operation *op) { return converter.isLegal(&op->getRegion(0)); });
   target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
                     omp::BarrierOp, omp::TaskwaitOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))

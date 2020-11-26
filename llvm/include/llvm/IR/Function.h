@@ -472,14 +472,12 @@ public:
 
   /// Extract the byval type for a parameter.
   Type *getParamByValType(unsigned ArgNo) const {
-    Type *Ty = AttributeSets.getParamByValType(ArgNo);
-    return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
+    return AttributeSets.getParamByValType(ArgNo);
   }
 
   /// Extract the sret type for a parameter.
   Type *getParamStructRetType(unsigned ArgNo) const {
-    Type *Ty = AttributeSets.getParamStructRetType(ArgNo);
-    return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
+    return AttributeSets.getParamStructRetType(ArgNo);
   }
 
   /// Extract the byref type for a parameter.

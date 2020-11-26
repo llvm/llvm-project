@@ -57,7 +57,9 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
   const Value *UA = GetUnderlyingObjCPtr(SA);
   const Value *UB = GetUnderlyingObjCPtr(SB);
   if (UA != SA || UB != SB) {
-    Result = AAResultBase::alias(MemoryLocation(UA), MemoryLocation(UB), AAQI);
+    Result = AAResultBase::alias(
+        MemoryLocation(UA, LocationSize::unknown()),
+        MemoryLocation(UB, LocationSize::unknown()), AAQI);
     // We can't use MustAlias or PartialAlias results here because
     // GetUnderlyingObjCPtr may return an offsetted pointer value.
     if (Result == NoAlias)
@@ -85,8 +87,8 @@ bool ObjCARCAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   // ObjC-specific no-ops, and try making an imprecise alias query.
   const Value *U = GetUnderlyingObjCPtr(S);
   if (U != S)
-    return AAResultBase::pointsToConstantMemory(MemoryLocation(U), AAQI,
-                                                OrLocal);
+    return AAResultBase::pointsToConstantMemory(
+        MemoryLocation(U, LocationSize::unknown()), AAQI, OrLocal);
 
   // If that failed, fail. We don't need to chain here, since that's covered
   // by the earlier precise query.

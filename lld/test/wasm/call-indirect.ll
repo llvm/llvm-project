@@ -153,4 +153,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Name:            call_ptr
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...

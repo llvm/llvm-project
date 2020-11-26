@@ -292,8 +292,7 @@ private:
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.
   VPlanPtr buildVPlanWithVPRecipes(
-      VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
-      SmallPtrSetImpl<Instruction *> &DeadInstructions,
+      VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions,
       const DenseMap<Instruction *, Instruction *> &SinkAfter);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,

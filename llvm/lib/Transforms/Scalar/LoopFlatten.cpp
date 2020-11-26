@@ -35,6 +35,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
@@ -66,7 +67,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     WidenIV("loop-flatten-widen-iv", cl::Hidden,
-            cl::init(false),
+            cl::init(true),
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 
@@ -83,6 +84,9 @@ struct FlattenInfo {
   BranchInst *OuterBranch = nullptr;
   SmallPtrSet<Value *, 4> LinearIVUses;
   SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
+
+  // Whether this holds the flatten info before or after widening.
+  bool Widened = false;
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
 };
@@ -335,8 +339,9 @@ static bool checkIVUsers(struct FlattenInfo &FI) {
   // transformation wouldn't be profitable.
 
   Value *InnerLimit = FI.InnerLimit;
-  if (auto *I = dyn_cast<SExtInst>(InnerLimit))
-    InnerLimit = I->getOperand(0);
+  if (FI.Widened &&
+      (isa<SExtInst>(InnerLimit) || isa<ZExtInst>(InnerLimit)))
+    InnerLimit = cast<Instruction>(InnerLimit)->getOperand(0);
 
   // Check that all uses of the inner loop's induction variable match the
   // expected pattern, recording the uses of the outer IV.
@@ -347,7 +352,7 @@ static bool checkIVUsers(struct FlattenInfo &FI) {
 
     // After widening the IVs, a trunc instruction might have been introduced, so
     // look through truncs.
-    if (dyn_cast<TruncInst>(U) ) {
+    if (isa<TruncInst>(U)) {
       if (!U->hasOneUse())
         return false;
       U = *U->user_begin();
@@ -544,20 +549,18 @@ static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
   BranchInst::Create(InnerExitBlock, InnerExitingBlock);
   DT->deleteEdge(InnerExitingBlock, FI.InnerLoop->getHeader());
 
-  auto HasSExtUser = [] (Value *V) -> Value * {
-    for (User *U : V->users() )
-      if (dyn_cast<SExtInst>(U))
-        return U;
-    return nullptr;
-  };
-
   // Replace all uses of the polynomial calculated from the two induction
   // variables with the one new one.
+  IRBuilder<> Builder(FI.OuterInductionPHI->getParent()->getTerminator());
   for (Value *V : FI.LinearIVUses) {
-    // If the induction variable has been widened, look through the SExt.
-    if (Value *U = HasSExtUser(V))
-      V = U;
-    V->replaceAllUsesWith(FI.OuterInductionPHI);
+    Value *OuterValue = FI.OuterInductionPHI;
+    if (FI.Widened)
+      OuterValue = Builder.CreateTrunc(FI.OuterInductionPHI, V->getType(),
+                                       "flatten.trunciv");
+
+    LLVM_DEBUG(dbgs() << "Replacing: "; V->dump();
+               dbgs() << "with:      "; OuterValue->dump());
+    V->replaceAllUsesWith(OuterValue);
   }
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
@@ -613,6 +616,8 @@ static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
     RecursivelyDeleteDeadPHINode(WideIVs[i].NarrowIV);
   }
   // After widening, rediscover all the loop components.
+  assert(Widened && "Widenend IV expected");
+  FI.Widened = true;
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 }
 

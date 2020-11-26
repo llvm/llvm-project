@@ -489,31 +489,31 @@ __OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
 __OMP_RTL(__kmpc_destroy_allocator, false, Void, /* Int */ Int32,
           /* omp_allocator_handle_t */ VoidPtr)
 
-__OMP_RTL(__kmpc_push_target_tripcount, false, Void, Int64, Int64)
-__OMP_RTL(__tgt_target_mapper, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_nowait_mapper, false, Int32, Int64, VoidPtr, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_teams_mapper, false, Int32, Int64, VoidPtr, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, Int32, Int32)
-__OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, Int64, VoidPtr, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, Int32, Int32)
+__OMP_RTL(__kmpc_push_target_tripcount, false, Void, IdentPtr, Int64, Int64)
+__OMP_RTL(__tgt_target_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_nowait_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_teams_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int32, Int32)
+__OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int32, Int32)
 __OMP_RTL(__tgt_register_requires, false, Void, Int64)
-__OMP_RTL(__tgt_target_data_begin_mapper, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_begin_mapper_issue, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, AsyncInfoPtr)
+__OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_begin_mapper_issue, false, Void, IdentPtr, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, AsyncInfoPtr)
 __OMP_RTL(__tgt_target_data_begin_mapper_wait, false, Void, Int64, AsyncInfoPtr)
-__OMP_RTL(__tgt_target_data_end_mapper, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_update_mapper, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_update_nowait_mapper, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_end_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_update_mapper, false, Void, IdentPtr, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_update_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
 __OMP_RTL(__tgt_mapper_num_components, false, Int64, VoidPtr)
 __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
           Int64, Int64)

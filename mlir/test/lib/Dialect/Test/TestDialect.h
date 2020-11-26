@@ -16,7 +16,7 @@
 
 #include "TestInterfaces.h"
 #include "mlir/Dialect/Traits.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"

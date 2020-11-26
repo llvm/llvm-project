@@ -319,14 +319,12 @@ define float @fma_f32(float %a, float %b, float %c) nounwind {
 declare float @llvm.fmuladd.f32(float, float, float)
 
 define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
-; Use of fmadd depends on TargetLowering::isFMAFasterthanFMulAndFAdd
 ; RV32IF-LABEL: fmuladd_f32:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmv.w.x ft0, a2
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
 ; RV32IF-NEXT:    fmv.w.x ft2, a0
-; RV32IF-NEXT:    fmul.s ft1, ft2, ft1
-; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
@@ -335,8 +333,7 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a2
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
 ; RV64IF-NEXT:    fmv.w.x ft2, a0
-; RV64IF-NEXT:    fmul.s ft1, ft2, ft1
-; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %1 = call float @llvm.fmuladd.f32(float %a, float %b, float %c)

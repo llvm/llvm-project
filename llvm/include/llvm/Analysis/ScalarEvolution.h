@@ -600,8 +600,16 @@ public:
     return getConstant(Ty, -1, /*isSigned=*/true);
   }
 
-  /// Return an expression for sizeof AllocTy that is type IntTy
+  /// Return an expression for sizeof ScalableTy that is type IntTy, where
+  /// ScalableTy is a scalable vector type.
+  const SCEV *getSizeOfScalableVectorExpr(Type *IntTy,
+                                          ScalableVectorType *ScalableTy);
+
+  /// Return an expression for the alloc size of AllocTy that is type IntTy
   const SCEV *getSizeOfExpr(Type *IntTy, Type *AllocTy);
+
+  /// Return an expression for the store size of StoreTy that is type IntTy
+  const SCEV *getStoreSizeOfExpr(Type *IntTy, Type *StoreTy);
 
   /// Return an expression for offsetof on the given field with type IntTy
   const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy, unsigned FieldNo);
@@ -954,14 +962,9 @@ public:
   /// monotonically increasing or decreasing, returns
   /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
   /// respectively. If we could not prove either of these facts, returns None.
-  ///
-  /// If NumIter was provided, then we are proving monotonicity during at least
-  /// NumIter first iterations. If it was not provided, then we are proving
-  /// monotonicity on all iteration space.
   Optional<MonotonicPredicateType>
-  getMonotonicPredicateType(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
-                            Optional<const SCEV *> NumIter = None,
-                            const Instruction *Context = nullptr);
+  getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
+                            ICmpInst::Predicate Pred);
 
   struct LoopInvariantPredicate {
     ICmpInst::Predicate Pred;
@@ -1669,7 +1672,14 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsExit,
                                          bool AllowPredicates);
-
+  Optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool ControlsExit, bool AllowPredicates);
+  ExitLimit computeExitLimitFromCondFromBinOpHelper(
+      ExitLimitCacheTy &Cache, const Loop *L, BinaryOperator *BO,
+      bool EitherMayExit, bool ExitIfTrue, bool ControlsExit,
+      bool AllowPredicates, const Constant *NeutralElement);
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
   /// ExitCond and ExitIfTrue. If AllowPredicates is set, this call will try
@@ -1913,9 +1923,9 @@ private:
   /// entry and backedge.
   SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
-  Optional<MonotonicPredicateType> getMonotonicPredicateTypeImpl(
-      const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
-      Optional<const SCEV *> NumIter, const Instruction *Context);
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
+                                ICmpInst::Predicate Pred);
 
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)

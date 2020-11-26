@@ -618,7 +618,7 @@ As well as:
 *   spv.GLSL.SSign
 *   spv.GLSL.FSign
 *   spv.MemoryBarrier
-*   spv._reference_of
+*   spv.mlir.referenceof
 *   spv.SMod
 *   spv.specConstant
 *   spv.SubgroupBallotKHR
@@ -665,7 +665,7 @@ spv.selection {
   spv.Branch ^merge                                     llvm.br ^merge
 
 ^merge:                                               ^merge:
-  spv._merge                                            llvm.br ^continue
+  spv.mlir.merge                                            llvm.br ^continue
 }
 // Remaining code																			^continue:
                                                         // Remaining code
@@ -690,7 +690,7 @@ spv.loop {
   spv.Branch ^header                                    llvm.br ^header
 
 ^merge:                                               ^merge:
-  spv._merge                                            llvm.br ^remaining
+  spv.mlir.merge                                            llvm.br ^remaining
 }
 // Remaining code                                     ^remaining:
                                                         // Remaining code
@@ -787,7 +787,7 @@ Module in SPIR-V has one region that contains one block. It is defined via
 `spv.module` is converted into `ModuleOp`. This plays a role of enclosing scope
 to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
-`spv._module_end` is mapped to an equivalent terminator `ModuleTerminatorOp`.
+`spv.mlir.endmodule` is mapped to an equivalent terminator `ModuleTerminatorOp`.
 
 ## `mlir-spirv-cpu-runner`
 

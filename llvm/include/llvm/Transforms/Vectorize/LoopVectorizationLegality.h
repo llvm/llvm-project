@@ -311,8 +311,8 @@ public:
 
   unsigned getMaxSafeDepDistBytes() { return LAI->getMaxSafeDepDistBytes(); }
 
-  uint64_t getMaxSafeRegisterWidth() const {
-    return LAI->getDepChecker().getMaxSafeRegisterWidth();
+  uint64_t getMaxSafeVectorWidthInBits() const {
+    return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
   bool hasStride(Value *V) { return LAI->hasStride(V); }

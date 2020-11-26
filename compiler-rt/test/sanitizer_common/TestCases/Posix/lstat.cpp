@@ -8,7 +8,11 @@ int main(void) {
   struct stat st;
 
   assert(!lstat("/dev/null", &st));
+#if defined(__sun__) && defined(__svr4__)
+  assert(S_ISLNK(st.st_mode));
+#else
   assert(S_ISCHR(st.st_mode));
+#endif
 
   return 0;
 }

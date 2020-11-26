@@ -91,9 +91,9 @@ entry:
         store i32 %a5, i32* %tmp8, align 16
         %tmp10 = getelementptr %struct.s, %struct.s* %d, i32 0, i32 5
         store i32 %a6, i32* %tmp10, align 16
-        call void @f( %struct.s* byval %d)
-        call void @f( %struct.s* byval %d)
+        call void @f(%struct.s* byval(%struct.s) %d)
+        call void @f(%struct.s* byval(%struct.s) %d)
         ret void
 }
 
-declare void @f(%struct.s* byval)
+declare void @f(%struct.s* byval(%struct.s))

@@ -597,7 +597,13 @@ public:
 
 /// "foo" - Represent an initialization by a string value.
 class StringInit : public TypedInit {
+////  enum StringFormat {
+////    SF_String,  // Format as "text"
+////    SF_Code,    // Format as [{text}]
+////  };
+
   StringRef Value;
+////  StringFormat Format;
 
   explicit StringInit(StringRef V)
       : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
@@ -630,11 +636,10 @@ public:
 
 class CodeInit : public TypedInit {
   StringRef Value;
-  SMLoc Loc;
 
-  explicit CodeInit(StringRef V, const SMLoc &Loc)
+  explicit CodeInit(StringRef V)
       : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
-        Value(V), Loc(Loc) {}
+        Value(V) {}
 
 public:
   CodeInit(const StringInit &) = delete;
@@ -644,10 +649,9 @@ public:
     return I->getKind() == IK_CodeInit;
   }
 
-  static CodeInit *get(StringRef, const SMLoc &Loc);
+  static CodeInit *get(StringRef);
 
   StringRef getValue() const { return Value; }
-  const SMLoc &getLoc() const { return Loc; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
@@ -1648,6 +1652,9 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level methods useful to tablegen back-ends
   //
+
+  ///Return the source location for the named field.
+  SMLoc getFieldLoc(StringRef FieldName) const;
 
   /// Return the initializer for a value with the specified name,
   /// or throw an exception if the field does not exist.

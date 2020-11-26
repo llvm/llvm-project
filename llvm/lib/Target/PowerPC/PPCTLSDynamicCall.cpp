@@ -111,8 +111,8 @@ protected:
           Opc1 = PPC::PADDI8pc;
           Opc2 = MI.getOperand(2).getTargetFlags() ==
                          PPCII::MO_GOT_TLSGD_PCREL_FLAG
-                     ? PPC::GETtlsADDR
-                     : PPC::GETtlsldADDR;
+                     ? PPC::GETtlsADDRPCREL
+                     : PPC::GETtlsldADDRPCREL;
         }
 
         // We create ADJCALLSTACKUP and ADJCALLSTACKDOWN around _tls_get_addr

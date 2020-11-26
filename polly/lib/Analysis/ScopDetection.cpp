@@ -1129,7 +1129,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
   AAMDNodes AATags;
   Inst->getAAMetadata(AATags);
   AliasSet &AS = Context.AST.getAliasSetFor(
-      MemoryLocation(BP->getValue(), MemoryLocation::UnknownSize, AATags));
+      MemoryLocation(BP->getValue(), LocationSize::unknown(), AATags));
 
   if (!AS.isMustAlias()) {
     if (PollyUseRuntimeAliasChecks) {

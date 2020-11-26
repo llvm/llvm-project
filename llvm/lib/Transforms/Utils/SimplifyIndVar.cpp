@@ -1540,31 +1540,6 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
   bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
   auto AnotherOpExtKind = ExtKind;
-  if (!CanSignExtend && !CanZeroExtend) {
-    // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
-    // will most likely not see it. Let's try to prove it.
-    if (OpCode != Instruction::Add)
-      return false;
-    if (ExtKind != ZeroExtended)
-      return false;
-    const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
-    const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
-    if (!SE->isKnownNegative(RHS))
-      return false;
-    bool ProvedSubNUW = SE->isKnownPredicateAt(
-        ICmpInst::ICMP_UGE, LHS, SE->getNegativeSCEV(RHS), NarrowUse);
-    if (!ProvedSubNUW)
-      return false;
-    // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
-    // neg(zext(neg(op))), which is basically sext(op).
-    AnotherOpExtKind = SignExtended;
-  }
-
-  // Verifying that Defining operand is an AddRec
-  const SCEV *Op1 = SE->getSCEV(WideDef);
-  const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
-  if (!AddRecOp1 || AddRecOp1->getLoop() != L)
-    return false;
 
   // Check that all uses are either s/zext, or narrow def (in case of we are
   // widening the IV increment).
@@ -1581,6 +1556,51 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     ExtUsers.push_back(User);
   }
+  if (ExtUsers.empty()) {
+    DeadInsts.emplace_back(NarrowUse);
+    return true;
+  }
+
+  // We'll prove some facts that should be true in the context of ext users. If
+  // there is no users, we are done now. If there are some, pick their common
+  // dominator as context.
+  Instruction *Context = nullptr;
+  for (auto *Ext : ExtUsers) {
+    if (!Context || DT->dominates(Ext, Context))
+      Context = Ext;
+    else if (!DT->dominates(Context, Ext))
+      // For users that don't have dominance relation, use common dominator.
+      Context =
+          DT->findNearestCommonDominator(Context->getParent(), Ext->getParent())
+              ->getTerminator();
+  }
+  assert(Context && "Context not found?");
+
+  if (!CanSignExtend && !CanZeroExtend) {
+    // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
+    // will most likely not see it. Let's try to prove it.
+    if (OpCode != Instruction::Add)
+      return false;
+    if (ExtKind != ZeroExtended)
+      return false;
+    const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
+    const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
+    if (!SE->isKnownNegative(RHS))
+      return false;
+    bool ProvedSubNUW = SE->isKnownPredicateAt(
+        ICmpInst::ICMP_UGE, LHS, SE->getNegativeSCEV(RHS), Context);
+    if (!ProvedSubNUW)
+      return false;
+    // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
+    // neg(zext(neg(op))), which is basically sext(op).
+    AnotherOpExtKind = SignExtended;
+  }
+
+  // Verifying that Defining operand is an AddRec
+  const SCEV *Op1 = SE->getSCEV(WideDef);
+  const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
+  if (!AddRecOp1 || AddRecOp1->getLoop() != L)
+    return false;
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 

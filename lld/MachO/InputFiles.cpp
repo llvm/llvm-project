@@ -43,7 +43,7 @@
 
 #include "InputFiles.h"
 #include "Config.h"
-#include "DriverUtils.h"
+#include "Driver.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "MachOStructs.h"

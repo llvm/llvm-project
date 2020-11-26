@@ -68,7 +68,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* noalias sret %agg.result) #0 !dbg !14 {
+define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* noalias sret(%struct.Foo) %agg.result) #0 !dbg !14 {
 entry:
   %result.ptr = alloca i8*, align 8
   %0 = bitcast %struct.Foo* %agg.result to i8*
@@ -89,7 +89,7 @@ entry:
   %bar = alloca %struct.Foo, align 4
   store i32 0, i32* %retval, align 4
   call void @llvm.dbg.declare(metadata %struct.Foo* %bar, metadata !36, metadata !DIExpression()), !dbg !37
-  call void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* sret %bar), !dbg !37
+  call void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* sret(%struct.Foo) %bar), !dbg !37
   %x = getelementptr inbounds %struct.Foo, %struct.Foo* %bar, i32 0, i32 0, !dbg !38
   %0 = load i32, i32* %x, align 4, !dbg !38
   ret i32 %0, !dbg !38

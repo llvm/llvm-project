@@ -2,7 +2,7 @@
 
 %struct.sret0 = type { i32, i32, i32 }
 
-define void @test0(%struct.sret0* noalias sret %agg.result, i32 %dummy) nounwind {
+define void @test0(%struct.sret0* noalias sret(%struct.sret0) %agg.result, i32 %dummy) nounwind {
 entry:
 ; CHECK: sw ${{[0-9]+}}, {{[0-9]+}}($4)
 ; CHECK: sw ${{[0-9]+}}, {{[0-9]+}}($4)

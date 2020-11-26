@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BWVL
 
 ;
 ; vXi64
@@ -1122,22 +1122,43 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX2-NEXT:    movl $1, %eax
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: mask_v3i1:
-; AVX512:       # %bb.0:
-; AVX512:         vpcmpneqd %{{.}}mm1, %{{.}}mm0, %k0
-; AVX512-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    testb $1, %al
-; AVX512-NEXT:    je .LBB27_2
-; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512:         retq
-; AVX512-NEXT:  .LBB27_2:
-; AVX512-NEXT:    movl $1, %eax
-; AVX512:         retq
+; AVX512BW-LABEL: mask_v3i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k1
+; AVX512BW-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512BW-NEXT:    korw %k0, %k1, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testb $1, %al
+; AVX512BW-NEXT:    je .LBB27_2
+; AVX512BW-NEXT:  # %bb.1:
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:  .LBB27_2:
+; AVX512BW-NEXT:    movl $1, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: mask_v3i1:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
+; AVX512BWVL-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512BWVL-NEXT:    korw %k1, %k0, %k1
+; AVX512BWVL-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512BWVL-NEXT:    korw %k0, %k1, %k0
+; AVX512BWVL-NEXT:    kmovd %k0, %eax
+; AVX512BWVL-NEXT:    testb $1, %al
+; AVX512BWVL-NEXT:    je .LBB27_2
+; AVX512BWVL-NEXT:  # %bb.1:
+; AVX512BWVL-NEXT:    xorl %eax, %eax
+; AVX512BWVL-NEXT:    retq
+; AVX512BWVL-NEXT:  .LBB27_2:
+; AVX512BWVL-NEXT:    movl $1, %eax
+; AVX512BWVL-NEXT:    retq
   %1 = icmp ne <3 x i32> %a, %b
   %2 = call i1 @llvm.vector.reduce.or.v3i1(<3 x i1> %1)
   br i1 %2, label %3, label %4

@@ -286,10 +286,14 @@ const DWARFUnitIndex::Entry *DWARFUnitIndex::getFromHash(uint64_t S) const {
 
   auto H = S & Mask;
   auto HP = ((S >> 32) & Mask) | 1;
-  while (Rows[H].getSignature() != S && Rows[H].getSignature() != 0)
+  // The spec says "while 0 is a valid hash value, the row index in a used slot
+  // will always be non-zero". Loop until we find a match or an empty slot.
+  while (Rows[H].getSignature() != S && Rows[H].Index != nullptr)
     H = (H + HP) & Mask;
 
-  if (Rows[H].getSignature() != S)
+  // If the slot is empty, we don't care whether the signature matches (it could
+  // be zero and still match the zeros in the empty slot).
+  if (Rows[H].Index == nullptr)
     return nullptr;
 
   return &Rows[H];

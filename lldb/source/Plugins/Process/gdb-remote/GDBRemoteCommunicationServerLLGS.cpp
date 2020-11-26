@@ -2605,6 +2605,17 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
       response.PutChar(';');
     }
 
+    // Flags
+    MemoryRegionInfo::OptionalBool memory_tagged =
+        region_info.GetMemoryTagged();
+    if (memory_tagged != MemoryRegionInfo::eDontKnow) {
+      response.PutCString("flags:");
+      if (memory_tagged == MemoryRegionInfo::eYes) {
+        response.PutCString("mt");
+      }
+      response.PutChar(';');
+    }
+
     // Name
     ConstString name = region_info.GetName();
     if (name) {

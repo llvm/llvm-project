@@ -1815,6 +1815,19 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setType(DstReg, LLT::scalar(64));
     return true;
   }
+  case AArch64::G_DUP: {
+    // Convert the type from p0 to s64 to help selection.
+    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    if (!DstTy.getElementType().isPointer())
+      return false;
+    MachineIRBuilder MIB(I);
+    auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(1).getReg());
+    MRI.setType(I.getOperand(0).getReg(),
+                DstTy.changeElementType(LLT::scalar(64)));
+    MRI.setRegBank(NewSrc.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
+    I.getOperand(1).setReg(NewSrc.getReg(0));
+    return true;
+  }
   default:
     return false;
   }
@@ -3651,7 +3664,7 @@ bool AArch64InstructionSelector::selectExtractElt(
   (void)WideTy;
   assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
          "source register size too small!");
-  assert(NarrowTy.isScalar() && "cannot extract vector into vector!");
+  assert(!NarrowTy.isVector() && "cannot extract vector into vector!");
 
   // Need the lane index to determine the correct copy opcode.
   MachineOperand &LaneIdxOp = I.getOperand(2);

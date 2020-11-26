@@ -11,11 +11,11 @@ target triple = "wasm32-unknown-unknown"
 %EmptyStruct = type { }
 
 declare void @ext_func(%SmallStruct*)
-declare void @ext_func_empty(%EmptyStruct* byval)
-declare void @ext_byval_func(%SmallStruct* byval)
-declare void @ext_byval_func_align8(%SmallStruct* byval align 8)
-declare void @ext_byval_func_alignedstruct(%AlignedStruct* byval)
-declare void @ext_byval_func_empty(%EmptyStruct* byval)
+declare void @ext_func_empty(%EmptyStruct* byval(%EmptyStruct))
+declare void @ext_byval_func(%SmallStruct* byval(%SmallStruct))
+declare void @ext_byval_func_align8(%SmallStruct* byval(%SmallStruct) align 8)
+declare void @ext_byval_func_alignedstruct(%AlignedStruct* byval(%AlignedStruct))
+declare void @ext_byval_func_empty(%EmptyStruct* byval(%EmptyStruct))
 
 ; CHECK-LABEL: byval_arg
 define void @byval_arg(%SmallStruct* %ptr) {
@@ -34,7 +34,7 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 12{{$}}
  ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, $[[SP]], $pop[[L5]]{{$}}
  ; CHECK-NEXT: call ext_byval_func, $pop[[ARG]]{{$}}
- call void @ext_byval_func(%SmallStruct* byval %ptr)
+ call void @ext_byval_func(%SmallStruct* byval(%SmallStruct) %ptr)
  ; Restore the stack
  ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[L8:.+]]=, $[[SP]], $pop[[L6]]
@@ -58,7 +58,7 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 8{{$}}
  ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, $[[SP]], $pop[[L5]]{{$}}
  ; CHECK-NEXT: call ext_byval_func_align8, $pop[[ARG]]{{$}}
- call void @ext_byval_func_align8(%SmallStruct* byval align 8 %ptr)
+ call void @ext_byval_func_align8(%SmallStruct* byval(%SmallStruct) align 8 %ptr)
  ret void
 }
 
@@ -76,12 +76,12 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
  ; CHECK-NEXT: i64.store 0($[[SP]]), $pop[[L4]]
  ; Pass a pointer to the stack slot to the function
  ; CHECK-NEXT: call ext_byval_func_alignedstruct, $[[SP]]
- tail call void @ext_byval_func_alignedstruct(%AlignedStruct* byval %ptr)
+ tail call void @ext_byval_func_alignedstruct(%AlignedStruct* byval(%AlignedStruct) %ptr)
  ret void
 }
 
 ; CHECK-LABEL: byval_param
-define void @byval_param(%SmallStruct* byval align 32 %ptr) {
+define void @byval_param(%SmallStruct* byval(%SmallStruct) align 32 %ptr) {
  ; CHECK: .functype byval_param (i32) -> ()
  ; %ptr is just a pointer to a struct, so pass it directly through
  ; CHECK: call ext_func, $0
@@ -93,12 +93,12 @@ define void @byval_param(%SmallStruct* byval align 32 %ptr) {
 define void @byval_empty_caller(%EmptyStruct* %ptr) {
  ; CHECK: .functype byval_empty_caller (i32) -> ()
  ; CHECK: call ext_byval_func_empty, $0
- call void @ext_byval_func_empty(%EmptyStruct* byval %ptr)
+ call void @ext_byval_func_empty(%EmptyStruct* byval(%EmptyStruct) %ptr)
  ret void
 }
 
 ; CHECK-LABEL: byval_empty_callee
-define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
+define void @byval_empty_callee(%EmptyStruct* byval(%EmptyStruct) %ptr) {
  ; CHECK: .functype byval_empty_callee (i32) -> ()
  ; CHECK: call ext_func_empty, $0
  call void @ext_func_empty(%EmptyStruct* %ptr)
@@ -117,8 +117,8 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
 ; CHECK-NEXT: local.tee      $push[[L9:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
 ; CHECK-NEXT: call           big_byval_callee,
 %big = type [131072 x i8]
-declare void @big_byval_callee(%big* byval align 1)
-define void @big_byval(%big* byval align 1 %x) {
-  call void @big_byval_callee(%big* byval align 1 %x)
+declare void @big_byval_callee(%big* byval(%big) align 1)
+define void @big_byval(%big* byval(%big) align 1 %x) {
+  call void @big_byval_callee(%big* byval(%big) align 1 %x)
   ret void
 }

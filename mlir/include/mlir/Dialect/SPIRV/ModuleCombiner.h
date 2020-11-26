@@ -28,7 +28,7 @@ class ModuleOp;
 /// combination process proceeds in 2 phases:
 ///
 ///   (1) resolve conflicts between pairs of ops from different modules
-///   (2) deduplicate equivalent ops/sub-ops in the merged module. (TODO)
+///   (2) deduplicate equivalent ops/sub-ops in the merged module.
 ///
 /// For the conflict resolution phase, the following rules are employed to
 /// resolve such conflicts:
@@ -39,13 +39,22 @@ class ModuleOp;
 ///   other symbol.
 ///   - If none of the 2 conflicting ops are spv.func, then rename either.
 ///
-/// In all cases, the references to the updated symbol are also updated to
-/// reflect the change.
+/// For deduplication, the following 3 cases are taken into consideration:
+///
+///   - If 2 spv.globalVariable's have either the same descriptor set + binding
+///   or the same build_in attribute value, then replace one of them using the
+///   other.
+///   - If 2 spv.specConstant's have the same spec_id attribute value, then
+///   replace one of them using the other.
+///   - If 2 spv.func's are identical replace one of them using the other.
+///
+/// In all cases, the references to the updated symbol (whether renamed or
+/// deduplicated) are also updated to reflect the change.
 ///
 /// \param modules the list of modules to combine. Input modules are not
 /// modified.
 /// \param combinedMdouleBuilder an OpBuilder to be used for
-/// building up the combined module.
+//                               building up the combined module.
 /// \param symbRenameListener a listener that gets called everytime a symbol in
 ///                           one of the input modules is renamed. The arguments
 ///                           passed to the listener are: the input

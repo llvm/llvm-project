@@ -148,7 +148,7 @@ Optional<RewriteRule> noSkip(const LangOptions &LangOpts,
   if (Options.get("Skip", "false") == "true")
     return None;
   return tooling::makeRule(clang::ast_matchers::functionDecl(),
-                           change(cat("void nothing()")), cat("no message"));
+                           changeTo(cat("void nothing();")), cat("no message"));
 }
 
 class ConfigurableCheck : public TransformerClangTidyCheck {

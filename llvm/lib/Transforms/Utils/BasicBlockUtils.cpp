@@ -237,7 +237,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     // times. We add inserts before deletes here to reduce compile time.
     for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
       // This successor of BB may already have PredBB as a predecessor.
-      if (llvm::find(successors(PredBB), *I) == succ_end(PredBB))
+      if (!llvm::is_contained(successors(PredBB), *I))
         Updates.push_back({DominatorTree::Insert, PredBB, *I});
     for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
       Updates.push_back({DominatorTree::Delete, BB, *I});

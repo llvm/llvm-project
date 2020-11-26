@@ -92,6 +92,7 @@ if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     Attribute
     AnnotateFunctions
+    CallSuperAttr
     clang-interpreter
     PrintFunctionNames
     )
@@ -123,6 +124,8 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-readobj
     llvm-symbolizer
     opt
+    split-file
+    yaml2obj
     )
 
   if(TARGET llvm-lto)

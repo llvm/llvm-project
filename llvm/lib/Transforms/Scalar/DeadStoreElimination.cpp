@@ -275,7 +275,7 @@ static MemoryLocation getLocForWrite(Instruction *Inst,
     default:
       return MemoryLocation(); // Unhandled intrinsic.
     case Intrinsic::init_trampoline:
-      return MemoryLocation(II->getArgOperand(0));
+      return MemoryLocation(II->getArgOperand(0), LocationSize::unknown());
     case Intrinsic::masked_store:
       return MemoryLocation::getForArgument(II, 1, TLI);
     case Intrinsic::lifetime_end: {
@@ -287,7 +287,7 @@ static MemoryLocation getLocForWrite(Instruction *Inst,
   if (auto *CB = dyn_cast<CallBase>(Inst))
     // All the supported TLI functions so far happen to have dest as their
     // first argument.
-    return MemoryLocation(CB->getArgOperand(0));
+    return MemoryLocation(CB->getArgOperand(0), LocationSize::unknown());
   return MemoryLocation();
 }
 
@@ -828,7 +828,8 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
                        MapVector<Instruction *, bool> &ThrowableInst) {
   bool MadeChange = false;
 
-  MemoryLocation Loc = MemoryLocation(F->getOperand(0));
+  MemoryLocation Loc = MemoryLocation(F->getOperand(0),
+                                      LocationSize::unknown());
   SmallVector<BasicBlock *, 16> Blocks;
   Blocks.push_back(F->getParent());
 
@@ -1725,14 +1726,15 @@ struct DSEState {
         case LibFunc_strncpy:
         case LibFunc_strcat:
         case LibFunc_strncat:
-          return {MemoryLocation(CB->getArgOperand(0))};
+          return {MemoryLocation(CB->getArgOperand(0),
+                                 LocationSize::unknown())};
         default:
           break;
         }
       }
       switch (CB->getIntrinsicID()) {
       case Intrinsic::init_trampoline:
-        return {MemoryLocation(CB->getArgOperand(0))};
+        return {MemoryLocation(CB->getArgOperand(0), LocationSize::unknown())};
       case Intrinsic::masked_store:
         return {MemoryLocation::getForArgument(CB, 1, TLI)};
       default:
@@ -1827,7 +1829,9 @@ struct DSEState {
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
       if (isFreeCall(I, &TLI))
-        return {std::make_pair(MemoryLocation(CB->getArgOperand(0)), true)};
+        return {std::make_pair(MemoryLocation(CB->getArgOperand(0),
+                                              LocationSize::unknown()),
+                               true)};
     }
 
     return None;

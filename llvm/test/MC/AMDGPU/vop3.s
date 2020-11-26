@@ -599,7 +599,7 @@ v_mad_i16_e64 v5, -1, v2, v3
 // NOSICI: error: instruction not supported on this GPU
 
 v_mad_i16 v5, v1, -4.0, v3
-// NOVI: error: invalid literal operand
+// NOVI: error: literal operands are not supported
 // NOSICI: error: instruction not supported on this GPU
 
 v_mad_i16 v5, v1, v2, 0
@@ -615,7 +615,7 @@ v_mad_u16 v5, v1, 0, v3
 // NOSICI: error: instruction not supported on this GPU
 
 v_mad_u16 v5, v1, v2, -4.0
-// NOVI: error: invalid literal operand
+// NOVI: error: literal operands are not supported
 // NOSICI: error: instruction not supported on this GPU
 
 ///===---------------------------------------------------------------------===//

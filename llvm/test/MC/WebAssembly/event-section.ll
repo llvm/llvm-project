@@ -56,4 +56,4 @@ define i32 @test_throw1(i8* %p) {
 
 ; SEC:          Type: EVENT (0xD)
 ; SEC-NEXT:     Size: 3
-; SEC-NEXT:     Offset: 97
+; SEC-NEXT:     Offset: 63

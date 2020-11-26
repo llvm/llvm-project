@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -267,6 +267,10 @@ struct PointwiseExtractPattern : public OpRewritePattern<ExtractMapOp> {
 private:
   FilterConstraintType filter;
 };
+
+/// Implements transfer op write to read forwarding and dead transfer write
+/// optimizations.
+void transferOpflowOpt(FuncOp func);
 
 } // namespace vector
 

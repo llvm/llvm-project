@@ -327,6 +327,49 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+define void @test.not.uge.uge.nonconst(i8* %start, i8* %low, i8* %high, i64 %off) {
+; CHECK-LABEL: @test.not.uge.uge.nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, i8* [[START:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8* [[ADD_PTR_I]], [[HIGH:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[START_OFF_2:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 [[OFF]]
+; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8* [[START_OFF_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    [[START_1:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 1
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge i8* [[START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    [[START_OFF:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 [[OFF]]
+; CHECK-NEXT:    [[F_0:%.*]] = icmp uge i8* [[START_OFF]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add.ptr.i = getelementptr inbounds i8, i8* %start, i64 %off
+  %c.1 = icmp uge i8* %add.ptr.i, %high
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %start.off.2 = getelementptr inbounds i8, i8* %start, i64 %off
+  %t.0 = icmp uge i8* %start.off.2, %high
+  call void @use(i1 %t.0)
+
+  ret void
+
+if.end:                                           ; preds = %entry
+  %start.1 = getelementptr inbounds i8, i8* %start, i64 1
+  %c.0 = icmp uge i8* %start.1, %high
+  call void @use(i1 %c.0)
+
+  %start.off = getelementptr inbounds i8, i8* %start, i64 %off
+  %f.0 = icmp uge i8* %start.off, %high
+  call void @use(i1 %f.0)
+
+  ret void
+}
 
 declare void @use(i1)
 declare void @llvm.trap()

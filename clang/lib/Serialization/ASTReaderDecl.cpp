@@ -868,7 +868,10 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setInlineSpecified(Record.readInt());
   FD->setImplicitlyInline(Record.readInt());
   FD->setVirtualAsWritten(Record.readInt());
-  FD->setPure(Record.readInt());
+  // We defer calling `FunctionDecl::setPure()` here as for methods of
+  // `CXXTemplateSpecializationDecl`s, we may not have connected up the
+  // definition (which is required for `setPure`).
+  const bool Pure = Record.readInt();
   FD->setHasInheritedPrototype(Record.readInt());
   FD->setHasWrittenPrototype(Record.readInt());
   FD->setDeletedAsWritten(Record.readInt());
@@ -1014,6 +1017,10 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     break;
   }
   }
+
+  // Defer calling `setPure` until merging above has guaranteed we've set
+  // `DefinitionData` (as this will need to access it).
+  FD->setPure(Pure);
 
   // Read in the parameters.
   unsigned NumParams = Record.readInt();

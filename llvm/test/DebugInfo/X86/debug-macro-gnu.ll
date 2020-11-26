@@ -1,6 +1,6 @@
 ; This test checks emission of the GNU extension for the .debug_macro section.
 
-; RUN: %llc_dwarf -dwarf-version=4 -O0 -use-gnu-debug-macro -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -dwarf-version=4 -O0 -use-gnu-debug-macro -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK-LABEL:  .debug_info contents:
 ; CHECK: DW_AT_GNU_macros [DW_FORM_sec_offset] (0x00000000)

@@ -330,6 +330,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, MATTR));
+  assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
@@ -373,6 +374,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<buffer_ostream> BOS;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
+  assert(MCII && "Unable to create instruction info!");
 
   std::unique_ptr<MCInstrAnalysis> MCIA(
       TheTarget->createMCInstrAnalysis(MCII.get()));
@@ -443,9 +445,11 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCCodeEmitter> MCE(
       TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+  assert(MCE && "Unable to create code emitter!");
 
   std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
       *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
+  assert(MAB && "Unable to create asm backend!");
 
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
     // Skip empty code regions.

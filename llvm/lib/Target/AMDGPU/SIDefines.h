@@ -33,26 +33,27 @@ enum : uint64_t {
   VOP2 = 1 << 8,
   VOPC = 1 << 9,
 
- // TODO: Should this be spilt into VOP3 a and b?
+  // TODO: Should this be spilt into VOP3 a and b?
   VOP3 = 1 << 10,
   VOP3P = 1 << 12,
 
   VINTRP = 1 << 13,
   SDWA = 1 << 14,
   DPP = 1 << 15,
+  TRANS = 1 << 16,
 
   // Memory instruction formats.
-  MUBUF = 1 << 16,
-  MTBUF = 1 << 17,
-  SMRD = 1 << 18,
-  MIMG = 1 << 19,
-  EXP = 1 << 20,
-  FLAT = 1 << 21,
-  DS = 1 << 22,
+  MUBUF = 1 << 17,
+  MTBUF = 1 << 18,
+  SMRD = 1 << 19,
+  MIMG = 1 << 20,
+  EXP = 1 << 21,
+  FLAT = 1 << 22,
+  DS = 1 << 23,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 23,
-  SGPRSpill = 1 << 24,
+  VGPRSpill = 1 << 24,
+  SGPRSpill = 1 << 25,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,

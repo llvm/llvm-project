@@ -1649,8 +1649,9 @@ void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
   // TODO: Should VirtualFunctionElimination also be supported here?
   // See similar handling in CodeGenModule::EmitVTableTypeMetadata.
   if (CGM.getCodeGenOpts().WholeProgramVTables) {
+    llvm::DenseSet<const CXXRecordDecl *> Visited;
     llvm::GlobalObject::VCallVisibility TypeVis =
-        CGM.GetVCallVisibilityLevel(RD);
+        CGM.GetVCallVisibilityLevel(RD, Visited);
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
       VTable->setVCallVisibilityMetadata(TypeVis);
   }

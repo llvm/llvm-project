@@ -779,13 +779,13 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
         if (TLI.getPointerTy(DL) == MVT::i64) {
           Opc = X86::MOV64rm;
           RC  = &X86::GR64RegClass;
-
-          if (Subtarget->isPICStyleRIPRel())
-            StubAM.Base.Reg = X86::RIP;
         } else {
           Opc = X86::MOV32rm;
           RC  = &X86::GR32RegClass;
         }
+
+        if (Subtarget->isPICStyleRIPRel())
+          StubAM.Base.Reg = X86::RIP;
 
         LoadReg = createResultReg(RC);
         MachineInstrBuilder LoadMI =

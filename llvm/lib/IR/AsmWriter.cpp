@@ -1455,6 +1455,13 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
+  if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV)) {
+    Out << "dso_local_equivalent ";
+    WriteAsOperandInternal(Out, Equiv->getGlobalValue(), &TypePrinter, Machine,
+                           Context);
+    return;
+  }
+
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
     Type *ETy = CA->getType()->getElementType();
     Out << '[';
@@ -1558,6 +1565,11 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
 
   if (isa<ConstantTokenNone>(CV)) {
     Out << "none";
+    return;
+  }
+
+  if (isa<PoisonValue>(CV)) {
+    Out << "poison";
     return;
   }
 

@@ -67,10 +67,15 @@ struct WasmLimits {
   uint64_t Maximum;
 };
 
-struct WasmTable {
-  uint32_t Index;
+struct WasmTableType {
   uint8_t ElemType;
   WasmLimits Limits;
+};
+
+struct WasmTable {
+  uint32_t Index;
+  WasmTableType Type;
+  StringRef SymbolName; // from the "linking" section
 };
 
 struct WasmInitExpr {
@@ -115,7 +120,7 @@ struct WasmImport {
   union {
     uint32_t SigIndex;
     WasmGlobalType Global;
-    WasmTable Table;
+    WasmTableType Table;
     WasmLimits Memory;
     WasmEventType Event;
   };
@@ -195,7 +200,13 @@ struct WasmSymbolInfo {
   };
 };
 
-struct WasmFunctionName {
+enum class NameType {
+  FUNCTION,
+  GLOBAL
+};
+
+struct WasmDebugName {
+  NameType Type;
   uint32_t Index;
   StringRef Name;
 };
@@ -303,6 +314,7 @@ enum : uint8_t {
 enum : unsigned {
   WASM_NAMES_FUNCTION = 0x1,
   WASM_NAMES_LOCAL = 0x2,
+  WASM_NAMES_GLOBAL = 0x7,
 };
 
 // Kind codes used in the custom "linking" section

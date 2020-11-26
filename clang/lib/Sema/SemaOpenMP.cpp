@@ -5942,7 +5942,7 @@ void Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
       llvm::omp::TraitProperty::implementation_extension_disable_implicit_base);
   // If no base was found we create a declaration that we use as base.
   if (Bases.empty() && UseImplicitBase) {
-    D.setFunctionDefinitionKind(FDK_Declaration);
+    D.setFunctionDefinitionKind(FunctionDefinitionKind::Declaration);
     Decl *BaseD = HandleDeclarator(S, D, TemplateParamLists);
     BaseD->setImplicit(true);
     if (auto *BaseTemplD = dyn_cast<FunctionTemplateDecl>(BaseD))

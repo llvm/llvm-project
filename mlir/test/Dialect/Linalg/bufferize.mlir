@@ -45,6 +45,7 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xf32>, memref<4xf32>)
+// CHECK-NEXT: ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
 func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
     %0, %1 = linalg.generic {
       indexing_maps = [#map0, #map0, #map0],
@@ -55,6 +56,31 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
         linalg.yield %tmp1, %tmp1 : f32, f32
     } -> tensor<4xf32>, tensor<4xf32>
     return %0, %1 : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL:   func @multiple_results_indexed
+// CHECK:           %[[RESULT0:.*]] = alloc() : memref<4xi32>
+// CHECK:           %[[RESULT1:.*]] = alloc() : memref<4xi32>
+// CHECK:           linalg.indexed_generic
+// CHECK-SAME:      ins(%{{.*}} : memref<4xi32>)
+// CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xi32>, memref<4xi32>)
+// CHECK-NEXT: ^bb0(%{{.*}}: index, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32):
+func @multiple_results_indexed(%arg0: tensor<4xi32>)
+        -> (tensor<4xi32>, tensor<4xi32>) {
+    %0, %1 = linalg.indexed_generic {
+      indexing_maps = [#map0, #map0, #map0],
+      iterator_types = ["parallel"]
+    } ins(%arg0 : tensor<4xi32>) {
+      ^bb0(%i: index, %gen_arg1: i32):
+        %i_i32 = index_cast %i : index to i32
+        %tmp1 = addi %gen_arg1, %i_i32 : i32
+        linalg.yield %tmp1, %tmp1 : i32, i32
+    } -> tensor<4xi32>, tensor<4xi32>
+    return %0, %1 : tensor<4xi32>, tensor<4xi32>
 }
 
 // -----

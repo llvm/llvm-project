@@ -6,7 +6,7 @@
 ; users of byval alignments > 4, so no real calls for ABI stability.
 
 ; "byval align 16" can't fit in any regs with an i8* taking up r0.
-define i32 @test_align16(i8*, [4 x i32]* byval align 16 %b) {
+define i32 @test_align16(i8*, [4 x i32]* byval([4 x i32]) align 16 %b) {
 ; CHECK-LABEL: test_align16:
 ; CHECK-NOT: sub sp
 ; CHECK: push {r4, r7, lr}
@@ -22,7 +22,7 @@ define i32 @test_align16(i8*, [4 x i32]* byval align 16 %b) {
 
 ; byval align 8 can, but we used to incorrectly set r7 here (miscalculating the
 ; space taken up by arg regs).
-define i32 @test_align8(i8*, [4 x i32]* byval align 8 %b) {
+define i32 @test_align8(i8*, [4 x i32]* byval([4 x i32]) align 8 %b) {
 ; CHECK-LABEL: test_align8:
 ; CHECK: sub sp, #8
 ; CHECK: push {r4, r7, lr}
@@ -40,7 +40,7 @@ define i32 @test_align8(i8*, [4 x i32]* byval align 8 %b) {
 
 ; "byval align 32" can't fit in regs no matter what: it would be misaligned
 ; unless the incoming stack was deliberately misaligned.
-define i32 @test_align32(i8*, [4 x i32]* byval align 32 %b) {
+define i32 @test_align32(i8*, [4 x i32]* byval([4 x i32]) align 32 %b) {
 ; CHECK-LABEL: test_align32:
 ; CHECK-NOT: sub sp
 ; CHECK: push {r4, r7, lr}
@@ -67,7 +67,7 @@ define void @test_call_align16() {
 ; While we're here, make sure the caller also puts it at sp
   ; CHECK: mov r[[BASE:[0-9]+]], sp
   ; CHECK: vst1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[BASE]]]
-  call i32 @test_align16(i8* null, [4 x i32]* byval align 16 @var)
+  call i32 @test_align16(i8* null, [4 x i32]* byval([4 x i32]) align 16 @var)
   ret void
 }
 

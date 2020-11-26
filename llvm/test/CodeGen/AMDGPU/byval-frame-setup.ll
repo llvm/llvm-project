@@ -23,7 +23,7 @@
 
 ; GCN: [[BB1]]
 ; GCN: s_or_b64 exec, exec
-define hidden void @void_func_byval_struct_use_outside_entry_block(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg1, i1 %cond) #1 {
+define hidden void @void_func_byval_struct_use_outside_entry_block(%struct.ByValStruct addrspace(5)* byval(%struct.ByValStruct) noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval(%struct.ByValStruct) noalias nocapture align 4 %arg1, i1 %cond) #1 {
 entry:
   br i1 %cond, label %bb0, label %bb1
 

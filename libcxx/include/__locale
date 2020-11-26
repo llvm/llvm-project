@@ -22,6 +22,8 @@
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <cstring>
 # include <support/win32/locale_win32.h>
+#elif defined(__NuttX__)
+# include <support/nuttx/xlocale.h>
 #elif defined(_AIX) || defined(__MVS__)
 # include <support/ibm/xlocale.h>
 #elif defined(__ANDROID__)

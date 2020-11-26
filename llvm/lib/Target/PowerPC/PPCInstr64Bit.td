@@ -1265,17 +1265,36 @@ def ADDItlsgdL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm6
                        [(set i64:$rD,
                          (PPCaddiTlsgdL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
-// LR8 is a true define, while the rest of the Defs are clobbers.  X3 is
+
+class GETtlsADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
+                                             asmstr,
+                                             [(set i64:$rD,
+                                               (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))]>,
+                                      isPPC64;
+class GETtlsldADDRPseudo <string asmstr> : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
+                                             asmstr,
+                                             [(set i64:$rD,
+                                               (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))]>,
+                                      isPPC64;
+
+let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1 in {
+// LR8 is a true define, while the rest of the Defs are clobbers. X3 is
 // explicitly defined when this op is created, so not mentioned here.
 // This is lowered to BL8_NOP_TLS by the assembly printer, so the size must be
 // correct because the branch select pass is relying on it.
-let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1, Size = 8,
-    Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
-def GETtlsADDR : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                        "#GETtlsADDR",
-                        [(set i64:$rD,
-                          (PPCgetTlsAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                 isPPC64;
+let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7], Size = 8 in
+def GETtlsADDR : GETtlsADDRPseudo <"#GETtlsADDR">;
+let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7], Size = 8 in
+def GETtlsADDRPCREL : GETtlsADDRPseudo <"#GETtlsADDRPCREL">;
+
+// LR8 is a true define, while the rest of the Defs are clobbers. X3 is
+// explicitly defined when this op is created, so not mentioned here.
+let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
+def GETtlsldADDR : GETtlsldADDRPseudo <"#GETtlsldADDR">;
+let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
+def GETtlsldADDRPCREL : GETtlsldADDRPseudo <"#GETtlsldADDRPCREL">;
+}
+
 // Combined op for ADDItlsgdL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
@@ -1299,15 +1318,6 @@ def ADDItlsldL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm6
                        [(set i64:$rD,
                          (PPCaddiTlsldL i64:$reg, tglobaltlsaddr:$disp))]>,
                  isPPC64;
-// LR8 is a true define, while the rest of the Defs are clobbers.  X3 is
-// explicitly defined when this op is created, so not mentioned here.
-let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
-    Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
-def GETtlsldADDR : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
-                          "#GETtlsldADDR",
-                          [(set i64:$rD,
-                            (PPCgetTlsldAddr i64:$reg, tglobaltlsaddr:$sym))]>,
-                   isPPC64;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

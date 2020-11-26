@@ -760,7 +760,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
     for (auto I = pred_begin(PredBB), E = pred_end(PredBB); I != E; ++I) {
       Updates.push_back({DominatorTree::Delete, *I, PredBB});
       // This predecessor of PredBB may already have DestBB as a successor.
-      if (llvm::find(successors(*I), DestBB) == succ_end(*I))
+      if (!llvm::is_contained(successors(*I), DestBB))
         Updates.push_back({DominatorTree::Insert, *I, DestBB});
     }
   }
@@ -1072,7 +1072,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
       Updates.push_back({DominatorTree::Delete, *I, BB});
       // This predecessor of BB may already have Succ as a successor.
-      if (llvm::find(successors(*I), Succ) == succ_end(*I))
+      if (!llvm::is_contained(successors(*I), Succ))
         Updates.push_back({DominatorTree::Insert, *I, Succ});
     }
   }

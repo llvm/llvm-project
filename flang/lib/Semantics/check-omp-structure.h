@@ -150,6 +150,12 @@ public:
   void Enter(const parser::OmpClause::Uniform &);
   void Enter(const parser::OmpClause::UseDevicePtr &);
   void Enter(const parser::OmpClause::IsDevicePtr &);
+  // Memory-order-clause
+  void Enter(const parser::OmpClause::SeqCst &);
+  void Enter(const parser::OmpClause::AcqRel &);
+  void Enter(const parser::OmpClause::Release &);
+  void Enter(const parser::OmpClause::Acquire &);
+  void Enter(const parser::OmpClause::Relaxed &);
 
   void Enter(const parser::OmpAlignedClause &);
   void Enter(const parser::OmpAllocateClause &);
@@ -171,13 +177,16 @@ private:
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);
-
+  void CheckAllowedMapTypes(const parser::OmpMapType::Type &,
+      const std::list<parser::OmpMapType::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
+
+  void CheckIsVarPartOfAnotherVar(const parser::OmpObjectList &objList);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

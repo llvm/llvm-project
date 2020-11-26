@@ -83,3 +83,16 @@ define void @test2(i32 %cmd) nounwind {
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* null, i8* undef, i64 20, i1 false) nounwind
   ret void
 }
+
+; https://llvm.org/PR48075
+
+@g = external global i16, align 1
+
+define void @inttoptr_constexpr_crash(<1 x i16*>* %p) {
+; CHECK-LABEL: @inttoptr_constexpr_crash(
+; CHECK-NEXT:    store <1 x i16*> inttoptr (<1 x i16> bitcast (<2 x i8> <i8 ptrtoint (i16* @g to i8), i8 ptrtoint (i16* @g to i8)> to <1 x i16>) to <1 x i16*>), <1 x i16*>* [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  store <1 x i16*> inttoptr (<1 x i16> bitcast (<2 x i8> <i8 ptrtoint (i16* @g to i8), i8 ptrtoint (i16* @g to i8)> to <1 x i16>) to <1 x i16*>), <1 x i16*>* %p, align 1
+  ret void
+}

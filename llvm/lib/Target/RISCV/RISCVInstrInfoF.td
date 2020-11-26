@@ -332,13 +332,9 @@ def : Pat<(fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
           (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), FPR32:$rs3),
-          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
-          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the

@@ -16,7 +16,7 @@ target triple = "hexagon"
 declare i32 @f0(i8* nocapture, ...) #0
 
 ; Function Attrs: nounwind
-define void @f1(%s.0* byval %a0, <16 x i32> %a1) #0 {
+define void @f1(%s.0* byval(%s.0) %a0, <16 x i32> %a1) #0 {
 b0:
   %v0 = alloca <16 x i32>, align 64
   store <16 x i32> %a1, <16 x i32>* %v0, align 64, !tbaa !0
@@ -30,7 +30,7 @@ b0:
 define i32 @f2() #0 {
 b0:
   %v0 = load <16 x i32>, <16 x i32>* @g2, align 64, !tbaa !0
-  tail call void @f1(%s.0* byval @g1, <16 x i32> %v0)
+  tail call void @f1(%s.0* byval(%s.0) @g1, <16 x i32> %v0)
   ret i32 0
 }
 

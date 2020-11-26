@@ -4890,19 +4890,6 @@ _LIBCPP_FUNC_VIS void* align(size_t __align, size_t __sz, void*& __ptr, size_t& 
 
 // --- Helper for container swap --
 template <typename _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
-void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
-#if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT
-#else
-    _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
-#endif
-{
-    __swap_allocator(__a1, __a2,
-      integral_constant<bool, _VSTD::allocator_traits<_Alloc>::propagate_on_container_swap::value>());
-}
-
-template <typename _Alloc>
 _LIBCPP_INLINE_VISIBILITY
 void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
 #if _LIBCPP_STD_VER >= 14
@@ -4918,6 +4905,19 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
 template <typename _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
+
+template <typename _Alloc>
+inline _LIBCPP_INLINE_VISIBILITY
+void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
+#if _LIBCPP_STD_VER >= 14
+    _NOEXCEPT
+#else
+    _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
+#endif
+{
+    _VSTD::__swap_allocator(__a1, __a2,
+      integral_constant<bool, _VSTD::allocator_traits<_Alloc>::propagate_on_container_swap::value>());
+}
 
 template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >
 struct __noexcept_move_assign_container : public integral_constant<bool,

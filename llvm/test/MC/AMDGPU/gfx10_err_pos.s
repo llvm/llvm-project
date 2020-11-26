@@ -6,7 +6,22 @@
 v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
 // CHECK: error: destination must be different than all sources
 // CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                          ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
+// CHECK-NEXT:{{^}}                                  ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
+// CHECK-NEXT:{{^}}                                  ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
+// CHECK-NEXT:{{^}}                                      ^
 
 //==============================================================================
 // dim modifier is required on this GPU
@@ -546,24 +561,6 @@ v_dot_f32_f16 v0, v1, v2
 // CHECK-NEXT:{{^}}^
 
 //==============================================================================
-// invalid literal operand
-
-v_add_f64 v[0:1], 1.23456, -abs(1.2345)
-// CHECK: error: invalid literal operand
-// CHECK-NEXT:{{^}}v_add_f64 v[0:1], 1.23456, -abs(1.2345)
-// CHECK-NEXT:{{^}}^
-
-v_min3_i16 v5, 0x5678, 0x5678, 0x5679
-// CHECK: error: invalid literal operand
-// CHECK-NEXT:{{^}}v_min3_i16 v5, 0x5678, 0x5678, 0x5679
-// CHECK-NEXT:{{^}}^
-
-v_pk_add_f16 v1, 25.0, 25.1
-// CHECK: error: invalid literal operand
-// CHECK-NEXT:{{^}}v_pk_add_f16 v1, 25.0, 25.1
-// CHECK-NEXT:{{^}}^
-
-//==============================================================================
 // invalid mask
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
@@ -622,17 +619,42 @@ v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
 v_ashrrev_i64 v[0:1], 0x100, s[0:1]
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], 0x100, s[0:1]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                             ^
+
+v_ashrrev_i64 v[0:1], s3, s[0:1]
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], s3, s[0:1]
+// CHECK-NEXT:{{^}}                          ^
 
 v_bfe_u32 v0, s1, 0x3039, s2
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, 0x3039, s2
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                          ^
+
+v_bfe_u32 v0, s1, s2, s3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, s2, s3
+// CHECK-NEXT:{{^}}                      ^
 
 v_div_fmas_f32 v5, s3, 0x123, v3
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, 0x123, v3
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                       ^
+
+v_div_fmas_f32 v5, s3, v3, 0x123
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, v3, 0x123
+// CHECK-NEXT:{{^}}                           ^
+
+v_div_fmas_f32 v5, 0x123, v3, s3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, 0x123, v3, s3
+// CHECK-NEXT:{{^}}                              ^
+
+v_div_fmas_f32 v5, s3, s4, v3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, s4, v3
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // invalid operand for instruction
@@ -777,7 +799,47 @@ v_mov_b32 v0, v0 row_bcast:0
 s_and_b32 s2, 0x12345678, 0x12345679
 // CHECK: error: only one literal operand is allowed
 // CHECK-NEXT:{{^}}s_and_b32 s2, 0x12345678, 0x12345679
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                          ^
+
+v_add_f64 v[0:1], 1.23456, -abs(1.2345)
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_add_f64 v[0:1], 1.23456, -abs(1.2345)
+// CHECK-NEXT:{{^}}                                ^
+
+v_min3_i16 v5, 0x5678, 0x5678, 0x5679
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_min3_i16 v5, 0x5678, 0x5678, 0x5679
+// CHECK-NEXT:{{^}}                               ^
+
+v_pk_add_f16 v1, 25.0, 25.1
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_pk_add_f16 v1, 25.0, 25.1
+// CHECK-NEXT:{{^}}                       ^
+
+v_fma_mix_f32 v5, 0x7c, 0x7b, 1
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_fma_mix_f32 v5, 0x7c, 0x7b, 1
+// CHECK-NEXT:{{^}}                        ^
+
+v_pk_add_i16 v5, 0x7c, 0x4000
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x7c, 0x4000
+// CHECK-NEXT:{{^}}                       ^
+
+v_pk_add_i16 v5, 0x4400, 0x4000
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x4400, 0x4000
+// CHECK-NEXT:{{^}}                         ^
+
+v_bfe_u32 v0, v2, 123, undef
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, 123, undef
+// CHECK-NEXT:{{^}}                       ^
+
+v_bfe_u32 v0, v2, undef, 123
+// CHECK: error: only one literal operand is allowed
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, undef, 123
+// CHECK-NEXT:{{^}}                         ^
 
 //==============================================================================
 // out of bounds attr

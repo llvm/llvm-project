@@ -24,8 +24,8 @@ define void @test1(i8* %a, i8* %b, i64 %s) nounwind {
 ; Check that we don't crash due to a memcpy size type mismatch error ("Cannot
 ; emit physreg copy instruction") in X86InstrInfo::copyPhysReg.
 %struct = type { [4096 x i8] }
-declare void @foo(%struct* byval)
+declare void @foo(%struct* byval(%struct))
 define void @test2(%struct* %x) {
-  call void @foo(%struct* byval %x)
+  call void @foo(%struct* byval(%struct) %x)
   ret void
 }

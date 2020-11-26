@@ -24,4 +24,18 @@ def AsyncParallelFor : FunctionPass<"async-parallel-for"> {
   let dependentDialects = ["async::AsyncDialect", "scf::SCFDialect"];
 }
 
+def AsyncRefCounting : FunctionPass<"async-ref-counting"> {
+  let summary = "Automatic reference counting for Async dialect data types";
+  let constructor = "mlir::createAsyncRefCountingPass()";
+  let dependentDialects = ["async::AsyncDialect"];
+}
+
+def AsyncRefCountingOptimization :
+    FunctionPass<"async-ref-counting-optimization"> {
+  let summary = "Optimize automatic reference counting operations for the"
+                "Async dialect by removing redundant operations";
+  let constructor = "mlir::createAsyncRefCountingOptimizationPass()";
+  let dependentDialects = ["async::AsyncDialect"];
+}
+
 #endif // MLIR_DIALECT_ASYNC_PASSES

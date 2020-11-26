@@ -2,7 +2,7 @@
 
 define void @t0(i32 %a) nounwind {
 entry:
-; CHECK: t0
+; CHECK-LABEL: t0:
 ; CHECK: str {{w[0-9]+}}, [sp, #12]
 ; CHECK-NEXT: ldr [[REGISTER:w[0-9]+]], [sp, #12]
 ; CHECK-NEXT: str [[REGISTER]], [sp, #12]
@@ -15,7 +15,7 @@ entry:
 }
 
 define void @t1(i64 %a) nounwind {
-; CHECK: t1
+; CHECK-LABEL: t1:
 ; CHECK: str {{x[0-9]+}}, [sp, #8]
 ; CHECK-NEXT: ldr [[REGISTER:x[0-9]+]], [sp, #8]
 ; CHECK-NEXT: str [[REGISTER]], [sp, #8]
@@ -29,7 +29,7 @@ define void @t1(i64 %a) nounwind {
 
 define zeroext i1 @i1(i1 %a) nounwind {
 entry:
-; CHECK: @i1
+; CHECK-LABEL: i1:
 ; CHECK: and [[REG:w[0-9]+]], w0, #0x1
 ; CHECK: strb [[REG]], [sp, #15]
 ; CHECK: ldrb [[REG1:w[0-9]+]], [sp, #15]
@@ -84,7 +84,7 @@ entry:
 }
 
 define void @t6() nounwind {
-; CHECK: t6
+; CHECK-LABEL: t6:
 ; CHECK: brk #0x1
   tail call void @llvm.trap()
   ret void
@@ -93,11 +93,12 @@ define void @t6() nounwind {
 declare void @llvm.trap() nounwind
 
 define void @ands(i32* %addr) {
-; CHECK-LABEL: ands:
-; CHECK: tst [[COND:w[0-9]+]], #0x1
-; CHECK-NEXT: mov w{{[0-9]+}}, #2
-; CHECK-NEXT: mov w{{[0-9]+}}, #1
-; CHECK-NEXT: csel [[COND]],
+; FIXME: 'select i1 undef' makes this unreliable (ub?).
+; CHECK-COM-LABEL: ands:
+; CHECK-COM: tst [[COND:w[0-9]+]], #0x1
+; CHECK-COM-NEXT: mov w{{[0-9]+}}, #2
+; CHECK-COM-NEXT: mov w{{[0-9]+}}, #1
+; CHECK-COM-NEXT: csel [[COND]],
 entry:
   %cond91 = select i1 undef, i32 1, i32 2
   store i32 %cond91, i32* %addr, align 4

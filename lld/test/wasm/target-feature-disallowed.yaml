@@ -36,7 +36,7 @@ Sections:
 ...
 
 # SPECIFIED:        - Type:            CUSTOM
-# SPECIFIED-NEXT:     Name:            target_features
+# SPECIFIED:          Name:            target_features
 # SPECIFIED-NEXT:     Features:
 # SPECIFIED-NEXT:       - Prefix:          USED
 # SPECIFIED-NEXT:         Name:            bar
@@ -47,7 +47,7 @@ Sections:
 # SPECIFIED-NEXT: ...
 
 # UNSPECIFIED:        - Type:            CUSTOM
-# UNSPECIFIED-NEXT:     Name:            target_features
+# UNSPECIFIED:          Name:            target_features
 # UNSPECIFIED-NEXT:     Features:
 # UNSPECIFIED-NEXT:       - Prefix:          USED
 # UNSPECIFIED-NEXT:         Name:            bar
@@ -58,14 +58,14 @@ Sections:
 # UNSPECIFIED-NEXT: ...
 
 # DISALLOWED:        - Type:            CUSTOM
-# DISALLOWED-NEXT:     Name:            target_features
+# DISALLOWED:          Name:            target_features
 # DISALLOWED-NEXT:     Features:
 # DISALLOWED-NEXT:       - Prefix:          USED
 # DISALLOWED-NEXT:         Name:            bar
 # DISALLOWED-NEXT: ...
 
 # NONE:        - Type:            CUSTOM
-# NONE-NEXT:     Name:            target_features
+# NONE:          Name:            target_features
 # NONE-NEXT:     Features:
 # NONE-NEXT:       - Prefix:          USED
 # NONE-NEXT:         Name:            bar

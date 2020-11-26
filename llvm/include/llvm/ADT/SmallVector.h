@@ -136,12 +136,68 @@ protected:
     this->Size = this->Capacity = 0; // FIXME: Setting Capacity to 0 is suspect.
   }
 
-  void assertSafeToPush(const void *Elt) {
-    assert(
-        (Elt < begin() || Elt >= end() || this->size() < this->capacity()) &&
-        "Attempting to push_back to the vector an element of the vector without"
-        " enough space reserved");
+  /// Return true unless Elt will be invalidated by resizing the vector to
+  /// NewSize.
+  bool isSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
+    // Past the end.
+    if (LLVM_LIKELY(Elt < this->begin() || Elt >= this->end()))
+      return true;
+
+    // Return false if Elt will be destroyed by shrinking.
+    if (NewSize <= this->size())
+      return Elt < this->begin() + NewSize;
+
+    // Return false if we need to grow.
+    return NewSize <= this->capacity();
   }
+
+  /// Check whether Elt will be invalidated by resizing the vector to NewSize.
+  void assertSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
+    assert(isSafeToReferenceAfterResize(Elt, NewSize) &&
+           "Attempting to reference an element of the vector in an operation "
+           "that invalidates it");
+  }
+
+  /// Check whether Elt will be invalidated by increasing the size of the
+  /// vector by N.
+  void assertSafeToAdd(const void *Elt, size_t N = 1) {
+    this->assertSafeToReferenceAfterResize(Elt, this->size() + N);
+  }
+
+  /// Check whether any part of the range will be invalidated by clearing.
+  void assertSafeToReferenceAfterClear(const T *From, const T *To) {
+    if (From == To)
+      return;
+    this->assertSafeToReferenceAfterResize(From, 0);
+    this->assertSafeToReferenceAfterResize(To - 1, 0);
+  }
+  template <
+      class ItTy,
+      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
+                       bool> = false>
+  void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
+
+  /// Check whether any part of the range will be invalidated by growing.
+  void assertSafeToAddRange(const T *From, const T *To) {
+    if (From == To)
+      return;
+    this->assertSafeToAdd(From, To - From);
+    this->assertSafeToAdd(To - 1, To - From);
+  }
+  template <
+      class ItTy,
+      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
+                       bool> = false>
+  void assertSafeToAddRange(ItTy, ItTy) {}
+
+  /// Check whether any argument will be invalidated by growing for
+  /// emplace_back.
+  template <class ArgType1, class... ArgTypes>
+  void assertSafeToEmplace(ArgType1 &Arg1, ArgTypes &... Args) {
+    this->assertSafeToAdd(&Arg1);
+    this->assertSafeToEmplace(Args...);
+  }
+  void assertSafeToEmplace() {}
 
 public:
   using size_type = size_t;
@@ -258,7 +314,7 @@ protected:
 
 public:
   void push_back(const T &Elt) {
-    this->assertSafeToPush(&Elt);
+    this->assertSafeToAdd(&Elt);
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     ::new ((void*) this->end()) T(Elt);
@@ -266,7 +322,7 @@ public:
   }
 
   void push_back(T &&Elt) {
-    this->assertSafeToPush(&Elt);
+    this->assertSafeToAdd(&Elt);
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     ::new ((void*) this->end()) T(::std::move(Elt));
@@ -362,7 +418,7 @@ protected:
 
 public:
   void push_back(const T &Elt) {
-    this->assertSafeToPush(&Elt);
+    this->assertSafeToAdd(&Elt);
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     memcpy(reinterpret_cast<void *>(this->end()), &Elt, sizeof(T));
@@ -418,15 +474,20 @@ public:
   }
 
   void resize(size_type N, const T &NV) {
+    if (N == this->size())
+      return;
+
     if (N < this->size()) {
       this->destroy_range(this->begin()+N, this->end());
       this->set_size(N);
-    } else if (N > this->size()) {
-      if (this->capacity() < N)
-        this->grow(N);
-      std::uninitialized_fill(this->end(), this->begin()+N, NV);
-      this->set_size(N);
+      return;
     }
+
+    this->assertSafeToReferenceAfterResize(&NV, N);
+    if (this->capacity() < N)
+      this->grow(N);
+    std::uninitialized_fill(this->end(), this->begin() + N, NV);
+    this->set_size(N);
   }
 
   void reserve(size_type N) {
@@ -454,6 +515,7 @@ public:
                 typename std::iterator_traits<in_iter>::iterator_category,
                 std::input_iterator_tag>::value>>
   void append(in_iter in_start, in_iter in_end) {
+    this->assertSafeToAddRange(in_start, in_end);
     size_type NumInputs = std::distance(in_start, in_end);
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
@@ -464,6 +526,7 @@ public:
 
   /// Append \p NumInputs copies of \p Elt to the end.
   void append(size_type NumInputs, const T &Elt) {
+    this->assertSafeToAdd(&Elt, NumInputs);
     if (NumInputs > this->capacity() - this->size())
       this->grow(this->size()+NumInputs);
 
@@ -479,6 +542,7 @@ public:
   // re-initializing them - for all assign(...) variants.
 
   void assign(size_type NumElts, const T &Elt) {
+    this->assertSafeToReferenceAfterResize(&Elt, 0);
     clear();
     if (this->capacity() < NumElts)
       this->grow(NumElts);
@@ -491,6 +555,7 @@ public:
                 typename std::iterator_traits<in_iter>::iterator_category,
                 std::input_iterator_tag>::value>>
   void assign(in_iter in_start, in_iter in_end) {
+    this->assertSafeToReferenceAfterClear(in_start, in_end);
     clear();
     append(in_start, in_end);
   }
@@ -543,6 +608,9 @@ private:
     assert(I >= this->begin() && "Insertion iterator is out of bounds.");
     assert(I <= this->end() && "Inserting past the end of the vector.");
 
+    // Check that adding an element won't invalidate Elt.
+    this->assertSafeToAdd(&Elt);
+
     if (this->size() >= this->capacity()) {
       size_t EltNo = I-this->begin();
       this->grow();
@@ -582,6 +650,9 @@ public:
 
     assert(I >= this->begin() && "Insertion iterator is out of bounds.");
     assert(I <= this->end() && "Inserting past the end of the vector.");
+
+    // Check that adding NumToInsert elements won't invalidate Elt.
+    this->assertSafeToAdd(&Elt, NumToInsert);
 
     // Ensure there is enough space.
     reserve(this->size() + NumToInsert);
@@ -638,6 +709,9 @@ public:
     assert(I >= this->begin() && "Insertion iterator is out of bounds.");
     assert(I <= this->end() && "Inserting past the end of the vector.");
 
+    // Check that the reserve that follows doesn't invalidate the iterators.
+    this->assertSafeToAddRange(From, To);
+
     size_t NumToInsert = std::distance(From, To);
 
     // Ensure there is enough space.
@@ -687,6 +761,7 @@ public:
   }
 
   template <typename... ArgTypes> reference emplace_back(ArgTypes &&... Args) {
+    this->assertSafeToEmplace(Args...);
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
     ::new ((void *)this->end()) T(std::forward<ArgTypes>(Args)...);

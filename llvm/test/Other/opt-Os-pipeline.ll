@@ -117,8 +117,8 @@
 ; CHECK-NEXT:         Loop-Closed SSA Form Pass
 ; CHECK-NEXT:         Scalar Evolution Analysis
 ; CHECK-NEXT:         Loop Pass Manager
-; CHECK-NEXT:           Induction Variable Simplification
 ; CHECK-NEXT:           Recognize loop idioms
+; CHECK-NEXT:           Induction Variable Simplification
 ; CHECK-NEXT:           Delete dead loops
 ; CHECK-NEXT:           Unroll loops
 ; CHECK-NEXT:         SROA

@@ -2,7 +2,7 @@
 
 // -----
 // CHECK-LABEL: parseCalibrated
-// CHECK: !quant.calibrated<f32<-0.998, 1.232100e+00>
+// CHECK: !quant.calibrated<f32<-0.998:1.232100e+00>
 !qalias = type !quant.calibrated<f32<-0.998:1.2321>>
 func @parseCalibrated() -> !qalias {
   %0 = "foo"() : () -> !qalias

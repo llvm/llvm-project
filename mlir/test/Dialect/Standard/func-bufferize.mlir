@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -func-bufferize -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -func-bufferize -finalizing-bufferize -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @identity(
 // CHECK-SAME:        %[[ARG:.*]]: memref<f32>) -> memref<f32> {

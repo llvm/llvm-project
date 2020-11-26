@@ -344,6 +344,12 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMGetUndef(TypeCloner(M).Clone(Cst));
   }
 
+  // Try poison
+  if (LLVMIsPoison(Cst)) {
+    check_value_kind(Cst, LLVMPoisonValueValueKind);
+    return LLVMGetPoison(TypeCloner(M).Clone(Cst));
+  }
+
   // Try null
   if (LLVMIsNull(Cst)) {
     check_value_kind(Cst, LLVMConstantTokenNoneValueKind);

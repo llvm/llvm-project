@@ -129,7 +129,7 @@ static bool testLoopFusionTransformation(AffineForOp forOpA, AffineForOp forOpB,
     mlir::ComputationSliceState sliceUnion;
     FusionResult result = mlir::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
-      mlir::fuseLoops(forOpA, forOpB, &sliceUnion);
+      mlir::fuseLoops(forOpA, forOpB, sliceUnion);
       // Note: 'forOpA' is removed to simplify test output. A proper loop
       // fusion pass should check the data dependence graph and run memref
       // region analysis to ensure removing 'forOpA' is safe.

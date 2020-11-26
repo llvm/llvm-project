@@ -1076,6 +1076,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR:
     // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
+  case PPC::GETtlsADDRPCREL:
   case PPC::GETtlsADDR32: {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
@@ -1121,6 +1122,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsldADDR:
     // Transform: %x3 = GETtlsldADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsld)
+  case PPC::GETtlsldADDRPCREL:
   case PPC::GETtlsldADDR32: {
     // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
@@ -1996,6 +1998,48 @@ bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   return PPCAsmPrinter::doFinalization(M);
 }
 
+static unsigned mapToSinitPriority(int P) {
+  if (P < 0 || P > 65535)
+    report_fatal_error("invalid init priority");
+
+  if (P <= 20)
+    return P;
+
+  if (P < 81)
+    return 20 + (P - 20) * 16;
+
+  if (P <= 1124)
+    return 1004 + (P - 81);
+
+  if (P < 64512)
+    return 2047 + (P - 1124) * 33878;
+
+  return 2147482625u + (P - 64512);
+}
+
+static std::string convertToSinitPriority(int Priority) {
+  // This helper function converts clang init priority to values used in sinit
+  // and sterm functions.
+  //
+  // The conversion strategies are:
+  // We map the reserved clang/gnu priority range [0, 100] into the sinit/sterm
+  // reserved priority range [0, 1023] by
+  // - directly mapping the first 21 and the last 20 elements of the ranges
+  // - linear interpolating the intermediate values with a step size of 16.
+  //
+  // We map the non reserved clang/gnu priority range of [101, 65535] into the
+  // sinit/sterm priority range [1024, 2147483648] by:
+  // - directly mapping the first and the last 1024 elements of the ranges
+  // - linear interpolating the intermediate values with a step size of 33878.
+  unsigned int P = mapToSinitPriority(Priority);
+
+  std::string PrioritySuffix;
+  llvm::raw_string_ostream os(PrioritySuffix);
+  os << llvm::format_hex_no_prefix(P, 8);
+  os.flush();
+  return PrioritySuffix;
+}
+
 void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
                                           const Constant *List, bool IsCtor) {
   SmallVector<Structor, 8> Structors;
@@ -2005,14 +2049,14 @@ void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
 
   unsigned Index = 0;
   for (Structor &S : Structors) {
-    if (S.Priority != 65535)
-      report_fatal_error(
-          "prioritized sinit and sterm functions are not yet supported on AIX");
+    if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(S.Func))
+      S.Func = CE->getOperand(0);
 
     llvm::GlobalAlias::create(
         GlobalValue::ExternalLinkage,
         (IsCtor ? llvm::Twine("__sinit") : llvm::Twine("__sterm")) +
-            llvm::Twine("80000000_", FormatIndicatorAndUniqueModId) +
+            llvm::Twine(convertToSinitPriority(S.Priority)) +
+            llvm::Twine("_", FormatIndicatorAndUniqueModId) +
             llvm::Twine("_", llvm::utostr(Index++)),
         cast<Function>(S.Func));
   }

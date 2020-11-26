@@ -19,12 +19,21 @@ Examples
   std::string a;
   std::string b;
 
+  // Initializing a string_view with an empty string literal produces an
+  // instance that compares equal to string_view().
+  std::string_view a = "";
+  std::string_view b("");
+
+  // becomes
+  std::string_view a;
+  std::string_view b;
+
 Options
 -------
 
 .. option:: StringNames
 
-    Default is `::std::basic_string`.
+    Default is `::std::basic_string;::std::basic_string_view`.
 
     Semicolon-delimited list of class names to apply this check to.
     By default `::std::basic_string` applies to ``std::string`` and

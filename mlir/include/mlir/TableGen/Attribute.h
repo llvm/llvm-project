@@ -94,6 +94,10 @@ public:
   // of `TypeAttrBase`).
   bool isTypeAttr() const;
 
+  // Returns true if this attribute is a symbol reference attribute (i.e., a
+  // subclass of `SymbolRefAttr` or `FlatSymbolRefAttr`).
+  bool isSymbolRefAttr() const;
+
   // Returns true if this attribute is an enum attribute (i.e., a subclass of
   // `EnumAttrInfo`)
   bool isEnumAttr() const;

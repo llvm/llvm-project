@@ -34,7 +34,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.Inner = type { i32, i64 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo(%struct.Outer* byval align 8 %outer) #0 !dbg !4 {
+define i32 @foo(%struct.Outer* byval(%struct.Outer) align 8 %outer) #0 !dbg !4 {
 entry:
   %i1 = alloca %struct.Inner, align 8
   call void @llvm.dbg.declare(metadata %struct.Outer* %outer, metadata !25, metadata !2), !dbg !26

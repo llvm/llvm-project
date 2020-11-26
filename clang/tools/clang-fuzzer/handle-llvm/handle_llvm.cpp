@@ -107,11 +107,16 @@ static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
   std::string E;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(codegen::getMArch(), ModuleTriple, E);
-  TargetMachine *Machine = TheTarget->createTargetMachine(
+  if (!TheTarget)
+    ErrorAndExit(E);
+
+  std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       M->getTargetTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
       Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), OLvl);
-  std::unique_ptr<TargetMachine> TM(Machine);
+      codegen::getExplicitCodeModel(), OLvl));
+  if (!TM)
+    ErrorAndExit("Could not create target machine");
+
   codegen::setFunctionAttributes(codegen::getCPUStr(),
                                  codegen::getFeaturesStr(), *M);
 

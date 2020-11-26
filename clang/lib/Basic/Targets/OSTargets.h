@@ -674,6 +674,9 @@ protected:
 
     Builder.defineMacro("_AIX");
 
+    if (Opts.EnableAIXExtendedAltivecABI)
+      Builder.defineMacro("__EXTABI__");
+
     unsigned Major, Minor, Micro;
     Triple.getOSVersion(Major, Minor, Micro);
 

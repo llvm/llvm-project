@@ -17,7 +17,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -404,7 +404,6 @@ LogicalResult
 ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
                                   PatternRewriter &rewriter) const {
   Location loc = parallelOp.getLoc();
-  BlockAndValueMapping mapping;
 
   // For a parallel loop, we essentially need to create an n-dimensional loop
   // nest. We do this by translating to scf.for ops and have those lowered in
@@ -412,6 +411,8 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   // values), forward the initial values for the reductions down the loop
   // hierarchy and bubble up the results by modifying the "yield" terminator.
   SmallVector<Value, 4> iterArgs = llvm::to_vector<4>(parallelOp.initVals());
+  SmallVector<Value, 4> ivs;
+  ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
   for (auto loop_operands :
@@ -420,7 +421,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
     Value iv, lower, upper, step;
     std::tie(iv, lower, upper, step) = loop_operands;
     ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step, iterArgs);
-    mapping.map(iv, forOp.getInductionVar());
+    ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
     iterArgs.assign(iterRange.begin(), iterRange.end());
 
@@ -439,33 +440,33 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
 
-  // Now copy over the contents of the body.
+  // First, merge reduction blocks into the main region.
   SmallVector<Value, 4> yieldOperands;
   yieldOperands.reserve(parallelOp.getNumResults());
-  for (auto &op : parallelOp.getBody()->without_terminator()) {
-    // Reduction blocks are handled differently.
+  for (auto &op : *parallelOp.getBody()) {
     auto reduce = dyn_cast<ReduceOp>(op);
-    if (!reduce) {
-      rewriter.clone(op, mapping);
+    if (!reduce)
       continue;
-    }
 
-    // Clone the body of the reduction operation into the body of the loop,
-    // using operands of "scf.reduce" and iteration arguments corresponding
-    // to the reduction value to replace arguments of the reduction block.
-    // Collect operands of "scf.reduce.return" to be returned by a final
-    // "scf.yield" instead.
-    Value arg = iterArgs[yieldOperands.size()];
     Block &reduceBlock = reduce.reductionOperator().front();
-    mapping.map(reduceBlock.getArgument(0), mapping.lookupOrDefault(arg));
-    mapping.map(reduceBlock.getArgument(1),
-                mapping.lookupOrDefault(reduce.operand()));
-    for (auto &nested : reduceBlock.without_terminator())
-      rewriter.clone(nested, mapping);
-    yieldOperands.push_back(
-        mapping.lookup(reduceBlock.getTerminator()->getOperand(0)));
+    Value arg = iterArgs[yieldOperands.size()];
+    yieldOperands.push_back(reduceBlock.getTerminator()->getOperand(0));
+    rewriter.eraseOp(reduceBlock.getTerminator());
+    rewriter.mergeBlockBefore(&reduceBlock, &op, {arg, reduce.operand()});
+    rewriter.eraseOp(reduce);
   }
 
+  // Then merge the loop body without the terminator.
+  rewriter.eraseOp(parallelOp.getBody()->getTerminator());
+  Block *newBody = rewriter.getInsertionBlock();
+  if (newBody->empty())
+    rewriter.mergeBlocks(parallelOp.getBody(), newBody, ivs);
+  else
+    rewriter.mergeBlockBefore(parallelOp.getBody(), newBody->getTerminator(),
+                              ivs);
+
+  // Finally, create the terminator if required (for loops with no results, it
+  // has been already created in loop construction).
   if (!yieldOperands.empty()) {
     rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
     rewriter.create<scf::YieldOp>(loc, yieldOperands);

@@ -189,6 +189,23 @@ let FunctionMapper = "ARM_AM::getAM3Op" in {
 // LDM, base reg in list
 def IsLDMBaseRegInListPred : MCSchedPredicate<IsLDMBaseRegInList>;
 
+class IsRegPCPred<int n> : MCSchedPredicate<CheckRegOperand<n, PC>>;
+
+class BranchWriteRes<int lat, int uops, list<ProcResourceKind> resl,
+                     list<int> rcl, SchedWriteRes wr> :
+  SchedWriteRes<!listconcat(wr.ProcResources, resl)> {
+  let Latency = !add(wr.Latency, lat);
+  let ResourceCycles = !listconcat(wr.ResourceCycles, rcl);
+  let NumMicroOps = !add(wr.NumMicroOps, uops);
+  SchedWriteRes BaseWr = wr;
+}
+
+class CheckBranchForm<int n, BranchWriteRes br> :
+  SchedWriteVariant<[
+    SchedVar<IsRegPCPred<n>, [br]>,
+    SchedVar<NoSchedPred,    [br.BaseWr]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //

@@ -1,0 +1,32 @@
+//===-- VVPNodes.def - Lists & properties of VE Vector Predication Nodes --===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines all VVP_* SDNodes and their properties
+//
+//===----------------------------------------------------------------------===//
+
+/// ADD_VVP_OP(VVPNAME,SDNAME)
+/// \p VVPName is a VVP SDNode operator.
+/// \p SDNAME is the generic SD opcode corresponding to \p VVPName.
+#ifndef ADD_VVP_OP
+#define ADD_VVP_OP(X, Y)
+#endif
+
+/// ADD_BINARY_VVP_OP(VVPNAME,SDNAME)
+/// \p VVPName is a VVP Binary operator.
+/// \p SDNAME is the generic SD opcode corresponding to \p VVPName.
+#ifndef ADD_BINARY_VVP_OP
+#define ADD_BINARY_VVP_OP(X,Y) ADD_VVP_OP(X,Y)
+#endif
+
+// Integer arithmetic.
+ADD_BINARY_VVP_OP(VVP_ADD,ADD)
+
+
+#undef ADD_BINARY_VVP_OP
+#undef ADD_VVP_OP

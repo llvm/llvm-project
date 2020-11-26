@@ -38,10 +38,10 @@ entry:
   %byval-temp = alloca %struct.a, align 8
   %0 = bitcast %struct.a* %byval-temp to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 8 %0, i8* align 4 bitcast (%struct.a* @c to i8*), i32 260, i1 false)
-  call void @d(%struct.a* byval nonnull align 8 %byval-temp)
+  call void @d(%struct.a* byval(%struct.a) nonnull align 8 %byval-temp)
   ret void
 }
 
-declare void @d(%struct.a* byval align 8) local_unnamed_addr #1
+declare void @d(%struct.a* byval(%struct.a) align 8) local_unnamed_addr #1
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)

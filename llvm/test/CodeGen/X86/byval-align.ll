@@ -7,7 +7,7 @@
 @.str3 = private constant [7 x i8] c"test.c\00", align 1 ; <[7 x i8]*> [#uses=1]
 @__PRETTY_FUNCTION__.2067 = internal constant [13 x i8] c"aligned_func\00" ; <[13 x i8]*> [#uses=1]
 
-define void @aligned_func(%struct.S* byval align 64 %obj) nounwind {
+define void @aligned_func(%struct.S* byval(%struct.S) align 64 %obj) nounwind {
 entry:
   %ptr = alloca i8*                               ; <i8**> [#uses=3]
   %p = alloca i64                                 ; <i64*> [#uses=3]
@@ -51,7 +51,7 @@ entry:
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
   %0 = getelementptr inbounds %struct.S, %struct.S* %s1, i32 0, i32 0 ; <i32*> [#uses=1]
   store i32 1, i32* %0, align 4
-  call void @aligned_func(%struct.S* byval align 64 %s1) nounwind
+  call void @aligned_func(%struct.S* byval(%struct.S) align 64 %s1) nounwind
   br label %return
 
 return:                                           ; preds = %entry

@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -mtriple=x86_64 -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: [[CU0BT0:0x[0-9a-f]+]]: DW_TAG_base_type

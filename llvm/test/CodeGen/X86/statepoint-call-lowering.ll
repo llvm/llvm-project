@@ -204,9 +204,9 @@ right:
 
 %struct2 = type { i64, i64, i64 }
 
-declare void @consume_attributes(i32, i8* nest, i32, %struct2* byval)
+declare void @consume_attributes(i32, i8* nest, i32, %struct2* byval(%struct2))
 
-define void @test_attributes(%struct2* byval %s) gc "statepoint-example" {
+define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -235,7 +235,7 @@ define void @test_attributes(%struct2* byval %s) gc "statepoint-example" {
 entry:
 ; Check that arguments with attributes are lowered correctly.
 ; We call a function that has a nest argument and a byval argument.
-  %statepoint_token = call token (i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64 0, i32 0, void (i32, i8*, i32, %struct2*)* @consume_attributes, i32 4, i32 0, i32 42, i8* nest null, i32 17, %struct2* byval %s, i32 0, i32 0)
+  %statepoint_token = call token (i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64 0, i32 0, void (i32, i8*, i32, %struct2*)* @consume_attributes, i32 4, i32 0, i32 42, i8* nest null, i32 17, %struct2* byval(%struct2) %s, i32 0, i32 0)
   ret void
 }
 

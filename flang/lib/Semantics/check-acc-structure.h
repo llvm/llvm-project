@@ -59,6 +59,8 @@ public:
   void Leave(const parser::OpenACCWaitConstruct &);
   void Enter(const parser::OpenACCAtomicConstruct &);
   void Leave(const parser::OpenACCAtomicConstruct &);
+  void Enter(const parser::OpenACCCacheConstruct &);
+  void Leave(const parser::OpenACCCacheConstruct &);
 
   // Clauses
   void Leave(const parser::AccClauseList &);

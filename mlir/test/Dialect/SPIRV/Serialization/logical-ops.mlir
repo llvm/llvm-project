@@ -87,7 +87,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @select() -> () "None" {
     %0 = spv.constant 4.0 : f32
     %1 = spv.constant 5.0 : f32
-    %2 = spv._reference_of @condition_scalar : i1
+    %2 = spv.mlir.referenceof @condition_scalar : i1
     // CHECK: spv.Select {{.*}}, {{.*}}, {{.*}} : i1, f32
     %3 = spv.Select %2, %0, %1 : i1, f32
     %4 = spv.constant dense<[2.0, 3.0, 4.0, 5.0]> : vector<4xf32>

@@ -52,6 +52,9 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; YAML-NEXT:         Name:            ret32
 ; YAML-NEXT:       - Index:           3
 ; YAML-NEXT:         Name:            call_ret32
+; YAML-NEXT:     GlobalNames:
+; YAML-NEXT:       - Index:           0
+; YAML-NEXT:         Name:            __stack_pointer
 ; YAML-NEXT: ...
 
 ;      RELOC:     Name:            linking

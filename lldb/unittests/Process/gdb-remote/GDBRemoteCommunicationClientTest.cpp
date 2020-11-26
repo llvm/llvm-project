@@ -343,6 +343,25 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetWritable());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
+  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.GetMemoryTagged());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;flags:;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;flags: mt  zz mt  ;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {

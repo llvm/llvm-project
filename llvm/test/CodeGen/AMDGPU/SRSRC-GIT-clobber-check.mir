@@ -23,7 +23,7 @@ machineFunctionInfo:
 body:             |
   ; CHECK:   $sgpr1 = COPY killed $sgpr5
   ; CHECK:   $sgpr4_sgpr5 = S_GETPC_B64
-  ; CHECK:   $sgpr4 = S_MOV_B32 $sgpr8, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK:   $sgpr4 = S_MOV_B32 $sgpr8
   ; CHECK:   $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM $sgpr4_sgpr5, 0, 0, 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7 :: (dereferenceable invariant load 16, align 4, addrspace 4)
   bb.0:
     successors: %bb.1, %bb.2

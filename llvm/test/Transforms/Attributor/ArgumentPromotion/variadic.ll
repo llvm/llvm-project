@@ -21,11 +21,11 @@ define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
 ; CHECK-SAME: (i32 [[ARGC:%.*]], i8** nocapture nofree readnone [[ARGV:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* noundef nonnull byval align 8 dereferenceable(16) @t45)
+; CHECK-NEXT:    tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* noundef nonnull byval(%struct.tt0) align 8 dereferenceable(16) @t45)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* byval align 8 @t45)
+  tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* byval(%struct.tt0) align 8 @t45)
   ret i32 0
 }
 

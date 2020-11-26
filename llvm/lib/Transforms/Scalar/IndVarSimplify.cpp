@@ -1790,7 +1790,9 @@ bool IndVarSimplify::run(Loop *L) {
   if (optimizeLoopExits(L, Rewriter))  {
     Changed = true;
     // Given we've changed exit counts, notify SCEV
-    SE->forgetLoop(L);
+    // Some nested loops may share same folded exit basic block,
+    // thus we need to notify top most loop.
+    SE->forgetTopmostLoop(L);
   }
 
   // Try to form loop invariant tests for loop exits by changing how many

@@ -1010,46 +1010,59 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
 
 struct TraceInstance : public PluginInstance<TraceCreateInstance> {
   TraceInstance(ConstString name, std::string description,
-                CallbackType create_callback, llvm::StringRef schema)
+                CallbackType create_callback, llvm::StringRef schema,
+                TraceGetStartCommand get_start_command)
       : PluginInstance<TraceCreateInstance>(name, std::move(description),
                                             create_callback),
-        schema(schema) {}
+        schema(schema), get_start_command(get_start_command) {}
 
   llvm::StringRef schema;
+  TraceGetStartCommand get_start_command;
 };
 
 typedef PluginInstances<TraceInstance> TraceInstances;
 
-static TraceInstances &GetTraceInstances() {
+static TraceInstances &GetTracePluginInstances() {
   static TraceInstances g_instances;
   return g_instances;
 }
 
 bool PluginManager::RegisterPlugin(ConstString name, const char *description,
                                    TraceCreateInstance create_callback,
-                                   llvm::StringRef schema) {
-  return GetTraceInstances().RegisterPlugin(name, description, create_callback,
-                                            schema);
+                                   llvm::StringRef schema,
+                                   TraceGetStartCommand get_start_command) {
+  return GetTracePluginInstances().RegisterPlugin(
+      name, description, create_callback, schema, get_start_command);
 }
 
 bool PluginManager::UnregisterPlugin(TraceCreateInstance create_callback) {
-  return GetTraceInstances().UnregisterPlugin(create_callback);
+  return GetTracePluginInstances().UnregisterPlugin(create_callback);
 }
 
 TraceCreateInstance
 PluginManager::GetTraceCreateCallback(ConstString plugin_name) {
-  return GetTraceInstances().GetCallbackForName(plugin_name);
+  return GetTracePluginInstances().GetCallbackForName(plugin_name);
 }
 
 llvm::StringRef PluginManager::GetTraceSchema(ConstString plugin_name) {
-  for (const TraceInstance &instance : GetTraceInstances().GetInstances())
+  for (const TraceInstance &instance : GetTracePluginInstances().GetInstances())
     if (instance.name == plugin_name)
       return instance.schema;
   return llvm::StringRef();
 }
 
+CommandObjectSP
+PluginManager::GetTraceStartCommand(llvm::StringRef plugin_name,
+                                    CommandInterpreter &interpreter) {
+  for (const TraceInstance &instance : GetTracePluginInstances().GetInstances())
+    if (instance.name.GetStringRef() == plugin_name)
+      return instance.get_start_command(interpreter);
+  return CommandObjectSP();
+}
+
 llvm::StringRef PluginManager::GetTraceSchema(size_t index) {
-  if (TraceInstance *instance = GetTraceInstances().GetInstanceAtIndex(index))
+  if (TraceInstance *instance =
+          GetTracePluginInstances().GetInstanceAtIndex(index))
     return instance->schema;
   return llvm::StringRef();
 }
@@ -1267,6 +1280,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetSymbolFileInstances().PerformDebuggerCallback(debugger);
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
+  GetTracePluginInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.

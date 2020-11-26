@@ -113,8 +113,8 @@ TEST(CodeExpander, NotAnExpansion) {
       .emit(OS);
   EXPECT_EQ(OS.str(), " $foo");
   DiagChecker.expect(SMDiagnostic(
-      SrcMgr, SMLoc::getFromPointer(In.data() + 1), "TestBuffer", 1, 1,
-      SourceMgr::DK_Warning, "Assuming missing escape character", " $foo", {}));
+      SrcMgr, SMLoc::getFromPointer(In.data()), "TestBuffer", 1, 0,
+      SourceMgr::DK_Warning, "Assuming missing escape character: \\$", " $foo", {}));
 }
 
 // \$foo is not an expansion but shouldn't warn as it's using the escape.
@@ -162,27 +162,7 @@ TEST(CodeExpander, UndefinedExpansion) {
   EXPECT_EQ(OS.str(), "expansion");
   DiagChecker.expect(
       SMDiagnostic(SrcMgr, SMLoc(), "<unknown>", 0, -1, SourceMgr::DK_Error,
-                   "Attempting to expand an undeclared variable foo", "", {}));
-}
-
-// ${foo} is an undefined expansion and should error. When given a valid
-// location for the start of the buffer it should correctly point at the
-// expansion being performed.
-TEST(CodeExpander, UndefinedExpansionWithLoc) {
-  std::string Result;
-  raw_string_ostream OS(Result);
-  CodeExpansions Expansions;
-  Expansions.declare("bar", "expansion");
-
-  RAIIDiagnosticChecker DiagChecker;
-  StringRef In = bufferize("Padding ${foo}${bar}");
-  CodeExpander(In, Expansions, SMLoc::getFromPointer(In.data()), false)
-      .emit(OS);
-  EXPECT_EQ(OS.str(), "Padding expansion");
-  DiagChecker.expect(SMDiagnostic(
-      SrcMgr, SMLoc::getFromPointer(In.data() + 8), "TestBuffer", 1, 8,
-      SourceMgr::DK_Error, "Attempting to expand an undeclared variable foo",
-      "Padding ${foo}${bar}", {}));
+                   "Attempt to expand an undeclared variable 'foo'", "", {}));
 }
 
 // ${bar is an unterminated expansion. Warn and implicitly terminate it.
@@ -197,7 +177,7 @@ TEST(CodeExpander, UnterminatedExpansion) {
   CodeExpander(In, Expansions, SMLoc::getFromPointer(In.data()), false)
       .emit(OS);
   EXPECT_EQ(OS.str(), " expansion");
-  DiagChecker.expect(SMDiagnostic(SrcMgr, SMLoc::getFromPointer(In.data() + 1),
-                                  "TestBuffer", 1, 1, SourceMgr::DK_Warning,
-                                  "Unterminated expansion", " ${bar", {}));
+  DiagChecker.expect(SMDiagnostic(SrcMgr, SMLoc::getFromPointer(In.data()),
+                                  "TestBuffer", 1, 0, SourceMgr::DK_Warning,
+                                  "Unterminated expansion '${bar'", " ${bar", {}));
 }

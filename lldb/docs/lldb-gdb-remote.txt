@@ -1123,6 +1123,11 @@ tuples to return are:
                  // the file while for anonymous regions it have to be the name
                  // associated to the region if that is available.
 
+    flags:<flags-string>; // where <flags-string> is a space separated string
+                          // of flag names. Currently the only supported flag
+                          // is "mt" for AArch64 memory tagging. lldb will
+                          // ignore any other flags in this field.
+
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that
                                      // contains an error string

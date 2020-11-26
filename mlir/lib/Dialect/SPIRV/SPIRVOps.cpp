@@ -18,7 +18,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -641,7 +641,7 @@ static Type getElementType(Type type, Attribute indices, OpAsmParser &parser,
   return getElementType(type, indices, errorFn);
 }
 
-/// Returns true if the given `block` only contains one `spv._merge` op.
+/// Returns true if the given `block` only contains one `spv.mlir.merge` op.
 static inline bool isMergeBlock(Block &block) {
   return !block.empty() && std::next(block.begin()) == block.end() &&
          isa<spirv::MergeOp>(block.front());
@@ -2320,7 +2320,7 @@ static LogicalResult verify(spirv::LoopOp loopOp) {
   Block &merge = region.back();
   if (!isMergeBlock(merge))
     return loopOp.emitOpError(
-        "last block must be the merge block with only one 'spv._merge' op");
+        "last block must be the merge block with only one 'spv.mlir.merge' op");
 
   if (std::next(region.begin()) == region.end())
     return loopOp.emitOpError(
@@ -2397,12 +2397,12 @@ void spirv::LoopOp::addEntryAndMergeBlock() {
   body().push_back(mergeBlock);
   OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
 
-  // Add a spv._merge op into the merge block.
+  // Add a spv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
 }
 
 //===----------------------------------------------------------------------===//
-// spv._merge
+// spv.mlir.merge
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::MergeOp mergeOp) {
@@ -2571,7 +2571,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv._reference_of
+// spv.mlir.referenceof
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
@@ -2697,7 +2697,7 @@ static LogicalResult verify(spirv::SelectionOp selectionOp) {
   // The last block is the merge block.
   if (!isMergeBlock(region.back()))
     return selectionOp.emitOpError(
-        "last block must be the merge block with only one 'spv._merge' op");
+        "last block must be the merge block with only one 'spv.mlir.merge' op");
 
   if (std::next(region.begin()) == region.end())
     return selectionOp.emitOpError("must have a selection header block");
@@ -2723,7 +2723,7 @@ void spirv::SelectionOp::addMergeBlock() {
   body().push_back(mergeBlock);
   OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
 
-  // Add a spv._merge op into the merge block.
+  // Add a spv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
 }
 

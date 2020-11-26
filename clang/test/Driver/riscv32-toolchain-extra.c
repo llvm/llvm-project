@@ -22,6 +22,10 @@
 // RUN:    -target riscv32-unknown-elf --rtlib=platform 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
+// RUN: %T/testroot-riscv32-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    -target riscv32-unknown-elf --rtlib=platform 2>&1 \
+// RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
+
 // C-RV32-BAREMETAL-ILP32-NOGCC: "-internal-isystem" "{{.*}}Output/testroot-riscv32-baremetal-nogcc/bin/../riscv32-unknown-elf/include"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}Output/testroot-riscv32-baremetal-nogcc/bin/riscv32-unknown-elf-ld"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}Output/testroot-riscv32-baremetal-nogcc/bin/../riscv32-unknown-elf/lib/crt0.o"

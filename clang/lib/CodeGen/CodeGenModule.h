@@ -1333,8 +1333,11 @@ public:
   /// a virtual function call could be made which ends up being dispatched to a
   /// member function of this class. This scope can be wider than the visibility
   /// of the class itself when the class has a more-visible dynamic base class.
+  /// The client should pass in an empty Visited set, which is used to prevent
+  /// redundant recursive processing.
   llvm::GlobalObject::VCallVisibility
-  GetVCallVisibilityLevel(const CXXRecordDecl *RD);
+  GetVCallVisibilityLevel(const CXXRecordDecl *RD,
+                          llvm::DenseSet<const CXXRecordDecl *> &Visited);
 
   /// Emit type metadata for the given vtable using the given layout.
   void EmitVTableTypeMetadata(const CXXRecordDecl *RD,
@@ -1478,7 +1481,8 @@ private:
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,
                      llvm::Constant *AssociatedData = nullptr);
-  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535);
+  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
+                     bool IsDtorAttrFunc = false);
 
   /// EmitCtorList - Generates a global array of functions and priorities using
   /// the given list and name. This array will have appending linkage and is
@@ -1507,6 +1511,11 @@ private:
   /// Register functions annotated with __attribute__((destructor)) using
   /// __cxa_atexit, if it is available, or atexit otherwise.
   void registerGlobalDtorsWithAtExit();
+
+  // When using sinit and sterm functions, unregister
+  // __attribute__((destructor)) annotated functions which were previously
+  // registered by the atexit subroutine using unatexit.
+  void unregisterGlobalDtorsWithUnAtExit();
 
   void emitMultiVersionFunctions();
 

@@ -74,7 +74,7 @@ spv.module Logical GLSL450 {
     ^then:
       spv.Return
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -97,7 +97,7 @@ spv.module Logical GLSL450 {
     ^then:
       spv.Branch ^merge
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -111,7 +111,7 @@ spv.module Logical GLSL450 {
     // CHECK-NEXT: ^bb1:
     // CHECK-NEXT:   spv.Branch ^bb2
     // CHECK-NEXT: ^bb2:
-    // CHECK-NEXT:   spv._merge
+    // CHECK-NEXT:   spv.mlir.merge
     spv.FunctionCall @callee(%0) : (i1) -> ()
     spv.Return
   }
@@ -130,7 +130,7 @@ spv.module Logical GLSL450 {
     ^continue:
       spv.Branch ^header
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -157,7 +157,7 @@ spv.module Logical GLSL450 {
     ^continue:
       spv.Branch ^header
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -175,7 +175,7 @@ spv.module Logical GLSL450 {
     // CHECK-NEXT: ^bb3:
     // CHECK-NEXT:   spv.Branch ^bb1
     // CHECK-NEXT: ^bb4:
-    // CHECK-NEXT:   spv._merge
+    // CHECK-NEXT:   spv.mlir.merge
     spv.FunctionCall @callee(%0) : (i1) -> ()
     spv.Return
   }
@@ -211,7 +211,7 @@ spv.module Logical GLSL450 {
       spv.FunctionCall @atomic_add(%5, %7) : (i32, !spv.ptr<i32, StorageBuffer>) -> ()
       spv.Branch ^bb2
     ^bb2 : // 2 preds: ^bb0, ^bb1
-      spv._merge
+      spv.mlir.merge
     }
     // CHECK: spv.Return
     spv.Return

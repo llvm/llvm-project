@@ -152,11 +152,11 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
   %a = alloca %struct.S1, align 4
-  call void @f2(%struct.S1* byval align 4 %a)
+  call void @f2(%struct.S1* byval(%struct.S1) align 4 %a)
   ret void
 }
 
-declare dso_local void @f2(%struct.S1* byval align 4) #1
+declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
 
 ; O32-SDAG-LABEL: Initial selection DAG: %bb.0 'g2:entry'
 ; O32-SDAG: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
@@ -348,7 +348,7 @@ entry:
   %1 = bitcast %struct.S1* %byval-temp to i8*
   %2 = bitcast %struct.S1* %0 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 1 %2, i32 65520, i1 false)
-  call void @f2(%struct.S1* byval align 4 %byval-temp)
+  call void @f2(%struct.S1* byval(%struct.S1) align 4 %byval-temp)
   ret void
 }
 

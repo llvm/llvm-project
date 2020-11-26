@@ -199,9 +199,11 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+  std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
       CodeModel, Conf.CGOptLevel));
+  assert(TM && "Failed to create target machine");
+  return TM;
 }
 
 static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,

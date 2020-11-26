@@ -1077,7 +1077,7 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test58(
 ; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[I:%.*]], 4200
 ; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[J:%.*]], 4200
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
@@ -1501,4 +1501,76 @@ define <2 x i8> @sub_mask_lowbits_splat_extra_use(<2 x i8> %x, <2 x i8>* %p) {
   store <2 x i8> %a2, <2 x i8>* %p
   %r = sub <2 x i8> %a1, %a2
   ret <2 x i8> %r
+}
+
+define i16 @sub_nsw_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nsw_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i16 [[TMP1]], 3
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 8
+  %y8 = mul nsw i16 %y, 8
+  %r = sub nsw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nuw_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nuw_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 2
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 4
+  %y8 = mul nsw i16 %y, 4
+  %r = sub nuw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 16
+  %y8 = mul nsw i16 %y, 16
+  %r = sub i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nsw_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nsw_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 3
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 8
+  %y8 = mul nuw i16 %y, 8
+  %r = sub nsw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nuw_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nuw_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i16 [[TMP1]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 16
+  %y8 = mul nuw i16 %y, 16
+  %r = sub nuw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 5
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 32
+  %y8 = mul nuw i16 %y, 32
+  %r = sub i16 %x8, %y8
+  ret i16 %r
 }

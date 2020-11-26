@@ -67,8 +67,8 @@ declare hidden void @external_void_func_v32i32_i8_i8_i16(<32 x i32>, i8, i8, i16
 
 ; Structs
 declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
-declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
+declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
+declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }), { i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
 
 declare hidden void @external_void_func_v2i8(<2 x i8>) #0
 declare hidden void @external_void_func_v3i8(<3 x i8>) #0
@@ -76,7 +76,7 @@ declare hidden void @external_void_func_v4i8(<4 x i8>) #0
 declare hidden void @external_void_func_v8i8(<8 x i8>) #0
 declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 
-declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
+declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval(double) align 16) #0
 declare hidden void @stack_passed_f64_arg(<32 x i32>, double) #0
 declare hidden void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
     <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0

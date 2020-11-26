@@ -4,39 +4,39 @@
 ; RUN: llc < %s -O1 -march=sparc -mcpu=leon4   | FileCheck %s -check-prefix=LEON3_4_ITIN
 
 ; NO_ITIN-LABEL: f32_ops:
-; NO_ITIN:       ld 
-; NO_ITIN-NEXT:  ld 
-; NO_ITIN-NEXT:  ld 
-; NO_ITIN-NEXT:  ld 
-; NO_ITIN-NEXT:  fadds 
-; NO_ITIN-NEXT:  fsubs 
-; NO_ITIN-NEXT:  fmuls 
-; NO_ITIN-NEXT:  retl 
-; NO_ITIN-NEXT:  fdivs 
+; NO_ITIN:       ld
+; NO_ITIN-NEXT:  ld
+; NO_ITIN-NEXT:  ld
+; NO_ITIN-NEXT:  ld
+; NO_ITIN-NEXT:  fadds
+; NO_ITIN-NEXT:  fsubs
+; NO_ITIN-NEXT:  fmuls
+; NO_ITIN-NEXT:  retl
+; NO_ITIN-NEXT:  fdivs
 
 ; LEON2_ITIN-LABEL: f32_ops:
-; LEON2_ITIN:       ld 
-; LEON2_ITIN-NEXT:  ld 
-; LEON2_ITIN-NEXT:  fadds 
-; LEON2_ITIN-NEXT:  ld 
-; LEON2_ITIN-NEXT:  fsubs 
-; LEON2_ITIN-NEXT:  ld 
-; LEON2_ITIN-NEXT:  fmuls 
-; LEON2_ITIN-NEXT:  retl 
-; LEON2_ITIN-NEXT:  fdivs 
+; LEON2_ITIN:       ld
+; LEON2_ITIN-NEXT:  ld
+; LEON2_ITIN-NEXT:  fadds
+; LEON2_ITIN-NEXT:  ld
+; LEON2_ITIN-NEXT:  fsubs
+; LEON2_ITIN-NEXT:  ld
+; LEON2_ITIN-NEXT:  fmuls
+; LEON2_ITIN-NEXT:  retl
+; LEON2_ITIN-NEXT:  fdivs
 
 ; LEON3_4_ITIN-LABEL: f32_ops:
-; LEON3_4_ITIN:       ld 
-; LEON3_4_ITIN-NEXT:  ld 
-; LEON3_4_ITIN-NEXT:  ld 
-; LEON3_4_ITIN-NEXT:  fadds 
-; LEON3_4_ITIN-NEXT:  ld 
-; LEON3_4_ITIN-NEXT:  fsubs 
-; LEON3_4_ITIN-NEXT:  fmuls 
-; LEON3_4_ITIN-NEXT:  retl 
-; LEON3_4_ITIN-NEXT:  fdivs 
+; LEON3_4_ITIN:       ld
+; LEON3_4_ITIN-NEXT:  ld
+; LEON3_4_ITIN-NEXT:  ld
+; LEON3_4_ITIN-NEXT:  fadds
+; LEON3_4_ITIN-NEXT:  ld
+; LEON3_4_ITIN-NEXT:  fsubs
+; LEON3_4_ITIN-NEXT:  fmuls
+; LEON3_4_ITIN-NEXT:  retl
+; LEON3_4_ITIN-NEXT:  fdivs
 
-define float @f32_ops(float* byval %a, float* byval %b, float* byval %c, float* byval %d) {
+define float @f32_ops(float* byval(float) %a, float* byval(float) %b, float* byval(float) %c, float* byval(float) %d) {
 entry:
   %0 = load float, float* %a, align 8
   %1 = load float, float* %b, align 8

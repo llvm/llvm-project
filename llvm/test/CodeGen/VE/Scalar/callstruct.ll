@@ -5,7 +5,7 @@
 @A = common global %struct.a zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
-define void @fun(%struct.a* noalias nocapture sret %a, i32 %p1, i32 %p2) {
+define void @fun(%struct.a* noalias nocapture sret(%struct.a) %a, i32 %p1, i32 %p2) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
@@ -37,10 +37,10 @@ define void @caller() {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i64, align 8
   %a.bc = bitcast i64* %a to %struct.a*
-  call void @callee(%struct.a* nonnull sret %a.bc, i32 3, i32 4)
+  call void @callee(%struct.a* nonnull sret(%struct.a) %a.bc, i32 3, i32 4)
   %a.val = load i64, i64* %a, align 8
   store i64 %a.val, i64* bitcast (%struct.a* @A to i64*), align 4
   ret void
 }
 
-declare void @callee(%struct.a* sret, i32, i32)
+declare void @callee(%struct.a* sret(%struct.a), i32, i32)

@@ -33,13 +33,15 @@ entry:
 ; CHECK: addis [[REG1:[0-9]+]], 2, .LC[[TOCNUM:[0-9]+]]@toc@ha
 ; CHECK: ld [[REG2:[0-9]+]], .LC[[TOCNUM]]@toc@l([[REG1]])
 ; CHECK: lwz {{[0-9]+}}, 0([[REG2]])
-; CHECK: stw {{[0-9]+}}, 0([[REG2]])
+; CHECK: addis [[REG3:[0-9]+]], 2, .LC[[TOCNUM]]@toc@ha
+; CHECK: ld [[REG4:[0-9]+]], .LC[[TOCNUM]]@toc@l([[REG3]])
+; CHECK: stw {{[0-9]+}}, 0([[REG4]])
 
 
 ; CHECK:      .section .toc,"aw",@progbits
 ; CHECK-NEXT: .LC0:
 ; CHECK-NEXT:  .tc ei[TC],ei
 ; CHECK-NEXT: .LC1:
-; CHECK-NEXT:  .tc fi[TC],fi
-; CHECK-NEXT: .LC2:
 ; CHECK-NEXT:  .tc gi[TC],gi
+; CHECK-NEXT: .LC2:
+; CHECK-NEXT:  .tc fi[TC],fi

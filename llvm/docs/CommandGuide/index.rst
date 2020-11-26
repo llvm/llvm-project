@@ -74,5 +74,6 @@ Developer Tools
    tblgen
    lit
    llvm-exegesis
-   llvm-pdbutil
    llvm-locstats
+   llvm-pdbutil
+   llvm-profgen

@@ -12,7 +12,7 @@
 ; A sequence of copyto/copyfrom virtual registers is used to deal with byval
 ; lowering appearing after moving arguments to registers. The following two
 ; checks verify that the register allocator changes those sequences to direct
-; moves to argument register where it can (for registers that are not used in 
+; moves to argument register where it can (for registers that are not used in
 ; byval lowering - not rsi, not rdi, not rcx).
 ; Expect argument 4 to be moved directly to register edx.
 ; CHECK: movl $7, %edx
@@ -30,13 +30,13 @@
                    i64, i64, i64, i64, i64, i64, i64, i64,
                    i64, i64, i64, i64, i64, i64, i64, i64 }
 
-declare  tailcc i64 @tailcallee(%struct.s* byval %a, i64 %val, i64 %val2, i64 %val3, i64 %val4, i64 %val5)
+declare  tailcc i64 @tailcallee(%struct.s* byval(%struct.s) %a, i64 %val, i64 %val2, i64 %val3, i64 %val4, i64 %val5)
 
 
-define  tailcc i64 @tailcaller(i64 %b, %struct.s* byval %a) {
+define  tailcc i64 @tailcaller(i64 %b, %struct.s* byval(%struct.s) %a) {
 entry:
         %tmp2 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 1
         %tmp3 = load i64, i64* %tmp2, align 8
-        %tmp4 = tail call tailcc i64 @tailcallee(%struct.s* byval %a , i64 %tmp3, i64 %b, i64 7, i64 13, i64 17)
+        %tmp4 = tail call tailcc i64 @tailcallee(%struct.s* byval(%struct.s) %a , i64 %tmp3, i64 %b, i64 7, i64 13, i64 17)
         ret i64 %tmp4
 }

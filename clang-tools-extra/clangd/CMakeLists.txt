@@ -56,6 +56,7 @@ add_clang_library(clangDaemon
   ConfigYAML.cpp
   Diagnostics.cpp
   DraftStore.cpp
+  DumpAST.cpp
   ExpectedTypes.cpp
   FindSymbols.cpp
   FindTarget.cpp
@@ -80,6 +81,7 @@ add_clang_library(clangDaemon
   SemanticSelection.cpp
   SourceCode.cpp
   QueryDriverDatabase.cpp
+  TidyProvider.cpp
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
@@ -96,6 +98,7 @@ add_clang_library(clangDaemon
   index/IndexAction.cpp
   index/MemIndex.cpp
   index/Merge.cpp
+  index/ProjectAware.cpp
   index/Ref.cpp
   index/Relation.cpp
   index/Serialization.cpp
@@ -138,7 +141,6 @@ clang_target_link_libraries(clangDaemon
   clangTooling
   clangToolingCore
   clangToolingInclusions
-  clangToolingRefactoring
   clangToolingSyntax
   )
 
@@ -167,17 +169,18 @@ if ( CLANGD_BUILD_XPC )
   add_subdirectory(xpc)
 endif ()
 
+if (CLANGD_ENABLE_REMOTE)
+  include(FindGRPC)
+endif()
+
 if(CLANG_INCLUDE_TESTS)
-add_subdirectory(test)
-add_subdirectory(unittests)
+  add_subdirectory(test)
+  add_subdirectory(unittests)
 endif()
 
 # FIXME(kirillbobyrev): Document this in the LLVM docs once remote index is stable.
 option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for Clangd" OFF)
 set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
 
-if (CLANGD_ENABLE_REMOTE)
-  include(FindGRPC)
-endif()
 add_subdirectory(index/remote)
 add_subdirectory(index/dex/dexp)

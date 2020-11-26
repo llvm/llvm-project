@@ -5,7 +5,7 @@
 %struct.CMTimeMapping = type { %struct.CMTimeRange, %struct.CMTimeRange }
 %struct.CMTimeRange = type { %struct.CMTime, %struct.CMTime }
 
-define void @t(%struct.CMTimeMapping* noalias nocapture sret %agg.result) nounwind optsize ssp {
+define void @t(%struct.CMTimeMapping* noalias nocapture sret(%struct.CMTimeMapping) %agg.result) nounwind optsize ssp {
 entry:
   %agg.result1 = bitcast %struct.CMTimeMapping* %agg.result to i8* ; <i8*> [#uses=1]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %agg.result1, i8* align 4 null, i64 96, i1 false)

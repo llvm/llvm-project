@@ -14,6 +14,6 @@
 #define MLIR_IR_FUNCTION_H
 
 // TODO: This is a temporary forward until Function.h is removed.
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 
 #endif // MLIR_IR_FUNCTION_H

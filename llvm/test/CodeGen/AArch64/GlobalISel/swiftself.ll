@@ -53,7 +53,7 @@ declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
 ; CHECK: bl {{_?}}thisreturn_attribute
 ; CHECK: str x0, {{\[}}[[CSREG]]
 ; CHECK: ret
-define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret, i8** noalias nocapture readonly swiftself) {
+define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret(i8*), i8** noalias nocapture readonly swiftself) {
 entry:
   %2 = load i8*, i8** %1, align 8
   %3 = tail call swiftcc i8* @thisreturn_attribute(i8* swiftself %2)

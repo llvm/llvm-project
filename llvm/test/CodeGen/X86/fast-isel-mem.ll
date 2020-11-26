@@ -13,16 +13,20 @@ entry:
 	ret i32 %2
 ; This should fold one of the loads into the add.
 ; CHECK-LABEL: loadgv:
+; CHECK: 	movl	L_src$non_lazy_ptr, %eax
+; CHECK: 	movl	(%eax), %eax
 ; CHECK: 	movl	L_src$non_lazy_ptr, %ecx
-; CHECK: 	movl	(%ecx), %eax
 ; CHECK: 	addl	(%ecx), %eax
+; CHECK: 	movl	L_src$non_lazy_ptr, %ecx
 ; CHECK: 	movl	%eax, (%ecx)
 ; CHECK: 	ret
 
 ; ATOM:	loadgv:
-; ATOM:		movl    L_src$non_lazy_ptr, %ecx
-; ATOM:         movl    (%ecx), %eax
+; ATOM:		movl    L_src$non_lazy_ptr, %eax
+; ATOM:         movl    (%eax), %eax
+; ATOM:		    movl    L_src$non_lazy_ptr, %ecx
 ; ATOM:         addl    (%ecx), %eax
+; ATOM:		    movl    L_src$non_lazy_ptr, %ecx
 ; ATOM:         movl    %eax, (%ecx)
 ; ATOM:         ret
 

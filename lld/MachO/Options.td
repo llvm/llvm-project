@@ -1107,9 +1107,7 @@ def debug_snapshot : Flag<["-"], "debug_snapshot">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def demangle : Flag<["-"], "demangle">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
+     HelpText<"Demangle symbol names in diagnostics">;
 def dyld_env : Flag<["-"], "dyld_env">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,

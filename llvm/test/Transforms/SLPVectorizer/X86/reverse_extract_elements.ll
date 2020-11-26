@@ -27,7 +27,7 @@ entry:
   ret float %add.3
 }
 
-define double @dotd(<4 x double>* byval nocapture readonly align 32, <4 x double>* byval nocapture readonly align 32) {
+define double @dotd(<4 x double>* byval(<4 x double>) nocapture readonly align 32, <4 x double>* byval(<4 x double>) nocapture readonly align 32) {
 ; CHECK-LABEL: @dotd(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, <4 x double>* [[TMP0:%.*]], align 32

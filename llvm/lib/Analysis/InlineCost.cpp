@@ -1101,7 +1101,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   // integer is large enough to represent the pointer.
   unsigned IntegerSize = I.getType()->getScalarSizeInBits();
   unsigned AS = I.getOperand(0)->getType()->getPointerAddressSpace();
-  if (IntegerSize >= DL.getPointerSizeInBits(AS)) {
+  if (IntegerSize == DL.getPointerSizeInBits(AS)) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
@@ -1909,6 +1909,10 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // instructions shouldn't factor into the cost computation, but until then,
     // hack around it here.
     if (isa<DbgInfoIntrinsic>(I))
+      continue;
+
+    // Skip pseudo-probes.
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     // Skip ephemeral values.

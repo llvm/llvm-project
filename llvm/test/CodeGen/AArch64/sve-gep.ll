@@ -105,11 +105,9 @@ define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_1(<vscale x 2 x 
 ; CHECK-LABEL: scalable_of_scalable_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov z1.d, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mla z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, <vscale x 2 x i64> %idx
@@ -120,10 +118,8 @@ define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_2(<vscale x 2 x 
 ; CHECK-LABEL: scalable_of_scalable_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov z1.d, #1 // =0x1
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mla z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x <vscale x 2 x i64>*> %base, <vscale x 2 x i64> %idx

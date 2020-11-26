@@ -424,7 +424,8 @@ public:
 
   /// A convenience wrapper around the \c isNoAlias helper interface.
   bool isNoAlias(const Value *V1, const Value *V2) {
-    return isNoAlias(MemoryLocation(V1), MemoryLocation(V2));
+    return isNoAlias(MemoryLocation(V1, LocationSize::unknown()),
+                     MemoryLocation(V2, LocationSize::unknown()));
   }
 
   /// A trivial helper function to check to see if the specified pointers are
@@ -446,7 +447,8 @@ public:
   /// A convenience wrapper around the primary \c pointsToConstantMemory
   /// interface.
   bool pointsToConstantMemory(const Value *P, bool OrLocal = false) {
-    return pointsToConstantMemory(MemoryLocation(P), OrLocal);
+    return pointsToConstantMemory(MemoryLocation(P, LocationSize::unknown()),
+                                  OrLocal);
   }
 
   /// @}

@@ -206,6 +206,7 @@ class MCStreamer {
   std::vector<std::unique_ptr<WinEH::FrameInfo>> WinFrameInfos;
 
   WinEH::FrameInfo *CurrentWinFrameInfo;
+  size_t CurrentProcWinFrameInfoStartIndex;
 
   /// Tracks an index to represent the order a symbol was emitted in.
   /// Zero means we did not emit that symbol.
@@ -243,6 +244,8 @@ protected:
   WinEH::FrameInfo *getCurrentWinFrameInfo() {
     return CurrentWinFrameInfo;
   }
+
+  virtual void EmitWindowsUnwindTables(WinEH::FrameInfo *Frame);
 
   virtual void EmitWindowsUnwindTables();
 

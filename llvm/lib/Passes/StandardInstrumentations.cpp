@@ -32,12 +32,6 @@
 
 using namespace llvm;
 
-// TODO: remove once all required passes are marked as such.
-static cl::opt<bool>
-    EnableOptnone("enable-npm-optnone", cl::init(true),
-                  cl::desc("Enable skipping optional passes optnone functions "
-                           "under new pass manager"));
-
 cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
     "verify-cfg-preserved", cl::Hidden,
 #ifdef NDEBUG
@@ -247,14 +241,20 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy"});
 }
 
-// Return true when this is a defined function for which printing
-// of changes is desired.
-bool isInterestingFunction(const Function &F) {
+} // namespace
+
+template <typename IRUnitT>
+ChangeReporter<IRUnitT>::~ChangeReporter<IRUnitT>() {
+  assert(BeforeStack.empty() && "Problem with Change Printer stack.");
+}
+
+template <typename IRUnitT>
+bool ChangeReporter<IRUnitT>::isInterestingFunction(const Function &F) {
   return llvm::isFunctionInPrintList(F.getName());
 }
 
-// Return true when this is a pass for which printing of changes is desired.
-bool isInterestingPass(StringRef PassID) {
+template <typename IRUnitT>
+bool ChangeReporter<IRUnitT>::isInterestingPass(StringRef PassID) {
   if (isIgnored(PassID))
     return false;
 
@@ -265,7 +265,8 @@ bool isInterestingPass(StringRef PassID) {
 
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
-bool isInteresting(Any IR, StringRef PassID) {
+template <typename IRUnitT>
+bool ChangeReporter<IRUnitT>::isInteresting(Any IR, StringRef PassID) {
   if (!isInterestingPass(PassID))
     return false;
   if (any_isa<const Function *>(IR))
@@ -273,10 +274,8 @@ bool isInteresting(Any IR, StringRef PassID) {
   return true;
 }
 
-} // namespace
-
 template <typename IRUnitT>
-void ChangePrinter<IRUnitT>::saveIRBeforePass(Any IR, StringRef PassID) {
+void ChangeReporter<IRUnitT>::saveIRBeforePass(Any IR, StringRef PassID) {
   // Always need to place something on the stack because invalidated passes
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
@@ -296,7 +295,7 @@ void ChangePrinter<IRUnitT>::saveIRBeforePass(Any IR, StringRef PassID) {
 }
 
 template <typename IRUnitT>
-void ChangePrinter<IRUnitT>::handleIRAfterPass(Any IR, StringRef PassID) {
+void ChangeReporter<IRUnitT>::handleIRAfterPass(Any IR, StringRef PassID) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
   std::string Name;
 
@@ -308,7 +307,7 @@ void ChangePrinter<IRUnitT>::handleIRAfterPass(Any IR, StringRef PassID) {
     if (auto UM = unwrapModule(IR))
       Name = UM->second;
   }
-  if (Name.empty())
+  if (Name == "")
     Name = " (module)";
 
   if (isIgnored(PassID))
@@ -332,7 +331,7 @@ void ChangePrinter<IRUnitT>::handleIRAfterPass(Any IR, StringRef PassID) {
 }
 
 template <typename IRUnitT>
-void ChangePrinter<IRUnitT>::handleInvalidatedPass(StringRef PassID) {
+void ChangeReporter<IRUnitT>::handleInvalidatedPass(StringRef PassID) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
 
   // Always flag it as invalidated as we cannot determine when
@@ -343,18 +342,9 @@ void ChangePrinter<IRUnitT>::handleInvalidatedPass(StringRef PassID) {
   BeforeStack.pop_back();
 }
 
-template <typename IRUnitT> ChangePrinter<IRUnitT>::~ChangePrinter<IRUnitT>() {
-  assert(BeforeStack.empty() && "Problem with Change Printer stack.");
-}
-
-IRChangePrinter::IRChangePrinter() : Out(dbgs()) {}
-
-IRChangePrinter::~IRChangePrinter() {}
-
-void IRChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (!PrintChanged)
-    return;
-
+template <typename IRUnitT>
+void ChangeReporter<IRUnitT>::registerRequiredCallbacks(
+    PassInstrumentationCallbacks &PIC) {
   PIC.registerBeforeNonSkippedPassCallback(
       [this](StringRef P, Any IR) { saveIRBeforePass(IR, P); });
 
@@ -368,7 +358,12 @@ void IRChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
       });
 }
 
-void IRChangePrinter::handleInitialIR(Any IR) {
+template <typename IRUnitT>
+TextChangeReporter<IRUnitT>::TextChangeReporter()
+    : ChangeReporter<IRUnitT>(), Out(dbgs()) {}
+
+template <typename IRUnitT>
+void TextChangeReporter<IRUnitT>::handleInitialIR(Any IR) {
   // Always print the module.
   // Unwrap and print directly to avoid filtering problems in general routines.
   auto UnwrappedModule = unwrapModule(IR, /*Force=*/true);
@@ -378,24 +373,53 @@ void IRChangePrinter::handleInitialIR(Any IR) {
                                 /*ShouldPreserveUseListOrder=*/true);
 }
 
-void IRChangePrinter::generateIRRepresentation(Any IR, StringRef PassID,
-                                               std::string &Output) {
-  raw_string_ostream OS(Output);
-  // use the after banner for all cases so it will match
-  SmallString<20> Banner = formatv("*** IR Dump After {0} ***", PassID);
-  unwrapAndPrint(OS, IR, Banner, llvm::forcePrintModuleIR(),
-                 /*Brief=*/false, /*ShouldPreserveUseListOrder=*/true);
-  OS.str();
-}
-
-void IRChangePrinter::omitAfter(StringRef PassID, std::string &Name) {
+template <typename IRUnitT>
+void TextChangeReporter<IRUnitT>::omitAfter(StringRef PassID,
+                                            std::string &Name) {
   Out << formatv("*** IR Dump After {0}{1} omitted because no change ***\n",
                  PassID, Name);
 }
 
-void IRChangePrinter::handleAfter(StringRef PassID, std::string &Name,
-                                  const std::string &Before,
-                                  const std::string &After, Any) {
+template <typename IRUnitT>
+void TextChangeReporter<IRUnitT>::handleInvalidated(StringRef PassID) {
+  Out << formatv("*** IR Pass {0} invalidated ***\n", PassID);
+}
+
+template <typename IRUnitT>
+void TextChangeReporter<IRUnitT>::handleFiltered(StringRef PassID,
+                                                 std::string &Name) {
+  SmallString<20> Banner =
+      formatv("*** IR Dump After {0}{1} filtered out ***\n", PassID, Name);
+  Out << Banner;
+}
+
+template <typename IRUnitT>
+void TextChangeReporter<IRUnitT>::handleIgnored(StringRef PassID,
+                                                std::string &Name) {
+  Out << formatv("*** IR Pass {0}{1} ignored ***\n", PassID, Name);
+}
+
+IRChangedPrinter::~IRChangedPrinter() {}
+
+void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
+  if (PrintChanged)
+    TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
+}
+
+void IRChangedPrinter::generateIRRepresentation(Any IR, StringRef PassID,
+                                                std::string &Output) {
+  raw_string_ostream OS(Output);
+  // use the after banner for all cases so it will match
+  SmallString<20> Banner = formatv("*** IR Dump After {0} ***", PassID);
+  unwrapAndPrint(OS, IR, Banner, forcePrintModuleIR(),
+                 /*Brief=*/false, /*ShouldPreserveUseListOrder=*/true);
+
+  OS.str();
+}
+
+void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
+                                   const std::string &Before,
+                                   const std::string &After, Any) {
   assert(After.find("*** IR Dump") == 0 && "Unexpected banner format.");
   StringRef AfterRef = After;
   StringRef Banner =
@@ -423,23 +447,8 @@ void IRChangePrinter::handleAfter(StringRef PassID, std::string &Name,
   Out << After.substr(Banner.size());
 }
 
-void IRChangePrinter::handleInvalidated(StringRef PassID) {
-  Out << formatv("*** IR Pass {0} invalidated ***\n", PassID);
-}
-
-void IRChangePrinter::handleFiltered(StringRef PassID, std::string &Name) {
-  SmallString<20> Banner =
-      formatv("*** IR Dump After {0}{1} filtered out ***\n", PassID, Name);
-  Out << Banner;
-}
-
-void IRChangePrinter::handleIgnored(StringRef PassID, std::string &Name) {
-  Out << formatv("*** IR Pass {0}{1} ignored ***\n", PassID, Name);
-}
-
-bool IRChangePrinter::same(const std::string &Before,
-                           const std::string &After) {
-  return Before == After;
+bool IRChangedPrinter::same(const std::string &S1, const std::string &S2) {
+  return S1 == S2;
 }
 
 PrintIRInstrumentation::~PrintIRInstrumentation() {
@@ -545,8 +554,6 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  if (!EnableOptnone)
-    return true;
   const Function *F = nullptr;
   if (any_isa<const Function *>(IR)) {
     F = any_cast<const Function *>(IR);
@@ -837,3 +844,10 @@ void StandardInstrumentations::registerCallbacks(
   if (VerifyEach)
     Verify.registerCallbacks(PIC);
 }
+
+namespace llvm {
+
+template class ChangeReporter<std::string>;
+template class TextChangeReporter<std::string>;
+
+} // namespace llvm

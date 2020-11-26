@@ -776,6 +776,8 @@ private:
   SDValue ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N, unsigned OpNo);
+  SDValue ScalarizeVecOp_FP_EXTEND(SDNode *N);
+  SDValue ScalarizeVecOp_STRICT_FP_EXTEND(SDNode *N);
   SDValue ScalarizeVecOp_VECREDUCE(SDNode *N);
   SDValue ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N);
 

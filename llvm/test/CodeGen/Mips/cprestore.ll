@@ -13,8 +13,8 @@
 define void @foo2() nounwind {
 entry:
   %s = alloca %struct.S, align 4
-  call void @foo1(%struct.S* byval %s)
+  call void @foo1(%struct.S* byval(%struct.S) %s)
   ret void
 }
 
-declare void @foo1(%struct.S* byval)
+declare void @foo1(%struct.S* byval(%struct.S))

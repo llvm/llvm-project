@@ -19,7 +19,7 @@
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-define double @test_1(double* byval %a, double* byval %b) {
+define double @test_1(double* byval(double) %a, double* byval(double) %b) {
 entry:
     %0 = load double, double* %a, align 8
     %1 = load double, double* %b, align 8
@@ -50,7 +50,7 @@ declare double @llvm.sqrt.f64(double) nounwind readonly
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-define double @test_2(double* byval %a) {
+define double @test_2(double* byval(double) %a) {
 entry:
     %0 = load double, double* %a, align 8
     %1 = call double @llvm.sqrt.f64(double %0) nounwind

@@ -57,11 +57,18 @@ int test() {
   p = &*(p + 1);
 
   // Struct member access
-  struct S NODEREF *s;  // expected-note 2 {{s declared here}}
+  struct S NODEREF *s; // expected-note 3 {{s declared here}}
   x = s->a;   // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
   x = (*s).b; // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
   p = &s->a;
   p = &(*s).b;
+
+  // Most things in sizeof() can't actually access memory
+  x = sizeof(s->a);          // ok
+  x = sizeof(*s);            // ok
+  x = sizeof(s[0]);          // ok
+  x = sizeof(s->a + (s->b)); // ok
+  x = sizeof(int[++s->a]);   // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
 
   // Nested struct access
   struct S2 NODEREF *s2_noderef;    // expected-note 5 {{s2_noderef declared here}}

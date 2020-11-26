@@ -59,8 +59,22 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
   return true;
 }
 
+static bool isRISCVBareMetal(const llvm::Triple &Triple) {
+  if (Triple.getArch() != llvm::Triple::riscv32 &&
+      Triple.getArch() != llvm::Triple::riscv64)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  return Triple.getEnvironmentName() == "elf";
+}
+
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMBareMetal(Triple);
+  return isARMBareMetal(Triple) || isRISCVBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {

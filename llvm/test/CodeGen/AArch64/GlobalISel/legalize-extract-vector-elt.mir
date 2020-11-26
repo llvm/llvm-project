@@ -131,3 +131,20 @@ body: |
     $x0 = COPY %5(s64)
     RET_ReallyLR
 ...
+---
+name:            test_eve_v2p0
+body: |
+  bb.0:
+    liveins: $q0, $q1, $x0
+    ; CHECK-LABEL: name: test_eve_v2p0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[EVEC:%[0-9]+]]:_(p0) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x p0>), [[COPY1]](s64)
+    ; CHECK: $x0 = COPY [[EVEC]](p0)
+    ; CHECK: RET_ReallyLR
+    %0:_(<2 x p0>) = COPY $q0
+    %2:_(s64) = COPY $x0
+    %3:_(p0) = G_EXTRACT_VECTOR_ELT %0:_(<2 x p0>), %2:_(s64)
+    $x0 = COPY %3(p0)
+    RET_ReallyLR
+...

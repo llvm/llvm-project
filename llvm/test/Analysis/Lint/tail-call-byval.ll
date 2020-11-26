@@ -15,12 +15,12 @@ entry:
 ; CHECK: Undefined behavior: Call with "tail" keyword references alloca
 ; CHECK-NEXT:  tail call void @f1(%s* %c)
 
-declare void @f3(%s* byval)
+declare void @f3(%s* byval(%s))
 
 define void @f4() {
 entry:
   %c = alloca %s
-  tail call void @f3(%s* byval %c)
+  tail call void @f3(%s* byval(%s) %c)
   ret void
 }
 
@@ -28,6 +28,6 @@ entry:
 ; byval, effectively copying the data to the stack instead of leaking the
 ; pointer itself.
 ; CHECK-NOT: Undefined behavior: Call with "tail" keyword references alloca
-; CHECK-NOT:  tail call void @f3(%s* byval %c)
+; CHECK-NOT:  tail call void @f3(%s* byval(%s) %c)
 
 

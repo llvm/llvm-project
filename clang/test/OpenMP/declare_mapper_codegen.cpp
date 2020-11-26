@@ -257,7 +257,7 @@ void foo(int a){
   C c;
   c.a = a;
 
-  // CK0-DAG: call i32 @__tgt_target_mapper(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** [[MPRGEP:%.+]])
+  // CK0-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%[^,]+]] to i8**
@@ -296,7 +296,7 @@ void foo(int a){
     ++c.a;
   }
 
-  // CK0-DAG: call i32 @__tgt_target_teams_mapper(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[TEAMSIZES]]{{.+}}, {{.+}}[[TEAMTYPES]]{{.+}}, i8** [[MPRGEP:%.+]], i32 0, i32 0)
+  // CK0-DAG: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[TEAMSIZES]]{{.+}}, {{.+}}[[TEAMTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i32 0)
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%[^,]+]] to i8**
@@ -325,7 +325,7 @@ void foo(int a){
     ++c.a;
   }
 
-  // CK0-DAG: call void @__tgt_target_data_begin_mapper(i64 {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[EDSIZES]]{{.+}}, {{.+}}[[EDTYPES]]{{.+}}, i8** [[MPRGEP:%.+]])
+  // CK0-DAG: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[EDSIZES]]{{.+}}, {{.+}}[[EDTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%[^,]+]] to i8**
@@ -374,7 +374,7 @@ void foo(int a){
   // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
   #pragma omp target enter data map(mapper(id),to: c) nowait
 
-  // CK0-DAG: call void @__tgt_target_data_end_mapper(i64 {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[EXDSIZES]]{{.+}}, {{.+}}[[EXDTYPES]]{{.+}}, i8** [[MPRGEP:%.+]])
+  // CK0-DAG: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[EXDSIZES]]{{.+}}, {{.+}}[[EXDTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%[^,]+]] to i8**
@@ -423,7 +423,7 @@ void foo(int a){
   // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
   #pragma omp target exit data map(mapper(id),from: c) nowait
 
-  // CK0-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** [[TMPRGEP:%.+]])
+  // CK0-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** null, i8** [[TMPRGEP:%.+]])
   // CK0-DAG: [[TGEPBP]] = getelementptr inbounds {{.+}}[[TBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK0-DAG: [[TGEPP]] = getelementptr inbounds {{.+}}[[TP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK0-DAG: [[TMPRGEP]] = bitcast [1 x i8*]* [[TMPR:%[^,]+]] to i8**
@@ -437,7 +437,7 @@ void foo(int a){
   // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
   #pragma omp target update to(mapper(id): c)
 
-  // CK0-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** [[FMPRGEP:%.+]])
+  // CK0-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** null, i8** [[FMPRGEP:%.+]])
   // CK0-DAG: [[FGEPBP]] = getelementptr inbounds {{.+}}[[FBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK0-DAG: [[FGEPP]] = getelementptr inbounds {{.+}}[[FP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK0-DAG: [[FMPRGEP]] = bitcast [1 x i8*]* [[FMPR:%[^,]+]] to i8**
@@ -507,7 +507,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINED:@.+]](i32 {{.*}}{{[^,]+}}, [[ANON_T]]* noalias [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_nowait_mapper(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZEGEP:%[0-9]+]], {{.+}}[[NWTYPES]]{{.+}}, i8** [[MPRGEP:%.+]])
+// CK0-DAG: call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZEGEP:%[0-9]+]], {{.+}}[[NWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[SIZEGEP]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SIZEFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
@@ -538,7 +538,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINE_1:@.+]](i32 {{.*}}%.global_tid.{{.+}}, [[ANON_T_0]]* noalias [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_teams_nowait_mapper(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], i64* [[SIZEGEP:%[0-9]+]], {{.+}}[[TEAMNWTYPES]]{{.+}}, i8** [[MPRGEP:%.+]], i32 0, i32 0)
+// CK0-DAG: call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], i64* [[SIZEGEP:%[0-9]+]], {{.+}}[[TEAMNWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i32 0)
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[SIZEGEP]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SIZEFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
@@ -569,7 +569,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_16:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_begin_nowait_mapper(i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EDNWTYPES]], i32 0, i32 0), i8** [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EDNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -588,7 +588,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_23:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_end_nowait_mapper(i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EXDNWTYPES]], i32 0, i32 0), i8** [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_end_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[EXDNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -606,7 +606,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_32:@.+]](i32{{.*}} %{{[^,]+}}, i32* noalias %{{[^,]+}}, i8* noalias %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_update_nowait_mapper(i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[FNWTYPES]], i32 0, i32 0), i8** [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[FNWTYPES]], i32 0, i32 0), i8** null, i8** [[MPR:%.+]])
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -911,7 +911,7 @@ void foo(int a){
 
   // CK3-DAG: [[BC:%.+]] = getelementptr inbounds %class.B, %class.B* [[BVAL]], i32 0, i32 0
 
-  // CK3-DAG: call i32 @__tgt_target_mapper(i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** [[MPRGEP:%.+]])
+  // CK3-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
   // CK3-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK3-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK3-DAG: [[MPRGEP]] = bitcast [2 x i8*]* [[MPR:%[^,]+]] to i8**
@@ -1151,7 +1151,7 @@ void foo(int a){
   C c;
   c.a = a;
 
-  // CK4-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** [[TMPRGEP:%.+]])
+  // CK4-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** null, i8** [[TMPRGEP:%.+]])
   // CK4-DAG: [[TGEPBP]] = getelementptr inbounds {{.+}}[[TBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK4-DAG: [[TGEPP]] = getelementptr inbounds {{.+}}[[TP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK4-DAG: [[TMPRGEP]] = bitcast [1 x i8*]* [[TMPR:%[^,]+]] to i8**
@@ -1165,7 +1165,7 @@ void foo(int a){
   // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
   #pragma omp target update to(present, mapper(id): c)
 
-  // CK4-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** [[FMPRGEP:%.+]])
+  // CK4-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** null, i8** [[FMPRGEP:%.+]])
   // CK4-DAG: [[FGEPBP]] = getelementptr inbounds {{.+}}[[FBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK4-DAG: [[FGEPP]] = getelementptr inbounds {{.+}}[[FP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
   // CK4-DAG: [[FMPRGEP]] = bitcast [1 x i8*]* [[FMPR:%[^,]+]] to i8**

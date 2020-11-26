@@ -1,0 +1,39 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"languageId":"cpp","text":"void callee(int);\nvoid caller1() {\n  callee(42);\n}\nvoid caller2() {\n  caller1();\n  caller1();\n}\nvoid caller3() {\n  caller1();\n  caller2();\n}\n","uri":"test:///main.cpp","version":1}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/prepareCallHierarchy","params":{"position":{"character":8,"line":0},"textDocument":{"uri":"test:///main.cpp"}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "data": "{{.*}}",
+# CHECK-NEXT:      "kind": 12,
+# CHECK-NEXT:      "name": "callee",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 16,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 0,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "selectionRange": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 11,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 5,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/main.cpp"
+# CHECK-NEXT:    }
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

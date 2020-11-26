@@ -727,13 +727,13 @@ class GdbRemoteTestCaseBase(TestBase):
 
         # Validate keys are known.
         for (key, val) in list(mem_region_dict.items()):
-            self.assertTrue(
-                key in [
-                    "start",
-                    "size",
-                    "permissions",
-                    "name",
-                    "error"])
+            self.assertIn(key,
+                ["start",
+                 "size",
+                 "permissions",
+                 "flags",
+                 "name",
+                 "error"])
             self.assertIsNotNone(val)
 
         mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))

@@ -1592,7 +1592,7 @@ define arm_aapcs_vfpcc void @fms(float* nocapture readonly %pSrc1, float* nocapt
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vfms.f32 q2, q0, q1
+; CHECK-NEXT:    vfms.f32 q2, q1, q0
 ; CHECK-NEXT:    vstrb.8 q2, [r3], #16
 ; CHECK-NEXT:    le lr, .LBB18_3
 ; CHECK-NEXT:  @ %bb.4: @ %while.end

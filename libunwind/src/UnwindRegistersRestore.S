@@ -170,7 +170,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   PPC64_LR(30)
   PPC64_LR(31)
 
-#ifdef PPC64_HAS_VMX
+#if defined(__VSX__)
 
   // restore VS registers
   // (note that this also restores floating point registers and V registers,
@@ -312,6 +312,7 @@ PPC64_CLVS_BOTTOM(n)
   PPC64_LF(30)
   PPC64_LF(31)
 
+#if defined(__ALTIVEC__)
   // restore vector registers if any are in use
   ld    %r5, PPC64_OFFS_VRSAVE(%r3)   // test VRsave
   cmpwi %r5, 0
@@ -373,6 +374,7 @@ PPC64_CLV_UNALIGNED_BOTTOM(n)
   PPC64_CLV_UNALIGNEDh(31)
 
 #endif
+#endif
 
 Lnovec:
   ld    %r0, PPC64_OFFS_CR(%r3)
@@ -431,6 +433,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   lwz     %r30,128(%r3)
   lwz     %r31,132(%r3)
 
+#ifndef __NO_FPRS__
   // restore float registers
   lfd     %f0, 160(%r3)
   lfd     %f1, 168(%r3)
@@ -464,7 +467,9 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   lfd     %f29,392(%r3)
   lfd     %f30,400(%r3)
   lfd     %f31,408(%r3)
+#endif
 
+#if defined(__ALTIVEC__)
   // restore vector registers if any are in use
   lwz     %r5, 156(%r3)       // test VRsave
   cmpwi   %r5, 0
@@ -537,6 +542,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   LOAD_VECTOR_UNALIGNEDh(29)
   LOAD_VECTOR_UNALIGNEDh(30)
   LOAD_VECTOR_UNALIGNEDh(31)
+#endif
 
 Lnovec:
   lwz     %r0, 136(%r3)   // __cr

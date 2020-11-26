@@ -187,3 +187,6 @@ def : Pat<(int_ve_vl_vbrdw_vsmvl simm7:$I, v256i1:$vm, v256f64:$pt, i32:$vl), (V
 def : Pat<(int_ve_vl_pvbrd_vsl i64:$sy, i32:$vl), (PVBRDrl i64:$sy, i32:$vl)>;
 def : Pat<(int_ve_vl_pvbrd_vsvl i64:$sy, v256f64:$pt, i32:$vl), (PVBRDrl_v i64:$sy, i32:$vl, v256f64:$pt)>;
 def : Pat<(int_ve_vl_pvbrd_vsMvl i64:$sy, v512i1:$vm, v256f64:$pt, i32:$vl), (PVBRDrml_v i64:$sy, v512i1:$vm, i32:$vl, v256f64:$pt)>;
+def : Pat<(int_ve_vl_vmv_vsvl uimm7:$N, v256f64:$vz, i32:$vl), (VMVivl (ULO7 $N), v256f64:$vz, i32:$vl)>;
+def : Pat<(int_ve_vl_vmv_vsvvl uimm7:$N, v256f64:$vz, v256f64:$pt, i32:$vl), (VMVivl_v (ULO7 $N), v256f64:$vz, i32:$vl, v256f64:$pt)>;
+def : Pat<(int_ve_vl_vmv_vsvmvl uimm7:$N, v256f64:$vz, v256i1:$vm, v256f64:$pt, i32:$vl), (VMVivml_v (ULO7 $N), v256f64:$vz, v256i1:$vm, i32:$vl, v256f64:$pt)>;

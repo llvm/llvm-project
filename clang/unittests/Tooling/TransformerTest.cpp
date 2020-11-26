@@ -1353,7 +1353,7 @@ void instantiate()
 
   // Changes the 'int' in 'S', but not the 'T' in 'TemplStruct':
   testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedField),
-                    changeTo(cat("safe_int ", name("theField")))),
+                    changeTo(cat("safe_int ", name("theField"), ";"))),
            NonTemplatesInput + TemplatesInput,
            NonTemplatesExpected + TemplatesInput);
 
@@ -1378,7 +1378,7 @@ void instantiate()
 
   // Changes the 'int' in 'S', and (incorrectly) the 'T' in 'TemplStruct':
   testRule(makeRule(traverse(TK_AsIs, MatchedField),
-                    changeTo(cat("safe_int ", name("theField")))),
+                    changeTo(cat("safe_int ", name("theField"), ";"))),
 
            NonTemplatesInput + TemplatesInput,
            NonTemplatesExpected + IncorrectTemplatesExpected);
@@ -1589,7 +1589,7 @@ TEST_F(TransformerTest, MultipleFiles) {
                                            Changes[0].getReplacements());
   ASSERT_TRUE(static_cast<bool>(UpdatedCode))
       << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
-  EXPECT_EQ(format(*UpdatedCode), format(R"cc(;)cc"));
+  EXPECT_EQ(format(*UpdatedCode), "");
 
   ASSERT_EQ(Changes[1].getFilePath(), "input.cc");
   EXPECT_THAT(Changes[1].getInsertedHeaders(), IsEmpty());
@@ -1598,8 +1598,7 @@ TEST_F(TransformerTest, MultipleFiles) {
       Source, Changes[1].getReplacements());
   ASSERT_TRUE(static_cast<bool>(UpdatedCode))
       << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
-  EXPECT_EQ(format(*UpdatedCode), format(R"cc(#include "input.h"
-                        ;)cc"));
+  EXPECT_EQ(format(*UpdatedCode), format("#include \"input.h\"\n"));
 }
 
 TEST_F(TransformerTest, AddIncludeMultipleFiles) {

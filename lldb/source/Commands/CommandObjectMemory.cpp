@@ -1709,12 +1709,18 @@ protected:
           section_name = section_sp->GetName();
         }
       }
+
       result.AppendMessageWithFormatv(
-          "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}\n",
+          "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}",
           range_info.GetRange().GetRangeBase(),
           range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
           range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
           name, section_name ? " " : "", section_name);
+      MemoryRegionInfo::OptionalBool memory_tagged =
+          range_info.GetMemoryTagged();
+      if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+        result.AppendMessage("memory tagging: enabled");
+
       m_prev_end_addr = range_info.GetRange().GetRangeEnd();
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;

@@ -122,7 +122,40 @@ s_set_gpr_idx_on s0, 16
 v_add_f32_e64 v0, flat_scratch_hi, m0
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_add_f32_e64 v0, flat_scratch_hi, m0
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                   ^
+
+v_madak_f32 v5, s1, v2, 0xa1b1c1d1
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_madak_f32 v5, s1, v2, 0xa1b1c1d1
+// CHECK-NEXT:{{^}}                ^
+
+v_madmk_f32 v5, s1, 0x11213141, v255
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_madmk_f32 v5, s1, 0x11213141, v255
+// CHECK-NEXT:{{^}}                ^
+
+//==============================================================================
+// literal operands are not supported
+
+v_bfe_u32 v0, v2, v3, undef
+// CHECK: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, v3, undef
+// CHECK-NEXT:{{^}}                      ^
+
+v_bfe_u32 v0, v2, undef, v3
+// CHECK: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, undef, v3
+// CHECK-NEXT:{{^}}                  ^
+
+v_add_i16 v5, v1, 0.5
+// CHECK: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_add_i16 v5, v1, 0.5
+// CHECK-NEXT:{{^}}                  ^
+
+v_add_i16 v5, 0.5, v2
+// CHECK: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_add_i16 v5, 0.5, v2
+// CHECK-NEXT:{{^}}              ^
 
 //==============================================================================
 // r128 modifier is not supported on this GPU

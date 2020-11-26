@@ -215,7 +215,7 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     GV->setAlignment(Align(8));
     Ident = GV;
   }
-  return Ident;
+  return Builder.CreatePointerCast(Ident, IdentPtr);
 }
 
 Type *OpenMPIRBuilder::getLanemaskType() {

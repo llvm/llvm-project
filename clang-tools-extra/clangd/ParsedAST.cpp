@@ -17,6 +17,7 @@
 #include "IncludeFixer.h"
 #include "Preamble.h"
 #include "SourceCode.h"
+#include "TidyProvider.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "support/Logger.h"
@@ -292,13 +293,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   llvm::Optional<tidy::ClangTidyContext> CTContext;
   {
     trace::Span Tracer("ClangTidyInit");
+    tidy::ClangTidyOptions ClangTidyOpts =
+        getTidyOptionsForFile(Inputs.ClangTidyProvider, Filename);
     dlog("ClangTidy configuration for file {0}: {1}", Filename,
-         tidy::configurationAsText(Inputs.Opts.ClangTidyOpts));
+         tidy::configurationAsText(ClangTidyOpts));
     tidy::ClangTidyCheckFactories CTFactories;
     for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
       E.instantiate()->addCheckFactories(CTFactories);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
-        tidy::ClangTidyGlobalOptions(), Inputs.Opts.ClangTidyOpts));
+        tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);

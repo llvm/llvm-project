@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
+#include "../TidyProvider.h"
 #include "Compiler.h"
 #include "ParsedAST.h"
 #include "TestFS.h"
@@ -58,8 +59,7 @@ struct TestTU {
   // Extra arguments for the compiler invocation.
   std::vector<std::string> ExtraArgs;
 
-  llvm::Optional<std::string> ClangTidyChecks;
-  llvm::Optional<std::string> ClangTidyWarningsAsErrors;
+  TidyProvider ClangTidyProvider = {};
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;
 

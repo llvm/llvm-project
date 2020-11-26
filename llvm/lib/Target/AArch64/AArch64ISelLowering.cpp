@@ -417,8 +417,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
+  setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
 
@@ -660,6 +662,57 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i64, Custom);
 
+  // Generate outline atomics library calls only if LSE was not specified for
+  // subtarget
+  if (Subtarget->outlineAtomics() && !Subtarget->hasLSE()) {
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_CLR, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_CLR, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_CLR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_CLR, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i8, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i64, LibCall);
+#define LCALLNAMES(A, B, N)                                                    \
+  setLibcallName(A##N##_RELAX, #B #N "_relax");                                \
+  setLibcallName(A##N##_ACQ, #B #N "_acq");                                    \
+  setLibcallName(A##N##_REL, #B #N "_rel");                                    \
+  setLibcallName(A##N##_ACQ_REL, #B #N "_acq_rel");
+#define LCALLNAME4(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
+#define LCALLNAME5(A, B)                                                       \
+  LCALLNAMES(A, B, 1)                                                          \
+  LCALLNAMES(A, B, 2)                                                          \
+  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
+    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, __aarch64_cas)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, __aarch64_swp)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, __aarch64_ldadd)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, __aarch64_ldset)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, __aarch64_ldclr)
+    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, __aarch64_ldeor)
+#undef LCALLNAMES
+#undef LCALLNAME4
+#undef LCALLNAME5
+  }
+
   // 128-bit loads and stores can be done without expanding
   setOperationAction(ISD::LOAD, MVT::i128, Custom);
   setOperationAction(ISD::STORE, MVT::i128, Custom);
@@ -781,6 +834,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::STORE);
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
+
+  setTargetDAGCombine(ISD::MSCATTER);
 
   setTargetDAGCombine(ISD::MUL);
 
@@ -10076,7 +10131,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
 SDValue AArch64TargetLowering::LowerATOMIC_LOAD_SUB(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto &Subtarget = static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
-  if (!Subtarget.hasLSE())
+  if (!Subtarget.hasLSE() && !Subtarget.outlineAtomics())
     return SDValue();
 
   // LSE has an atomic load-add instruction, but not a load-sub.
@@ -10093,7 +10148,7 @@ SDValue AArch64TargetLowering::LowerATOMIC_LOAD_SUB(SDValue Op,
 SDValue AArch64TargetLowering::LowerATOMIC_LOAD_AND(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto &Subtarget = static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
-  if (!Subtarget.hasLSE())
+  if (!Subtarget.hasLSE() && !Subtarget.outlineAtomics())
     return SDValue();
 
   // LSE has an atomic load-clear instruction, but not a load-and.
@@ -13891,6 +13946,44 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performMSCATTERCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      SelectionDAG &DAG) {
+  MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
+  assert(MSC && "Can only combine scatter store nodes");
+
+  SDLoc DL(MSC);
+  SDValue Chain = MSC->getChain();
+  SDValue Scale = MSC->getScale();
+  SDValue Index = MSC->getIndex();
+  SDValue Data = MSC->getValue();
+  SDValue Mask = MSC->getMask();
+  SDValue BasePtr = MSC->getBasePtr();
+  ISD::MemIndexType IndexType = MSC->getIndexType();
+
+  EVT IdxVT = Index.getValueType();
+
+  if (DCI.isBeforeLegalize()) {
+    // SVE gather/scatter requires indices of i32/i64. Promote anything smaller
+    // prior to legalisation so the result can be split if required.
+    if ((IdxVT.getVectorElementType() == MVT::i8) ||
+        (IdxVT.getVectorElementType() == MVT::i16)) {
+      EVT NewIdxVT = IdxVT.changeVectorElementType(MVT::i32);
+      if (MSC->isIndexSigned())
+        Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
+      else
+        Index = DAG.getNode(ISD::ZERO_EXTEND, DL, NewIdxVT, Index);
+
+      SDValue Ops[] = { Chain, Data, Mask, BasePtr, Index, Scale };
+      return DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
+                                  MSC->getMemoryVT(), DL, Ops,
+                                  MSC->getMemOperand(), IndexType,
+                                  MSC->isTruncatingStore());
+    }
+  }
+
+  return SDValue();
+}
 
 /// Target-specific DAG combine function for NEON load/store intrinsics
 /// to merge base address updates.
@@ -15083,6 +15176,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::MSCATTER:
+    return performMSCATTERCombine(N, DCI, DAG);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:
@@ -15547,7 +15642,7 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
   assert(N->getValueType(0) == MVT::i128 &&
          "AtomicCmpSwap on types less than 128 should be legal");
 
-  if (Subtarget->hasLSE()) {
+  if (Subtarget->hasLSE() || Subtarget->outlineAtomics()) {
     // LSE has a 128-bit compare and swap (CASP), but i128 is not a legal type,
     // so lower it here, wrapped in REG_SEQUENCE and EXTRACT_SUBREG.
     SDValue Ops[] = {
@@ -15776,14 +15871,30 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // Nand not supported in LSE.
   if (AI->getOperation() == AtomicRMWInst::Nand) return AtomicExpansionKind::LLSC;
   // Leave 128 bits to LLSC.
-  return (Subtarget->hasLSE() && Size < 128) ? AtomicExpansionKind::None : AtomicExpansionKind::LLSC;
+  if (Subtarget->hasLSE() && Size < 128)
+    return AtomicExpansionKind::None;
+  if (Subtarget->outlineAtomics() && Size < 128) {
+    // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
+    // Don't outline them unless
+    // (1) high level <atomic> support approved:
+    //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
+    // (2) low level libgcc and compiler-rt support implemented by:
+    //   min/max outline atomics helpers
+    if (AI->getOperation() != AtomicRMWInst::Min &&
+        AI->getOperation() != AtomicRMWInst::Max &&
+        AI->getOperation() != AtomicRMWInst::UMin &&
+        AI->getOperation() != AtomicRMWInst::UMax) {
+      return AtomicExpansionKind::None;
+    }
+  }
+  return AtomicExpansionKind::LLSC;
 }
 
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
   // If subtarget has LSE, leave cmpxchg intact for codegen.
-  if (Subtarget->hasLSE())
+  if (Subtarget->hasLSE() || Subtarget->outlineAtomics())
     return AtomicExpansionKind::None;
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also

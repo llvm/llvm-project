@@ -12,6 +12,7 @@
 # RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/my_driver.sh
 # RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo %t.dir/my/dir2/ >&2' >> %t.dir/my_driver.sh
@@ -45,7 +46,7 @@
       "uri": "file://INPUT_DIR/the-file.cpp",
       "languageId":"cpp",
       "version":1,
-      "text":"#include <a.h>\n#include <b.h>"
+      "text":"#include <a.h>\n#include <b.h>\n#if !defined(__ARM_ARCH) || !defined(__gnu_linux__)\n#error \"Invalid target\"\n#endif"
     }
   }
 }

@@ -374,10 +374,13 @@ bool LTOCodeGenerator::determineTarget() {
   }
 
   TargetMach = createTargetMachine();
+  assert(TargetMach && "Unable to create target machine");
+
   return true;
 }
 
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
+  assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
       TripleStr, MCpu, FeatureStr, Options, RelocModel, None, CGOptLevel));
 }

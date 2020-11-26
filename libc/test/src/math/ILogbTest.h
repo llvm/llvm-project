@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 
-#include "include/math.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 #include <limits.h>
 

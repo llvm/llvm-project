@@ -1522,6 +1522,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         ArrayAttr iterator_types();
         ArrayAttr indexing_maps();
         static void regionBuilder(Block &block);
+        static std::function<void(Block &)> getRegionBuilder() {{ return regionBuilder; }
 
         // Generic methods.
         static unsigned getNumRegionArgs() {{ return {4}; }

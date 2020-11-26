@@ -400,7 +400,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   if (Current.is(TT_SelectorName) && !Previous.is(tok::at) &&
       State.Stack.back().ObjCSelectorNameFound &&
-      State.Stack.back().BreakBeforeParameter)
+      State.Stack.back().BreakBeforeParameter &&
+      (Style.ObjCBreakBeforeNestedBlockParam ||
+       !Current.startsSequence(TT_SelectorName, tok::colon, tok::caret)))
     return true;
 
   unsigned NewLineColumn = getNewLineColumn(State);

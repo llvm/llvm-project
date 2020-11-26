@@ -122,7 +122,7 @@ define i32 @test_thread_local_global() {
 
 %byval.class = type { i32 }
 
-define void @test_byval_arg(%byval.class* byval %x) {
+define void @test_byval_arg(%byval.class* byval(%byval.class) %x) {
 ; CHECK: remark: {{.*}} unable to lower arguments: void (%byval.class*)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_byval
   ret void
@@ -131,7 +131,7 @@ define void @test_byval_arg(%byval.class* byval %x) {
 define void @test_byval_param(%byval.class* %x) {
 ; CHECK: remark: {{.*}} unable to translate instruction: call
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_byval_param
-  call void @test_byval_arg(%byval.class* byval %x)
+  call void @test_byval_arg(%byval.class* byval(%byval.class) %x)
   ret void
 }
 
