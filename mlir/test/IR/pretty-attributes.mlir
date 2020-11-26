@@ -16,3 +16,6 @@
 
 // CHECK: opaque<"", "0xDEADBEEF"> : tensor<100xf32>
 "test.opaque_attr"() {foo.opaque_attr = opaque<"", "0xEBFE"> : tensor<100xf32> } : () -> ()
+
+// CHECK: dense<1> : tensor<3xi32>
+"test.dense_splat"() {foo.dense_attr = dense<1> : tensor<3xi32>} : () -> ()
