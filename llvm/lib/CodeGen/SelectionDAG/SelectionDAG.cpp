@@ -139,6 +139,15 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 //===----------------------------------------------------------------------===//
 
 bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
+  if (N->getOpcode() == ISD::SPLAT_VECTOR) {
+    unsigned EltSize =
+        N->getValueType(0).getVectorElementType().getSizeInBits();
+    if (auto *Op0 = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
+      SplatVal = Op0->getAPIntValue().truncOrSelf(EltSize);
+      return true;
+    }
+  }
+
   auto *BV = dyn_cast<BuildVectorSDNode>(N);
   if (!BV)
     return false;
