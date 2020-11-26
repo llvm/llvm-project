@@ -225,7 +225,7 @@
 "`3291 <https://wg21.link/LWG3291>`__","``iota_view::iterator``\  has the wrong ``iterator_category``\ ","Prague",""
 "`3292 <https://wg21.link/LWG3292>`__","``iota_view``\  is under-constrained","Prague",""
 "`3294 <https://wg21.link/LWG3294>`__","``zoned_time``\  deduction guides misinterprets ``string``\ /``char*``\ ","Prague",""
-"`3296 <https://wg21.link/LWG3296>`__","Inconsistent default argument for ``basic_regex<>::assign``\ ","Prague",""
+"`3296 <https://wg21.link/LWG3296>`__","Inconsistent default argument for ``basic_regex<>::assign``\ ","Prague","|Complete|"
 "`3299 <https://wg21.link/LWG3299>`__","Pointers don't need customized iterator behavior","Prague",""
 "`3300 <https://wg21.link/LWG3300>`__","Non-array ``ssize``\  overload is underconstrained","Prague",""
 "`3301 <https://wg21.link/LWG3301>`__","``transform_view::iterator``\  has incorrect ``iterator_category``\ ","Prague",""
