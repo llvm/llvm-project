@@ -109,6 +109,26 @@ inline void ompt_set_thread_state(kmp_info_t *thread, ompt_state_t state) {
 inline const char *ompt_get_runtime_version() {
   return &__kmp_version_lib_ver[KMP_VERSION_MAGIC_LEN];
 }
+
+class OmptReturnAddressGuard {
+private:
+  bool SetAddress{false};
+  int Gtid;
+
+public:
+  OmptReturnAddressGuard(int Gtid, void *ReturnAddress) : Gtid(Gtid) {
+    if (ompt_enabled.enabled && Gtid >= 0 && __kmp_threads[Gtid] &&
+        !__kmp_threads[Gtid]->th.ompt_thread_info.return_address) {
+      SetAddress = true;
+      __kmp_threads[Gtid]->th.ompt_thread_info.return_address = ReturnAddress;
+    }
+  }
+  ~OmptReturnAddressGuard() {
+    if (SetAddress)
+      __kmp_threads[Gtid]->th.ompt_thread_info.return_address = NULL;
+  }
+};
+
 #endif // OMPT_SUPPORT
 
 // macros providing the OMPT callbacks for reduction clause
@@ -134,24 +154,5 @@ inline const char *ompt_get_runtime_version() {
 #define OMPT_REDUCTION_BEGIN
 #define OMPT_REDUCTION_END
 #endif // ! OMPT_SUPPORT && OMPT_OPTIONAL
-
-class OmptReturnAddressGuard {
-private:
-  bool SetAddress{false};
-  int Gtid;
-
-public:
-  OmptReturnAddressGuard(int Gtid, void *ReturnAddress) : Gtid(Gtid) {
-    if (ompt_enabled.enabled && Gtid >= 0 && __kmp_threads[Gtid] &&
-        !__kmp_threads[Gtid]->th.ompt_thread_info.return_address) {
-      SetAddress = true;
-      __kmp_threads[Gtid]->th.ompt_thread_info.return_address = ReturnAddress;
-    }
-  }
-  ~OmptReturnAddressGuard() {
-    if (SetAddress)
-      __kmp_threads[Gtid]->th.ompt_thread_info.return_address = NULL;
-  }
-};
 
 #endif
