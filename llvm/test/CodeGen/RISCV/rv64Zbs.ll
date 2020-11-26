@@ -69,20 +69,13 @@ define signext i32 @sbclr_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64IB-LABEL: sbclr_i32_load:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    lw a0, 0(a0)
-; RV64IB-NEXT:    addi a2, zero, 1
-; RV64IB-NEXT:    sllw a1, a2, a1
-; RV64IB-NEXT:    andn a0, a0, a1
-; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    sbclrw a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbclr_i32_load:
 ; RV64IBS:       # %bb.0:
 ; RV64IBS-NEXT:    lw a0, 0(a0)
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sllw a1, a2, a1
-; RV64IBS-NEXT:    not a1, a1
-; RV64IBS-NEXT:    and a0, a1, a0
-; RV64IBS-NEXT:    sext.w a0, a0
+; RV64IBS-NEXT:    sbclrw a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -198,19 +191,13 @@ define signext i32 @sbset_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64IB-LABEL: sbset_i32_load:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    lw a0, 0(a0)
-; RV64IB-NEXT:    addi a2, zero, 1
-; RV64IB-NEXT:    sllw a1, a2, a1
-; RV64IB-NEXT:    or a0, a1, a0
-; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    sbsetw a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbset_i32_load:
 ; RV64IBS:       # %bb.0:
 ; RV64IBS-NEXT:    lw a0, 0(a0)
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sllw a1, a2, a1
-; RV64IBS-NEXT:    or a0, a1, a0
-; RV64IBS-NEXT:    sext.w a0, a0
+; RV64IBS-NEXT:    sbsetw a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -321,19 +308,13 @@ define signext i32 @sbinv_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64IB-LABEL: sbinv_i32_load:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    lw a0, 0(a0)
-; RV64IB-NEXT:    addi a2, zero, 1
-; RV64IB-NEXT:    sllw a1, a2, a1
-; RV64IB-NEXT:    xor a0, a1, a0
-; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    sbinvw a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbinv_i32_load:
 ; RV64IBS:       # %bb.0:
 ; RV64IBS-NEXT:    lw a0, 0(a0)
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sllw a1, a2, a1
-; RV64IBS-NEXT:    xor a0, a1, a0
-; RV64IBS-NEXT:    sext.w a0, a0
+; RV64IBS-NEXT:    sbinvw a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b

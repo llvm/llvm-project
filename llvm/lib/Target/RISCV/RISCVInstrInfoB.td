@@ -893,9 +893,15 @@ def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
 let Predicates = [HasStdExtZbs, IsRV64] in {
 def : Pat<(and (not (riscv_sllw 1, GPR:$rs2)), (assertsexti32 GPR:$rs1)),
           (SBCLRW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (and (not (riscv_sllw 1, GPR:$rs2)), GPR:$rs1), i32),
+          (SBCLRW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
           (SBSETW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (or (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
+          (SBSETW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(xor (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
+          (SBINVW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (xor (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
           (SBINVW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
           (SBEXTW GPR:$rs1, GPR:$rs2)>;
