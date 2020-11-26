@@ -62,7 +62,9 @@ static void reportUndefined(Symbol *sym) {
                      << "ignoring undefined symbol: " + toString(*sym) + "\n");
           f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
           f->stubFunction->markLive();
-          f->setTableIndex(0);
+          // Mark the function itself as a stub which prevents it from being
+          // assigned a table entry.
+          f->isStub = true;
         }
       }
       break;
