@@ -24,7 +24,7 @@
 "`P0809R0 <https://wg21.link/P0809R0>`__","LWG","Comparing Unordered Containers","Jacksonville","",""
 "`P0858R0 <https://wg21.link/P0858R0>`__","LWG","Constexpr iterator requirements","Jacksonville","",""
 "`P0905R1 <https://wg21.link/P0905R1>`__","CWG","Symmetry for spaceship","Jacksonville","",""
-"`P0966R1 <https://wg21.link/P0966R1>`__","LWG","``string::reserve``\  Should Not Shrink","Jacksonville","|Complete|","8.0"
+"`P0966R1 <https://wg21.link/P0966R1>`__","LWG","``string::reserve``\  Should Not Shrink","Jacksonville","|Complete| [#note-P0966]_","12.0"
 "","","","","",""
 "`P0019R8 <https://wg21.link/P0019R8>`__","LWG","Atomic Ref","Rapperswil","",""
 "`P0458R2 <https://wg21.link/P0458R2>`__","LWG","Checking for Existence of an Element in Associative Containers","Rapperswil","|Complete|",""
