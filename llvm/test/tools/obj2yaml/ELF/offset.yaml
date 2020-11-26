@@ -32,6 +32,10 @@
 # BASIC-NEXT:     Type:         SHT_PROGBITS
 # BASIC-NEXT:     AddressAlign: 0x10
 # BASIC-NEXT:     Offset:       0x200
+# BASIC-NEXT:   - Name:         .bar4
+# BASIC-NEXT:     Type:         SHT_PROGBITS
+# BASIC-NEXT:     AddressAlign: 0x100000000
+# BASIC-NEXT:     Offset:       0x210
 
 --- !ELF
 FileHeader:
@@ -81,6 +85,12 @@ Sections:
     Type:         SHT_PROGBITS
     AddressAlign: 0x10
     Offset:       0x200
+## A case where AddressAlign > MAX_UINT32 and (uint32_t)AddressAlign == 0.
+## Check we dump an offset in this case properly.
+  - Name:         .bar4
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x100000000
+    Offset:       0x210
 
 ## Show we dump the "Offset" key for the first section when
 ## it has an unexpected file offset.

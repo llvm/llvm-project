@@ -248,8 +248,8 @@ static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
     ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
     const typename ELFT::Shdr &SecHdr = S[Sec.OriginalSecNdx];
 
-    ExpectedOffset =
-        alignTo(ExpectedOffset, SecHdr.sh_addralign ? SecHdr.sh_addralign : 1);
+    ExpectedOffset = alignTo(ExpectedOffset,
+                             SecHdr.sh_addralign ? SecHdr.sh_addralign : 1uLL);
 
     // We only set the "Offset" field when it can't be naturally derived
     // from the offset and size of the previous section. This reduces
