@@ -1108,8 +1108,10 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 109: return createRegOperand(TBA_HI);
   case 110: return createRegOperand(TMA_LO);
   case 111: return createRegOperand(TMA_HI);
-  case 124: return createRegOperand(M0);
-  case 125: return createRegOperand(SGPR_NULL);
+  case 124:
+    return isGFX11Plus() ? createRegOperand(SGPR_NULL) : createRegOperand(M0);
+  case 125:
+    return isGFX11Plus() ? createRegOperand(M0) : createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE);
@@ -1249,6 +1251,9 @@ bool AMDGPUDisassembler::isGFX11() const {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
 }
 
+bool AMDGPUDisassembler::isGFX11Plus() const {
+  return AMDGPU::isGFX11Plus(STI);
+}
 
 
 //===----------------------------------------------------------------------===//
