@@ -3657,13 +3657,13 @@ input IR as well.
 Poison Values
 -------------
 
+A poison value is a result of an erroneous operation.
 In order to facilitate speculative execution, many instructions do not
 invoke immediate undefined behavior when provided with illegal operands,
 and return a poison value instead.
-
-There is currently no way of representing a poison value in the IR; they
-only exist when produced by operations such as :ref:`add <i_add>` with
-the ``nsw`` flag.
+The string '``poison``' can be used anywhere a constant is expected, and
+operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
+a poison value.
 
 Poison value behavior is defined in terms of value *dependence*:
 
@@ -3732,13 +3732,14 @@ Here are some examples:
 
     entry:
       %poison = sub nuw i32 0, 1           ; Results in a poison value.
+      %poison2 = sub i32 poison, 1         ; Also results in a poison value.
       %still_poison = and i32 %poison, 0   ; 0, but also poison.
       %poison_yet_again = getelementptr i32, i32* @h, i32 %still_poison
       store i32 0, i32* %poison_yet_again  ; Undefined behavior due to
                                            ; store to poison.
 
       store i32 %poison, i32* @g           ; Poison value stored to memory.
-      %poison2 = load i32, i32* @g         ; Poison value loaded back from memory.
+      %poison3 = load i32, i32* @g         ; Poison value loaded back from memory.
 
       %narrowaddr = bitcast i32* @g to i16*
       %wideaddr = bitcast i32* @g to i64*
