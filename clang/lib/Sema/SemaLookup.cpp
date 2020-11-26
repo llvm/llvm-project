@@ -2085,47 +2085,6 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
   return Found;
 }
 
-/// Callback that looks for any member of a class with the given name.
-static bool LookupAnyMember(const CXXBaseSpecifier *Specifier,
-                            CXXBasePath &Path, DeclarationName Name) {
-  RecordDecl *BaseRecord = Specifier->getType()->castAs<RecordType>()->getDecl();
-
-  Path.Decls = BaseRecord->lookup(Name);
-  return !Path.Decls.empty();
-}
-
-/// Determine whether the given set of member declarations contains only
-/// static members, nested types, and enumerators.
-template<typename InputIterator>
-static bool HasOnlyStaticMembers(InputIterator First, InputIterator Last) {
-  Decl *D = (*First)->getUnderlyingDecl();
-  if (isa<VarDecl>(D) || isa<TypeDecl>(D) || isa<EnumConstantDecl>(D))
-    return true;
-
-  if (isa<CXXMethodDecl>(D)) {
-    // Determine whether all of the methods are static.
-    bool AllMethodsAreStatic = true;
-    for(; First != Last; ++First) {
-      D = (*First)->getUnderlyingDecl();
-
-      if (!isa<CXXMethodDecl>(D)) {
-        assert(isa<TagDecl>(D) && "Non-function must be a tag decl");
-        break;
-      }
-
-      if (!cast<CXXMethodDecl>(D)->isStatic()) {
-        AllMethodsAreStatic = false;
-        break;
-      }
-    }
-
-    if (AllMethodsAreStatic)
-      return true;
-  }
-
-  return false;
-}
-
 /// Perform qualified name lookup into a given context.
 ///
 /// Qualified name lookup (C++ [basic.lookup.qual]) is used to find
@@ -2203,6 +2162,13 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   if (!LookupRec || !LookupRec->getDefinition())
     return false;
 
+  // We're done for lookups that can never succeed for C++ classes.
+  if (R.getLookupKind() == LookupOperatorName ||
+      R.getLookupKind() == LookupNamespaceName ||
+      R.getLookupKind() == LookupObjCProtocolName ||
+      R.getLookupKind() == LookupLabel)
+    return false;
+
   // If we're performing qualified name lookup into a dependent class,
   // then we are actually looking into a current instantiation. If we have any
   // dependent base classes, then we either have to delay lookup until
@@ -2215,59 +2181,27 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   }
 
   // Perform lookup into our base classes.
-  CXXBasePaths Paths;
-  Paths.setOrigin(LookupRec);
-
-  // Look for this member in our base classes
-  bool (*BaseCallback)(const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
-                       DeclarationName Name) = nullptr;
-  switch (R.getLookupKind()) {
-    case LookupObjCImplicitSelfParam:
-    case LookupOrdinaryName:
-    case LookupMemberName:
-    case LookupRedeclarationWithLinkage:
-    case LookupLocalFriendName:
-    case LookupDestructorName:
-      BaseCallback = &CXXRecordDecl::FindOrdinaryMember;
-      break;
-
-    case LookupTagName:
-      BaseCallback = &CXXRecordDecl::FindTagMember;
-      break;
-
-    case LookupAnyName:
-      BaseCallback = &LookupAnyMember;
-      break;
-
-    case LookupOMPReductionName:
-      BaseCallback = &CXXRecordDecl::FindOMPReductionMember;
-      break;
-
-    case LookupOMPMapperName:
-      BaseCallback = &CXXRecordDecl::FindOMPMapperMember;
-      break;
-
-    case LookupUsingDeclName:
-      // This lookup is for redeclarations only.
-
-    case LookupOperatorName:
-    case LookupNamespaceName:
-    case LookupObjCProtocolName:
-    case LookupLabel:
-      // These lookups will never find a member in a C++ class (or base class).
-      return false;
-
-    case LookupNestedNameSpecifierName:
-      BaseCallback = &CXXRecordDecl::FindNestedNameSpecifierMember;
-      break;
-  }
 
   DeclarationName Name = R.getLookupName();
-  if (!LookupRec->lookupInBases(
-          [=](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-            return BaseCallback(Specifier, Path, Name);
-          },
-          Paths))
+  unsigned IDNS = R.getIdentifierNamespace();
+
+  // Look for this member in our base classes.
+  auto BaseCallback = [Name, IDNS](const CXXBaseSpecifier *Specifier,
+                                   CXXBasePath &Path) -> bool {
+    CXXRecordDecl *BaseRecord = Specifier->getType()->getAsCXXRecordDecl();
+    // Drop leading non-matching lookup results from the declaration list so
+    // we don't need to consider them again below.
+    for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
+         Path.Decls = Path.Decls.slice(1)) {
+      if (Path.Decls.front()->isInIdentifierNamespace(IDNS))
+        return true;
+    }
+    return false;
+  };
+
+  CXXBasePaths Paths;
+  Paths.setOrigin(LookupRec);
+  if (!LookupRec->lookupInBases(BaseCallback, Paths))
     return false;
 
   R.setNamingClass(LookupRec);
@@ -2281,6 +2215,85 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   QualType SubobjectType;
   int SubobjectNumber = 0;
   AccessSpecifier SubobjectAccess = AS_none;
+
+  // Check whether the given lookup result contains only static members.
+  auto HasOnlyStaticMembers = [&](DeclContextLookupResult Result) {
+    for (NamedDecl *ND : Result)
+      if (ND->isInIdentifierNamespace(IDNS) && ND->isCXXInstanceMember())
+        return false;
+    return true;
+  };
+
+  bool TemplateNameLookup = R.isTemplateNameLookup();
+
+  // Determine whether two sets of members contain the same members, as
+  // required by C++ [class.member.lookup]p6.
+  auto HasSameDeclarations = [IDNS,
+                              TemplateNameLookup](DeclContextLookupResult A,
+                                                  DeclContextLookupResult B) {
+    using Iterator = DeclContextLookupResult::iterator;
+    using Result = const Decl *;
+
+    auto Next = [&](Iterator &It, Iterator End) -> Result {
+      while (It != End) {
+        NamedDecl *ND = *It++;
+        if (!ND->isInIdentifierNamespace(IDNS))
+          continue;
+
+        // C++ [temp.local]p3:
+        //   A lookup that finds an injected-class-name (10.2) can result in
+        //   an ambiguity in certain cases (for example, if it is found in
+        //   more than one base class). If all of the injected-class-names
+        //   that are found refer to specializations of the same class
+        //   template, and if the name is used as a template-name, the
+        //   reference refers to the class template itself and not a
+        //   specialization thereof, and is not ambiguous.
+        if (TemplateNameLookup)
+          if (auto *TD = getAsTemplateNameDecl(ND))
+            ND = TD;
+
+        // FIXME: Per C++ [class.member.lookup]p3:
+        //   type declarations (including injected-class-names are replaced by the
+        //   types they designate
+        // So two different typedef declarations with the same name from two
+        // different base classes declaring the same type do not introduce an
+        // ambiguity.
+
+        return cast<NamedDecl>(ND->getUnderlyingDecl()->getCanonicalDecl());
+      }
+      return nullptr;
+    };
+
+    // We'll often find the declarations are in the same order. Handle this
+    // case (and the special case of only one declaration) efficiently.
+    Iterator AIt = A.begin(), BIt = B.begin(), AEnd = A.end(), BEnd = B.end();
+    while (true) {
+      Result AResult = Next(AIt, AEnd);
+      Result BResult = Next(BIt, BEnd);
+      if (!AResult && !BResult)
+        return true;
+      if (!AResult || !BResult)
+        return false;
+      if (AResult != BResult) {
+        // Found a mismatch; carefully check both lists, accounting for the
+        // possibility of declarations appearing more than once.
+        llvm::SmallDenseMap<Result, bool, 32> AResults;
+        for (; AResult; AResult = Next(AIt, AEnd))
+          AResults.insert({AResult, /*FoundInB*/false});
+        unsigned Found = 0;
+        for (; BResult; BResult = Next(BIt, BEnd)) {
+          auto It = AResults.find(BResult);
+          if (It == AResults.end())
+            return false;
+          if (!It->second) {
+            It->second = true;
+            ++Found;
+          }
+        }
+        return AResults.size() == Found;
+      }
+    }
+  };
 
   for (CXXBasePaths::paths_iterator Path = Paths.begin(), PathEnd = Paths.end();
        Path != PathEnd; ++Path) {
@@ -2298,51 +2311,25 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
       continue;
     }
 
-    if (SubobjectType
-                 != Context.getCanonicalType(PathElement.Base->getType())) {
+    if (SubobjectType !=
+        Context.getCanonicalType(PathElement.Base->getType())) {
       // We found members of the given name in two subobjects of
       // different types. If the declaration sets aren't the same, this
       // lookup is ambiguous.
-      if (HasOnlyStaticMembers(Path->Decls.begin(), Path->Decls.end())) {
-        CXXBasePaths::paths_iterator FirstPath = Paths.begin();
-        DeclContext::lookup_iterator FirstD = FirstPath->Decls.begin();
-        DeclContext::lookup_iterator CurrentD = Path->Decls.begin();
-
-        // Get the decl that we should use for deduplicating this lookup.
-        auto GetRepresentativeDecl = [&](NamedDecl *D) -> Decl * {
-          // C++ [temp.local]p3:
-          //   A lookup that finds an injected-class-name (10.2) can result in
-          //   an ambiguity in certain cases (for example, if it is found in
-          //   more than one base class). If all of the injected-class-names
-          //   that are found refer to specializations of the same class
-          //   template, and if the name is used as a template-name, the
-          //   reference refers to the class template itself and not a
-          //   specialization thereof, and is not ambiguous.
-          if (R.isTemplateNameLookup())
-            if (auto *TD = getAsTemplateNameDecl(D))
-              D = TD;
-          return D->getUnderlyingDecl()->getCanonicalDecl();
-        };
-
-        while (FirstD != FirstPath->Decls.end() &&
-               CurrentD != Path->Decls.end()) {
-          if (GetRepresentativeDecl(*FirstD) !=
-              GetRepresentativeDecl(*CurrentD))
-            break;
-
-          ++FirstD;
-          ++CurrentD;
-        }
-
-        if (FirstD == FirstPath->Decls.end() &&
-            CurrentD == Path->Decls.end())
-          continue;
-      }
+      //
+      // FIXME: The language rule says that this applies irrespective of
+      // whether the sets contain only static members.
+      if (HasOnlyStaticMembers(Path->Decls) &&
+          HasSameDeclarations(Paths.begin()->Decls, Path->Decls))
+        continue;
 
       R.setAmbiguousBaseSubobjectTypes(Paths);
       return true;
     }
 
+    // FIXME: This language rule no longer exists. Checking for ambiguous base
+    // subobjects should be done as part of formation of a class member access
+    // expression (when converting the object parameter to the member's type).
     if (SubobjectNumber != PathElement.SubobjectNumber) {
       // We have a different subobject of the same type.
 
@@ -2350,7 +2337,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
       //   A static member, a nested type or an enumerator defined in
       //   a base class T can unambiguously be found even if an object
       //   has more than one base class subobject of type T.
-      if (HasOnlyStaticMembers(Path->Decls.begin(), Path->Decls.end()))
+      if (HasOnlyStaticMembers(Path->Decls))
         continue;
 
       // We have found a nonstatic member name in multiple, distinct
@@ -2365,7 +2352,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   for (auto *D : Paths.front().Decls) {
     AccessSpecifier AS = CXXRecordDecl::MergeAccess(SubobjectAccess,
                                                     D->getAccess());
-    R.addDecl(D, AS);
+    if (NamedDecl *ND = R.getAcceptableDecl(D))
+      R.addDecl(ND, AS);
   }
   R.resolveKind();
   return true;
