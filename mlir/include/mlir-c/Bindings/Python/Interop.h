@@ -26,8 +26,11 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Pass.h"
 
+#define MLIR_PYTHON_CAPSULE_ATTRIBUTE "mlir.ir.Attribute._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_CONTEXT "mlir.ir.Context._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_MODULE "mlir.ir.Module._CAPIPtr"
+#define MLIR_PYTHON_CAPSULE_OPERATION "mlir.ir.Operation._CAPIPtr"
+#define MLIR_PYTHON_CAPSULE_TYPE "mlir.ir.Type._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_PASS_MANAGER "mlir.passmanager.PassManager._CAPIPtr"
 
 /** Attribute on MLIR Python objects that expose their C-API pointer.
@@ -65,6 +68,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** Creates a capsule object encapsulating the raw C-API MlirAttribute.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the attribute in any way.
+ */
+static inline PyObject *mlirPythonAttributeToCapsule(MlirAttribute attribute) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(attribute),
+                       MLIR_PYTHON_CAPSULE_ATTRIBUTE, NULL);
+}
+
+/** Extracts an MlirAttribute from a capsule as produced from
+ * mlirPythonAttributeToCapsule. If the capsule is not of the right type, then
+ * a null attribute is returned (as checked via mlirAttributeIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirAttribute mlirPythonCapsuleToAttribute(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_ATTRIBUTE);
+  MlirAttribute attr = {ptr};
+  return attr;
+}
 
 /** Creates a capsule object encapsulating the raw C-API MlirContext.
  * The returned capsule does not extend or affect ownership of any Python
@@ -118,6 +140,43 @@ mlirPythonCapsuleToPassManager(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_PASS_MANAGER);
   MlirPassManager pm = {ptr};
   return pm;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirOperation.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the operation in any way.
+ */
+static inline PyObject *mlirPythonOperationToCapsule(MlirOperation operation) {
+  return PyCapsule_New(operation.ptr, MLIR_PYTHON_CAPSULE_OPERATION, NULL);
+}
+
+/** Extracts an MlirOperations from a capsule as produced from
+ * mlirPythonOperationToCapsule. If the capsule is not of the right type, then
+ * a null type is returned (as checked via mlirOperationIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirOperation mlirPythonCapsuleToOperation(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_OPERATION);
+  MlirOperation op = {ptr};
+  return op;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirType.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the type in any way.
+ */
+static inline PyObject *mlirPythonTypeToCapsule(MlirType type) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(type),
+                       MLIR_PYTHON_CAPSULE_TYPE, NULL);
+}
+
+/** Extracts an MlirType from a capsule as produced from
+ * mlirPythonTypeToCapsule. If the capsule is not of the right type, then
+ * a null type is returned (as checked via mlirTypeIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirType mlirPythonCapsuleToType(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_TYPE);
+  MlirType type = {ptr};
+  return type;
 }
 
 #ifdef __cplusplus
