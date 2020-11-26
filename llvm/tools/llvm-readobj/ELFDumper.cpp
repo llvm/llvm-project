@@ -2204,10 +2204,9 @@ void ELFDumper<ELFT>::parseDynamicTable() {
       else if (Dyn.getVal() == DT_RELA)
         DynPLTRelRegion.EntSize = sizeof(Elf_Rela);
       else
-        reportError(createError(Twine("unknown DT_PLTREL value of ") +
-                                Twine((uint64_t)Dyn.getVal())),
-                    ObjF.getFileName());
-      DynPLTRelRegion.EntSizePrintName = "";
+        reportUniqueWarning(createError(Twine("unknown DT_PLTREL value of ") +
+                                        Twine((uint64_t)Dyn.getVal())));
+      DynPLTRelRegion.EntSizePrintName = "PLTREL entry size";
       break;
     case ELF::DT_JMPREL:
       DynPLTRelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
