@@ -38,6 +38,9 @@ Getting Started with libc++
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
+   Cxx1yStatus
+   Cxx1zStatus
+   Cxx2aStatus
 
 
 .. toctree::
@@ -132,8 +135,9 @@ C++ Dialect Support
 ---------------------
 
 * C++11 - Complete
-* `C++14 - Complete <http://libcxx.llvm.org/cxx1y_status.html>`__
-* `C++17 - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
+* :ref:`C++14 - Complete <cxx1y-status>`
+* :ref:`C++17 - In Progress <cxx1z-status>`
+* :ref:`C++20 - In Progress <cxx2a-status>`
 * `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
