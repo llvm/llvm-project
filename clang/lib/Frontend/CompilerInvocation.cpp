@@ -3753,9 +3753,6 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   Opts.LinkerVersion =
       std::string(Args.getLastArgValue(OPT_target_linker_version));
   Opts.OpenCLExtensionsAsWritten = Args.getAllArgValues(OPT_cl_ext_EQ);
-  Opts.ForceEnableInt128 = Args.hasArg(OPT_fforce_enable_int128);
-  Opts.NVPTXUseShortPointers = Args.hasFlag(
-      options::OPT_fcuda_short_ptr, options::OPT_fno_cuda_short_ptr, false);
   Opts.AllowAMDGPUUnsafeFPAtomics =
       Args.hasFlag(options::OPT_munsafe_fp_atomics,
                    options::OPT_mno_unsafe_fp_atomics, false);

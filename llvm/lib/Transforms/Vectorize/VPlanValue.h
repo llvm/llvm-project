@@ -90,6 +90,7 @@ public:
     VPVInstructionSC,
     VPVMemoryInstructionSC,
     VPVReductionSC,
+    VPVReplicateSC,
     VPVWidenSC,
     VPVWidenCallSC,
     VPVWidenGEPSC,
