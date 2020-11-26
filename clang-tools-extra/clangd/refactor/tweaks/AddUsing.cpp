@@ -152,12 +152,14 @@ findInsertionPoint(const Tweak::Selection &Inputs,
     if (SM.isBeforeInTranslationUnit(Inputs.Cursor, U->getUsingLoc()))
       // "Usings" is sorted, so we're done.
       break;
-    if (U->getQualifier()->getAsNamespace()->getCanonicalDecl() ==
-            QualifierToRemove.getNestedNameSpecifier()
-                ->getAsNamespace()
-                ->getCanonicalDecl() &&
-        U->getName() == Name) {
-      return InsertionPointData();
+    if (const auto *Namespace = U->getQualifier()->getAsNamespace()) {
+      if (Namespace->getCanonicalDecl() ==
+              QualifierToRemove.getNestedNameSpecifier()
+                  ->getAsNamespace()
+                  ->getCanonicalDecl() &&
+          U->getName() == Name) {
+        return InsertionPointData();
+      }
     }
 
     // Insertion point will be before last UsingDecl that affects cursor
