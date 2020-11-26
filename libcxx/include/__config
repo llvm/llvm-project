@@ -991,6 +991,12 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX17
 #endif
 
+#if _LIBCPP_STD_VER > 17
+#  define _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_DEPRECATED
+#else
+#  define _LIBCPP_DEPRECATED_IN_CXX20
+#endif
+
 // Macros to enter and leave a state where deprecation warnings are suppressed.
 #if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) && \
     (defined(_LIBCPP_COMPILER_CLANG) || defined(_LIBCPP_COMPILER_GCC))
