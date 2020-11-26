@@ -29,8 +29,7 @@ def patch_gn_file(gn_file, add, remove):
     if add:
         srcs_tok = 'sources = ['
         tokloc = gn_contents.find(srcs_tok)
-        while tokloc != -1 and tokloc + len(srcs_tok) < len(gn_contents) and \
-                gn_contents[tokloc + len(srcs_tok)] == ']':
+        while gn_contents[tokloc:].startswith('sources = []'):
             tokloc = gn_contents.find(srcs_tok, tokloc + 1)
         if tokloc == -1: raise ValueError(gn_file + ': No source list')
         if gn_contents.find(srcs_tok, tokloc + 1) != -1:
