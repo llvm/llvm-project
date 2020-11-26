@@ -5,16 +5,16 @@
 
 #include "fp_test.h"
 
-TYPE_FP16 __truncdfhf2(double a);
+uint16_t __truncdfhf2(double a);
 
 int test__truncdfhf2(double a, uint16_t expected)
 {
-    TYPE_FP16 x = __truncdfhf2(a);
+    uint16_t x = __truncdfhf2(a);
     int ret = compareResultH(x, expected);
 
     if (ret){
-        printf("error in test__truncdfhf2(%lf) = %#.4x, "
-               "expected %#.4x\n", a, toRep16(x), expected);
+        printf("error in test__truncdfhf2(%f) = %#.4x, "
+               "expected %#.4x\n", a, x, fromRep16(expected));
     }
     return ret;
 }

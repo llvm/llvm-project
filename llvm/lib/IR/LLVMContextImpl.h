@@ -1376,6 +1376,8 @@ public:
 
   DenseMap<Type *, std::unique_ptr<UndefValue>> UVConstants;
 
+  DenseMap<Type *, std::unique_ptr<PoisonValue>> PVConstants;
+
   StringMap<std::unique_ptr<ConstantDataSequential>> CDSConstants;
 
   DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>

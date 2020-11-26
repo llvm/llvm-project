@@ -402,54 +402,45 @@ bool CXXRecordDecl::FindVirtualBaseClass(const CXXBaseSpecifier *Specifier,
             ->getCanonicalDecl() == BaseRecord;
 }
 
-bool CXXRecordDecl::FindTagMember(const CXXBaseSpecifier *Specifier,
-                                  CXXBasePath &Path,
-                                  DeclarationName Name) {
-  RecordDecl *BaseRecord =
-    Specifier->getType()->castAs<RecordType>()->getDecl();
-
-  for (Path.Decls = BaseRecord->lookup(Name);
-       !Path.Decls.empty();
-       Path.Decls = Path.Decls.slice(1)) {
-    if (Path.Decls.front()->isInIdentifierNamespace(IDNS_Tag))
-      return true;
-  }
-
-  return false;
+static bool isOrdinaryMember(const NamedDecl *ND) {
+  return ND->isInIdentifierNamespace(Decl::IDNS_Ordinary | Decl::IDNS_Tag |
+                                     Decl::IDNS_Member);
 }
 
-static bool findOrdinaryMember(RecordDecl *BaseRecord, CXXBasePath &Path,
+static bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
                                DeclarationName Name) {
-  const unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_Tag |
-                        Decl::IDNS_Member;
-  for (Path.Decls = BaseRecord->lookup(Name);
-       !Path.Decls.empty();
-       Path.Decls = Path.Decls.slice(1)) {
-    if (Path.Decls.front()->isInIdentifierNamespace(IDNS))
+  Path.Decls = RD->lookup(Name);
+  for (NamedDecl *ND : Path.Decls)
+    if (isOrdinaryMember(ND))
       return true;
-  }
 
   return false;
 }
 
-bool CXXRecordDecl::FindOrdinaryMember(const CXXBaseSpecifier *Specifier,
-                                       CXXBasePath &Path,
-                                       DeclarationName Name) {
-  RecordDecl *BaseRecord =
-      Specifier->getType()->castAs<RecordType>()->getDecl();
-  return findOrdinaryMember(BaseRecord, Path, Name);
+bool CXXRecordDecl::hasMemberName(DeclarationName Name) const {
+  CXXBasePath P;
+  if (findOrdinaryMember(this, P, Name))
+    return true;
+
+  CXXBasePaths Paths(false, false, false);
+  return lookupInBases(
+      [Name](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+        return findOrdinaryMember(Specifier->getType()->getAsCXXRecordDecl(),
+                                  Path, Name);
+      },
+      Paths);
 }
 
-bool CXXRecordDecl::FindOrdinaryMemberInDependentClasses(
-    const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
-    DeclarationName Name) {
+static bool
+findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
+                                     CXXBasePath &Path, DeclarationName Name) {
   const TemplateSpecializationType *TST =
       Specifier->getType()->getAs<TemplateSpecializationType>();
   if (!TST) {
     auto *RT = Specifier->getType()->getAs<RecordType>();
     if (!RT)
       return false;
-    return findOrdinaryMember(RT->getDecl(), Path, Name);
+    return findOrdinaryMember(cast<CXXRecordDecl>(RT->getDecl()), Path, Name);
   }
   TemplateName TN = TST->getTemplateName();
   const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
@@ -461,80 +452,32 @@ bool CXXRecordDecl::FindOrdinaryMemberInDependentClasses(
   return findOrdinaryMember(RD, Path, Name);
 }
 
-bool CXXRecordDecl::FindOMPReductionMember(const CXXBaseSpecifier *Specifier,
-                                           CXXBasePath &Path,
-                                           DeclarationName Name) {
-  RecordDecl *BaseRecord =
-      Specifier->getType()->castAs<RecordType>()->getDecl();
-
-  for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
-       Path.Decls = Path.Decls.slice(1)) {
-    if (Path.Decls.front()->isInIdentifierNamespace(IDNS_OMPReduction))
-      return true;
-  }
-
-  return false;
-}
-
-bool CXXRecordDecl::FindOMPMapperMember(const CXXBaseSpecifier *Specifier,
-                                        CXXBasePath &Path,
-                                        DeclarationName Name) {
-  RecordDecl *BaseRecord =
-      Specifier->getType()->castAs<RecordType>()->getDecl();
-
-  for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
-       Path.Decls = Path.Decls.slice(1)) {
-    if (Path.Decls.front()->isInIdentifierNamespace(IDNS_OMPMapper))
-      return true;
-  }
-
-  return false;
-}
-
-bool CXXRecordDecl::
-FindNestedNameSpecifierMember(const CXXBaseSpecifier *Specifier,
-                              CXXBasePath &Path,
-                              DeclarationName Name) {
-  RecordDecl *BaseRecord =
-    Specifier->getType()->castAs<RecordType>()->getDecl();
-
-  for (Path.Decls = BaseRecord->lookup(Name);
-       !Path.Decls.empty();
-       Path.Decls = Path.Decls.slice(1)) {
-    // FIXME: Refactor the "is it a nested-name-specifier?" check
-    if (isa<TypedefNameDecl>(Path.Decls.front()) ||
-        Path.Decls.front()->isInIdentifierNamespace(IDNS_Tag))
-      return true;
-  }
-
-  return false;
-}
-
 std::vector<const NamedDecl *> CXXRecordDecl::lookupDependentName(
-    const DeclarationName &Name,
+    DeclarationName Name,
     llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
   std::vector<const NamedDecl *> Results;
   // Lookup in the class.
-  DeclContext::lookup_result DirectResult = lookup(Name);
-  if (!DirectResult.empty()) {
-    for (const NamedDecl *ND : DirectResult) {
-      if (Filter(ND))
-        Results.push_back(ND);
-    }
-    return Results;
+  bool AnyOrdinaryMembers = false;
+  for (const NamedDecl *ND : lookup(Name)) {
+    if (isOrdinaryMember(ND))
+      AnyOrdinaryMembers = true;
+    if (Filter(ND))
+      Results.push_back(ND);
   }
+  if (AnyOrdinaryMembers)
+    return Results;
+
   // Perform lookup into our base classes.
   CXXBasePaths Paths;
   Paths.setOrigin(this);
   if (!lookupInBases(
           [&](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-            return CXXRecordDecl::FindOrdinaryMemberInDependentClasses(
-                Specifier, Path, Name);
+            return findOrdinaryMemberInDependentClasses(Specifier, Path, Name);
           },
           Paths, /*LookupInDependent=*/true))
     return Results;
   for (const NamedDecl *ND : Paths.front().Decls) {
-    if (Filter(ND))
+    if (isOrdinaryMember(ND) && Filter(ND))
       Results.push_back(ND);
   }
   return Results;

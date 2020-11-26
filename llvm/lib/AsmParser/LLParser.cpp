@@ -3273,6 +3273,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
     break;
   case lltok::kw_null: ID.Kind = ValID::t_Null; break;
   case lltok::kw_undef: ID.Kind = ValID::t_Undef; break;
+  case lltok::kw_poison: ID.Kind = ValID::t_Poison; break;
   case lltok::kw_zeroinitializer: ID.Kind = ValID::t_Zero; break;
   case lltok::kw_none: ID.Kind = ValID::t_None; break;
 
@@ -5536,10 +5537,15 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
       return error(ID.Loc, "invalid type for none constant");
     V = Constant::getNullValue(Ty);
     return false;
+  case ValID::t_Poison:
+    // FIXME: LabelTy should not be a first-class type.
+    if (!Ty->isFirstClassType() || Ty->isLabelTy())
+      return error(ID.Loc, "invalid type for poison constant");
+    V = PoisonValue::get(Ty);
+    return false;
   case ValID::t_Constant:
     if (ID.ConstantVal->getType() != Ty)
       return error(ID.Loc, "constant expression type mismatch");
-
     V = ID.ConstantVal;
     return false;
   case ValID::t_ConstantStruct:

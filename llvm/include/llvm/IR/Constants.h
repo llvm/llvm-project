@@ -1348,12 +1348,15 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 /// can appear to have different bit patterns at each use. See
 /// LangRef.html#undefvalues for details.
 ///
-class UndefValue final : public ConstantData {
+class UndefValue : public ConstantData {
   friend class Constant;
 
   explicit UndefValue(Type *T) : ConstantData(T, UndefValueVal) {}
 
   void destroyConstantImpl();
+
+protected:
+  explicit UndefValue(Type *T, ValueTy vty) : ConstantData(T, vty) {}
 
 public:
   UndefValue(const UndefValue &) = delete;
@@ -1381,7 +1384,49 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == UndefValueVal;
+    return V->getValueID() == UndefValueVal ||
+           V->getValueID() == PoisonValueVal;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+/// In order to facilitate speculative execution, many instructions do not
+/// invoke immediate undefined behavior when provided with illegal operands,
+/// and return a poison value instead.
+///
+/// see LangRef.html#poisonvalues for details.
+///
+class PoisonValue final : public UndefValue {
+  friend class Constant;
+
+  explicit PoisonValue(Type *T) : UndefValue(T, PoisonValueVal) {}
+
+  void destroyConstantImpl();
+
+public:
+  PoisonValue(const PoisonValue &) = delete;
+
+  /// Static factory methods - Return an 'poison' object of the specified type.
+  static PoisonValue *get(Type *T);
+
+  /// If this poison has array or vector type, return a poison with the right
+  /// element type.
+  PoisonValue *getSequentialElement() const;
+
+  /// If this poison has struct type, return a poison with the right element
+  /// type for the specified element.
+  PoisonValue *getStructElement(unsigned Elt) const;
+
+  /// Return an poison of the right value for the specified GEP index if we can,
+  /// otherwise return null (e.g. if C is a ConstantExpr).
+  PoisonValue *getElementValue(Constant *C) const;
+
+  /// Return an poison of the right value for the specified GEP index.
+  PoisonValue *getElementValue(unsigned Idx) const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *V) {
+    return V->getValueID() == PoisonValueVal;
   }
 };
 

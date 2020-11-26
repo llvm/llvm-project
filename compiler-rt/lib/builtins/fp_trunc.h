@@ -50,11 +50,7 @@ typedef uint32_t dst_rep_t;
 static const int dstSigBits = 23;
 
 #elif defined DST_HALF
-#ifdef COMPILER_RT_HAS_FLOAT16
-typedef _Float16 dst_t;
-#else
 typedef uint16_t dst_t;
-#endif
 typedef uint16_t dst_rep_t;
 #define DST_REP_C UINT16_C
 static const int dstSigBits = 10;
