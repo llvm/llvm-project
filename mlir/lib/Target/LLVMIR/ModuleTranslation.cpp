@@ -433,7 +433,7 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // attribute (shared, private, firstprivate, ...) of variables.
   // Currently defaults to shared.
   auto privCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                    llvm::Value &vPtr,
+                    llvm::Value &, llvm::Value &vPtr,
                     llvm::Value *&replacementValue) -> InsertPointTy {
     replacementValue = &vPtr;
 
