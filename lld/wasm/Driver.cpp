@@ -973,7 +973,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       warn(Twine("symbol exported via --export not found: ") + arg->getValue());
   }
 
-  if (!config->relocatable) {
+  if (!config->relocatable && !config->isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

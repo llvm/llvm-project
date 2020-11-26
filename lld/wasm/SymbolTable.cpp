@@ -673,9 +673,9 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
   // to be exported outside the object file.
   replaceSymbol<DefinedFunction>(sym, debugName, WASM_SYMBOL_BINDING_LOCAL,
                                  nullptr, func);
-  // Ensure it compares equal to the null pointer, and so that table relocs
-  // don't pull in the stub body (only call-operand relocs should do that).
-  func->setTableIndex(0);
+  // Ensure the stub function doesn't get a table entry.  Its address
+  // should always compare equal to the null pointer.
+  sym->isStub = true;
   return func;
 }
 
