@@ -9123,7 +9123,7 @@ public:
       const TemplateArgumentList &TemplateArgList,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
-      SourceLocation PointOfInstantiation,
+      SourceLocation PointOfInstantiation, void *InsertPos,
       LateInstantiatedAttrVec *LateAttrs = nullptr,
       LocalInstantiationScope *StartingScope = nullptr);
   VarTemplateSpecializationDecl *CompleteVarTemplateSpecializationDecl(

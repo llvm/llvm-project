@@ -4471,7 +4471,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
       Template, InstantiationPattern, *InstantiationArgs, TemplateArgs,
-      Converted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
+      Converted, TemplateNameLoc, InsertPos /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
 
