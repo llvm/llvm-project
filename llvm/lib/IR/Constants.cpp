@@ -519,6 +519,9 @@ void llvm::deleteConstant(Constant *C) {
   case Constant::UndefValueVal:
     delete static_cast<UndefValue *>(C);
     break;
+  case Constant::PoisonValueVal:
+    delete static_cast<PoisonValue *>(C);
+    break;
   case Constant::ConstantExprVal:
     if (isa<UnaryConstantExpr>(C))
       delete static_cast<UnaryConstantExpr *>(C);
@@ -1722,7 +1725,12 @@ UndefValue *UndefValue::get(Type *Ty) {
 /// Remove the constant from the constant table.
 void UndefValue::destroyConstantImpl() {
   // Free the constant and any dangling references to it.
-  getContext().pImpl->UVConstants.erase(getType());
+  if (getValueID() == UndefValueVal) {
+    getContext().pImpl->UVConstants.erase(getType());
+  } else if (getValueID() == PoisonValueVal) {
+    getContext().pImpl->PVConstants.erase(getType());
+  }
+  llvm_unreachable("Not a undef or a poison!");
 }
 
 PoisonValue *PoisonValue::get(Type *Ty) {

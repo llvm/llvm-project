@@ -291,6 +291,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
 
   switch (L->getValueID()) {
   case Value::UndefValueVal:
+  case Value::PoisonValueVal:
   case Value::ConstantTokenNoneVal:
     return TypesRes;
   case Value::ConstantIntVal: {
