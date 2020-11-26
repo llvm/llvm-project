@@ -9673,7 +9673,7 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterations(
   // Value of IV on suggested last iteration.
   const SCEV *Last = AR->evaluateAtIteration(MaxIter, *this);
   // Does it still meet the requirement?
-  if (!isKnownPredicateAt(Pred, Last, RHS, Context))
+  if (!isLoopBackedgeGuardedByCond(L, Pred, Last, RHS))
     return None;
   // Because step is +/- 1 and MaxIter has same type as Start (i.e. it does
   // not exceed max unsigned value of this type), this effectively proves
