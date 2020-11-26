@@ -363,7 +363,7 @@ static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_end: {
-      MemoryLocation ArgLoc(II->getArgOperand(1), LocationSize::unknown());
+      MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(1));
       return AA.alias(ArgLoc, Loc) == MustAlias;
     }
     default:

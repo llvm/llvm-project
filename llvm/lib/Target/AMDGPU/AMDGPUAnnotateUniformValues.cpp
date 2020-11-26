@@ -109,7 +109,7 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
     BasicBlock::iterator StartIt = (!L && (BB == Load->getParent())) ?
       BasicBlock::iterator(Load) : BB->end();
     auto Q = MDR->getPointerDependencyFrom(
-        MemoryLocation(Ptr, LocationSize::unknown()), true, StartIt, BB, Load);
+        MemoryLocation::getBeforeOrAfter(Ptr), true, StartIt, BB, Load);
     if (Q.isClobber() || Q.isUnknown())
       return true;
   }
