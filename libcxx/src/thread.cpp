@@ -15,20 +15,8 @@
 #include "future"
 #include "limits"
 
-#if __has_include(<sys/types.h>)
-# include <sys/types.h>
-#endif
-
-#if __has_include(<sys/param.h>)
-# include <sys/param.h>
-#endif
-
-#if __has_include(<sys/sysctl.h>)
-# include <sys/sysctl.h>
-#endif
-
 #if __has_include(<unistd.h>)
-# include <unistd.h>
+# include <unistd.h> // for sysconf
 #endif
 
 #if defined(__NetBSD__)
@@ -84,13 +72,7 @@ thread::detach()
 unsigned
 thread::hardware_concurrency() _NOEXCEPT
 {
-#if defined(CTL_HW) && defined(HW_NCPU)
-    unsigned n;
-    int mib[2] = {CTL_HW, HW_NCPU};
-    std::size_t s = sizeof(n);
-    sysctl(mib, 2, &n, &s, 0, 0);
-    return n;
-#elif defined(_SC_NPROCESSORS_ONLN)
+#if defined(_SC_NPROCESSORS_ONLN)
     long result = sysconf(_SC_NPROCESSORS_ONLN);
     // sysconf returns -1 if the name is invalid, the option does not exist or
     // does not have a definite limit.

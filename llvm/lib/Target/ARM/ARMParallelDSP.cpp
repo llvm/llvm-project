@@ -374,7 +374,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
   DepMap RAWDeps;
 
   // Record any writes that may alias a load.
-  const auto Size = LocationSize::unknown();
+  const auto Size = LocationSize::beforeOrAfterPointer();
   for (auto Write : Writes) {
     for (auto Read : Loads) {
       MemoryLocation ReadLoc =

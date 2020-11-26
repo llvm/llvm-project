@@ -23,7 +23,7 @@ class TestDbgInfoContentList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::list<Foo, std::allocator<Foo> >"
+        list_type = "std::list<Foo>"
         size_type = list_type + "::size_type"
         value_type = list_type + "::value_type"
 

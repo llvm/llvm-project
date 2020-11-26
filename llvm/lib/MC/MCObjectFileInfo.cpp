@@ -997,7 +997,7 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
   }
 
   return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, MCSection::NonUniqueID,
+                            GroupName, ElfSec.getUniqueID(),
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
 
