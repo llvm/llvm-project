@@ -420,16 +420,27 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
   }
 }
 
+/// Maps sparse integer option to actual integral storage type.
+static Type genIntType(PatternRewriter &rewriter, linalg::SparseIntType tp) {
+  switch (tp) {
+  case linalg::SparseIntType::kNative:
+    return rewriter.getIndexType();
+  case linalg::SparseIntType::kI64:
+    return rewriter.getIntegerType(64);
+  case linalg::SparseIntType::kI32:
+    return rewriter.getIntegerType(32);
+  }
+}
+
 /// Local bufferization of all dense and sparse data structures.
 /// This code enables testing the first prototype sparse compiler.
 // TODO: replace this with a proliferated bufferization strategy
-void genBuffers(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
-                linalg::GenericOp op) {
+static void genBuffers(Merger &merger, CodeGen &codegen,
+                       PatternRewriter &rewriter, linalg::GenericOp op) {
   Location loc = op.getLoc();
   unsigned numTensors = op.getNumInputsAndOutputs();
   unsigned numInputs = op.getNumInputs();
   assert(numTensors == numInputs + 1);
-  Type indexType = rewriter.getIndexType();
 
   // For now, set all unknown dimensions to 999.
   // TODO: compute these values (using sparsity or by reading tensor)
@@ -450,9 +461,13 @@ void genBuffers(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
       // Handle sparse storage schemes.
       if (merger.isSparseAccess(t, i)) {
         allDense = false;
-        auto dynTp = MemRefType::get({ShapedType::kDynamicSize}, indexType);
-        codegen.pointers[t][i] = rewriter.create<AllocaOp>(loc, dynTp, unknown);
-        codegen.indices[t][i] = rewriter.create<AllocaOp>(loc, dynTp, unknown);
+        auto dynShape = {ShapedType::kDynamicSize};
+        auto ptrTp = MemRefType::get(
+            dynShape, genIntType(rewriter, codegen.options.ptrType));
+        auto indTp = MemRefType::get(
+            dynShape, genIntType(rewriter, codegen.options.indType));
+        codegen.pointers[t][i] = rewriter.create<AllocaOp>(loc, ptrTp, unknown);
+        codegen.indices[t][i] = rewriter.create<AllocaOp>(loc, indTp, unknown);
       }
       // Find lower and upper bound in current dimension.
       Value up;
@@ -516,6 +531,15 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
   rewriter.create<StoreOp>(op.getLoc(), rhs, codegen.buffers[tensor], args);
 }
 
+/// Generates a pointer/index load from the sparse storage scheme.
+static Value genIntLoad(PatternRewriter &rewriter, Location loc, Value ptr,
+                        Value s) {
+  Value load = rewriter.create<LoadOp>(loc, ptr, s);
+  return load.getType().isa<IndexType>()
+             ? load
+             : rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
+}
+
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
@@ -551,7 +575,6 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   unsigned idx = topSort[at];
 
   // Initialize sparse positions.
-  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
   for (unsigned b = 0, be = inits.size(); b < be; b++) {
     if (inits[b]) {
       unsigned tensor = merger.tensor(b);
@@ -564,11 +587,12 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
             break;
         }
         Value ptr = codegen.pointers[tensor][idx];
-        Value p = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
-                             : codegen.pidxs[tensor][topSort[pat - 1]];
-        codegen.pidxs[tensor][idx] = rewriter.create<LoadOp>(loc, ptr, p);
-        p = rewriter.create<AddIOp>(loc, p, one);
-        codegen.highs[tensor][idx] = rewriter.create<LoadOp>(loc, ptr, p);
+        Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+        Value p0 = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
+                              : codegen.pidxs[tensor][topSort[pat - 1]];
+        codegen.pidxs[tensor][idx] = genIntLoad(rewriter, loc, ptr, p0);
+        Value p1 = rewriter.create<AddIOp>(loc, p0, one);
+        codegen.highs[tensor][idx] = genIntLoad(rewriter, loc, ptr, p1);
       } else {
         // Dense index still in play.
         needsUniv = true;
@@ -723,15 +747,17 @@ static void genLocals(Merger &merger, CodeGen &codegen,
     if (locals[b] && merger.isSparseBit(b)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
-      Value ld = rewriter.create<LoadOp>(loc, codegen.indices[tensor][idx],
-                                         codegen.pidxs[tensor][idx]);
-      codegen.idxs[tensor][idx] = ld;
+      Value ptr = codegen.indices[tensor][idx];
+      Value s = codegen.pidxs[tensor][idx];
+      Value load = genIntLoad(rewriter, loc, ptr, s);
+      codegen.idxs[tensor][idx] = load;
       if (!needsUniv) {
         if (min) {
-          Value cmp = rewriter.create<CmpIOp>(loc, CmpIPredicate::ult, ld, min);
-          min = rewriter.create<SelectOp>(loc, cmp, ld, min);
+          Value cmp =
+              rewriter.create<CmpIOp>(loc, CmpIPredicate::ult, load, min);
+          min = rewriter.create<SelectOp>(loc, cmp, load, min);
         } else {
-          min = ld;
+          min = load;
         }
       }
     }

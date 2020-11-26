@@ -107,8 +107,8 @@ namespace PR6268 {
 }
 
 namespace PR6463 {
-  struct B { typedef int type; }; // expected-note 2{{member found by ambiguous name lookup}}
-  struct C { typedef int type; }; // expected-note 2{{member found by ambiguous name lookup}}
+  struct B { typedef int type; }; // expected-note 2{{member type 'int' found by ambiguous name lookup}}
+  struct C { typedef const int type; }; // expected-note 2{{member type 'const int' found by ambiguous name lookup}}
 
   template<typename T>
   struct A : B, C { 

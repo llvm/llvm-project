@@ -142,7 +142,7 @@ void MarkLive::mark() {
           reloc.Type == R_WASM_TABLE_INDEX_I32 ||
           reloc.Type == R_WASM_TABLE_INDEX_I64) {
         auto *funcSym = cast<FunctionSymbol>(sym);
-        if (funcSym->hasTableIndex() && funcSym->getTableIndex() == 0)
+        if (funcSym->isStub)
           continue;
       }
 
