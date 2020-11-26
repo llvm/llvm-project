@@ -623,18 +623,23 @@ $InactiveCode[[#endif]]
       // Code after the preamble.
       // Code inside inactive blocks does not get regular highlightings
       // because it's not part of the AST.
-$InactiveCode[[#ifdef test]]
+      #define $Macro[[test2]]
+$InactiveCode[[#if defined(test)]]
 $InactiveCode[[int Inactive2;]]
+$InactiveCode[[#elif defined(test2)]]
+      int $Variable[[Active1]];
+$InactiveCode[[#else]]
+$InactiveCode[[int Inactive3;]]
 $InactiveCode[[#endif]]
 
       #ifndef $Macro[[test]]
-      int $Variable[[Active1]];
+      int $Variable[[Active2]];
       #endif
 
 $InactiveCode[[#ifdef test]]
-$InactiveCode[[int Inactive3;]]
+$InactiveCode[[int Inactive4;]]
 $InactiveCode[[#else]]
-      int $Variable[[Active2]];
+      int $Variable[[Active3]];
       #endif
     )cpp",
       // Argument to 'sizeof...'
