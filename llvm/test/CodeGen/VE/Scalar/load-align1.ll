@@ -11,8 +11,9 @@
 define double @loadf64stk() {
 ; CHECK-LABEL: loadf64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca double, align 1
   %1 = load double, double* %addr, align 1
   ret double %1
@@ -22,8 +23,9 @@ define double @loadf64stk() {
 define float @loadf32stk() {
 ; CHECK-LABEL: loadf32stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldu %s0, 188(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ldu %s0, 12(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca float, align 1
   %1 = load float, float* %addr, align 1
   ret float %1
@@ -33,8 +35,9 @@ define float @loadf32stk() {
 define i64 @loadi64stk() {
 ; CHECK-LABEL: loadi64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i64, align 1
   %1 = load i64, i64* %addr, align 1
   ret i64 %1
@@ -44,8 +47,9 @@ define i64 @loadi64stk() {
 define i32 @loadi32stk() {
 ; CHECK-LABEL: loadi32stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ldl.sx %s0, 188(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ldl.sx %s0, 12(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i32, align 1
   %1 = load i32, i32* %addr, align 1
   ret i32 %1
@@ -55,8 +59,9 @@ define i32 @loadi32stk() {
 define i16 @loadi16stk() {
 ; CHECK-LABEL: loadi16stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld2b.zx %s0, 190(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i16, align 1
   %1 = load i16, i16* %addr, align 1
   ret i16 %1
@@ -66,8 +71,9 @@ define i16 @loadi16stk() {
 define i8 @loadi8stk() {
 ; CHECK-LABEL: loadi8stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.zx %s0, 191(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i8, align 1
   %1 = load i8, i8* %addr, align 1
   ret i8 %1
