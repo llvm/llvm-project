@@ -5158,8 +5158,6 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   // context. This context will be fixed when the actual template declaration
   // is created.
 
-  // FIXME: Import default argument  and constraint expression.
-
   ExpectedSLoc BeginLocOrErr = import(D->getBeginLoc());
   if (!BeginLocOrErr)
     return BeginLocOrErr.takeError();
@@ -5204,6 +5202,14 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
             ASTTemplateArgumentListInfo::Create(Importer.getToContext(),
                                                 ToTAInfo) : nullptr,
         ToIDC);
+  }
+
+  if (D->hasDefaultArgument()) {
+    Expected<TypeSourceInfo *> ToDefaultArgOrErr =
+        import(D->getDefaultArgumentInfo());
+    if (!ToDefaultArgOrErr)
+      return ToDefaultArgOrErr.takeError();
+    ToD->setDefaultArgument(*ToDefaultArgOrErr);
   }
 
   return ToD;

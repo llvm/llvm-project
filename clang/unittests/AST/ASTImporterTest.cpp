@@ -880,6 +880,25 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
                  has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclNoDefaultArg) {
+  Decl *FromTU = getTuDecl("template<typename T> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T")));
+  TemplateTypeParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_FALSE(To->hasDefaultArgument());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclDefaultArg) {
+  Decl *FromTU =
+      getTuDecl("template<typename T = int> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T")));
+  TemplateTypeParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_TRUE(To->hasDefaultArgument());
+  QualType ToArg = To->getDefaultArgument();
+  ASSERT_EQ(ToArg, QualType(To->getASTContext().IntTy));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportBeginLocOfDeclRefExpr) {
   Decl *FromTU =
       getTuDecl("class A { public: static int X; }; void f() { (void)A::X; }",

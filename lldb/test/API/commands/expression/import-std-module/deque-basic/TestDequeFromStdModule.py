@@ -22,7 +22,7 @@ class TestBasicDeque(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        deque_type = "std::deque<int, std::allocator<int> >"
+        deque_type = "std::deque<int>"
         size_type = deque_type + "::size_type"
         value_type = "std::__deque_base<int, std::allocator<int> >::value_type"
         iterator = deque_type + "::iterator"
