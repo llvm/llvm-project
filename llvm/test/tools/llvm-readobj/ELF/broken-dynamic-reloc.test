@@ -163,7 +163,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --dyn-relocations %t10a 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t10a --check-prefix=INVALID-DT-PLTRELSZ1 --implicit-check-not=warning:
 
-# INVALID-DT-PLTRELSZ1: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0xff){{$}}
+# INVALID-DT-PLTRELSZ1: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0xff) or PLTREL entry size (0x18){{$}}
 
 --- !ELF
 FileHeader:
