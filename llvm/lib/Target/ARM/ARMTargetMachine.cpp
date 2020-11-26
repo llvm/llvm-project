@@ -99,6 +99,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVEVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
+  initializeARMBlockPlacementPass(Registry);
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
 }
@@ -551,6 +552,8 @@ void ARMPassConfig::addPreEmitPass() {
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
     return MF.getSubtarget<ARMSubtarget>().isThumb2();
   }));
+
+  addPass(createARMBlockPlacementPass());
 
   // Don't optimize barriers at -O0.
   if (getOptLevel() != CodeGenOpt::None)

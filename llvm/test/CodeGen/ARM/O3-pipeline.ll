@@ -172,6 +172,9 @@
 ; CHECK-NEXT:      Implement the 'patchable-function' attribute
 ; CHECK-NEXT:      Thumb2 instruction size reduce pass
 ; CHECK-NEXT:      Unpack machine instruction bundles
+; CHECK-NEXT:      MachineDominator Tree Construction
+; CHECK-NEXT:      Machine Natural Loop Construction
+; CHECK-NEXT:      ARM block placement
 ; CHECK-NEXT:      optimise barriers pass
 ; CHECK-NEXT:      Contiguously Lay Out Funclets
 ; CHECK-NEXT:      StackMap Liveness Analysis
