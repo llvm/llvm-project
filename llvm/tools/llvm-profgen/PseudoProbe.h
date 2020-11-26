@@ -201,6 +201,21 @@ public:
 
   // Print pseudo_probe section info, used along with show-disassembly
   void printProbeForAddress(raw_ostream &OS, uint64_t Address);
+
+  // Look up the probe of a call for the input address
+  const PseudoProbe *getCallProbeForAddr(uint64_t Address) const;
+
+  // Helper function to populate one probe's inline stack into
+  // \p InlineContextStack.
+  // Current leaf location info will be added if IncludeLeaf is true
+  // Example:
+  //  Current probe(bar:3) inlined at foo:2 then inlined at main:1
+  //  IncludeLeaf = true,  Output: [main:1, foo:2, bar:3]
+  //  IncludeLeaf = false, OUtput: [main:1, foo:2]
+  void
+  getInlineContextForProbe(const PseudoProbe *Probe,
+                           SmallVector<std::string, 16> &InlineContextStack,
+                           bool IncludeLeaf) const;
 };
 
 } // end namespace sampleprof
