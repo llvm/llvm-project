@@ -5987,7 +5987,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
       AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
-  bool IsGFX10 = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10;
+  bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->value_begin(), Op->value_end());
   SmallVector<EVT, 3> OrigResultTypes(Op->value_begin(), Op->value_end());
@@ -6235,11 +6235,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (BaseOpcode->Atomic) {
     GLC = True; // TODO no-return optimization
     if (!parseCachePolicy(Op.getOperand(ArgOffset + Intr->CachePolicyIndex),
-                          DAG, nullptr, &SLC, IsGFX10 ? &DLC : nullptr))
+                          DAG, nullptr, &SLC, IsGFX10Plus ? &DLC : nullptr))
       return Op;
   } else {
     if (!parseCachePolicy(Op.getOperand(ArgOffset + Intr->CachePolicyIndex),
-                          DAG, &GLC, &SLC, IsGFX10 ? &DLC : nullptr))
+                          DAG, &GLC, &SLC, IsGFX10Plus ? &DLC : nullptr))
       return Op;
   }
 
@@ -6256,20 +6256,20 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (BaseOpcode->Sampler)
     Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
-  if (IsGFX10)
+  if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
   Ops.push_back(Unorm);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     Ops.push_back(DLC);
   Ops.push_back(GLC);
   Ops.push_back(SLC);
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     Ops.push_back(IsA16 ? True : False);
   Ops.push_back(TFE);
   Ops.push_back(LWE);
-  if (!IsGFX10)
+  if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
     Ops.push_back(IsD16 ? True : False);
@@ -6280,7 +6280,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX10) {
+  if (IsGFX10Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx10NSA
                                           : AMDGPU::MIMGEncGfx10Default,
@@ -6559,11 +6559,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
-    bool IsGFX10 = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10;
+    bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
     SDValue GLC;
     SDValue DLC = DAG.getTargetConstant(0, DL, MVT::i1);
     if (!parseCachePolicy(Op.getOperand(3), DAG, &GLC, nullptr,
-                          IsGFX10 ? &DLC : nullptr))
+                          IsGFX10Plus ? &DLC : nullptr))
       return Op;
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
                         DAG);

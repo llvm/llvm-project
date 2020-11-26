@@ -338,7 +338,7 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
   const MCSubtargetInfo &STI = *getGlobalSTI();
-  if (AMDGPU::isGFX10(STI) &&
+  if (AMDGPU::isGFX10Plus(STI) &&
       (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
        STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
     OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
