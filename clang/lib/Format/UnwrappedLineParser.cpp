@@ -3038,7 +3038,6 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
-      FormatTok->MustBreakAlignBefore = true;
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
@@ -3063,7 +3062,6 @@ void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
     Line->Tokens.back().Tok->MustBreakBefore = true;
-    Line->Tokens.back().Tok->MustBreakAlignBefore = true;
     MustBreakBeforeNextToken = false;
   }
 }
