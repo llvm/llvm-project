@@ -2674,7 +2674,9 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
   // Place the cloned scalar in the new loop.
   Builder.Insert(Cloned);
 
-  // Add the cloned scalar to the scalar map entry.
+  // TODO: Set result for VPValue of VPReciplicateRecipe. This requires
+  // representing scalar values in VPTransformState. Add the cloned scalar to
+  // the scalar map entry.
   VectorLoopValueMap.setScalarValue(Instr, Instance, Cloned);
 
   // If we just cloned a new assumption, add it the assumption cache.
@@ -7549,6 +7551,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   auto *Recipe = new VPReplicateRecipe(I, Plan->mapToVPValues(I->operands()),
                                        IsUniform, IsPredicated);
   setRecipe(I, Recipe);
+  Plan->addVPValue(I, Recipe);
 
   // Find if I uses a predicated instruction. If so, it will use its scalar
   // value. Avoid hoisting the insert-element which packs the scalar value into
@@ -8103,18 +8106,20 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
-    State.ILV->scalarizeInstruction(Ingredient, *this, *State.Instance,
-                                    IsPredicated, State);
+    State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this,
+                                    *State.Instance, IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
       // If we're constructing lane 0, initialize to start from undef.
       if (State.Instance->Lane == 0) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Undef =
-            UndefValue::get(VectorType::get(Ingredient->getType(), State.VF));
-        State.ValueMap.setVectorValue(Ingredient, State.Instance->Part, Undef);
+        Value *Undef = UndefValue::get(
+            VectorType::get(getUnderlyingValue()->getType(), State.VF));
+        State.ValueMap.setVectorValue(getUnderlyingInstr(),
+                                      State.Instance->Part, Undef);
       }
-      State.ILV->packScalarIntoVectorValue(Ingredient, *State.Instance);
+      State.ILV->packScalarIntoVectorValue(getUnderlyingInstr(),
+                                           *State.Instance);
     }
     return;
   }
@@ -8125,7 +8130,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(Ingredient, *this, {Part, Lane},
+      State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this, {Part, Lane},
                                       IsPredicated, State);
 }
 
