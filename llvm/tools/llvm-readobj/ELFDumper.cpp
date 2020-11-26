@@ -5559,7 +5559,7 @@ static void printNotesHelper(
       StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size);
       Error Err = Error::success();
-      for (const typename ELFT::Note &Note : Obj.notes(S, Err))
+      for (const typename ELFT::Note Note : Obj.notes(S, Err))
         ProcessNoteFn(Note);
       if (Err)
         Dumper.reportUniqueWarning(
