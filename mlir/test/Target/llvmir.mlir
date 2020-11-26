@@ -1319,6 +1319,7 @@ module attributes {llvm.target_triple = "x86_64-pc-windows-msvc"} {}
 // -----
 
 // CHECK-NOT: "CodeView", i32 1
+// CHECK: aarch64-linux-android
 module attributes {llvm.target_triple = "aarch64-linux-android"} {}
 
 // -----
