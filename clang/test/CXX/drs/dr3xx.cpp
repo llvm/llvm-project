@@ -137,13 +137,17 @@ namespace dr305 { // dr305: no
 #endif
 }
 
-namespace dr306 { // dr306: no
-  // FIXME: dup 39
-  // FIXME: This should be accepted.
-  struct A { struct B {}; }; // expected-note 2{{member}}
-  struct C { typedef A::B B; }; // expected-note {{member}}
+namespace dr306 { // dr306: dup 39
+  struct A { struct B {}; };
+  struct C { typedef A::B B; };
   struct D : A, A::B, C {};
-  D::B b; // expected-error {{found in multiple base classes of different types}}
+  D::B b;
+
+  struct X {}; // expected-note {{member type 'dr306::X' found}}
+  template<typename T> struct Y { typedef T X; }; // expected-note {{member type 'const dr306::X' found}}
+  template<typename T> struct Z : X, Y<T> {};
+  Z<X>::X zx;
+  Z<const X>::X zcx; // expected-error {{member 'X' found in multiple base classes of different types}}
 }
 
 // dr307: na

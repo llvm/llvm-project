@@ -304,8 +304,8 @@ static_assert(sizeof(B<int>) == sizeof(A<int>::NameFromBase), "");
 }
 
 namespace two_types_in_base {
-template <typename T> struct A { typedef T NameFromBase; }; // expected-note {{member found by ambiguous name lookup}}
-template <typename T> struct B { struct NameFromBase { T m; }; }; // expected-note {{member found by ambiguous name lookup}}
+template <typename T> struct A { typedef T NameFromBase; }; // expected-note {{member type 'int' found by ambiguous name lookup}}
+template <typename T> struct B { struct NameFromBase { T m; }; }; // expected-note {{member type 'two_types_in_base::B<int>::NameFromBase' found by ambiguous name lookup}}
 template <typename T> struct C : A<T>, B<T> {
   NameFromBase m; // expected-error {{member 'NameFromBase' found in multiple base classes of different types}} expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 };
