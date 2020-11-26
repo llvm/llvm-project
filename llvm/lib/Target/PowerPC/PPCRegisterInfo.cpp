@@ -231,8 +231,10 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (Subtarget.isAIXABI()) {
-    assert(!Subtarget.hasAltivec() && "Altivec is not implemented on AIX yet.");
-    return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
+    return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
+                                                  : CSR_PPC64_RegMask)
+                        : (Subtarget.hasAltivec() ? CSR_AIX32_Altivec_RegMask
+                                                  : CSR_AIX32_RegMask);
   }
 
   if (CC == CallingConv::Cold) {
