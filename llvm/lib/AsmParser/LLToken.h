@@ -74,6 +74,7 @@ enum Kind {
   kw_localexec,
   kw_zeroinitializer,
   kw_undef,
+  kw_poison,
   kw_null,
   kw_none,
   kw_to,

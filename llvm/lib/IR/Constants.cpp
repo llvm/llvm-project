@@ -1090,6 +1090,32 @@ unsigned UndefValue::getNumElements() const {
 }
 
 //===----------------------------------------------------------------------===//
+//                         PoisonValue Implementation
+//===----------------------------------------------------------------------===//
+
+PoisonValue *PoisonValue::getSequentialElement() const {
+  if (ArrayType *ATy = dyn_cast<ArrayType>(getType()))
+    return PoisonValue::get(ATy->getElementType());
+  return PoisonValue::get(cast<VectorType>(getType())->getElementType());
+}
+
+PoisonValue *PoisonValue::getStructElement(unsigned Elt) const {
+  return PoisonValue::get(getType()->getStructElementType(Elt));
+}
+
+PoisonValue *PoisonValue::getElementValue(Constant *C) const {
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+    return getSequentialElement();
+  return getStructElement(cast<ConstantInt>(C)->getZExtValue());
+}
+
+PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
+  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+    return getSequentialElement();
+  return getStructElement(Idx);
+}
+
+//===----------------------------------------------------------------------===//
 //                            ConstantXXX Classes
 //===----------------------------------------------------------------------===//
 
@@ -1697,6 +1723,20 @@ UndefValue *UndefValue::get(Type *Ty) {
 void UndefValue::destroyConstantImpl() {
   // Free the constant and any dangling references to it.
   getContext().pImpl->UVConstants.erase(getType());
+}
+
+PoisonValue *PoisonValue::get(Type *Ty) {
+  std::unique_ptr<PoisonValue> &Entry = Ty->getContext().pImpl->PVConstants[Ty];
+  if (!Entry)
+    Entry.reset(new PoisonValue(Ty));
+
+  return Entry.get();
+}
+
+/// Remove the constant from the constant table.
+void PoisonValue::destroyConstantImpl() {
+  // Free the constant and any dangling references to it.
+  getContext().pImpl->PVConstants.erase(getType());
 }
 
 BlockAddress *BlockAddress::get(BasicBlock *BB) {
