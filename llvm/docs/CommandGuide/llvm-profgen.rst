@@ -1,5 +1,5 @@
 llvm-profgen - LLVM SPGO profile generation tool
-=================================================
+================================================
 
 .. program:: llvm-profgen
 

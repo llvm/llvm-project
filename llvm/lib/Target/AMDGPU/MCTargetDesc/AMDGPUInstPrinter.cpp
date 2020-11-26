@@ -155,7 +155,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     if (IsFlatSeg) { // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
     } else {         // Signed offset
-      if (AMDGPU::isGFX10(STI)) {
+      if (AMDGPU::isGFX10Plus(STI)) {
         O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
       } else {
         O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
@@ -207,7 +207,7 @@ void AMDGPUInstPrinter::printGDS(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printDLC(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  if (AMDGPU::isGFX10(STI))
+  if (AMDGPU::isGFX10Plus(STI))
     printNamedBit(MI, OpNo, O, "dlc");
 }
 
@@ -310,7 +310,7 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   assert(OpNo != -1);
 
   unsigned Val = MI->getOperand(OpNo).getImm();
-  if (AMDGPU::isGFX10(STI)) {
+  if (AMDGPU::isGFX10Plus(STI)) {
     if (Val == UFMT_DEFAULT)
       return;
     if (isValidUnifiedFormat(Val)) {
@@ -780,7 +780,7 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
 void AMDGPUInstPrinter::printDPP8(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI,
                                   raw_ostream &O) {
-  if (!AMDGPU::isGFX10(STI))
+  if (!AMDGPU::isGFX10Plus(STI))
     llvm_unreachable("dpp8 is not supported on ASICs earlier than GFX10");
 
   unsigned Imm = MI->getOperand(OpNo).getImm();
@@ -816,25 +816,25 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
     O << "row_ror:";
     printU4ImmDecOperand(MI, OpNo, O);
   } else if (Imm == DppCtrl::WAVE_SHL1) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* wave_shl is not supported starting from GFX10 */";
       return;
     }
     O << "wave_shl:1";
   } else if (Imm == DppCtrl::WAVE_ROL1) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* wave_rol is not supported starting from GFX10 */";
       return;
     }
     O << "wave_rol:1";
   } else if (Imm == DppCtrl::WAVE_SHR1) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* wave_shr is not supported starting from GFX10 */";
       return;
     }
     O << "wave_shr:1";
   } else if (Imm == DppCtrl::WAVE_ROR1) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* wave_ror is not supported starting from GFX10 */";
       return;
     }
@@ -844,20 +844,20 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   } else if (Imm == DppCtrl::ROW_HALF_MIRROR) {
     O << "row_half_mirror";
   } else if (Imm == DppCtrl::BCAST15) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* row_bcast is not supported starting from GFX10 */";
       return;
     }
     O << "row_bcast:15";
   } else if (Imm == DppCtrl::BCAST31) {
-    if (!AMDGPU::isVI(STI) && !AMDGPU::isGFX9(STI)) {
+    if (AMDGPU::isGFX10Plus(STI)) {
       O << "/* row_bcast is not supported starting from GFX10 */";
       return;
     }
     O << "row_bcast:31";
   } else if ((Imm >= DppCtrl::ROW_SHARE_FIRST) &&
              (Imm <= DppCtrl::ROW_SHARE_LAST)) {
-    if (!AMDGPU::isGFX10(STI)) {
+    if (!AMDGPU::isGFX10Plus(STI)) {
       O << "/* row_share is not supported on ASICs earlier than GFX10 */";
       return;
     }
@@ -865,7 +865,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
     printU4ImmDecOperand(MI, OpNo, O);
   } else if ((Imm >= DppCtrl::ROW_XMASK_FIRST) &&
              (Imm <= DppCtrl::ROW_XMASK_LAST)) {
-    if (!AMDGPU::isGFX10(STI)) {
+    if (!AMDGPU::isGFX10Plus(STI)) {
       O << "/* row_xmask is not supported on ASICs earlier than GFX10 */";
       return;
     }
@@ -1023,9 +1023,9 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   else if (Tgt == Exp::ET_NULL)
     O << " null";
   else if (Tgt >= Exp::ET_POS0 &&
-           Tgt <= uint32_t(isGFX10(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
+           Tgt <= uint32_t(isGFX10Plus(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
     O << " pos" << Tgt - Exp::ET_POS0;
-  else if (isGFX10(STI) && Tgt == Exp::ET_PRIM)
+  else if (isGFX10Plus(STI) && Tgt == Exp::ET_PRIM)
     O << " prim";
   else if (Tgt >= Exp::ET_PARAM0 && Tgt <= Exp::ET_PARAM31)
     O << " param" << Tgt - Exp::ET_PARAM0;

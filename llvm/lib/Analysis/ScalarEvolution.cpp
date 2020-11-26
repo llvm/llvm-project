@@ -9851,10 +9851,6 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
     assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()) &&
            "This cannot be done on broken IR!");
 
-
-  if (isKnownViaNonRecursiveReasoning(Pred, LHS, RHS))
-    return true;
-
   BasicBlock *Latch = L->getLoopLatch();
   if (!Latch)
     return false;
@@ -9870,7 +9866,7 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   // We don't want more than one activation of the following loops on the stack
   // -- that can lead to O(n!) time complexity.
   if (WalkingBEDominatingConds)
-    return false;
+    return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 
   SaveAndRestore<bool> ClearOnExit(WalkingBEDominatingConds, true);
 
@@ -9911,7 +9907,7 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   if (isImpliedViaGuard(Latch, Pred, LHS, RHS))
     return true;
 
-  return isKnownPredicateAt(Pred, LHS, RHS, Latch->getTerminator());
+  return isBasicBlockEntryGuardedByCond(Latch, Pred, LHS, RHS);
 }
 
 bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,

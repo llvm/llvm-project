@@ -153,7 +153,8 @@ public:
     void resize(size_type n, value_type c);
     void resize(size_type n);
 
-    void reserve(size_type res_arg = 0);
+    void reserve(size_type res_arg);
+    void reserve(); // deprecated in C++20
     void shrink_to_fit();
     void clear() noexcept;
     bool empty() const noexcept;
@@ -954,13 +955,13 @@ public:
     void resize(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
-    void reserve(size_type __res_arg);
+    void reserve(size_type __requested_capacity);
     _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
 
+    _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
+    void reserve() _NOEXCEPT {shrink_to_fit();}
     _LIBCPP_INLINE_VISIBILITY
-    void reserve() _NOEXCEPT {reserve(0);}
-    _LIBCPP_INLINE_VISIBILITY
-    void shrink_to_fit() _NOEXCEPT {reserve();}
+    void shrink_to_fit() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT;
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
@@ -1417,6 +1418,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
     _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink() _NOEXCEPT;
+
+    _LIBCPP_INLINE_VISIBILITY void __shrink_or_extend(size_type __target_capacity);
 
     _LIBCPP_INLINE_VISIBILITY
     bool __is_long() const _NOEXCEPT
@@ -3262,65 +3265,88 @@ basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
 
 template <class _CharT, class _Traits, class _Allocator>
 void
-basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __res_arg)
+basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __requested_capacity)
 {
-    if (__res_arg > max_size())
+    if (__requested_capacity > max_size())
         this->__throw_length_error();
+
+#if _LIBCPP_STD_VER > 17
+    // Reserve never shrinks as of C++20.
+    if (__requested_capacity <= capacity()) return;
+#endif
+
+    size_type __target_capacity = _VSTD::max(__requested_capacity, size());
+    __target_capacity = __recommend(__target_capacity);
+    if (__target_capacity == capacity()) return;
+
+    __shrink_or_extend(__target_capacity);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void
+basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT
+{
+    size_type __target_capacity = __recommend(size());
+    if (__target_capacity == capacity()) return;
+
+    __shrink_or_extend(__target_capacity);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void
+basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity)
+{
     size_type __cap = capacity();
     size_type __sz = size();
-    __res_arg = _VSTD::max(__res_arg, __sz);
-    __res_arg = __recommend(__res_arg);
-    if (__res_arg != __cap)
+
+    pointer __new_data, __p;
+    bool __was_long, __now_long;
+    if (__target_capacity == __min_cap - 1)
     {
-        pointer __new_data, __p;
-        bool __was_long, __now_long;
-        if (__res_arg == __min_cap - 1)
-        {
-            __was_long = true;
-            __now_long = false;
-            __new_data = __get_short_pointer();
-            __p = __get_long_pointer();
-        }
-        else
-        {
-            if (__res_arg > __cap)
-                __new_data = __alloc_traits::allocate(__alloc(), __res_arg+1);
-            else
-            {
-            #ifndef _LIBCPP_NO_EXCEPTIONS
-                try
-                {
-            #endif  // _LIBCPP_NO_EXCEPTIONS
-                    __new_data = __alloc_traits::allocate(__alloc(), __res_arg+1);
-            #ifndef _LIBCPP_NO_EXCEPTIONS
-                }
-                catch (...)
-                {
-                    return;
-                }
-            #else  // _LIBCPP_NO_EXCEPTIONS
-                if (__new_data == nullptr)
-                    return;
-            #endif  // _LIBCPP_NO_EXCEPTIONS
-            }
-            __now_long = true;
-            __was_long = __is_long();
-            __p = __get_pointer();
-        }
-        traits_type::copy(_VSTD::__to_address(__new_data),
-                          _VSTD::__to_address(__p), size()+1);
-        if (__was_long)
-            __alloc_traits::deallocate(__alloc(), __p, __cap+1);
-        if (__now_long)
-        {
-            __set_long_cap(__res_arg+1);
-            __set_long_size(__sz);
-            __set_long_pointer(__new_data);
-        }
-        else
-            __set_short_size(__sz);
-        __invalidate_all_iterators();
+        __was_long = true;
+        __now_long = false;
+        __new_data = __get_short_pointer();
+        __p = __get_long_pointer();
     }
+    else
+    {
+        if (__target_capacity > __cap)
+            __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+        else
+        {
+        #ifndef _LIBCPP_NO_EXCEPTIONS
+            try
+            {
+        #endif  // _LIBCPP_NO_EXCEPTIONS
+                __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+        #ifndef _LIBCPP_NO_EXCEPTIONS
+            }
+            catch (...)
+            {
+                return;
+            }
+        #else  // _LIBCPP_NO_EXCEPTIONS
+            if (__new_data == nullptr)
+                return;
+        #endif  // _LIBCPP_NO_EXCEPTIONS
+        }
+        __now_long = true;
+        __was_long = __is_long();
+        __p = __get_pointer();
+    }
+    traits_type::copy(_VSTD::__to_address(__new_data),
+                        _VSTD::__to_address(__p), size()+1);
+    if (__was_long)
+        __alloc_traits::deallocate(__alloc(), __p, __cap+1);
+    if (__now_long)
+    {
+        __set_long_cap(__target_capacity+1);
+        __set_long_size(__sz);
+        __set_long_pointer(__new_data);
+    }
+    else
+        __set_short_size(__sz);
+    __invalidate_all_iterators();
 }
 
 template <class _CharT, class _Traits, class _Allocator>

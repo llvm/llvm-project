@@ -1485,7 +1485,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
       AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
-  const bool IsGFX10 = STI.getGeneration() >= AMDGPUSubtarget::GFX10;
+  const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
 
   const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
@@ -1603,12 +1603,12 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     GLC = true; // TODO no-return optimization
     if (!parseCachePolicy(
             MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm(), nullptr,
-            &SLC, IsGFX10 ? &DLC : nullptr))
+            &SLC, IsGFX10Plus ? &DLC : nullptr))
       return false;
   } else {
     if (!parseCachePolicy(
             MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm(), &GLC,
-            &SLC, IsGFX10 ? &DLC : nullptr))
+            &SLC, IsGFX10Plus ? &DLC : nullptr))
       return false;
   }
 
@@ -1641,7 +1641,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     ++NumVDataDwords;
 
   int Opcode = -1;
-  if (IsGFX10) {
+  if (IsGFX10Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx10NSA
                                           : AMDGPU::MIMGEncGfx10Default,
@@ -1693,22 +1693,22 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   MIB.addImm(DMask); // dmask
 
-  if (IsGFX10)
+  if (IsGFX10Plus)
     MIB.addImm(DimInfo->Encoding);
   MIB.addImm(Unorm);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     MIB.addImm(DLC);
 
   MIB.addImm(GLC);
   MIB.addImm(SLC);
   MIB.addImm(IsA16 &&  // a16 or r128
              STI.hasFeature(AMDGPU::FeatureR128A16) ? -1 : 0);
-  if (IsGFX10)
+  if (IsGFX10Plus)
     MIB.addImm(IsA16 ? -1 : 0);
 
   MIB.addImm(TFE); // tfe
   MIB.addImm(LWE); // lwe
-  if (!IsGFX10)
+  if (!IsGFX10Plus)
     MIB.addImm(DimInfo->DA ? -1 : 0);
   if (BaseOpcode->HasD16)
     MIB.addImm(IsD16 ? -1 : 0);
