@@ -22,9 +22,9 @@ entry:
 ; CHECK-I686:	movl	ptr@GOT(%eax),
 ; CHECK-I686:	movl	src@GOT(%eax),
 ; CHECK-I686:	ret
-; CHECK-DAG-X32:	movl	dst@GOTPCREL(%rip),
-; CHECK-DAG-X32:	movl	ptr@GOTPCREL(%rip),
-; CHECK-DAG-X32:	movl	src@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	dst@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	ptr@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	src@GOTPCREL(%rip),
 ; CHECK-X32:	retq
 }
 
@@ -48,9 +48,9 @@ entry:
 ; CHECK-I686:	movl	ptr2@GOT(%eax),
 ; CHECK-I686:	movl	src2@GOT(%eax),
 ; CHECK-I686:	ret
-; CHECK-DAG-X32:	movl	dst2@GOTPCREL(%rip),
-; CHECK-DAG-X32:	movl	ptr2@GOTPCREL(%rip),
-; CHECK-DAG-X32:	movl	src2@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	dst2@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	ptr2@GOTPCREL(%rip),
+; CHECK-X32-DAG:	movl	src2@GOTPCREL(%rip),
 ; CHECK-X32:	retq
 
 }
