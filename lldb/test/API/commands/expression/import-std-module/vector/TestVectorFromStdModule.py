@@ -22,7 +22,7 @@ class TestBasicVector(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        vector_type = "std::vector<int, std::allocator<int> >"
+        vector_type = "std::vector<int>"
         size_type = vector_type + "::size_type"
         value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
         iterator = vector_type + "::iterator"
