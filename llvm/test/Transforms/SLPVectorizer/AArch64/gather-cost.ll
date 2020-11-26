@@ -12,10 +12,7 @@ target triple = "aarch64--linux-gnu"
 ; REMARK-NEXT:    - String: 'Vectorized horizontal reduction with cost '
 ; REMARK-NEXT:    - Cost: '-7'
 ;
-; REMARK-LABEL: Function: gather_load
-; REMARK:       Args:
-; REMARK-NEXT:    - String: 'Stores SLP vectorized with cost
-; REMARK-NEXT:    - Cost: '-2'
+; REMARK-NOT: Function: gather_load
 
 define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @gather_multiple_use(
@@ -61,11 +58,25 @@ define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 define void @gather_load(i16* noalias %ptr) {
 ; CHECK-LABEL: @gather_load(
 ; CHECK-NEXT:    [[ARRAYIDX182:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> <i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 1, i64 0), i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 2, i64 1), i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 3, i64 2), i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 4, i64 3)>, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw <4 x i16> [[TMP2]], <i16 10, i16 20, i16 30, i16 40>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16* [[ARRAYIDX182]] to <4 x i16>*
-; CHECK-NEXT:    store <4 x i16> [[TMP3]], <4 x i16>* [[TMP4]], align 2
+; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 4
+; CHECK-NEXT:    [[L0:%.*]] = load i8, i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 1, i64 0), align 1
+; CHECK-NEXT:    [[CONV150:%.*]] = zext i8 [[L0]] to i16
+; CHECK-NEXT:    [[ADD152:%.*]] = add nuw nsw i16 [[CONV150]], 10
+; CHECK-NEXT:    [[L1:%.*]] = load i8, i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 2, i64 1), align 1
+; CHECK-NEXT:    [[CONV156:%.*]] = zext i8 [[L1]] to i16
+; CHECK-NEXT:    [[ADD158:%.*]] = add nuw nsw i16 [[CONV156]], 20
+; CHECK-NEXT:    [[L2:%.*]] = load i8, i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 3, i64 2), align 1
+; CHECK-NEXT:    [[CONV162:%.*]] = zext i8 [[L2]] to i16
+; CHECK-NEXT:    [[ADD164:%.*]] = add nuw nsw i16 [[CONV162]], 30
+; CHECK-NEXT:    [[L3:%.*]] = load i8, i8* getelementptr inbounds ([6 x [258 x i8]], [6 x [258 x i8]]* @data, i64 0, i64 4, i64 3), align 1
+; CHECK-NEXT:    [[CONV168:%.*]] = zext i8 [[L3]] to i16
+; CHECK-NEXT:    [[ADD170:%.*]] = add nuw nsw i16 [[CONV168]], 40
+; CHECK-NEXT:    store i16 [[ADD152]], i16* [[ARRAYIDX182]], align 2
+; CHECK-NEXT:    store i16 [[ADD158]], i16* [[ARRAYIDX183]], align 2
+; CHECK-NEXT:    store i16 [[ADD164]], i16* [[ARRAYIDX184]], align 2
+; CHECK-NEXT:    store i16 [[ADD170]], i16* [[ARRAYIDX185]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx182 = getelementptr inbounds i16, i16* %ptr, i64 1
