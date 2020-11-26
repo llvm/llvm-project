@@ -6998,23 +6998,11 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                                .Options.EnableAIXExtendedAltivecABI)
     report_fatal_error("the default Altivec AIX ABI is not yet supported");
 
-  if (ValVT.isVector() && State.getMachineFunction()
-                              .getTarget()
-                              .Options.EnableAIXExtendedAltivecABI)
-    report_fatal_error("the extended Altivec AIX ABI is not yet supported");
-
-  assert((!ValVT.isInteger() ||
-          (ValVT.getFixedSizeInBits() <= RegVT.getFixedSizeInBits())) &&
-         "Integer argument exceeds register size: should have been legalized");
-
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
 
   if (ArgFlags.isNest())
     report_fatal_error("Nest arguments are unimplemented.");
-
-  if (ValVT.isVector() || LocVT.isVector())
-    report_fatal_error("Vector arguments are unimplemented on AIX.");
 
   static const MCPhysReg GPR_32[] = {// 32-bit registers.
                                      PPC::R3, PPC::R4, PPC::R5, PPC::R6,
@@ -7022,6 +7010,11 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg GPR_64[] = {// 64-bit registers.
                                      PPC::X3, PPC::X4, PPC::X5, PPC::X6,
                                      PPC::X7, PPC::X8, PPC::X9, PPC::X10};
+
+  static const MCPhysReg VR[] = {// Vector registers.
+                                 PPC::V2,  PPC::V3,  PPC::V4,  PPC::V5,
+                                 PPC::V6,  PPC::V7,  PPC::V8,  PPC::V9,
+                                 PPC::V10, PPC::V11, PPC::V12, PPC::V13};
 
   if (ArgFlags.isByVal()) {
     if (ArgFlags.getNonZeroByValAlign() > PtrAlign)
@@ -7118,6 +7111,25 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     return false;
   }
+  case MVT::v4f32:
+  case MVT::v4i32:
+  case MVT::v8i16:
+  case MVT::v16i8:
+  case MVT::v2i64:
+  case MVT::v2f64:
+  case MVT::v1i128: {
+    if (State.isVarArg())
+      report_fatal_error(
+          "variadic arguments for vector types are unimplemented for AIX");
+
+    if (unsigned VReg = State.AllocateReg(VR))
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
+    else {
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
+    }
+    return false;
+  }
   }
   return true;
 }
@@ -7138,6 +7150,14 @@ static const TargetRegisterClass *getRegClassForSVT(MVT::SimpleValueType SVT,
     return &PPC::F4RCRegClass;
   case MVT::f64:
     return &PPC::F8RCRegClass;
+  case MVT::v4f32:
+  case MVT::v4i32:
+  case MVT::v8i16:
+  case MVT::v16i8:
+  case MVT::v2i64:
+  case MVT::v2f64:
+  case MVT::v1i128:
+    return &PPC::VRRCRegClass;
   }
 }
 
@@ -7254,6 +7274,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+    if (VA.isMemLoc() && VA.getValVT().isVector())
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
 
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
@@ -7451,8 +7474,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   const PPCSubtarget& Subtarget =
       static_cast<const PPCSubtarget&>(DAG.getSubtarget());
-  if (Subtarget.hasAltivec())
-    report_fatal_error("Altivec support is unimplemented on AIX.");
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -7598,6 +7619,10 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     const MVT LocVT = VA.getLocVT();
     const MVT ValVT = VA.getValVT();
 
+    if (VA.isMemLoc() && VA.getValVT().isVector())
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
+
     switch (VA.getLocInfo()) {
     default:
       report_fatal_error("Unexpected argument extension type.");
@@ -7741,10 +7766,6 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     SDValue Arg = OutVals[RealResIdx];
-
-    if (Subtarget.isAIXABI() &&
-        (VA.getLocVT().isVector() || VA.getValVT().isVector()))
-      report_fatal_error("Returning vector types not yet supported on AIX.");
 
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");

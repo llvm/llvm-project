@@ -1,12 +1,7 @@
-; RUN: not --crash llc < %s -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
-; RUN: not --crash llc < %s -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
-
-; This test expects a compiler diagnostic for an AIX limitation on Altivec
-; support.  When the Altivec limitation diagnostic is removed, this test
-; should compile clean and fail in order to alert the author to validate the
-; instructions emitted to initialize the GPR for the double vararg.
-; The mfvsrwz and mfvsrd instructions should be used to initialize the GPR for
-; the double vararg without going through memory.
+; RUN:  llc < %s -mtriple powerpc64-ibm-aix-xcoff -vec-extabi -mcpu=pwr8 2>&1
+;       | FileCheck %s --check-prefix=ASM64
+; RUN:  llc < %s -mtriple powerpc-ibm-aix-xcoff -vec-extabi -mcpu=pwr8 2>&1
+;       | FileCheck %s --check-prefix=ASM32
 
 @f1 = global float 0.000000e+00, align 4
 
@@ -20,4 +15,15 @@ entry:
 
 declare void @test_vararg(i32, ...)
 
-; CHECK: LLVM ERROR: Altivec support is unimplemented on AIX.
+
+; ASM64:           xscvdpspn
+; ASM64:           mffprd
+; ASM64:           xxsldwi
+; ASM64:           mffprwz
+
+
+; ASM32:           lfsx
+; ASM32:           fmr
+; ASM32:           stfs
+; ASM32:           lwz
+; ASM32:           stfd
