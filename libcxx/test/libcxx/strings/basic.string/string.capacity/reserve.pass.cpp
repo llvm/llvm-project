@@ -21,42 +21,30 @@
 
 template <class S>
 void
-test(typename S::size_type min_cap, typename S::size_type erased_index)
+test()
 {
-    S s(min_cap, 'a');
-    s.erase(erased_index);
-    assert(s.size() == erased_index);
-    assert(s.capacity() >= min_cap); // Check that we really have at least this capacity.
-
+    // Tests that a call to reserve() on a long string is equivalent to shrink_to_fit().
+    S s(1000, 'a');
     typename S::size_type old_cap = s.capacity();
-    S s0 = s;
+    s.resize(20);
+    assert(s.capacity() == old_cap);
     s.reserve();
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == s0);
-    assert(s.capacity() <= old_cap);
-    assert(s.capacity() >= s.size());
+    assert(s.capacity() < old_cap);
 }
 
 int main(int, char**)
 {
     {
     typedef std::string S;
-    {
-    test<S>(0, 0);
-    test<S>(10, 5);
-    test<S>(100, 50);
-    }
+    test<S>();
     }
 #if TEST_STD_VER >= 11
     {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    {
-    test<S>(0, 0);
-    test<S>(10, 5);
-    test<S>(100, 50);
-    }
+    typedef min_allocator<char> A;
+    typedef std::basic_string<char, std::char_traits<char>, A> S;
+    test<S>();
     }
 #endif
 
-  return 0;
+    return 0;
 }
