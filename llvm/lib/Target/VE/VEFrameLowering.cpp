@@ -225,32 +225,39 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                        int64_t NumBytes,
                                        MaybeAlign MaybeAlign) const {
   DebugLoc DL;
-  const VEInstrInfo &TII =
-      *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const VEInstrInfo &TII = *STI.getInstrInfo();
 
-  if (NumBytes >= -64 && NumBytes < 63) {
+  if (NumBytes == 0) {
+    // Nothing to do here.
+  } else if (isInt<7>(NumBytes)) {
+    // adds.l %s11, NumBytes@lo, %s11
     BuildMI(MBB, MBBI, DL, TII.get(VE::ADDSLri), VE::SX11)
         .addReg(VE::SX11)
         .addImm(NumBytes);
-    return;
+  } else if (isInt<32>(NumBytes)) {
+    // lea %s11, NumBytes@lo(, %s11)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::LEArii), VE::SX11)
+        .addReg(VE::SX11)
+        .addImm(0)
+        .addImm(Lo_32(NumBytes));
+  } else {
+    // Emit following codes.  This clobbers SX13 which we always know is
+    // available here.
+    //   lea     %s13, NumBytes@lo
+    //   and     %s13, %s13, (32)0
+    //   lea.sl  %sp, NumBytes@hi(%s13, %sp)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::LEAzii), VE::SX13)
+        .addImm(0)
+        .addImm(0)
+        .addImm(Lo_32(NumBytes));
+    BuildMI(MBB, MBBI, DL, TII.get(VE::ANDrm), VE::SX13)
+        .addReg(VE::SX13)
+        .addImm(M0(32));
+    BuildMI(MBB, MBBI, DL, TII.get(VE::LEASLrri), VE::SX11)
+        .addReg(VE::SX11)
+        .addReg(VE::SX13)
+        .addImm(Hi_32(NumBytes));
   }
-
-  // Emit following codes.  This clobbers SX13 which we always know is
-  // available here.
-  //   lea     %s13,%lo(NumBytes)
-  //   and     %s13,%s13,(32)0
-  //   lea.sl  %sp,%hi(NumBytes)(%sp, %s13)
-  BuildMI(MBB, MBBI, DL, TII.get(VE::LEAzii), VE::SX13)
-      .addImm(0)
-      .addImm(0)
-      .addImm(Lo_32(NumBytes));
-  BuildMI(MBB, MBBI, DL, TII.get(VE::ANDrm), VE::SX13)
-      .addReg(VE::SX13)
-      .addImm(M0(32));
-  BuildMI(MBB, MBBI, DL, TII.get(VE::LEASLrri), VE::SX11)
-      .addReg(VE::SX11)
-      .addReg(VE::SX13)
-      .addImm(Hi_32(NumBytes));
 
   if (MaybeAlign) {
     // and %sp, %sp, Align-1
