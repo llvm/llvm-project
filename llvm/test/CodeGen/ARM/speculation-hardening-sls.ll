@@ -186,10 +186,61 @@ entry:
 ; CHECK: .Lfunc_end
 }
 
-; HARDEN-label: __llvm_slsblr_thunk_(arm|thumb)_r5:
+; Verify that neither r12 nor lr are used as registers in indirect call
+; instructions when the sls-hardening-blr mitigation is enabled, as
+; (a) a linker is allowed to clobber r12 on calls, and
+; (b) the hardening transformation isn't correct if lr is the register holding
+;     the address of the function called.
+define i32 @check_r12(i32 ()** %fp) {
+entry:
+; CHECK-LABEL: check_r12:
+  %f = load i32 ()*, i32 ()** %fp, align 4
+  ; Force f to be moved into r12
+  %r12_f = tail call i32 ()* asm "add $0, $1, #0", "={r12},{r12}"(i32 ()* %f) nounwind
+  %call = call i32 %r12_f()
+; NOHARDENARM:     blx r12
+; NOHARDENTHUMB:   blx r12
+; HARDEN-NOT: bl {{__llvm_slsblr_thunk_(arm|thumb)_r12}}
+  ret i32 %call
+; CHECK: .Lfunc_end
+}
+
+define i32 @check_lr(i32 ()** %fp) {
+entry:
+; CHECK-LABEL: check_lr:
+  %f = load i32 ()*, i32 ()** %fp, align 4
+  ; Force f to be moved into lr
+  %lr_f = tail call i32 ()* asm "add $0, $1, #0", "={lr},{lr}"(i32 ()* %f) nounwind
+  %call = call i32 %lr_f()
+; NOHARDENARM:     blx lr
+; NOHARDENTHUMB:   blx lr
+; HARDEN-NOT: bl {{__llvm_slsblr_thunk_(arm|thumb)_lr}}
+  ret i32 %call
+; CHECK: .Lfunc_end
+}
+
+; Verify that even when sls-harden-blr is enabled, "blx r12" is still an
+; instruction that is accepted by the inline assembler
+define void @verify_inline_asm_blx_r12(void ()* %g) {
+entry:
+; CHECK-LABEL: verify_inline_asm_blx_r12:
+  %0 = bitcast void ()* %g to i8*
+  tail call void asm sideeffect "blx $0", "{r12}"(i8* %0) nounwind
+; CHECK: blx r12
+  ret void
+; CHECK:       {{bx lr$}}
+; ISBDSB-NEXT: dsb sy
+; ISBDSB-NEXT: isb
+; SB-NEXT:     {{ sb$}}
+; CHECK: .Lfunc_end
+}
+
+; HARDEN-label: {{__llvm_slsblr_thunk_(arm|thumb)_r5}}:
 ; HARDEN:    bx r5
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     dsb sy
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
+
+

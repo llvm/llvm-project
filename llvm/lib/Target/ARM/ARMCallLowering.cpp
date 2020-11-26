@@ -480,15 +480,16 @@ struct CallReturnHandler : public ARMIncomingValueHandler {
 };
 
 // FIXME: This should move to the ARMSubtarget when it supports all the opcodes.
-unsigned getCallOpcode(const ARMSubtarget &STI, bool isDirect) {
+unsigned getCallOpcode(const MachineFunction &MF, const ARMSubtarget &STI,
+                       bool isDirect) {
   if (isDirect)
     return STI.isThumb() ? ARM::tBL : ARM::BL;
 
   if (STI.isThumb())
-    return ARM::tBLXr;
+    return gettBLXrOpcode(MF);
 
   if (STI.hasV5TOps())
-    return ARM::BLX;
+    return getBLXOpcode(MF);
 
   if (STI.hasV4TOps())
     return ARM::BX_CALL;
@@ -516,7 +517,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
   // Create the call instruction so we can add the implicit uses of arg
   // registers, but don't insert it yet.
   bool IsDirect = !Info.Callee.isReg();
-  auto CallOpcode = getCallOpcode(STI, IsDirect);
+  auto CallOpcode = getCallOpcode(MF, STI, IsDirect);
   auto MIB = MIRBuilder.buildInstrNoInsert(CallOpcode);
 
   bool IsThumb = STI.isThumb();

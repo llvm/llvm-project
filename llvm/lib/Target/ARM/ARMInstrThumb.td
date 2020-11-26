@@ -548,14 +548,18 @@ let isCall = 1,
 
   // Also used for Thumb2
   def tBLXr : TI<(outs), (ins pred:$p, GPR:$func), IIC_Br,
-                  "blx${p}\t$func",
-                  [(ARMcall GPR:$func)]>,
+                  "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T]>,
               T1Special<{1,1,1,?}>, Sched<[WriteBrL]> { // A6.2.3 & A8.6.24;
     bits<4> func;
     let Inst{6-3} = func;
     let Inst{2-0} = 0b000;
   }
+  def tBLXr_noip :  ARMPseudoExpand<(outs), (ins pred:$p, GPRnoip:$func),
+                   2, IIC_Br, [], (tBLXr pred:$p, GPR:$func)>,
+                   Requires<[IsThumb, HasV5T]>,
+                   Sched<[WriteBrL]>;
+
 
   // ARMv8-M Security Extensions
   def tBLXNSr : TI<(outs), (ins pred:$p, GPRnopc:$func), IIC_Br,
@@ -585,6 +589,11 @@ let isCall = 1,
                   []>,
              Requires<[IsThumb]>, Sched<[WriteBr]>;
 }
+
+def : ARMPat<(ARMcall GPR:$func), (tBLXr $func)>,
+      Requires<[IsThumb, HasV5T, NoSLSBLRMitigation]>;
+def : ARMPat<(ARMcall GPRnoip:$func), (tBLXr_noip $func)>,
+      Requires<[IsThumb, HasV5T, SLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   let isPredicable = 1 in
