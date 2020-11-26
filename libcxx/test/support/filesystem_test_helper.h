@@ -185,7 +185,7 @@ struct scoped_test_env
         filename = sanitize_path(std::move(filename));
 
         if (size >
-            static_cast<typename std::make_signed<large_file_offset_t>::type>(
+            static_cast<typename std::make_unsigned<large_file_offset_t>::type>(
                 std::numeric_limits<large_file_offset_t>::max())) {
             fprintf(stderr, "create_file(%s, %ju) too large\n",
                     filename.c_str(), size);
