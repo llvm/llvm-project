@@ -33,6 +33,9 @@
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/Trace.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Types.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseMap.h"
@@ -56,55 +59,102 @@ namespace clang {
 namespace clangd {
 namespace {
 
-std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
+struct DriverInfo {
   std::vector<std::string> SystemIncludes;
+  std::string Target;
+};
+
+bool isValidTarget(llvm::StringRef Triple) {
+  std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
+  TargetOpts->Triple = Triple.str();
+  DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+                          new IgnoringDiagConsumer);
+  IntrusiveRefCntPtr<TargetInfo> Target =
+      TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+  return bool(Target);
+}
+
+llvm::Optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
+  DriverInfo Info;
   const char SIS[] = "#include <...> search starts here:";
   const char SIE[] = "End of search list.";
+  const char TS[] = "Target: ";
   llvm::SmallVector<llvm::StringRef, 8> Lines;
   Output.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
-  auto StartIt = llvm::find_if(
-      Lines, [SIS](llvm::StringRef Line) { return Line.trim() == SIS; });
-  if (StartIt == Lines.end()) {
+  enum {
+    Initial,            // Initial state: searching for target or includes list.
+    IncludesExtracting, // Includes extracting.
+    Done                // Includes and target extraction done.
+  } State = Initial;
+  bool SeenIncludes = false;
+  bool SeenTarget = false;
+  for (auto *It = Lines.begin(); State != Done && It != Lines.end(); ++It) {
+    auto Line = *It;
+    switch (State) {
+    case Initial:
+      if (!SeenIncludes && Line.trim() == SIS) {
+        SeenIncludes = true;
+        State = IncludesExtracting;
+      } else if (!SeenTarget && Line.trim().startswith(TS)) {
+        SeenTarget = true;
+        llvm::StringRef TargetLine = Line.trim();
+        TargetLine.consume_front(TS);
+        // Only detect targets that clang understands
+        if (!isValidTarget(TargetLine)) {
+          elog("System include extraction: invalid target \"{0}\", ignoring",
+               TargetLine);
+        } else {
+          Info.Target = TargetLine.str();
+          vlog("System include extraction: target extracted: \"{0}\"",
+               TargetLine);
+        }
+      }
+      break;
+    case IncludesExtracting:
+      if (Line.trim() == SIE) {
+        State = SeenTarget ? Done : Initial;
+      } else {
+        Info.SystemIncludes.push_back(Line.trim().str());
+        vlog("System include extraction: adding {0}", Line);
+      }
+      break;
+    default:
+      llvm_unreachable("Impossible state of the driver output parser");
+      break;
+    }
+  }
+  if (!SeenIncludes) {
     elog("System include extraction: start marker not found: {0}", Output);
-    return {};
+    return llvm::None;
   }
-  ++StartIt;
-  const auto EndIt =
-      llvm::find_if(llvm::make_range(StartIt, Lines.end()),
-                    [SIE](llvm::StringRef Line) { return Line.trim() == SIE; });
-  if (EndIt == Lines.end()) {
+  if (State == IncludesExtracting) {
     elog("System include extraction: end marker missing: {0}", Output);
-    return {};
+    return llvm::None;
   }
-
-  for (llvm::StringRef Line : llvm::make_range(StartIt, EndIt)) {
-    SystemIncludes.push_back(Line.trim().str());
-    vlog("System include extraction: adding {0}", Line);
-  }
-  return SystemIncludes;
+  return std::move(Info);
 }
 
-std::vector<std::string>
-extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
-                      llvm::ArrayRef<std::string> CommandLine,
-                      const llvm::Regex &QueryDriverRegex) {
-  trace::Span Tracer("Extract system includes");
+llvm::Optional<DriverInfo>
+extractSystemIncludesAndTarget(PathRef Driver, llvm::StringRef Lang,
+                               llvm::ArrayRef<std::string> CommandLine,
+                               const llvm::Regex &QueryDriverRegex) {
+  trace::Span Tracer("Extract system includes and target");
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", Lang);
 
   if (!QueryDriverRegex.match(Driver)) {
     vlog("System include extraction: not allowed driver {0}", Driver);
-    return {};
+    return llvm::None;
   }
 
   if (!llvm::sys::fs::exists(Driver)) {
     elog("System include extraction: {0} does not exist.", Driver);
-    return {};
+    return llvm::None;
   }
   if (!llvm::sys::fs::can_execute(Driver)) {
     elog("System include extraction: {0} is not executable.", Driver);
-    return {};
+    return llvm::None;
   }
 
   llvm::SmallString<128> StdErrPath;
@@ -113,7 +163,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
     elog("System include extraction: failed to create temporary file with "
          "error {0}",
          EC.message());
-    return {};
+    return llvm::None;
   }
   auto CleanUp = llvm::make_scope_exit(
       [&StdErrPath]() { llvm::sys::fs::remove(StdErrPath); });
@@ -158,21 +208,24 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
     elog("System include extraction: driver execution failed with return code: "
          "{0}. Args: ['{1}']",
          llvm::to_string(RC), llvm::join(Args, "', '"));
-    return {};
+    return llvm::None;
   }
 
   auto BufOrError = llvm::MemoryBuffer::getFile(StdErrPath);
   if (!BufOrError) {
     elog("System include extraction: failed to read {0} with error {1}",
          StdErrPath, BufOrError.getError().message());
-    return {};
+    return llvm::None;
   }
 
-  auto Includes = parseDriverOutput(BufOrError->get()->getBuffer());
-  log("System include extractor: successfully executed {0}, got includes: "
-      "\"{1}\"",
-      Driver, llvm::join(Includes, ", "));
-  return Includes;
+  llvm::Optional<DriverInfo> Info =
+      parseDriverOutput(BufOrError->get()->getBuffer());
+  if (!Info)
+    return llvm::None;
+  log("System includes extractor: successfully executed {0}\n\tgot includes: "
+      "\"{1}\"\n\tgot target: \"{2}\"",
+      Driver, llvm::join(Info->SystemIncludes, ", "), Info->Target);
+  return Info;
 }
 
 tooling::CompileCommand &
@@ -182,6 +235,19 @@ addSystemIncludes(tooling::CompileCommand &Cmd,
     // FIXME(kadircet): This doesn't work when we have "--driver-mode=cl"
     Cmd.CommandLine.push_back("-isystem");
     Cmd.CommandLine.push_back(Include.str());
+  }
+  return Cmd;
+}
+
+tooling::CompileCommand &setTarget(tooling::CompileCommand &Cmd,
+                                   const std::string &Target) {
+  if (!Target.empty()) {
+    // We do not want to override existing target with extracted one.
+    for (llvm::StringRef Arg : Cmd.CommandLine) {
+      if (Arg == "-target" || Arg.startswith("--target="))
+        return Cmd;
+    }
+    Cmd.CommandLine.push_back("--target=" + Target);
   }
   return Cmd;
 }
@@ -268,13 +334,14 @@ public:
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
 
-    std::vector<std::string> SystemIncludes =
-        QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
-          return extractSystemIncludes(Driver, Lang, Cmd->CommandLine,
-                                       QueryDriverRegex);
-        });
-
-    return addSystemIncludes(*Cmd, SystemIncludes);
+    if (auto Info =
+            QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
+              return extractSystemIncludesAndTarget(
+                  Driver, Lang, Cmd->CommandLine, QueryDriverRegex);
+            })) {
+      setTarget(addSystemIncludes(*Cmd, Info->SystemIncludes), Info->Target);
+    }
+    return Cmd;
   }
 
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
@@ -283,7 +350,7 @@ public:
 
 private:
   // Caches includes extracted from a driver. Key is driver:lang.
-  Memoize<llvm::StringMap<std::vector<std::string>>> QueriedDrivers;
+  Memoize<llvm::StringMap<llvm::Optional<DriverInfo>>> QueriedDrivers;
   llvm::Regex QueryDriverRegex;
 
   std::unique_ptr<GlobalCompilationDatabase> Base;
