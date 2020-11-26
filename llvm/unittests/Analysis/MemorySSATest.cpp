@@ -1277,7 +1277,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
 
   MemoryAccess *LifetimeStartClobber =
       MSSA.getWalker()->getClobberingMemoryAccess(
-          LifetimeStartAccess, MemoryLocation(Foo, LocationSize::unknown()));
+          LifetimeStartAccess, MemoryLocation::getAfter(Foo));
   EXPECT_EQ(LifetimeStartClobber, LifetimeStartAccess);
 }
 

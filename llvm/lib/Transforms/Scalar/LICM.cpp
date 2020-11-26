@@ -1209,8 +1209,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
             bool Invalidated;
             if (CurAST)
               Invalidated = pointerInvalidatedByLoop(
-                  MemoryLocation(Op, LocationSize::unknown(), AAMDNodes()),
-                  CurAST, CurLoop, AA);
+                  MemoryLocation::getBeforeOrAfter(Op), CurAST, CurLoop, AA);
             else
               Invalidated = pointerInvalidatedByLoopWithMSSA(
                   MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I,
