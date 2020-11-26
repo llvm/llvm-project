@@ -20,7 +20,7 @@ class TestBoolVector(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
-        vector_type = "std::vector<bool, std::allocator<bool> >"
+        vector_type = "std::vector<bool>"
         size_type = vector_type + "::size_type"
 
         self.runCmd("settings set target.import-std-module true")

@@ -22,7 +22,7 @@ class TestStack(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         # Test std::stack functionality with a std::deque.
-        stack_type = "std::stack<C, std::deque<C, std::allocator<C> > >"
+        stack_type = "std::stack<C>"
         size_type = stack_type + "::size_type"
 
         self.expect_expr("s_deque", result_type=stack_type)
@@ -40,7 +40,7 @@ class TestStack(TestBase):
                          result_value="5")
 
         # Test std::stack functionality with a std::vector.
-        stack_type = "std::stack<C, std::vector<C, std::allocator<C> > >"
+        stack_type = "std::stack<C, std::vector<C> >"
         size_type = stack_type + "::size_type"
 
         self.expect_expr("s_vector", result_type=stack_type)
@@ -58,7 +58,7 @@ class TestStack(TestBase):
                          result_value="5")
 
         # Test std::stack functionality with a std::list.
-        stack_type = "std::stack<C, std::list<C, std::allocator<C> > >"
+        stack_type = "std::stack<C, std::list<C> >"
         size_type = stack_type + "::size_type"
         self.expect_expr("s_list", result_type=stack_type)
         self.expect("expr s_list.pop()")
