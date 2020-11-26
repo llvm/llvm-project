@@ -22,6 +22,10 @@
 // RUN:    -target riscv64-unknown-elf --rtlib=platform 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
+// RUN: %T/testroot-riscv64-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    -target riscv64-unknown-elf --rtlib=platform 2>&1 \
+// RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
+
 // C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/include"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/lib/crt0.o"
