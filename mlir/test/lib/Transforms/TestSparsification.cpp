@@ -31,6 +31,14 @@ struct TestSparsification
   Option<int32_t> vectorLength{
       *this, "vl", llvm::cl::desc("Set the vector length"), llvm::cl::init(1)};
 
+  Option<int32_t> ptrType{*this, "ptr-type",
+                          llvm::cl::desc("Set the pointer type"),
+                          llvm::cl::init(0)};
+
+  Option<int32_t> indType{*this, "ind-type",
+                          llvm::cl::desc("Set the index type"),
+                          llvm::cl::init(0)};
+
   /// Registers all dialects required by testing.
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<scf::SCFDialect, vector::VectorDialect>();
@@ -64,13 +72,26 @@ struct TestSparsification
     }
   }
 
+  /// Returns the requested integer type.
+  linalg::SparseIntType typeOption(int32_t option) {
+    switch (option) {
+    default:
+      return linalg::SparseIntType::kNative;
+    case 1:
+      return linalg::SparseIntType::kI64;
+    case 2:
+      return linalg::SparseIntType::kI32;
+    }
+  }
+
   /// Runs the test on a function.
   void runOnFunction() override {
     auto *ctx = &getContext();
     OwningRewritePatternList patterns;
     // Translate strategy flags to strategy options.
     linalg::SparsificationOptions options(parallelOption(), vectorOption(),
-                                          vectorLength);
+                                          vectorLength, typeOption(ptrType),
+                                          typeOption(indType));
     // Apply rewriting.
     linalg::populateSparsificationPatterns(ctx, patterns, options);
     applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));

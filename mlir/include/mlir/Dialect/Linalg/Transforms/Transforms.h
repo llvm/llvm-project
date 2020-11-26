@@ -821,18 +821,31 @@ enum class SparseVectorizationStrategy {
   kAnyStorageInnerLoop
 };
 
+/// Defines a type for "pointer" and "index" storage in the sparse storage
+/// scheme, with a choice between the native platform-dependent index width,
+/// 64-bit integers, or 32-bit integers. A narrow width obviously reduces
+/// the memory footprint of the sparse storage scheme, but the width should
+/// suffice to define the total required range (viz. the maximum number of
+/// stored entries per indirection level for the "pointers" and the maximum
+/// value of each tensor index over all dimensions for the "indices").
+enum class SparseIntType { kNative, kI64, kI32 };
+
 /// Sparsification options.
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl)
-      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl) {
-  }
+                        SparseVectorizationStrategy v, unsigned vl,
+                        SparseIntType pt, SparseIntType it)
+      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
+        ptrType(pt), indType(it) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u) {}
+                              SparseVectorizationStrategy::kNone, 1u,
+                              SparseIntType::kNative, SparseIntType::kNative) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
+  SparseIntType ptrType;
+  SparseIntType indType;
 };
 
 /// Set up sparsification rewriting rules with the given options.
