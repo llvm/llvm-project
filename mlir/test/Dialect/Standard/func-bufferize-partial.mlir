@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -func-bufferize -split-input-file -verify-diagnostics --debug-only=dialect-conversion | FileCheck %s
+// RUN: mlir-opt %s -func-bufferize -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @block_arguments(
 // CHECK-SAME:        %[[ARG:.*]]: memref<f32>) -> memref<f32> {
