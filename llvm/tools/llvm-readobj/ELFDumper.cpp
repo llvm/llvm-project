@@ -2886,12 +2886,12 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
     printMipsReginfo();
     MipsGOTParser<ELFT> Parser(*this);
     if (Error E = Parser.findGOT(dynamic_table(), dynamic_symbols()))
-      reportError(std::move(E), ObjF.getFileName());
+      reportUniqueWarning(std::move(E));
     else if (!Parser.isGotEmpty())
       ELFDumperStyle->printMipsGOT(Parser);
 
     if (Error E = Parser.findPLT(dynamic_table()))
-      reportError(std::move(E), ObjF.getFileName());
+      reportUniqueWarning(std::move(E));
     else if (!Parser.isPltEmpty())
       ELFDumperStyle->printMipsPLT(Parser);
     break;
