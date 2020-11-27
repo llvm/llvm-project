@@ -76,7 +76,7 @@ public:
   /// length. Will fail if call on non reference like base.
   fir::CharBoxValue toScalarCharacter(const fir::CharArrayBoxValue &);
 
-  /// Unbox \p boxchar into (fir.ref<fir.char<kind>>, getLengthType()).
+  /// Unbox \p boxchar into (fir.ref<fir.char<kind>>, character length type).
   std::pair<mlir::Value, mlir::Value> createUnboxChar(mlir::Value boxChar);
 
   /// Allocate a temp of fir::CharacterType type and length len.
@@ -111,10 +111,6 @@ public:
   static fir::CharacterType getCharacterType(mlir::Type type);
   static fir::CharacterType getCharacterType(const fir::CharBoxValue &box);
   static fir::CharacterType getCharacterType(mlir::Value str);
-
-  /// Return the integer type that must be used to manipulate
-  /// Character lengths. TODO: move this to FirOpBuilder?
-  mlir::Type getLengthType() { return builder.getIndexType(); }
 
   /// Create an extended value from a value of type:
   /// - fir.boxchar<kind>
@@ -156,6 +152,11 @@ public:
   mlir::Value createSingletonFromCode(mlir::Value code, int kind);
   /// Returns integer value held in a character singleton.
   mlir::Value extractCodeFromSingleton(mlir::Value singleton);
+
+  /// Compute length given a fir.box describing a character entity.
+  /// It adjusts the length from the number of bytes per the descriptor
+  /// to the number of characters per the Fortran KIND.
+  mlir::Value readLengthFromBox(mlir::Value box);
 
 private:
   /// FIXME: the implementation also needs a clean-up now that

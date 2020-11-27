@@ -76,9 +76,12 @@ public:
   /// Create a 1-dimensional sequence of `eleTy` of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy);
 
-  /// Create a null constant of type RefType and value 0. Need to pass in the
-  /// Location information.
-  mlir::Value createNullConstant(mlir::Location loc);
+  /// Get character length type
+  mlir::Type getCharacterLengthType() { return getIndexType(); }
+
+  /// Create a null constant memory reference of type \p ptrType.
+  /// If \p ptrType is not provided, !fir.ref<none> type will be used.
+  mlir::Value createNullConstant(mlir::Location loc, mlir::Type ptrType = {});
 
   /// Create an integer constant of type \p type and value \p i.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,

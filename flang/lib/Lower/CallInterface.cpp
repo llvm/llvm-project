@@ -466,11 +466,6 @@ private:
       const FortranEntity &entity) {
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
-    if (obj.attrs.test(Attrs::Allocatable))
-      TODO("allocatable in procedure interface");
-    else if (obj.attrs.test(Attrs::Pointer))
-      TODO("pointer in procedure interface");
-
     if (obj.attrs.test(Attrs::Optional))
       TODO("Optional in procedure interface");
     if (obj.attrs.test(Attrs::Asynchronous))
@@ -484,6 +479,8 @@ private:
     if (obj.attrs.test(Attrs::Target))
       TODO("Target in procedure interface");
 
+    // TODO: intents that require special care (e.g finalization)
+
     using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
     const auto &shapeAttrs = obj.type.attrs();
     if (shapeAttrs.test(ShapeAttrs::AssumedRank))
@@ -495,32 +492,28 @@ private:
     // it must be by box. That may no be always true (e.g for simple optionals)
 
     auto dynamicType = obj.type.type();
-    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      auto len = fir::CharacterType::unknownLen();
-      if (auto constantLen = toInt64(dynamicType.GetCharLength()))
-        len = *constantLen;
-      mlir::Type type =
-          fir::CharacterType::get(&mlirContext, dynamicType.kind(), len);
-      fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
-      if (!bounds.empty())
-        type = fir::SequenceType::get(bounds, type);
-      auto boxType = fir::BoxType::get(type);
-      addFirInput(boxType, nextPassedArgPosition(), Property::Box);
-      addPassedArg(PassEntityBy::Box, entity);
-    } else if (dynamicType.category() ==
-               Fortran::common::TypeCategory::Derived) {
+    auto cat = dynamicType.category();
+    llvm::SmallVector<std::int64_t, 2> lenParams;
+    if (cat == Fortran::common::TypeCategory::Derived)
       TODO("derived type arguments in procedure interface");
-    } else {
-      mlir::Type type =
-          getConverter().genType(dynamicType.category(), dynamicType.kind());
-      fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
-      if (!bounds.empty())
-        type = fir::SequenceType::get(bounds, type);
-      auto boxType = fir::BoxType::get(type);
+    if (cat == Fortran::common::TypeCategory::Character)
+      if (auto constantLen = toInt64(dynamicType.GetCharLength()))
+        lenParams.push_back(*constantLen);
+    auto type = getConverter().genType(cat, dynamicType.kind(), lenParams);
+    fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
+    if (!bounds.empty())
+      type = fir::SequenceType::get(bounds, type);
+    if (obj.attrs.test(Attrs::Allocatable))
+      type = fir::HeapType::get(type);
+    if (obj.attrs.test(Attrs::Pointer))
+      type = fir::PointerType::get(type);
+    auto boxType = fir::BoxType::get(type);
 
-      // For allocatable and pointer, we will most likely want to pass
-      // a box reference here, but for the rest, a simple box should enforce
-      // the fact that the box is not re-used by the caller after the call.
+    if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
+      auto boxRefType = fir::ReferenceType::get(boxType);
+      addFirInput(boxRefType, nextPassedArgPosition(), Property::MutableBox);
+      addPassedArg(PassEntityBy::MutableBox, entity);
+    } else {
       addFirInput(boxType, nextPassedArgPosition(), Property::Box);
       addPassedArg(PassEntityBy::Box, entity);
     }
