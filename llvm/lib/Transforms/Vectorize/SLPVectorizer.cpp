@@ -1744,6 +1744,19 @@ private:
 #endif
   };
 
+#ifndef NDEBUG
+  void dumpTreeCosts(TreeEntry *E, int ReuseShuffleCost, int VecCost,
+                     int ScalarCost) const {
+    dbgs() << "SLP: Calculated costs for Tree:\n"; E->dump();
+    dbgs() << "SLP: Costs:\n";
+    dbgs() << "SLP:     ReuseShuffleCost = " << ReuseShuffleCost << "\n";
+    dbgs() << "SLP:     VectorCost = " << VecCost << "\n";
+    dbgs() << "SLP:     ScalarCost = " << ScalarCost << "\n";
+    dbgs() << "SLP:     ReuseShuffleCost + VecCost - ScalarCost = " <<
+               ReuseShuffleCost + VecCost - ScalarCost << "\n";
+  }
+#endif
+
   /// Create a new VectorizableTree entry.
   TreeEntry *newTreeEntry(ArrayRef<Value *> VL, Optional<ScheduleData *> Bundle,
                           const InstructionsState &S,
@@ -3562,6 +3575,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
             TTI->getCastInstrCost(E->getOpcode(), VecTy, SrcVecTy,
                                   TTI::getCastContextHint(VL0), CostKind, VL0);
       }
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return VecCost - ScalarCost;
     }
     case Instruction::FCmp:
@@ -3612,6 +3626,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
         VecCost = std::min(VecCost, IntrinsicCost);
       }
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::FNeg:
@@ -3681,6 +3696,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       int VecCost = TTI->getArithmeticInstrCost(
           E->getOpcode(), VecTy, CostKind, Op1VK, Op2VK, Op1VP, Op2VP,
           Operands, VL0);
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::GetElementPtr: {
@@ -3699,6 +3715,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       int VecCost =
           TTI->getArithmeticInstrCost(Instruction::Add, VecTy, CostKind,
                                       Op1VK, Op2VK);
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::Load: {
@@ -3726,6 +3743,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         VecLdCost += TTI->getShuffleCost(
             TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
       }
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecLdCost, ScalarLdCost));
       return ReuseShuffleCost + VecLdCost - ScalarLdCost;
     }
     case Instruction::Store: {
@@ -3747,6 +3765,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         VecStCost += TTI->getShuffleCost(
             TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
       }
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecStCost, ScalarStCost));
       return ReuseShuffleCost + VecStCost - ScalarStCost;
     }
     case Instruction::Call: {
@@ -3811,6 +3830,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                                          TTI::CastContextHint::None, CostKind);
       }
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
+      LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     default:
@@ -4034,10 +4054,11 @@ int BoUpSLP::getTreeCost() {
       continue;
 
     int C = getEntryCost(&TE);
+    Cost += C;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                       << " for bundle that starts with " << *TE.Scalars[0]
-                      << ".\n");
-    Cost += C;
+                      << ".\n"
+                      << "SLP: Current total cost = " << Cost << "\n");
   }
 
   SmallPtrSet<Value *, 16> ExtractCostCalculated;
@@ -5941,9 +5962,9 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   int Cost = R.getTreeCost();
 
-  LLVM_DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF << "\n");
+  LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF =" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
-    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
+    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
     using namespace ore;
 
