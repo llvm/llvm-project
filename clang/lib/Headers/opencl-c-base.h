@@ -9,6 +9,21 @@
 #ifndef _OPENCL_BASE_H_
 #define _OPENCL_BASE_H_
 
+// Define extension macros
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+// For SPIR all extensions are supported.
+#if defined(__SPIR__)
+#define cl_khr_subgroup_extended_types 1
+#define cl_khr_subgroup_non_uniform_vote 1
+#define cl_khr_subgroup_ballot 1
+#define cl_khr_subgroup_non_uniform_arithmetic 1
+#define cl_khr_subgroup_shuffle 1
+#define cl_khr_subgroup_shuffle_relative 1
+#define cl_khr_subgroup_clustered_reduce 1
+#endif // defined(__SPIR__)
+#endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
 // built-in scalar data types:
 
 /**
