@@ -1338,7 +1338,7 @@ public:
   /// Returns true if this CallSite passes the given Value* as an argument to
   /// the called function.
   bool hasArgument(const Value *V) const {
-    return llvm::any_of(args(), [V](const Value *Arg) { return Arg == V; });
+    return llvm::is_contained(args(), V);
   }
 
   Value *getCalledOperand() const { return Op<CalledOperandOpEndIdx>(); }
