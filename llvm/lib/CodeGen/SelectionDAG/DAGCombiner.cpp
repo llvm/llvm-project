@@ -14573,6 +14573,12 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
 
   // fold a brcond with a setcc condition into a BR_CC node if BR_CC is legal
   // on the target.
+  if (N1.getOpcode() == ISD::FREEZE) {
+    SDValue Op = N1->getOperand(0);
+    if (!Op.isUndef()) {
+      N1 = Op;
+    }
+  }
   if (N1.getOpcode() == ISD::SETCC &&
       TLI.isOperationLegalOrCustom(ISD::BR_CC,
                                    N1.getOperand(0).getValueType())) {
