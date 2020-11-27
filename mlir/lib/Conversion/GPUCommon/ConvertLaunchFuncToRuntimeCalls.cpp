@@ -163,7 +163,7 @@ public:
 
 private:
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::HostRegisterOp hostRegisterOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -205,7 +205,7 @@ public:
 
 private:
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::WaitOp waitOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -219,7 +219,7 @@ public:
 
 private:
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::WaitOp waitOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -251,7 +251,7 @@ private:
                                    Location loc, OpBuilder &builder) const;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::LaunchFuncOp launchOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 
   llvm::SmallString<32> gpuBinaryAnnotation;
@@ -321,14 +321,15 @@ isAsyncWithOneDependency(ConversionPatternRewriter &rewriter,
 }
 
 LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
-    Operation *op, ArrayRef<Value> operands,
+    gpu::HostRegisterOp hostRegisterOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
+  auto *op = hostRegisterOp.getOperation();
   if (failed(areAllLLVMTypes(op, operands, rewriter)))
     return failure();
 
   Location loc = op->getLoc();
 
-  auto memRefType = cast<gpu::HostRegisterOp>(op).value().getType();
+  auto memRefType = hostRegisterOp.value().getType();
   auto elementType = memRefType.cast<UnrankedMemRefType>().getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
@@ -412,19 +413,19 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 // afterwards. In case this isn't correct, we will get a runtime error.
 // Eventually, we will have a pass that guarantees this property.
 LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
-    Operation *op, ArrayRef<Value> operands,
+    gpu::WaitOp waitOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (cast<gpu::WaitOp>(op).asyncToken())
-    return rewriter.notifyMatchFailure(op, "Cannot convert async op.");
+  if (waitOp.asyncToken())
+    return rewriter.notifyMatchFailure(waitOp, "Cannot convert async op.");
 
-  Location loc = op->getLoc();
+  Location loc = waitOp.getLoc();
 
   for (auto asyncDependency : operands)
     streamSynchronizeCallBuilder.create(loc, rewriter, {asyncDependency});
   for (auto asyncDependency : operands)
     streamDestroyCallBuilder.create(loc, rewriter, {asyncDependency});
 
-  rewriter.eraseOp(op);
+  rewriter.eraseOp(waitOp);
   return success();
 }
 
@@ -435,23 +436,23 @@ LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
 // assumes that there is no other use between the definition and this op, and
 // the plan is to have a pass that guarantees this property.
 LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
-    Operation *op, ArrayRef<Value> operands,
+    gpu::WaitOp waitOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (!cast<gpu::WaitOp>(op).asyncToken())
-    return rewriter.notifyMatchFailure(op, "Can only convert async op.");
+  if (!waitOp.asyncToken())
+    return rewriter.notifyMatchFailure(waitOp, "Can only convert async op.");
 
-  Location loc = op->getLoc();
+  Location loc = waitOp.getLoc();
 
   auto insertionPoint = rewriter.saveInsertionPoint();
   SmallVector<Value, 1> events;
-  for (auto pair : llvm::zip(op->getOperands(), operands)) {
+  for (auto pair : llvm::zip(waitOp.asyncDependencies(), operands)) {
     auto token = std::get<0>(pair);
     if (auto *defOp = token.getDefiningOp()) {
       rewriter.setInsertionPointAfter(defOp);
     } else {
       // If we can't find the defining op, we record the event at block start,
       // which is late and therefore misses parallelism, but still valid.
-      rewriter.setInsertionPointToStart(op->getBlock());
+      rewriter.setInsertionPointToStart(waitOp.getOperation()->getBlock());
     }
     auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
     auto stream = std::get<1>(pair);
@@ -464,7 +465,7 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     streamWaitEventCallBuilder.create(loc, rewriter, {stream, event});
   for (auto event : events)
     eventDestroyCallBuilder.create(loc, rewriter, {event});
-  rewriter.replaceOp(op, {stream});
+  rewriter.replaceOp(waitOp, {stream});
 
   return success();
 }
@@ -564,23 +565,21 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateKernelNameConstant(
 // If the op is async, the stream corresponds to the (single) async dependency
 // as well as the async token the op produces.
 LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
-    Operation *op, ArrayRef<Value> operands,
+    gpu::LaunchFuncOp launchOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(op, operands, rewriter)))
+  if (failed(areAllLLVMTypes(launchOp, operands, rewriter)))
     return failure();
-
-  auto launchOp = cast<gpu::LaunchFuncOp>(op);
 
   if (launchOp.asyncDependencies().size() > 1)
     return rewriter.notifyMatchFailure(
-        op, "Cannot convert with more than one async dependency.");
+        launchOp, "Cannot convert with more than one async dependency.");
 
   // Fail when the synchronous version of the op has async dependencies. The
   // lowering destroys the stream, and we do not want to check that there is no
   // use of the stream after this op.
   if (!launchOp.asyncToken() && !launchOp.asyncDependencies().empty())
     return rewriter.notifyMatchFailure(
-        op, "Cannot convert non-async op with async dependencies.");
+        launchOp, "Cannot convert non-async op with async dependencies.");
 
   Location loc = launchOp.getLoc();
 
@@ -612,7 +611,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       loc, rewriter, {module.getResult(0), kernelName});
   auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                                 rewriter.getI32IntegerAttr(0));
-  auto adaptor = gpu::LaunchFuncOpAdaptor(operands, op->getAttrDictionary());
+  auto adaptor = gpu::LaunchFuncOpAdaptor(
+      operands, launchOp.getOperation()->getAttrDictionary());
   Value stream =
       adaptor.asyncDependencies().empty()
           ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0)
@@ -620,23 +620,24 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, operands, rewriter);
   auto nullpointer = rewriter.create<LLVM::NullOp>(loc, llvmPointerPointerType);
-  launchKernelCallBuilder.create(
-      loc, rewriter,
-      {function.getResult(0), launchOp.gridSizeX(), launchOp.gridSizeY(),
-       launchOp.gridSizeZ(), launchOp.blockSizeX(), launchOp.blockSizeY(),
-       launchOp.blockSizeZ(), /*sharedMemBytes=*/zero, stream, kernelParams,
-       /*extra=*/nullpointer});
+  launchKernelCallBuilder.create(loc, rewriter,
+                                 {function.getResult(0), launchOp.gridSizeX(),
+                                  launchOp.gridSizeY(), launchOp.gridSizeZ(),
+                                  launchOp.blockSizeX(), launchOp.blockSizeY(),
+                                  launchOp.blockSizeZ(),
+                                  /*sharedMemBytes=*/zero, stream, kernelParams,
+                                  /*extra=*/nullpointer});
 
   if (launchOp.asyncToken()) {
     // Async launch: make dependent ops use the same stream.
-    rewriter.replaceOp(op, {stream});
+    rewriter.replaceOp(launchOp, {stream});
   } else {
     // Synchronize with host and destroy stream. This must be the stream created
     // above (with no other uses) because we check that the synchronous version
     // does not have any async dependencies.
     streamSynchronizeCallBuilder.create(loc, rewriter, stream);
     streamDestroyCallBuilder.create(loc, rewriter, stream);
-    rewriter.eraseOp(op);
+    rewriter.eraseOp(launchOp);
   }
   moduleUnloadCallBuilder.create(loc, rewriter, module.getResult(0));
 
