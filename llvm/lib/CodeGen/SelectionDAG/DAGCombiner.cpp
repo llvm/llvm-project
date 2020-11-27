@@ -22052,8 +22052,6 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
             : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
 
       if (!Reciprocal) {
-        // The estimate is now completely wrong if the input was exactly 0.0 or
-        // possibly a denormal. Force the answer to 0.0 for those cases.
         SDLoc DL(Op);
         EVT CCVT = getSetCCResultType(VT);
         SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
@@ -22077,10 +22075,13 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
             // Test = X == 0.0
             Test = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
         }
-        // Test ? 0.0 : Est
-        Est = DAG.getNode(Test.getValueType().isVector() ? ISD::VSELECT
-                                                         : ISD::SELECT,
-                          DL, VT, Test, FPZero, Est);
+
+        // The estimate is now completely wrong if the input was exactly 0.0 or
+        // possibly a denormal. Force the answer to 0.0 or value provided by
+        // target for those cases.
+        Est = DAG.getNode(
+            Test.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
+            Test, TLI.getSqrtResultForDenormInput(Op, DAG), Est);
       }
     }
     return Est;
