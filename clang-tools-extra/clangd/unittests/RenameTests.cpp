@@ -540,6 +540,94 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Fields in classes & partial and full specialiations.
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          T [[Vari^able]] = 42;
+        };
+
+        void foo() {
+          Foo<int> f;
+          f.[[Varia^ble]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T Variable;
+          void bar() { ++Variable; }
+        };
+
+        template<>
+        struct Foo<unsigned, bool> {
+          unsigned [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      // Static fields.
+      R"cpp(
+        struct Foo {
+          static int [[Var^iable]];
+        };
+
+        int Foo::[[Var^iable]] = 42;
+
+        void foo() {
+          int LocalInt = Foo::[[Var^iable]];
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          static T [[Var^iable]];
+        };
+
+        template <>
+        int Foo<int>::[[Var^iable]] = 42;
+
+        template <>
+        bool Foo<bool>::[[Var^iable]] = true;
+
+        void foo() {
+          int LocalInt = Foo<int>::[[Var^iable]];
+          bool LocalBool = Foo<bool>::[[Var^iable]];
+        }
+      )cpp",
+
       // Template parameters.
       R"cpp(
         template <typename [[^T]]>
