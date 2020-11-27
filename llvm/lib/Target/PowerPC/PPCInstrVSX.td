@@ -2463,6 +2463,8 @@ def : Pat<(fneg (PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C)),
 def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, (fneg v4f32:$C)),
           (XVNMADDASP $C, $A, $B)>;
 
+def : Pat<(PPCfsqrt f64:$frA), (XSSQRTDP $frA)>;
+
 def : Pat<(v2f64 (bitconvert v4f32:$A)),
           (COPY_TO_REGCLASS $A, VSRC)>;
 def : Pat<(v2f64 (bitconvert v4i32:$A)),
