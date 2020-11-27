@@ -856,18 +856,12 @@ define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64IB-LABEL: minu_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    zext.w a1, a1
-; RV64IB-NEXT:    zext.w a0, a0
 ; RV64IB-NEXT:    minu a0, a0, a1
-; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: minu_i32:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    zext.w a1, a1
-; RV64IBB-NEXT:    zext.w a0, a0
 ; RV64IBB-NEXT:    minu a0, a0, a1
-; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
   %cmp = icmp ult i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
@@ -908,18 +902,12 @@ define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64IB-LABEL: maxu_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    zext.w a1, a1
-; RV64IB-NEXT:    zext.w a0, a0
 ; RV64IB-NEXT:    maxu a0, a0, a1
-; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: maxu_i32:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    zext.w a1, a1
-; RV64IBB-NEXT:    zext.w a0, a0
 ; RV64IBB-NEXT:    maxu a0, a0, a1
-; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
   %cmp = icmp ugt i32 %a, %b
   %cond = select i1 %cmp, i32 %a, i32 %b
