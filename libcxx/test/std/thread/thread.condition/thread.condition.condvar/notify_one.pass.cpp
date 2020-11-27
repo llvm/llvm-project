@@ -41,6 +41,7 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 
@@ -78,8 +79,8 @@ void f2()
 
 int main(int, char**)
 {
-  std::thread t1(f1);
-  std::thread t2(f2);
+  std::thread t1 = support::make_test_thread(f1);
+  std::thread t2 = support::make_test_thread(f2);
   {
     while (ready > 0)
       std::this_thread::yield();

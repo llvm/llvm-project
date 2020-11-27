@@ -198,7 +198,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo) {
   ASSERT_TRUE(TT.getVectorExt());
   TBVectorExt VecExt = TT.getVectorExt().getValue();
 
-  EXPECT_EQ(VecExt.geNumberOfVRSaved(), 0);
+  EXPECT_EQ(VecExt.getNumberOfVRSaved(), 0);
   EXPECT_TRUE(VecExt.isVRSavedOnStack());
   EXPECT_FALSE(VecExt.hasVarArgs());
 
@@ -232,7 +232,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo1) {
   ASSERT_TRUE(TT.getVectorExt());
   TBVectorExt VecExt = TT.getVectorExt().getValue();
 
-  EXPECT_EQ(VecExt.geNumberOfVRSaved(), 4);
+  EXPECT_EQ(VecExt.getNumberOfVRSaved(), 4);
   EXPECT_FALSE(VecExt.isVRSavedOnStack());
   EXPECT_TRUE(VecExt.hasVarArgs());
 

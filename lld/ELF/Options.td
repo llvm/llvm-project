@@ -340,7 +340,9 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
-defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+defm reproduce:
+  Eq<"reproduce",
+     "Write tar file containing inputs and command to reproduce link">;
 
 defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
