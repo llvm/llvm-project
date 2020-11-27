@@ -689,6 +689,9 @@ def : Pat<(xor (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
           (SBINV GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (shiftop<srl> GPR:$rs1, GPR:$rs2), 1),
           (SBEXT GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(shiftop<shl> 1, GPR:$rs2),
+          (SBSET X0, GPR:$rs2)>;
 }
 
 let Predicates = [HasStdExtZbb] in {
@@ -905,6 +908,9 @@ def : Pat<(sext_inreg (xor (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
           (SBINVW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
           (SBEXTW GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(riscv_sllw 1, GPR:$rs2),
+          (SBSETW X0, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {

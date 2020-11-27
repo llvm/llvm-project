@@ -205,6 +205,27 @@ define signext i32 @sbset_i32_load(i32* %p, i32 signext %b) nounwind {
   ret i32 %or
 }
 
+; We can use sbsetw for 1 << x by setting the first source to zero.
+define signext i32 @sbset_i32_zero(i32 signext %a) nounwind {
+; RV64I-LABEL: sbset_i32_zero:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 1
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: sbset_i32_zero:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    sbsetw a0, zero, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBS-LABEL: sbset_i32_zero:
+; RV64IBS:       # %bb.0:
+; RV64IBS-NEXT:    sbsetw a0, zero, a0
+; RV64IBS-NEXT:    ret
+  %shl = shl i32 1, %a
+  ret i32 %shl
+}
+
 define i64 @sbset_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: sbset_i64:
 ; RV64I:       # %bb.0:
@@ -248,6 +269,27 @@ define i64 @sbset_i64_no_mask(i64 %a, i64 %b) nounwind {
   %shl = shl i64 1, %b
   %or = or i64 %shl, %a
   ret i64 %or
+}
+
+; We can use sbsetw for 1 << x by setting the first source to zero.
+define signext i64 @sbset_i64_zero(i64 signext %a) nounwind {
+; RV64I-LABEL: sbset_i64_zero:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: sbset_i64_zero:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    sbset a0, zero, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBS-LABEL: sbset_i64_zero:
+; RV64IBS:       # %bb.0:
+; RV64IBS-NEXT:    sbset a0, zero, a0
+; RV64IBS-NEXT:    ret
+  %shl = shl i64 1, %a
+  ret i64 %shl
 }
 
 define signext i32 @sbinv_i32(i32 signext %a, i32 signext %b) nounwind {
