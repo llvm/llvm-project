@@ -168,14 +168,31 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   // Avoid types like <2 x i32*>.
   if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())
     return false;
+  // The given type may be something like <17 x i32>, which is not MVT,
+  // but can be represented as (non-simple) EVT.
   EVT Ty = EVT::getEVT(VecTy, /*HandleUnknown*/false);
-  if (!Ty.isSimple() || Ty.getSizeInBits() <= 64)
+  if (Ty.getSizeInBits() <= 64 || !Ty.getVectorElementType().isSimple())
     return false;
-  if (isHVXVectorType(Ty.getSimpleVT(), IncludeBool))
-    return true;
-  auto Action =
-      getTargetLowering()->getPreferredVectorAction(Ty.getSimpleVT());
-  return Action == TargetLoweringBase::TypeWidenVector;
+
+  auto isHvxTy = [this, IncludeBool](MVT SimpleTy) {
+    if (isHVXVectorType(SimpleTy, IncludeBool))
+      return true;
+    auto Action = getTargetLowering()->getPreferredVectorAction(SimpleTy);
+    return Action == TargetLoweringBase::TypeWidenVector;
+  };
+
+  // Round up EVT to have power-of-2 elements, and keep checking if it
+  // qualifies for HVX, dividing it in half after each step.
+  MVT ElemTy = Ty.getVectorElementType().getSimpleVT();
+  unsigned VecLen = PowerOf2Ceil(Ty.getVectorNumElements());
+  while (ElemTy.getSizeInBits() * VecLen > 64) {
+    MVT SimpleTy = MVT::getVectorVT(ElemTy, VecLen);
+    if (SimpleTy.isValid() && isHvxTy(SimpleTy))
+      return true;
+    VecLen /= 2;
+  }
+
+  return false;
 }
 
 void HexagonSubtarget::UsrOverflowMutation::apply(ScheduleDAGInstrs *DAG) {
