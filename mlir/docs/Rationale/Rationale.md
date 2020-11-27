@@ -570,10 +570,10 @@ for (i = 0; i < N; i++) {
 ```
 
 The presence of dynamic control flow leads to an inner non-affine function
-nested in an outer function that using affine loops.
+nested in an outer function that uses affine loops.
 
 ```mlir
-func @search(%A: memref<?x?xi32, %S: <?xi32>, %key : i32) {
+func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
   %ni = dim %A, 0 : memref<?x?xi32>
   // This loop can be parallelized
   affine.for %i = 0 to %ni {

@@ -34,7 +34,7 @@ system](#type-system).  [Operations](#operations) are contained in
 [Blocks](#blocks) and Blocks are contained in [Regions](#regions). Operations
 are also ordered within their containing block and Blocks are ordered in their
 containing region, although this order may or may not be semantically
-meaningful in a given [kind of region](Interfaces.md#regionkindinterface)).
+meaningful in a given [kind of region](Interfaces.md#regionkindinterfaces)).
 Operations may also contain regions, enabling hierarchical structures to be
 represented.
 
@@ -55,8 +55,8 @@ allowing operation semantics to be described abstractly using
 [Traits](Traits.md) and [Interfaces](Interfaces.md), enabling transformations
 to operate on operations more generically.  Traits often describe verification
 constraints on valid IR, enabling complex invariants to be captured and
-checked. (see
-[docs/Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations])
+checked. (see [Op vs
+Operation](docs/Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations))
 
 One obvious application of MLIR is to represent an
 [SSA-based](https://en.wikipedia.org/wiki/Static_single_assignment_form) IR,
@@ -438,7 +438,7 @@ block-arg-list ::= `(` value-id-and-type-list? `)`
 A *Block* is an ordered list of operations, concluding with a single
 [terminator operation](#terminator-operations). In [SSACFG
 regions](#control-flow-and-ssacfg-regions), each block represents a compiler
-[basic block] (https://en.wikipedia.org/wiki/Basic_block) where instructions
+[basic block](https://en.wikipedia.org/wiki/Basic_block) where instructions
 inside the block are executed in order and terminator operations implement
 control flow branches between basic blocks.
 
@@ -505,7 +505,7 @@ regions: [SSACFG regions](#control-flow-and-ssacfg-regions), which describe
 control flow between blocks, and [Graph regions](#graph-regions), which do not
 require control flow between block. The kinds of regions within an operation
 are described using the
-[RegionKindInterface](Interfaces.md#regionkindinterface).
+[RegionKindInterface](Interfaces.md#regionkindinterfaces).
 
 Regions do not have a name or an address, only the blocks contained in a
 region do. Regions must be contained within operations and have no type or
@@ -561,7 +561,7 @@ defined in a region can never be used outside of the region.
 ### Control Flow and SSACFG Regions
 
 In MLIR, control flow semantics of a region is indicated by
-[RegionKind::SSACFG](Interfaces.md#regionkindinterface).  Informally, these
+[RegionKind::SSACFG](Interfaces.md#regionkindinterfaces).  Informally, these
 regions support semantics where operations in a region 'execute
 sequentially'. Before an operation executes, its operands have well-defined
 values. After an operation executes, the operands have the same values and
@@ -647,7 +647,7 @@ directly used values remain live.
 ### Graph Regions
 
 In MLIR, graph-like semantics in a region is indicated by
-[RegionKind::Graph](Interfaces.md#regionkindinterface). Graph regions are
+[RegionKind::Graph](Interfaces.md#regionkindinterfaces). Graph regions are
 appropriate for concurrent semantics without control flow, or for modeling
 generic directed graph data structures. Graph regions are appropriate for
 representing cyclic relationships between coupled values where there is no
@@ -869,7 +869,7 @@ function-type ::= type-list-parens `->` function-result-type
 ```
 
 MLIR supports first-class functions: for example, the
-[`constant` operation](Dialects/Standard.md#constant-operation) produces the
+[`constant` operation](Dialects/Standard.md#stdconstant-constantop) produces the
 address of a function as a value. This value may be passed to and
 returned from functions, merged across control flow boundaries with
 [block arguments](#blocks), and called with the
@@ -888,10 +888,11 @@ index-type ::= `index`
 ```
 
 The `index` type is a signless integer whose size is equal to the natural
-machine word of the target ([rationale](Rationale/Rationale.md#signless-types)) and is
-used by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be
-used as an element of vector, tensor or memref type
-([rationale](Rationale/Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
+machine word of the target
+([rationale](Rationale/Rationale.md#integer-signedness-semantics)) and is used
+by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be used
+as an element of vector
+([rationale](Rationale/Rationale.md#index-type-disallowed-in-vector-types)).
 
 **Rationale:** integers of platform-specific bit widths are practical to express
 sizes, dimensionalities and subscripts.
@@ -1319,7 +1320,7 @@ dependent-attribute-name ::= ((letter|[_]) (letter|digit|[_$])*)
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the index of a
-[`dim` operation](Dialects/Standard.md#dim-operation), or the stride of a
+[`dim` operation](Dialects/Standard.md#stddim-dimop), or the stride of a
 convolution. They consist of a name and a concrete attribute value. The set of
 expected attributes, their structure, and their interpretation are all
 contextually dependent on what they are attached to.
