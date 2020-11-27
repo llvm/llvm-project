@@ -697,20 +697,18 @@ define i32 @test14(i32 %start, i32* %p, i32* %q) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[FOO]] to i64
-; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
-; CHECK-NEXT:    [[LOAD_ADDR:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q]], align 4
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ; CHECK:       failure:
 ; CHECK-NEXT:    unreachable
 ;
@@ -750,24 +748,23 @@ define i32 @test15(i32 %start, i32* %p, i32* %q) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[FOO]] to i64
-; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
-; CHECK-NEXT:    [[LOAD_ADDR:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q]], align 4
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @use(i32 -1)
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
+; CHECK-NEXT:    call void @use(i32 [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ; CHECK:       failure:
-; CHECK-NEXT:    [[FOO_LCSSA1:%.*]] = phi i32 [ [[FOO]], [[BACKEDGE]] ]
-; CHECK-NEXT:    call void @use(i32 [[FOO_LCSSA1]])
+; CHECK-NEXT:    [[FOO_LCSSA1_WIDE:%.*]] = phi i64 [ [[TMP1]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[FOO_LCSSA1_WIDE]] to i32
+; CHECK-NEXT:    call void @use(i32 [[TMP3]])
 ; CHECK-NEXT:    unreachable
 ;
 entry:
