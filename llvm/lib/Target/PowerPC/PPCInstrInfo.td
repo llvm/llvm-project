@@ -127,6 +127,7 @@ def SDT_PPCFPMinMax : SDTypeProfile<1, 2, [
 
 def PPCfre    : SDNode<"PPCISD::FRE",     SDTFPUnaryOp, []>;
 def PPCfrsqrte: SDNode<"PPCISD::FRSQRTE", SDTFPUnaryOp, []>;
+def PPCfsqrt  : SDNode<"PPCISD::FSQRT",   SDTFPUnaryOp, []>;
 def PPCftsqrt : SDNode<"PPCISD::FTSQRT",  SDT_PPCFtsqrt,[]>;
 
 def PPCfcfid  : SDNode<"PPCISD::FCFID",   SDTFPUnaryOp, []>;
@@ -2705,6 +2706,8 @@ let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
                           [(set f32:$frD, (any_fsqrt f32:$frB))]>;
 }
 }
+
+def : Pat<(PPCfsqrt f64:$frA), (FSQRT $frA)>;
 
 /// Note that FMR is defined as pseudo-ops on the PPC970 because they are
 /// often coalesced away and we don't want the dispatch group builder to think
