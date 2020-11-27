@@ -1400,5 +1400,45 @@ TEST(InstructionsTest, BranchWeightOverflow) {
   ASSERT_EQ(ProfWeight, UINT32_MAX);
 }
 
+TEST(InstructionsTest, AllocaInst) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      %T = type { i64, [3 x i32]}
+      define void @f(i32 %n) {
+      entry:
+        %A = alloca i32, i32 1
+        %B = alloca i32, i32 4
+        %C = alloca i32, i32 %n
+        %D = alloca <8 x double>
+        %E = alloca <vscale x 8 x double>
+        %F = alloca [2 x half]
+        %G = alloca [2 x [3 x i128]]
+        %H = alloca %T
+        ret void
+      }
+    )");
+  const DataLayout &DL = M->getDataLayout();
+  ASSERT_TRUE(M);
+  Function *Fun = cast<Function>(M->getNamedValue("f"));
+  BasicBlock &BB = Fun->front();
+  auto It = BB.begin();
+  AllocaInst &A = cast<AllocaInst>(*It++);
+  AllocaInst &B = cast<AllocaInst>(*It++);
+  AllocaInst &C = cast<AllocaInst>(*It++);
+  AllocaInst &D = cast<AllocaInst>(*It++);
+  AllocaInst &E = cast<AllocaInst>(*It++);
+  AllocaInst &F = cast<AllocaInst>(*It++);
+  AllocaInst &G = cast<AllocaInst>(*It++);
+  AllocaInst &H = cast<AllocaInst>(*It++);
+  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
+  EXPECT_FALSE(C.getAllocationSizeInBits(DL));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
+  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
+  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+}
+
 } // end anonymous namespace
 } // end namespace llvm
