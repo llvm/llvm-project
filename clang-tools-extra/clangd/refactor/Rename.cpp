@@ -124,6 +124,28 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
   if (const auto *Function = dyn_cast<FunctionDecl>(D))
     if (const FunctionTemplateDecl *Template = Function->getPrimaryTemplate())
       return canonicalRenameDecl(Template);
+  if (const auto *Field = dyn_cast<FieldDecl>(D)) {
+    // This is a hacky way to do something like
+    // CXXMethodDecl::getInstantiatedFromMemberFunction for the field because
+    // Clang AST does not store relevant information about the field that is
+    // instantiated.
+    const auto *FieldParent = dyn_cast<CXXRecordDecl>(Field->getParent());
+    if (!FieldParent)
+      return Field->getCanonicalDecl();
+    FieldParent = FieldParent->getTemplateInstantiationPattern();
+    // Field is not instantiation.
+    if (!FieldParent || Field->getParent() == FieldParent)
+      return Field->getCanonicalDecl();
+    for (const FieldDecl *Candidate : FieldParent->fields())
+      if (Field->getDeclName() == Candidate->getDeclName())
+        return Candidate->getCanonicalDecl();
+    elog("FieldParent should have field with the same name as Field.");
+  }
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const VarDecl *OriginalVD = VD->getInstantiatedFromStaticDataMember())
+      VD = OriginalVD;
+    return VD->getCanonicalDecl();
+  }
   return dyn_cast<NamedDecl>(D->getCanonicalDecl());
 }
 
