@@ -54,7 +54,7 @@ struct _LIBCPP_TEMPLATE_VIS __libcpp_debug_info {
   __libcpp_debug_info(const char* __f, int __l, const char* __p, const char* __m)
     : __file_(__f), __line_(__l), __pred_(__p), __msg_(__m) {}
 
-  _LIBCPP_FUNC_VIS std::string what() const;
+  _LIBCPP_FUNC_VIS string what() const;
 
   const char* __file_;
   int __line_;

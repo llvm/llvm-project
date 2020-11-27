@@ -236,7 +236,7 @@ public:
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
-        : __data(__s), __size(std::__char_traits_length_checked<_Traits>(__s)) {}
+        : __data(__s), __size(_VSTD::__char_traits_length_checked<_Traits>(__s)) {}
 
     // [string.view.iterators], iterators
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY

@@ -514,7 +514,7 @@ template <template <class...> class, class ...>
 false_type __sfinae_test_impl(...);
 
 template <template <class ...> class _Templ, class ..._Args>
-using _IsValidExpansion _LIBCPP_NODEBUG_TYPE = decltype(std::__sfinae_test_impl<_Templ, _Args...>(0));
+using _IsValidExpansion _LIBCPP_NODEBUG_TYPE = decltype(__sfinae_test_impl<_Templ, _Args...>(0));
 
 template <class>
 struct __void_t { typedef void type; };
@@ -2550,7 +2550,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_destructible_v = __is_destructible(
 //  if it's a function, return false
 //  if it's   void,     return false
 //  if it's an array of unknown bound, return false
-//  Otherwise, return "std::declval<_Up&>().~_Up()" is well-formed
+//  Otherwise, return "declval<_Up&>().~_Up()" is well-formed
 //    where _Up is remove_all_extents<_Tp>::type
 
 template <class>

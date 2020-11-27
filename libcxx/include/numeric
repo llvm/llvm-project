@@ -377,7 +377,7 @@ _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result, _BinaryOp __b)
 {
     if (__first != __last) {
-        typename std::iterator_traits<_InputIterator>::value_type __init = *__first;
+        typename iterator_traits<_InputIterator>::value_type __init = *__first;
         *__result++ = __init;
         if (++__first != __last)
             return _VSTD::inclusive_scan(__first, __last, __result, __b, __init);
@@ -391,7 +391,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result)
 {
-    return _VSTD::inclusive_scan(__first, __last, __result, std::plus<>());
+    return _VSTD::inclusive_scan(__first, __last, __result, _VSTD::plus<>());
 }
 
 template <class _InputIterator, class _OutputIterator, class _Tp,
@@ -437,7 +437,7 @@ transform_inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result, _BinaryOp __b, _UnaryOp __u)
 {
     if (__first != __last) {
-        typename std::iterator_traits<_InputIterator>::value_type __init = __u(*__first);
+        typename iterator_traits<_InputIterator>::value_type __init = __u(*__first);
         *__result++ = __init;
         if (++__first != __last)
             return _VSTD::transform_inclusive_scan(__first, __last, __result, __b, __u, __init);
@@ -576,8 +576,8 @@ enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp> && !is_null_pointer_v<_T
 midpoint(_Tp __a, _Tp __b) noexcept
 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
-    using _Up = std::make_unsigned_t<_Tp>;
-    constexpr _Up __bitshift = std::numeric_limits<_Up>::digits - 1;
+    using _Up = make_unsigned_t<_Tp>;
+    constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
     _Up __diff = _Up(__b) - _Up(__a);
     _Up __sign_bit = __b < __a;
