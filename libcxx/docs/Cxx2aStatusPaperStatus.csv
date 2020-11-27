@@ -10,7 +10,7 @@
 "`P0457R2 <https://wg21.link/P0457R2>`__","LWG","String Prefix and Suffix Checking","Albuquerque","|Complete|","6.0"
 "`P0550R2 <https://wg21.link/P0550R2>`__","LWG","Transformation Trait ``remove_cvref``\ ","Albuquerque","|Complete|","6.0"
 "`P0600R1 <https://wg21.link/P0600R1>`__","LWG","nodiscard in the Library","Albuquerque","|In Progress| [#note-P0600]_","7.0"
-"`P0616R0 <https://wg21.link/P0616R0>`__","LWG","de-pessimize legacy <numeric> algorithms with std::move","Albuquerque","",""
+"`P0616R0 <https://wg21.link/P0616R0>`__","LWG","de-pessimize legacy <numeric> algorithms with std::move","Albuquerque","|Complete|","12.0"
 "`P0653R2 <https://wg21.link/P0653R2>`__","LWG","Utility to convert a pointer to a raw pointer","Albuquerque","|Complete|","6.0"
 "`P0718R2 <https://wg21.link/P0718R2>`__","LWG","Atomic shared_ptr","Albuquerque","",""
 "`P0767R1 <https://wg21.link/P0767R1>`__","CWG","Deprecate POD","Albuquerque","|Complete|","7.0"
