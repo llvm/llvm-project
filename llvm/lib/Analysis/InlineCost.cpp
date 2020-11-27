@@ -2578,7 +2578,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   // We can add a flag which determines InlineParams for this run. Right now,
   // the default InlineParams are used.
   const InlineParams Params = llvm::getInlineParams();
-    for (BasicBlock &BB : F) {
+  for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         Function *CalledFunction = CI->getCalledFunction();
