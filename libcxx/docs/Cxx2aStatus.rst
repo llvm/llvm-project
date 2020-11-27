@@ -4,7 +4,7 @@
 libc++ C++2a Status
 ================================
 
-.. include:: Styles.rst
+.. include:: Helpers/Styles.rst
 
 .. contents::
    :local:
