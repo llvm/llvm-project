@@ -135,6 +135,23 @@ public:
     return genScalarLit<1>(str.str(), static_cast<int64_t>(len));
   }
 
+  fir::MutableBoxValue
+  genMutableBoxValue(const Fortran::lower::SomeExpr &expr) {
+    // TODO: GetLastSymbol is not the right thing to do if expr if an
+    // allocatable or pointer derived type component.
+    auto *sym = Fortran::evaluate::GetLastSymbol(expr);
+    if (!sym)
+      fir::emitFatalError(getLoc(), "trying to get descriptor address of an "
+                                    "expression that is not a variable");
+    return symMap.lookupSymbol(*sym).match(
+        [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr)
+            -> fir::MutableBoxValue { return boxAddr; },
+        [&](auto &) -> fir::MutableBoxValue {
+          fir::emitFatalError(getLoc(),
+                              "symbol was not lowered to MutableBoxValue");
+        });
+  }
+
   mlir::Location getLoc() { return location; }
 
   template <typename A>
@@ -216,28 +233,19 @@ public:
     return createCharCompare(pred, genval(ex.left()), genval(ex.right()));
   }
 
-  fir::ExtendedValue
-  genAllocatableOrPointerUnbox(Fortran::semantics::SymbolRef sym) {
-    auto boxAddr = symMap.lookupSymbol(sym).getAddr();
-    if (Fortran::semantics::IsAssumedRankArray(sym))
+  Fortran::lower::SymbolBox
+  genAllocatableOrPointerUnbox(fir::MutableBoxValue boxAddr) {
+    if (boxAddr.hasAssumedRank())
       TODO("Assumed rank allocatables or pointers");
-    if (Fortran::semantics::IsPointer(sym))
+    if (boxAddr.isPointer())
       TODO("pointer"); // deal with non contiguity;
-    auto rank = sym->Rank();
-    // TODO: only intrinsic types other than CHARACTER
-    if (!boxAddr)
-      TODO("Allocatable type not lowered yet");
-    auto boxType = fir::dyn_cast_ptrEleTy(boxAddr.getType());
-    if (!boxType || !boxType.isa<fir::BoxType>())
-      llvm_unreachable("bad allocatable or pointer type in symbol map");
+    auto rank = boxAddr.rank();
 
-    auto varAddrType = boxType.cast<fir::BoxType>().getEleTy();
+    auto addrType = boxAddr.getBoxTy().getEleTy();
     auto loc = getLoc();
 
-    auto box = builder.create<fir::LoadOp>(loc, boxAddr);
-    auto addr = builder.create<fir::BoxAddrOp>(loc, varAddrType, box);
-    if (rank == 0)
-      return addr;
+    auto box = builder.create<fir::LoadOp>(loc, boxAddr.getAddr());
+    auto addr = builder.create<fir::BoxAddrOp>(loc, addrType, box);
     auto idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value, 4> lbounds;
     llvm::SmallVector<mlir::Value, 4> extents;
@@ -248,16 +256,31 @@ public:
       lbounds.push_back(dimInfo.getResult(0));
       extents.push_back(dimInfo.getResult(1));
     }
-    return fir::ArrayBoxValue{addr, extents, lbounds};
+
+    if (boxAddr.isCharacter()) {
+      Fortran::lower::CharacterExprHelper helper{builder, loc};
+      auto params = boxAddr.nonDeferredLenParams();
+      auto len = params.empty() ? helper.readLengthFromBox(box) : params[0];
+      if (rank)
+        return fir::CharArrayBoxValue{addr, len, extents, lbounds};
+      return fir::CharBoxValue{addr, len};
+    }
+    if (boxAddr.isDerived())
+      TODO("derived type boxAddress opening");
+    if (rank)
+      return fir::ArrayBoxValue{addr, extents, lbounds};
+    return fir::AbstractBox{addr};
   }
 
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   fir::ExtendedValue gen(Fortran::semantics::SymbolRef sym) {
-    if (Fortran::semantics::IsAllocatableOrPointer(sym))
-      return genAllocatableOrPointerUnbox(sym);
     if (auto val = symMap.lookupSymbol(sym))
-      return val.toExtendedValue();
+      return val.match(
+          [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr) {
+            return genAllocatableOrPointerUnbox(boxAddr).toExtendedValue();
+          },
+          [&val](auto &) { return val.toExtendedValue(); });
     llvm_unreachable("all symbols should be in the map");
     auto addr = builder.createTemporary(getLoc(), converter.genType(sym),
                                         toStringRef(sym->name()));
@@ -651,9 +674,7 @@ public:
     };
 
     auto lenp = builder.createIntegerConstant(
-        getLoc(),
-        Fortran::lower::CharacterExprHelper{builder, getLoc()}.getLengthType(),
-        len);
+        getLoc(), builder.getCharacterLengthType(), len);
     // When in an initializer context, construct the literal op itself and do
     // not construct another constant object in rodata.
     if (inInitializer)
@@ -1025,6 +1046,7 @@ public:
     auto genFullDim = [&](const auto &arr, mlir::Value delta) -> mlir::Value {
       mlir::Value total = zero;
       assert(arr.getExtents().size() == aref.subscript().size());
+      delta = builder.createConvert(loc, idxTy, delta);
       unsigned dim = 0;
       for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
         auto subVal = genComponent(sub);
@@ -1138,15 +1160,12 @@ public:
       if (generateArrayCoordinate)
         return genArrayCoorOp(gen(symbol), aref);
       auto si = symMap.lookupSymbol(symbol);
-      if (Fortran::semantics::IsAllocatableOrPointer(symbol))
-        si = gen(symbol).match(
-            [&](const fir::ArrayBoxValue &x) -> Fortran::lower::SymbolBox {
-              return x;
-            },
-            [&](const auto &) -> Fortran::lower::SymbolBox {
-              TODO("character and derived intrinsic allocatables");
-              return {};
-            });
+      si = si.match(
+          [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &x)
+              -> Fortran::lower::SymbolBox {
+            return genAllocatableOrPointerUnbox(x);
+          },
+          [](const auto &x) -> Fortran::lower::SymbolBox { return x; });
       if (!si.hasConstantShape())
         return gen(si, aref);
       auto box = gen(symbol);
@@ -1348,6 +1367,11 @@ public:
               "Lowering internal error: passing non trivial value by value");
         else
           caller.placeInput(arg, *argVal);
+        continue;
+      }
+
+      if (arg.passBy == PassBy::MutableBox) {
+        caller.placeInput(arg, genMutableBoxValue(*expr).getAddr());
         continue;
       }
 
@@ -2617,4 +2641,17 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
   LLVM_DEBUG(llvm::dbgs() << "string-lit: \"" << str << "\"\n");
   return ScalarExprLowering{loc, converter, dummySymbolMap, dummyStmtCtx}
       .genStringLit(str, len);
+}
+
+fir::MutableBoxValue Fortran::lower::createSomeMutableBox(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
+    Fortran::lower::SymMap &symMap) {
+  // MutableBox lowering StatementContext does not need to be propagated
+  // to the caller because the result value is a variable, not a temporary
+  // expression. The StatementContext clean-up can occur before using the
+  // resulting MutableBoxValue.
+  Fortran::lower::StatementContext dummyStmtCtx;
+  return ScalarExprLowering{loc, converter, symMap, dummyStmtCtx}
+      .genMutableBoxValue(expr);
 }

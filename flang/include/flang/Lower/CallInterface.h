@@ -99,7 +99,10 @@ public:
   enum class PassEntityBy {
     BaseAddress,
     BoxChar,
+    // passing a read-only descriptor
     Box,
+    // passing a writable descriptor
+    MutableBox,
     AddressAndLength,
     /// Value means passed by value at the mlir level, it is not necessarily
     /// implied by Fortran Value attribute.
@@ -114,6 +117,7 @@ public:
     CharAddress,
     CharLength,
     Box,
+    MutableBox,
     Value
   };
 

@@ -27,23 +27,6 @@
 
 /// Runtime call generators
 using namespace Fortran::runtime;
-static void genAllocatableInitIntrinsic(Fortran::lower::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        mlir::Value boxAddress,
-                                        mlir::Value typeCategory,
-                                        mlir::Value kind, mlir::Value rank,
-                                        mlir::Value corank) {
-  auto callee =
-      Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableInitIntrinsic)>(
-          loc, builder);
-  llvm::SmallVector<mlir::Value, 5> args = {boxAddress, typeCategory, kind,
-                                            rank, corank};
-  llvm::SmallVector<mlir::Value, 5> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
-  builder.create<fir::CallOp>(loc, callee, operands);
-}
-
 static void genAllocatableSetBounds(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value boxAddress,
                                     mlir::Value dimIndex, mlir::Value lowerBoud,
@@ -56,6 +39,33 @@ static void genAllocatableSetBounds(Fortran::lower::FirOpBuilder &builder,
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
+}
+
+static void genAllocatableInitCharRtCall(Fortran::lower::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         fir::MutableBoxValue boxAddress,
+                                         mlir::Value len) {
+  auto callee =
+      Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableInitCharacter)>(
+          loc, builder);
+  auto inputTypes = callee.getType().getInputs();
+  if (inputTypes.size() != 5) {
+    mlir::emitError(
+        loc, "AllocatableInitCharacter runtime interface not as expected");
+    return;
+  }
+  llvm::SmallVector<mlir::Value, 5> args;
+  args.push_back(
+      builder.createConvert(loc, inputTypes[0], boxAddress.getAddr()));
+  args.push_back(builder.createConvert(loc, inputTypes[1], len));
+  auto kind = boxAddress.getEleTy().cast<fir::CharacterType>().getFKind();
+  args.push_back(builder.createIntegerConstant(loc, inputTypes[2], kind));
+  auto rank = boxAddress.rank();
+  args.push_back(builder.createIntegerConstant(loc, inputTypes[3], rank));
+  // TODO: coarrays
+  auto corank = 0;
+  args.push_back(builder.createIntegerConstant(loc, inputTypes[4], corank));
+  builder.create<fir::CallOp>(loc, callee, args);
 }
 
 static mlir::Value
@@ -93,7 +103,23 @@ static const Fortran::semantics::Symbol &
 unwrapSymbol(const Fortran::parser::AllocateObject &allocObj) {
   const auto &lastName = Fortran::parser::GetLastName(allocObj);
   assert(lastName.symbol);
-  return lastName.symbol->GetUltimate();
+  return *lastName.symbol;
+}
+
+// TODO: the front-end needs to store the AllocateObject as an expressions.
+// When derived type are supported, the allocatable can be describe by a non
+// trivial expression that would need to be computed e.g `A(foo(B+C),
+// 1)%alloc_component` For now, getting the last name symbol is OK since there
+// is only one name.
+static fir::MutableBoxValue
+genBoxAddress(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+              const Fortran::parser::AllocateObject &allocObj) {
+  // FIXME: once the front-end exposes Expr, use genExprMutableBox to keep track
+  // of the non deferred lengths parameters here. They are already in the
+  // descriptor, so the compiled code is correct without knowing them, but we
+  // lose runtime checks opportunities.
+  auto addr = converter.getSymbolAddress(unwrapSymbol(allocObj));
+  return fir::MutableBoxValue{addr, llvm::None};
 }
 
 namespace {
@@ -138,6 +164,7 @@ public:
 
   void lower() {
     visitAllocateOptions();
+    lowerAllocateLengthParameters();
     errorManagement.lower(converter, loc, statExpr, errMsgExpr);
     // Create a landing block after all allocations so that
     // we can jump there in case of error.
@@ -156,12 +183,14 @@ public:
 private:
   struct Allocation {
     const Fortran::parser::Allocation &alloc;
-    const Fortran::semantics::Symbol &symbol;
     const Fortran::semantics::DeclTypeSpec &type;
     bool hasCoarraySpec() const {
       return std::get<std::optional<Fortran::parser::AllocateCoarraySpec>>(
                  alloc.t)
           .has_value();
+    }
+    const auto &getAllocObj() const {
+      return std::get<Fortran::parser::AllocateObject>(alloc.t);
     }
     const auto &getShapeSpecs() const {
       return std::get<std::list<Fortran::parser::AllocateShapeSpec>>(alloc.t);
@@ -172,7 +201,7 @@ private:
     const auto &allocObj = std::get<Fortran::parser::AllocateObject>(alloc.t);
     const auto &symbol = unwrapSymbol(allocObj);
     assert(symbol.GetType());
-    return {alloc, symbol, *symbol.GetType()};
+    return Allocation{alloc, *symbol.GetType()};
   }
 
   void visitAllocateOptions() {
@@ -203,12 +232,8 @@ private:
   }
 
   void lowerAllocation(const Allocation &alloc) {
-    auto boxAddr = converter.getSymbolAddress(alloc.symbol);
-    if (!boxAddr)
-      TODO("Allocatable type not lowered yet");
+    auto boxAddr = genBoxAddress(converter, loc, alloc.getAllocObj());
     mlir::Value backupBox;
-    if (errorManagement.hasErrorRecovery())
-      backupBox = genDescriptorBackup(boxAddr);
 
     if (sourceExpr) {
       genSourceAllocation(alloc, boxAddr);
@@ -219,24 +244,17 @@ private:
     }
 
     if (errorManagement.hasErrorRecovery())
-      genDescriptorRollBack(boxAddr, backupBox);
+      handleError();
   }
 
-  mlir::Value genDescriptorBackup(mlir::Value boxAddr) {
-    // back-up descriptors in case something goes wrong. This is to fullfill
-    // Fortran 2018 9.7.4 point 6 requirements that the original descriptor is
-    // unaltered in case of error when stat is present. Instead of overthinking
-    // what individual fields we need to backup, which in case of polymorphism
-    // can be quite a lot, just save the whole descriptor before modifying it.
-    TODO("descriptor backup in allocate with stat");
+  void handleError() {
+    // Ensure allocation status was not modified and create jump to end
+    // on allocate statement in case an error was met.
+    TODO("Error hanlding in allocate statement");
   }
 
-  void genDescriptorRollBack(mlir::Value boxAddr, mlir::Value backupBox) {
-    // copy back backed-up descriptors in case something went wrong.
-    TODO("descriptor rollback in allocate with stat");
-  }
-
-  void genSimpleAllocation(const Allocation &alloc, mlir::Value boxAddr) {
+  void genSimpleAllocation(const Allocation &alloc,
+                           fir::MutableBoxValue boxAddr) {
     if (alloc.hasCoarraySpec())
       TODO("coarray allocation");
     if (alloc.type.IsPolymorphic())
@@ -246,6 +264,7 @@ private:
     auto idxTy = builder.getIndexType();
     auto i32Ty = builder.getIntegerType(32);
     Fortran::lower::StatementContext stmtCtx;
+    auto addr = boxAddr.getAddr();
     for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
       mlir::Value lb;
       const auto &bounds = iter.value().t;
@@ -258,10 +277,10 @@ private:
           Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx, loc));
       auto dimIndex = builder.createIntegerConstant(loc, i32Ty, iter.index());
       // Runtime call
-      genAllocatableSetBounds(builder, loc, boxAddr, dimIndex, lb, ub);
+      genAllocatableSetBounds(builder, loc, addr, dimIndex, lb, ub);
     }
     // Runtime call
-    auto stat = genAllocatableAllocate(builder, loc, boxAddr, getHasStat(),
+    auto stat = genAllocatableAllocate(builder, loc, addr, getHasStat(),
                                        getErrMsgBoxAddr(), getSourceFile(),
                                        getSourceLine());
     if (auto statAddr = getStatAddr()) {
@@ -271,19 +290,52 @@ private:
     }
   }
 
-  void genSetDeferredLengthParameters(const Allocation &alloc,
-                                      mlir::Value boxAddr) {
-    // TODO: go through type parameters and set the ones that are deferred
-    // according to the allocation typespec.
+  /// Lower the length parameters that may be specified in the optional
+  /// type specification.
+  void lowerAllocateLengthParameters() {
+    const auto *typeSpec = getAllocateStmtTypeSpec();
+    if (!typeSpec)
+      return;
+    if (typeSpec->AsDerived()) {
+      mlir::emitError(loc, "TODO: setting derived type params in allocation");
+      return;
+    }
+    if (typeSpec->category() ==
+        Fortran::semantics::DeclTypeSpec::Category::Character) {
+      auto lenParam = typeSpec->characterTypeSpec().length();
+      if (auto intExpr = lenParam.GetExplicit()) {
+        Fortran::lower::StatementContext stmtCtx;
+        Fortran::semantics::SomeExpr lenExpr{*intExpr};
+        lenParams.push_back(
+            fir::getBase(converter.genExprValue(lenExpr, stmtCtx, &loc)));
+      }
+    }
   }
 
-  void genSourceAllocation(const Allocation &alloc, mlir::Value boxAddr) {
+  // Set length parameters in the box stored in boxAddr.
+  // This must be called before setting the bounds because it may use
+  // Init runtime calls that may set the bounds to zero.
+  void genSetDeferredLengthParameters(const Allocation &alloc,
+                                      fir::MutableBoxValue boxAddr) {
+    if (lenParams.empty())
+      return;
+    // TODO: in case a length parameter was not deferred, insert a runtime check
+    // that the length is the same (AllocatableCheckLengthParameter runtime
+    // call).
+    if (boxAddr.isCharacter())
+      genAllocatableInitCharRtCall(builder, loc, boxAddr, lenParams[0]);
+    // TODO: derived type
+  }
+
+  void genSourceAllocation(const Allocation &alloc,
+                           fir::MutableBoxValue boxAddr) {
     TODO("SOURCE allocation lowering");
   }
-  void genMoldAllocation(const Allocation &alloc, mlir::Value boxAddr) {
+  void genMoldAllocation(const Allocation &alloc,
+                         fir::MutableBoxValue boxAddr) {
     TODO("MOLD allocation lowering");
   }
-  void genSetType(const Allocation &alloc, mlir::Value boxAddr) {
+  void genSetType(const Allocation &alloc, fir::MutableBoxValue boxAddr) {
     TODO("Polymorphic entity allocation lowering");
   }
 
@@ -305,6 +357,13 @@ private:
   }
   mlir::Value getStatAddr() const { return errorManagement.statAddr; }
 
+  const Fortran::semantics::DeclTypeSpec *getAllocateStmtTypeSpec() const {
+    if (const auto &typeSpec =
+            std::get<std::optional<Fortran::parser::TypeSpec>>(stmt.t))
+      return typeSpec->declTypeSpec;
+    return nullptr;
+  }
+
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::FirOpBuilder &builder;
   const Fortran::parser::AllocateStmt &stmt;
@@ -312,6 +371,9 @@ private:
   const Fortran::lower::SomeExpr *moldExpr{nullptr};
   const Fortran::lower::SomeExpr *statExpr{nullptr};
   const Fortran::lower::SomeExpr *errMsgExpr{nullptr};
+  // If the allocate has a type spec, lenParams contains the
+  // value of the length parameters that were specified inside.
+  llvm::SmallVector<mlir::Value, 2> lenParams;
   ErrorManagementValues errorManagement;
 
   mlir::Location loc;
@@ -348,8 +410,7 @@ void Fortran::lower::genDeallocateStmt(
   errorManagement.lower(converter, loc, statExpr, errMsgExpr);
   for (const auto &allocateObject :
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
-    const auto &symbol = unwrapSymbol(allocateObject);
-    auto boxAddr = converter.getSymbolAddress(symbol);
+    auto boxAddr = genBoxAddress(converter, loc, allocateObject).getAddr();
     if (!boxAddr)
       TODO("Allocatable type not lowered yet");
     // TODO use return stat for error recovery
@@ -360,32 +421,41 @@ void Fortran::lower::genDeallocateStmt(
   }
 }
 
-void Fortran::lower::genAllocatableInit(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::lower::pft::Variable &var, mlir::Value boxAddress) {
-  auto loc = converter.genLocation(var.getSymbol().name());
-  auto &builder = converter.getFirOpBuilder();
-  auto declType = var.getSymbol().GetType();
-  if (!declType)
-    TODO("Is this possible ?");
-  if (auto intrinsic = declType->AsIntrinsic()) {
-    if (intrinsic->category() == Fortran::common::TypeCategory::Character) {
-      TODO("character alloctable init");
-    } else {
-      auto i32ty = builder.getIntegerType(32);
-      int catCode = static_cast<int>(intrinsic->category());
-      auto cat = builder.createIntegerConstant(loc, i32ty, catCode);
-      auto kindExpr = Fortran::evaluate::AsGenericExpr(
-          Fortran::common::Clone(intrinsic->kind()));
-      Fortran::lower::StatementContext stmtCtx;
-      auto kind = fir::getBase(converter.genExprValue(kindExpr, stmtCtx));
-      auto rank =
-          builder.createIntegerConstant(loc, i32ty, var.getSymbol().Rank());
-      auto corank = builder.createIntegerConstant(loc, i32ty, 0);
-      genAllocatableInitIntrinsic(builder, loc, boxAddress, cat, kind, rank,
-                                  corank);
-    }
-  } else {
-    TODO("derived type allocatable init");
+mlir::Value
+Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type boxType,
+                                     mlir::ValueRange nonDeferredParams) {
+  auto heapType = boxType.dyn_cast<fir::BoxType>().getEleTy();
+  auto type = fir::dyn_cast_ptrEleTy(heapType);
+  auto eleTy = type;
+  if (auto seqType = eleTy.dyn_cast<fir::SequenceType>())
+    eleTy = seqType.getEleTy();
+  if (eleTy.isa<fir::RecordType>())
+    mlir::emitError(loc, "TODO: Derived type allocatable initialization");
+  auto nullAddr = builder.createNullConstant(loc, heapType);
+  mlir::Value shape;
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+    auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    llvm::SmallVector<mlir::Value, 2> extents(seqTy.getDimension(), zero);
+    llvm::ArrayRef<mlir::Value> lbounds = llvm::None;
+    shape = builder.createShape(loc,
+                                fir::ArrayBoxValue{nullAddr, extents, lbounds});
   }
+  // Provide dummy length parameters if they are dynamic. If a length parameter
+  // is deferred. it is set to zero here and will be set on allocation.
+  llvm::SmallVector<mlir::Value, 2> lenParams;
+  if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+    if (charTy.getLen() == fir::CharacterType::unknownLen()) {
+      if (!nonDeferredParams.empty()) {
+        lenParams.push_back(nonDeferredParams[0]);
+      } else {
+        auto zero =
+            builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+        lenParams.push_back(zero);
+      }
+    }
+  }
+  mlir::Value emptySlice;
+  return builder.create<fir::EmboxOp>(loc, boxType, nullAddr, shape, emptySlice,
+                                      lenParams);
 }

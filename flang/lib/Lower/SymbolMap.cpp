@@ -106,6 +106,17 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
+                                   const fir::MutableBoxValue &box) {
+  os << "boxaddress: { box: " << box.getAddr();
+  if (!box.lenParams.empty()) {
+    os << ", type params: [";
+    llvm::interleaveComma(box.lenParams, os);
+    os << "]";
+  }
+  return os << "}";
+}
+
+llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::ExtendedValue &exv) {
   exv.match([&](const auto &value) { os << value; });
   return os;
@@ -167,4 +178,29 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
     os << " }>\n";
   }
   return os;
+}
+
+/// Debug verifier for MutableBox ctor. There is no guarantee that this will
+/// always be called, so it should not have any functional side effects,
+/// the const is here to enforce that.
+bool fir::MutableBoxValue::verify() const {
+  auto type = fir::dyn_cast_ptrEleTy(getAddr().getType());
+  if (!type)
+    return false;
+  auto box = type.dyn_cast<fir::BoxType>();
+  if (!box)
+    return false;
+  auto eleTy = box.getEleTy();
+  if (!eleTy.isa<fir::PointerType>() && !eleTy.isa<fir::HeapType>())
+    return false;
+
+  auto nParams = lenParams.size();
+  if (isCharacter()) {
+    if (nParams > 1)
+      return false;
+  } else if (!isDerived()) {
+    if (nParams != 0)
+      return false;
+  }
+  return true;
 }

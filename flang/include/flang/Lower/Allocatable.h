@@ -12,6 +12,8 @@
 
 namespace mlir {
 class Value;
+class ValueRange;
+class Type;
 class Location;
 } // namespace mlir
 
@@ -22,18 +24,18 @@ struct DeallocateStmt;
 
 namespace Fortran::lower {
 class AbstractConverter;
-namespace pft {
-struct Variable;
-}
+class FirOpBuilder;
 
-/// Generate fir to initialize the box (descriptor) of an allocatable variable.
-/// Initialization of such box has to be done at the beginning of the variable
-/// lifetime.
-/// The memory address of the box to be initialized must be provided as an
-/// input.
-void genAllocatableInit(Fortran::lower::AbstractConverter &,
-                        const Fortran::lower::pft::Variable &,
-                        mlir::Value boxAddress);
+/// Create a fir.box of type \p boxType that can be used to initialize an
+/// allocatable variable. Initialization of such variable has to be done at the
+/// beginning of the variable lifetime by storing the created box in the memory
+/// for the variable box.
+/// \p nonDeferredParams must provide the non deferred length parameters so that
+/// they can already be placed in the unallocated box (inquiries about these
+/// parameters are legal even in unallocated state).
+mlir::Value createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
+                                 mlir::Location loc, mlir::Type boxType,
+                                 mlir::ValueRange nonDeferredParams);
 
 /// Lower an allocate statement to fir.
 void genAllocateStmt(Fortran::lower::AbstractConverter &,

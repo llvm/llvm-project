@@ -61,6 +61,13 @@ createSomeExtendedAddress(mlir::Location loc, AbstractConverter &converter,
                           const evaluate::Expr<evaluate::SomeType> &expr,
                           SymMap &symMap, StatementContext &stmtCtx);
 
+/// Create the address of the box.
+/// \p expr must be the designator of an allocatable/pointer entity.
+fir::MutableBoxValue
+createSomeMutableBox(mlir::Location loc, AbstractConverter &converter,
+                     const evaluate::Expr<evaluate::SomeType> &expr,
+                     SymMap &symMap);
+
 /// Create a string literal. Lowers `str` to the MLIR representation of a
 /// literal CHARACTER value. (KIND is assumed to be 1.)
 fir::ExtendedValue createStringLiteral(mlir::Location loc,
