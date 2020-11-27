@@ -17,10 +17,54 @@
 
 #include <numeric>
 #include <functional>
+#include <string>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+struct rvalue_addable
+{
+    bool correctOperatorUsed = false;
+
+    // make sure the predicate is passed an rvalue and an lvalue (so check that the first argument was moved)
+    rvalue_addable operator()(rvalue_addable&& r, rvalue_addable const&) {
+        r.correctOperatorUsed = true;
+        return std::move(r);
+    }
+};
+
+rvalue_addable operator+(rvalue_addable& lhs, rvalue_addable const&)
+{
+    lhs.correctOperatorUsed = false;
+        return lhs;
+}
+
+rvalue_addable operator+(rvalue_addable&& lhs, rvalue_addable const&)
+{
+    lhs.correctOperatorUsed = true;
+    return std::move(lhs);
+}
+
+void
+test_use_move()
+{
+    rvalue_addable arr[100];
+    auto res1 = std::accumulate(arr, arr + 100, rvalue_addable());
+    auto res2 = std::accumulate(arr, arr + 100, rvalue_addable(), /*predicate=*/rvalue_addable());
+    assert(res1.correctOperatorUsed);
+    assert(res2.correctOperatorUsed);
+}
+#endif // TEST_STD_VER > 17
+
+void
+test_string()
+{
+    std::string sa[] = {"a", "b", "c"};
+    assert(std::accumulate(sa, sa + 3, std::string()) == "abc");
+    assert(std::accumulate(sa, sa + 3, std::string(), std::plus<std::string>()) == "abc");
+}
 
 template <class Iter, class T>
 void
@@ -53,5 +97,10 @@ int main(int, char**)
     test<random_access_iterator<const int*> >();
     test<const int*>();
 
-  return 0;
+#if TEST_STD_VER > 17
+    test_use_move();
+#endif // TEST_STD_VER > 17
+    test_string();
+
+    return 0;
 }

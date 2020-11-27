@@ -163,7 +163,11 @@ _Tp
 accumulate(_InputIterator __first, _InputIterator __last, _Tp __init)
 {
     for (; __first != __last; ++__first)
+#if _LIBCPP_STD_VER > 17
+        __init = _VSTD::move(__init) + *__first;
+#else
         __init = __init + *__first;
+#endif
     return __init;
 }
 
@@ -173,7 +177,11 @@ _Tp
 accumulate(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOperation __binary_op)
 {
     for (; __first != __last; ++__first)
+#if _LIBCPP_STD_VER > 17
+        __init = __binary_op(_VSTD::move(__init), *__first);
+#else
         __init = __binary_op(__init, *__first);
+#endif
     return __init;
 }
 
@@ -212,7 +220,11 @@ _Tp
 inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _Tp __init)
 {
     for (; __first1 != __last1; ++__first1, (void) ++__first2)
+#if _LIBCPP_STD_VER > 17
+        __init = _VSTD::move(__init) + *__first1 * *__first2;
+#else
         __init = __init + *__first1 * *__first2;
+#endif
     return __init;
 }
 
@@ -223,7 +235,11 @@ inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2
               _Tp __init, _BinaryOperation1 __binary_op1, _BinaryOperation2 __binary_op2)
 {
     for (; __first1 != __last1; ++__first1, (void) ++__first2)
+#if _LIBCPP_STD_VER > 17
+        __init = __binary_op1(_VSTD::move(__init), __binary_op2(*__first1, *__first2));
+#else
         __init = __binary_op1(__init, __binary_op2(*__first1, *__first2));
+#endif
     return __init;
 }
 
@@ -273,7 +289,11 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
         *__result = __t;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
+#if _LIBCPP_STD_VER > 17
+            __t = _VSTD::move(__t) + *__first;
+#else
             __t = __t + *__first;
+#endif
             *__result = __t;
         }
     }
@@ -292,7 +312,11 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
         *__result = __t;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
+#if _LIBCPP_STD_VER > 17
+            __t = __binary_op(_VSTD::move(__t), *__first);
+#else
             __t = __binary_op(__t, *__first);
+#endif
             *__result = __t;
         }
     }
@@ -417,13 +441,17 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
 {
     if (__first != __last)
     {
-        typename iterator_traits<_InputIterator>::value_type __t1(*__first);
-        *__result = __t1;
+        typename iterator_traits<_InputIterator>::value_type __acc(*__first);
+        *__result = __acc;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
-            typename iterator_traits<_InputIterator>::value_type __t2(*__first);
-            *__result = __t2 - __t1;
-            __t1 = _VSTD::move(__t2);
+            typename iterator_traits<_InputIterator>::value_type __val(*__first);
+#if _LIBCPP_STD_VER > 17
+            *__result = __val - _VSTD::move(__acc);
+#else
+            *__result = __val - __acc;
+#endif
+            __acc = _VSTD::move(__val);
         }
     }
     return __result;
@@ -437,13 +465,17 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
 {
     if (__first != __last)
     {
-        typename iterator_traits<_InputIterator>::value_type __t1(*__first);
-        *__result = __t1;
+        typename iterator_traits<_InputIterator>::value_type __acc(*__first);
+        *__result = __acc;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
-            typename iterator_traits<_InputIterator>::value_type __t2(*__first);
-            *__result = __binary_op(__t2, __t1);
-            __t1 = _VSTD::move(__t2);
+            typename iterator_traits<_InputIterator>::value_type __val(*__first);
+#if _LIBCPP_STD_VER > 17
+            *__result = __binary_op(__val, _VSTD::move(__acc));
+#else
+            *__result = __binary_op(__val, __acc);
+#endif
+            __acc = _VSTD::move(__val);
         }
     }
     return __result;
