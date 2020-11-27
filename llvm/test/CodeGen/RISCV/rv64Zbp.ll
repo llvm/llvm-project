@@ -2265,6 +2265,118 @@ define i64 @bitreverse_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
+define i32 @bswap_rotr_i32(i32 %a) {
+; RV64I-LABEL: bswap_rotr_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 24
+; RV64I-NEXT:    lui a2, 4080
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a2, a0, 8
+; RV64I-NEXT:    addi a3, zero, 255
+; RV64I-NEXT:    slli a4, a3, 24
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    srli a2, a0, 40
+; RV64I-NEXT:    lui a4, 16
+; RV64I-NEXT:    addiw a4, a4, -256
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    srli a4, a0, 56
+; RV64I-NEXT:    or a2, a2, a4
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    slli a4, a3, 32
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    slli a4, a0, 24
+; RV64I-NEXT:    slli a5, a3, 40
+; RV64I-NEXT:    and a4, a4, a5
+; RV64I-NEXT:    or a2, a4, a2
+; RV64I-NEXT:    slli a4, a0, 40
+; RV64I-NEXT:    slli a3, a3, 48
+; RV64I-NEXT:    and a3, a4, a3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 16
+; RV64I-NEXT:    addi a2, zero, 1
+; RV64I-NEXT:    slli a2, a2, 32
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    slli a2, a2, 16
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bswap_rotr_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    greviw a0, a0, 8
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bswap_rotr_i32:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    greviw a0, a0, 8
+; RV64IBP-NEXT:    ret
+  %1 = call i32 @llvm.bswap.i32(i32 %a)
+  %2 = call i32 @llvm.fshr.i32(i32 %1, i32 %1, i32 16)
+  ret i32 %2
+}
+
+define i32 @bswap_rotl_i32(i32 %a) {
+; RV64I-LABEL: bswap_rotl_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 24
+; RV64I-NEXT:    lui a2, 4080
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a2, a0, 8
+; RV64I-NEXT:    addi a3, zero, 255
+; RV64I-NEXT:    slli a4, a3, 24
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    srli a2, a0, 40
+; RV64I-NEXT:    lui a4, 16
+; RV64I-NEXT:    addiw a4, a4, -256
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    srli a4, a0, 56
+; RV64I-NEXT:    or a2, a2, a4
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    slli a4, a3, 32
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    slli a4, a0, 24
+; RV64I-NEXT:    slli a5, a3, 40
+; RV64I-NEXT:    and a4, a4, a5
+; RV64I-NEXT:    or a2, a4, a2
+; RV64I-NEXT:    slli a4, a0, 40
+; RV64I-NEXT:    slli a3, a3, 48
+; RV64I-NEXT:    and a3, a4, a3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 16
+; RV64I-NEXT:    addi a2, zero, 1
+; RV64I-NEXT:    slli a2, a2, 32
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    slli a2, a2, 16
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bswap_rotl_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    greviw a0, a0, 8
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bswap_rotl_i32:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    greviw a0, a0, 8
+; RV64IBP-NEXT:    ret
+  %1 = call i32 @llvm.bswap.i32(i32 %a)
+  %2 = call i32 @llvm.fshl.i32(i32 %1, i32 %1, i32 16)
+  ret i32 %2
+}
+
 ; There's no [un]shfliw instruction as slliu.w occupies the encoding slot that
 ; would be occupied by shfliw.
 
