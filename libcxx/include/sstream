@@ -210,13 +210,13 @@ public:
     // 27.8.1.1 Constructors:
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_stringbuf(ios_base::openmode __wch = ios_base::in | ios_base::out)
-        : __hm_(0), __mode_(__wch)
+        : __hm_(nullptr), __mode_(__wch)
     { }
 
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_stringbuf(const string_type& __s,
                              ios_base::openmode __wch = ios_base::in | ios_base::out)
-        : __str_(__s.get_allocator()), __hm_(0), __mode_(__wch)
+        : __str_(__s.get_allocator()), __hm_(nullptr), __mode_(__wch)
     {
         str(__s);
     }
@@ -440,7 +440,7 @@ void
 basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
 {
     __str_ = __s;
-    __hm_ = 0;
+    __hm_ = nullptr;
     if (__mode_ & ios_base::in)
     {
         __hm_ = const_cast<char_type*>(__str_.data()) + __str_.size();
@@ -587,9 +587,9 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
         return pos_type(-1);
     if (__noff != 0)
     {
-        if ((__wch & ios_base::in) && this->gptr() == 0)
+        if ((__wch & ios_base::in) && this->gptr() == nullptr)
             return pos_type(-1);
-        if ((__wch & ios_base::out) && this->pptr() == 0)
+        if ((__wch & ios_base::out) && this->pptr() == nullptr)
             return pos_type(-1);
     }
     if (__wch & ios_base::in)

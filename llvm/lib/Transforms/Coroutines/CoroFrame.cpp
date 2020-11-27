@@ -576,9 +576,10 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
         StackLifetimeAnalyzer.getLiveRange(AI2));
   };
   auto GetAllocaSize = [&](const AllocaInfo &A) {
-    Optional<uint64_t> RetSize = A.Alloca->getAllocationSizeInBits(DL);
-    assert(RetSize && "We can't handle scalable type now.\n");
-    return RetSize.getValue();
+    Optional<TypeSize> RetSize = A.Alloca->getAllocationSizeInBits(DL);
+    assert(RetSize && "Variable Length Arrays (VLA) are not supported.\n");
+    assert(!RetSize->isScalable() && "Scalable vectors are not yet supported");
+    return RetSize->getFixedSize();
   };
   // Put larger allocas in the front. So the larger allocas have higher
   // priority to merge, which can save more space potentially. Also each
