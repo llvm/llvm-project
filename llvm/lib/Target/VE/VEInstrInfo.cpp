@@ -92,38 +92,46 @@ static VECC::CondCode GetOppositeBranchCondition(VECC::CondCode CC) {
   llvm_unreachable("Invalid cond code");
 }
 
-// Treat br.l [BRCF AT] as unconditional branch
+// Treat a branch relative long always instruction as unconditional branch.
+// For example, br.l.t and br.l.
 static bool isUncondBranchOpcode(int Opc) {
-  return Opc == VE::BRCFLa    || Opc == VE::BRCFWa    ||
-         Opc == VE::BRCFLa_nt || Opc == VE::BRCFWa_nt ||
-         Opc == VE::BRCFLa_t  || Opc == VE::BRCFWa_t  ||
-         Opc == VE::BRCFDa    || Opc == VE::BRCFSa    ||
-         Opc == VE::BRCFDa_nt || Opc == VE::BRCFSa_nt ||
-         Opc == VE::BRCFDa_t  || Opc == VE::BRCFSa_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME) (Opc == NAME##a || Opc == NAME##a_nt || Opc == NAME##a_t)
+  // VE has other branch relative always instructions for word/double/float,
+  // but we use only long branches in our lower.  So, sanity check it here.
+  assert(!BRKIND(BRCFW) && !BRKIND(BRCFD) && !BRKIND(BRCFS) &&
+         "Branch relative word/double/float always instructions should not be "
+         "used!");
+  return BRKIND(BRCFL);
+#undef BRKIND
 }
 
+// Treat branch relative conditional as conditional branch instructions.
+// For example, brgt.l.t and brle.s.nt.
 static bool isCondBranchOpcode(int Opc) {
-  return Opc == VE::BRCFLrr    || Opc == VE::BRCFLir    ||
-         Opc == VE::BRCFLrr_nt || Opc == VE::BRCFLir_nt ||
-         Opc == VE::BRCFLrr_t  || Opc == VE::BRCFLir_t  ||
-         Opc == VE::BRCFWrr    || Opc == VE::BRCFWir    ||
-         Opc == VE::BRCFWrr_nt || Opc == VE::BRCFWir_nt ||
-         Opc == VE::BRCFWrr_t  || Opc == VE::BRCFWir_t  ||
-         Opc == VE::BRCFDrr    || Opc == VE::BRCFDir    ||
-         Opc == VE::BRCFDrr_nt || Opc == VE::BRCFDir_nt ||
-         Opc == VE::BRCFDrr_t  || Opc == VE::BRCFDir_t  ||
-         Opc == VE::BRCFSrr    || Opc == VE::BRCFSir    ||
-         Opc == VE::BRCFSrr_nt || Opc == VE::BRCFSir_nt ||
-         Opc == VE::BRCFSrr_t  || Opc == VE::BRCFSir_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME)                                                           \
+  (Opc == NAME##rr || Opc == NAME##rr_nt || Opc == NAME##rr_t ||               \
+   Opc == NAME##ir || Opc == NAME##ir_nt || Opc == NAME##ir_t)
+  return BRKIND(BRCFL) || BRKIND(BRCFW) || BRKIND(BRCFD) || BRKIND(BRCFS);
+#undef BRKIND
 }
 
+// Treat branch long always instructions as indirect branch.
+// For example, b.l.t and b.l.
 static bool isIndirectBranchOpcode(int Opc) {
-  return Opc == VE::BCFLari    || Opc == VE::BCFLari    ||
-         Opc == VE::BCFLari_nt || Opc == VE::BCFLari_nt ||
-         Opc == VE::BCFLari_t  || Opc == VE::BCFLari_t  ||
-         Opc == VE::BCFLari    || Opc == VE::BCFLari    ||
-         Opc == VE::BCFLari_nt || Opc == VE::BCFLari_nt ||
-         Opc == VE::BCFLari_t  || Opc == VE::BCFLari_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME)                                                           \
+  (Opc == NAME##ari || Opc == NAME##ari_nt || Opc == NAME##ari_t)
+  // VE has other branch always instructions for word/double/float, but
+  // we use only long branches in our lower.  So, sanity check it here.
+  assert(!BRKIND(BCFW) && !BRKIND(BCFD) && !BRKIND(BCFS) &&
+         "Branch word/double/float always instructions should not be used!");
+  return BRKIND(BCFL);
+#undef BRKIND
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
