@@ -117,3 +117,13 @@ entry:
   %2 = load i32, i32* %1
   ret i32 %2
 }
+
+; CHECK-LABEL: Function: one_size_unknown:
+; CHECK: NoModRef:  Ptr: i8* %p.minus1	<->  call void @llvm.memset.p0i8.i32(i8* %p, i8 0, i32 %size, i1 false)
+define void @one_size_unknown(i8* %p, i32 %size) {
+  %p.minus1 = getelementptr inbounds i8, i8* %p, i32 -1
+  call void @llvm.memset.p0i8.i32(i8* %p, i8 0, i32 %size, i1 false)
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
