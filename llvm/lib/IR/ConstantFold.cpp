@@ -630,7 +630,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
           V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored)) {
         // Undefined behavior invoked - the destination type can't represent
         // the input constant.
-        return UndefValue::get(DestTy);
+        return PoisonValue::get(DestTy);
       }
       return ConstantInt::get(FPC->getContext(), IntVal);
     }
@@ -916,7 +916,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
   unsigned NumElts = ValTy->getNumElements();
   if (CIdx->uge(NumElts))
-    return UndefValue::get(Val->getType());
+    return PoisonValue::get(Val->getType());
 
   SmallVector<Constant*, 16> Result;
   Result.reserve(NumElts);
@@ -1144,23 +1144,21 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     }
     case Instruction::SDiv:
     case Instruction::UDiv:
-      // X / undef -> undef
-      if (isa<UndefValue>(C2))
-        return C2;
-      // undef / 0 -> undef
+      // X / undef -> poison
+      // X / 0 -> poison
+      if (match(C2, m_CombineOr(m_Undef(), m_Zero())))
+        return PoisonValue::get(C2->getType());
       // undef / 1 -> undef
-      if (match(C2, m_Zero()) || match(C2, m_One()))
+      if (match(C2, m_One()))
         return C1;
       // undef / X -> 0       otherwise
       return Constant::getNullValue(C1->getType());
     case Instruction::URem:
     case Instruction::SRem:
-      // X % undef -> undef
-      if (match(C2, m_Undef()))
-        return C2;
-      // undef % 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
+      // X % undef -> poison
+      // X % 0 -> poison
+      if (match(C2, m_CombineOr(m_Undef(), m_Zero())))
+        return PoisonValue::get(C2->getType());
       // undef % X -> 0       otherwise
       return Constant::getNullValue(C1->getType());
     case Instruction::Or:                          // X | undef -> -1
@@ -1168,28 +1166,28 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return C1;
       return Constant::getAllOnesValue(C1->getType()); // undef | X -> ~0
     case Instruction::LShr:
-      // X >>l undef -> undef
+      // X >>l undef -> poison
       if (isa<UndefValue>(C2))
-        return C2;
+        return PoisonValue::get(C2->getType());
       // undef >>l 0 -> undef
       if (match(C2, m_Zero()))
         return C1;
       // undef >>l X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::AShr:
-      // X >>a undef -> undef
+      // X >>a undef -> poison
       if (isa<UndefValue>(C2))
-        return C2;
+        return PoisonValue::get(C2->getType());
       // undef >>a 0 -> undef
       if (match(C2, m_Zero()))
         return C1;
-      // TODO: undef >>a X -> undef if the shift is exact
+      // TODO: undef >>a X -> poison if the shift is exact
       // undef >>a X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::Shl:
       // X << undef -> undef
       if (isa<UndefValue>(C2))
-        return C2;
+        return PoisonValue::get(C2->getType());
       // undef << 0 -> undef
       if (match(C2, m_Zero()))
         return C1;
@@ -1242,14 +1240,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       if (CI2->isOne())
         return C1;                                            // X / 1 == X
       if (CI2->isZero())
-        return UndefValue::get(CI2->getType());               // X / 0 == undef
+        return PoisonValue::get(CI2->getType());              // X / 0 == poison
       break;
     case Instruction::URem:
     case Instruction::SRem:
       if (CI2->isOne())
         return Constant::getNullValue(CI2->getType());        // X % 1 == 0
       if (CI2->isZero())
-        return UndefValue::get(CI2->getType());               // X % 0 == undef
+        return PoisonValue::get(CI2->getType());              // X % 0 == poison
       break;
     case Instruction::And:
       if (CI2->isZero()) return C2;                           // X & 0 == 0
@@ -1363,7 +1361,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       case Instruction::SDiv:
         assert(!CI2->isZero() && "Div by zero handled above");
         if (C2V.isAllOnesValue() && C1V.isMinSignedValue())
-          return UndefValue::get(CI1->getType());   // MIN_INT / -1 -> undef
+          return PoisonValue::get(CI1->getType());   // MIN_INT / -1 -> poison
         return ConstantInt::get(CI1->getContext(), C1V.sdiv(C2V));
       case Instruction::URem:
         assert(!CI2->isZero() && "Div by zero handled above");
@@ -1371,7 +1369,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       case Instruction::SRem:
         assert(!CI2->isZero() && "Div by zero handled above");
         if (C2V.isAllOnesValue() && C1V.isMinSignedValue())
-          return UndefValue::get(CI1->getType());   // MIN_INT % -1 -> undef
+          return PoisonValue::get(CI1->getType());   // MIN_INT % -1 -> poison
         return ConstantInt::get(CI1->getContext(), C1V.srem(C2V));
       case Instruction::And:
         return ConstantInt::get(CI1->getContext(), C1V & C2V);
@@ -1382,15 +1380,15 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       case Instruction::Shl:
         if (C2V.ult(C1V.getBitWidth()))
           return ConstantInt::get(CI1->getContext(), C1V.shl(C2V));
-        return UndefValue::get(C1->getType()); // too big shift is undef
+        return PoisonValue::get(C1->getType()); // too big shift is poison
       case Instruction::LShr:
         if (C2V.ult(C1V.getBitWidth()))
           return ConstantInt::get(CI1->getContext(), C1V.lshr(C2V));
-        return UndefValue::get(C1->getType()); // too big shift is undef
+        return PoisonValue::get(C1->getType()); // too big shift is poison
       case Instruction::AShr:
         if (C2V.ult(C1V.getBitWidth()))
           return ConstantInt::get(CI1->getContext(), C1V.ashr(C2V));
-        return UndefValue::get(C1->getType()); // too big shift is undef
+        return PoisonValue::get(C1->getType()); // too big shift is poison
       }
     }
 
@@ -1436,7 +1434,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     // Fast path for splatted constants.
     if (Constant *C2Splat = C2->getSplatValue()) {
       if (Instruction::isIntDivRem(Opcode) && C2Splat->isNullValue())
-        return UndefValue::get(VTy);
+        return PoisonValue::get(VTy);
       if (Constant *C1Splat = C1->getSplatValue()) {
         return ConstantVector::getSplat(
             VTy->getElementCount(),
@@ -1453,9 +1451,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
         Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
 
-        // If any element of a divisor vector is zero, the whole op is undef.
+        // If any element of a divisor vector is zero, the whole op is poison.
         if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
-          return UndefValue::get(VTy);
+          return PoisonValue::get(VTy);
 
         Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));
       }
@@ -2338,7 +2336,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     return PoisonValue::get(GEPTy);
 
   if (isa<UndefValue>(C))
-    return UndefValue::get(GEPTy);
+    // If inbounds, we can choose an out-of-bounds pointer as a base pointer.
+    return InBounds ? PoisonValue::get(GEPTy) : UndefValue::get(GEPTy);
 
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idxs.size() == 1 && (Idx0->isNullValue() || isa<UndefValue>(Idx0)))
