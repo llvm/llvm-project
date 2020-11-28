@@ -33,9 +33,7 @@ define i8 @func_gv() {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -176
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -176(, %s11)
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -75,9 +73,7 @@ define i32 @func_alloca(i32 signext %0) {
 ; CHECK-NEXT:    st %s15, 24(, %s11)
 ; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s13, -192
-; CHECK-NEXT:    and %s13, %s13, (32)0
-; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; CHECK-NEXT:    lea %s11, -192(, %s11)
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -104,9 +100,7 @@ define i32 @func_alloca(i32 signext %0) {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -192
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -192(, %s11)
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
