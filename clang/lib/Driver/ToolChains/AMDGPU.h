@@ -49,7 +49,7 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY AMDGPUToolChain : public Generic_ELF {
 protected:
   const std::map<options::ID, const StringRef> OptionsDefault;
-
+  unsigned CodeObjectVersion = 4;
   Tool *buildLinker() const override;
   const StringRef getOptionDefault(options::ID OptID) const {
     auto opt = OptionsDefault.find(OptID);
@@ -92,6 +92,8 @@ public:
 
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
+
+  unsigned GetCodeObjectVersion() const { return CodeObjectVersion; }
 
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.

@@ -417,7 +417,8 @@ AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
   // and errors for the last invalid code object version options.
   // It is done here to avoid repeated warning or error messages for
   // each tool invocation.
-  (void)getOrCheckAMDGPUCodeObjectVersion(D, Args, /*Diagnose=*/true);
+  CodeObjectVersion =
+    getOrCheckAMDGPUCodeObjectVersion(D, Args, /*Diagnose=*/true);
 }
 
 Tool *AMDGPUToolChain::buildLinker() const {
