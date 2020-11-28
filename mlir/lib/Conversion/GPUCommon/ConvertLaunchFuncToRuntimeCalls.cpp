@@ -365,8 +365,7 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  auto adaptor = gpu::AllocOpAdaptor(
-      operands, allocOp.getOperation()->getAttrDictionary());
+  auto adaptor = gpu::AllocOpAdaptor(operands, allocOp->getAttrDictionary());
   auto stream = adaptor.asyncDependencies().front();
   Value allocatedPtr =
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult(0);
@@ -394,8 +393,8 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Location loc = deallocOp.getLoc();
 
-  auto adaptor = gpu::DeallocOpAdaptor(
-      operands, deallocOp.getOperation()->getAttrDictionary());
+  auto adaptor =
+      gpu::DeallocOpAdaptor(operands, deallocOp->getAttrDictionary());
   Value pointer =
       MemRefDescriptor(adaptor.memref()).allocatedPtr(rewriter, loc);
   auto casted = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pointer);
@@ -451,7 +450,7 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     } else {
       // If we can't find the defining op, we record the event at block start,
       // which is late and therefore misses parallelism, but still valid.
-      rewriter.setInsertionPointToStart(waitOp.getOperation()->getBlock());
+      rewriter.setInsertionPointToStart(waitOp->getBlock());
     }
     auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
     auto stream = std::get<1>(pair);
@@ -610,8 +609,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       loc, rewriter, {module.getResult(0), kernelName});
   auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                                 rewriter.getI32IntegerAttr(0));
-  auto adaptor = gpu::LaunchFuncOpAdaptor(
-      operands, launchOp.getOperation()->getAttrDictionary());
+  auto adaptor =
+      gpu::LaunchFuncOpAdaptor(operands, launchOp->getAttrDictionary());
   Value stream =
       adaptor.asyncDependencies().empty()
           ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0)

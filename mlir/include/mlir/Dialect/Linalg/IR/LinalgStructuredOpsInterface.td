@@ -848,11 +848,11 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
            "ValueRange":$operands),
       [{
         BlockAndValueMapping map;
-        unsigned numRegions = $_op.getOperation()->getNumRegions();
+        unsigned numRegions = $_op->getNumRegions();
         Operation *res = create(b, loc, resultTypes, operands, $_op.getAttrs());
         assert(res->getNumRegions() == numRegions && "inconsistent # regions");
         for (unsigned ridx = 0; ridx < numRegions; ++ridx)
-          $_op.getOperation()->getRegion(ridx).cloneInto(
+          $_op->getRegion(ridx).cloneInto(
             &res->getRegion(ridx), map);
         return res;
       }]

@@ -122,7 +122,7 @@ AsyncRefCountingOptimizationPass::optimizeReferenceCounting(Value value) {
       for (DropRefOp dropRef : info.dropRefs) {
         // `drop_ref` operation after the `add_ref` with matching count.
         if (dropRef.count() != addRef.count() ||
-            dropRef.getOperation()->isBeforeInBlock(addRef.getOperation()))
+            dropRef->isBeforeInBlock(addRef.getOperation()))
           continue;
 
         // `drop_ref` was already marked for removal.

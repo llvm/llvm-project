@@ -732,8 +732,8 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
                     [&](OpResult result) {
                       return yieldOp.getOperand(result.getResultNumber());
                     });
-    rewriter.updateRootInPlace(
-        yieldOp, [&]() { yieldOp.getOperation()->setOperands(usedOperands); });
+    rewriter.updateRootInPlace(yieldOp,
+                               [&]() { yieldOp->setOperands(usedOperands); });
   }
 
   LogicalResult matchAndRewrite(IfOp op,

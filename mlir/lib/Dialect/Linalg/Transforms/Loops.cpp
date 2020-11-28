@@ -65,10 +65,9 @@ template <typename IndexedValueType, typename OpType>
 static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
                                      ArrayRef<SmallVector<Value, 8>> indexing,
                                      ArrayRef<Value> outputBuffers) {
-  assert(op.getOperation()->getNumRegions() == 1 &&
-         "Expected single region op");
+  assert(op->getNumRegions() == 1 && "Expected single region op");
   auto &b = ScopedContext::getBuilderRef();
-  auto &block = op.getOperation()->getRegion(0).front();
+  auto &block = op->getRegion(0).front();
   BlockAndValueMapping map;
   map.map(block.getArguments(), indexedValues);
   for (auto &op : block.without_terminator()) {

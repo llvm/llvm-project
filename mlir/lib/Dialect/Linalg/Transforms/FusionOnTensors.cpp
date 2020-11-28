@@ -93,8 +93,8 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
                                         AffineMap consumerToProducerLoopsMap,
                                         unsigned consumerIdx, unsigned nloops) {
   // Build the region of the fused op.
-  Block &producerBlock = producer.getOperation()->getRegion(0).front();
-  Block &consumerBlock = consumer.getOperation()->getRegion(0).front();
+  Block &producerBlock = producer->getRegion(0).front();
+  Block &consumerBlock = consumer->getRegion(0).front();
   Block *fusedBlock = new Block();
   fusedOp->getRegion(0).push_back(fusedBlock);
   BlockAndValueMapping mapper;
@@ -217,32 +217,31 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
   LinalgOp fusedOp;
   if (isa<GenericOp>(producer.getOperation()) &&
       isa<GenericOp>(consumer.getOperation())) {
-    fusedOp = rewriter
-                  .create<GenericOp>(consumer.getLoc(),
-                                     consumer.getOperation()->getResultTypes(),
-                                     /*inputs=*/fusedOperands,
-                                     /*outputBuffers=*/ValueRange{},
-                                     /*initTensors=*/ValueRange{},
-                                     rewriter.getArrayAttr(fusedIndexMaps),
-                                     consumer.iterator_types(),
-                                     /*doc=*/nullptr,
-                                     /*library_call=*/nullptr,
-                                     /*sparse=*/nullptr)
-                  .getOperation();
-  } else {
     fusedOp =
         rewriter
-            .create<IndexedGenericOp>(consumer.getLoc(),
-                                      consumer.getOperation()->getResultTypes(),
-                                      /*inputs=*/fusedOperands,
-                                      /*outputBuffers=*/ValueRange{},
-                                      /*initTensors=*/ValueRange{},
-                                      rewriter.getArrayAttr(fusedIndexMaps),
-                                      consumer.iterator_types(),
-                                      /*doc=*/nullptr,
-                                      /*library_call=*/nullptr,
-                                      /*sparse=*/nullptr)
+            .create<GenericOp>(consumer.getLoc(), consumer->getResultTypes(),
+                               /*inputs=*/fusedOperands,
+                               /*outputBuffers=*/ValueRange{},
+                               /*initTensors=*/ValueRange{},
+                               rewriter.getArrayAttr(fusedIndexMaps),
+                               consumer.iterator_types(),
+                               /*doc=*/nullptr,
+                               /*library_call=*/nullptr,
+                               /*sparse=*/nullptr)
             .getOperation();
+  } else {
+    fusedOp = rewriter
+                  .create<IndexedGenericOp>(
+                      consumer.getLoc(), consumer->getResultTypes(),
+                      /*inputs=*/fusedOperands,
+                      /*outputBuffers=*/ValueRange{},
+                      /*initTensors=*/ValueRange{},
+                      rewriter.getArrayAttr(fusedIndexMaps),
+                      consumer.iterator_types(),
+                      /*doc=*/nullptr,
+                      /*library_call=*/nullptr,
+                      /*sparse=*/nullptr)
+                  .getOperation();
   }
 
   // Construct an AffineMap from consumer loops to producer loops.
@@ -262,7 +261,7 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
   generateFusedTensorOpRegion(rewriter, fusedOp.getOperation(), producer,
                               consumer, consumerToProducerLoopsMap, consumerIdx,
                               consumer.getNumLoops());
-  return SmallVector<Value, 1>(fusedOp.getOperation()->getResults());
+  return SmallVector<Value, 1>(fusedOp->getResults());
 }
 
 /// Linearize the expressions in `sourceMap` based on the `reassociationMaps`
@@ -558,7 +557,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
   }
   SmallVector<Type, 1> resultTypes;
   SmallVector<SmallVector<ReassociationIndices, 4>, 1> resultReassociation;
-  for (auto result : llvm::enumerate(linalgOp.getOperation()->getResults())) {
+  for (auto result : llvm::enumerate(linalgOp->getResults())) {
     AffineMap indexingMap =
         linalgOp.getIndexingMap(linalgOp.getNumInputs() + result.index());
     SmallVector<ReassociationIndices, 4> reassociation;
@@ -579,8 +578,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
       /*inputs=*/expandedOpOperands,
       /*outputBuffers=*/ValueRange{},
       /*initTensors=*/ValueRange{}, expandedOpIndexingMaps, iteratorTypes);
-  Region &fusedRegion = fusedOp.getOperation()->getRegion(0);
-  Region &originalRegion = linalgOp.getOperation()->getRegion(0);
+  Region &fusedRegion = fusedOp->getRegion(0);
+  Region &originalRegion = linalgOp->getRegion(0);
 
   if (isa<GenericOp>(linalgOp.getOperation())) {
     rewriter.cloneRegionBefore(originalRegion, fusedRegion,
@@ -634,15 +633,15 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
   SmallVector<Value, 1> resultVals;
-  for (auto result : llvm::enumerate(linalgOp.getOperation()->getResults())) {
+  for (auto result : llvm::enumerate(linalgOp->getResults())) {
     if (!isExpanding &&
         resultTypes[result.index()] != result.value().getType()) {
       resultVals.push_back(rewriter.create<TensorReshapeOp>(
           linalgOp.getLoc(), result.value().getType(),
-          fusedOp.getOperation()->getResult(result.index()),
+          fusedOp->getResult(result.index()),
           resultReassociation[result.index()]));
     } else {
-      resultVals.push_back(fusedOp.getOperation()->getResult(result.index()));
+      resultVals.push_back(fusedOp->getResult(result.index()));
     }
   }
   // Assuming a single result.
@@ -722,7 +721,7 @@ struct FoldProducerReshapeOpByLinearization
         return op.emitRemark("fused op loop bound computation failed");
 
       rewriter.startRootUpdate(op);
-      op.getOperation()->setOperands(fusedOperands);
+      op->setOperands(fusedOperands);
       op.indexing_mapsAttr(rewriter.getAffineMapArrayAttr(fusedIndexMaps));
       rewriter.finalizeRootUpdate(op);
       if (reshapeOp.use_empty())
@@ -819,10 +818,10 @@ struct FoldConsumerReshapeOpByLinearization
         /*doc=*/nullptr,
         /*library_call=*/nullptr,
         /*sparse=*/nullptr);
-    auto &fusedRegion = fusedOp.getOperation()->getRegion(0);
-    rewriter.cloneRegionBefore(producer.getOperation()->getRegion(0),
-                               fusedRegion, fusedRegion.begin());
-    rewriter.replaceOp(reshapeOp, fusedOp.getOperation()->getResults());
+    auto &fusedRegion = fusedOp->getRegion(0);
+    rewriter.cloneRegionBefore(producer->getRegion(0), fusedRegion,
+                               fusedRegion.begin());
+    rewriter.replaceOp(reshapeOp, fusedOp->getResults());
     if (producer.use_empty())
       rewriter.eraseOp(producer);
     return success();
@@ -893,7 +892,7 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 
       LinalgOp fusedOp = createLinalgOpOfSameType(
           linalgOp, rewriter, rewriter.getUnknownLoc(),
-          linalgOp.getOperation()->getResultTypes(),
+          linalgOp->getResultTypes(),
           /*inputs=*/fusedOperands,
           /*outputBuffers=*/ValueRange{},
           /*initTensors=*/ValueRange{}, // no init tensors for now.
@@ -905,16 +904,16 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 
       // Map the block argument corresponding to the replaced argument with the
       // scalar constant.
-      Region &linalgOpRegion = linalgOp.getOperation()->getRegion(0);
+      Region &linalgOpRegion = linalgOp->getRegion(0);
       Block &entryBlock = *linalgOpRegion.begin();
       unsigned argIndex = entryBlock.getNumArguments() -
                           linalgOp.getNumInputs() + operand.index();
       BlockAndValueMapping mapping;
       mapping.map(entryBlock.getArgument(argIndex), scalarConstant);
-      Region &fusedRegion = fusedOp.getOperation()->getRegion(0);
+      Region &fusedRegion = fusedOp->getRegion(0);
       rewriter.cloneRegionBefore(linalgOpRegion, fusedRegion,
                                  fusedRegion.begin(), mapping);
-      rewriter.replaceOp(linalgOp, fusedOp.getOperation()->getResults());
+      rewriter.replaceOp(linalgOp, fusedOp->getResults());
       if (constantOp.use_empty())
         rewriter.eraseOp(constantOp);
       return success();
@@ -951,10 +950,8 @@ struct FuseTensorOps : public OpRewritePattern<LinalgOpTy> {
   LogicalResult matchAndRewrite(LinalgOpTy op,
                                 PatternRewriter &rewriter) const override {
     // Find the first operand that is defined by another generic op on tensors.
-    for (auto operandNum :
-         llvm::seq<unsigned>(0, op.getOperation()->getNumOperands())) {
-      Operation *producer =
-          op.getOperation()->getOperand(operandNum).getDefiningOp();
+    for (auto operandNum : llvm::seq<unsigned>(0, op->getNumOperands())) {
+      Operation *producer = op->getOperand(operandNum).getDefiningOp();
       if (!producer)
         continue;
       Optional<SmallVector<Value, 1>> fusedOpResults =
