@@ -1,6 +1,6 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i686-pc-linux-gnu -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false | FileCheck %s -check-prefixes=CHECK,CHECK-I686
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false | FileCheck %s -check-prefixes=CHECK,CHECK-X32
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -fast-isel | FileCheck %s -check-prefixes=CHECK,CHECK-X32
+; RUN: llc < %s -mcpu=generic -mtriple=i686-pc-linux-gnu -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-I686
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -fast-isel -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
 
 @ptr = external global i32* 
 @dst = external global i32 
