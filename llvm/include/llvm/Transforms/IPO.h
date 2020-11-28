@@ -216,11 +216,6 @@ ModulePass *createMergeFunctionsPass();
 ModulePass *createHotColdSplittingPass();
 
 //===----------------------------------------------------------------------===//
-/// createIROutlinerPass - This pass finds similar code regions and factors
-/// those regions out into functions.
-ModulePass *createIROutlinerPass();
-
-//===----------------------------------------------------------------------===//
 /// createPartialInliningPass - This pass inlines parts of functions.
 ///
 ModulePass *createPartialInliningPass();
