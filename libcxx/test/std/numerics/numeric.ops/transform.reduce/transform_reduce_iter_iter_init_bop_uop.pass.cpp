@@ -8,7 +8,10 @@
 
 // <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: clang-8
+// UNSUPPORTED: gcc-9
 
+// Became constexpr in C++20
 // template <class InputIterator1, class T,
 //           class BinaryOperation, class UnaryOperation>
 //    T transform_reduce(InputIterator1 first1, InputIterator1 last1,
@@ -41,7 +44,7 @@ struct twice
 };
 
 template <class Iter1, class T, class BOp, class UOp>
-void
+TEST_CONSTEXPR_CXX20 void
 test(Iter1 first1, Iter1 last1, T init, BOp bOp, UOp uOp, T x)
 {
     static_assert( std::is_same_v<T,
@@ -50,7 +53,7 @@ test(Iter1 first1, Iter1 last1, T init, BOp bOp, UOp uOp, T x)
 }
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[]          = {1, 2, 3, 4, 5, 6};
@@ -76,14 +79,16 @@ test()
 }
 
 template <typename T, typename Init>
-void test_return_type()
+TEST_CONSTEXPR_CXX20 void
+test_return_type()
 {
     T *p = nullptr;
     static_assert( std::is_same_v<Init,
          decltype(std::transform_reduce(p, p, Init{}, std::plus<>(), identity()))> );
 }
 
-void test_move_only_types()
+TEST_CONSTEXPR_CXX20 void
+test_move_only_types()
 {
     MoveOnly ia[] = {{1}, {2}, {3}};
     assert(60 ==
@@ -92,7 +97,8 @@ void test_move_only_types()
         [](const MoveOnly& target) { return MoveOnly{target.get() * 10}; }).get());
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -119,5 +125,14 @@ int main(int, char**)
 
     test_move_only_types();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

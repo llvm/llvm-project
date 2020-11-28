@@ -138,7 +138,7 @@
 "`P1394 <https://wg21.link/P1394>`__","LWG","Range constructor for std::span","Belfast","* *",""
 "`P1456 <https://wg21.link/P1456>`__","LWG","Move-only views","Belfast","* *",""
 "`P1622 <https://wg21.link/P1622>`__","LWG","Mandating the Standard Library: Clause 32 - Thread support library","Belfast","* *",""
-"`P1645 <https://wg21.link/P1645>`__","LWG","constexpr for numeric algorithms","Belfast","* *",""
+"`P1645 <https://wg21.link/P1645>`__","LWG","constexpr for numeric algorithms","Belfast","|Complete|","12.0"
 "`P1664 <https://wg21.link/P1664>`__","LWG","reconstructible_range - a concept for putting ranges back together","Belfast","* *",""
 "`P1686 <https://wg21.link/P1686>`__","LWG","Mandating the Standard Library: Clause 27 - Time library","Belfast","* *",""
 "`P1690 <https://wg21.link/P1690>`__","LWG","Refinement Proposal for P0919 Heterogeneous lookup for unordered containers","Belfast","|Complete|","12.0"

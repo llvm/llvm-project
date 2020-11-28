@@ -189,6 +189,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 namespace llvm {
 
 void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS) {
+  RK.startTimer("Parse patterns");
   DAGISelEmitter(RK).run(OS);
 }
 

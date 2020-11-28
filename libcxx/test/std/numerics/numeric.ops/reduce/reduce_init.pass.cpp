@@ -8,7 +8,10 @@
 
 // <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: clang-8
+// UNSUPPORTED: gcc-9
 
+// Became constexpr in C++20
 // template<class InputIterator, class T>
 //   T reduce(InputIterator first, InputIterator last, T init);
 
@@ -19,7 +22,7 @@
 #include "test_iterators.h"
 
 template <class Iter, class T>
-void
+TEST_CONSTEXPR_CXX20 void
 test(Iter first, Iter last, T init, T x)
 {
     static_assert( std::is_same_v<T, decltype(std::reduce(first, last, init))> );
@@ -27,7 +30,7 @@ test(Iter first, Iter last, T init, T x)
 }
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5, 6};
@@ -43,13 +46,15 @@ test()
 }
 
 template <typename T, typename Init>
-void test_return_type()
+TEST_CONSTEXPR_CXX20 void
+test_return_type()
 {
     T *p = nullptr;
     static_assert( std::is_same_v<Init, decltype(std::reduce(p, p, Init{}))> );
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -65,5 +70,14 @@ int main(int, char**)
     test<random_access_iterator<const int*> >();
     test<const int*>();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }
