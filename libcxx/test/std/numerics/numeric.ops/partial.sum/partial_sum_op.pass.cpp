@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
+// UNSUPPORTED: clang-8
 
+// Became constexpr in C++20
 // template<InputIterator InIter,
 //          OutputIterator<auto, const InIter::value_type&> OutIter,
 //          Callable<auto, const InIter::value_type&, InIter::reference> BinaryOperation>
@@ -31,25 +33,25 @@ struct rvalue_addable
     bool correctOperatorUsed = false;
 
     // make sure the predicate is passed an rvalue and an lvalue (so check that the first argument was moved)
-    rvalue_addable operator()(rvalue_addable&& r, rvalue_addable const&) {
+    constexpr rvalue_addable operator()(rvalue_addable&& r, rvalue_addable const&) {
         r.correctOperatorUsed = true;
         return std::move(r);
     }
 };
 
-rvalue_addable operator+(rvalue_addable& lhs, rvalue_addable const&)
+constexpr rvalue_addable operator+(rvalue_addable& lhs, rvalue_addable const&)
 {
     lhs.correctOperatorUsed = false;
     return lhs;
 }
 
-rvalue_addable operator+(rvalue_addable&& lhs, rvalue_addable const&)
+constexpr rvalue_addable operator+(rvalue_addable&& lhs, rvalue_addable const&)
 {
     lhs.correctOperatorUsed = true;
     return std::move(lhs);
 }
 
-void
+constexpr void
 test_use_move()
 {
     const std::size_t size = 100;
@@ -64,7 +66,15 @@ test_use_move()
 }
 #endif // TEST_STD_VER > 17
 
+// C++20 can use string in constexpr evaluation, but both libc++ and MSVC
+// don't have the support yet. In these cases omit the constexpr test.
+// FIXME Remove constexpr string workaround introduced in D90569
+#if TEST_STD_VER > 17 && \
+	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
 void
+#else
+TEST_CONSTEXPR_CXX20 void
+#endif
 test_string()
 {
     std::string sa[] = {"a", "b", "c"};
@@ -75,7 +85,7 @@ test_string()
 }
 
 template <class InIter, class OutIter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5};
@@ -88,7 +98,8 @@ test()
         assert(ib[i] == ir[i]);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test<input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, forward_iterator<int*> >();
@@ -123,7 +134,24 @@ int main(int, char**)
 #if TEST_STD_VER > 17
     test_use_move();
 #endif // TEST_STD_VER > 17
+    // C++20 can use string in constexpr evaluation, but both libc++ and MSVC
+    // don't have the support yet. In these cases omit the constexpr test.
+    // FIXME Remove constexpr string workaround introduced in D90569
+#if TEST_STD_VER > 17 && \
+	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
+	if (!std::is_constant_evaluated())
+#endif
     test_string();
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
     return 0;
 }
