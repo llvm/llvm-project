@@ -161,12 +161,7 @@ private:
   using PointersTy = SmallVector<PointerAlignElem, 8>;
   PointersTy Pointers;
 
-  PointersTy::const_iterator
-  findPointerLowerBound(uint32_t AddressSpace) const {
-    return const_cast<DataLayout *>(this)->findPointerLowerBound(AddressSpace);
-  }
-
-  PointersTy::iterator findPointerLowerBound(uint32_t AddressSpace);
+  const PointerAlignElem &getPointerAlignElem(uint32_t AddressSpace) const;
 
   // The StructType -> StructLayout map.
   mutable void *LayoutMap = nullptr;
