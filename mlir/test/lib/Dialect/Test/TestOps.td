@@ -134,12 +134,6 @@ def VariadicWithSameOperandsResult :
   let results = (outs AnySignlessInteger:$result);
 }
 
-def SameOperandsResultType : TEST_Op<
-    "same_operand_result_type", [SameOperandsAndResultType]> {
-  let arguments = (ins AnyTensor:$operand);
-  let results = (outs AnyTensor:$result);
-}
-
 //===----------------------------------------------------------------------===//
 // Test Results
 //===----------------------------------------------------------------------===//
