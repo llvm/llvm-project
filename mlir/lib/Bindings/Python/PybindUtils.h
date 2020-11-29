@@ -50,7 +50,7 @@ public:
   Defaulting() = default;
   Defaulting(ReferrentTy &referrent) : referrent(&referrent) {}
 
-  ReferrentTy *get() { return referrent; }
+  ReferrentTy *get() const { return referrent; }
   ReferrentTy *operator->() { return referrent; }
 
 private:

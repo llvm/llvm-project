@@ -119,6 +119,10 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
 }
 
+int mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
+  return unwrap(l1) == unwrap(l2);
+}
+
 MlirContext mlirLocationGetContext(MlirLocation location) {
   return wrap(unwrap(location).getContext());
 }
