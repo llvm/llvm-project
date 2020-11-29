@@ -3743,8 +3743,8 @@ Here are some examples:
 
       %narrowaddr = bitcast i32* @g to i16*
       %wideaddr = bitcast i32* @g to i64*
-      %poison3 = load i16, i16* %narrowaddr ; Returns a poison value.
-      %poison4 = load i64, i64* %wideaddr   ; Returns a poison value.
+      %poison4 = load i16, i16* %narrowaddr ; Returns a poison value.
+      %poison5 = load i64, i64* %wideaddr   ; Returns a poison value.
 
       %cmp = icmp slt i32 %poison, 0       ; Returns a poison value.
       br i1 %cmp, label %end, label %end   ; undefined behavior
@@ -3763,8 +3763,7 @@ The padding of an aggregate isn't considered, since it isn't visible
 without storing it into memory and loading it with a different type.
 
 A constant of a :ref:`single value <t_single_value>`, non-vector type is well
-defined if it is a non-undef constant. Note that there is no poison constant
-in LLVM.
+defined if it is neither '``undef``' constant nor '``poison``' constant.
 The result of :ref:`freeze instruction <i_freeze>` is well defined regardless
 of its operand.
 
