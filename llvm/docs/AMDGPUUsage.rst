@@ -1235,8 +1235,8 @@ are deprecated and should not be used.
      ``AMD:AMDGPU:9:0:3`` ``gfx902:xnack+``
      ``AMD:AMDGPU:9:0:4`` ``gfx904:xnack-``
      ``AMD:AMDGPU:9:0:5`` ``gfx904:xnack+``
-     ``AMD:AMDGPU:9:0:6`` ``gfx906:xnack-``
-     ``AMD:AMDGPU:9:0:7`` ``gfx906:xnack+``
+     ``AMD:AMDGPU:9:0:6`` ``gfx906:sramecc-:xnack-``
+     ``AMD:AMDGPU:9:0:7`` ``gfx906:sramecc-:xnack+``
      ==================== ==========================
 
 .. _amdgpu-note-records-v3-v4:
