@@ -65,7 +65,7 @@ private:
   unsigned partition;
 
   // A list of sections to visit.
-  SmallVector<InputSection *, 256> queue;
+  SmallVector<InputSection *, 0> queue;
 
   // There are normally few input sections whose names are valid C
   // identifiers, so we just store a std::vector instead of a multimap.
