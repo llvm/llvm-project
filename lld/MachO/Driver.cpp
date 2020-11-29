@@ -37,6 +37,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <algorithm>
@@ -548,6 +549,12 @@ static void warnIfUnimplementedOption(const opt::Option &opt) {
   }
 }
 
+static const char *getReproduceOption(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_reproduce))
+    return arg->getValue();
+  return getenv("LLD_REPRODUCE");
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -567,6 +574,20 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   } else if (args.hasArg(OPT_help)) {
     parser.printHelp(argsArr[0], /*showHidden=*/false);
     return true;
+  }
+
+  if (const char *path = getReproduceOption(args)) {
+    // Note that --reproduce is a debug option so you can ignore it
+    // if you are trying to understand the whole picture of the code.
+    Expected<std::unique_ptr<TarWriter>> errOrWriter =
+        TarWriter::create(path, path::stem(path));
+    if (errOrWriter) {
+      tar = std::move(*errOrWriter);
+      tar->append("response.txt", createResponseFile(args));
+      tar->append("version.txt", getLLDVersion() + "\n");
+    } else {
+      error("--reproduce: " + toString(errOrWriter.takeError()));
+    }
   }
 
   config = make<Configuration>();

@@ -56,12 +56,14 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -71,6 +73,7 @@ using namespace lld;
 using namespace lld::macho;
 
 std::vector<InputFile *> macho::inputFiles;
+std::unique_ptr<TarWriter> macho::tar;
 
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
@@ -88,8 +91,11 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // If this is a regular non-fat file, return it.
   const char *buf = mbref.getBufferStart();
   auto *hdr = reinterpret_cast<const MachO::fat_header *>(buf);
-  if (read32be(&hdr->magic) != MachO::FAT_MAGIC)
+  if (read32be(&hdr->magic) != MachO::FAT_MAGIC) {
+    if (tar)
+      tar->append(relativeToRoot(path), mbref.getBuffer());
     return mbref;
+  }
 
   // Object files and archive files may be fat files, which contains
   // multiple real files for different CPU ISAs. Here, we search for a
@@ -112,6 +118,8 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
     uint32_t size = read32be(&arch[i].size);
     if (offset + size > mbref.getBufferSize())
       error(path + ": slice extends beyond end of file");
+    if (tar)
+      tar->append(relativeToRoot(path), mbref.getBuffer());
     return MemoryBufferRef(StringRef(buf + offset, size), path.copy(bAlloc));
   }
 

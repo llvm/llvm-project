@@ -184,7 +184,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       // fail because the archive we are creating doesn't contain empty
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
-      os << "-o " << quote(sys::path::filename(arg->getValue())) << "\n";
+      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
       break;
     case OPT_dynamic_list:
     case OPT_library_path:
