@@ -327,21 +327,19 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   // Return early if there are no PHI nodes to update.
   if (!isa<PHINode>(begin()))
     return;
-  unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
 
-  // Update all PHI nodes.
-  for (iterator II = begin(); isa<PHINode>(II);) {
-    PHINode *PN = cast<PHINode>(II++);
-    PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
-    if (!KeepOneInputPHIs) {
-      // If we have a single predecessor, removeIncomingValue erased the PHI
-      // node itself.
-      if (NumPreds > 1) {
-        if (Value *PNV = PN->hasConstantValue()) {
-          // Replace the PHI node with its constant value.
-          PN->replaceAllUsesWith(PNV);
-          PN->eraseFromParent();
-        }
+  unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
+  for (PHINode &Phi : make_early_inc_range(phis())) {
+    Phi.removeIncomingValue(Pred, !KeepOneInputPHIs);
+    if (KeepOneInputPHIs)
+      continue;
+    // If we have a single predecessor, removeIncomingValue erased the PHI
+    // node itself.
+    // Try to replace the PHI node with a constant value.
+    if (NumPreds > 1) {
+      if (Value *PhiConstant = Phi.hasConstantValue()) {
+        Phi.replaceAllUsesWith(PhiConstant);
+        Phi.eraseFromParent();
       }
     }
   }
