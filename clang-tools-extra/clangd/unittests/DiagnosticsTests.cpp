@@ -474,6 +474,24 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
+TEST(DiagnosticTest, ElseAfterReturnRange) {
+  Annotations Main(R"cpp(
+    int foo(int cond) {
+    if (cond == 1) {
+      return 42;
+    } [[else]] if (cond == 2) {
+      return 43;
+    }
+    return 44;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyProvider = addTidyChecks("llvm-else-after-return");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(Diag(Main.range(), "do not use 'else' after 'return'")));
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:
