@@ -690,6 +690,15 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle2) {
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
+TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
+  parseAssembly(
+      "define <2 x i32*> @test(<2 x i32*> %x) {\n"
+      "  %A = shufflevector <2 x i32*> zeroinitializer, <2 x i32*> undef, <2 x i32> zeroinitializer\n"
+      "  ret <2 x i32*> %A\n"
+      "}\n");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 64u);
+}
+
 TEST(ValueTracking, propagatesPoison) {
   std::string AsmHead = "declare i32 @g(i32)\n"
                         "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
