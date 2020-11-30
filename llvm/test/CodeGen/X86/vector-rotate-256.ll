@@ -5,6 +5,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VLBW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vbmi2 | FileCheck %s --check-prefixes=AVX512,AVX512VBMI2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vbmi2,+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VLVBMI2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=XOPAVX2
 
@@ -75,6 +77,19 @@ define <4 x i64> @var_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vprolvq %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: var_rotate_v4i64:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: var_rotate_v4i64:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolvq %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: var_rotate_v4i64:
 ; XOPAVX1:       # %bb.0:
@@ -172,6 +187,19 @@ define <8 x i32> @var_rotate_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vprolvd %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: var_rotate_v8i32:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: var_rotate_v8i32:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolvd %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: var_rotate_v8i32:
 ; XOPAVX1:       # %bb.0:
@@ -306,6 +334,27 @@ define <16 x i16> @var_rotate_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; AVX512VLBW-NEXT:    vpsrlvw %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: var_rotate_v16i16:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512VBMI2-NEXT:    vpsllvw %zmm1, %zmm0, %zmm2
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm3 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; AVX512VBMI2-NEXT:    vpsubw %ymm1, %ymm3, %ymm1
+; AVX512VBMI2-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: var_rotate_v16i16:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsllvw %ymm1, %ymm0, %ymm2
+; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} ymm3 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; AVX512VLVBMI2-NEXT:    vpsubw %ymm1, %ymm3, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsrlvw %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: var_rotate_v16i16:
 ; XOPAVX1:       # %bb.0:
@@ -475,6 +524,32 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512VLBW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: var_rotate_v32i8:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512VBMI2-NEXT:    vpsubb %ymm1, %ymm2, %ymm2
+; AVX512VBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero,ymm1[16],zero,ymm1[17],zero,ymm1[18],zero,ymm1[19],zero,ymm1[20],zero,ymm1[21],zero,ymm1[22],zero,ymm1[23],zero,ymm1[24],zero,ymm1[25],zero,ymm1[26],zero,ymm1[27],zero,ymm1[28],zero,ymm1[29],zero,ymm1[30],zero,ymm1[31],zero
+; AVX512VBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VBMI2-NEXT:    vpsllvw %zmm1, %zmm0, %zmm1
+; AVX512VBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero,ymm2[16],zero,ymm2[17],zero,ymm2[18],zero,ymm2[19],zero,ymm2[20],zero,ymm2[21],zero,ymm2[22],zero,ymm2[23],zero,ymm2[24],zero,ymm2[25],zero,ymm2[26],zero,ymm2[27],zero,ymm2[28],zero,ymm2[29],zero,ymm2[30],zero,ymm2[31],zero
+; AVX512VBMI2-NEXT:    vpsrlvw %zmm2, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512VBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: var_rotate_v32i8:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512VLVBMI2-NEXT:    vpsubb %ymm1, %ymm2, %ymm2
+; AVX512VLVBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero,ymm1[16],zero,ymm1[17],zero,ymm1[18],zero,ymm1[19],zero,ymm1[20],zero,ymm1[21],zero,ymm1[22],zero,ymm1[23],zero,ymm1[24],zero,ymm1[25],zero,ymm1[26],zero,ymm1[27],zero,ymm1[28],zero,ymm1[29],zero,ymm1[30],zero,ymm1[31],zero
+; AVX512VLVBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VLVBMI2-NEXT:    vpsllvw %zmm1, %zmm0, %zmm1
+; AVX512VLVBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero,ymm2[16],zero,ymm2[17],zero,ymm2[18],zero,ymm2[19],zero,ymm2[20],zero,ymm2[21],zero,ymm2[22],zero,ymm2[23],zero,ymm2[24],zero,ymm2[25],zero,ymm2[26],zero,ymm2[27],zero,ymm2[28],zero,ymm2[29],zero,ymm2[30],zero,ymm2[31],zero
+; AVX512VLVBMI2-NEXT:    vpsrlvw %zmm2, %zmm0, %zmm0
+; AVX512VLVBMI2-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512VLVBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: var_rotate_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -554,6 +629,20 @@ define <4 x i64> @splatvar_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX512VLBW-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; AVX512VLBW-NEXT:    vprolvq %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatvar_rotate_v4i64:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX512VBMI2-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatvar_rotate_v4i64:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX512VLVBMI2-NEXT:    vprolvq %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatvar_rotate_v4i64:
 ; XOPAVX1:       # %bb.0:
@@ -640,6 +729,20 @@ define <8 x i32> @splatvar_rotate_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX512VLBW-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; AVX512VLBW-NEXT:    vprolvd %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatvar_rotate_v8i32:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX512VBMI2-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatvar_rotate_v8i32:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX512VLVBMI2-NEXT:    vprolvd %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatvar_rotate_v8i32:
 ; XOPAVX1:       # %bb.0:
@@ -857,6 +960,34 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512VLBW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: splatvar_rotate_v32i8:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VBMI2-NEXT:    vpbroadcastb %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512VBMI2-NEXT:    vpsllw %xmm2, %zmm0, %zmm2
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512VBMI2-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
+; AVX512VBMI2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512VBMI2-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatvar_rotate_v32i8:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VLVBMI2-NEXT:    vpbroadcastb %xmm1, %xmm1
+; AVX512VLVBMI2-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512VLVBMI2-NEXT:    vpsllw %xmm2, %zmm0, %zmm2
+; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512VLVBMI2-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
+; AVX512VLVBMI2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512VLVBMI2-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
+; AVX512VLVBMI2-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VLVBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: splatvar_rotate_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -941,6 +1072,19 @@ define <4 x i64> @constant_rotate_v4i64(<4 x i64> %a) nounwind {
 ; AVX512VLBW-NEXT:    vprolvq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: constant_rotate_v4i64:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,14,50,60]
+; AVX512VBMI2-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: constant_rotate_v4i64:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolvq {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: constant_rotate_v4i64:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vprotq {{.*}}(%rip), %xmm0, %xmm1
@@ -1022,6 +1166,19 @@ define <8 x i32> @constant_rotate_v8i32(<8 x i32> %a) nounwind {
 ; AVX512VLBW-NEXT:    vprolvd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: constant_rotate_v8i32:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,5,6,7,8,9,10,11]
+; AVX512VBMI2-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: constant_rotate_v8i32:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolvd {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: constant_rotate_v8i32:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm1
@@ -1098,6 +1255,23 @@ define <16 x i16> @constant_rotate_v16i16(<16 x i16> %a) nounwind {
 ; AVX512VLBW-NEXT:    vpsllvw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: constant_rotate_v16i16:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
+; AVX512VBMI2-NEXT:    vpsrlvw %zmm2, %zmm0, %zmm2
+; AVX512VBMI2-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: constant_rotate_v16i16:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpsrlvw {{.*}}(%rip), %ymm0, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsllvw {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: constant_rotate_v16i16:
 ; XOPAVX1:       # %bb.0:
@@ -1254,6 +1428,24 @@ define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind {
 ; AVX512VLBW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: constant_rotate_v32i8:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VBMI2-NEXT:    vpsllvw {{.*}}(%rip), %zmm0, %zmm1
+; AVX512VBMI2-NEXT:    vpsrlvw {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512VBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: constant_rotate_v32i8:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
+; AVX512VLVBMI2-NEXT:    vpsllvw {{.*}}(%rip), %zmm0, %zmm1
+; AVX512VLVBMI2-NEXT:    vpsrlvw {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VLVBMI2-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512VLVBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: constant_rotate_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1325,6 +1517,18 @@ define <4 x i64> @splatconstant_rotate_v4i64(<4 x i64> %a) nounwind {
 ; AVX512VLBW-NEXT:    vprolq $14, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: splatconstant_rotate_v4i64:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprolq $14, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_v4i64:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolq $14, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: splatconstant_rotate_v4i64:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vprotq $14, %xmm0, %xmm1
@@ -1389,6 +1593,18 @@ define <8 x i32> @splatconstant_rotate_v8i32(<8 x i32> %a) nounwind {
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vprold $4, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatconstant_rotate_v8i32:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprold $4, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_v8i32:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprold $4, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_rotate_v8i32:
 ; XOPAVX1:       # %bb.0:
@@ -1518,6 +1734,22 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind {
 ; AVX512VLBW-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: splatconstant_rotate_v32i8:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512VBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_v32i8:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
+;
 ; XOPAVX1-LABEL: splatconstant_rotate_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vprotb $4, %xmm0, %xmm1
@@ -1584,6 +1816,19 @@ define <4 x i64> @splatconstant_rotate_mask_v4i64(<4 x i64> %a) nounwind {
 ; AVX512VLBW-NEXT:    vprolq $15, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatconstant_rotate_mask_v4i64:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprolq $15, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_mask_v4i64:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprolq $15, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_rotate_mask_v4i64:
 ; XOPAVX1:       # %bb.0:
@@ -1657,6 +1902,19 @@ define <8 x i32> @splatconstant_rotate_mask_v8i32(<8 x i32> %a) nounwind {
 ; AVX512VLBW-NEXT:    vprold $4, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatconstant_rotate_mask_v8i32:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vprold $4, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_mask_v8i32:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vprold $4, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_rotate_mask_v8i32:
 ; XOPAVX1:       # %bb.0:
@@ -1734,6 +1992,21 @@ define <16 x i16> @splatconstant_rotate_mask_v16i16(<16 x i16> %a) nounwind {
 ; AVX512VLBW-NEXT:    vpsrlw $11, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpternlogq $168, {{.*}}(%rip), %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatconstant_rotate_mask_v16i16:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vpsrlw $11, %ymm0, %ymm1
+; AVX512VBMI2-NEXT:    vpsllw $5, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_mask_v16i16:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpsllw $5, %ymm0, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsrlw $11, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vpternlogq $168, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_rotate_mask_v16i16:
 ; XOPAVX1:       # %bb.0:
@@ -1823,6 +2096,23 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind {
 ; AVX512VLBW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm0
 ; AVX512VLBW-NEXT:    vpternlogq $248, {{.*}}(%rip), %ymm2, %ymm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: splatconstant_rotate_mask_v32i8:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
+; AVX512VBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512VBMI2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: splatconstant_rotate_mask_v32i8:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
+; AVX512VLVBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm2
+; AVX512VLVBMI2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VLVBMI2-NEXT:    vpternlogq $248, {{.*}}(%rip), %ymm2, %ymm0
+; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_rotate_mask_v32i8:
 ; XOPAVX1:       # %bb.0:
