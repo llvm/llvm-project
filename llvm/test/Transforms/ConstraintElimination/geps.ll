@@ -455,7 +455,7 @@ define void @test.ult.gep.shl.zext(i32* readonly %src, i32* readnone %max, i32 %
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i32 [[IDX_SHL]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_SHL:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[EXT_1]]
 ; CHECK-NEXT:    [[C_MAX_0:%.*]] = icmp ult i32* [[ADD_PTR_SHL]], [[MAX]]
-; CHECK-NEXT:    call void @use(i1 [[C_MAX_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl i32 [[IDX]], 1
 ; CHECK-NEXT:    [[EXT_2:%.*]] = zext i32 [[IDX_SHL_NOT_NUW]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[EXT_2]]
