@@ -1781,6 +1781,74 @@ define i64 @bitreverse_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
+define i32 @bswap_rotr_i32(i32 %a) {
+; RV32I-LABEL: bswap_rotr_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a2, a2, -256
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a2, a0, 24
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    slli a2, a0, 8
+; RV32I-NEXT:    lui a3, 4080
+; RV32I-NEXT:    and a2, a2, a3
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: bswap_rotr_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev8.h a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: bswap_rotr_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev8.h a0, a0
+; RV32IBP-NEXT:    ret
+  %1 = call i32 @llvm.bswap.i32(i32 %a)
+  %2 = call i32 @llvm.fshr.i32(i32 %1, i32 %1, i32 16)
+  ret i32 %2
+}
+
+define i32 @bswap_rotl_i32(i32 %a) {
+; RV32I-LABEL: bswap_rotl_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a2, a2, -256
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a2, a0, 24
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    slli a2, a0, 8
+; RV32I-NEXT:    lui a3, 4080
+; RV32I-NEXT:    and a2, a2, a3
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: bswap_rotl_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev8.h a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: bswap_rotl_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev8.h a0, a0
+; RV32IBP-NEXT:    ret
+  %1 = call i32 @llvm.bswap.i32(i32 %a)
+  %2 = call i32 @llvm.fshl.i32(i32 %1, i32 %1, i32 16)
+  ret i32 %2
+}
+
 define i32 @shfl1_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: shfl1_i32:
 ; RV32I:       # %bb.0:
