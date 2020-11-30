@@ -128,7 +128,7 @@ namespace test2 {
     X *getPrev() { return Prev; } // expected-note{{member is declared here}}
   };
 
-  class ilist_node : private ilist_half_node { // expected-note {{declared private here}} expected-note {{constrained by private inheritance here}}
+  class ilist_node : private ilist_half_node { // expected-note {{constrained by private inheritance here}}
     friend struct ilist_walker;
     X *Next;
     X *getNext() { return Next; } // expected-note {{declared private here}}
@@ -143,8 +143,7 @@ namespace test2 {
 
   struct ilist_walker_bad {
     static X *getPrev(X *N) { return N->getPrev(); } // \
-    // expected-error {{'getPrev' is a private member of 'test2::ilist_half_node'}} \
-    // expected-error {{cannot cast 'test2::X' to its private base class 'test2::ilist_half_node'}}
+    // expected-error {{'getPrev' is a private member of 'test2::ilist_half_node'}}
 
     static X *getNext(X *N) { return N->getNext(); } // \
     // expected-error {{'getNext' is a private member of 'test2::ilist_node'}}

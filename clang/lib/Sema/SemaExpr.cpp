@@ -2818,21 +2818,24 @@ Sema::LookupInObjCMethod(LookupResult &Lookup, Scope *S,
 
 /// Cast a base object to a member's actual type.
 ///
-/// Logically this happens in three phases:
+/// There are two relevant checks:
 ///
-/// * First we cast from the base type to the naming class.
-///   The naming class is the class into which we were looking
-///   when we found the member;  it's the qualifier type if a
-///   qualifier was provided, and otherwise it's the base type.
+/// C++ [class.access.base]p7:
 ///
-/// * Next we cast from the naming class to the declaring class.
-///   If the member we found was brought into a class's scope by
-///   a using declaration, this is that class;  otherwise it's
-///   the class declaring the member.
+///   If a class member access operator [...] is used to access a non-static
+///   data member or non-static member function, the reference is ill-formed if
+///   the left operand [...] cannot be implicitly converted to a pointer to the
+///   naming class of the right operand.
 ///
-/// * Finally we cast from the declaring class to the "true"
-///   declaring class of the member.  This conversion does not
-///   obey access control.
+/// C++ [expr.ref]p7:
+///
+///   If E2 is a non-static data member or a non-static member function, the
+///   program is ill-formed if the class of which E2 is directly a member is an
+///   ambiguous base (11.8) of the naming class (11.9.3) of E2.
+///
+/// Note that the latter check does not consider access; the access of the
+/// "real" base class is checked as appropriate when checking the access of the
+/// member name.
 ExprResult
 Sema::PerformObjectMemberConversion(Expr *From,
                                     NestedNameSpecifier *Qualifier,
@@ -2956,45 +2959,10 @@ Sema::PerformObjectMemberConversion(Expr *From,
     }
   }
 
-  bool IgnoreAccess = false;
-
-  // If we actually found the member through a using declaration, cast
-  // down to the using declaration's type.
-  //
-  // Pointer equality is fine here because only one declaration of a
-  // class ever has member declarations.
-  if (FoundDecl->getDeclContext() != Member->getDeclContext()) {
-    assert(isa<UsingShadowDecl>(FoundDecl));
-    QualType URecordType = Context.getTypeDeclType(
-                           cast<CXXRecordDecl>(FoundDecl->getDeclContext()));
-
-    // We only need to do this if the naming-class to declaring-class
-    // conversion is non-trivial.
-    if (!Context.hasSameUnqualifiedType(FromRecordType, URecordType)) {
-      assert(IsDerivedFrom(FromLoc, FromRecordType, URecordType));
-      CXXCastPath BasePath;
-      if (CheckDerivedToBaseConversion(FromRecordType, URecordType,
-                                       FromLoc, FromRange, &BasePath))
-        return ExprError();
-
-      QualType UType = URecordType;
-      if (PointerConversions)
-        UType = Context.getPointerType(UType);
-      From = ImpCastExprToType(From, UType, CK_UncheckedDerivedToBase,
-                               VK, &BasePath).get();
-      FromType = UType;
-      FromRecordType = URecordType;
-    }
-
-    // We don't do access control for the conversion from the
-    // declaring class to the true declaring class.
-    IgnoreAccess = true;
-  }
-
   CXXCastPath BasePath;
   if (CheckDerivedToBaseConversion(FromRecordType, DestRecordType,
                                    FromLoc, FromRange, &BasePath,
-                                   IgnoreAccess))
+                                   /*IgnoreAccess=*/true))
     return ExprError();
 
   return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase,

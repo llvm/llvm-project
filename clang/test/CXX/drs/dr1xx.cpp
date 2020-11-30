@@ -528,7 +528,7 @@ namespace dr142 { // dr142: yes
     void f();
   };
   void DD::f() {
-    mi = 3; // expected-error {{private base class}} expected-error {{private member}}
+    mi = 3; // expected-error {{private member}}
     si = 3; // expected-error {{private member}}
     B b_old; // expected-error {{private member}}
     dr142::B b;
