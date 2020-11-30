@@ -126,6 +126,7 @@ typedef uint64_t hostrpc_varfn_uint64_t(void *, ...);
 typedef double hostrpc_varfn_double_t(void *, ...);
 
 static hostrpc_status_t hostrpc_printf(char *buf, size_t bufsz, uint32_t *rc);
+static hostrpc_status_t hostrpc_fprintf(char *buf, size_t bufsz, uint32_t *rc);
 static hostrpc_status_t hostrpc_varfn_uint_(char *buf, size_t bufsz,
                                             uint32_t *rc);
 static hostrpc_status_t hostrpc_varfn_uint64_(char *buf, size_t bufsz,
@@ -139,6 +140,16 @@ static void hostrpc_handler_SERVICE_PRINTF(uint32_t device_id,
   char *device_buffer = (char *)payload[1];
   uint uint_value;
   hostrpc_status_t rc = hostrpc_printf(device_buffer, bufsz, &uint_value);
+  payload[0] = (uint64_t)uint_value; // what the printf returns
+  payload[1] = (uint64_t)rc;         // Any errors in the service function
+  atmi_free(device_buffer);
+}
+static void hostrpc_handler_SERVICE_FPRINTF(uint32_t device_id,
+                                            uint64_t *payload) {
+  size_t bufsz = (size_t)payload[0];
+  char *device_buffer = (char *)payload[1];
+  uint uint_value;
+  hostrpc_status_t rc = hostrpc_fprintf(device_buffer, bufsz, &uint_value);
   payload[0] = (uint64_t)uint_value; // what the printf returns
   payload[1] = (uint64_t)rc;         // Any errors in the service function
   atmi_free(device_buffer);
@@ -304,6 +315,9 @@ extern void hostrpc_execute_service(uint32_t service, uint32_t device_id,
   switch (service_id) {
   case HOSTRPC_SERVICE_PRINTF:
     hostrpc_handler_SERVICE_PRINTF(device_id, payload);
+    break;
+  case HOSTRPC_SERVICE_FPRINTF:
+    hostrpc_handler_SERVICE_FPRINTF(device_id, payload);
     break;
   case HOSTRPC_SERVICE_VARFNUINT:
     hostrpc_handler_SERVICE_VARFNUINT(device_id, payload);
@@ -578,6 +592,68 @@ static hostrpc_status_t hostrpc_pfBuildValist(hostrpc_ValistExt_t *valist,
   return HOSTRPC_SUCCESS;
 } // end hostrpc_pfBuildValist
 
+/*
+ *  The buffer to pack arguments for all vargs functions has thes 4 sections:
+ *  1. Header        datalen 4 bytes
+ *                   numargs 4 bytes
+ *  2. Keys          A 4-byte key for each arg including string args
+ *                   Each 4-byte key contains llvmID and numbits to
+ *                   describe the datatype.
+ *  3. args_data     Ths data values for each argument.
+ *                   Each arg is aligned according to its size.
+ *                   If the field is a string
+ *                   the dataptr contains the string length.
+ *  4. strings_data  Exection time string values
+ */
+static hostrpc_status_t hostrpc_fprintf(char *buf, size_t bufsz, uint *rc) {
+
+  // FIXME: Put the collection of these 6 values in a function
+  //        All service routines that use vargs will need these values.
+  int *datalen = (int *)buf;
+  int NumArgs = *((int *)(buf + sizeof(int)));
+  size_t data_not_used =
+      (size_t)(*datalen) - ((size_t)(2 + NumArgs) * sizeof(int));
+  char *keyptr = buf + (2 * sizeof(int));
+  char *dataptr = keyptr + (NumArgs * sizeof(int));
+  char *strptr = buf + (size_t)*datalen;
+
+  // Skip past the file pointer and format string argument
+  size_t fillerNeeded = ((size_t)dataptr) % 8;
+  if (fillerNeeded)
+    dataptr += fillerNeeded; // dataptr is now aligned on 8 byte
+  // Cannot convert directly to FILE*, so convert to 8-byte size_t first
+  FILE *fileptr = (FILE *)*((size_t *)dataptr);
+  dataptr += sizeof(FILE *); // skip past file ptr
+  NumArgs = NumArgs - 2;
+  keyptr += 8; // All keys are 4 bytes
+  size_t strsz = (size_t) * (unsigned int *)dataptr;
+  dataptr += 4; //  for strings the data value is the size, not a key
+  char *fmtstr = strptr;
+  strptr += strsz;
+  data_not_used -= (sizeof(FILE *) + 4); // 12
+
+  hostrpc_ValistExt_t valist;
+  va_list *real_va_list;
+  real_va_list = (va_list *)&valist;
+
+  if (hostrpc_pfBuildValist(&valist, NumArgs, keyptr, dataptr, strptr,
+                            &data_not_used) != HOSTRPC_SUCCESS)
+    return HOSTRPC_ERROR_INVALID_REQUEST;
+
+  // Roll back offsets and save stack pointer for hostrpc_varfn_uint to consume
+  valist.gp_offset = 0;
+  valist.fp_offset = sizeof(hostrpc_pfIntRegs_t);
+  void *save_stack = valist.overflow_arg_area;
+
+  *rc = vfprintf(fileptr, fmtstr, *real_va_list);
+
+  if (valist.reg_save_area)
+    free(valist.reg_save_area);
+  if (save_stack)
+    free(save_stack);
+
+  return HOSTRPC_SUCCESS;
+}
 //  This the main service routine for printf
 static hostrpc_status_t hostrpc_printf(char *buf, size_t bufsz, uint *rc) {
   if (bufsz == 0)

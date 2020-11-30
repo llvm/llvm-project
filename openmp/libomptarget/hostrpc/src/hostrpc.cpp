@@ -91,6 +91,24 @@ EXTERN int printf_execute(char *print_buffer, uint32_t bufsz) {
   return (int)result.arg0;
 }
 
+EXTERN char *fprintf_allocate(uint32_t bufsz) {
+  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
+  arg0 = (uint64_t)bufsz;
+  hostrpc_result_t result =
+      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
+                     arg3, arg4, arg5, arg6, arg7);
+  return (char *)result.arg1;
+}
+EXTERN int fprintf_execute(char *print_buffer, uint32_t bufsz) {
+  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
+  arg0 = (uint64_t)bufsz;
+  arg1 = (uint64_t)print_buffer;
+  hostrpc_result_t result =
+      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_FPRINTF), arg0, arg1, arg2, arg3,
+                     arg4, arg5, arg6, arg7);
+  return (int)result.arg0;
+}
+
 EXTERN uint32_t hostrpc_varfn_uint_execute(char *print_buffer, uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
   arg0 = (uint64_t)bufsz;

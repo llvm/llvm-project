@@ -3,10 +3,10 @@
 
 /*
  *    hostrpc.h:  This header contains the enum for all the
- *                           implemented services in hostcall.  This header is
- *                           included by both device stubs and host routines.
- *                           It also includes the version, release, and patch
- *                           identification for hostcall.
+ *                implemented services in hostrpc.  This header is
+ *                included by both device stubs and host routines.
+ *                It also includes the version, release, and patch
+ *                identification for hostrpc.
 
 MIT License
 
@@ -39,8 +39,11 @@ SOFTWARE.
 #endif
 
 #include <stdint.h>
+#include <stdio.h>
 
 //  These are the interfaces for the device stubs */
+EXTERN int fprintf(FILE *, const char *, ...);
+EXTERN char *fprintf_allocate(uint32_t bufsz);
 EXTERN int printf(const char *, ...);
 EXTERN char *printf_allocate(uint32_t bufsz);
 EXTERN char *global_allocate(uint32_t bufsz);
@@ -79,12 +82,12 @@ EXTERN hostrpc_result_t hostrpc_invoke(uint32_t id, uint64_t arg0,
 
 // Please update at least the patch level when adding a new service.
 // This will ensure that applications that use a new device stub do not
-// try to use backlevel hostcall host runtimes that do not have the
+// try to use backlevel hostrpc host runtimes that do not have the
 // implmented host version of the service.
 //
 #define HOSTRPC_VERSION 0
 #define HOSTRPC_RELEASE 7
-#define HOSTRPC_PATCH 0
+#define HOSTRPC_PATCH 1
 // HOSTRPC_VRM fits in two bytes allowing for 64 patches, 64 releases, and 15
 // versions
 #define HOSTRPC_VRM                                                            \
@@ -106,6 +109,7 @@ enum hostcall_service_id {
   HOSTRPC_SERVICE_VARFNUINT,
   HOSTRPC_SERVICE_VARFNUINT64,
   HOSTRPC_SERVICE_VARFNDOUBLE,
+  HOSTRPC_SERVICE_FPRINTF,
 };
 typedef enum hostcall_service_id hostcall_service_id_t;
 
