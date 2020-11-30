@@ -493,8 +493,8 @@ void VEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  // Functions having BP or stack objects need to emit prologue and epilogue
-  // to allocate local buffer on the stack.
+  // Functions having BP need to emit prologue and epilogue to allocate local
+  // buffer on the stack even if the function is a leaf function.
   if (isLeafProc(MF) && !hasBP(MF)) {
     VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
     FuncInfo->setLeafProc(true);
