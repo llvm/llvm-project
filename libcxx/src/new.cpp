@@ -64,7 +64,7 @@ operator new(std::size_t size) _THROW_BAD_ALLOC
     if (size == 0)
         size = 1;
     void* p;
-    while ((p = ::malloc(size)) == 0)
+    while ((p = ::malloc(size)) == nullptr)
     {
         // If malloc fails and there is a new_handler,
         // call it to try free up memory.
@@ -85,7 +85,7 @@ _LIBCPP_WEAK
 void*
 operator new(size_t size, const std::nothrow_t&) _NOEXCEPT
 {
-    void* p = 0;
+    void* p = nullptr;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
@@ -111,7 +111,7 @@ _LIBCPP_WEAK
 void*
 operator new[](size_t size, const std::nothrow_t&) _NOEXCEPT
 {
-    void* p = 0;
+    void* p = nullptr;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
@@ -207,7 +207,7 @@ _LIBCPP_WEAK
 void*
 operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) _NOEXCEPT
 {
-    void* p = 0;
+    void* p = nullptr;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
@@ -233,7 +233,7 @@ _LIBCPP_WEAK
 void*
 operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) _NOEXCEPT
 {
-    void* p = 0;
+    void* p = nullptr;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {

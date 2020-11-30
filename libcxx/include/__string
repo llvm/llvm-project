@@ -268,7 +268,7 @@ char_traits<_CharT>::find(const char_type* __s, size_t __n, const char_type& __a
             return __s;
         ++__s;
     }
-    return 0;
+    return nullptr;
 }
 
 template <class _CharT>
@@ -683,7 +683,7 @@ char_traits<char8_t>::find(const char_type* __s, size_t __n, const char_type& __
             return __s;
         ++__s;
     }
-    return 0;
+    return nullptr;
 }
 
 #endif // #_LIBCPP_NO_HAS_CHAR8_T
@@ -765,7 +765,7 @@ char_traits<char16_t>::find(const char_type* __s, size_t __n, const char_type& _
             return __s;
         ++__s;
     }
-    return 0;
+    return nullptr;
 }
 
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -885,7 +885,7 @@ char_traits<char32_t>::find(const char_type* __s, size_t __n, const char_type& _
             return __s;
         ++__s;
     }
-    return 0;
+    return nullptr;
 }
 
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -943,7 +943,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
     if (__pos >= __sz)
         return __npos;
     const _CharT* __r = _Traits::find(__p + __pos, __sz - __pos, __c);
-    if (__r == 0)
+    if (__r == nullptr)
         return __npos;
     return static_cast<_SizeT>(__r - __p);
 }
@@ -972,7 +972,7 @@ __search_substring(const _CharT *__first1, const _CharT *__last1,
 
     // Find __f2 the first byte matching in __first1.
     __first1 = _Traits::find(__first1, __len1 - __len2 + 1, __f2);
-    if (__first1 == 0)
+    if (__first1 == nullptr)
       return __last1;
 
     // It is faster to compare from the first byte of __first1 even if we
@@ -1095,7 +1095,7 @@ __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
     {
         const _CharT* __pe = __p + __sz;
         for (const _CharT* __ps = __p + __pos; __ps != __pe; ++__ps)
-            if (_Traits::find(__s, __n, *__ps) == 0)
+            if (_Traits::find(__s, __n, *__ps) == nullptr)
                 return static_cast<_SizeT>(__ps - __p);
     }
     return __npos;
@@ -1129,7 +1129,7 @@ __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
     else
         __pos = __sz;
     for (const _CharT* __ps = __p + __pos; __ps != __p;)
-        if (_Traits::find(__s, __n, *--__ps) == 0)
+        if (_Traits::find(__s, __n, *--__ps) == nullptr)
             return static_cast<_SizeT>(__ps - __p);
     return __npos;
 }

@@ -449,15 +449,15 @@ typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 
-int                stoi  (const string& str, size_t* idx = 0, int base = 10);
-long               stol  (const string& str, size_t* idx = 0, int base = 10);
-unsigned long      stoul (const string& str, size_t* idx = 0, int base = 10);
-long long          stoll (const string& str, size_t* idx = 0, int base = 10);
-unsigned long long stoull(const string& str, size_t* idx = 0, int base = 10);
+int                stoi  (const string& str, size_t* idx = nullptr, int base = 10);
+long               stol  (const string& str, size_t* idx = nullptr, int base = 10);
+unsigned long      stoul (const string& str, size_t* idx = nullptr, int base = 10);
+long long          stoll (const string& str, size_t* idx = nullptr, int base = 10);
+unsigned long long stoull(const string& str, size_t* idx = nullptr, int base = 10);
 
-float       stof (const string& str, size_t* idx = 0);
-double      stod (const string& str, size_t* idx = 0);
-long double stold(const string& str, size_t* idx = 0);
+float       stof (const string& str, size_t* idx = nullptr);
+double      stod (const string& str, size_t* idx = nullptr);
+long double stold(const string& str, size_t* idx = nullptr);
 
 string to_string(int val);
 string to_string(unsigned val);
@@ -469,15 +469,15 @@ string to_string(float val);
 string to_string(double val);
 string to_string(long double val);
 
-int                stoi  (const wstring& str, size_t* idx = 0, int base = 10);
-long               stol  (const wstring& str, size_t* idx = 0, int base = 10);
-unsigned long      stoul (const wstring& str, size_t* idx = 0, int base = 10);
-long long          stoll (const wstring& str, size_t* idx = 0, int base = 10);
-unsigned long long stoull(const wstring& str, size_t* idx = 0, int base = 10);
+int                stoi  (const wstring& str, size_t* idx = nullptr, int base = 10);
+long               stol  (const wstring& str, size_t* idx = nullptr, int base = 10);
+unsigned long      stoul (const wstring& str, size_t* idx = nullptr, int base = 10);
+long long          stoll (const wstring& str, size_t* idx = nullptr, int base = 10);
+unsigned long long stoull(const wstring& str, size_t* idx = nullptr, int base = 10);
 
-float       stof (const wstring& str, size_t* idx = 0);
-double      stod (const wstring& str, size_t* idx = 0);
-long double stold(const wstring& str, size_t* idx = 0);
+float       stof (const wstring& str, size_t* idx = nullptr);
+double      stod (const wstring& str, size_t* idx = nullptr);
+long double stold(const wstring& str, size_t* idx = nullptr);
 
 wstring to_wstring(int val);
 wstring to_wstring(unsigned val);
@@ -3965,7 +3965,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
         return false;
     if (capacity() < __min_cap - 1)
         return false;
-    if (data() == 0)
+    if (data() == nullptr)
         return false;
     if (data()[size()] != value_type())
         return false;
@@ -4336,15 +4336,15 @@ typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 
-_LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long               stol  (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long      stoul (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long long          stoll (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long long stoull(const string& __str, size_t* __idx = 0, int __base = 10);
+_LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long               stol  (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long      stoul (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long long          stoll (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long long stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_FUNC_VIS float       stof (const string& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS double      stod (const string& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS long double stold(const string& __str, size_t* __idx = 0);
+_LIBCPP_FUNC_VIS float       stof (const string& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS double      stod (const string& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS long double stold(const string& __str, size_t* __idx = nullptr);
 
 _LIBCPP_FUNC_VIS string to_string(int __val);
 _LIBCPP_FUNC_VIS string to_string(unsigned __val);
@@ -4356,15 +4356,15 @@ _LIBCPP_FUNC_VIS string to_string(float __val);
 _LIBCPP_FUNC_VIS string to_string(double __val);
 _LIBCPP_FUNC_VIS string to_string(long double __val);
 
-_LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long long          stoll (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long long stoull(const wstring& __str, size_t* __idx = 0, int __base = 10);
+_LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long long          stoll (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long long stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_FUNC_VIS float       stof (const wstring& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS double      stod (const wstring& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS long double stold(const wstring& __str, size_t* __idx = 0);
+_LIBCPP_FUNC_VIS float       stof (const wstring& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS double      stod (const wstring& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS long double stold(const wstring& __str, size_t* __idx = nullptr);
 
 _LIBCPP_FUNC_VIS wstring to_wstring(int __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(unsigned __val);
