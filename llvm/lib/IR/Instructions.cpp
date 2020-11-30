@@ -49,13 +49,14 @@ using namespace llvm;
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
-Optional<uint64_t>
+Optional<TypeSize>
 AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
-  uint64_t Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+  TypeSize Size = DL.getTypeAllocSizeInBits(getAllocatedType());
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return None;
+    assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     Size *= C->getZExtValue();
   }
   return Size;
