@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMLinker
 
   LINK_COMPONENTS
   Core
+  Object
   Support
   TransformUtils
   )
