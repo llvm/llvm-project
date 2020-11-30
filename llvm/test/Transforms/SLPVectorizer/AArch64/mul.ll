@@ -27,8 +27,7 @@ target triple = "aarch64--linux-gnu"
 ;        str     q0, [x0]
 ;        ret
 ;
-; but if we don't SLP vectorise these examples we get this which is smaller
-; and faster:
+; If we don't SLP vectorise but scalarize this we get this instead:
 ;
 ;        ldp     x8, x9, [x1]
 ;        ldp     x10, x11, [x0]
@@ -37,20 +36,19 @@ target triple = "aarch64--linux-gnu"
 ;        stp     x8, x9, [x0]
 ;        ret
 ;
-; FIXME: don't SLP vectorise this.
-
 define void @mul(i64* noalias nocapture %a, i64* noalias nocapture readonly %b) {
 ; CHECK-LABEL: @mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[B]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <2 x i64> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store i64 [[MUL]], i64* [[A]], align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[MUL4:%.*]] = mul nsw i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store i64 [[MUL4]], i64* [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -79,16 +77,18 @@ entry:
 define void @mac(i64* noalias nocapture %a, i64* noalias nocapture readonly %b) {
 ; CHECK-LABEL: @mac(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[B]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <2 x i64> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], <2 x i64>* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[MUL4:%.*]] = mul nsw i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], [[TMP0]]
+; CHECK-NEXT:    store i64 [[ADD]], i64* [[A]], align 8
+; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i64 [[MUL4]], [[TMP2]]
+; CHECK-NEXT:    store i64 [[ADD9]], i64* [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
