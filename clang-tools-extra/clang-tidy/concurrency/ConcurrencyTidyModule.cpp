@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "MtUnsafeCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -16,7 +17,10 @@ namespace concurrency {
 
 class ConcurrencyModule : public ClangTidyModule {
 public:
-  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<concurrency::MtUnsafeCheck>(
+        "concurrency-mt-unsafe");
+  }
 };
 
 } // namespace concurrency
