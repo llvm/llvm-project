@@ -330,7 +330,7 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
 
   unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
   for (PHINode &Phi : make_early_inc_range(phis())) {
-    Phi.removeIncomingValue(Pred);
+    Phi.removeIncomingValue(Pred, !KeepOneInputPHIs);
     if (KeepOneInputPHIs)
       continue;
     // If we have a single predecessor, removeIncomingValue erased the PHI
