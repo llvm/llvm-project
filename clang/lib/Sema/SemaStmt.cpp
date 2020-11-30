@@ -3629,7 +3629,8 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                       Scope *CurScope) {
   // Correct typos, in case the containing function returns 'auto' and
   // RetValExp should determine the deduced type.
-  ExprResult RetVal = CorrectDelayedTyposInExpr(RetValExp);
+  ExprResult RetVal = CorrectDelayedTyposInExpr(
+      RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
   if (RetVal.isInvalid())
     return StmtError();
   StmtResult R = BuildReturnStmt(ReturnLoc, RetVal.get());
