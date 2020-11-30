@@ -39,7 +39,8 @@ install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}
 target_link_libraries(omptarget.rtl.cuda
   ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+  "-Wl,-z,defs")
 
 # Report to the parent scope that we are building a plugin for CUDA.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
