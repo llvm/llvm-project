@@ -1152,10 +1152,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
        _LIBCPP_HAS_NO_THREADS is defined.
 #endif
 
-#if defined(__STDCPP_THREADS__) && defined(_LIBCPP_HAS_NO_THREADS)
-#error _LIBCPP_HAS_NO_THREADS cannot be set when __STDCPP_THREADS__ is set.
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(__STDCPP_THREADS__)
 #define __STDCPP_THREADS__ 1
 #endif
