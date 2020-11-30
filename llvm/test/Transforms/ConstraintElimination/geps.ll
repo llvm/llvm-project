@@ -371,5 +371,127 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+; Test which requires decomposing GEP %ptr, SHL().
+define void @test.ult.gep.shl(i32* readonly %src, i32* readnone %max, i32 %idx, i32 %j) {
+; CHECK-LABEL: @test.ult.gep.shl(
+; CHECK-NEXT:  check.0.min:
+; CHECK-NEXT:    [[ADD_10:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i32 10
+; CHECK-NEXT:    [[C_ADD_10_MAX:%.*]] = icmp ugt i32* [[ADD_10]], [[MAX:%.*]]
+; CHECK-NEXT:    br i1 [[C_ADD_10_MAX]], label [[TRAP:%.*]], label [[CHECK_IDX:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    ret void
+; CHECK:       check.idx:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[CHECK_MAX:%.*]], label [[TRAP]]
+; CHECK:       check.max:
+; CHECK-NEXT:    [[IDX_SHL:%.*]] = shl nuw i32 [[IDX]], 2
+; CHECK-NEXT:    [[ADD_PTR_SHL:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i32 [[IDX_SHL]]
+; CHECK-NEXT:    [[C_MAX_0:%.*]] = icmp ult i32* [[ADD_PTR_SHL]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_0]])
+; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl i32 [[IDX]], 2
+; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i32 [[IDX_SHL_NOT_NUW]]
+; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult i32* [[ADD_PTR_SHL_NOT_NUW]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_1]])
+; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw i32 [[IDX]], 3
+; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i32 [[IDX_SHL_3]]
+; CHECK-NEXT:    [[C_MAX_2:%.*]] = icmp ult i32* [[ADD_PTR_SHL_3]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_2]])
+; CHECK-NEXT:    ret void
+;
+check.0.min:
+  %add.10 = getelementptr inbounds i32, i32* %src, i32 10
+  %c.add.10.max = icmp ugt i32* %add.10, %max
+  br i1 %c.add.10.max, label %trap, label %check.idx
+
+trap:
+  ret void
+
+check.idx:                                      ; preds = %check.0.min
+  %cmp = icmp ult i32 %idx, 5
+  br i1 %cmp, label %check.max, label %trap
+
+check.max:                                      ; preds = %check.0.min
+  %idx.shl = shl nuw i32 %idx, 2
+  %add.ptr.shl = getelementptr inbounds i32, i32* %src, i32 %idx.shl
+  %c.max.0 = icmp ult i32* %add.ptr.shl, %max
+  call void @use(i1 %c.max.0)
+
+  %idx.shl.not.nuw = shl i32 %idx, 2
+  %add.ptr.shl.not.nuw = getelementptr inbounds i32, i32* %src, i32 %idx.shl.not.nuw
+  %c.max.1 = icmp ult i32* %add.ptr.shl.not.nuw, %max
+  call void @use(i1 %c.max.1)
+
+  %idx.shl.3 = shl nuw i32 %idx, 3
+  %add.ptr.shl.3 = getelementptr inbounds i32, i32* %src, i32 %idx.shl.3
+  %c.max.2 = icmp ult i32* %add.ptr.shl.3, %max
+  call void @use(i1 %c.max.2)
+
+  ret void
+}
+
+; Test which requires decomposing GEP %ptr, ZEXT(SHL()).
+define void @test.ult.gep.shl.zext(i32* readonly %src, i32* readnone %max, i32 %idx, i32 %j) {
+; CHECK-LABEL: @test.ult.gep.shl.zext(
+; CHECK-NEXT:  check.0.min:
+; CHECK-NEXT:    [[ADD_10:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i32 10
+; CHECK-NEXT:    [[C_ADD_10_MAX:%.*]] = icmp ugt i32* [[ADD_10]], [[MAX:%.*]]
+; CHECK-NEXT:    br i1 [[C_ADD_10_MAX]], label [[TRAP:%.*]], label [[CHECK_IDX:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    ret void
+; CHECK:       check.idx:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[CHECK_MAX:%.*]], label [[TRAP]]
+; CHECK:       check.max:
+; CHECK-NEXT:    [[IDX_SHL:%.*]] = shl nuw i32 [[IDX]], 2
+; CHECK-NEXT:    [[EXT_1:%.*]] = zext i32 [[IDX_SHL]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[EXT_1]]
+; CHECK-NEXT:    [[C_MAX_0:%.*]] = icmp ult i32* [[ADD_PTR_SHL]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_0]])
+; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl i32 [[IDX]], 2
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext i32 [[IDX_SHL_NOT_NUW]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[EXT_2]]
+; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult i32* [[ADD_PTR_SHL_NOT_NUW]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_1]])
+; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw i32 [[IDX]], 3
+; CHECK-NEXT:    [[EXT_3:%.*]] = zext i32 [[IDX_SHL_3]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[EXT_3]]
+; CHECK-NEXT:    [[C_MAX_2:%.*]] = icmp ult i32* [[ADD_PTR_SHL_3]], [[MAX]]
+; CHECK-NEXT:    call void @use(i1 [[C_MAX_2]])
+; CHECK-NEXT:    ret void
+;
+check.0.min:
+  %add.10 = getelementptr inbounds i32, i32* %src, i32 10
+  %c.add.10.max = icmp ugt i32* %add.10, %max
+  br i1 %c.add.10.max, label %trap, label %check.idx
+
+trap:
+  ret void
+
+check.idx:                                      ; preds = %check.0.min
+  %cmp = icmp ult i32 %idx, 5
+  br i1 %cmp, label %check.max, label %trap
+
+check.max:                                      ; preds = %check.0.min
+  %idx.shl = shl nuw i32 %idx, 2
+  %ext.1 = zext i32 %idx.shl to i64
+  %add.ptr.shl = getelementptr inbounds i32, i32* %src, i64 %ext.1
+  %c.max.0 = icmp ult i32* %add.ptr.shl, %max
+  call void @use(i1 %c.max.0)
+
+  %idx.shl.not.nuw = shl i32 %idx, 2
+  %ext.2 = zext i32 %idx.shl.not.nuw to i64
+  %add.ptr.shl.not.nuw = getelementptr inbounds i32, i32* %src, i64 %ext.2
+  %c.max.1 = icmp ult i32* %add.ptr.shl.not.nuw, %max
+  call void @use(i1 %c.max.1)
+
+  %idx.shl.3 = shl nuw i32 %idx, 3
+  %ext.3 = zext i32 %idx.shl.3 to i64
+  %add.ptr.shl.3 = getelementptr inbounds i32, i32* %src, i64 %ext.3
+  %c.max.2 = icmp ult i32* %add.ptr.shl.3, %max
+  call void @use(i1 %c.max.2)
+
+  ret void
+}
+
 declare void @use(i1)
 declare void @llvm.trap()
