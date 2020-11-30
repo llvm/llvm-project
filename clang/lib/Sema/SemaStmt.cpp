@@ -3327,9 +3327,14 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   }
 
   if (HasDeducedReturnType) {
+    FunctionDecl *FD = CurLambda->CallOperator;
+    // If we've already decided this lambda is invalid, e.g. because
+    // we saw a `return` whose expression had an error, don't keep
+    // trying to deduce its return type.
+    if (FD->isInvalidDecl())
+      return StmtError();
     // In C++1y, the return type may involve 'auto'.
     // FIXME: Blocks might have a return type of 'auto' explicitly specified.
-    FunctionDecl *FD = CurLambda->CallOperator;
     if (CurCap->ReturnType.isNull())
       CurCap->ReturnType = FD->getReturnType();
 
@@ -3709,6 +3714,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
       FunctionDecl *FD = cast<FunctionDecl>(CurContext);
+      // If we've already decided this function is invalid, e.g. because
+      // we saw a `return` whose expression had an error, don't keep
+      // trying to deduce its return type.
+      if (FD->isInvalidDecl())
+        return StmtError();
       if (DeduceFunctionTypeFromReturnExpr(FD, ReturnLoc, RetValExp, AT)) {
         FD->setInvalidDecl();
         return StmtError();
