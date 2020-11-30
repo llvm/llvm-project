@@ -1147,7 +1147,7 @@ public:
   //   const char *pyClassName
   // and redefine bindDerived.
   using ClassTy = py::class_<DerivedTy, PyValue>;
-  using IsAFunctionTy = int (*)(MlirValue);
+  using IsAFunctionTy = bool (*)(MlirValue);
 
   PyConcreteValue() = default;
   PyConcreteValue(PyOperationRef operationRef, MlirValue value)
@@ -1407,7 +1407,7 @@ public:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
   using ClassTy = py::class_<DerivedTy, BaseTy>;
-  using IsAFunctionTy = int (*)(MlirAttribute);
+  using IsAFunctionTy = bool (*)(MlirAttribute);
 
   PyConcreteAttribute() = default;
   PyConcreteAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
@@ -1934,7 +1934,7 @@ public:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
   using ClassTy = py::class_<DerivedTy, BaseTy>;
-  using IsAFunctionTy = int (*)(MlirType);
+  using IsAFunctionTy = bool (*)(MlirType);
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)

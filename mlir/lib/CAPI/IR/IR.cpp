@@ -36,11 +36,11 @@ bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
 
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
 
-void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow) {
+void mlirContextSetAllowUnregisteredDialects(MlirContext context, bool allow) {
   unwrap(context)->allowUnregisteredDialects(allow);
 }
 
-int mlirContextGetAllowUnregisteredDialects(MlirContext context) {
+bool mlirContextGetAllowUnregisteredDialects(MlirContext context) {
   return unwrap(context)->allowsUnregisteredDialects();
 }
 intptr_t mlirContextGetNumRegisteredDialects(MlirContext context) {
@@ -92,7 +92,7 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
 }
 
 void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
-                                        int prettyForm) {
+                                        bool prettyForm) {
   unwrap(flags)->enableDebugInfo(/*prettyForm=*/prettyForm);
 }
 
@@ -119,7 +119,7 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
 }
 
-int mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
+bool mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
   return unwrap(l1) == unwrap(l2);
 }
 
@@ -320,7 +320,7 @@ void mlirOperationSetAttributeByName(MlirOperation op, MlirStringRef name,
   unwrap(op)->setAttr(unwrap(name), unwrap(attr));
 }
 
-int mlirOperationRemoveAttributeByName(MlirOperation op, MlirStringRef name) {
+bool mlirOperationRemoveAttributeByName(MlirOperation op, MlirStringRef name) {
   auto removeResult = unwrap(op)->removeAttr(unwrap(name));
   return removeResult == MutableDictionaryAttr::RemoveResult::Removed;
 }
@@ -488,11 +488,11 @@ bool mlirValueEqual(MlirValue value1, MlirValue value2) {
   return unwrap(value1) == unwrap(value2);
 }
 
-int mlirValueIsABlockArgument(MlirValue value) {
+bool mlirValueIsABlockArgument(MlirValue value) {
   return unwrap(value).isa<BlockArgument>();
 }
 
-int mlirValueIsAOpResult(MlirValue value) {
+bool mlirValueIsAOpResult(MlirValue value) {
   return unwrap(value).isa<OpResult>();
 }
 

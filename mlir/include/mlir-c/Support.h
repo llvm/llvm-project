@@ -95,12 +95,12 @@ struct MlirLogicalResult {
 typedef struct MlirLogicalResult MlirLogicalResult;
 
 /// Checks if the given logical result represents a success.
-inline static int mlirLogicalResultIsSuccess(MlirLogicalResult res) {
+inline static bool mlirLogicalResultIsSuccess(MlirLogicalResult res) {
   return res.value != 0;
 }
 
 /// Checks if the given logical result represents a failure.
-inline static int mlirLogicalResultIsFailure(MlirLogicalResult res) {
+inline static bool mlirLogicalResultIsFailure(MlirLogicalResult res) {
   return res.value == 0;
 }
 
