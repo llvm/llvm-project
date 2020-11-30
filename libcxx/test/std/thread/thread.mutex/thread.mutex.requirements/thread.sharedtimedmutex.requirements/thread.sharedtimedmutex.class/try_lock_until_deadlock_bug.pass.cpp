@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::shared_timed_mutex m;
@@ -59,10 +60,10 @@ int main(int, char**)
   typedef std::chrono::steady_clock Clock;
 
   m.lock_shared();
-  std::thread t1(writer_one);
+  std::thread t1 = support::make_test_thread(writer_one);
   // create some readers
-  std::thread t2(blocked_reader);
-  std::thread t3(blocked_reader);
+  std::thread t2 = support::make_test_thread(blocked_reader);
+  std::thread t3 = support::make_test_thread(blocked_reader);
   // Kill the test after 10 seconds if it hasn't completed.
   auto end_point = Clock::now() + std::chrono::seconds(10);
   while (readers_finished != total_readers && Clock::now() < end_point) {

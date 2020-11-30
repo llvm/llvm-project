@@ -5,19 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// <thread>
-
-// class thread
-
-// thread& operator=(thread&& t);
+#ifndef TEST_SUPPORT_MAKE_TEST_THREAD_H
+#define TEST_SUPPORT_MAKE_TEST_THREAD_H
 
 #include <thread>
+#include <utility>
 
-int main(int, char**)
-{
-    std::thread t0;
-    std::thread t1;
-    t0 = t1;
-    return 0;
+namespace support {
+
+template <class F, class ...Args>
+std::thread make_test_thread(F&& f, Args&& ...args) {
+    return std::thread(std::forward<F>(f), std::forward<Args>(args)...);
 }
+
+} // end namespace support
+
+#endif // TEST_SUPPORT_MAKE_TEST_THREAD_H

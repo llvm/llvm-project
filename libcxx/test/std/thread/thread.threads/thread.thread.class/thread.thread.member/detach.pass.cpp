@@ -19,6 +19,7 @@
 #include <system_error>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::atomic_bool done(false);
@@ -65,7 +66,7 @@ int main(int, char**)
 {
     {
         G g;
-        std::thread t0(g);
+        std::thread t0 = support::make_test_thread(g);
         assert(t0.joinable());
         t0.detach();
         assert(!t0.joinable());
@@ -76,7 +77,7 @@ int main(int, char**)
     assert(G::n_alive == 0);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        std::thread t0(foo);
+        std::thread t0 = support::make_test_thread(foo);
         assert(t0.joinable());
         t0.detach();
         assert(!t0.joinable());
