@@ -386,8 +386,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
     if (Res) break;
 
-    //TODO-GFX11
-    //Res = tryDecodeInst(DecoderTableGFX1164, MI, DW, Address);
+    Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address);
+    if (Res) break;
   } while (false);
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
