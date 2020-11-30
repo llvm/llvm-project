@@ -2081,8 +2081,9 @@ public:
   /// elements than its source vectors.
   /// Example: shufflevector <2 x n> A, <2 x n> B, <1,2,3>
   bool increasesLength() const {
-    unsigned NumSourceElts =
-        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+    unsigned NumSourceElts = cast<VectorType>(Op<0>()->getType())
+                                 ->getElementCount()
+                                 .getKnownMinValue();
     unsigned NumMaskElts = ShuffleMask.size();
     return NumSourceElts < NumMaskElts;
   }
