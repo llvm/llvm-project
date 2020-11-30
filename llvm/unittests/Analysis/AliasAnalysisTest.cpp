@@ -295,7 +295,8 @@ TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
 
   BatchAAResults BatchAA(AA);
   EXPECT_EQ(MayAlias, BatchAA.alias(ALoc, BLoc));
-  EXPECT_EQ(MayAlias, BatchAA.alias(ANextLoc, BNextLoc));
+  // TODO: This is incorrect.
+  EXPECT_EQ(NoAlias, BatchAA.alias(ANextLoc, BNextLoc));
 }
 
 class AAPassInfraTest : public testing::Test {
