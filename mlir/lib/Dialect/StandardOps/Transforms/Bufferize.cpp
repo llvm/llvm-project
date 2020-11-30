@@ -21,6 +21,21 @@
 using namespace mlir;
 
 namespace {
+class BufferizeDimOp : public OpConversionPattern<DimOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(DimOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    DimOp::Adaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<DimOp>(op, adaptor.memrefOrTensor(),
+                                       adaptor.index());
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 class BufferizeDynamicTensorFromElementsOp
     : public OpConversionPattern<DynamicTensorFromElementsOp> {
 public:
@@ -148,6 +163,7 @@ void mlir::populateStdBufferizePatterns(MLIRContext *context,
                                         OwningRewritePatternList &patterns) {
   patterns.insert<
       // clang-format off
+      BufferizeDimOp,
       BufferizeDynamicTensorFromElementsOp,
       BufferizeExtractElementOp,
       BufferizeSelectOp,
@@ -178,6 +194,8 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
       return typeConverter.isLegal(op.getType()) ||
              !op.condition().getType().isa<IntegerType>();
     });
+    target.addDynamicallyLegalOp<DimOp>(
+        [&](DimOp op) { return typeConverter.isLegal(op); });
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
