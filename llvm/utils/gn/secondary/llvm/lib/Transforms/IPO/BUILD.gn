@@ -40,7 +40,6 @@ static_library("IPO") {
     "GlobalSplit.cpp",
     "HotColdSplitting.cpp",
     "IPO.cpp",
-    "IROutliner.cpp",
     "InferFunctionAttrs.cpp",
     "InlineSimple.cpp",
     "Inliner.cpp",
