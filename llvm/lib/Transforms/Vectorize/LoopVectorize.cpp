@@ -4322,7 +4322,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
     auto *Clone = Builder.Insert(GEP->clone());
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *EntryPart = Builder.CreateVectorSplat(VF, Clone);
-      VectorLoopValueMap.setVectorValue(GEP, Part, EntryPart);
+      State.set(VPDef, GEP, EntryPart, Part);
       addMetadata(EntryPart, GEP);
     }
   } else {
@@ -4359,7 +4359,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
               : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
       assert((VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
              "NewGEP is not a pointer vector");
-      VectorLoopValueMap.setVectorValue(GEP, Part, NewGEP);
+      State.set(VPDef, GEP, NewGEP, Part);
       addMetadata(NewGEP, GEP);
     }
   }
