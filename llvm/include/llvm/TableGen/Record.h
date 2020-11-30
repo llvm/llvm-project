@@ -1829,7 +1829,7 @@ public:
   /// Stop timing a phase.
   void stopTimer();
 
-  /// Start timing the overall backend. If the backend starts a timer,
+  /// Start timing the overall backend. If the backend itself starts a timer,
   /// then this timer is cleared.
   void startBackendTimer(StringRef Name);
 
