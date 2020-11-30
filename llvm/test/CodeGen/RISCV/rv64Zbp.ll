@@ -1858,7 +1858,6 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 }
 
 ; Similar to bswap_i32 but the result is not sign extended.
-; FIXME: We should use greviw here.
 define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: bswap_i32_nosext:
 ; RV64I:       # %bb.0:
@@ -2049,7 +2048,6 @@ define signext i32 @bitreverse_i32(i32 signext %a) nounwind {
 }
 
 ; Similar to bitreverse_i32 but the result is not sign extended.
-; FIXME: We should use greviw here.
 define void @bitreverse_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: bitreverse_i32_nosext:
 ; RV64I:       # %bb.0:
