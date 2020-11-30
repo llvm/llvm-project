@@ -796,11 +796,11 @@ void IRLinker::computeTypeMapping() {
     }
 
     auto STTypePrefix = getTypeNamePrefix(ST->getName());
-    if (STTypePrefix.size()== ST->getName().size())
+    if (STTypePrefix.size() == ST->getName().size())
       continue;
 
     // Check to see if the destination module has a struct with the prefix name.
-    StructType *DST = DstM.getTypeByName(STTypePrefix);
+    StructType *DST = StructType::getTypeByName(ST->getContext(), STTypePrefix);
     if (!DST)
       continue;
 

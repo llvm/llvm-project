@@ -61,7 +61,7 @@ protected:
 TEST_F(TargetLibraryInfoTest, InvalidProto) {
   parseAssembly("%foo = type { %foo }\n");
 
-  auto *StructTy = M->getTypeByName("foo");
+  auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
