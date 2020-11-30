@@ -1336,9 +1336,7 @@ AliasResult BasicAAResult::aliasGEP(
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      // We need to know that V2Size is not unknown, otherwise we might have
-      // stripped a gep with negative index ('gep <ptr>, -1, ...).
-      if (V1Size.hasValue() && V2Size.hasValue()) {
+      if (V1Size.hasValue()) {
         if ((-DecompGEP1.Offset).ult(V1Size.getValue()))
           return PartialAlias;
         return NoAlias;
