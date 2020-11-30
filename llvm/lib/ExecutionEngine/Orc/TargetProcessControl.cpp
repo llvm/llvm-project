@@ -110,7 +110,7 @@ SelfTargetProcessControl::runWrapper(JITTargetAddress WrapperFnAddr,
       tpctypes::CWrapperFunctionResult (*)(const uint8_t *Data, uint64_t Size);
   auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
   return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
-};
+}
 
 Error SelfTargetProcessControl::disconnect() { return Error::success(); }
 
