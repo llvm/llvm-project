@@ -34,9 +34,7 @@ define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; CHECK-NEXT:    st %s15, 24(, %s11)
 ; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s13, -208
-; CHECK-NEXT:    and %s13, %s13, (32)0
-; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; CHECK-NEXT:    lea %s11, -208(, %s11)
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -65,9 +63,7 @@ define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -208
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -208(, %s11)
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -113,9 +109,7 @@ define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly 
 ; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    st %s17, 40(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s13, -288
-; CHECK-NEXT:    and %s13, %s13, (32)0
-; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
@@ -159,9 +153,7 @@ define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly 
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    st %s17, 40(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -288
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -288(, %s11)
 ; PIC-NEXT:    and %s11, %s11, (59)1
 ; PIC-NEXT:    or %s17, 0, %s11
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_2
@@ -230,9 +222,7 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -176
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -176(, %s11)
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB3_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -274,9 +264,7 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; CHECK-NEXT:    st %s15, 24(, %s11)
 ; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s13, -208
-; CHECK-NEXT:    and %s13, %s13, (32)0
-; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; CHECK-NEXT:    lea %s11, -208(, %s11)
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -308,9 +296,7 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -208
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -208(, %s11)
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB4_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -358,9 +344,7 @@ define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture reado
 ; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    st %s17, 40(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s13, -288
-; CHECK-NEXT:    and %s13, %s13, (32)0
-; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_2
@@ -404,9 +388,7 @@ define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture reado
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    st %s17, 40(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s13, -288
-; PIC-NEXT:    and %s13, %s13, (32)0
-; PIC-NEXT:    lea.sl %s11, -1(%s13, %s11)
+; PIC-NEXT:    lea %s11, -288(, %s11)
 ; PIC-NEXT:    and %s11, %s11, (59)1
 ; PIC-NEXT:    or %s17, 0, %s11
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB5_2
