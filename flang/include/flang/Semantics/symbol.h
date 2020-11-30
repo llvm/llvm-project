@@ -493,6 +493,7 @@ public:
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement
+      InNamelist, // flag is set if the symbol is in Namelist statement
       // OpenACC data-sharing attribute
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
