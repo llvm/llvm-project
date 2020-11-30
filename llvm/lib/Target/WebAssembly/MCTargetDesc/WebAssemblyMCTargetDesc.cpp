@@ -147,6 +147,10 @@ wasm::ValType WebAssembly::toValType(const MVT &Ty) {
   case MVT::v4f32:
   case MVT::v2f64:
     return wasm::ValType::V128;
+  case MVT::funcref:
+    return wasm::ValType::FUNCREF;
+  case MVT::externref:
+    return wasm::ValType::EXTERNREF;
   case MVT::exnref:
     return wasm::ValType::EXNREF;
   default:

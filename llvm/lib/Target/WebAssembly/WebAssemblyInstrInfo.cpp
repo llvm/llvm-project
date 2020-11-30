@@ -76,6 +76,10 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     CopyOpcode = WebAssembly::COPY_F64;
   else if (RC == &WebAssembly::V128RegClass)
     CopyOpcode = WebAssembly::COPY_V128;
+  else if (RC == &WebAssembly::FUNCREFRegClass)
+    CopyOpcode = WebAssembly::COPY_FUNCREF;
+  else if (RC == &WebAssembly::EXTERNREFRegClass)
+    CopyOpcode = WebAssembly::COPY_EXTERNREF;
   else if (RC == &WebAssembly::EXNREFRegClass)
     CopyOpcode = WebAssembly::COPY_EXNREF;
   else
