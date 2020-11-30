@@ -20,10 +20,60 @@
 
 #include <numeric>
 #include <functional>
+#include <string>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+struct rvalue_subtractable
+{
+    bool correctOperatorUsed = false;
+
+    // make sure the predicate is passed an rvalue and an lvalue (so check that the first argument was moved)
+    rvalue_subtractable operator()(rvalue_subtractable const&, rvalue_subtractable&& r) {
+        r.correctOperatorUsed = true;
+        return std::move(r);
+    }
+};
+
+rvalue_subtractable operator-(rvalue_subtractable const&, rvalue_subtractable& rhs)
+{
+    rhs.correctOperatorUsed = false;
+    return rhs;
+}
+
+rvalue_subtractable operator-(rvalue_subtractable const&, rvalue_subtractable&& rhs)
+{
+    rhs.correctOperatorUsed = true;
+    return std::move(rhs);
+}
+
+void
+test_use_move()
+{
+    const std::size_t size = 100;
+    rvalue_subtractable arr[size];
+    rvalue_subtractable res1[size];
+    rvalue_subtractable res2[size];
+    std::adjacent_difference(arr, arr + size, res1);
+    std::adjacent_difference(arr, arr + size, res2, /*predicate=*/rvalue_subtractable());
+    // start at 1 because the first element is not moved
+    for (unsigned i = 1; i < size; ++i) assert(res1[i].correctOperatorUsed);
+    for (unsigned i = 1; i < size; ++i) assert(res2[i].correctOperatorUsed);
+}
+#endif // TEST_STD_VER > 17
+
+void
+test_string()
+{
+    std::string sa[] = {"a", "b", "c"};
+    std::string sr[] = {"a", "ba", "cb"};
+    std::string output[3];
+    std::adjacent_difference(sa, sa + 3, output, std::plus<std::string>());
+    for (unsigned i = 0; i < 3; ++i) assert(output[i] == sr[i]);
+}
 
 template <class InIter, class OutIter>
 void
@@ -116,5 +166,10 @@ int main(int, char**)
     std::adjacent_difference(x, x+3, y, std::minus<X>());
 #endif
 
-  return 0;
+#if TEST_STD_VER > 17
+    test_use_move();
+#endif // TEST_STD_VER > 17
+    test_string();
+
+    return 0;
 }
