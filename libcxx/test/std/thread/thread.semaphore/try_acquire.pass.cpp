@@ -25,6 +25,7 @@
 #include <semaphore>
 #include <thread>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
@@ -35,7 +36,7 @@ int main(int, char**)
   s.release();
   assert(s.try_acquire());
   s.release(2);
-  std::thread t([&](){
+  std::thread t = support::make_test_thread([&](){
     assert(s.try_acquire());
   });
   t.join();

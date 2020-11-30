@@ -26,6 +26,7 @@
 #include <chrono>
 #include <thread>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
@@ -40,7 +41,7 @@ int main(int, char**)
     }
   };
 
-  std::thread t(l);
+  std::thread t = support::make_test_thread(l);
   l();
 
   t.join();
