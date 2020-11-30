@@ -1142,7 +1142,7 @@ basic_istream<_CharT, _Traits>::putback(char_type __c)
         try
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-            if (this->rdbuf() == 0 || this->rdbuf()->sputbackc(__c) == traits_type::eof())
+            if (this->rdbuf() == nullptr || this->rdbuf()->sputbackc(__c) == traits_type::eof())
                 __state |= ios_base::badbit;
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
@@ -1179,7 +1179,7 @@ basic_istream<_CharT, _Traits>::unget()
         try
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-            if (this->rdbuf() == 0 || this->rdbuf()->sungetc() == traits_type::eof())
+            if (this->rdbuf() == nullptr || this->rdbuf()->sungetc() == traits_type::eof())
                 __state |= ios_base::badbit;
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
@@ -1215,7 +1215,7 @@ basic_istream<_CharT, _Traits>::sync()
         try
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-            if (this->rdbuf() == 0)
+            if (this->rdbuf() == nullptr)
                 return -1;
             if (this->rdbuf()->pubsync() == -1)
             {

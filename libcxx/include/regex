@@ -2574,12 +2574,12 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_regex()
         : __flags_(regex_constants::ECMAScript), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {}
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_regex(const value_type* __p, flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {
         __init(__p, __p + __traits_.length(__p));
         }
@@ -2587,7 +2587,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_regex(const value_type* __p, size_t __len, flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {
         __init(__p, __p + __len);
         }
@@ -2599,7 +2599,7 @@ public:
         explicit basic_regex(const basic_string<value_type, _ST, _SA>& __p,
                              flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {
         __init(__p.begin(), __p.end());
         }
@@ -2609,7 +2609,7 @@ public:
         basic_regex(_ForwardIterator __first, _ForwardIterator __last,
                     flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {
         __init(__first, __last);
         }
@@ -2618,7 +2618,7 @@ public:
     basic_regex(initializer_list<value_type> __il,
                 flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
-          __end_(0)
+          __end_(nullptr)
         {
         __init(__il.begin(), __il.end());
         }
