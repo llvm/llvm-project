@@ -30,7 +30,7 @@ MlirContext mlirContextCreate() {
   return wrap(context);
 }
 
-int mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
+bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
   return unwrap(ctx1) == unwrap(ctx2);
 }
 
@@ -66,7 +66,7 @@ MlirContext mlirDialectGetContext(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getContext());
 }
 
-int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
+bool mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
   return unwrap(dialect1) == unwrap(dialect2);
 }
 
@@ -245,7 +245,7 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
 
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
-int mlirOperationEqual(MlirOperation op, MlirOperation other) {
+bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
@@ -398,7 +398,7 @@ MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args) {
   return wrap(b);
 }
 
-int mlirBlockEqual(MlirBlock block, MlirBlock other) {
+bool mlirBlockEqual(MlirBlock block, MlirBlock other) {
   return unwrap(block) == unwrap(other);
 }
 
@@ -480,7 +480,7 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 // Value API.
 //===----------------------------------------------------------------------===//
 
-int mlirValueEqual(MlirValue value1, MlirValue value2) {
+bool mlirValueEqual(MlirValue value1, MlirValue value2) {
   return unwrap(value1) == unwrap(value2);
 }
 
@@ -538,7 +538,9 @@ MlirContext mlirTypeGetContext(MlirType type) {
   return wrap(unwrap(type).getContext());
 }
 
-int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
+bool mlirTypeEqual(MlirType t1, MlirType t2) {
+  return unwrap(t1) == unwrap(t2);
+}
 
 void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
@@ -563,7 +565,7 @@ MlirType mlirAttributeGetType(MlirAttribute attribute) {
   return wrap(unwrap(attribute).getType());
 }
 
-int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
+bool mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
   return unwrap(a1) == unwrap(a2);
 }
 
@@ -588,7 +590,7 @@ MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
   return wrap(Identifier::get(unwrap(str), unwrap(context)));
 }
 
-int mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
+bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
   return unwrap(ident) == unwrap(other);
 }
 
