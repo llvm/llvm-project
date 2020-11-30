@@ -9,7 +9,7 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     constpexr bool       // constexpr after C++17
+//     constexpr bool       // constexpr after C++17
 //     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
 #include <algorithm>
