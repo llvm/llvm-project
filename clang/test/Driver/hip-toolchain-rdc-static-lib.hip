@@ -47,7 +47,7 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: [[LLD: ".*lld"]] {{.*}} "-o" "[[IMG_DEV1:.*out]]" [[A_BC1]] [[B_BC1]]
+// CHECK: [[LLD: ".*lld.*"]] {{.*}} "-o" "[[IMG_DEV1:.*out]]" [[A_BC1]] [[B_BC1]]
 
 // generate image for device side path on gfx900
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -78,6 +78,6 @@
 // CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
 
-// CHECK: [[MC:".*llvm-mc"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*llvm-mc.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
 
 // CHECK: [[AR:".*llvm-ar.*"]] "rcsD" "{{.*}}.out" [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]
