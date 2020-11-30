@@ -1,0 +1,32 @@
+## Check how we dump invalid SHT_RISCV_ATTRIBUTES sections.
+
+## This test case is used to ensure llvm-readobj checks the version of
+## attribute sections correctly. The only supported format is 'A' (41),
+## here we use 'B' (42).
+
+# RUN: yaml2obj %s -D BITS=32 -DCONTENT=42 -o %t1.32.o
+# RUN: llvm-readobj -A %t1.32.o 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=ERR-FORMAT
+# RUN: yaml2obj %s -D BITS=64 -DCONTENT=42 -o %t1.64.o
+# RUN: llvm-readobj -A %t1.64.o 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=ERR-FORMAT
+
+# ERR-FORMAT: warning: '[[FILE]].{{32|64}}.o': unrecognised FormatVersion: 0x42
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS=64]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:    .riscv.attributes
+    Type:    SHT_RISCV_ATTRIBUTES
+    Content: [[CONTENT]]
+
+## Check we report a warning when we are unable to parse the attribute section data.
+
+# RUN: yaml2obj %s -D BITS=32 -DCONTENT=4100000000 -o %t2.32.o
+# RUN: llvm-readobj -A %t2.32.o 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=ERR-LENGTH
+# RUN: yaml2obj %s -D BITS=64 -DCONTENT=4100000000 -o %t2.64.o
+# RUN: llvm-readobj -A %t2.64.o 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=ERR-LENGTH
+
+# ERR-LENGTH: warning: '[[FILE]].{{32|64}}.o': invalid section length 0 at offset 0x1
