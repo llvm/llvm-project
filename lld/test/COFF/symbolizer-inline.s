@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj %s -o %t.obj -triple x86_64-windows-msvc
 # RUN: lld-link -entry:main -nodefaultlib %t.obj -out:%t.exe -pdb:%t.pdb -debug
 # RUN: llvm-symbolizer --obj=%t.exe --use-native-pdb-reader --relative-address \
-# RUN:   0x1014 0x1018 0x101c 0x1023 0x1024 | FileCheck %s
+# RUN:   0x1014 0x1018 0x101c 0x1023 0x1024 \
 # RUN:   0x1037 0x103A 0x104B 0x104E | FileCheck %s
 
 # Compiled from this cpp code, with modifications to add extra inline line and 
