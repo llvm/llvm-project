@@ -443,6 +443,7 @@ class CodeGenSchedModels {
   InstClassMapTy InstrClassMap;
 
   std::vector<STIPredicateFunction> STIPredicates;
+  std::vector<unsigned> getAllProcIndices() const;
 
 public:
   CodeGenSchedModels(RecordKeeper& RK, const CodeGenTarget &TGT);
