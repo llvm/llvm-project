@@ -25,7 +25,7 @@ func @fun(%a : !fir.ref<i64>) -> i64 {
 }
 
 // CHECK-LABEL: @bar
-func @bar(%a : !fir.ref<i64>) -> i64
+func private @bar(%a : !fir.ref<i64>) -> i64
 
 // CHECK-LABEL: @fun2
 func @fun2(%a : !fir.ref<i64>) -> i64 {

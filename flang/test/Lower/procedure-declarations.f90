@@ -165,5 +165,5 @@ subroutine call_foo8_2(i)
   call foo8(i)
 end subroutine 
 
-! CHECK: func @_QPfoo6(!fir.ref<!fir.array<10xi32>>)
-! CHECK: func @_QPfoo7()
+! CHECK: func private @_QPfoo6(!fir.ref<!fir.array<10xi32>>)
+! CHECK: func private @_QPfoo7()

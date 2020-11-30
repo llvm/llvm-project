@@ -14,4 +14,4 @@ func @x(%addr : !fir.ref<index>) {
   return
 }
 
-func @y(%addr : !fir.ref<index>)
+func private @y(%addr : !fir.ref<index>)

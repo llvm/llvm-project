@@ -21,4 +21,4 @@ func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
   return
 }
 
-func @y(!fir.box<!fir.array<10xf32>>) -> ()
+func private @y(!fir.box<!fir.array<10xf32>>) -> ()

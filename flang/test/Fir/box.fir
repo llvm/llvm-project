@@ -1,9 +1,9 @@
 // RUN: tco -o - %s | FileCheck %s
 
 // CHECK-LABEL: declare void @g({ float*, i64, i32, i8, i8, i8, i8 }*)
-func @g(%b : !fir.box<f32>)
+func private @g(%b : !fir.box<f32>)
 // CHECK-LABEL: declare void @ga({ float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }*)
-func @ga(%b : !fir.box<!fir.array<?xf32>>)
+func private @ga(%b : !fir.box<!fir.array<?xf32>>)
 
 // CHECK-LABEL: define void @f
 // CHECK: (float* %[[ARG:.*]])

@@ -49,5 +49,5 @@ end subroutine
 
 ! Test external function declarations
 
-! CHECK: func @_QPbar(!fir.box<!fir.array<?x?x?xf32>>)
-! CHECK: func @_QPbar_char(!fir.box<!fir.array<?x?x?x!fir.char<1,?>>>)
+! CHECK: func private @_QPbar(!fir.box<!fir.array<?x?x?xf32>>)
+! CHECK: func private @_QPbar_char(!fir.box<!fir.array<?x?x?x!fir.char<1,?>>>)

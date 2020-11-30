@@ -2,7 +2,7 @@
 
 // Test of building and passing boxchar.
 
-func @callee(%x : !fir.boxchar<1>)
+func private @callee(%x : !fir.boxchar<1>)
 
 // CHECK-LABEL: define void @get_name
 func @get_name() {

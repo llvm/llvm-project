@@ -21,7 +21,7 @@ func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index
   return
 }
 
-func @f2() -> i1
+func private @f2() -> i1
 
 // CHECK-LABEL: @x2
 func @x2(%lo : index, %up : index, %ok : i1) {
@@ -39,7 +39,7 @@ func @x2(%lo : index, %up : index, %ok : i1) {
   return
 }
 
-func @f3(i16)
+func private @f3(i16)
 
 // do_loop with an extra loop-carried value
 // CHECK-LABEL: @x3
@@ -81,7 +81,7 @@ func @y3(%lo : index, %up : index) -> i1 {
   return %andok : i1
 }
 
-func @f4(i32) -> i1
+func private @f4(i32) -> i1
 
 // do_loop that returns the final value of the induction
 // CHECK-LABEL: @x4

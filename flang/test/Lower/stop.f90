@@ -65,5 +65,5 @@ subroutine stop_char_lit
   stop 'crash'
 end subroutine stop_char_lit
 
-! CHECK-DAG: func @_Fortran{{.*}}StopStatement(i32, i1, i1) -> none
-! CHECK-DAG: func @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK-DAG: func private @_Fortran{{.*}}StopStatement(i32, i1, i1) -> none
+! CHECK-DAG: func private @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1) -> none
