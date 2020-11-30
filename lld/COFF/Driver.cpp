@@ -1188,6 +1188,11 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
     return std::string(path);
   }
 
+  // This is intentionally not guarded by OPT_lldignoreenv since writing
+  // a repro tar file doesn't affect the main output.
+  if (auto *path = getenv("LLD_REPRODUCE"))
+    return std::string(path);
+
   return None;
 }
 
