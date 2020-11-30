@@ -32,7 +32,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -53,7 +52,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -1220,10 +1218,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LWA: {
     // Verify alignment is legal, so we don't create relocations
     // that can't be supported.
-    // FIXME:  This test is currently disabled for Darwin.  The test
-    // suite shows a handful of test cases that fail this check for
-    // Darwin.  Those need to be investigated before this sanity test
-    // can be enabled for those subtargets.
     unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
     const MachineOperand &MO = MI->getOperand(OpNum);
     if (MO.isGlobal()) {
@@ -2062,10 +2056,8 @@ void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
   }
 }
 
-/// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code
-/// for a MachineFunction to the given output stream, in a format that the
-/// Darwin assembler can deal with.
-///
+// Return a pass that prints the PPC assembly code for a MachineFunction to the
+// given output stream.
 static AsmPrinter *
 createPPCAsmPrinterPass(TargetMachine &tm,
                         std::unique_ptr<MCStreamer> &&Streamer) {
