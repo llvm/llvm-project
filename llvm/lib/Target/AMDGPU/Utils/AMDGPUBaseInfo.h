@@ -69,6 +69,84 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
+enum class TargetIDSetting {
+  Unsupported,
+  Any,
+  Off,
+  On
+};
+
+class AMDGPUTargetID {
+private:
+  TargetIDSetting XnackSetting;
+  TargetIDSetting SramEccSetting;
+
+public:
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  ~AMDGPUTargetID() = default;
+
+  /// \return True if the current xnack setting is not "Unsupported".
+  bool isXnackSupported() const {
+    return XnackSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current xnack setting is "On" or "Any".
+  bool isXnackOnOrAny() const {
+    return XnackSetting == TargetIDSetting::On ||
+        XnackSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current xnack setting is "On" or "Off",
+  /// false otherwise.
+  bool isXnackOnOrOff() const {
+    return getXnackSetting() == TargetIDSetting::On ||
+        getXnackSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current xnack TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getXnackSetting() const {
+    return XnackSetting;
+  }
+
+  /// Sets xnack setting to \p NewXnackSetting.
+  void setXnackSetting(TargetIDSetting NewXnackSetting) {
+    XnackSetting = NewXnackSetting;
+  }
+
+  /// \return True if the current sramecc setting is not "Unsupported".
+  bool isSramEccSupported() const {
+    return SramEccSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current sramecc setting is "On" or "Any".
+  bool isSramEccOnOrAny() const {
+  return SramEccSetting == TargetIDSetting::On ||
+      SramEccSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current sramecc setting is "On" or "Off",
+  /// false otherwise.
+  bool isSramEccOnOrOff() const {
+    return getSramEccSetting() == TargetIDSetting::On ||
+        getSramEccSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current sramecc TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getSramEccSetting() const {
+    return SramEccSetting;
+  }
+
+  /// Sets sramecc setting to \p NewSramEccSetting.
+  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
+    SramEccSetting = NewSramEccSetting;
+  }
+
+  void setTargetIDFromFeaturesString(StringRef FS);
+  void setTargetIDFromTargetIDStream(StringRef TargetID);
+};
+
 /// Streams isa version string for given subtarget \p STI into \p Stream.
 void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
 
@@ -873,6 +951,10 @@ struct SIModeRegisterDefaults {
 };
 
 } // end namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AMDGPU::IsaInfo::TargetIDSetting S);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
