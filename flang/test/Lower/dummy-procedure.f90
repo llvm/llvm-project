@@ -135,18 +135,18 @@ subroutine todo3(dummy_proc)
   procedure(acos) :: dummy_proc
 end subroutine
 
-! CHECK-LABEL: func @fir.acos.f32.ref_f32(%arg0: !fir.ref<f32>) -> f32
+! CHECK-LABEL: func private @fir.acos.f32.ref_f32(%arg0: !fir.ref<f32>) -> f32
   !CHECK: %[[load:.*]] = fir.load %arg0
   !CHECK: %[[res:.*]] = fir.call @__fs_acos_1(%[[load]]) : (f32) -> f32
   !CHECK: return %[[res]] : f32
 
-!CHECK-LABEL: func @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)
+!CHECK-LABEL: func private @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)
   !CHECK: %[[load:.*]] = fir.load %arg0
   !CHECK: %[[cst1:.*]] = constant 1
   !CHECK: %[[imag:.*]] = fir.extract_value %[[load]], %[[cst1]] : (!fir.complex<4>, index) -> f32
   !CHECK: return %[[imag]] : f32
 
-!CHECK-LABEL: func @fir.len.i32.bc1(%arg0: !fir.boxchar<1>)
+!CHECK-LABEL: func private @fir.len.i32.bc1(%arg0: !fir.boxchar<1>)
   !CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   !CHECK: %[[len:.*]] = fir.convert %[[unboxed]]#1 : (index) -> i32
   !CHECK: return %[[len]] : i32

@@ -40,11 +40,11 @@ func @gen8() -> !fir.complex<8> {
 
 // I32: declare void @sink4({ float, float }*)
 // X64: declare void @sink4(<2 x float>)
-func @sink4(!fir.complex<4>) -> ()
+func private @sink4(!fir.complex<4>) -> ()
 
 // I32: declare void @sink8({ double, double }*)
 // X64: declare void @sink8(double, double)
-func @sink8(!fir.complex<8>) -> ()
+func private @sink8(!fir.complex<8>) -> ()
 
 // I32-LABEL: define void @call4()
 // X64-LABEL: define void @call4()

@@ -43,7 +43,7 @@ func @conj(%a : !fir.complex<4>) -> !fir.complex<4> {
   return %3 : !fir.complex<4>
 }
 
-func @print_complex(f32, f32)
+func private @print_complex(f32, f32)
 
 func @main() -> i32 {
   %0 = fir.alloca !fir.complex<4>

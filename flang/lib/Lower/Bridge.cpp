@@ -1797,6 +1797,7 @@ private:
       } else {
         global = builder->createGlobal(loc, genType(var), globalName, linkage);
       }
+      global.setVisibility(mlir::SymbolTable::Visibility::Public);
       auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                    global.getSymbol());
       mapSymbolAttributes(var, storeMap, addrOf);
@@ -2769,6 +2770,7 @@ private:
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setInsertionPointToStart(&func.front());
+    func.setVisibility(mlir::SymbolTable::Visibility::Public);
 
     mapDummiesAndResults(funit, callee);
 
