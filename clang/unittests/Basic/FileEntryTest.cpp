@@ -92,7 +92,6 @@ TEST(FileEntryTest, equals) {
   EXPECT_NE(&R2.getFileEntry(), R1);
   EXPECT_NE(R1, R2);
 
-  OptionalFileEntryRefDegradesToFileEntryPtr M0;
   OptionalFileEntryRefDegradesToFileEntryPtr M1 = R1;
 
   EXPECT_EQ(M1, &R1.getFileEntry());
