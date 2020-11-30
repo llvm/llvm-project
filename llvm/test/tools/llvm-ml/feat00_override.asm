@@ -1,6 +1,6 @@
-; RUN: llvm-ml -m32 -filetype=obj %s | llvm-readobj --syms - | FileCheck %s
-; RUN: llvm-ml -m64 -filetype=obj %s | llvm-readobj --syms - | FileCheck %s
-; RUN: llvm-ml -m32 -safeseh -filetype=obj %s | llvm-readobj --syms - | FileCheck %s
+; RUN: llvm-ml -m32 %s /Fo - | llvm-readobj --syms - | FileCheck %s
+; RUN: llvm-ml -m64 %s /Fo - | llvm-readobj --syms - | FileCheck %s
+; RUN: llvm-ml -m32 -safeseh %s /Fo - | llvm-readobj --syms - | FileCheck %s
 
 .code
 

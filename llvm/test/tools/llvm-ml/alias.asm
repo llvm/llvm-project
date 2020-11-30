@@ -1,4 +1,4 @@
-; RUN: llvm-ml -filetype=obj %s | llvm-readobj --syms - | FileCheck %s
+; RUN: llvm-ml %s /Fo - | llvm-readobj --syms - | FileCheck %s
 
 .code
 
