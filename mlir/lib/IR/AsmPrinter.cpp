@@ -158,7 +158,8 @@ OpPrintingFlags &OpPrintingFlags::useLocalScope() {
 /// Return if the given ElementsAttr should be elided.
 bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
   return elementsAttrElementLimit.hasValue() &&
-         *elementsAttrElementLimit < int64_t(attr.getNumElements());
+         *elementsAttrElementLimit < int64_t(attr.getNumElements()) &&
+         !attr.isa<SplatElementsAttr>();
 }
 
 /// Return the size limit for printing large ElementsAttr.
