@@ -1722,7 +1722,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "ftello", Signature(ArgTypes{FilePtrTy}, RetType{Off_tTy}),
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
 
-    Optional<RangeInt> Off_tMax = getMaxValue(Off_tTy);
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
     addToFunctionSummaryMap(
@@ -1732,10 +1731,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, Off_tMax))));
+                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
 
     Optional<QualType> Off64_tTy = lookupTy("off64_t");
-    Optional<RangeInt> Off64_tMax = getMaxValue(Off_tTy);
     // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,
     // off64_t offset);
     addToFunctionSummaryMap(
@@ -1745,7 +1743,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, Off64_tMax))));
+                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
 
     // int pipe(int fildes[2]);
     addToFunctionSummaryMap(
