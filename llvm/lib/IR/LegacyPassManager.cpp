@@ -675,11 +675,9 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
 
     // If AP is the last user of other passes then make P last user of
     // such passes.
-    for (auto LU : LastUser) {
+    for (auto &LU : LastUser) {
       if (LU.second == AP)
-        // DenseMap iterator is not invalidated here because
-        // this is just updating existing entries.
-        LastUser[LU.first] = P;
+        LU.second = P;
     }
   }
 }
