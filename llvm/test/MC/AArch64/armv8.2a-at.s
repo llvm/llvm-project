@@ -7,5 +7,5 @@
   at s1e1wp, x2
 // CHECK: at      s1e1rp, x1              // encoding: [0x01,0x79,0x08,0xd5]
 // CHECK: at      s1e1wp, x2              // encoding: [0x22,0x79,0x08,0xd5]
-// ERROR: error: AT S1E1RP requires pan-rwv
-// ERROR: error: AT S1E1WP requires pan-rwv
+// ERROR: error: AT S1E1RP requires: pan-rwv
+// ERROR: error: AT S1E1WP requires: pan-rwv

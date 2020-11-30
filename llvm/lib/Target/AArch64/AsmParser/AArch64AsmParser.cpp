@@ -2907,14 +2907,13 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
   else if (FBS[AArch64::HasV8_6aOps])
     Str += "ARMv8.6a";
   else {
-    auto ext = std::find_if(std::begin(ExtensionMap),
-      std::end(ExtensionMap),
-      [&](const Extension& e)
+    SmallVector<std::string, 2> ExtMatches;
+    for (const auto& Ext : ExtensionMap) {
       // Use & in case multiple features are enabled
-      { return (FBS & e.Features) != FeatureBitset(); }
-    );
-
-    Str += ext != std::end(ExtensionMap) ? ext->Name : "(unknown)";
+      if ((FBS & Ext.Features) != FeatureBitset())
+        ExtMatches.push_back(Ext.Name);
+    }
+    Str += !ExtMatches.empty() ? llvm::join(ExtMatches, ", ") : "(unknown)";
   }
 }
 
@@ -2959,7 +2958,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!IC)
       return TokError("invalid operand for IC instruction");
     else if (!IC->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("IC " + std::string(IC->Name) + " requires ");
+      std::string Str("IC " + std::string(IC->Name) + " requires: ");
       setRequiredFeatureString(IC->getRequiredFeatures(), Str);
       return TokError(Str.c_str());
     }
@@ -2969,7 +2968,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!DC)
       return TokError("invalid operand for DC instruction");
     else if (!DC->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("DC " + std::string(DC->Name) + " requires ");
+      std::string Str("DC " + std::string(DC->Name) + " requires: ");
       setRequiredFeatureString(DC->getRequiredFeatures(), Str);
       return TokError(Str.c_str());
     }
@@ -2979,7 +2978,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!AT)
       return TokError("invalid operand for AT instruction");
     else if (!AT->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("AT " + std::string(AT->Name) + " requires ");
+      std::string Str("AT " + std::string(AT->Name) + " requires: ");
       setRequiredFeatureString(AT->getRequiredFeatures(), Str);
       return TokError(Str.c_str());
     }
@@ -2989,7 +2988,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!TLBI)
       return TokError("invalid operand for TLBI instruction");
     else if (!TLBI->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("TLBI " + std::string(TLBI->Name) + " requires ");
+      std::string Str("TLBI " + std::string(TLBI->Name) + " requires: ");
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str.c_str());
     }
@@ -3000,7 +2999,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       return TokError("invalid operand for prediction restriction instruction");
     else if (!PRCTX->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str(
-          Mnemonic.upper() + std::string(PRCTX->Name) + " requires ");
+          Mnemonic.upper() + std::string(PRCTX->Name) + " requires: ");
       setRequiredFeatureString(PRCTX->getRequiredFeatures(), Str);
       return TokError(Str.c_str());
     }
