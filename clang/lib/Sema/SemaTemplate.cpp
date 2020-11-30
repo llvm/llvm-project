@@ -9759,11 +9759,11 @@ DeclResult Sema::ActOnExplicitInstantiation(
       Def->setTemplateSpecializationKind(TSK);
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
-          (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-           Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment())) {
-        // In the MS ABI, an explicit instantiation definition can add a dll
-        // attribute to a template with a previous instantiation declaration.
-        // MinGW doesn't allow this.
+          (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
+           !Context.getTargetInfo().getTriple().isPS4CPU())) {
+        // An explicit instantiation definition can add a dll attribute to a
+        // template with a previous instantiation declaration. MinGW doesn't
+        // allow this.
         auto *A = cast<InheritableAttr>(
             getDLLAttr(Specialization)->clone(getASTContext()));
         A->setInherited(true);
@@ -9777,19 +9777,19 @@ DeclResult Sema::ActOnExplicitInstantiation(
     bool NewlyDLLExported =
         !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
-        (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-         Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment())) {
-      // In the MS ABI, an explicit instantiation definition can add a dll
-      // attribute to a template with a previous implicit instantiation.
-      // MinGW doesn't allow this. We limit clang to only adding dllexport, to
-      // avoid potentially strange codegen behavior.  For example, if we extend
-      // this conditional to dllimport, and we have a source file calling a
-      // method on an implicitly instantiated template class instance and then
-      // declaring a dllimport explicit instantiation definition for the same
-      // template class, the codegen for the method call will not respect the
-      // dllimport, while it will with cl. The Def will already have the DLL
-      // attribute, since the Def and Specialization will be the same in the
-      // case of Old_TSK == TSK_ImplicitInstantiation, and we already added the
+        (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
+         !Context.getTargetInfo().getTriple().isPS4CPU())) {
+      // An explicit instantiation definition can add a dll attribute to a
+      // template with a previous implicit instantiation. MinGW doesn't allow
+      // this. We limit clang to only adding dllexport, to avoid potentially
+      // strange codegen behavior. For example, if we extend this conditional
+      // to dllimport, and we have a source file calling a method on an
+      // implicitly instantiated template class instance and then declaring a
+      // dllimport explicit instantiation definition for the same template
+      // class, the codegen for the method call will not respect the dllimport,
+      // while it will with cl. The Def will already have the DLL attribute,
+      // since the Def and Specialization will be the same in the case of
+      // Old_TSK == TSK_ImplicitInstantiation, and we already added the
       // attribute to the Specialization; we just need to make it take effect.
       assert(Def == Specialization &&
              "Def and Specialization should match for implicit instantiation");

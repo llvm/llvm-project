@@ -6510,9 +6510,7 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
   // special MSVC extension: in the last case, the declaration is treated as if
   // it were marked dllexport.
   bool IsInline = false, IsStaticDataMember = false, IsQualifiedFriend = false;
-  bool IsMicrosoft =
-      S.Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-      S.Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment();
+  bool IsMicrosoftABI  = S.Context.getTargetInfo().shouldDLLImportComdatSymbols();
   if (const auto *VD = dyn_cast<VarDecl>(NewDecl)) {
     // Ignore static data because out-of-line definitions are diagnosed
     // separately.
@@ -6526,9 +6524,9 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
   }
 
   if (OldImportAttr && !HasNewAttr &&
-      (!IsInline || (IsMicrosoft && IsTemplate)) && !IsStaticDataMember &&
+      (!IsInline || (IsMicrosoftABI && IsTemplate)) && !IsStaticDataMember &&
       !NewDecl->isLocalExternDecl() && !IsQualifiedFriend) {
-    if (IsMicrosoft && IsDefinition) {
+    if (IsMicrosoftABI && IsDefinition) {
       S.Diag(NewDecl->getLocation(),
              diag::warn_redeclaration_without_import_attribute)
           << NewDecl;
@@ -6545,7 +6543,7 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
       OldDecl->dropAttr<DLLImportAttr>();
       NewDecl->dropAttr<DLLImportAttr>();
     }
-  } else if (IsInline && OldImportAttr && !IsMicrosoft) {
+  } else if (IsInline && OldImportAttr && !IsMicrosoftABI) {
     // In MinGW, seeing a function declared inline drops the dllimport
     // attribute.
     OldDecl->dropAttr<DLLImportAttr>();
