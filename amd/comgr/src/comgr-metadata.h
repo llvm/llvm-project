@@ -55,8 +55,11 @@ amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName,
 
 bool isValidIsaName(llvm::StringRef IsaName);
 
-amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
-                                 char *IsaName);
+amd_comgr_status_t getElfIsaName(DataObject *DataP, std::string &IsaName);
+
+amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
+                                    amd_comgr_code_object_info_t *QueryList,
+                                    size_t QueryListsize);
 
 amd_comgr_status_t getIsaIndex(const llvm::StringRef IsaName, size_t &Index);
 

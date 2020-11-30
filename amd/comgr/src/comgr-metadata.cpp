@@ -39,6 +39,7 @@
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/AMDGPUMetadata.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -530,8 +531,8 @@ static std::string convertOldTargetNameToNew(const std::string &OldName,
 
 template <class ELFT>
 static amd_comgr_status_t
-getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj, size_t *Size,
-                          char *IsaName) {
+getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
+                          std::string &NoteIsaName) {
 
   auto ElfHeader = Obj->getELFFile().getHeader();
 
@@ -648,30 +649,21 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj, size_t *Size,
   OldName += ":";
   OldName += std::to_string(Stepping);
 
-  std::string NoteIsaName =
-      convertOldTargetNameToNew(OldName, IsHSAIL, ElfHeader.e_flags);
+  NoteIsaName = convertOldTargetNameToNew(OldName, IsHSAIL, ElfHeader.e_flags);
   if (NoteIsaName.empty()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
   NoteIsaName = "amdgcn-amd-amdhsa--" + NoteIsaName;
 
-  if (IsaName) {
-    memcpy(IsaName, NoteIsaName.c_str(),
-           std::min(*Size, NoteIsaName.size() + 1));
-  }
-  *Size = NoteIsaName.size() + 1;
-
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 template <class ELFT>
 static amd_comgr_status_t
-getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj, size_t *Size,
-                           char *IsaName) {
+getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
+                           std::string &ElfIsaName) {
   auto ElfHeader = Obj->getELFFile().getHeader();
-
-  std::string ElfIsaName;
 
   switch (ElfHeader.e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASSNONE:
@@ -764,29 +756,23 @@ getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj, size_t *Size,
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  if (IsaName) {
-    memcpy(IsaName, ElfIsaName.c_str(), std::min(*Size, ElfIsaName.size() + 1));
-  }
-  *Size = ElfIsaName.size() + 1;
-
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 template <class ELFT>
 static amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
-                                            size_t *Size, char *IsaName) {
+                                            std::string &IsaName) {
   auto ElfHeader = Obj->getELFFile().getHeader();
 
   if (ElfHeader.e_ident[ELF::EI_ABIVERSION] ==
       ELF::ELFABIVERSION_AMDGPU_HSA_V2) {
-    return getElfIsaNameFromElfNotes(Obj, Size, IsaName);
+    return getElfIsaNameFromElfNotes(Obj, IsaName);
   }
 
-  return getElfIsaNameFromElfHeader(Obj, Size, IsaName);
+  return getElfIsaNameFromElfHeader(Obj, IsaName);
 }
 
-amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
-                                 char *IsaName) {
+amd_comgr_status_t getElfIsaName(DataObject *DataP, std::string &IsaName) {
   auto ObjOrErr = getELFObjectFileBase(DataP);
   if (errorToBool(ObjOrErr.takeError())) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -794,16 +780,16 @@ amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
   auto *Obj = ObjOrErr->get();
 
   if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj)) {
-    return getElfIsaNameImpl(ELF32LE, Size, IsaName);
+    return getElfIsaNameImpl(ELF32LE, IsaName);
   }
   if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj)) {
-    return getElfIsaNameImpl(ELF64LE, Size, IsaName);
+    return getElfIsaNameImpl(ELF64LE, IsaName);
   }
   if (auto *ELF32BE = dyn_cast<ELF32BEObjectFile>(Obj)) {
-    return getElfIsaNameImpl(ELF32BE, Size, IsaName);
+    return getElfIsaNameImpl(ELF32BE, IsaName);
   }
   auto *ELF64BE = dyn_cast<ELF64BEObjectFile>(Obj);
-  return getElfIsaNameImpl(ELF64BE, Size, IsaName);
+  return getElfIsaNameImpl(ELF64BE, IsaName);
 }
 
 amd_comgr_status_t getIsaIndex(StringRef IsaString, size_t &Index) {
@@ -918,6 +904,186 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
 bool isValidIsaName(StringRef IsaString) {
   TargetIdentifier Ident;
   return parseTargetIdentifier(IsaString, Ident) == AMD_COMGR_STATUS_SUCCESS;
+}
+
+static size_t constexpr strLiteralLength(char const *str) {
+  size_t I = 0;
+  while (str[I]) {
+    ++I;
+  }
+  return I;
+}
+
+static constexpr const char *OFFLOAD_KIND_HIP = "hip";
+static constexpr const char *OFFLOAD_KIND_HIPV4 = "hipv4";
+static constexpr const char *OFFLOAD_KIND_HCC = "hcc";
+static constexpr const char *CLANG_OFFLOAD_BUNDLER_MAGIC =
+    "__CLANG_OFFLOAD_BUNDLE__";
+static constexpr size_t OffloadBundleMagicLen =
+    strLiteralLength(CLANG_OFFLOAD_BUNDLER_MAGIC);
+
+bool isCompatibleIsaName(StringRef IsaName, StringRef CodeObjectIsaName) {
+  if (IsaName == CodeObjectIsaName) {
+    return true;
+  }
+
+  TargetIdentifier CodeObjectIdent;
+  if (parseTargetIdentifier(CodeObjectIsaName, CodeObjectIdent)) {
+    return false;
+  }
+
+  TargetIdentifier IsaIdent;
+  if (parseTargetIdentifier(IsaName, IsaIdent)) {
+    return false;
+  }
+
+  if (CodeObjectIdent.Processor != IsaIdent.Processor) {
+    return false;
+  }
+
+  char CodeObjectXnack = ' ', CodeObjectSramecc = ' ';
+  for (auto Feature : CodeObjectIdent.Features) {
+    if (Feature.drop_back() == "xnack") {
+      CodeObjectXnack = Feature.take_back()[0];
+    }
+
+    if (Feature.drop_back() == "sramecc") {
+      CodeObjectSramecc = Feature.take_back()[0];
+    }
+  }
+
+  char IsaXnack = ' ', IsaSramecc = ' ';
+  for (auto Feature : IsaIdent.Features) {
+    if (Feature.drop_back() == "xnack") {
+      IsaXnack = Feature.take_back()[0];
+    }
+    if (Feature.drop_back() == "sramecc") {
+      IsaSramecc = Feature.take_back()[0];
+    }
+  }
+
+  if (CodeObjectXnack != ' ') {
+    if (CodeObjectXnack != IsaXnack) {
+      return false;
+    }
+  }
+
+  if (CodeObjectSramecc != ' ') {
+    if (CodeObjectSramecc != IsaSramecc) {
+      return false;
+    }
+  }
+  return true;
+}
+
+amd_comgr_status_t
+lookUpCodeObjectInSharedObject(DataObject *DataP,
+                               amd_comgr_code_object_info_t *QueryList,
+                               size_t QueryListSize) {
+  for (uint64_t I = 0; I < QueryListSize; I++) {
+    QueryList[I].offset = 0;
+    QueryList[I].size = 0;
+  }
+
+  std::string IsaName;
+  amd_comgr_status_t Status = getElfIsaName(DataP, IsaName);
+  if (Status != AMD_COMGR_STATUS_SUCCESS) {
+    return Status;
+  }
+
+  for (unsigned J = 0; J < QueryListSize; J++) {
+    if (isCompatibleIsaName(QueryList[J].isa, IsaName)) {
+      QueryList[J].offset = 0;
+      QueryList[J].size = DataP->Size;
+      break;
+    }
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
+                                    amd_comgr_code_object_info_t *QueryList,
+                                    size_t QueryListSize) {
+
+  if (DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
+    return lookUpCodeObjectInSharedObject(DataP, QueryList, QueryListSize);
+  }
+
+  int Seen = 0;
+  BinaryStreamReader Reader(StringRef(DataP->Data, DataP->Size),
+                            support::little);
+
+  StringRef Magic;
+  if (auto EC = Reader.readFixedString(Magic, OffloadBundleMagicLen)) {
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  if (Magic != CLANG_OFFLOAD_BUNDLER_MAGIC) {
+    if (DataP->DataKind == AMD_COMGR_DATA_KIND_BYTES) {
+      return lookUpCodeObjectInSharedObject(DataP, QueryList, QueryListSize);
+    }
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  uint64_t NumOfCodeObjects;
+  if (auto EC = Reader.readInteger(NumOfCodeObjects)) {
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  for (uint64_t I = 0; I < QueryListSize; I++) {
+    QueryList[I].offset = 0;
+    QueryList[I].size = 0;
+  }
+
+  for (uint64_t I = 0; I < NumOfCodeObjects; I++) {
+    uint64_t BundleEntryCodeObjectSize;
+    uint64_t BundleEntryCodeObjectOffset;
+    uint64_t BundleEntryIDSize;
+    StringRef BundleEntryID;
+
+    if (auto EC = Reader.readInteger(BundleEntryCodeObjectOffset)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    if (auto Status = Reader.readInteger(BundleEntryCodeObjectSize)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    if (auto Status = Reader.readInteger(BundleEntryIDSize)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    if (Reader.readFixedString(BundleEntryID, BundleEntryIDSize)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    const auto OffloadAndTargetId = BundleEntryID.split('-');
+    if (OffloadAndTargetId.first != OFFLOAD_KIND_HIP &&
+        OffloadAndTargetId.first != OFFLOAD_KIND_HIPV4 &&
+        OffloadAndTargetId.first != OFFLOAD_KIND_HCC) {
+      continue;
+    }
+
+    for (unsigned J = 0; J < QueryListSize; J++) {
+      if (QueryList[J].size != 0) {
+        break;
+      }
+
+      if (isCompatibleIsaName(QueryList[J].isa, OffloadAndTargetId.second)) {
+        QueryList[J].offset = BundleEntryCodeObjectOffset;
+        QueryList[J].size = BundleEntryCodeObjectSize;
+        Seen++;
+        break;
+      }
+    }
+
+    if (Seen == QueryListSize) {
+      break;
+    }
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
 }
 
 } // namespace metadata

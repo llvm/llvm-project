@@ -119,6 +119,8 @@ struct DataObject {
 
   amd_comgr_status_t setName(llvm::StringRef Name);
   amd_comgr_status_t setData(llvm::StringRef Data);
+  amd_comgr_status_t setData(std::unique_ptr<llvm::MemoryBuffer> Buffer);
+
   void setMetadata(DataMeta *Metadata);
 
   amd_comgr_data_kind_t DataKind;
@@ -129,6 +131,9 @@ struct DataObject {
   DataSymbol *DataSym;
 
 private:
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+
+  void clearData();
   // We require this type be allocated via new, specifically through calling
   // allocate, because we want to be able to `delete this` in release. To make
   // sure the type is not constructed without new, or destructed without

@@ -86,6 +86,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
+  target_compile_definitions("${name}"
+    PRIVATE -DHIP_COMPILER=${HIP_COMPILER})
+endif()
   target_link_libraries("${name}"
     amd_comgr)
   add_dependencies("${name}"
@@ -100,6 +104,8 @@ endif()
       PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
   endif()
 endmacro()
+
+find_package(hip CONFIG PATHS ${ROCM_INSTALL_PATH}/hip QUIET)
 
 add_comgr_test(data_test)
 add_comgr_test(disasm_llvm_reloc_test)
@@ -125,8 +131,10 @@ add_comgr_test(get_data_isa_name_test)
 add_comgr_test(include_subdirectory_test)
 add_comgr_test(options_test)
 add_comgr_test(demangle_test)
-# Test : Compile HIP only if HIP-Clang is installed.
-find_package(hip CONFIG PATHS ${ROCM_INSTALL_PATH}/hip QUIET)
+add_comgr_test(file_map)
+add_comgr_test(lookup_code_object_test)
+
+# Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
   add_comgr_test(compile_hip_test)
   add_comgr_test(compile_hip_test_in_process)

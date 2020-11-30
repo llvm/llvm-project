@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.2.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "2.3.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 include(GNUInstallDirs)
