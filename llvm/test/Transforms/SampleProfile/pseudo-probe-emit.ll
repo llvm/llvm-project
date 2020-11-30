@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
 ; RUN: llc %t -stop-after=instruction-select -o - | FileCheck %s --check-prefix=CHECK-MIR
