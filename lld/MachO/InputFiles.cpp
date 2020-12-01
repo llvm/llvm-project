@@ -76,6 +76,7 @@ using namespace lld::macho;
 
 std::vector<InputFile *> macho::inputFiles;
 std::unique_ptr<TarWriter> macho::tar;
+int InputFile::idCount = 0;
 
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {

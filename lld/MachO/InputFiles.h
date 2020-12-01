@@ -65,13 +65,15 @@ public:
   std::vector<Symbol *> symbols;
   ArrayRef<llvm::MachO::section_64> sectionHeaders;
   std::vector<SubsectionMap> subsections;
+  // Provides an easy way to sort InputFiles deterministically.
+  const int id;
 
 protected:
   InputFile(Kind kind, MemoryBufferRef mb)
-      : mb(mb), fileKind(kind), name(mb.getBufferIdentifier()) {}
+      : mb(mb), id(idCount++), fileKind(kind), name(mb.getBufferIdentifier()) {}
 
   InputFile(Kind kind, const llvm::MachO::InterfaceFile &interface)
-      : fileKind(kind), name(saver.save(interface.getPath())) {}
+      : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
   void parseSections(ArrayRef<llvm::MachO::section_64>);
 
@@ -85,6 +87,8 @@ protected:
 private:
   const Kind fileKind;
   const StringRef name;
+
+  static int idCount;
 };
 
 // .o file
