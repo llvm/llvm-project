@@ -28,23 +28,8 @@ define i8 @func_gv() {
 ;
 ; PIC-LABEL: func_gv:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -176(, %s11)
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; PIC-NEXT:  # %bb.1:
-; PIC-NEXT:    ld %s61, 24(, %s14)
-; PIC-NEXT:    or %s62, 0, %s0
-; PIC-NEXT:    lea %s63, 315
-; PIC-NEXT:    shm.l %s63, (%s61)
-; PIC-NEXT:    shm.l %s8, 8(%s61)
-; PIC-NEXT:    shm.l %s11, 16(%s61)
-; PIC-NEXT:    monc
-; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB1_2:
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
@@ -54,11 +39,8 @@ define i8 @func_gv() {
 ; PIC-NEXT:    lea.sl %s0, vi8@got_hi(, %s0)
 ; PIC-NEXT:    ld %s0, (%s0, %s15)
 ; PIC-NEXT:    ld1b.zx %s0, (, %s0)
-; PIC-NEXT:    or %s11, 0, %s9
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
 
   %v = load i8, i8* @vi8, align 1
