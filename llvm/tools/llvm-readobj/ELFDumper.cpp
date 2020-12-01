@@ -125,9 +125,11 @@ template <class ELFT> struct RelSymbol {
 /// the size, entity size and virtual address are different entries in arbitrary
 /// order (DT_REL, DT_RELSZ, DT_RELENT for example).
 struct DynRegionInfo {
-  DynRegionInfo(const Binary &Owner) : Obj(&Owner) {}
-  DynRegionInfo(const Binary &Owner, const uint8_t *A, uint64_t S, uint64_t ES)
-      : Addr(A), Size(S), EntSize(ES), Obj(&Owner) {}
+  DynRegionInfo(const Binary &Owner, const ObjDumper &D)
+      : Obj(&Owner), Dumper(&D) {}
+  DynRegionInfo(const Binary &Owner, const ObjDumper &D, const uint8_t *A,
+                uint64_t S, uint64_t ES)
+      : Addr(A), Size(S), EntSize(ES), Obj(&Owner), Dumper(&D) {}
 
   /// Address in current address space.
   const uint8_t *Addr = nullptr;
@@ -138,6 +140,8 @@ struct DynRegionInfo {
 
   /// Owner object. Used for error reporting.
   const Binary *Obj;
+  /// Dumper used for error reporting.
+  const ObjDumper *Dumper;
   /// Error prefix. Used for error reporting to provide more information.
   std::string Context;
   /// Region size name. Used for error reporting.
@@ -156,13 +160,11 @@ struct DynRegionInfo {
     const uint64_t ObjSize = Obj->getMemoryBufferRef().getBufferSize();
 
     if (Size > ObjSize - Offset) {
-      reportWarning(
-          createError("unable to read data at 0x" + Twine::utohexstr(Offset) +
-                      " of size 0x" + Twine::utohexstr(Size) + " (" +
-                      SizePrintName +
-                      "): it goes past the end of the file of size 0x" +
-                      Twine::utohexstr(ObjSize)),
-          Obj->getFileName());
+      Dumper->reportUniqueWarning(createError(
+          "unable to read data at 0x" + Twine::utohexstr(Offset) +
+          " of size 0x" + Twine::utohexstr(Size) + " (" + SizePrintName +
+          "): it goes past the end of the file of size 0x" +
+          Twine::utohexstr(ObjSize)));
       return {Start, Start};
     }
 
@@ -180,7 +182,7 @@ struct DynRegionInfo {
           (" or " + EntSizePrintName + " (0x" + Twine::utohexstr(EntSize) + ")")
               .str();
 
-    reportWarning(createError(Msg.c_str()), Obj->getFileName());
+    Dumper->reportUniqueWarning(createError(Msg.c_str()));
     return {Start, Start};
   }
 };
@@ -311,7 +313,7 @@ private:
                          ") + size (0x" + Twine::utohexstr(Size) +
                          ") is greater than the file size (0x" +
                          Twine::utohexstr(Obj.getBufSize()) + ")");
-    return DynRegionInfo(ObjF, Obj.base() + Offset, Size, EntSize);
+    return DynRegionInfo(ObjF, *this, Obj.base() + Offset, Size, EntSize);
   }
 
   void printAttributes();
@@ -1928,7 +1930,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   if (!DynamicPhdr && !DynamicSec)
     return;
 
-  DynRegionInfo FromPhdr(ObjF);
+  DynRegionInfo FromPhdr(ObjF, *this);
   bool IsPhdrTableValid = false;
   if (DynamicPhdr) {
     // Use cantFail(), because p_offset/p_filesz fields of a PT_DYNAMIC are
@@ -1944,7 +1946,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   // Ignore sh_entsize and use the expected value for entry size explicitly.
   // This allows us to dump dynamic sections with a broken sh_entsize
   // field.
-  DynRegionInfo FromSec(ObjF);
+  DynRegionInfo FromSec(ObjF, *this);
   bool IsSecTableValid = false;
   if (DynamicSec) {
     Expected<DynRegionInfo> RegOrErr =
@@ -2007,8 +2009,8 @@ template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
     : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(*O.getELFFile()),
-      DynRelRegion(O), DynRelaRegion(O), DynRelrRegion(O), DynPLTRelRegion(O),
-      DynamicTable(O) {
+      DynRelRegion(O, *this), DynRelaRegion(O, *this), DynRelrRegion(O, *this),
+      DynPLTRelRegion(O, *this), DynamicTable(O, *this) {
   if (opts::Output == opts::GNU)
     ELFDumperStyle.reset(new GNUStyle<ELFT>(Writer, *this));
   else
@@ -2117,7 +2119,7 @@ void ELFDumper<ELFT>::parseDynamicTable() {
       // If we can't map the DT_SYMTAB value to an address (e.g. when there are
       // no program headers), we ignore its value.
       if (const uint8_t *VA = toMappedAddr(Dyn.getTag(), Dyn.getPtr())) {
-        DynSymFromTable.emplace(ObjF);
+        DynSymFromTable.emplace(ObjF, *this);
         DynSymFromTable->Addr = VA;
         DynSymFromTable->EntSize = sizeof(Elf_Sym);
         DynSymFromTable->EntSizePrintName = "";
