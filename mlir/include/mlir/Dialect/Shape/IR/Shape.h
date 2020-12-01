@@ -14,7 +14,6 @@
 #ifndef MLIR_SHAPE_IR_SHAPE_H
 #define MLIR_SHAPE_IR_SHAPE_H
 
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
