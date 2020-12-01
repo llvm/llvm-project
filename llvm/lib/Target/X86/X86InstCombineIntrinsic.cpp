@@ -1909,7 +1909,16 @@ Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     // Consider things like undef&0.  The result is known zero, not undef.
     if (!UndefElts2[0] || !UndefElts3[0])
       UndefElts.clearBit(0);
+    break;
 
+  // TODO: Add fmaddsub support?
+  case Intrinsic::x86_sse3_addsub_pd:
+  case Intrinsic::x86_sse3_addsub_ps:
+  case Intrinsic::x86_avx_addsub_pd_256:
+  case Intrinsic::x86_avx_addsub_ps_256:
+    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    UndefElts &= UndefElts2;
     break;
 
   case Intrinsic::x86_sse2_packssdw_128:
