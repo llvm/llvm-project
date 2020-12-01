@@ -1238,8 +1238,8 @@ static SDValue combineORToGREV(SDValue Op, SelectionDAG &DAG,
 }
 
 // Matches any the following pattern as a GORCI(W) operation
-// 1.  (or (GREVI x, shamt), x)
-// 2.  (or x, (GREVI x, shamt))
+// 1.  (or (GREVI x, shamt), x) if shamt is a power of 2
+// 2.  (or x, (GREVI x, shamt)) if shamt is a power of 2
 // 3.  (or (or (BITMANIP_SHL x), x), (BITMANIP_SRL x))
 // Note that with the variant of 3.,
 //     (or (or (BITMANIP_SHL x), (BITMANIP_SRL x)), x)
@@ -1258,7 +1258,8 @@ static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
     for (const auto &OpPair :
          {std::make_pair(Op0, Op1), std::make_pair(Op1, Op0)}) {
       if (OpPair.first.getOpcode() == RISCVISD::GREVI &&
-          OpPair.first.getOperand(0) == OpPair.second)
+          OpPair.first.getOperand(0) == OpPair.second &&
+          isPowerOf2_32(OpPair.first.getConstantOperandVal(1)))
         return DAG.getNode(RISCVISD::GORCI, DL, VT, OpPair.second,
                            OpPair.first.getOperand(1));
     }
