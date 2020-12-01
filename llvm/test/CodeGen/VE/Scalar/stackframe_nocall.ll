@@ -195,23 +195,8 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ;
 ; PIC-LABEL: test_frame0_var:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -176(, %s11)
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB3_2
-; PIC-NEXT:  # %bb.1:
-; PIC-NEXT:    ld %s61, 24(, %s14)
-; PIC-NEXT:    or %s62, 0, %s0
-; PIC-NEXT:    lea %s63, 315
-; PIC-NEXT:    shm.l %s63, (%s61)
-; PIC-NEXT:    shm.l %s8, 8(%s61)
-; PIC-NEXT:    shm.l %s11, 16(%s61)
-; PIC-NEXT:    monc
-; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB3_2:
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
@@ -222,11 +207,8 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ; PIC-NEXT:    ld %s1, (%s1, %s15)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s1)
 ; PIC-NEXT:    st1b %s1, (, %s0)
-; PIC-NEXT:    or %s11, 0, %s9
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %3 = load i8, i8* @data, align 1
   store i8 %3, i8* %0, align 1
@@ -260,12 +242,9 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ;
 ; PIC-LABEL: test_frame32_var:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -208(, %s11)
+; PIC-NEXT:    adds.l %s11, -32, %s11
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB4_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -286,13 +265,11 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; PIC-NEXT:    lea.sl %s0, data@got_hi(, %s0)
 ; PIC-NEXT:    ld %s0, (%s0, %s15)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s0)
-; PIC-NEXT:    lea %s0, 176(, %s11)
-; PIC-NEXT:    st1b %s1, 176(, %s11)
-; PIC-NEXT:    or %s11, 0, %s9
+; PIC-NEXT:    lea %s0, (, %s11)
+; PIC-NEXT:    st1b %s1, (, %s11)
+; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
   %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
