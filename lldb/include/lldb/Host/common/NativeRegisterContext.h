@@ -121,6 +121,8 @@ public:
   virtual std::vector<uint32_t>
   GetExpeditedRegisters(ExpeditedRegs expType) const;
 
+  virtual bool RegisterOffsetIsDynamic() const { return false; }
+
   const RegisterInfo *GetRegisterInfoByName(llvm::StringRef reg_name,
                                             uint32_t start_idx = 0);
 

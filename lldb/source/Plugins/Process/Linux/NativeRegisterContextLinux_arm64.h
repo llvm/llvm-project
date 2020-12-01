@@ -47,6 +47,8 @@ public:
   std::vector<uint32_t>
   GetExpeditedRegisters(ExpeditedRegs expType) const override;
 
+  bool RegisterOffsetIsDynamic() const override { return true; }
+
   // Hardware breakpoints/watchpoint management functions
 
   uint32_t NumSupportedHardwareBreakpoints() override;
