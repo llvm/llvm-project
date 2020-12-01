@@ -98,7 +98,6 @@ static int __kmp_expand_threads(int nNeed);
 #if KMP_OS_WINDOWS
 static int __kmp_unregister_root_other_thread(int gtid);
 #endif
-static void __kmp_unregister_library(void); // called by __kmp_internal_end()
 static void __kmp_reap_thread(kmp_info_t *thread, int is_root);
 kmp_info_t *__kmp_thread_pool_insert_pt = NULL;
 
@@ -6360,7 +6359,12 @@ static inline char *__kmp_reg_status_name() {
      each thread. If registration and unregistration go in different threads
      (omp_misc_other_root_exit.cpp test case), the name of registered_lib_env
      env var can not be found, because the name will contain different pid. */
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB // shared memory is with dynamic library
+  return __kmp_str_format("__KMP_REGISTERED_LIB_%d_%d", (int)getpid(),
+                          (int)getuid());
+#else
   return __kmp_str_format("__KMP_REGISTERED_LIB_%d", (int)getpid());
+#endif
 } // __kmp_reg_status_get
 
 void __kmp_register_library_startup(void) {

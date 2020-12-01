@@ -3132,6 +3132,7 @@ extern void __kmp_internal_end_dest(void *);
 
 extern int __kmp_register_root(int initial_thread);
 extern void __kmp_unregister_root(int gtid);
+extern void __kmp_unregister_library(void); // called by __kmp_internal_end()
 
 extern int __kmp_ignore_mppbeg(void);
 extern int __kmp_ignore_mppend(void);
