@@ -31,6 +31,10 @@ class Builder:
         """Returns the ARCH_CFLAGS for the make system."""
         return ""
 
+    def getSwiftTargetFlags(self, architecture):
+        """Returns TARGET_SWIFTFLAGS for the make system."""
+        return ""
+
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
         The first argument is a tuple of the relative path to the testcase
@@ -145,6 +149,7 @@ class Builder:
                 "all",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
+                self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
@@ -171,6 +176,7 @@ class Builder:
                 "MAKE_DSYM=NO",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
+                self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
@@ -196,6 +202,7 @@ class Builder:
                 "MAKE_DSYM=NO", "MAKE_DWO=YES",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
+                self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
@@ -221,6 +228,7 @@ class Builder:
                 "MAKE_DSYM=NO", "MAKE_GMODULES=YES",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
+                self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),

@@ -262,8 +262,10 @@ ifndef NO_TEST_COMMON_H
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
-SWIFTFLAGS += $(ARCH_SWIFTFLAGS)
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
+ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
+  SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
+endif
 
 # Swift bridging headers.
 ifneq "$(SWIFT_BRIDGING_HEADER)" ""
