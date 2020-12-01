@@ -439,7 +439,3 @@ transformer::detail::findSelectedCase(const MatchResult &Result,
 }
 
 const llvm::StringRef RewriteRule::RootID = ::clang::transformer::RootID;
-
-TextGenerator tooling::text(std::string M) {
-  return std::make_shared<SimpleTextGenerator>(std::move(M));
-}

@@ -21,12 +21,21 @@ using namespace clang;
 using namespace tooling;
 using namespace ast_matchers;
 namespace {
+using ::clang::transformer::addInclude;
+using ::clang::transformer::applyFirst;
+using ::clang::transformer::before;
+using ::clang::transformer::cat;
+using ::clang::transformer::changeTo;
+using ::clang::transformer::makeRule;
+using ::clang::transformer::member;
+using ::clang::transformer::name;
+using ::clang::transformer::node;
+using ::clang::transformer::remove;
+using ::clang::transformer::rewriteDescendants;
+using ::clang::transformer::RewriteRule;
+using ::clang::transformer::statement;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
-using transformer::cat;
-using transformer::changeTo;
-using transformer::rewriteDescendants;
-using transformer::RewriteRule;
 
 constexpr char KHeaderContents[] = R"cc(
   struct string {
@@ -339,8 +348,9 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
 
 TEST_F(TransformerTest, NodePartMember) {
   StringRef E = "expr";
-  RewriteRule Rule = makeRule(memberExpr(member(hasName("bad"))).bind(E),
-                              changeTo(member(std::string(E)), cat("good")));
+  RewriteRule Rule =
+      makeRule(memberExpr(clang::ast_matchers::member(hasName("bad"))).bind(E),
+               changeTo(member(std::string(E)), cat("good")));
 
   std::string Input = R"cc(
     struct S {
