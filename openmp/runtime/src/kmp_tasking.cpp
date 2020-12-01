@@ -849,17 +849,6 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     }
   }
 
-  // Check mutexinoutset dependencies, release locks
-  kmp_depnode_t *node = taskdata->td_depnode;
-  if (node && (node->dn.mtx_num_locks < 0)) {
-    // negative num_locks means all locks were acquired
-    node->dn.mtx_num_locks = -node->dn.mtx_num_locks;
-    for (int i = node->dn.mtx_num_locks - 1; i >= 0; --i) {
-      KMP_DEBUG_ASSERT(node->dn.mtx_locks[i] != NULL);
-      __kmp_release_lock(node->dn.mtx_locks[i], gtid);
-    }
-  }
-
   // bookkeeping for resuming task:
   // GEH - note tasking_ser => task_serial
   KMP_DEBUG_ASSERT(
