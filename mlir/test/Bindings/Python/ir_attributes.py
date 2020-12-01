@@ -155,7 +155,7 @@ run(testIntegerAttr)
 def testBoolAttr():
   with Context() as ctx:
     battr = BoolAttr(Attribute.parse("true"))
-    # CHECK: iattr value: 1
+    # CHECK: iattr value: True
     print("iattr value:", battr.value)
 
     # Test factory methods.

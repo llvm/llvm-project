@@ -21,7 +21,7 @@ using namespace mlir;
 // Integer types.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAInteger(MlirType type) {
+bool mlirTypeIsAInteger(MlirType type) {
   return unwrap(type).isa<IntegerType>();
 }
 
@@ -41,15 +41,15 @@ unsigned mlirIntegerTypeGetWidth(MlirType type) {
   return unwrap(type).cast<IntegerType>().getWidth();
 }
 
-int mlirIntegerTypeIsSignless(MlirType type) {
+bool mlirIntegerTypeIsSignless(MlirType type) {
   return unwrap(type).cast<IntegerType>().isSignless();
 }
 
-int mlirIntegerTypeIsSigned(MlirType type) {
+bool mlirIntegerTypeIsSigned(MlirType type) {
   return unwrap(type).cast<IntegerType>().isSigned();
 }
 
-int mlirIntegerTypeIsUnsigned(MlirType type) {
+bool mlirIntegerTypeIsUnsigned(MlirType type) {
   return unwrap(type).cast<IntegerType>().isUnsigned();
 }
 
@@ -57,7 +57,7 @@ int mlirIntegerTypeIsUnsigned(MlirType type) {
 // Index type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAIndex(MlirType type) { return unwrap(type).isa<IndexType>(); }
+bool mlirTypeIsAIndex(MlirType type) { return unwrap(type).isa<IndexType>(); }
 
 MlirType mlirIndexTypeGet(MlirContext ctx) {
   return wrap(IndexType::get(unwrap(ctx)));
@@ -67,25 +67,25 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsABF16(MlirType type) { return unwrap(type).isBF16(); }
+bool mlirTypeIsABF16(MlirType type) { return unwrap(type).isBF16(); }
 
 MlirType mlirBF16TypeGet(MlirContext ctx) {
   return wrap(FloatType::getBF16(unwrap(ctx)));
 }
 
-int mlirTypeIsAF16(MlirType type) { return unwrap(type).isF16(); }
+bool mlirTypeIsAF16(MlirType type) { return unwrap(type).isF16(); }
 
 MlirType mlirF16TypeGet(MlirContext ctx) {
   return wrap(FloatType::getF16(unwrap(ctx)));
 }
 
-int mlirTypeIsAF32(MlirType type) { return unwrap(type).isF32(); }
+bool mlirTypeIsAF32(MlirType type) { return unwrap(type).isF32(); }
 
 MlirType mlirF32TypeGet(MlirContext ctx) {
   return wrap(FloatType::getF32(unwrap(ctx)));
 }
 
-int mlirTypeIsAF64(MlirType type) { return unwrap(type).isF64(); }
+bool mlirTypeIsAF64(MlirType type) { return unwrap(type).isF64(); }
 
 MlirType mlirF64TypeGet(MlirContext ctx) {
   return wrap(FloatType::getF64(unwrap(ctx)));
@@ -95,7 +95,7 @@ MlirType mlirF64TypeGet(MlirContext ctx) {
 // None type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsANone(MlirType type) { return unwrap(type).isa<NoneType>(); }
+bool mlirTypeIsANone(MlirType type) { return unwrap(type).isa<NoneType>(); }
 
 MlirType mlirNoneTypeGet(MlirContext ctx) {
   return wrap(NoneType::get(unwrap(ctx)));
@@ -105,7 +105,7 @@ MlirType mlirNoneTypeGet(MlirContext ctx) {
 // Complex type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAComplex(MlirType type) {
+bool mlirTypeIsAComplex(MlirType type) {
   return unwrap(type).isa<ComplexType>();
 }
 
@@ -121,13 +121,13 @@ MlirType mlirComplexTypeGetElementType(MlirType type) {
 // Shaped type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAShaped(MlirType type) { return unwrap(type).isa<ShapedType>(); }
+bool mlirTypeIsAShaped(MlirType type) { return unwrap(type).isa<ShapedType>(); }
 
 MlirType mlirShapedTypeGetElementType(MlirType type) {
   return wrap(unwrap(type).cast<ShapedType>().getElementType());
 }
 
-int mlirShapedTypeHasRank(MlirType type) {
+bool mlirShapedTypeHasRank(MlirType type) {
   return unwrap(type).cast<ShapedType>().hasRank();
 }
 
@@ -135,11 +135,11 @@ int64_t mlirShapedTypeGetRank(MlirType type) {
   return unwrap(type).cast<ShapedType>().getRank();
 }
 
-int mlirShapedTypeHasStaticShape(MlirType type) {
+bool mlirShapedTypeHasStaticShape(MlirType type) {
   return unwrap(type).cast<ShapedType>().hasStaticShape();
 }
 
-int mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim) {
+bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim) {
   return unwrap(type).cast<ShapedType>().isDynamicDim(
       static_cast<unsigned>(dim));
 }
@@ -148,11 +148,11 @@ int64_t mlirShapedTypeGetDimSize(MlirType type, intptr_t dim) {
   return unwrap(type).cast<ShapedType>().getDimSize(static_cast<unsigned>(dim));
 }
 
-int mlirShapedTypeIsDynamicSize(int64_t size) {
+bool mlirShapedTypeIsDynamicSize(int64_t size) {
   return ShapedType::isDynamic(size);
 }
 
-int mlirShapedTypeIsDynamicStrideOrOffset(int64_t val) {
+bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val) {
   return ShapedType::isDynamicStrideOrOffset(val);
 }
 
@@ -160,7 +160,7 @@ int mlirShapedTypeIsDynamicStrideOrOffset(int64_t val) {
 // Vector type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAVector(MlirType type) { return unwrap(type).isa<VectorType>(); }
+bool mlirTypeIsAVector(MlirType type) { return unwrap(type).isa<VectorType>(); }
 
 MlirType mlirVectorTypeGet(intptr_t rank, const int64_t *shape,
                            MlirType elementType) {
@@ -180,13 +180,13 @@ MlirType mlirVectorTypeGetChecked(intptr_t rank, const int64_t *shape,
 // Ranked / Unranked tensor type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsATensor(MlirType type) { return unwrap(type).isa<TensorType>(); }
+bool mlirTypeIsATensor(MlirType type) { return unwrap(type).isa<TensorType>(); }
 
-int mlirTypeIsARankedTensor(MlirType type) {
+bool mlirTypeIsARankedTensor(MlirType type) {
   return unwrap(type).isa<RankedTensorType>();
 }
 
-int mlirTypeIsAUnrankedTensor(MlirType type) {
+bool mlirTypeIsAUnrankedTensor(MlirType type) {
   return unwrap(type).isa<UnrankedTensorType>();
 }
 
@@ -218,7 +218,7 @@ MlirType mlirUnrankedTensorTypeGetChecked(MlirType elementType,
 // Ranked / Unranked MemRef type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAMemRef(MlirType type) { return unwrap(type).isa<MemRefType>(); }
+bool mlirTypeIsAMemRef(MlirType type) { return unwrap(type).isa<MemRefType>(); }
 
 MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank,
                            const int64_t *shape, intptr_t numMaps,
@@ -261,7 +261,7 @@ unsigned mlirMemRefTypeGetMemorySpace(MlirType type) {
   return unwrap(type).cast<MemRefType>().getMemorySpace();
 }
 
-int mlirTypeIsAUnrankedMemRef(MlirType type) {
+bool mlirTypeIsAUnrankedMemRef(MlirType type) {
   return unwrap(type).isa<UnrankedMemRefType>();
 }
 
@@ -284,7 +284,7 @@ unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type) {
 // Tuple type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsATuple(MlirType type) { return unwrap(type).isa<TupleType>(); }
+bool mlirTypeIsATuple(MlirType type) { return unwrap(type).isa<TupleType>(); }
 
 MlirType mlirTupleTypeGet(MlirContext ctx, intptr_t numElements,
                           MlirType const *elements) {
@@ -305,7 +305,7 @@ MlirType mlirTupleTypeGetType(MlirType type, intptr_t pos) {
 // Function type.
 //===----------------------------------------------------------------------===//
 
-int mlirTypeIsAFunction(MlirType type) {
+bool mlirTypeIsAFunction(MlirType type) {
   return unwrap(type).isa<FunctionType>();
 }
 

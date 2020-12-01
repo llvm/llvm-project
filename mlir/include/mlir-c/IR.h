@@ -95,10 +95,10 @@ MLIR_CAPI_EXPORTED void mlirContextDestroy(MlirContext context);
 
 /// Sets whether unregistered dialects are allowed in this context.
 MLIR_CAPI_EXPORTED void
-mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
+mlirContextSetAllowUnregisteredDialects(MlirContext context, bool allow);
 
 /// Returns whether the context allows unregistered dialects.
-MLIR_CAPI_EXPORTED int
+MLIR_CAPI_EXPORTED bool
 mlirContextGetAllowUnregisteredDialects(MlirContext context);
 
 /** Returns the number of dialects registered with the given context. A
@@ -154,12 +154,12 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 MLIR_CAPI_EXPORTED MlirContext mlirLocationGetContext(MlirLocation location);
 
 /// Checks if the location is null.
-static inline int mlirLocationIsNull(MlirLocation location) {
+static inline bool mlirLocationIsNull(MlirLocation location) {
   return !location.ptr;
 }
 
 /// Checks if two locations are equal.
-MLIR_CAPI_EXPORTED int mlirLocationEqual(MlirLocation l1, MlirLocation l2);
+MLIR_CAPI_EXPORTED bool mlirLocationEqual(MlirLocation l1, MlirLocation l2);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -271,7 +271,7 @@ mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
  * debug information is printed in a more readable 'pretty' form. Note: The
  * IR generated with 'prettyForm' is not parsable. */
 MLIR_CAPI_EXPORTED void
-mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, int prettyForm);
+mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool prettyForm);
 
 /// Always print operations in the generic form.
 MLIR_CAPI_EXPORTED void
@@ -364,10 +364,10 @@ MLIR_CAPI_EXPORTED void mlirOperationSetAttributeByName(MlirOperation op,
                                                         MlirStringRef name,
                                                         MlirAttribute attr);
 
-/** Removes an attribute by name. Returns 0 if the attribute was not found
- * and !0 if removed. */
-MLIR_CAPI_EXPORTED int mlirOperationRemoveAttributeByName(MlirOperation op,
-                                                          MlirStringRef name);
+/** Removes an attribute by name. Returns false if the attribute was not found
+ * and true if removed. */
+MLIR_CAPI_EXPORTED bool mlirOperationRemoveAttributeByName(MlirOperation op,
+                                                           MlirStringRef name);
 
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -504,10 +504,10 @@ static inline bool mlirValueIsNull(MlirValue value) { return !value.ptr; }
 bool mlirValueEqual(MlirValue value1, MlirValue value2);
 
 /// Returns 1 if the value is a block argument, 0 otherwise.
-MLIR_CAPI_EXPORTED int mlirValueIsABlockArgument(MlirValue value);
+MLIR_CAPI_EXPORTED bool mlirValueIsABlockArgument(MlirValue value);
 
 /// Returns 1 if the value is an operation result, 0 otherwise.
-MLIR_CAPI_EXPORTED int mlirValueIsAOpResult(MlirValue value);
+MLIR_CAPI_EXPORTED bool mlirValueIsAOpResult(MlirValue value);
 
 /** Returns the block in which this value is defined as an argument. Asserts if
  * the value is not a block argument. */

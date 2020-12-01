@@ -44,12 +44,12 @@ DEFINE_C_API_STRUCT(MlirAffineMap, const void);
 MLIR_CAPI_EXPORTED MlirContext mlirAffineMapGetContext(MlirAffineMap affineMap);
 
 /// Checks whether an affine map is null.
-static inline int mlirAffineMapIsNull(MlirAffineMap affineMap) {
+static inline bool mlirAffineMapIsNull(MlirAffineMap affineMap) {
   return !affineMap.ptr;
 }
 
 /// Checks if two affine maps are equal.
-MLIR_CAPI_EXPORTED int mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2);
+MLIR_CAPI_EXPORTED bool mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2);
 
 /** Prints an affine map by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -98,17 +98,17 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapPermutationGet(
 /** Checks whether the given affine map is an identity affine map. The function
  * asserts that the number of dimensions is greater or equal to the number of
  * results. */
-MLIR_CAPI_EXPORTED int mlirAffineMapIsIdentity(MlirAffineMap affineMap);
+MLIR_CAPI_EXPORTED bool mlirAffineMapIsIdentity(MlirAffineMap affineMap);
 
 /// Checks whether the given affine map is a minor identity affine map.
-MLIR_CAPI_EXPORTED int mlirAffineMapIsMinorIdentity(MlirAffineMap affineMap);
+MLIR_CAPI_EXPORTED bool mlirAffineMapIsMinorIdentity(MlirAffineMap affineMap);
 
 /// Checks whether the given affine map is an empty affine map.
-MLIR_CAPI_EXPORTED int mlirAffineMapIsEmpty(MlirAffineMap affineMap);
+MLIR_CAPI_EXPORTED bool mlirAffineMapIsEmpty(MlirAffineMap affineMap);
 
 /** Checks whether the given affine map is a single result constant affine
  * map. */
-MLIR_CAPI_EXPORTED int mlirAffineMapIsSingleConstant(MlirAffineMap affineMap);
+MLIR_CAPI_EXPORTED bool mlirAffineMapIsSingleConstant(MlirAffineMap affineMap);
 
 /** Returns the constant result of the given affine map. The function asserts
  * that the map has a single constant result. */
@@ -130,12 +130,12 @@ MLIR_CAPI_EXPORTED intptr_t mlirAffineMapGetNumInputs(MlirAffineMap affineMap);
 
 /** Checks whether the given affine map represents a subset of a symbol-less
  * permutation map. */
-MLIR_CAPI_EXPORTED int
+MLIR_CAPI_EXPORTED bool
 mlirAffineMapIsProjectedPermutation(MlirAffineMap affineMap);
 
 /** Checks whether the given affine map represents a symbol-less permutation
  * map. */
-MLIR_CAPI_EXPORTED int mlirAffineMapIsPermutation(MlirAffineMap affineMap);
+MLIR_CAPI_EXPORTED bool mlirAffineMapIsPermutation(MlirAffineMap affineMap);
 
 /// Returns the affine map consisting of the `resultPos` subset.
 MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapGetSubMap(MlirAffineMap affineMap,
