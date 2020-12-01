@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_FILEENTRY_H
 #define LLVM_CLANG_BASIC_FILEENTRY_H
 
+#include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
@@ -47,7 +48,6 @@ class OptionalStorage<clang::FileEntryRef, /*is_trivially_copyable*/ true>;
 
 namespace clang {
 
-class DirectoryEntry;
 class FileEntry;
 
 /// A reference to a \c FileEntry that includes the name of the file as it was
@@ -58,6 +58,7 @@ public:
   const FileEntry &getFileEntry() const {
     return *ME->second->V.get<FileEntry *>();
   }
+  DirectoryEntryRef getDir() const { return *ME->second->Dir; }
 
   inline bool isValid() const;
   inline off_t getSize() const;
@@ -104,8 +105,11 @@ public:
     /// gcc5.3.  Once that's no longer supported, change this back.
     llvm::PointerUnion<FileEntry *, const void *> V;
 
+    /// Directory the file was found in. Set if and only if V is a FileEntry.
+    Optional<DirectoryEntryRef> Dir;
+
     MapValue() = delete;
-    MapValue(FileEntry &FE) : V(&FE) {}
+    MapValue(FileEntry &FE, DirectoryEntryRef Dir) : V(&FE), Dir(Dir) {}
     MapValue(MapEntry &ME) : V(&ME) {}
   };
 
@@ -143,8 +147,7 @@ public:
   const clang::FileEntryRef::MapEntry &getMapEntry() const { return *ME; }
 
 private:
-  friend class llvm::optional_detail::OptionalStorage<
-      FileEntryRef, /*is_trivially_copyable*/ true>;
+  friend class FileMgr::MapEntryOptionalStorage<FileEntryRef>;
   struct optional_none_tag {};
 
   // Private constructor for use by OptionalStorage.
@@ -167,46 +170,21 @@ namespace optional_detail {
 
 /// Customize OptionalStorage<FileEntryRef> to use FileEntryRef and its
 /// optional_none_tag to keep it the size of a single pointer.
-template <> class OptionalStorage<clang::FileEntryRef> {
-  clang::FileEntryRef MaybeRef;
+template <>
+class OptionalStorage<clang::FileEntryRef>
+    : public clang::FileMgr::MapEntryOptionalStorage<clang::FileEntryRef> {
+  using StorageImpl =
+      clang::FileMgr::MapEntryOptionalStorage<clang::FileEntryRef>;
 
 public:
-  ~OptionalStorage() = default;
-  OptionalStorage() : MaybeRef(clang::FileEntryRef::optional_none_tag()) {}
-  OptionalStorage(OptionalStorage const &Other) = default;
-  OptionalStorage(OptionalStorage &&Other) = default;
-  OptionalStorage &operator=(OptionalStorage const &Other) = default;
-  OptionalStorage &operator=(OptionalStorage &&Other) = default;
+  OptionalStorage() = default;
 
   template <class... ArgTypes>
   explicit OptionalStorage(in_place_t, ArgTypes &&...Args)
-      : MaybeRef(std::forward<ArgTypes>(Args)...) {}
-
-  void reset() { MaybeRef = clang::FileEntryRef::optional_none_tag(); }
-
-  bool hasValue() const { return MaybeRef.hasOptionalValue(); }
-
-  clang::FileEntryRef &getValue() LLVM_LVALUE_FUNCTION {
-    assert(hasValue());
-    return MaybeRef;
-  }
-  clang::FileEntryRef const &getValue() const LLVM_LVALUE_FUNCTION {
-    assert(hasValue());
-    return MaybeRef;
-  }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-  clang::FileEntryRef &&getValue() && {
-    assert(hasValue());
-    return std::move(MaybeRef);
-  }
-#endif
-
-  template <class... Args> void emplace(Args &&...args) {
-    MaybeRef = clang::FileEntryRef(std::forward<Args>(args)...);
-  }
+      : StorageImpl(in_place_t{}, std::forward<ArgTypes>(Args)...) {}
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
-    MaybeRef = Ref;
+    StorageImpl::operator=(Ref);
     return *this;
   }
 };
