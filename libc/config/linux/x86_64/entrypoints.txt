@@ -21,6 +21,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
+    # fenv.h entrypoints
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.fegetround
+    libc.src.fenv.fesetround
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+
     # signal.h entrypoints
     libc.src.signal.raise
     libc.src.signal.sigaction
