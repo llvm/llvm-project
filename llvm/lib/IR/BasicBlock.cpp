@@ -333,14 +333,16 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
     Phi.removeIncomingValue(Pred, !KeepOneInputPHIs);
     if (KeepOneInputPHIs)
       continue;
-    // If we have a single predecessor, removeIncomingValue erased the PHI
-    // node itself.
+
+    // If we have a single predecessor, removeIncomingValue may have erased the
+    // PHI node itself.
+    if (NumPreds == 1)
+      continue;
+
     // Try to replace the PHI node with a constant value.
-    if (NumPreds > 1) {
-      if (Value *PhiConstant = Phi.hasConstantValue()) {
-        Phi.replaceAllUsesWith(PhiConstant);
-        Phi.eraseFromParent();
-      }
+    if (Value *PhiConstant = Phi.hasConstantValue()) {
+      Phi.replaceAllUsesWith(PhiConstant);
+      Phi.eraseFromParent();
     }
   }
 }
