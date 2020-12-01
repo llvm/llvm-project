@@ -992,6 +992,13 @@ class GdbRemoteTestCaseBase(TestBase):
                 return reg_info
         return None
 
+    def find_register_with_name_and_dwarf_regnum(self, reg_infos, name, dwarf_num):
+        self.assertIsNotNone(reg_infos)
+        for reg_info in reg_infos:
+            if (reg_info["name"] == name) and (reg_info["dwarf"] == dwarf_num):
+                return reg_info
+        return None
+
     def decode_gdbremote_binary(self, encoded_bytes):
         decoded_bytes = ""
         i = 0
