@@ -425,7 +425,8 @@ public:
                  pybind11::object parentKeepAlive = pybind11::object());
 
   /// Gets the backing operation.
-  MlirOperation get() {
+  operator MlirOperation() const { return get(); }
+  MlirOperation get() const {
     checkValid();
     return operation;
   }
@@ -440,7 +441,7 @@ public:
     assert(!attached && "operation already attached");
     attached = true;
   }
-  void checkValid();
+  void checkValid() const;
 
   /// Gets the owning block or raises an exception if the operation has no
   /// owning block.
