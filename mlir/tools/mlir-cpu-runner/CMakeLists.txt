@@ -11,6 +11,8 @@ llvm_update_compile_flags(mlir-cpu-runner)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 target_link_libraries(mlir-cpu-runner PRIVATE
   ${dialect_libs}
+  LLVMAsmParser
+  LLVMX86AsmParser
   MLIRAnalysis
   MLIREDSC
   MLIRExecutionEngine

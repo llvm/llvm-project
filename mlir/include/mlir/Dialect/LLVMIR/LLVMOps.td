@@ -1191,4 +1191,48 @@ def LLVM_FenceOp : LLVM_ZeroResultOp<"fence", []> {
   let printer = [{ printFenceOp(p, *this); }];
   let verifier = "return ::verify(*this);";
 }
+
+def AsmATT : LLVM_EnumAttrCase<
+  /*string cppSym=*/"AD_ATT", /*string irSym=*/"att",
+  /*string llvmSym=*/"AD_ATT", /*int val=*/0>;
+def AsmIntel : LLVM_EnumAttrCase<
+  /*string cppSym=*/"AD_Intel", /*string irSym=*/"intel",
+  /*string llvmSym=*/"AD_Intel", /*int val=*/1>;
+def AsmATTOrIntel : LLVM_EnumAttr<
+  /*string name=*/"AsmDialect",
+  /*string llvmName=*/"::llvm::InlineAsm::AsmDialect",
+  /*string description=*/"ATT (0) or Intel (1) asm dialect",
+  /*list<LLVM_EnumAttrCase> cases=*/[AsmATT, AsmIntel]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
+  let description = [{
+    The InlineAsmOp mirrors the underlying LLVM semantics with a notable
+    exception: the embedded `asm_string` is not allowed to define or reference
+    any symbol or any global variable: only the operands of the op may be read,
+    written, or referenced.
+    Attempting to define or reference any symbol or any global behavior is
+    considered undefined behavior at this time.
+  }];
+  let arguments = (
+    ins Variadic<LLVM_Type>:$operands,
+        StrAttr:$asm_string,
+        StrAttr:$constraints,
+        UnitAttr:$has_side_effects,
+        UnitAttr:$is_align_stack,
+        OptionalAttr<
+          DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect);
+
+  let results = (outs Optional<LLVM_Type>:$res);
+
+  let assemblyFormat = [{
+    (`has_side_effects` $has_side_effects^)?
+    (`is_align_stack` $is_align_stack^)?
+    (`asm_dialect` `=` $asm_dialect^)?
+    attr-dict
+    $asm_string `,` $constraints
+    operands `:` functional-type(operands, results)
+   }];
+}
 #endif // LLVMIR_OPS
