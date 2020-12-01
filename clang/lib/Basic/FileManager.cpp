@@ -335,9 +335,13 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   return ReturnedRef;
 }
 
-const FileEntry *
-FileManager::getVirtualFile(StringRef Filename, off_t Size,
-                            time_t ModificationTime) {
+const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
+                                             time_t ModificationTime) {
+  return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();
+}
+
+FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
+                                            time_t ModificationTime) {
   ++NumFileLookups;
 
   // See if there is already an entry in the map for an existing file.
@@ -345,12 +349,10 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
       {Filename, std::errc::no_such_file_or_directory}).first;
   if (NamedFileEnt.second) {
     FileEntryRef::MapValue Value = *NamedFileEnt.second;
-    FileEntry *FE;
-    if (LLVM_LIKELY(FE = Value.V.dyn_cast<FileEntry *>()))
-      return FE;
-    return &FileEntryRef(*reinterpret_cast<const FileEntryRef::MapEntry *>(
-                             Value.V.get<const void *>()))
-                .getFileEntry();
+    if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
+      return FileEntryRef(NamedFileEnt);
+    return FileEntryRef(*reinterpret_cast<const FileEntryRef::MapEntry *>(
+        Value.V.get<const void *>()));
   }
 
   // We've not seen this before, or the file is cached as non-existent.
@@ -389,7 +391,7 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
     // FIXME: Surely this should add a reference by the new name, and return
     // it instead...
     if (UFE->isValid())
-      return UFE;
+      return FileEntryRef(NamedFileEnt);
 
     UFE->UniqueID = Status.getUniqueID();
     UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
@@ -407,7 +409,7 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
   UFE->UID     = NextFileUID++;
   UFE->IsValid = true;
   UFE->File.reset();
-  return UFE;
+  return FileEntryRef(NamedFileEnt);
 }
 
 llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
