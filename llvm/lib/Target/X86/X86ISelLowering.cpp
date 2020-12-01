@@ -17590,12 +17590,14 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Rotate;
 
   // Try to use PALIGNR.
-  if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v8i64, V1, V2, Mask,
-                                                Subtarget, DAG))
-    return Rotate;
+  if (Subtarget.hasBWI())
+    if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v8i64, V1, V2, Mask,
+                                                  Subtarget, DAG))
+      return Rotate;
 
   if (SDValue Unpck = lowerShuffleWithUNPCK(DL, MVT::v8i64, Mask, V1, V2, DAG))
     return Unpck;
+
   // If we have AVX512F support, we can use VEXPAND.
   if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8i64, Zeroable, Mask, V1, V2,
                                        DAG, Subtarget))
