@@ -371,6 +371,7 @@ h1 { font-size:14pt }
 .msg { border-radius:5px }
 .msg { font-family:Helvetica, sans-serif; font-size:8pt }
 .msg { float:left }
+.msg { position:relative }
 .msg { padding:0.25em 1ex 0.25em 1ex }
 .msg { margin-top:10px; margin-bottom:10px }
 .msg { font-weight:bold }
