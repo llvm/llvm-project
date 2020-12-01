@@ -9,8 +9,8 @@
 ; leaving cost 3 for scalarizing the result + 2 for executing the op with VF 2.
 
 ; CM: LV: Scalar loop costs: 7.
-; CM: LV: Found an estimated cost of 5 for VF 2 For instruction:   %a = extractvalue { i64, i64 } %sv, 0
-; CM-NEXT: LV: Found an estimated cost of 5 for VF 2 For instruction:   %b = extractvalue { i64, i64 } %sv, 1
+; CM: LV: Found an estimated cost of 19 for VF 2 For instruction:   %a = extractvalue { i64, i64 } %sv, 0
+; CM-NEXT: LV: Found an estimated cost of 19 for VF 2 For instruction:   %b = extractvalue { i64, i64 } %sv, 1
 
 ; Check that the extractvalue operands are actually free in vector code.
 
