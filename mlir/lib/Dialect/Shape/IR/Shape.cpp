@@ -559,6 +559,65 @@ OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionLibraryOp
+//===----------------------------------------------------------------------===//
+
+void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
+                              StringRef name) {
+  ensureTerminator(*result.addRegion(), builder, result.location);
+  result.attributes.push_back(builder.getNamedAttr(
+      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+}
+
+FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
+  auto attr = mapping()
+                  .get(op->getName().getIdentifier())
+                  .dyn_cast_or_null<FlatSymbolRefAttr>();
+  if (!attr)
+    return nullptr;
+  return lookupSymbol<FuncOp>(attr);
+}
+
+ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
+                                   OperationState &result) {
+  // Parse the op name.
+  StringAttr nameAttr;
+  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+                             result.attributes))
+    return failure();
+
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return failure();
+
+  auto *bodyRegion = result.addRegion();
+  if (parser.parseRegion(*bodyRegion))
+    return failure();
+
+  FunctionLibraryOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
+                                      result.location);
+  if (parser.parseKeyword("mapping"))
+    return failure();
+
+  DictionaryAttr mappingAttr;
+  if (parser.parseAttribute(mappingAttr,
+                            parser.getBuilder().getType<NoneType>(), "mapping",
+                            result.attributes))
+    return failure();
+  return success();
+}
+
+void print(OpAsmPrinter &p, FunctionLibraryOp op) {
+  p << op.getOperationName() << ' ';
+  p.printSymbolName(op.getName());
+  p.printOptionalAttrDictWithKeyword(
+      op.getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
+  p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+  p << " mapping ";
+  p.printAttributeWithoutType(op.mappingAttr());
+}
+
+//===----------------------------------------------------------------------===//
 // GetExtentOp
 //===----------------------------------------------------------------------===//
 
