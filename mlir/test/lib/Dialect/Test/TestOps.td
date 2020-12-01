@@ -1000,7 +1000,7 @@ def ThreeResultOp : TEST_Op<"three_result"> {
   let results = (outs I32:$result1, F32:$result2, F32:$result3);
 }
 
-def AnotherThreeResultOp : TEST_Op<"another_three_result"> {
+def AnotherThreeResultOp : TEST_Op<"another_three_result", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let arguments = (ins MultiResultOpEnum:$kind);
   let results = (outs I32:$result1, F32:$result2, F32:$result3);
 }

@@ -453,10 +453,10 @@ OpEmitter::OpEmitter(const Operator &op)
   genVerifier();
   genCanonicalizerDecls();
   genFolderDecls();
+  genTypeInterfaceMethods();
   genOpInterfaceMethods();
   generateOpFormat(op, opClass);
   genSideEffectInterfaceMethods();
-  genTypeInterfaceMethods();
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -1739,7 +1739,6 @@ void OpEmitter::genTypeInterfaceMethods() {
   auto *method =
       opClass.addMethodAndPrune("::mlir::LogicalResult", "inferReturnTypes",
                                 OpMethod::MP_Static, std::move(paramList));
-
   auto &body = method->body();
   body << "  inferredReturnTypes.resize(" << op.getNumResults() << ");\n";
 
