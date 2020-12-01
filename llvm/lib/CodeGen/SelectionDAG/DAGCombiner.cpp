@@ -9743,6 +9743,68 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         }
       }
     }
+
+    // Match VSELECTs into sub with unsigned saturation.
+    if (hasOperation(ISD::USUBSAT, VT)) {
+      // Check if one of the arms of the VSELECT is a zero vector. If it's on
+      // the left side invert the predicate to simplify logic below.
+      SDValue Other;
+      ISD::CondCode SatCC = CC;
+      if (ISD::isBuildVectorAllZeros(N1.getNode())) {
+        Other = N2;
+        SatCC = ISD::getSetCCInverse(SatCC, VT.getScalarType());
+      } else if (ISD::isBuildVectorAllZeros(N2.getNode())) {
+        Other = N1;
+      }
+
+      if (Other && Other.getNumOperands() == 2 && Other.getOperand(0) == LHS) {
+        SDValue CondLHS = LHS, CondRHS = RHS;
+        SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
+
+        // Look for a general sub with unsigned saturation first.
+        // x >= y ? x-y : 0 --> usubsat x, y
+        // x >  y ? x-y : 0 --> usubsat x, y
+        if ((SatCC == ISD::SETUGE || SatCC == ISD::SETUGT) &&
+            Other.getOpcode() == ISD::SUB && OpRHS == CondRHS)
+          return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
+
+        if (auto *OpRHSBV = dyn_cast<BuildVectorSDNode>(OpRHS)) {
+          if (isa<BuildVectorSDNode>(CondRHS)) {
+            // If the RHS is a constant we have to reverse the const
+            // canonicalization.
+            // x > C-1 ? x+-C : 0 --> usubsat x, C
+            auto MatchUSUBSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
+              return (!Op && !Cond) ||
+                     (Op && Cond &&
+                      Cond->getAPIntValue() == (-Op->getAPIntValue() - 1));
+            };
+            if (SatCC == ISD::SETUGT && Other.getOpcode() == ISD::ADD &&
+                ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT,
+                                          /*AllowUndefs*/ true)) {
+              OpRHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                  OpRHS);
+              return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
+            }
+
+            // Another special case: If C was a sign bit, the sub has been
+            // canonicalized into a xor.
+            // FIXME: Would it be better to use computeKnownBits to determine
+            //        whether it's safe to decanonicalize the xor?
+            // x s< 0 ? x^C : 0 --> usubsat x, C
+            if (auto *OpRHSConst = OpRHSBV->getConstantSplatNode()) {
+              if (SatCC == ISD::SETLT && Other.getOpcode() == ISD::XOR &&
+                  ISD::isBuildVectorAllZeros(CondRHS.getNode()) &&
+                  OpRHSConst->getAPIntValue().isSignMask()) {
+                // Note that we have to rebuild the RHS constant here to ensure
+                // we don't rely on particular values of undef lanes.
+                OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
+                return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   if (SimplifySelectOps(N, N1, N2))
