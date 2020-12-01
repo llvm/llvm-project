@@ -15,6 +15,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
@@ -91,6 +92,11 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef mb);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
+
+  llvm::DWARFUnit *compileUnit = nullptr;
+
+private:
+  void parseDebugInfo();
 };
 
 // command-line -sectcreate file

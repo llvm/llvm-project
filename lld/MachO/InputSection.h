@@ -35,13 +35,18 @@ struct Reloc {
   llvm::PointerUnion<Symbol *, InputSection *> referent;
 };
 
-inline bool isZeroFill(uint8_t flags) {
+inline bool isZeroFill(uint32_t flags) {
   return llvm::MachO::isVirtualSection(flags & llvm::MachO::SECTION_TYPE);
 }
 
-inline bool isThreadLocalVariables(uint8_t flags) {
+inline bool isThreadLocalVariables(uint32_t flags) {
   return (flags & llvm::MachO::SECTION_TYPE) ==
          llvm::MachO::S_THREAD_LOCAL_VARIABLES;
+}
+
+inline bool isDebugSection(uint32_t flags) {
+  return (flags & llvm::MachO::SECTION_ATTRIBUTES_USR) ==
+         llvm::MachO::S_ATTR_DEBUG;
 }
 
 class InputSection {
