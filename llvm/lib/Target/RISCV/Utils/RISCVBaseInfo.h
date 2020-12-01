@@ -236,7 +236,7 @@ struct SysReg {
 };
 
 #define GET_SysRegsList_DECL
-#include "RISCVGenSystemOperands.inc"
+#include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
 namespace RISCVABI {
