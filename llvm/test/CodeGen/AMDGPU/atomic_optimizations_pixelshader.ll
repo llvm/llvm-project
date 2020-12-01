@@ -149,7 +149,6 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
-; GFX1032-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz BB0_4
 ; GFX1032-NEXT:  ; %bb.1:
@@ -382,7 +381,6 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
-; GFX1032-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz BB1_4
 ; GFX1032-NEXT:  ; %bb.1:

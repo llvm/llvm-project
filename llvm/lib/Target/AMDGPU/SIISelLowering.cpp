@@ -11561,17 +11561,7 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   Info->limitOccupancy(MF);
 
   if (ST.isWave32() && !MF.empty()) {
-    // Add VCC_HI def because many instructions marked as imp-use VCC where
-    // we may only define VCC_LO. If nothing defines VCC_HI we may end up
-    // having a use of undef.
-
     const SIInstrInfo *TII = ST.getInstrInfo();
-    DebugLoc DL;
-
-    MachineBasicBlock &MBB = MF.front();
-    MachineBasicBlock::iterator I = MBB.getFirstNonDebugInstr();
-    BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), AMDGPU::VCC_HI);
-
     for (auto &MBB : MF) {
       for (auto &MI : MBB) {
         TII->fixImplicitOperands(MI);
