@@ -34,14 +34,12 @@ def grp_kind : OptionGroup<"kind">, HelpText<"OUTPUT KIND">;
 
 def execute : Flag<["-"], "execute">,
      HelpText<"Produce a main executable (default)">,
-     Flags<[HelpHidden]>,
      Group<grp_kind>;
 def dylib : Flag<["-"], "dylib">,
      HelpText<"Produce a shared library">,
      Group<grp_kind>;
 def bundle : Flag<["-"], "bundle">,
      HelpText<"Produce a bundle">,
-     Flags<[HelpHidden]>,
      Group<grp_kind>;
 def r : Flag<["-"], "r">,
      HelpText<"Merge multiple object files into one, retaining relocations">,
