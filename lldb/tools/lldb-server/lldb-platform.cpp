@@ -349,13 +349,13 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        uint16_t port = 0;
+        llvm::Optional<uint16_t> port = 0;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname
                                                 pid, port, socket_name);
         if (error.Success())
-          platform.SetPendingGdbServer(pid, port, socket_name);
+          platform.SetPendingGdbServer(pid, *port, socket_name);
         else
           fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
       }
