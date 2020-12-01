@@ -2090,11 +2090,9 @@ void ELFDumper<ELFT>::parseDynamicTable() {
   auto toMappedAddr = [&](uint64_t Tag, uint64_t VAddr) -> const uint8_t * {
     auto MappedAddrOrError = Obj.toMappedAddr(VAddr);
     if (!MappedAddrOrError) {
-      Error Err =
-          createError("Unable to parse DT_" + Obj.getDynamicTagAsString(Tag) +
-                      ": " + llvm::toString(MappedAddrOrError.takeError()));
-
-      reportWarning(std::move(Err), ObjF.getFileName());
+      this->reportUniqueWarning("Unable to parse DT_" +
+                                Obj.getDynamicTagAsString(Tag) + ": " +
+                                llvm::toString(MappedAddrOrError.takeError()));
       return nullptr;
     }
     return MappedAddrOrError.get();
@@ -2134,11 +2132,10 @@ void ELFDumper<ELFT>::parseDynamicTable() {
     case ELF::DT_SYMENT: {
       uint64_t Val = Dyn.getVal();
       if (Val != sizeof(Elf_Sym))
-        reportWarning(createError("DT_SYMENT value of 0x" +
+        this->reportUniqueWarning("DT_SYMENT value of 0x" +
                                   Twine::utohexstr(Val) +
                                   " is not the size of a symbol (0x" +
-                                  Twine::utohexstr(sizeof(Elf_Sym)) + ")"),
-                      ObjF.getFileName());
+                                  Twine::utohexstr(sizeof(Elf_Sym)) + ")");
       break;
     }
     case ELF::DT_RELA:
