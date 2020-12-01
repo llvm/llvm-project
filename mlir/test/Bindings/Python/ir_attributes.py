@@ -74,6 +74,20 @@ def testAttrEqDoesNotRaise():
 run(testAttrEqDoesNotRaise)
 
 
+# CHECK-LABEL: TEST: testAttrCapsule
+def testAttrCapsule():
+  with Context() as ctx:
+    a1 = Attribute.parse('"attr1"')
+  # CHECK: mlir.ir.Attribute._CAPIPtr
+  attr_capsule = a1._CAPIPtr
+  print(attr_capsule)
+  a2 = Attribute._CAPICreate(attr_capsule)
+  assert a2 == a1
+  assert a2.context is ctx
+
+run(testAttrCapsule)
+
+
 # CHECK-LABEL: TEST: testStandardAttrCasts
 def testStandardAttrCasts():
   with Context():

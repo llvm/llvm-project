@@ -74,6 +74,20 @@ def testTypeEqDoesNotRaise():
 run(testTypeEqDoesNotRaise)
 
 
+# CHECK-LABEL: TEST: testTypeCapsule
+def testTypeCapsule():
+  with Context() as ctx:
+    t1 = Type.parse("i32", ctx)
+  # CHECK: mlir.ir.Type._CAPIPtr
+  type_capsule = t1._CAPIPtr
+  print(type_capsule)
+  t2 = Type._CAPICreate(type_capsule)
+  assert t2 == t1
+  assert t2.context is ctx
+
+run(testTypeCapsule)
+
+
 # CHECK-LABEL: TEST: testStandardTypeCasts
 def testStandardTypeCasts():
   ctx = Context()

@@ -307,11 +307,24 @@ public:
   PyLocation(PyMlirContextRef contextRef, MlirLocation loc)
       : BaseContextObject(std::move(contextRef)), loc(loc) {}
 
+  operator MlirLocation() const { return loc; }
+  MlirLocation get() const { return loc; }
+
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
   void contextExit(pybind11::object excType, pybind11::object excVal,
                    pybind11::object excTb);
 
+  /// Gets a capsule wrapping the void* within the MlirContext.
+  pybind11::object getCapsule();
+
+  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
+  /// Note that PyMlirContext instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// is taken by calling this function.
+  static PyLocation createFromCapsule(pybind11::object capsule);
+
+private:
   MlirLocation loc;
 };
 
@@ -324,6 +337,8 @@ public:
   static constexpr const char kTypeDescription[] =
       "[ThreadContextAware] mlir.ir.Location";
   static PyLocation &resolve();
+
+  operator MlirLocation() const { return *get(); }
 };
 
 /// Wrapper around MlirModule.
@@ -568,7 +583,19 @@ public:
   PyAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
       : BaseContextObject(std::move(contextRef)), attr(attr) {}
   bool operator==(const PyAttribute &other);
+  operator MlirAttribute() const { return attr; }
+  MlirAttribute get() const { return attr; }
 
+  /// Gets a capsule wrapping the void* within the MlirContext.
+  pybind11::object getCapsule();
+
+  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
+  /// Note that PyMlirContext instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// is taken by calling this function.
+  static PyAttribute createFromCapsule(pybind11::object capsule);
+
+private:
   MlirAttribute attr;
 };
 
@@ -603,7 +630,18 @@ public:
       : BaseContextObject(std::move(contextRef)), type(type) {}
   bool operator==(const PyType &other);
   operator MlirType() const { return type; }
+  MlirType get() const { return type; }
 
+  /// Gets a capsule wrapping the void* within the MlirContext.
+  pybind11::object getCapsule();
+
+  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
+  /// Note that PyMlirContext instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// is taken by calling this function.
+  static PyType createFromCapsule(pybind11::object capsule);
+
+private:
   MlirType type;
 };
 
