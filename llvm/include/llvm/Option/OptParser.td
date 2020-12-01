@@ -100,6 +100,8 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   string MarshallingInfoKind = ?;
   code KeyPath = ?;
   code DefaultValue = ?;
+  code ImpliedValue = ?;
+  code ImpliedCheck = "false";
   bit ShouldAlwaysEmit = false;
   code NormalizerRetTy = ?;
   code NormalizedValuesScope = "";
@@ -145,9 +147,10 @@ class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
 
 // Helpers for defining marshalling information.
 
-class DefaultAnyOf<list<Option> options, string default = "false", string separator = " || "> {
-  code DefaultValue = !foldl(default, options, accumulator, option,
-                             !strconcat(accumulator, separator, !cast<string>(option.KeyPath)));
+class ImpliedByAnyOf<list<Option> options, code value = "true"> {
+  code ImpliedCheck = !foldl("false", options, accumulator, option,
+                             !strconcat(accumulator, " || ", !cast<string>(option.KeyPath)));
+  code ImpliedValue = value;
 }
 
 class MarshallingInfo<code keypath, code defaultvalue> {
@@ -159,21 +162,21 @@ class MarshallingInfo<code keypath, code defaultvalue> {
 class MarshallingInfoString<code keypath, code defaultvalue>
   : MarshallingInfo<keypath, defaultvalue> {}
 
-class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>>
-  : MarshallingInfo<keypath, defaults.DefaultValue> {
+class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
+  : MarshallingInfo<keypath, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
 class MarshallingInfoBitfieldFlag<code keypath, code value>
-  : MarshallingInfoFlag<keypath, DefaultAnyOf<[], "0u", " | ">> {
+  : MarshallingInfoFlag<keypath, "0u"> {
   code Normalizer = "(normalizeFlagToValue<unsigned, "#value#">)";
   code ValueMerger = "mergeMaskValue";
   code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
 }
 
 class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, Option negopt>
-  : MarshallingInfoFlag<keypath, DefaultAnyOf<[], defaultvalue>> {
+  : MarshallingInfoFlag<keypath, defaultvalue> {
   bit ShouldAlwaysEmit = 1;
   string MarshallingInfoKind = "BooleanFlag";
   code Normalizer = "normalizeBooleanFlag";
