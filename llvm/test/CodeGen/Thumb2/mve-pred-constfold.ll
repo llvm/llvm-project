@@ -51,10 +51,8 @@ define arm_aapcs_vfpcc void @const(<8 x i16> %acc0, <8 x i16> %acc1, i32* nocapt
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    uxth r2, r1
+; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    mvns r1, r1
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    uxth r1, r1
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvt.s16 r12, q1
 ; CHECK-NEXT:    vaddvt.s16 r2, q0
@@ -92,7 +90,6 @@ define arm_aapcs_vfpcc <4 x i32> @xorvpnot_i32(<4 x i32> %acc0, i16 signext %p0)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    mvns r0, r0
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
@@ -109,7 +106,6 @@ define arm_aapcs_vfpcc <8 x i16> @xorvpnot_i16(<8 x i16> %acc0, i16 signext %p0)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    mvns r0, r0
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
@@ -126,7 +122,6 @@ define arm_aapcs_vfpcc <16 x i8> @xorvpnot_i8(<16 x i8> %acc0, i16 signext %p0) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    mvns r0, r0
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr

@@ -13844,6 +13844,13 @@ PerformPREDICATE_CASTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT, Op->getOperand(0));
   }
 
+  // Only the bottom 16 bits of the source register are used.
+  if (Op.getValueType() == MVT::i32) {
+    APInt DemandedMask = APInt::getLowBitsSet(32, 16);
+    const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
+    if (TLI.SimplifyDemandedBits(Op, DemandedMask, DCI))
+      return SDValue(N, 0);
+  }
   return SDValue();
 }
 
