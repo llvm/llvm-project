@@ -71,6 +71,8 @@ public:
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
+  StringRef ImpliedCheck;
+  StringRef ImpliedValue;
   StringRef Normalizer;
   StringRef Denormalizer;
   StringRef ValueMerger;
@@ -112,6 +114,10 @@ struct SimpleEnumValueTable {
     OS << KeyPath;
     OS << ", ";
     emitScopedNormalizedValue(OS, DefaultValue);
+    OS << ", ";
+    OS << ImpliedCheck;
+    OS << ", ";
+    emitScopedNormalizedValue(OS, ImpliedValue);
     OS << ", ";
     OS << Normalizer;
     OS << ", ";
@@ -188,6 +194,9 @@ static MarshallingInfo::Ptr createMarshallingInfo(const Record &R) {
   Ret->KeyPath = R.getValueAsString("KeyPath");
   Ret->DefaultValue = R.getValueAsString("DefaultValue");
   Ret->NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
+  Ret->ImpliedCheck = R.getValueAsString("ImpliedCheck");
+  Ret->ImpliedValue =
+      R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret->DefaultValue);
 
   Ret->Normalizer = R.getValueAsString("Normalizer");
   Ret->Denormalizer = R.getValueAsString("Denormalizer");
