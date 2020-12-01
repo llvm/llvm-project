@@ -41,6 +41,7 @@ public:
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
+  bool hasGOT(const MachineFunction &MF) const;
 
   // VE reserves argument space always for call sites in the function
   // immediately on entry of the current function.
