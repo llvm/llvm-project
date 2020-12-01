@@ -2044,7 +2044,8 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
           if (Expected<StringRef> E = Obj.getStringTableForSymtab(Sec))
             DynamicStringTable = *E;
           else
-            reportWarning(E.takeError(), ObjF.getFileName());
+            reportUniqueWarning("unable to get the string table for the " +
+                                describe(Sec) + ": " + toString(E.takeError()));
         } else {
           reportUniqueWarning("unable to read dynamic symbols from " +
                               describe(Sec) + ": " +
