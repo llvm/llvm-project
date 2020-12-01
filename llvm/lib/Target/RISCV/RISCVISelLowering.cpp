@@ -162,7 +162,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZbp()) {
-    setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
+    setOperationAction(ISD::BITREVERSE, XLenVT, Custom);
+    setOperationAction(ISD::BSWAP, XLenVT, Custom);
 
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
@@ -495,6 +496,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::BSWAP:
+  case ISD::BITREVERSE: {
+    // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combinining.
+    assert(Subtarget.hasStdExtZbp() && "Unexpected custom legalisation");
+    MVT VT = Op.getSimpleValueType();
+    SDLoc DL(Op);
+    // Start with the maximum immediate value which is the bitwidth - 1.
+    unsigned Imm = VT.getSizeInBits() - 1;
+    // If this is BSWAP rather than BITREVERSE, clear the lower 3 bits.
+    if (Op.getOpcode() == ISD::BSWAP)
+      Imm &= ~0x7U;
+    return DAG.getNode(RISCVISD::GREVI, DL, VT, Op.getOperand(0),
+                       DAG.getTargetConstant(Imm, DL, Subtarget.getXLenVT()));
+  }
   }
 }
 
@@ -1288,6 +1303,29 @@ static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineGREVI(SDNode *N, SelectionDAG &DAG,
+                            const RISCVSubtarget &Subtarget) {
+  // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
+  // non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
+  uint64_t ShAmt1 = N->getConstantOperandVal(1);
+  SDValue GREVSrc = N->getOperand(0);
+
+  if (GREVSrc->getOpcode() != N->getOpcode())
+    return SDValue();
+
+  uint64_t ShAmt2 = GREVSrc.getConstantOperandVal(1);
+  GREVSrc = GREVSrc->getOperand(0);
+
+  uint64_t CombinedShAmt = ShAmt1 ^ ShAmt2;
+  if (CombinedShAmt == 0)
+    return GREVSrc;
+
+  SDLoc DL(N);
+  return DAG.getNode(
+      N->getOpcode(), DL, N->getValueType(0), GREVSrc,
+      DAG.getTargetConstant(CombinedShAmt, DL, Subtarget.getXLenVT()));
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1383,6 +1421,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
+
+    if (N->getOpcode() == RISCVISD::GREVIW)
+      if (SDValue V = combineGREVI(N, DCI.DAG, Subtarget))
+        return V;
+
     break;
   }
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
@@ -1415,23 +1458,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
                        DAG.getConstant(~SignBit, DL, MVT::i64));
   }
-  case RISCVISD::GREVI: {
-    // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
-    // non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
-    SDLoc DL(N);
-    auto GREVSrc = N->getOperand(0);
-    uint64_t ShAmt1 = N->getConstantOperandVal(1);
-    if (GREVSrc->getOpcode() != RISCVISD::GREVI)
-      break;
-    uint64_t ShAmt2 = GREVSrc.getConstantOperandVal(1);
-    GREVSrc = GREVSrc->getOperand(0);
-    uint64_t CombinedShAmt = ShAmt1 ^ ShAmt2;
-    if (CombinedShAmt == 0)
-      return GREVSrc;
-    return DAG.getNode(
-        RISCVISD::GREVI, DL, N->getValueType(0), GREVSrc,
-        DAG.getTargetConstant(CombinedShAmt, DL, Subtarget.getXLenVT()));
-  }
+  case RISCVISD::GREVI:
+    return combineGREVI(N, DCI.DAG, Subtarget);
   case ISD::OR:
     if (auto GREV = combineORToGREV(SDValue(N, 0), DCI.DAG, Subtarget))
       return GREV;

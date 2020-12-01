@@ -730,16 +730,9 @@ def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
-def : Pat<(rotr (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, 8)>;
-def : Pat<(rotl (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, 8)>;
-def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i32 24))>;
-def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i32 31))>;
+def : Pat<(rotr (riscv_grevi GPR:$rs1, (i32 24)), (i32 16)), (GREVI GPR:$rs1, 8)>;
+def : Pat<(rotl (riscv_grevi GPR:$rs1, (i32 24)), (i32 16)), (GREVI GPR:$rs1, 8)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
-
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i64 56))>;
-def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i64 63))>;
-} // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt] in {
 def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
