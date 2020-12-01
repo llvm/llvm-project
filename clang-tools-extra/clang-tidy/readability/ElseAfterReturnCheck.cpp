@@ -267,7 +267,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor;
+                               << ControlFlowInterruptor
+                               << SourceRange(ElseLoc);
       if (checkInitDeclUsageInElse(If) != nullptr) {
         Diag << tooling::fixit::createReplacement(
                     SourceRange(If->getIfLoc()),
@@ -302,7 +303,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor;
+                               << ControlFlowInterruptor
+                               << SourceRange(ElseLoc);
       Diag << tooling::fixit::createReplacement(
                   SourceRange(If->getIfLoc()),
                   (tooling::fixit::getText(*If->getInit(), *Result.Context) +
@@ -319,7 +321,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                           << ControlFlowInterruptor;
+                           << ControlFlowInterruptor << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 
