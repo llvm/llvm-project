@@ -20,6 +20,28 @@ def SSizeT : TypeDecl<"ssize_t"> {
   }];
 }
 
+def StructTm: TypeDecl<"struct tm"> {
+  let Decl = [{
+    struct tm {
+      int tm_sec; // seconds after the minute
+      int tm_min; // minutes after the hour
+      int tm_hour; // hours since midnight
+      int tm_mday; // day of the month
+      int tm_mon; // months since January
+      int tm_year; // years since 1900
+      int tm_wday; // days since Sunday
+      int tm_yday; // days since January
+      int tm_isdst; // Daylight Saving Time flag
+    };
+  }];
+}
+
+def TimeT: TypeDecl<"time_t"> {
+   let Decl = [{
+   typedef long time_t;
+  }];
+}
+
 def OffT : TypeDecl<"off_t"> {
   let Decl = [{
     #define __need_off_t
@@ -175,6 +197,17 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
+}
+
+def TimeAPI : PublicAPI<"time.h"> {
+  let TypeDeclarations = [
+    StructTm,
+    TimeT,
+  ];
+
+  let Functions = [
+    "mktime",
+  ];
 }
 
 def ErrnoAPI : PublicAPI<"errno.h"> {
