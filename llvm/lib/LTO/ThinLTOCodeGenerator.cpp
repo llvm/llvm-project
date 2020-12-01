@@ -37,6 +37,7 @@
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -75,6 +76,8 @@ extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> RemarksFilename;
 extern cl::opt<std::string> RemarksPasses;
 extern cl::opt<bool> RemarksWithHotness;
+extern cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+    RemarksHotnessThreshold;
 extern cl::opt<std::string> RemarksFormat;
 }
 
@@ -1104,7 +1107,7 @@ void ThinLTOCodeGenerator::run() {
         Context.enableDebugTypeODRUniquing();
         auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
             Context, RemarksFilename, RemarksPasses, RemarksFormat,
-            RemarksWithHotness, count);
+            RemarksWithHotness, RemarksHotnessThreshold, count);
         if (!DiagFileOrErr) {
           errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
           report_fatal_error("ThinLTO: Can't get an output file for the "

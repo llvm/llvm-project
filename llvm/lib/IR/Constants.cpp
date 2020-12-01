@@ -1862,6 +1862,11 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
       return NewEquiv;
   }
 
+  // If the argument is replaced with a null value, just replace this constant
+  // with a null value.
+  if (cast<Constant>(To)->isNullValue())
+    return To;
+
   // The replacement could be a bitcast or an alias to another function. We can
   // replace it with a bitcast to the dso_local_equivalent of that function.
   auto *Func = cast<Function>(To->stripPointerCastsAndAliases());

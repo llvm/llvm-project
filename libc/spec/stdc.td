@@ -3,6 +3,8 @@ def StdC : StandardSpec<"stdc"> {
   NamedType FILE = NamedType<"FILE">;
   PtrType FILEPtr = PtrType<FILE>;
   RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
+  NamedType StructTmType = NamedType<"struct tm">;
+  PtrType StructTmPtr = PtrType<StructTmType>;
 
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
@@ -467,6 +469,23 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Time = HeaderSpec<
+      "time.h",
+      [], // Macros
+      [ // Types
+       StructTmType,
+       TimeTType,
+      ],
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "mktime",
+              RetValSpec<TimeTType>,
+              [ArgSpec<StructTmPtr>]
+          >,
+      ]
+  >;
+
   let Headers = [
     Assert,
     CType,
@@ -477,5 +496,6 @@ def StdC : StandardSpec<"stdc"> {
     StdLib,
     Signal,
     Threads,
+    Time,
   ];
 }

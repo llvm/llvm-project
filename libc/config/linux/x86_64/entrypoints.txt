@@ -67,6 +67,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
 
+    # time.h entrypoints
+    libc.src.time.mktime
+
     # unistd.h entrypoints
     libc.src.unistd.write
 )

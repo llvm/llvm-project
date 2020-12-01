@@ -778,7 +778,7 @@ public:
         ModFile, RecordOpts.RecordSystemDependencies,
         /*Complain=*/false,
         [&](const serialization::InputFile &IF, bool isSystem) {
-          auto *FE = IF.getFile();
+          auto FE = IF.getFile();
           if (!FE)
             return;
           // Ignore module map files, they are not as important to track as

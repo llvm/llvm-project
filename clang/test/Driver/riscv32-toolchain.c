@@ -1,5 +1,4 @@
 // A basic clang -cc1 command-line, and simple environment check.
-// REQUIRES: platform-linker
 
 // RUN: %clang %s -### -no-canonical-prefixes -target riscv32 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
@@ -15,7 +14,7 @@
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
@@ -30,7 +29,7 @@
 // C-RV32-BAREMETAL-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
@@ -44,7 +43,7 @@
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
@@ -60,7 +59,7 @@
 // CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \

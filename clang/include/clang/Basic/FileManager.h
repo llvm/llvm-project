@@ -239,6 +239,9 @@ public:
   /// if there were a file with the given name on disk.
   ///
   /// The file itself is not accessed.
+  FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
+                                 time_t ModificationTime);
+
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 

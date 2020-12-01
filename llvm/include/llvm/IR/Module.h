@@ -850,7 +850,7 @@ public:
 
   /// Returns profile summary metadata. When IsCS is true, use the context
   /// sensitive profile summary.
-  Metadata *getProfileSummary(bool IsCS);
+  Metadata *getProfileSummary(bool IsCS) const;
   /// @}
 
   /// Returns whether semantic interposition is to be respected.

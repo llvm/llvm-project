@@ -14,6 +14,7 @@
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -66,6 +67,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -1587,11 +1589,24 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
         << "-fdiagnostics-show-hotness";
 
-  Opts.DiagnosticsHotnessThreshold = getLastArgUInt64Value(
-      Args, options::OPT_fdiagnostics_hotness_threshold_EQ, 0);
-  if (Opts.DiagnosticsHotnessThreshold > 0 && !UsingProfile)
-    Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
-        << "-fdiagnostics-hotness-threshold=";
+  // Parse remarks hotness threshold. Valid value is either integer or 'auto'.
+  if (auto *arg =
+          Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
+    auto ResultOrErr =
+        llvm::remarks::parseHotnessThresholdOption(arg->getValue());
+
+    if (!ResultOrErr) {
+      Diags.Report(diag::err_drv_invalid_diagnotics_hotness_threshold)
+          << "-fdiagnostics-hotness-threshold=";
+    } else {
+      Opts.DiagnosticsHotnessThreshold = *ResultOrErr;
+      if ((!Opts.DiagnosticsHotnessThreshold.hasValue() ||
+           Opts.DiagnosticsHotnessThreshold.getValue() > 0) &&
+          !UsingProfile)
+        Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
+            << "-fdiagnostics-hotness-threshold=";
+    }
+  }
 
   // If the user requested to use a sample profile for PGO, then the
   // backend will need to track source location information so the profile
@@ -3923,9 +3938,12 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   {                                                                            \
     this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    if (IMPLIED_CHECK)                                                         \
+      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
     if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))      \
       this->KEYPATH = MERGER(                                                  \
           this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
@@ -3934,15 +3952,16 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
-    NEG_SPELLING)                                                              \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
   {                                                                            \
+    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    if (IMPLIED_CHECK)                                                         \
+      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
     if (auto MaybeValue =                                                      \
             NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
       this->KEYPATH = MERGER(                                                  \
           this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
-    else                                                                       \
-      this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
   }
 
 #include "clang/Driver/Options.inc"
@@ -4248,24 +4267,31 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
 
 void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
+  // Capture the extracted value as a lambda argument to avoid potential issues
+  // with lifetime extension of the reference.
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
-  if (((FLAGS) & options::CC1Option) &&                                        \
-      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
-    DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    [&](const auto &Extracted) {                                               \
+      if (ALWAYS_EMIT || (Extracted != ((IMPLIED_CHECK) ? (IMPLIED_VALUE)      \
+                                                        : (DEFAULT_VALUE))))   \
+        DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, Extracted);              \
+    }(EXTRACTOR(this->KEYPATH));                                               \
   }
 
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
-    NEG_SPELLING)                                                              \
-  if (((FLAGS)&options::CC1Option) &&                                          \
-      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
-    DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX,                \
-                 EXTRACTOR(this->KEYPATH));                                    \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    bool Extracted = EXTRACTOR(this->KEYPATH);                                 \
+    if (ALWAYS_EMIT ||                                                         \
+        (Extracted != ((IMPLIED_CHECK) ? (IMPLIED_VALUE) : (DEFAULT_VALUE))))  \
+      DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX, Extracted);  \
   }
 
 #include "clang/Driver/Options.inc"
