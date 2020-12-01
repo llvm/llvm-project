@@ -35,6 +35,7 @@
 #define LLVM_CLANG_BASIC_SOURCEMANAGER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -60,8 +61,6 @@ namespace clang {
 class ASTReader;
 class ASTWriter;
 class FileManager;
-class FileEntry;
-class FileEntryRef;
 class LineTableInfo;
 class SourceManager;
 
@@ -982,11 +981,11 @@ public:
   }
 
   /// Bypass the overridden contents of a file.  This creates a new FileEntry
-  /// and initializes the content cache for it.  Returns nullptr if there is no
+  /// and initializes the content cache for it.  Returns None if there is no
   /// such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  const FileEntry *bypassFileContentsOverride(const FileEntry &File);
+  Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);
