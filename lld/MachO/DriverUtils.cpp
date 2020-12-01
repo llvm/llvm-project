@@ -175,3 +175,13 @@ Optional<DylibFile *> macho::makeDylibFromTAPI(MemoryBufferRef mbref,
   }
   return make<DylibFile>(**result, umbrella);
 }
+
+uint32_t macho::getModTime(StringRef path) {
+  fs::file_status stat;
+  if (!fs::status(path, stat))
+    if (fs::exists(stat))
+      return toTimeT(stat.getLastModificationTime());
+
+  warn("failed to get modification time of " + path);
+  return 0;
+}

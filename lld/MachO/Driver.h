@@ -43,6 +43,8 @@ llvm::Optional<std::string> resolveDylibPath(llvm::StringRef path);
 llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
                                               DylibFile *umbrella = nullptr);
 
+uint32_t getModTime(llvm::StringRef path);
+
 } // namespace macho
 } // namespace lld
 
