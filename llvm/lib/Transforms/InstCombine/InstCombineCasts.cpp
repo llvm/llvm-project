@@ -1520,15 +1520,13 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   Constant *BA = nullptr, *CA = nullptr;
   if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
                         m_Constant(CA))) &&
-      BA->isElementWiseEqual(CA) && A->getType() == DestTy) {
+      BA == CA && A->getType() == DestTy) {
     Constant *WideCurrShAmt = ConstantExpr::getSExt(CA, DestTy);
     Constant *NumLowbitsLeft = ConstantExpr::getSub(
         ConstantInt::get(DestTy, SrcTy->getScalarSizeInBits()), WideCurrShAmt);
     Constant *NewShAmt = ConstantExpr::getSub(
         ConstantInt::get(DestTy, DestTy->getScalarSizeInBits()),
         NumLowbitsLeft);
-    NewShAmt =
-        Constant::mergeUndefsWith(Constant::mergeUndefsWith(NewShAmt, BA), CA);
     A = Builder.CreateShl(A, NewShAmt, CI.getName());
     return BinaryOperator::CreateAShr(A, NewShAmt);
   }
