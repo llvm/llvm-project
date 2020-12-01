@@ -164,13 +164,14 @@ MLIR_CAPI_EXPORTED int mlirTypeIsAVector(MlirType type);
 /** Creates a vector type of the shape identified by its rank and dimensions,
  * with the given element type in the same context as the element type. The type
  * is owned by the context. */
-MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGet(intptr_t rank, int64_t *shape,
+MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGet(intptr_t rank,
+                                              const int64_t *shape,
                                               MlirType elementType);
 
 /** Same as "mlirVectorTypeGet" but returns a nullptr wrapping MlirType on
  * illegal arguments, emitting appropriate diagnostics. */
 MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGetChecked(intptr_t rank,
-                                                     int64_t *shape,
+                                                     const int64_t *shape,
                                                      MlirType elementType,
                                                      MlirLocation loc);
 
@@ -190,13 +191,13 @@ MLIR_CAPI_EXPORTED int mlirTypeIsAUnrankedTensor(MlirType type);
 /** Creates a tensor type of a fixed rank with the given shape and element type
  * in the same context as the element type. The type is owned by the context. */
 MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGet(intptr_t rank,
-                                                    int64_t *shape,
+                                                    const int64_t *shape,
                                                     MlirType elementType);
 
 /** Same as "mlirRankedTensorTypeGet" but returns a nullptr wrapping MlirType on
  * illegal arguments, emitting appropriate diagnostics. */
 MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGetChecked(intptr_t rank,
-                                                           int64_t *shape,
+                                                           const int64_t *shape,
                                                            MlirType elementType,
                                                            MlirLocation loc);
 
@@ -222,11 +223,9 @@ MLIR_CAPI_EXPORTED int mlirTypeIsAUnrankedMemRef(MlirType type);
 /** Creates a MemRef type with the given rank and shape, a potentially empty
  * list of affine layout maps, the given memory space and element type, in the
  * same context as element type. The type is owned by the context. */
-MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(MlirType elementType,
-                                              intptr_t rank, int64_t *shape,
-                                              intptr_t numMaps,
-                                              MlirAttribute const *affineMaps,
-                                              unsigned memorySpace);
+MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(
+    MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
+    MlirAttribute const *affineMaps, unsigned memorySpace);
 
 /** Creates a MemRef type with the given rank, shape, memory space and element
  * type in the same context as the element type. The type has no affine maps,
@@ -234,14 +233,14 @@ MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(MlirType elementType,
  * the context. */
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeContiguousGet(MlirType elementType,
                                                         intptr_t rank,
-                                                        int64_t *shape,
+                                                        const int64_t *shape,
                                                         unsigned memorySpace);
 
 /** Same as "mlirMemRefTypeContiguousGet" but returns a nullptr wrapping
  * MlirType on illegal arguments, emitting appropriate diagnostics. */
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeContiguousGetChecked(
-    MlirType elementType, intptr_t rank, int64_t *shape, unsigned memorySpace,
-    MlirLocation loc);
+    MlirType elementType, intptr_t rank, const int64_t *shape,
+    unsigned memorySpace, MlirLocation loc);
 
 /** Creates an Unranked MemRef type with the given element type and in the given
  * memory space. The type is owned by the context of element type. */
