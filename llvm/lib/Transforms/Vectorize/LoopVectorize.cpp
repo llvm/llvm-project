@@ -6853,6 +6853,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       return std::min(CallCost, getVectorIntrinsicCost(CI, VF));
     return CallCost;
   }
+  case Instruction::ExtractValue:
+    return TTI.getInstructionCost(I, TTI::TCK_RecipThroughput);
   default:
     // The cost of executing VF copies of the scalar instruction. This opcode
     // is unknown. Assume that it is the same as 'mul'.
