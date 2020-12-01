@@ -175,25 +175,20 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
   auto &TIR = FAM.getResult<TargetIRAnalysis>(Callee);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  auto TrivialDecision =
-      llvm::getAttributeBasedInliningDecision(CB, &Callee, TIR, GetTLI);
-
+  auto MandatoryKind = MandatoryInlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal
   // state we need to track, so we can just return the base InlineAdvice, which
   // will do nothing interesting.
   // Same thing if this is a recursive case.
-  if ((TrivialDecision.hasValue() && !TrivialDecision->isSuccess()) ||
+  if (MandatoryKind == MandatoryInlineAdvisor::MandatoryInliningKind::Never ||
       &Caller == &Callee)
     return std::make_unique<InlineAdvice>(this, CB, ORE, false);
 
-  bool Mandatory = TrivialDecision.hasValue() && TrivialDecision->isSuccess();
+  bool Mandatory =
+      MandatoryKind == MandatoryInlineAdvisor::MandatoryInliningKind::Always;
 
   // If we need to stop, we won't want to track anymore any state changes, so
   // we just return the base InlineAdvice, which acts as a noop.
