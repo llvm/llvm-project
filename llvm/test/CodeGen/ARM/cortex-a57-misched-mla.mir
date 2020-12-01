@@ -1,7 +1,7 @@
 # RUN: llc -mcpu=cortex-a57 -mtriple=thumb -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
 
 # TODO: Remove once bots have removed the output file left by 112b3cb
-# RUN: rm -f cortex-a57-misched-mla.s
+# RUN: rm -f %S/cortex-a57-misched-mla.s
 
 # CHECK-LABEL: ********** MI Scheduling **********
 # CHECK:       %[[RES:[0-9]+]]:rgpr = t2MLA
