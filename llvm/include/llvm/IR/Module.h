@@ -329,10 +329,6 @@ public:
   /// \see LLVMContext::getOperandBundleTagID
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
 
-  /// Return the type with the specified name, or null if there is none by that
-  /// name.
-  StructType *getTypeByName(StringRef Name) const;
-
   std::vector<StructType *> getIdentifiedStructTypes() const;
 
 /// @}

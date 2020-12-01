@@ -1349,7 +1349,7 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
   VarName##Ptr = PointerType::getUnqual(VarName);
 #define OMP_STRUCT_TYPE(VarName, StructName, ...)                              \
-  T = M.getTypeByName(StructName);                                             \
+  T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName);                    \
   VarName = T;                                                                 \
