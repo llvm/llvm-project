@@ -474,8 +474,8 @@ llvm.mlir.global @glob(0 : f32) : !llvm.float
 
 Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
 explicitly created as SSA values using `llvm.mlir.null`. This operation has
-operands or attributes, and returns a null value of a wrapped LLVM IR pointer
-type.
+no operands or attributes, and returns a null value of a wrapped LLVM IR
+pointer type.
 
 Examples:
 
