@@ -50,6 +50,10 @@
 using namespace clang;
 using namespace ento;
 
+namespace clang {
+class CrossTUAnalysisHelper;
+}
+
 //===----------------------------------------------------------------------===//
 // Boilerplate.
 //===----------------------------------------------------------------------===//
@@ -133,7 +137,7 @@ private:
 void ento::createHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // FIXME: HTML is currently our default output type, but if the output
   // directory isn't specified, it acts like if it was in the minimal text
@@ -153,7 +157,7 @@ void ento::createHTMLDiagnosticConsumer(
 void ento::createHTMLSingleFileDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
   createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU);
 
   // TODO: Emit an error here.

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/CrossTUAnalysisHelper.h"
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/PathDiagnosticConsumers.h"
@@ -17,7 +18,6 @@
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
@@ -42,7 +42,7 @@ namespace {
     PathDiagnosticConsumerOptions DiagOpts;
     const std::string OutputFile;
     const Preprocessor &PP;
-    const cross_tu::CrossTranslationUnitContext &CTU;
+    const CrossTUAnalysisHelper &CTU;
     const bool SupportsCrossFileDiagnostics;
 
     void printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
@@ -51,7 +51,7 @@ namespace {
   public:
     PlistPathDiagnosticConsumer(PathDiagnosticConsumerOptions DiagOpts,
                      const std::string &OutputFile, const Preprocessor &PP,
-                     const cross_tu::CrossTranslationUnitContext &CTU,
+                     const CrossTUAnalysisHelper &CTU,
                      bool supportsMultipleFiles);
 
     ~PlistPathDiagnosticConsumer() override {}
@@ -79,13 +79,13 @@ namespace {
 class PlistPrinter {
   const FIDMap& FM;
   const Preprocessor &PP;
-  const cross_tu::CrossTranslationUnitContext &CTU;
+  const CrossTUAnalysisHelper &CTU;
   llvm::SmallVector<const PathDiagnosticMacroPiece *, 0> MacroPieces;
 
 public:
   PlistPrinter(const FIDMap& FM,
                const Preprocessor &PP,
-               const cross_tu::CrossTranslationUnitContext &CTU)
+               const CrossTUAnalysisHelper &CTU)
     : FM(FM), PP(PP), CTU(CTU) {
   }
 
@@ -175,7 +175,7 @@ static void printCoverage(const PathDiagnostic *D,
 
 static ExpansionInfo
 getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
-                 const cross_tu::CrossTranslationUnitContext &CTU);
+                 const CrossTUAnalysisHelper &CTU);
 
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
@@ -521,7 +521,7 @@ static void printCoverage(const PathDiagnostic *D,
 
 PlistPathDiagnosticConsumer::PlistPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, const std::string &output,
-    const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
+    const Preprocessor &PP, const CrossTUAnalysisHelper &CTU,
     bool supportsMultipleFiles)
     : DiagOpts(std::move(DiagOpts)), OutputFile(output), PP(PP), CTU(CTU),
       SupportsCrossFileDiagnostics(supportsMultipleFiles) {
@@ -532,7 +532,7 @@ PlistPathDiagnosticConsumer::PlistPathDiagnosticConsumer(
 void ento::createPlistDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputFile, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // TODO: Emit an error here.
   if (OutputFile.empty())
@@ -547,7 +547,7 @@ void ento::createPlistDiagnosticConsumer(
 void ento::createPlistMultiFileDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputFile, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // TODO: Emit an error here.
   if (OutputFile.empty())
@@ -985,7 +985,7 @@ static const MacroInfo *getMacroInfoForLocation(const Preprocessor &PP,
 
 static ExpansionInfo
 getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
-                 const cross_tu::CrossTranslationUnitContext &CTU) {
+                 const CrossTUAnalysisHelper &CTU) {
 
   const Preprocessor *PPToUse = &PP;
   if (auto LocAndUnit = CTU.getImportedFromSourceLocation(MacroLoc)) {
