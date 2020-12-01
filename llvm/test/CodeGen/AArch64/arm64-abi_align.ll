@@ -1,5 +1,5 @@
-; RUN: llc -fast-isel-sink-local-values -aarch64-load-store-renaming=true < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
-; RUN: llc -fast-isel-sink-local-values -aarch64-load-store-renaming=true  < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
+; RUN: llc -aarch64-load-store-renaming=true < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
+; RUN: llc -aarch64-load-store-renaming=true  < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
 
 ; rdar://12648441
 ; Generated from arm64-arguments.c with -O2.
