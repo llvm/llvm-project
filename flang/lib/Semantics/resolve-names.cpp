@@ -4289,6 +4289,7 @@ bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {
     } else if (!ConvertToObjectEntity(*symbol)) {
       SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
     }
+    symbol->GetUltimate().set(Symbol::Flag::InNamelist);
     details.add_object(*symbol);
   }
 
