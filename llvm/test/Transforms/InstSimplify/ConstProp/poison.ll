@@ -114,3 +114,15 @@ define void @other_ops(i8 %x) {
   call void (...) @use(i1 %i1, i1 %i2, i8 %i3, i8 %i4, i8* getelementptr (i8, i8* poison, i64 1), i8* getelementptr inbounds (i8, i8* undef, i64 1))
   ret void
 }
+
+; TODO: these must be folded into poison; D92270
+define void @logicalops_i1(i1 %x) {
+; CHECK-LABEL: @logicalops_i1(
+; CHECK-NEXT:    call void (...) @use(i1 true, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %i1 = or i1 %x, poison
+  %i2 = and i1 %x, poison
+  call void (...) @use(i1 %i1, i1 %i2)
+  ret void
+}
