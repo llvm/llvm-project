@@ -2576,8 +2576,6 @@ namespace {
 
     bool addClassTransitive(CXXRecordDecl *RD) {
       Classes.insert(RD);
-      if (InstantiationLoc.isInvalid())
-        InstantiationLoc = RD->getLocation();
       return ClassesTransitive.insert(RD);
     }
 
