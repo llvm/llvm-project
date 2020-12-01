@@ -697,8 +697,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  ResponseFileSupport ResponseSupport = ResponseFileSupport::AtFileUTF8();
-  if (Version[0] < 607) {
+  ResponseFileSupport ResponseSupport;
+  if (Version[0] >= 607 || LinkerIsLLDDarwinNew) {
+    ResponseSupport = ResponseFileSupport::AtFileUTF8();
+  } else {
     // For older versions of the linker, use the legacy filelist method instead.
     ResponseSupport = {ResponseFileSupport::RF_FileList, llvm::sys::WEM_UTF8,
                        "-filelist"};
