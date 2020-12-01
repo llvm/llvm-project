@@ -3511,19 +3511,6 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   ClassMethods.insert(ClassMethods.begin(), OID->classmeth_begin(),
       OID->classmeth_end());
 
-  // Collect the same information about synthesized properties, which don't
-  // show up in the instance method lists.
-  for (auto *propertyImpl : OID->property_impls())
-    if (propertyImpl->getPropertyImplementation() ==
-        ObjCPropertyImplDecl::Synthesize) {
-      auto addPropertyMethod = [&](const ObjCMethodDecl *accessor) {
-        if (accessor)
-          InstanceMethods.push_back(accessor);
-      };
-      addPropertyMethod(propertyImpl->getGetterMethodDecl());
-      addPropertyMethod(propertyImpl->getSetterMethodDecl());
-    }
-
   llvm::Constant *Properties = GeneratePropertyList(OID, ClassDecl);
 
   // Collect the names of referenced protocols
