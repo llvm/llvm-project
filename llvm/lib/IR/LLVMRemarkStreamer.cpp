@@ -96,8 +96,7 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
-  if (RemarksHotnessThreshold)
-    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+  Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 
   if (RemarksFilename.empty())
     return nullptr;
@@ -144,8 +143,7 @@ Error llvm::setupLLVMOptimizationRemarks(
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
-  if (RemarksHotnessThreshold)
-    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+  Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 
   Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())
