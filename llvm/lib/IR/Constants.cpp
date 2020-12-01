@@ -1851,7 +1851,6 @@ void DSOLocalEquivalent::destroyConstantImpl() {
 
 Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   assert(From == getGlobalValue() && "Changing value does not match operand.");
-  assert(To->getType() == getType() && "Mismatched types");
   assert(isa<Constant>(To) && "Can only replace the operands with a constant");
 
   // The replacement is with another global value.
@@ -1859,7 +1858,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
     DSOLocalEquivalent *&NewEquiv =
         getContext().pImpl->DSOLocalEquivalents[ToObj];
     if (NewEquiv)
-      return NewEquiv;
+      return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
   }
 
   // If the argument is replaced with a null value, just replace this constant
