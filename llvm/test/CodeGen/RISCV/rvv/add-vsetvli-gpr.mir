@@ -1,0 +1,62 @@
+# RUN: llc -mtriple riscv64 -mattr=+experimental-v %s  \
+# RUN:     -start-before=finalize-isel -stop-after=finalize-isel -o - \
+# RUN:     | FileCheck --check-prefix=POST-INSERTER %s
+
+# RUN: llc -mtriple riscv64 -mattr=+experimental-v %s  \
+# RUN:     -start-before=finalize-isel -o - \
+# RUN:     | FileCheck --check-prefix=CODEGEN %s
+
+--- |
+  define void @vadd_vint64m1(
+            <vscale x 1 x i64> *%pc,
+            <vscale x 1 x i64> *%pa,
+            <vscale x 1 x i64> *%pb,
+            i64 %vl)
+  {
+    ret void
+  }
+...
+---
+name: vadd_vint64m1
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $x10, $x11, $x12, $x13
+
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %5:vr = IMPLICIT_DEF
+    %4:vr = PseudoVLE64_V_M1 %5, %1, $noreg, %3, 64, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
+    %7:vr = IMPLICIT_DEF
+    %6:vr = PseudoVLE64_V_M1 %7, %2, $noreg, %3, 64, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pb, align 8)
+    %9:vr = IMPLICIT_DEF
+    %8:vr = PseudoVADD_VV_M1 %9, killed %4, killed %6, $noreg, %3, 64, implicit $vl, implicit $vtype
+    PseudoVSE64_V_M1 killed %8, %0, $noreg, %3, 64, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
+    PseudoRET
+
+...
+
+# POST-INSERTER: %0:gpr = COPY $x13
+# POST-INSERTER: %4:vr = IMPLICIT_DEF
+# POST-INSERTER: dead %10:gpr = PseudoVSETVLI %0, 12, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: %5:vr = PseudoVLE64_V_M1 %4, %2, $noreg, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
+# POST-INSERTER: %6:vr = IMPLICIT_DEF
+# POST-INSERTER: dead %11:gpr = PseudoVSETVLI %0, 12, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: %7:vr = PseudoVLE64_V_M1 %6, %1, $noreg, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pb, align 8)
+# POST-INSERTER: %8:vr = IMPLICIT_DEF
+# POST-INSERTER: dead %12:gpr = PseudoVSETVLI %0, 12, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: %9:vr = PseudoVADD_VV_M1 %8, killed %5, killed %7, $noreg, $noreg, -1, implicit $vl, implicit $vtype
+# POST-INSERTER: dead %13:gpr = PseudoVSETVLI %0, 12, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: PseudoVSE64_V_M1 killed %9, %3, $noreg, $noreg, -1, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
+
+# CODEGEN: vsetvli	a4, a3, e64,m1,tu,mu
+# CODEGEN-NEXT: vle64.v	v25, (a1)
+# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,tu,mu
+# CODEGEN-NEXT: vle64.v	v26, (a2)
+# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,tu,mu
+# CODEGEN-NEXT: vadd.vv	v25, v25, v26
+# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,tu,mu
+# CODEGEN-NEXT: vse64.v	v25, (a0)
+# CODEGEN-NEXT: ret

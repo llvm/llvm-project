@@ -94,4 +94,11 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 
 } // namespace RISCVFeatures
 
+namespace RISCVVPseudosTable {
+
+#define GET_RISCVVPseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVVPseudosTable
+
 } // namespace llvm

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 
@@ -272,6 +273,111 @@ namespace RISCVFeatures {
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
+
+namespace RISCVVMVTs {
+
+constexpr MVT vint8mf8_t = MVT::nxv1i8;
+constexpr MVT vint8mf4_t = MVT::nxv2i8;
+constexpr MVT vint8mf2_t = MVT::nxv4i8;
+constexpr MVT vint8m1_t = MVT::nxv8i8;
+constexpr MVT vint8m2_t = MVT::nxv16i8;
+constexpr MVT vint8m4_t = MVT::nxv32i8;
+constexpr MVT vint8m8_t = MVT::nxv64i8;
+
+constexpr MVT vint16mf4_t = MVT::nxv1i16;
+constexpr MVT vint16mf2_t = MVT::nxv2i16;
+constexpr MVT vint16m1_t = MVT::nxv4i16;
+constexpr MVT vint16m2_t = MVT::nxv8i16;
+constexpr MVT vint16m4_t = MVT::nxv16i16;
+constexpr MVT vint16m8_t = MVT::nxv32i16;
+
+constexpr MVT vint32mf2_t = MVT::nxv1i32;
+constexpr MVT vint32m1_t = MVT::nxv2i32;
+constexpr MVT vint32m2_t = MVT::nxv4i32;
+constexpr MVT vint32m4_t = MVT::nxv8i32;
+constexpr MVT vint32m8_t = MVT::nxv16i32;
+
+constexpr MVT vint64m1_t = MVT::nxv1i64;
+constexpr MVT vint64m2_t = MVT::nxv2i64;
+constexpr MVT vint64m4_t = MVT::nxv4i64;
+constexpr MVT vint64m8_t = MVT::nxv8i64;
+
+constexpr MVT vfloat16mf4_t = MVT::nxv1f16;
+constexpr MVT vfloat16mf2_t = MVT::nxv2f16;
+constexpr MVT vfloat16m1_t = MVT::nxv4f16;
+constexpr MVT vfloat16m2_t = MVT::nxv8f16;
+constexpr MVT vfloat16m4_t = MVT::nxv16f16;
+constexpr MVT vfloat16m8_t = MVT::nxv32f16;
+
+constexpr MVT vfloat32mf2_t = MVT::nxv1f32;
+constexpr MVT vfloat32m1_t = MVT::nxv2f32;
+constexpr MVT vfloat32m2_t = MVT::nxv4f32;
+constexpr MVT vfloat32m4_t = MVT::nxv8f32;
+constexpr MVT vfloat32m8_t = MVT::nxv16f32;
+
+constexpr MVT vfloat64m1_t = MVT::nxv1f64;
+constexpr MVT vfloat64m2_t = MVT::nxv2f64;
+constexpr MVT vfloat64m4_t = MVT::nxv4f64;
+constexpr MVT vfloat64m8_t = MVT::nxv8f64;
+
+constexpr MVT vbool1_t = MVT::nxv64i1;
+constexpr MVT vbool2_t = MVT::nxv32i1;
+constexpr MVT vbool4_t = MVT::nxv16i1;
+constexpr MVT vbool8_t = MVT::nxv8i1;
+constexpr MVT vbool16_t = MVT::nxv4i1;
+constexpr MVT vbool32_t = MVT::nxv2i1;
+constexpr MVT vbool64_t = MVT::nxv1i1;
+
+} // namespace RISCVVMVTs
+
+namespace RISCVVLengthMultiplier {
+
+enum LengthMultiplier {
+  LMul1 = 0,
+  LMul2 = 1,
+  LMul4 = 2,
+  LMul8 = 3,
+  LMulF8 = 5,
+  LMulF4 = 6,
+  LMulF2 = 7
+};
+
+}
+
+namespace RISCVVStandardElementWidth {
+
+enum StandardElementWidth {
+  ElementWidth8 = 0,
+  ElementWidth16 = 1,
+  ElementWidth32 = 2,
+  ElementWidth64 = 3
+};
+
+}
+
+namespace RISCVVPseudosTable {
+
+struct PseudoInfo {
+  unsigned int Pseudo;
+  unsigned int BaseInstr;
+  uint8_t VLIndex;
+  uint8_t SEWIndex;
+  uint8_t MergeOpIndex;
+  uint8_t VLMul;
+
+  int getVLIndex() const { return static_cast<int8_t>(VLIndex); }
+
+  int getSEWIndex() const { return static_cast<int8_t>(SEWIndex); }
+
+  int getMergeOpIndex() const { return static_cast<int8_t>(MergeOpIndex); }
+};
+
+using namespace RISCV;
+
+#define GET_RISCVVPseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+
+} // end namespace RISCVVPseudosTable
 
 } // namespace llvm
 
