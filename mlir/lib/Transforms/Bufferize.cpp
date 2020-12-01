@@ -105,13 +105,17 @@ struct FinalizingBufferizePass
 
     populateEliminateBufferizeMaterializationsPatterns(context, typeConverter,
                                                        patterns);
-    target.addIllegalOp<TensorLoadOp, TensorToMemrefOp>();
 
     // If all result types are legal, and all block arguments are legal (ensured
     // by func conversion above), then all types in the program are legal.
-    target.markUnknownOpDynamicallyLegal([&](Operation *op) {
-      return typeConverter.isLegal(op->getResultTypes());
-    });
+    //
+    // We also check that the operand types are legal to avoid creating invalid
+    // IR. For example, this prevents
+    // populateEliminateBufferizeMaterializationsPatterns from updating the
+    // types of the operands to a return op without updating the enclosing
+    // function.
+    target.markUnknownOpDynamicallyLegal(
+        [&](Operation *op) { return typeConverter.isLegal(op); });
 
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
