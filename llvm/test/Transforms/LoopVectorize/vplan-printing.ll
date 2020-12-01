@@ -97,4 +97,60 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %red.next
 }
 
+define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
+; CHECK:       N0 [label =
+; CHECK-NEXT:    "for.body:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %i = phi 0, %i.next\l" +
+; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%i>, ir<5>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N2 [label =
+; CHECK-NEXT:    "pred.udiv.entry:\n" +
+; CHECK-NEXT:      +
+; CHECK-NEXT:      "BRANCH-ON-MASK ir<%cmp>\l"\l
+; CHECK-NEXT:         "CondBit: ir<%cmp>"
+; CHECK-NEXT:    ]
+;
+; CHECK:       N4 [label =
+; CHECK-NEXT:    "pred.udiv.if:\n" +
+; CHECK-NEXT:      "REPLICATE ir<%tmp4> = udiv ir<%n>, ir<%i> (S->V)\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N5 [label =
+; CHECK-NEXT:    "pred.udiv.continue:\n" +
+; CHECK-NEXT:      "PHI-PREDICATED-INSTRUCTION ir<%tmp4>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N7 [label =
+; CHECK-NEXT:    "for.inc:\n" +
+; CHECK-NEXT:      "EMIT vp<%0> = not ir<%cmp>\l" +
+; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%0> ir<%tmp4>/ir<%cmp>\l" +
+; CHECK-NEXT:      "CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>\l" +
+; CHECK-NEXT:      "WIDEN store ir<%idx>, ir<%d>\l"
+; CHECK-NEXT:  ]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %entry
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %cmp = icmp ult i64 %i, 5
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %tmp4 = udiv i64 %n, %i
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.then, %for.body
+  %d = phi i64 [ 0, %for.body ], [ %tmp4, %if.then ]
+  %idx = getelementptr i64, i64* %x, i64 %i
+  store i64 %d, i64* %idx
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.inc
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float) nounwind readnone

@@ -1237,14 +1237,13 @@ public:
 /// order to merge values that are set under such a branch and feed their uses.
 /// The phi nodes can be scalar or vector depending on the users of the value.
 /// This recipe works in concert with VPBranchOnMaskRecipe.
-class VPPredInstPHIRecipe : public VPRecipeBase {
-  Instruction *PredInst;
+class VPPredInstPHIRecipe : public VPRecipeBase, public VPUser {
 
 public:
   /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
   /// nodes after merging back from a Branch-on-Mask.
-  VPPredInstPHIRecipe(Instruction *PredInst)
-      : VPRecipeBase(VPPredInstPHISC), PredInst(PredInst) {}
+  VPPredInstPHIRecipe(VPValue *PredV)
+      : VPRecipeBase(VPPredInstPHISC), VPUser(PredV) {}
   ~VPPredInstPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
