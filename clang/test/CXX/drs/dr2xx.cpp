@@ -917,13 +917,13 @@ namespace dr280 { // dr280: yes
     operator f2*(); // expected-note {{candidate}}
     operator f3*(); // expected-note {{candidate}}
   };
-  struct D : private A, B { // expected-note 2{{here}}
+  struct D : private A, B { // expected-note {{here}}
     operator f2*(); // expected-note {{candidate}}
   } d;
   struct E : C, D {} e;
   void g() {
     d(); // ok, public
-    d(0); // expected-error {{private member of 'dr280::A'}} expected-error {{private base class 'dr280::A'}}
+    d(0); // expected-error {{private member of 'dr280::A'}}
     d(0, 0); // ok, suppressed by member in D
     d(0, 0, 0); // expected-error {{private member of 'dr280::B'}}
     e(); // expected-error {{ambiguous}}
