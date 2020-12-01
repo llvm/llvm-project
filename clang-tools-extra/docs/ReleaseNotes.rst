@@ -117,6 +117,12 @@ New checks
   Finds condition variables in nested ``if`` statements that were also checked
   in the outer ``if`` statement and were not changed.
 
+- New :doc:`concurrency-mt-unsafe <clang-tidy/checks/concurrency-mt-unsafe>`
+  check.
+
+  Finds thread-unsafe functions usage. Currently knows about POSIX and
+  Glibc function sets.
+
 - New :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone-signal-handler>` check.
 

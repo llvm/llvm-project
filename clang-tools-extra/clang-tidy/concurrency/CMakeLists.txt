@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyConcurrencyModule
   ConcurrencyTidyModule.cpp
+  MtUnsafeCheck.cpp
 
   LINK_LIBS
   clangTidy
