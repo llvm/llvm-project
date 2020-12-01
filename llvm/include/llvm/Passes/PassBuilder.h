@@ -36,11 +36,15 @@ struct PGOOptions {
   enum CSPGOAction { NoCSAction, CSIRInstr, CSIRUse };
   PGOOptions(std::string ProfileFile = "", std::string CSProfileGenFile = "",
              std::string ProfileRemappingFile = "", PGOAction Action = NoAction,
-             CSPGOAction CSAction = NoCSAction, bool SamplePGOSupport = false)
+             CSPGOAction CSAction = NoCSAction,
+             bool DebugInfoForProfiling = false,
+             bool PseudoProbeForProfiling = false)
       : ProfileFile(ProfileFile), CSProfileGenFile(CSProfileGenFile),
         ProfileRemappingFile(ProfileRemappingFile), Action(Action),
-        CSAction(CSAction),
-        SamplePGOSupport(SamplePGOSupport || Action == SampleUse) {
+        CSAction(CSAction), DebugInfoForProfiling(DebugInfoForProfiling ||
+                                                  (Action == SampleUse &&
+                                                   !PseudoProbeForProfiling)),
+        PseudoProbeForProfiling(PseudoProbeForProfiling) {
     // Note, we do allow ProfileFile.empty() for Action=IRUse LTO can
     // callback with IRUse action without ProfileFile.
 
@@ -55,16 +59,18 @@ struct PGOOptions {
     // a profile.
     assert(this->CSAction != CSIRUse || this->Action == IRUse);
 
-    // If neither Action nor CSAction, SamplePGOSupport needs to be true.
+    // If neither Action nor CSAction, DebugInfoForProfiling or
+    // PseudoProbeForProfiling needs to be true.
     assert(this->Action != NoAction || this->CSAction != NoCSAction ||
-           this->SamplePGOSupport);
+           this->DebugInfoForProfiling || this->PseudoProbeForProfiling);
   }
   std::string ProfileFile;
   std::string CSProfileGenFile;
   std::string ProfileRemappingFile;
   PGOAction Action;
   CSPGOAction CSAction;
-  bool SamplePGOSupport;
+  bool DebugInfoForProfiling;
+  bool PseudoProbeForProfiling;
 };
 
 /// Tunable parameters for passes in the default pipelines.
