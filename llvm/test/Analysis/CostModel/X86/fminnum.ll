@@ -92,6 +92,88 @@ define i32 @f64(i32 %arg) {
   ret i32 undef
 }
 
+define i32 @f32_nnan(i32 %arg) {
+; SSE-LABEL: 'f32_nnan'
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F32 = call nnan float @llvm.minnum.f32(float undef, float undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F32 = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call nnan <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call nnan <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX1-LABEL: 'f32_nnan'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call nnan float @llvm.minnum.f32(float undef, float undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = call nnan <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16F32 = call nnan <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX2-LABEL: 'f32_nnan'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call nnan float @llvm.minnum.f32(float undef, float undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8F32 = call nnan <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16F32 = call nnan <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'f32_nnan'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call nnan float @llvm.minnum.f32(float undef, float undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = call nnan <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = call nnan <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+  %F32 = call nnan float @llvm.minnum.f32(float undef, float undef)
+  %V2F32 = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+  %V4F32 = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+  %V8F32 = call nnan <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+  %V16F32 = call nnan <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+  ret i32 undef
+}
+
+define i32 @f64_nnan(i32 %arg) {
+; SSE-LABEL: 'f64_nnan'
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64 = call nnan double @llvm.minnum.f64(double undef, double undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2f64 = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4f64 = call nnan <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8f64 = call nnan <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16f64 = call nnan <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX1-LABEL: 'f64_nnan'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call nnan double @llvm.minnum.f64(double undef, double undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4f64 = call nnan <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8f64 = call nnan <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16f64 = call nnan <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX2-LABEL: 'f64_nnan'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call nnan double @llvm.minnum.f64(double undef, double undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f64 = call nnan <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8f64 = call nnan <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16f64 = call nnan <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'f64_nnan'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call nnan double @llvm.minnum.f64(double undef, double undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2f64 = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4f64 = call nnan <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8f64 = call nnan <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16f64 = call nnan <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+  %f64 = call nnan double @llvm.minnum.f64(double undef, double undef)
+  %V2f64 = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+  %V4f64 = call nnan <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+  %V8f64 = call nnan <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+  %V16f64 = call nnan <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+  ret i32 undef
+}
+
 declare float @llvm.minnum.f32(float, float)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
