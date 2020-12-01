@@ -638,8 +638,8 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
                                                         const SrcOp &Src) {
   LLT DstTy = Res.getLLTTy(*getMRI());
-  LLT SrcTy = Src.getLLTTy(*getMRI());
-  assert(SrcTy == DstTy.getElementType() && "Expected Src to match Dst elt ty");
+  assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
+         "Expected Src to match Dst elt ty");
   auto UndefVec = buildUndef(DstTy);
   auto Zero = buildConstant(LLT::scalar(64), 0);
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
