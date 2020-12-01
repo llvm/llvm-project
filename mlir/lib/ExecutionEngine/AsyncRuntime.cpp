@@ -24,8 +24,6 @@
 #include <thread>
 #include <vector>
 
-#include "llvm/Support/ThreadPool.h"
-
 //===----------------------------------------------------------------------===//
 // Async runtime API.
 //===----------------------------------------------------------------------===//
@@ -45,7 +43,6 @@ public:
   AsyncRuntime() : numRefCountedObjects(0) {}
 
   ~AsyncRuntime() {
-    threadPool.wait(); // wait for the completion of all async tasks
     assert(getNumRefCountedObjects() == 0 &&
            "all ref counted objects must be destroyed");
   }
@@ -53,8 +50,6 @@ public:
   int32_t getNumRefCountedObjects() {
     return numRefCountedObjects.load(std::memory_order_relaxed);
   }
-
-  llvm::ThreadPool &getThreadPool() { return threadPool; }
 
 private:
   friend class RefCounted;
@@ -69,8 +64,6 @@ private:
   }
 
   std::atomic<int32_t> numRefCountedObjects;
-
-  llvm::ThreadPool threadPool;
 };
 
 // Returns the default per-process instance of an async runtime.
@@ -241,8 +234,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
 }
 
 extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
-  auto *runtime = getDefaultAsyncRuntimeInstance();
-  runtime->getThreadPool().async([handle, resume]() { (*resume)(handle); });
+  (*resume)(handle);
 }
 
 extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
