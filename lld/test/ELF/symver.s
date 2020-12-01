@@ -15,29 +15,33 @@
 # RUN: ld.lld -shared --soname=def1.so --version-script=%t/ver %t/def1.o -o %t/def1.so
 # RUN: ld.lld -shared --soname=hid1.so --version-script=%t/ver %t/hid1.o -o %t/hid1.so
 
-## TODO Report a duplicate definition error for foo@v1 and foo@@v1.
-# RUN: ld.lld -shared --version-script=%t/ver %t/def1.o %t/hid1.o -o /dev/null
-
+## Report a duplicate definition error for foo@v1 and foo@@v1.
+# RUN: not ld.lld -shared --version-script=%t/ver %t/def1.o %t/hid1.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUP
 # RUN: ld.lld -shared --version-script=%t/ver %t/def1w.o %t/hid1.o -o /dev/null
 # RUN: ld.lld -shared --version-script=%t/ver %t/def1.o %t/hid1w.o -o /dev/null
 # RUN: ld.lld -shared --version-script=%t/ver %t/def1w.o %t/hid1w.o -o /dev/null
 
-## TODO foo@@v1 should resolve undefined foo@v1.
-# RUN: not ld.lld -shared --version-script=%t/ver %t/ref1p.o %t/def1.o -o /dev/null
+# DUP:      error: duplicate symbol: foo@@v1
+# DUP-NEXT: >>> defined at {{.*}}/def1{{w?}}.o:(.text+0x0)
+# DUP-NEXT: >>> defined at {{.*}}/hid1.o:(.text+0x0)
 
-## TODO
+## Protected undefined foo@v1 makes the output symbol protected.
+# RUN: ld.lld -shared --version-script=%t/ver %t/ref1p.o %t/def1.o -o %t.protected
+# RUN: llvm-readelf --dyn-syms %t.protected | FileCheck %s --check-prefix=PROTECTED
+
+# PROTECTED:  NOTYPE GLOBAL PROTECTED [[#]] foo@@v1
+
 ## foo@@v1 resolves both undefined foo and foo@v1. There is one single definition.
 ## Note: set soname so that the name string referenced by .gnu.version_d is fixed.
 # RUN: ld.lld -shared --soname=t --version-script=%t/ver %t/ref.o %t/ref1.o %t/def1.o -o %t1
 # RUN: llvm-readelf -r --dyn-syms %t1 | FileCheck %s
 
-# CHECK:       Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
+# CHECK:       Relocation section '.rela.plt' at offset {{.*}} contains 1 entries:
 # CHECK-NEXT:  {{.*}} Type               {{.*}}
 # CHECK-NEXT:  {{.*}} R_X86_64_JUMP_SLOT {{.*}} foo@@v1 + 0
-# CHECK-NEXT:  {{.*}} R_X86_64_JUMP_SLOT {{.*}} foo + 0
 
-# CHECK:       1: {{.*}} NOTYPE GLOBAL DEFAULT UND   foo{{$}}
-# CHECK-NEXT:  2: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo@@v1
+# CHECK:       1: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo@@v1
 # CHECK-EMPTY:
 
 ## foo@@v2 does not resolve undefined foo@v1.
@@ -96,10 +100,9 @@
 # RUN: llvm-readobj -r %t.w1 | FileCheck %s --check-prefix=W1REL
 # RUN: llvm-objdump -d --no-show-raw-insn %t.w1 | FileCheck %s --check-prefix=W1DIS
 
-## TODO foo should be foo@@v1.
 # W1REL:      .rela.plt {
 # W1REL-NEXT:   R_X86_64_JUMP_SLOT __wrap_foo 0x0
-# W1REL-NEXT:   R_X86_64_JUMP_SLOT foo 0x0
+# W1REL-NEXT:   R_X86_64_JUMP_SLOT foo@@v1 0x0
 # W1REL-NEXT: }
 
 # W1DIS-LABEL: <.text>:
@@ -150,7 +153,6 @@
 # W4DIS-COUNT-3: int3
 # W4DIS-NEXT:    callq {{.*}} <__wrap_foo@plt>
 
-## TODO The two callq should jump to the same address.
 ## Note: GNU ld errors "no symbol version section for versioned symbol `__wrap_foo@@v1'".
 # RUN: ld.lld -shared --soname=t --version-script=%t/ver --wrap=foo@@v1 %t/ref.o %t/ref1.o %t/def1.o %t/wrap.o -o %t.w5
 # RUN: llvm-readobj -r %t.w5 | FileCheck %s --check-prefix=W5REL
@@ -158,13 +160,12 @@
 
 # W5REL:      .rela.plt {
 # W5REL-NEXT:   R_X86_64_JUMP_SLOT foo@@v1 0x0
-# W5REL-NEXT:   R_X86_64_JUMP_SLOT foo 0x0
 # W5REL-NEXT: }
 
 # W5DIS-LABEL: <.text>:
-# W5DIS-NEXT:    callq 0x1380 <foo@plt>
+# W5DIS-NEXT:    callq 0x1350 <foo@plt>
 # W5DIS-COUNT-3: int3
-# W5DIS-NEXT:    callq 0x1390 <foo@plt>
+# W5DIS-NEXT:    callq 0x1350 <foo@plt>
 
 #--- ver
 v1 {};

@@ -37,11 +37,9 @@ std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = demangle(name);
 
-  // If sym has a non-default version, its name may have been truncated at '@'
-  // by Symbol::parseSymbolVersion(). Add the trailing part. This check is safe
-  // because every symbol name ends with '\0'.
-  if (name.data()[name.size()] == '@')
-    ret += name.data() + name.size();
+  const char *suffix = sym.getVersionSuffix();
+  if (*suffix == '@')
+    ret += suffix;
   return ret;
 }
 
