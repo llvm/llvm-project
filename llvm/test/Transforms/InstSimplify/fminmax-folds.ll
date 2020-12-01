@@ -526,11 +526,27 @@ define float @maxnum_undef_op1(float %x) {
   ret float %val
 }
 
+define float @maxnum_poison_op1(float %x) {
+; CHECK-LABEL: @maxnum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maxnum.f32(float %x, float poison)
+  ret float %val
+}
+
 define float @maxnum_undef_op0(float %x) {
 ; CHECK-LABEL: @maxnum_undef_op0(
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %val = call float @llvm.maxnum.f32(float undef, float %x)
+  ret float %val
+}
+
+define float @maxnum_poison_op0(float %x) {
+; CHECK-LABEL: @maxnum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maxnum.f32(float poison, float %x)
   ret float %val
 }
 
@@ -542,11 +558,27 @@ define float @minnum_undef_op1(float %x) {
   ret float %val
 }
 
+define float @minnum_poison_op1(float %x) {
+; CHECK-LABEL: @minnum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minnum.f32(float %x, float poison)
+  ret float %val
+}
+
 define float @minnum_undef_op0(float %x) {
 ; CHECK-LABEL: @minnum_undef_op0(
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %val = call float @llvm.minnum.f32(float undef, float %x)
+  ret float %val
+}
+
+define float @minnum_poison_op0(float %x) {
+; CHECK-LABEL: @minnum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minnum.f32(float poison, float %x)
   ret float %val
 }
 
@@ -558,11 +590,43 @@ define float @minnum_undef_undef(float %x) {
   ret float %val
 }
 
+define float @minnum_poison_undef(float %x) {
+; CHECK-LABEL: @minnum_poison_undef(
+; CHECK-NEXT:    ret float undef
+;
+  %val = call float @llvm.minnum.f32(float poison, float undef)
+  ret float %val
+}
+
+define float @minnum_undef_poison(float %x) {
+; CHECK-LABEL: @minnum_undef_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.minnum.f32(float undef, float poison)
+  ret float %val
+}
+
 define float @maxnum_undef_undef(float %x) {
 ; CHECK-LABEL: @maxnum_undef_undef(
 ; CHECK-NEXT:    ret float undef
 ;
   %val = call float @llvm.maxnum.f32(float undef, float undef)
+  ret float %val
+}
+
+define float @maxnum_poison_undef(float %x) {
+; CHECK-LABEL: @maxnum_poison_undef(
+; CHECK-NEXT:    ret float undef
+;
+  %val = call float @llvm.maxnum.f32(float poison, float undef)
+  ret float %val
+}
+
+define float @maxnum_undef_poison(float %x) {
+; CHECK-LABEL: @maxnum_undef_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.maxnum.f32(float undef, float poison)
   ret float %val
 }
 
@@ -862,11 +926,27 @@ define float @maximum_undef_op1(float %x) {
   ret float %val
 }
 
+define float @maximum_poison_op1(float %x) {
+; CHECK-LABEL: @maximum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maximum.f32(float %x, float poison)
+  ret float %val
+}
+
 define float @maximum_undef_op0(float %x) {
 ; CHECK-LABEL: @maximum_undef_op0(
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %val = call float @llvm.maximum.f32(float undef, float %x)
+  ret float %val
+}
+
+define float @maximum_poison_op0(float %x) {
+; CHECK-LABEL: @maximum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.maximum.f32(float poison, float %x)
   ret float %val
 }
 
@@ -878,11 +958,27 @@ define float @minimum_undef_op1(float %x) {
   ret float %val
 }
 
+define float @minimum_poison_op1(float %x) {
+; CHECK-LABEL: @minimum_poison_op1(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minimum.f32(float %x, float poison)
+  ret float %val
+}
+
 define float @minimum_undef_op0(float %x) {
 ; CHECK-LABEL: @minimum_undef_op0(
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %val = call float @llvm.minimum.f32(float undef, float %x)
+  ret float %val
+}
+
+define float @minimum_poison_op0(float %x) {
+; CHECK-LABEL: @minimum_poison_op0(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %val = call float @llvm.minimum.f32(float poison, float %x)
   ret float %val
 }
 
