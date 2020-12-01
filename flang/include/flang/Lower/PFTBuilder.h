@@ -399,6 +399,9 @@ struct Variable {
     const semantics::Symbol *symbol{};
 
     bool isGlobal() const { return global; }
+    bool isDeclaration() const {
+      return !symbol || symbol != &symbol->GetUltimate();
+    }
 
     int depth{};
     bool global{};
@@ -414,24 +417,29 @@ struct Variable {
   /// An interval of storage is a contiguous block of memory to be allocated or
   /// mapped onto another variable. Aliasing variables will be pointers into
   /// interval stores and may overlap each other.
-  struct IntervalStore {
-    IntervalStore(Interval &&interval) : interval{std::move(interval)} {}
-    IntervalStore(Interval &&interval,
-                  const llvm::SmallVector<const semantics::Symbol *, 8> &vars)
-        : interval{std::move(interval)}, vars{vars} {}
+  struct AggregateStore {
+    AggregateStore(Interval &&interval, bool isDeclaration = false)
+        : interval{std::move(interval)}, isDecl{isDeclaration} {}
+    AggregateStore(Interval &&interval,
+                   const llvm::SmallVector<const semantics::Symbol *, 8> &vars,
+                   bool isDeclaration = false)
+        : interval{std::move(interval)}, vars{vars}, isDecl{isDeclaration} {}
 
     bool isGlobal() const { return vars.size() > 0; }
+    bool isDeclaration() const { return isDecl; }
 
     Interval interval{};
     llvm::SmallVector<const semantics::Symbol *, 8> vars{};
+    /// Is this a declaration of a storage defined in another scope ?
+    bool isDecl;
   };
 
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
                     int depth = 0)
       : var{Nominal(&sym, depth, global)} {}
   explicit Variable(Interval &&interval)
-      : var{IntervalStore(std::move(interval))} {}
-  explicit Variable(IntervalStore &&istore) : var{std::move(istore)} {}
+      : var{AggregateStore(std::move(interval))} {}
+  explicit Variable(AggregateStore &&istore) : var{std::move(istore)} {}
 
   /// Return the front-end symbol for a nominal variable.
   const Fortran::semantics::Symbol &getSymbol() const {
@@ -440,15 +448,15 @@ struct Variable {
   }
 
   /// Return the aggregate store.
-  const IntervalStore &getAggregateStore() const {
+  const AggregateStore &getAggregateStore() const {
     assert(isAggregateStore());
-    return std::get<IntervalStore>(var);
+    return std::get<AggregateStore>(var);
   }
 
   /// Return the interval range of an aggregate store.
   const Interval &getInterval() const {
     assert(isAggregateStore());
-    return std::get<IntervalStore>(var).interval;
+    return std::get<AggregateStore>(var).interval;
   }
 
   /// Only nominal variable have front-end symbols.
@@ -456,12 +464,17 @@ struct Variable {
 
   /// Is this an aggregate store?
   bool isAggregateStore() const {
-    return std::holds_alternative<IntervalStore>(var);
+    return std::holds_alternative<AggregateStore>(var);
   }
 
   /// Is this variable a global?
   bool isGlobal() const {
     return std::visit([](const auto &x) { return x.isGlobal(); }, var);
+  }
+
+  /// Is this a declaration of a variable owned by another scope ?
+  bool isDeclaration() const {
+    return std::visit([](const auto &x) { return x.isDeclaration(); }, var);
   }
 
   bool isHeapAlloc() const {
@@ -530,7 +543,7 @@ struct Variable {
   LLVM_DUMP_METHOD void dump() const;
 
 private:
-  std::variant<Nominal, IntervalStore> var;
+  std::variant<Nominal, AggregateStore> var;
 };
 
 /// Function-like units may contain evaluations (executable statements) and

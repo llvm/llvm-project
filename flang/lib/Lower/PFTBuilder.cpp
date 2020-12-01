@@ -1207,6 +1207,22 @@ static bool symbolIsGlobal(const semantics::Symbol &sym) {
 }
 
 namespace {
+/// Helper structure to keep track of where equivalence are coming from.
+/// This information needs not to be retained in the Variable::AggregateStore
+/// afterwards.
+struct ScopedAggregateStore : lower::pft::Variable::AggregateStore {
+  ScopedAggregateStore(lower::pft::Variable::Interval &&interval,
+                       const semantics::Scope &scope)
+      : AggregateStore{std::move(interval)}, scope{scope} {}
+  ScopedAggregateStore(
+      lower::pft::Variable::Interval &&interval,
+      const llvm::SmallVector<const semantics::Symbol *, 8> &vars,
+      const semantics::Scope &scope)
+      : AggregateStore{std::move(interval), vars}, scope{scope} {}
+  auto getOffset() const { return std::get<0>(interval); }
+  const semantics::Scope &scope;
+};
+
 /// This helper class is for sorting the symbols in the symbol table. We want
 /// the symbols in an order such that a symbol will be visited after those it
 /// depends upon. Otherwise this sort is stable and preserves the order of the
@@ -1216,9 +1232,31 @@ struct SymbolDependenceDepth {
       std::vector<std::vector<lower::pft::Variable>> &vars, bool reentrant)
       : vars{vars}, reentrant{reentrant} {}
 
+  void analyzeAliasesInCurrentScope(const semantics::Scope &scope) {
+    for (const auto &iter : scope) {
+      const auto &ultimate = iter.second.get().GetUltimate();
+      if (skipSymbol(ultimate))
+        continue;
+      analyzeAliases(ultimate.owner());
+    }
+    // add all aggregate stores to the front of the work list
+    adjustSize(1);
+    // The copy in the loop matters, 'stores' will still be used.
+    for (auto st : stores) {
+      auto isDeclaration = scope != st.scope;
+      lower::pft::Variable::AggregateStore store(
+          std::move(st.interval), std::move(st.vars), isDeclaration);
+      vars[0].emplace_back(std::move(st));
+    }
+  }
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
   void analyzeAliases(const semantics::Scope &scope) {
+    if (scope.equivalenceSets().empty())
+      return;
+    if (scopeAnlyzedForAliases.find(&scope) != scopeAnlyzedForAliases.end())
+      return;
+    scopeAnlyzedForAliases.insert(&scope);
     Fortran::lower::IntervalSet intervals;
     llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *, 8>>
         aliasSets;
@@ -1270,11 +1308,11 @@ struct SymbolDependenceDepth {
           auto *gsym = gvarIter->second;
           LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
                                   << ") added as global " << *gsym << '\n');
-          stores.emplace_back(std::move(interval), pair.second);
+          stores.emplace_back(std::move(interval), pair.second, scope);
         } else {
           LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
                                   << ") added\n");
-          stores.emplace_back(std::move(interval));
+          stores.emplace_back(std::move(interval), scope);
         }
       }
     }
@@ -1291,14 +1329,10 @@ struct SymbolDependenceDepth {
       // TODO: add declaration?
       return 0;
     }
-    if (sym.has<semantics::UseDetails>() ||
-        sym.has<semantics::HostAssocDetails>() ||
-        sym.has<semantics::NamelistDetails>() ||
-        sym.has<semantics::ModuleDetails>() ||
-        sym.has<semantics::MiscDetails>()) {
-      // FIXME: do we want to do anything with any of these?  Other syms?
+    auto ultimate = sym.GetUltimate();
+    if (!ultimate.has<semantics::ObjectEntityDetails>() &&
+        !ultimate.has<semantics::ProcEntityDetails>())
       return 0;
-    }
 
     if (sym.has<semantics::DerivedTypeDetails>())
       llvm_unreachable("not yet implemented - derived type analysis");
@@ -1308,11 +1342,6 @@ struct SymbolDependenceDepth {
     int depth = 0;
     const auto *symTy = sym.GetType();
     assert(symTy && "symbol must have a type");
-
-    // Make sure an aliasing variable appears after its aggregate storage.
-    if (!aliasSyms.empty())
-      if (aliasSyms.find(&sym) != aliasSyms.end())
-        depth = std::max(1, depth);
 
     // check CHARACTER's length
     if (symTy->category() == semantics::DeclTypeSpec::Character)
@@ -1359,45 +1388,15 @@ struct SymbolDependenceDepth {
       vars[depth].back().setHeapAlloc();
     if (semantics::IsPointer(sym))
       vars[depth].back().setPointer();
-    if (sym.attrs().test(semantics::Attr::TARGET))
+    if (ultimate.attrs().test(semantics::Attr::TARGET))
       vars[depth].back().setTarget();
 
     // If there are alias sets, then link the participating variables to their
     // aggregate stores when constructing the new variable on the list.
-    if (!aliasSyms.empty())
-      if (aliasSyms.find(&sym) != aliasSyms.end()) {
-        // Expect the total number of EQUIVALENCE sets to be small for a typical
-        // Fortran program.
-        auto findStore = [&](std::size_t off) -> std::size_t {
-          for (auto v : stores) {
-            auto bot = std::get<0>(v.interval);
-            if (off >= bot && off < bot + std::get<1>(v.interval))
-              return bot;
-          }
-          // clang-format off
-          LLVM_DEBUG(
-              llvm::dbgs() << "looking for " << off << "\n{\n";
-              for (auto v : stores) {
-                llvm::dbgs() << "  i = [" << std::get<0>(v.interval) << ".."
-                    << std::get<0>(v.interval) + std::get<1>(v.interval)
-                    << "]\n";
-              }
-              llvm::dbgs() << "}\n");
-          // clang-format on
-          llvm_unreachable("the store must be present");
-        };
-        LLVM_DEBUG(llvm::dbgs() << "symbol: " << sym << '\n');
-        vars[depth].back().setAlias(findStore(sym.offset()));
-      }
+    if (auto *store = findStoreIfAlias(sym)) {
+      vars[depth].back().setAlias(store->getOffset());
+    }
     return depth;
-  }
-
-  /// Process the stores built for overlapping nominal variables.
-  void prepareStores() {
-    // add all aggregate stores to the front of the work list
-    adjustSize(1);
-    for (auto st : stores)
-      vars[0].emplace_back(std::move(st));
   }
 
   /// Save the final list of variable allocations as a single vector and free
@@ -1408,7 +1407,40 @@ struct SymbolDependenceDepth {
     vars.resize(1);
   }
 
+  ScopedAggregateStore *findStoreIfAlias(const Fortran::evaluate::Symbol &sym) {
+    const auto &ultimate = sym.GetUltimate();
+    const auto &scope = ultimate.owner();
+    // Expect the total number of EQUIVALENCE sets to be small for a typical
+    // Fortran program.
+    if (aliasSyms.find(&ultimate) != aliasSyms.end()) {
+      LLVM_DEBUG(llvm::dbgs() << "symbol: " << ultimate << '\n');
+      LLVM_DEBUG(llvm::dbgs() << "scope: " << scope << '\n');
+      auto off = ultimate.offset();
+      for (auto &v : stores) {
+        if (v.scope == scope) {
+          auto bot = std::get<0>(v.interval);
+          if (off >= bot && off < bot + std::get<1>(v.interval))
+            return &v;
+        }
+      }
+      // clang-format off
+      LLVM_DEBUG(
+          llvm::dbgs() << "looking for " << off << "\n{\n";
+          for (auto v : stores) {
+            llvm::dbgs() << " in scope: " << v.scope << "\n";
+            llvm::dbgs() << "  i = [" << std::get<0>(v.interval) << ".."
+                << std::get<0>(v.interval) + std::get<1>(v.interval)
+                << "]\n";
+          }
+          llvm::dbgs() << "}\n");
+      // clang-format on
+      llvm_unreachable("the store must be present");
+    }
+    return nullptr;
+  }
+
 private:
+  /// Skip symbol in alias analysis.
   bool skipSymbol(const semantics::Symbol &sym) {
     return !sym.has<semantics::ObjectEntityDetails>() ||
            lower::definedInCommonBlock(sym);
@@ -1423,7 +1455,8 @@ private:
   llvm::SmallSet<const semantics::Symbol *, 32> seen;
   std::vector<std::vector<lower::pft::Variable>> &vars;
   llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
-  std::vector<lower::pft::Variable::IntervalStore> stores;
+  llvm::SmallSet<const semantics::Scope *, 4> scopeAnlyzedForAliases;
+  std::vector<ScopedAggregateStore> stores;
   bool reentrant;
 };
 } // namespace
@@ -1433,9 +1466,7 @@ static void processSymbolTable(
     std::vector<std::vector<Fortran::lower::pft::Variable>> &varList,
     bool reentrant) {
   SymbolDependenceDepth sdd{varList, reentrant};
-  if (!scope.equivalenceSets().empty())
-    sdd.analyzeAliases(scope);
-  sdd.prepareStores();
+  sdd.analyzeAliasesInCurrentScope(scope);
   for (const auto &iter : scope)
     sdd.analyze(iter.second.get());
   sdd.finalize();
@@ -1566,7 +1597,7 @@ void Fortran::lower::pft::Variable::dump() const {
       llvm::errs() << ", target";
     if (s->aliaser)
       llvm::errs() << ", equivalence(" << s->aliasOffset << ')';
-  } else if (auto *s = std::get_if<IntervalStore>(&var)) {
+  } else if (auto *s = std::get_if<AggregateStore>(&var)) {
     llvm::errs() << "interval[" << std::get<0>(s->interval) << ", "
                  << std::get<1>(s->interval) << "]:";
     if (s->isGlobal())

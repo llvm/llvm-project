@@ -135,12 +135,12 @@ struct DynamicBound {
   static constexpr bool staticSize() { return false; }
   static constexpr bool isArray() { return true; }
   bool lboundAllOnes() const {
-      return llvm::all_of(bounds, [](const Fortran::semantics::ShapeSpec *p) {
-        if (auto low = p->lbound().GetExplicit())
-          if (auto lb = Fortran::evaluate::ToInt64(*low))
-            return *lb == 1;
-        return false;
-      });
+    return llvm::all_of(bounds, [](const Fortran::semantics::ShapeSpec *p) {
+      if (auto low = p->lbound().GetExplicit())
+        if (auto lb = Fortran::evaluate::ToInt64(*low))
+          return *lb == 1;
+      return false;
+    });
   }
 
   llvm::SmallVector<const Fortran::semantics::ShapeSpec *, 8> bounds;
@@ -227,12 +227,14 @@ inline bool symIsChar(const Fortran::semantics::Symbol &sym) {
 }
 
 inline bool symIsArray(const Fortran::semantics::Symbol &sym) {
-  const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+  const auto *det =
+      sym.GetUltimate().detailsIf<Fortran::semantics::ObjectEntityDetails>();
   return det && det->IsArray();
 }
 
 inline bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
-  const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+  const auto *det =
+      sym.GetUltimate().detailsIf<Fortran::semantics::ObjectEntityDetails>();
   return det && det->IsArray() && det->shape().IsExplicitShape();
 }
 
@@ -458,7 +460,9 @@ private:
   // Get the shape of a symbol.
   const Fortran::semantics::ArraySpec &
   getSymShape(const Fortran::semantics::Symbol &sym) {
-    return sym.get<Fortran::semantics::ObjectEntityDetails>().shape();
+    return sym.GetUltimate()
+        .get<Fortran::semantics::ObjectEntityDetails>()
+        .shape();
   }
 
   // Get the constant LEN of a CHARACTER, if it exists.
