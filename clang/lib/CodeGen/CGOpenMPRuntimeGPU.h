@@ -431,7 +431,6 @@ private:
   bool IsInParallelRegion = false;
   /// Nesting level of parallel region.
   int ParallelLevel = 0;
-  int MaxParallelLevel = 0;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;

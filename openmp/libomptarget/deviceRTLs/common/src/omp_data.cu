@@ -49,15 +49,6 @@ omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
 
 #endif
 
-#ifdef __AMDGCN__
-// Allocated by rtl.cpp
-DEVICE void *omptarget_nest_par_call_stack;
-// Read by rtl.cpp as part of choosing how much to allocate
-__attribute__((used))
-EXTERN uint32_t const omptarget_nest_par_call_struct_size =
-    sizeof(class omptarget_nvptx_TaskDescr);
-#endif
-
 DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 DEVICE SHARED uint32_t usedMemIdx;

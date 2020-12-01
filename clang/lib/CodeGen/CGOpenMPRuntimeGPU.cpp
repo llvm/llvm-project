@@ -1139,10 +1139,7 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   StringRef KernDescName = OutlinedFn->getName();
   CGOpenMPRuntime::emitStructureKernelDesc(CGM, KernDescName, FlatAttr,
                                            IsGeneric,
-                                           1, // Uses HostServices
-                                           MaxParallelLevel);
-  // Reset it to zero for any subsequent kernel
-  MaxParallelLevel = 0;
+                                           1 /* Uses HostServices */);
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
@@ -1699,26 +1696,21 @@ llvm::Function *CGOpenMPRuntimeGPU::emitParallelOutlinedFunction(
     bool &IsInParallelRegion;
     bool PrevIsInParallelRegion;
     int &ParallelLevel;
-    int &MaxParallelLevel;
 
   public:
-    NVPTXPrePostActionTy(bool &IsInParallelRegion, int &ParallelLevel,
-                         int &MaxParallelLevel)
-        : IsInParallelRegion(IsInParallelRegion), ParallelLevel(ParallelLevel),
-          MaxParallelLevel(MaxParallelLevel) {}
+    NVPTXPrePostActionTy(bool &IsInParallelRegion, int &ParallelLevel)
+        : IsInParallelRegion(IsInParallelRegion), ParallelLevel(ParallelLevel)
+    {}
     void Enter(CodeGenFunction &CGF) override {
       PrevIsInParallelRegion = IsInParallelRegion;
       IsInParallelRegion = true;
-      // Count the number of nested paralels.
-      if (ParallelLevel > MaxParallelLevel)
-        MaxParallelLevel = ParallelLevel;
       ParallelLevel++;
     }
     void Exit(CodeGenFunction &CGF) override {
       IsInParallelRegion = PrevIsInParallelRegion;
       ParallelLevel--;
     }
-  } Action(IsInParallelRegion, ParallelLevel, MaxParallelLevel);
+  } Action(IsInParallelRegion, ParallelLevel);
   CodeGen.setAction(Action);
   bool PrevIsInTTDRegion = IsInTTDRegion;
   IsInTTDRegion = false;
