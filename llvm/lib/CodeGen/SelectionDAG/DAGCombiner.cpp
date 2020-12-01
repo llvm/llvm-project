@@ -2707,36 +2707,18 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   return SDValue();
 }
 
-static SDValue flipBoolean(SDValue V, const SDLoc &DL,
-                           SelectionDAG &DAG, const TargetLowering &TLI) {
-  EVT VT = V.getValueType();
-
-  SDValue Cst;
-  switch (TLI.getBooleanContents(VT)) {
-  case TargetLowering::ZeroOrOneBooleanContent:
-  case TargetLowering::UndefinedBooleanContent:
-    Cst = DAG.getConstant(1, DL, VT);
-    break;
-  case TargetLowering::ZeroOrNegativeOneBooleanContent:
-    Cst = DAG.getAllOnesConstant(DL, VT);
-    break;
-  }
-
-  return DAG.getNode(ISD::XOR, DL, VT, V, Cst);
-}
-
 /**
  * Flips a boolean if it is cheaper to compute. If the Force parameters is set,
  * then the flip also occurs if computing the inverse is the same cost.
  * This function returns an empty SDValue in case it cannot flip the boolean
  * without increasing the cost of the computation. If you want to flip a boolean
- * no matter what, use flipBoolean.
+ * no matter what, use DAG.getLogicalNOT.
  */
 static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
                                   const TargetLowering &TLI,
                                   bool Force) {
   if (Force && isa<ConstantSDNode>(V))
-    return flipBoolean(V, SDLoc(V), DAG, TLI);
+    return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
 
   if (V.getOpcode() != ISD::XOR)
     return SDValue();
@@ -2763,7 +2745,7 @@ static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
   if (IsFlip)
     return V.getOperand(0);
   if (Force)
-    return flipBoolean(V, SDLoc(V), DAG, TLI);
+    return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
   return SDValue();
 }
 
@@ -2800,8 +2782,8 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
     if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
                                 DAG.getConstant(0, DL, VT), N0.getOperand(0));
-      return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
+      return CombineTo(
+          N, Sub, DAG.getLogicalNOT(DL, Sub.getValue(1), Sub->getValueType(1)));
     }
 
     if (SDValue Combined = visitUADDOLike(N0, N1, N))
@@ -3103,8 +3085,8 @@ SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
       SDLoc DL(N);
       SDValue Sub = DAG.getNode(ISD::SUBCARRY, DL, N->getVTList(), N1,
                                 N0.getOperand(0), NotC);
-      return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
+      return CombineTo(
+          N, Sub, DAG.getLogicalNOT(DL, Sub.getValue(1), Sub->getValueType(1)));
     }
 
   // Iff the flag result is dead:
