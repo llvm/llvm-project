@@ -250,7 +250,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM(Conf.DebugPassManager);
-  // FIXME (davide): verify the input.
+
+  if (!Conf.DisableVerify)
+    MPM.addPass(VerifierPass());
 
   PassBuilder::OptimizationLevel OL;
 
@@ -272,12 +274,14 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   }
 
   if (IsThinLTO)
-    MPM = PB.buildThinLTODefaultPipeline(OL, ImportSummary);
+    MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
   else
-    MPM = PB.buildLTODefaultPipeline(OL, ExportSummary);
-  MPM.run(Mod, MAM);
+    MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
 
-  // FIXME (davide): verify the output.
+  if (!Conf.DisableVerify)
+    MPM.addPass(VerifierPass());
+
+  MPM.run(Mod, MAM);
 }
 
 static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
