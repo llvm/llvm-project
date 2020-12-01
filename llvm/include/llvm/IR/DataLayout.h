@@ -175,13 +175,13 @@ private:
   Error setAlignment(AlignTypeEnum align_type, Align abi_align,
                      Align pref_align, uint32_t bit_width);
 
-  Align getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
-                         bool ABIAlign, Type *Ty) const;
-
   /// Attempts to set the alignment of a pointer in the given address space.
   /// Returns an error description on failure.
   Error setPointerAlignment(uint32_t AddrSpace, Align ABIAlign, Align PrefAlign,
                             uint32_t TypeByteWidth, uint32_t IndexWidth);
+
+  /// Internal helper to get alignment for integer of given bitwidth.
+  Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
 
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
@@ -530,7 +530,9 @@ public:
 
   /// Returns the minimum ABI-required alignment for an integer type of
   /// the specified bitwidth.
-  Align getABIIntegerTypeAlignment(unsigned BitWidth) const;
+  Align getABIIntegerTypeAlignment(unsigned BitWidth) const {
+    return getIntegerAlignment(BitWidth, /* abi_or_pref */ true);
+  }
 
   /// Returns the preferred stack/global alignment for the specified
   /// type.
