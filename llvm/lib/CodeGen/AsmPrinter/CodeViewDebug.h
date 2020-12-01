@@ -230,10 +230,6 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void calculateRanges(LocalVariable &Var,
                        const DbgValueHistoryMap::Entries &Entries);
 
-  static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
-                                        const FunctionInfo &FI,
-                                        const InlineSite &Site);
-
   /// Remember some debug info about each function. Keep it in a stable order to
   /// emit at the end of the TU.
   MapVector<const Function *, std::unique_ptr<FunctionInfo>> FnDebugInfo;
