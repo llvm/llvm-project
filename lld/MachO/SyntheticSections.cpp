@@ -668,9 +668,7 @@ void SymtabSection::emitStabs() {
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
-    // XXX is it right to assume that all symbols in __text are function
-    // symbols?
-    if (isec->name == "__text") {
+    if (isCodeSection(isec)) {
       symStab.type = MachO::N_FUN;
       stabs.emplace_back(std::move(symStab));
       emitEndFunStab(defined);
