@@ -627,6 +627,11 @@ LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A);
 LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A);
 
 /**
+ * Obtain a Type from a context by its registered name.
+ */
+LLVMTypeRef LLVMGetTypeByName2(LLVMContextRef C, const char *Name);
+
+/**
  * @}
  */
 
@@ -867,9 +872,7 @@ LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
  */
 LLVMContextRef LLVMGetModuleContext(LLVMModuleRef M);
 
-/**
- * Obtain a Type from a module by its registered name.
- */
+/** Deprecated: Use LLVMGetTypeByName2 instead. */
 LLVMTypeRef LLVMGetTypeByName(LLVMModuleRef M, const char *Name);
 
 /**

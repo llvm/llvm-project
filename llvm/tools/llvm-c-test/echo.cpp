@@ -110,7 +110,7 @@ struct TypeCloner {
         LLVMTypeRef S = nullptr;
         const char *Name = LLVMGetStructName(Src);
         if (Name) {
-          S = LLVMGetTypeByName(M, Name);
+          S = LLVMGetTypeByName2(Ctx, Name);
           if (S)
             return S;
           S = LLVMStructCreateNamed(Ctx, Name);

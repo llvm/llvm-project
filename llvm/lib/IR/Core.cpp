@@ -739,7 +739,11 @@ LLVMBool LLVMIsLiteralStruct(LLVMTypeRef StructTy) {
 }
 
 LLVMTypeRef LLVMGetTypeByName(LLVMModuleRef M, const char *Name) {
-  return wrap(unwrap(M)->getTypeByName(Name));
+  return wrap(StructType::getTypeByName(unwrap(M)->getContext(), Name));
+}
+
+LLVMTypeRef LLVMGetTypeByName2(LLVMContextRef C, const char *Name) {
+  return wrap(StructType::getTypeByName(*unwrap(C), Name));
 }
 
 /*--.. Operations on array, pointer, and vector types (sequence types) .....--*/
