@@ -9,6 +9,7 @@
 
 int main() {
   int x = 0;
+  int condition=0;
 #pragma omp parallel num_threads(2)
   {
 #pragma omp master
@@ -16,10 +17,10 @@ int main() {
       print_ids(0);
       printf("%" PRIu64 ": address of x: %p\n", ompt_get_thread_data()->value,
              &x);
-#pragma omp task depend(out : x)
+#pragma omp task depend(out : x) shared(condition)
       {
         x++;
-        delay(100);
+        OMPT_WAIT(condition,1);
       }
       print_fuzzy_address(1);
       print_ids(0);
@@ -27,6 +28,7 @@ int main() {
 #pragma omp task depend(in : x)
       { x = -1; }
       print_ids(0);
+      OMPT_SIGNAL(condition);
     }
   }
 
