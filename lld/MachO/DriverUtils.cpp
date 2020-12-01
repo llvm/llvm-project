@@ -14,6 +14,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 
@@ -68,6 +69,9 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingCount;
   SmallVector<const char *, 256> vec(argv.data(), argv.data() + argv.size());
 
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
+  cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
   opt::InputArgList args = ParseArgs(vec, missingIndex, missingCount);
 
   if (missingCount)
