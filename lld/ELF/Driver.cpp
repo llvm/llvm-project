@@ -48,6 +48,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
@@ -1013,6 +1014,17 @@ static void readConfigs(opt::InputArgList &args) {
   config->oFormatBinary = isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+
+  // Parse remarks hotness threshold. Valid value is either integer or 'auto'.
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      error(arg->getSpelling() + ": invalid argument '" + arg->getValue() +
+            "', only integer or 'auto' is supported");
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
+
   config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
   config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
   config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);

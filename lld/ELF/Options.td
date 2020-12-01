@@ -548,6 +548,10 @@ def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
+defm opt_remarks_hotness_threshold: EEq<"opt-remarks-hotness-threshold",
+  "Minimum profile count required for an optimization remark to be output."
+  " Use 'auto' to apply the threshold from profile summary.">,
+  MetaVarName<"<value>">;
 def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
 def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
@@ -596,6 +600,21 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
+def: J<"plugin-opt=opt-remarks-filename=">,
+  Alias<opt_remarks_filename>,
+  HelpText<"Alias for --opt-remarks-filename">;
+def: J<"plugin-opt=opt-remarks-passes=">,
+  Alias<opt_remarks_passes>,
+  HelpText<"Alias for --opt-remarks-passes">;
+def: J<"plugin-opt=opt-remarks-format=">,
+  Alias<opt_remarks_format>,
+  HelpText<"Alias for --opt-remarks-format">;
+def: F<"plugin-opt=opt-remarks-with-hotness">,
+  Alias<opt_remarks_with_hotness>,
+  HelpText<"Alias for --opt-remarks-with_hotness">;
+def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
+  Alias<opt_remarks_hotness_threshold>,
+  HelpText<"Alias for --opt-remarks-hotness-threshold">;
 def: J<"plugin-opt=sample-profile=">,
   Alias<lto_sample_profile>, HelpText<"Alias for --lto-sample-profile">;
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
