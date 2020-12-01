@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-linux -mcpu=corei7 | FileCheck --check-prefix=DAG %s
-; RUN: llc < %s -mtriple=i686-pc-linux -mcpu=corei7 -O0 | FileCheck --check-prefix=FAST %s
+; RUN: llc -fast-isel-sink-local-values < %s -mtriple=i686-pc-linux -mcpu=corei7 | FileCheck --check-prefix=DAG %s
+; RUN: llc -fast-isel-sink-local-values < %s -mtriple=i686-pc-linux -mcpu=corei7 -O0 | FileCheck --check-prefix=FAST %s
 
 %struct.s1 = type { double, float }
 
