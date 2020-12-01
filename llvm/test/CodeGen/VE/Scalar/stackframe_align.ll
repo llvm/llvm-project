@@ -12,12 +12,7 @@
 define i8* @test_frame7(i8* %0) {
 ; CHECK-LABEL: test_frame7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    st %s9, (, %s11)
-; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
-; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s11, -192(, %s11)
+; CHECK-NEXT:    adds.l %s11, -16, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -30,21 +25,15 @@ define i8* @test_frame7(i8* %0) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
-; CHECK-NEXT:    lea %s0, 185(, %s11)
-; CHECK-NEXT:    st1b %s1, 185(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
-; CHECK-NEXT:    ld %s10, 8(, %s11)
-; CHECK-NEXT:    ld %s9, (, %s11)
+; CHECK-NEXT:    lea %s0, 9(, %s11)
+; CHECK-NEXT:    st1b %s1, 9(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; CHECKFP-LABEL: test_frame7:
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -192(, %s11)
 ; CHECKFP-NEXT:    brge.l.t %s11, %s8, .LBB0_2
@@ -62,8 +51,6 @@ define i8* @test_frame7(i8* %0) {
 ; CHECKFP-NEXT:    lea %s0, -7(, %s9)
 ; CHECKFP-NEXT:    st1b %s1, -7(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -81,12 +68,7 @@ define i8* @test_frame7(i8* %0) {
 define i8* @test_frame7_align8(i8* %0) {
 ; CHECK-LABEL: test_frame7_align8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    st %s9, (, %s11)
-; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
-; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s11, -192(, %s11)
+; CHECK-NEXT:    adds.l %s11, -16, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -99,21 +81,15 @@ define i8* @test_frame7_align8(i8* %0) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
-; CHECK-NEXT:    lea %s0, 184(, %s11)
-; CHECK-NEXT:    st1b %s1, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
-; CHECK-NEXT:    ld %s10, 8(, %s11)
-; CHECK-NEXT:    ld %s9, (, %s11)
+; CHECK-NEXT:    lea %s0, 8(, %s11)
+; CHECK-NEXT:    st1b %s1, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; CHECKFP-LABEL: test_frame7_align8:
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -192(, %s11)
 ; CHECKFP-NEXT:    brge.l.t %s11, %s8, .LBB1_2
@@ -131,8 +107,6 @@ define i8* @test_frame7_align8(i8* %0) {
 ; CHECKFP-NEXT:    lea %s0, -8(, %s9)
 ; CHECKFP-NEXT:    st1b %s1, -8(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -150,12 +124,7 @@ define i8* @test_frame7_align8(i8* %0) {
 define i8* @test_frame16_align16(i8* %0) {
 ; CHECK-LABEL: test_frame16_align16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    st %s9, (, %s11)
-; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
-; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s11, -192(, %s11)
+; CHECK-NEXT:    adds.l %s11, -16, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -168,21 +137,15 @@ define i8* @test_frame16_align16(i8* %0) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
-; CHECK-NEXT:    lea %s0, 176(, %s11)
-; CHECK-NEXT:    st1b %s1, 176(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
-; CHECK-NEXT:    ld %s10, 8(, %s11)
-; CHECK-NEXT:    ld %s9, (, %s11)
+; CHECK-NEXT:    lea %s0, (, %s11)
+; CHECK-NEXT:    st1b %s1, (, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; CHECKFP-LABEL: test_frame16_align16:
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -192(, %s11)
 ; CHECKFP-NEXT:    brge.l.t %s11, %s8, .LBB2_2
@@ -200,8 +163,6 @@ define i8* @test_frame16_align16(i8* %0) {
 ; CHECKFP-NEXT:    lea %s0, -16(, %s9)
 ; CHECKFP-NEXT:    st1b %s1, -16(, %s9)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -222,8 +183,6 @@ define i8* @test_frame16_align32(i8* %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -224(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
@@ -242,8 +201,6 @@ define i8* @test_frame16_align32(i8* %0) {
 ; CHECK-NEXT:    lea %s0, 192(, %s11)
 ; CHECK-NEXT:    st1b %s1, 192(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -252,8 +209,6 @@ define i8* @test_frame16_align32(i8* %0) {
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -224(, %s11)
 ; CHECKFP-NEXT:    and %s11, %s11, (59)1
@@ -272,8 +227,6 @@ define i8* @test_frame16_align32(i8* %0) {
 ; CHECKFP-NEXT:    lea %s0, 192(, %s11)
 ; CHECKFP-NEXT:    st1b %s1, 192(, %s11)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -294,8 +247,6 @@ define i8* @test_frame32_align32(i8* %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -224(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
@@ -314,8 +265,6 @@ define i8* @test_frame32_align32(i8* %0) {
 ; CHECK-NEXT:    lea %s0, 192(, %s11)
 ; CHECK-NEXT:    st1b %s1, 192(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -324,8 +273,6 @@ define i8* @test_frame32_align32(i8* %0) {
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -224(, %s11)
 ; CHECKFP-NEXT:    and %s11, %s11, (59)1
@@ -344,8 +291,6 @@ define i8* @test_frame32_align32(i8* %0) {
 ; CHECKFP-NEXT:    lea %s0, 192(, %s11)
 ; CHECKFP-NEXT:    st1b %s1, 192(, %s11)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -370,8 +315,6 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_2
@@ -396,8 +339,6 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s2)
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -406,8 +347,6 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -240(, %s11)
 ; CHECKFP-NEXT:    brge.l.t %s11, %s8, .LBB5_2
@@ -432,8 +371,6 @@ define i8* @test_frame_dynalign16(i8* %0, i64 %1) {
 ; CHECKFP-NEXT:    ld1b.zx %s1, (, %s2)
 ; CHECKFP-NEXT:    st1b %s1, (, %s0)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
@@ -459,8 +396,6 @@ define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    st %s17, 40(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
@@ -493,8 +428,6 @@ define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s17, 40(, %s11)
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -503,8 +436,6 @@ define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
 ; CHECKFP:       # %bb.0:
 ; CHECKFP-NEXT:    st %s9, (, %s11)
 ; CHECKFP-NEXT:    st %s10, 8(, %s11)
-; CHECKFP-NEXT:    st %s15, 24(, %s11)
-; CHECKFP-NEXT:    st %s16, 32(, %s11)
 ; CHECKFP-NEXT:    st %s17, 40(, %s11)
 ; CHECKFP-NEXT:    or %s9, 0, %s11
 ; CHECKFP-NEXT:    lea %s11, -288(, %s11)
@@ -537,8 +468,6 @@ define i8* @test_frame16_align16_dynalign32(i8* %0, i64 %n) {
 ; CHECKFP-NEXT:    st1b %s1, (, %s0)
 ; CHECKFP-NEXT:    or %s11, 0, %s9
 ; CHECKFP-NEXT:    ld %s17, 40(, %s11)
-; CHECKFP-NEXT:    ld %s16, 32(, %s11)
-; CHECKFP-NEXT:    ld %s15, 24(, %s11)
 ; CHECKFP-NEXT:    ld %s10, 8(, %s11)
 ; CHECKFP-NEXT:    ld %s9, (, %s11)
 ; CHECKFP-NEXT:    b.l.t (, %s10)
