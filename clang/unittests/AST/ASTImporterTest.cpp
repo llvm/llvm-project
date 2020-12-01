@@ -5957,6 +5957,47 @@ TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
   EXPECT_EQ(Record, CompletedTags.front());
 }
 
+TEST_P(ImportFunctions, CTADImplicit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      A a{(int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU,
+      cxxDeductionGuideDecl(hasParameter(0, hasType(asString("A<T>")))));
+  auto *ToD = Import(FromD, Lang_CXX17);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->isCopyDeductionCandidate());
+  // Check that the deduced class template is also imported.
+  EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
+      FromD->getDeducedTemplate()));
+}
+
+TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template <typename T> explicit A(T) -> A<float>;
+      A a{(int)0}; // calls A<float>::A(float)
+      )",
+      Lang_CXX17, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl(unless(isImplicit())));
+  // Not-implicit: i.e. not compiler-generated, user defined.
+  ASSERT_FALSE(FromD->isImplicit());
+  ASSERT_TRUE(FromD->isExplicit()); // Has the explicit keyword.
+  auto *ToD = Import(FromD, Lang_CXX17);
+  ASSERT_TRUE(ToD);
+  EXPECT_FALSE(FromD->isImplicit());
+  EXPECT_TRUE(ToD->isExplicit());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
