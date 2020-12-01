@@ -501,6 +501,8 @@ public:
 
   bool isParsingMasm() const override { return true; }
 
+  bool defineMacro(StringRef Name, StringRef Value) override;
+
   bool lookUpField(StringRef Name, AsmFieldInfo &Info) const override;
   bool lookUpField(StringRef Base, StringRef Member,
                    AsmFieldInfo &Info) const override;
@@ -6903,6 +6905,19 @@ static int rewritesSort(const AsmRewrite *AsmRewriteA,
       AsmRewritePrecedence[AsmRewriteB->Kind])
     return 1;
   llvm_unreachable("Unstable rewrite sort.");
+}
+
+bool MasmParser::defineMacro(StringRef Name, StringRef Value) {
+  Variable &Var = Variables[Name.lower()];
+  if (Var.Name.empty()) {
+    Var.Name = Name;
+  } else if (!Var.Redefinable) {
+    return TokError("invalid variable redefinition");
+  }
+  Var.Redefinable = true;
+  Var.IsText = true;
+  Var.TextValue = Value.str();
+  return false;
 }
 
 bool MasmParser::lookUpField(StringRef Name, AsmFieldInfo &Info) const {
