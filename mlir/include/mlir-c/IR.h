@@ -153,6 +153,14 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 /// Gets the context that a location was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirLocationGetContext(MlirLocation location);
 
+/// Checks if the location is null.
+static inline int mlirLocationIsNull(MlirLocation location) {
+  return !location.ptr;
+}
+
+/// Checks if two locations are equal.
+MLIR_CAPI_EXPORTED int mlirLocationEqual(MlirLocation l1, MlirLocation l2);
+
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
