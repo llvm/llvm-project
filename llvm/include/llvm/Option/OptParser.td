@@ -187,7 +187,7 @@ class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, Option negopt>
 // Mixins for additional marshalling attributes.
 
 class IsNegative {
-  // todo: create & apply a normalizer for negative flags
+  code Normalizer = "normalizeSimpleNegativeFlag";
 }
 class AlwaysEmit { bit ShouldAlwaysEmit = true; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
