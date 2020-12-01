@@ -605,6 +605,10 @@ public:
     }
     return failure();
   }
+
+private:
+  using ConvertToLLVMPattern::match;
+  using ConvertToLLVMPattern::matchAndRewrite;
 };
 
 namespace LLVM {
