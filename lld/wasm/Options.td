@@ -215,6 +215,12 @@ def thinlto_cache_dir: J<"thinlto-cache-dir=">,
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def lto_new_pass_manager: F<"lto-new-pass-manager">,
+  HelpText<"Use new pass manager">;
+def lto_no_new_pass_manager: F<"lto-no-new-pass-manager">,
+  HelpText<"Use legacy pass manager">;
+def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
+  HelpText<"Debug new pass manager">;
 
 // Experimental PIC mode.
 def experimental_pic: F<"experimental-pic">,
