@@ -9,7 +9,7 @@ declare i32 @llvm.cttz.i32(i32, i1)
 
 define i64 @test1(i32 %x) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -20,7 +20,7 @@ define i64 @test1(i32 %x) {
 
 define i64 @test2(i32 %x) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range !0
+; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0]]
 ; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -31,7 +31,7 @@ define i64 @test2(i32 %x) {
 
 define i64 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range !0
+; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), [[RNG0]]
 ; CHECK-NEXT:    [[S:%.*]] = zext i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
@@ -105,11 +105,11 @@ define i32 @test8(i8 %a, i32 %f, i1 %p, i32* %z) {
 define i16 @test9(i16 %t, i1 %cond) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %T, label %F
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    br label %F
+; CHECK-NEXT:    br label [[F]]
 ; CHECK:       F:
-; CHECK-NEXT:    [[V_OFF0:%.*]] = phi i16 [ %t, %T ], [ 42, %entry ]
+; CHECK-NEXT:    [[V_OFF0:%.*]] = phi i16 [ [[T:%.*]], [[T]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i16 [[V_OFF0]]
 ;
 entry:
