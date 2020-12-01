@@ -1541,10 +1541,14 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
   auto AnotherOpExtKind = ExtKind;
 
-  // Check that all uses are either s/zext, or narrow def (in case of we are
-  // widening the IV increment), or single-input LCSSA Phis.
+  // Check that all uses are either:
+  // - narrow def (in case of we are widening the IV increment);
+  // - single-input LCSSA Phis;
+  // - comparison of the chosen type;
+  // - extend of the chosen type (raison d'etre).
   SmallVector<Instruction *, 4> ExtUsers;
   SmallVector<PHINode *, 4> LCSSAPhiUsers;
+  SmallVector<ICmpInst *, 4> ICmpUsers;
   for (Use &U : NarrowUse->uses()) {
     Instruction *User = cast<Instruction>(U.getUser());
     if (User == NarrowDef)
@@ -1556,6 +1560,19 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       if (LCSSAPhi->getNumOperands() != 1)
         return false;
       LCSSAPhiUsers.push_back(LCSSAPhi);
+      continue;
+    }
+    if (auto *ICmp = dyn_cast<ICmpInst>(User)) {
+      auto Pred = ICmp->getPredicate();
+      // We have 3 types of predicates: signed, unsigned and equality
+      // predicates. For equality, it's legal to widen icmp for either sign and
+      // zero extend. For sign extend, we can also do so for signed predicates,
+      // likeweise for zero extend we can widen icmp for unsigned predicates.
+      if (ExtKind == ZeroExtended && ICmpInst::isSigned(Pred))
+        return false;
+      if (ExtKind == SignExtended && ICmpInst::isUnsigned(Pred))
+        return false;
+      ICmpUsers.push_back(ICmp);
       continue;
     }
     if (ExtKind == SignExtended)
@@ -1655,6 +1672,26 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
   }
+
+  for (ICmpInst *User : ICmpUsers) {
+    Builder.SetInsertPoint(User);
+    auto ExtendedOp = [&](Value * V)->Value * {
+      if (V == NarrowUse)
+        return WideBO;
+      if (ExtKind == ZeroExtended)
+        return Builder.CreateZExt(V, WideBO->getType());
+      else
+        return Builder.CreateSExt(V, WideBO->getType());
+    };
+    auto Pred = User->getPredicate();
+    auto *LHS = ExtendedOp(User->getOperand(0));
+    auto *RHS = ExtendedOp(User->getOperand(1));
+    auto *WideCmp =
+        Builder.CreateICmp(Pred, LHS, RHS, User->getName() + ".wide");
+    User->replaceAllUsesWith(WideCmp);
+    DeadInsts.emplace_back(User);
+  }
+
   return true;
 }
 
