@@ -841,11 +841,11 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
 bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
   SmallVector<Value *, 4> Operands;
   Operands.push_back(GEP.getOperand(0));
-  for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
-    if (Constant *SimpleOp = SimplifiedValues.lookup(*I))
+  for (const Use &Op : GEP.indices())
+    if (Constant *SimpleOp = SimplifiedValues.lookup(Op))
       Operands.push_back(SimpleOp);
     else
-      Operands.push_back(*I);
+      Operands.push_back(Op);
   return TargetTransformInfo::TCC_Free ==
          TTI.getUserCost(&GEP, Operands,
                          TargetTransformInfo::TCK_SizeAndLatency);
@@ -1017,8 +1017,8 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 
   // Lambda to check whether a GEP's indices are all constant.
   auto IsGEPOffsetConstant = [&](GetElementPtrInst &GEP) {
-    for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
-      if (!isa<Constant>(*I) && !SimplifiedValues.lookup(*I))
+    for (const Use &Op : GEP.indices())
+      if (!isa<Constant>(Op) && !SimplifiedValues.lookup(Op))
         return false;
     return true;
   };
@@ -1884,8 +1884,8 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 
   // We found something we don't understand or can't handle. Mark any SROA-able
   // values in the operand list as no longer viable.
-  for (User::op_iterator OI = I.op_begin(), OE = I.op_end(); OI != OE; ++OI)
-    disableSROA(*OI);
+  for (const Use &Op : I.operands())
+    disableSROA(Op);
 
   return false;
 }
@@ -1900,7 +1900,7 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 InlineResult
 CallAnalyzer::analyzeBlock(BasicBlock *BB,
                            SmallPtrSetImpl<const Value *> &EphValues) {
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
+  for (Instruction &I : *BB) {
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
     // are actually used by the vector bonus heuristic. As long as that's true,
@@ -1916,11 +1916,11 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
       continue;
 
     // Skip ephemeral values.
-    if (EphValues.count(&*I))
+    if (EphValues.count(&I))
       continue;
 
     ++NumInstructions;
-    if (isa<ExtractElementInst>(I) || I->getType()->isVectorTy())
+    if (isa<ExtractElementInst>(I) || I.getType()->isVectorTy())
       ++NumVectorInstructions;
 
     // If the instruction simplified to a constant, there is no cost to this
@@ -1928,14 +1928,14 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // all of the per-instruction logic. The visit tree returns true if we
     // consumed the instruction in any way, and false if the instruction's base
     // cost should count against inlining.
-    onInstructionAnalysisStart(&*I);
+    onInstructionAnalysisStart(&I);
 
-    if (Base::visit(&*I))
+    if (Base::visit(&I))
       ++NumInstructionsSimplified;
     else
       onMissedSimplification();
 
-    onInstructionAnalysisFinish(&*I);
+    onInstructionAnalysisFinish(&I);
     using namespace ore;
     // If the visit this instruction detected an uninlinable pattern, abort.
     InlineResult IR = InlineResult::success();
@@ -2096,23 +2096,23 @@ InlineResult CallAnalyzer::analyze() {
   // Populate our simplified values by mapping from function arguments to call
   // arguments with known important simplifications.
   auto CAI = CandidateCall.arg_begin();
-  for (Function::arg_iterator FAI = F.arg_begin(), FAE = F.arg_end();
-       FAI != FAE; ++FAI, ++CAI) {
+  for (Argument &FAI : F.args()) {
     assert(CAI != CandidateCall.arg_end());
     if (Constant *C = dyn_cast<Constant>(CAI))
-      SimplifiedValues[&*FAI] = C;
+      SimplifiedValues[&FAI] = C;
 
     Value *PtrArg = *CAI;
     if (ConstantInt *C = stripAndComputeInBoundsConstantOffsets(PtrArg)) {
-      ConstantOffsetPtrs[&*FAI] = std::make_pair(PtrArg, C->getValue());
+      ConstantOffsetPtrs[&FAI] = std::make_pair(PtrArg, C->getValue());
 
       // We can SROA any pointer arguments derived from alloca instructions.
       if (auto *SROAArg = dyn_cast<AllocaInst>(PtrArg)) {
-        SROAArgValues[&*FAI] = SROAArg;
+        SROAArgValues[&FAI] = SROAArg;
         onInitializeSROAArg(SROAArg);
         EnabledSROAAllocas.insert(SROAArg);
       }
     }
+    ++CAI;
   }
   NumConstantArgs = SimplifiedValues.size();
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
@@ -2423,19 +2423,19 @@ InlineCost llvm::getInlineCost(
 
 InlineResult llvm::isInlineViable(Function &F) {
   bool ReturnsTwice = F.hasFnAttribute(Attribute::ReturnsTwice);
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
+  for (BasicBlock &BB : F) {
     // Disallow inlining of functions which contain indirect branches.
-    if (isa<IndirectBrInst>(BI->getTerminator()))
+    if (isa<IndirectBrInst>(BB.getTerminator()))
       return InlineResult::failure("contains indirect branches");
 
     // Disallow inlining of blockaddresses which are used by non-callbr
     // instructions.
-    if (BI->hasAddressTaken())
-      for (User *U : BlockAddress::get(&*BI)->users())
+    if (BB.hasAddressTaken())
+      for (User *U : BlockAddress::get(&BB)->users())
         if (!isa<CallBrInst>(*U))
           return InlineResult::failure("blockaddress used outside of callbr");
 
-    for (auto &II : *BI) {
+    for (auto &II : BB) {
       CallBase *Call = dyn_cast<CallBase>(&II);
       if (!Call)
         continue;
