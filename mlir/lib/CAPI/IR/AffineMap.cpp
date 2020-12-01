@@ -21,7 +21,7 @@ MlirContext mlirAffineMapGetContext(MlirAffineMap affineMap) {
   return wrap(unwrap(affineMap).getContext());
 }
 
-int mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2) {
+bool mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2) {
   return unwrap(a1) == unwrap(a2);
 }
 
@@ -62,19 +62,19 @@ MlirAffineMap mlirAffineMapPermutationGet(MlirContext ctx, intptr_t size,
       llvm::makeArrayRef(permutation, static_cast<size_t>(size)), unwrap(ctx)));
 }
 
-int mlirAffineMapIsIdentity(MlirAffineMap affineMap) {
+bool mlirAffineMapIsIdentity(MlirAffineMap affineMap) {
   return unwrap(affineMap).isIdentity();
 }
 
-int mlirAffineMapIsMinorIdentity(MlirAffineMap affineMap) {
+bool mlirAffineMapIsMinorIdentity(MlirAffineMap affineMap) {
   return unwrap(affineMap).isMinorIdentity();
 }
 
-int mlirAffineMapIsEmpty(MlirAffineMap affineMap) {
+bool mlirAffineMapIsEmpty(MlirAffineMap affineMap) {
   return unwrap(affineMap).isEmpty();
 }
 
-int mlirAffineMapIsSingleConstant(MlirAffineMap affineMap) {
+bool mlirAffineMapIsSingleConstant(MlirAffineMap affineMap) {
   return unwrap(affineMap).isSingleConstant();
 }
 
@@ -98,11 +98,11 @@ intptr_t mlirAffineMapGetNumInputs(MlirAffineMap affineMap) {
   return unwrap(affineMap).getNumInputs();
 }
 
-int mlirAffineMapIsProjectedPermutation(MlirAffineMap affineMap) {
+bool mlirAffineMapIsProjectedPermutation(MlirAffineMap affineMap) {
   return unwrap(affineMap).isProjectedPermutation();
 }
 
-int mlirAffineMapIsPermutation(MlirAffineMap affineMap) {
+bool mlirAffineMapIsPermutation(MlirAffineMap affineMap) {
   return unwrap(affineMap).isPermutation();
 }
 
