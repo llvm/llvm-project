@@ -418,6 +418,9 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
   if (const auto *CAZ = dyn_cast<ConstantAggregateZero>(this))
     return Elt < CAZ->getNumElements() ? CAZ->getElementValue(Elt) : nullptr;
 
+  if (const auto *PV = dyn_cast<PoisonValue>(this))
+    return Elt < PV->getNumElements() ? PV->getElementValue(Elt) : nullptr;
+
   if (const auto *UV = dyn_cast<UndefValue>(this))
     return Elt < UV->getNumElements() ? UV->getElementValue(Elt) : nullptr;
 
