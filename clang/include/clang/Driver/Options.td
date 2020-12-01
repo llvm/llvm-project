@@ -1501,11 +1501,9 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
-def fprebuilt_implicit_modules : Flag<["-"], "fprebuilt-implicit-modules">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Look up implicit modules in the prebuilt module path">;
-def fno_prebuilt_implicit_modules : Flag<["-"], "fno_prebuilt-implicit-modules">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>;
+defm prebuilt_implicit_modules : OptInFFlag<"prebuilt-implicit-modules",
+  "Look up implicit modules in the prebuilt module path", "", "",
+  [NoXarchOption, CC1Option], "HeaderSearchOpts->EnablePrebuiltImplicitModules">;
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">;
@@ -1524,13 +1522,17 @@ def fbuild_session_file : Joined<["-"], "fbuild-session-file=">,
 def fmodules_validate_once_per_build_session : Flag<["-"], "fmodules-validate-once-per-build-session">,
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Don't verify input files for the modules if the module has been "
-           "successfully validated or loaded during this build session">;
+           "successfully validated or loaded during this build session">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ModulesValidateOncePerBuildSession">;
 def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagnostic-validation">,
   Group<i_Group>, Flags<[CC1Option]>,
-  HelpText<"Disable validation of the diagnostic options when loading the module">;
+  HelpText<"Disable validation of the diagnostic options when loading the module">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ModulesValidateDiagnosticOptions", "true">, IsNegative;
+// todo: simplify these into a version of OptInFFlag that accepts different flags for each record and does not imply group
 def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-headers">,
   Group<i_Group>, Flags<[CC1Option]>,
-  HelpText<"Validate the system headers that a module depends on when loading the module">;
+  HelpText<"Validate the system headers that a module depends on when loading the module">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ModulesValidateSystemHeaders">;
 def fno_modules_validate_system_headers : Flag<["-"], "fno-modules-validate-system-headers">,
   Group<i_Group>, Flags<[NoXarchOption]>;
 
@@ -1539,7 +1541,8 @@ def fvalidate_ast_input_files_content:
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Compute and store the hash of input files used to build an AST."
            " Files with mismatching mtime's are considered valid"
-           " if both contents is identical">;
+           " if both contents is identical">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ValidateASTInputFilesContent">;
 def fmodules_validate_input_files_content:
   Flag <["-"], "fmodules-validate-input-files-content">,
   Group<f_Group>, Flags<[NoXarchOption]>,
@@ -1571,7 +1574,8 @@ def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
   HelpText<"Enable the 'modules' language feature">;
 def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
   Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Implicitly search the file system for module map files.">;
+  HelpText<"Implicitly search the file system for module map files.">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ImplicitModuleMaps">;
 def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Alias<fimplicit_module_maps>;
@@ -2888,7 +2892,8 @@ def no_integrated_cpp : Flag<["-", "--"], "no-integrated-cpp">, Flags<[NoXarchOp
 def no_pedantic : Flag<["-", "--"], "no-pedantic">, Group<pedantic_Group>;
 def no__dead__strip__inits__and__terms : Flag<["-"], "no_dead_strip_inits_and_terms">;
 def nobuiltininc : Flag<["-"], "nobuiltininc">, Flags<[CC1Option, CoreOption]>,
-  HelpText<"Disable builtin #include directories">;
+  HelpText<"Disable builtin #include directories">,
+  MarshallingInfoFlag<"HeaderSearchOpts->UseBuiltinIncludes", "true">, IsNegative;
 def nogpuinc : Flag<["-"], "nogpuinc">, HelpText<"Do not add include paths for CUDA/HIP and"
   " do not include the default CUDA/HIP wrapper headers">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
@@ -2908,7 +2913,8 @@ def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>;
 def nostdinc : Flag<["-"], "nostdinc">, Flags<[CoreOption]>;
 def nostdlibinc : Flag<["-"], "nostdlibinc">;
 def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>,
-  HelpText<"Disable standard #include directories for the C++ standard library">;
+  HelpText<"Disable standard #include directories for the C++ standard library">,
+  MarshallingInfoFlag<"HeaderSearchOpts->UseStandardCXXIncludes", "true">, IsNegative;
 def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
@@ -3070,7 +3076,8 @@ def undef : Flag<["-"], "undef">, Group<u_Group>, Flags<[CC1Option]>,
 def unexported__symbols__list : Separate<["-"], "unexported_symbols_list">;
 def u : JoinedOrSeparate<["-"], "u">, Group<u_Group>;
 def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
-  HelpText<"Show commands to run and use verbose output">;
+  HelpText<"Show commands to run and use verbose output">,
+  MarshallingInfoFlag<"HeaderSearchOpts->Verbose">;
 def verify_debug_info : Flag<["--"], "verify-debug-info">, Flags<[NoXarchOption]>,
   HelpText<"Verify the binary representation of debug output">;
 def weak_l : Joined<["-"], "weak-l">, Flags<[LinkerInput]>;
@@ -4207,7 +4214,8 @@ def fno_modules_error_recovery : Flag<["-"], "fno-modules-error-recovery">,
   HelpText<"Do not automatically import modules for error recovery">;
 def fmodule_map_file_home_is_cwd : Flag<["-"], "fmodule-map-file-home-is-cwd">,
   HelpText<"Use the current working directory as the home directory of "
-           "module maps specified by -fmodule-map-file=<FILE>">;
+           "module maps specified by -fmodule-map-file=<FILE>">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ModuleMapFileHomeIsCwd">;
 def fmodule_feature : Separate<["-"], "fmodule-feature">,
   MetaVarName<"<feature>">,
   HelpText<"Enable <feature> in module map requires declarations">;
@@ -4529,11 +4537,14 @@ def fobjc_gc : Flag<["-"], "fobjc-gc">, Group<f_Group>,
 //===----------------------------------------------------------------------===//
 
 def nostdsysteminc : Flag<["-"], "nostdsysteminc">,
-  HelpText<"Disable standard system #include directories">;
+  HelpText<"Disable standard system #include directories">,
+  MarshallingInfoFlag<"HeaderSearchOpts->UseStandardSystemIncludes", "true">, IsNegative;
 def fdisable_module_hash : Flag<["-"], "fdisable-module-hash">,
-  HelpText<"Disable the module hash">;
+  HelpText<"Disable the module hash">,
+  MarshallingInfoFlag<"HeaderSearchOpts->DisableModuleHash">;
 def fmodules_hash_content : Flag<["-"], "fmodules-hash-content">,
-  HelpText<"Enable hashing the content of a module file">;
+  HelpText<"Enable hashing the content of a module file">,
+  MarshallingInfoFlag<"HeaderSearchOpts->ModulesHashContent">;
 def fmodules_strict_context_hash : Flag<["-"], "fmodules-strict-context-hash">,
   HelpText<"Enable hashing of all compiler options that could impact the "
            "semantics of a module in an implicit build">,

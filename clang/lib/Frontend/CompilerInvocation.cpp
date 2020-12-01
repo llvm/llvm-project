@@ -2185,10 +2185,6 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
 static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
                                   const std::string &WorkingDir) {
   Opts.Sysroot = std::string(Args.getLastArgValue(OPT_isysroot, "/"));
-  Opts.Verbose = Args.hasArg(OPT_v);
-  Opts.UseBuiltinIncludes = !Args.hasArg(OPT_nobuiltininc);
-  Opts.UseStandardSystemIncludes = !Args.hasArg(OPT_nostdsysteminc);
-  Opts.UseStandardCXXIncludes = !Args.hasArg(OPT_nostdincxx);
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
   Opts.ResourceDir = std::string(Args.getLastArgValue(OPT_resource_dir));
@@ -2217,26 +2213,12 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
-  Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);
-  Opts.ModulesHashContent = Args.hasArg(OPT_fmodules_hash_content);
-  Opts.ModulesValidateDiagnosticOptions =
-      !Args.hasArg(OPT_fmodules_disable_diagnostic_validation);
-  Opts.ImplicitModuleMaps = Args.hasArg(OPT_fimplicit_module_maps);
-  Opts.ModuleMapFileHomeIsCwd = Args.hasArg(OPT_fmodule_map_file_home_is_cwd);
-  Opts.EnablePrebuiltImplicitModules =
-      Args.hasArg(OPT_fprebuilt_implicit_modules);
   Opts.ModuleCachePruneInterval =
       getLastArgIntValue(Args, OPT_fmodules_prune_interval, 7 * 24 * 60 * 60);
   Opts.ModuleCachePruneAfter =
       getLastArgIntValue(Args, OPT_fmodules_prune_after, 31 * 24 * 60 * 60);
-  Opts.ModulesValidateOncePerBuildSession =
-      Args.hasArg(OPT_fmodules_validate_once_per_build_session);
   Opts.BuildSessionTimestamp =
       getLastArgUInt64Value(Args, OPT_fbuild_session_timestamp, 0);
-  Opts.ModulesValidateSystemHeaders =
-      Args.hasArg(OPT_fmodules_validate_system_headers);
-  Opts.ValidateASTInputFilesContent =
-      Args.hasArg(OPT_fvalidate_ast_input_files_content);
   if (const Arg *A = Args.getLastArg(OPT_fmodule_format_EQ))
     Opts.ModuleFormat = A->getValue();
 
