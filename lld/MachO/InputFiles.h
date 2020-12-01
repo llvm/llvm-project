@@ -27,6 +27,7 @@ namespace llvm {
 namespace lto {
 class InputFile;
 } // namespace lto
+class TarWriter;
 } // namespace llvm
 
 namespace lld {
@@ -35,6 +36,10 @@ namespace macho {
 class InputSection;
 class Symbol;
 struct Reloc;
+
+// If --reproduce option is given, all input files are written
+// to this tar archive.
+extern std::unique_ptr<llvm::TarWriter> tar;
 
 // If .subsections_via_symbols is set, each InputSection will be split along
 // symbol boundaries. The keys of a SubsectionMap represent the offsets of
