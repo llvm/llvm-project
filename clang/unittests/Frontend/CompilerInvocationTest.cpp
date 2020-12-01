@@ -22,6 +22,13 @@ using ::testing::StrEq;
 using ::testing::StrNe;
 
 namespace {
+struct OptsPopulationTest : public ::testing::Test {
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  CompilerInvocation CInvok;
+
+  OptsPopulationTest()
+      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
+};
 
 class CC1CommandLineGenerationTest : public ::testing::Test {
 public:
@@ -37,23 +44,36 @@ public:
       : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
 };
 
-TEST(OptsPopulationTest, CanPopulateOptsWithImpliedFlags) {
+TEST_F(OptsPopulationTest, OptIsInitializedWithCustomDefaultValue) {
+  const char *Args[] = {"clang", "-xc++"};
+
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  ASSERT_TRUE(CInvok.getFrontendOpts().UseTemporary);
+}
+
+TEST_F(OptsPopulationTest, OptOfNegativeFlagIsPopulatedWithFalse) {
+  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  ASSERT_FALSE(CInvok.getFrontendOpts().UseTemporary);
+}
+
+TEST_F(OptsPopulationTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
   const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
 
-  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
-
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   // Explicitly provided flag.
-  ASSERT_EQ(CInvok.getLangOpts()->CLUnsafeMath, true);
+  ASSERT_TRUE(CInvok.getLangOpts()->CLUnsafeMath);
 
   // Flags directly implied by explicitly provided flag.
-  ASSERT_EQ(CInvok.getCodeGenOpts().LessPreciseFPMAD, true);
-  ASSERT_EQ(CInvok.getLangOpts()->UnsafeFPMath, true);
+  ASSERT_TRUE(CInvok.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(CInvok.getLangOpts()->UnsafeFPMath);
 
   // Flag transitively implied by explicitly provided flag.
-  ASSERT_EQ(CInvok.getLangOpts()->AllowRecip, true);
+  ASSERT_TRUE(CInvok.getLangOpts()->AllowRecip);
 }
 
 TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineFlag) {
@@ -132,6 +152,28 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
 
   CInvok1.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
+}
+
+TEST_F(CC1CommandLineGenerationTest, NotPresentNegativeFlagNotGenerated) {
+  const char *Args[] = {"clang", "-xc++"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
+}
+
+TEST_F(CC1CommandLineGenerationTest, PresentNegativeFlagGenerated) {
+  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
 }
 
 TEST_F(CC1CommandLineGenerationTest, NotPresentAndNotImpliedNotGenerated) {
