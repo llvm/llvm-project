@@ -13,11 +13,9 @@ declare <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float>, <8 x float>)
 
 define double @elts_addsub_v2f64(<2 x double> %0, <2 x double> %1) {
 ; CHECK-LABEL: @elts_addsub_v2f64(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0:%.*]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> [[TMP3]], <2 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
-; CHECK-NEXT:    ret double [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    ret double [[TMP4]]
 ;
   %3 = shufflevector <2 x double> %0, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %4 = shufflevector <2 x double> %1, <2 x double> undef, <2 x i32> <i32 0, i32 0>
@@ -28,13 +26,11 @@ define double @elts_addsub_v2f64(<2 x double> %0, <2 x double> %1) {
 
 define float @elts_addsub_v4f32(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @elts_addsub_v4f32(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1:%.*]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP3]], <4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd float [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret float [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    ret float [[TMP6]]
 ;
   %3 = shufflevector <4 x float> %0, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %4 = shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -47,13 +43,11 @@ define float @elts_addsub_v4f32(<4 x float> %0, <4 x float> %1) {
 
 define double @elts_addsub_v4f64(<4 x double> %0, <4 x double> %1) {
 ; CHECK-LABEL: @elts_addsub_v4f64(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP0:%.*]], <4 x double> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP1:%.*]], <4 x double> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> [[TMP3]], <4 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd double [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret double [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> [[TMP0:%.*]], <4 x double> [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    ret double [[TMP6]]
 ;
   %3 = shufflevector <4 x double> %0, <4 x double> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
   %4 = shufflevector <4 x double> %1, <4 x double> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
@@ -66,13 +60,11 @@ define double @elts_addsub_v4f64(<4 x double> %0, <4 x double> %1) {
 
 define float @elts_addsub_v8f32(<8 x float> %0, <8 x float> %1) {
 ; CHECK-LABEL: @elts_addsub_v8f32(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP0:%.*]], <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1:%.*]], <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> [[TMP3]], <8 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd float [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret float [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> [[TMP0:%.*]], <8 x float> [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    ret float [[TMP6]]
 ;
   %3 = shufflevector <8 x float> %0, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 4, i32 4, i32 4>
   %4 = shufflevector <8 x float> %1, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 4, i32 4, i32 4>
@@ -87,14 +79,12 @@ define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, flo
 ; CHECK-LABEL: @PR46277(
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> undef, float [[TMP0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP10]], <4 x float> [[TMP4:%.*]])
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, float* [[TMP5:%.*]], i64 1
-; CHECK-NEXT:    store float [[TMP12]], float* [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP11]], i32 1
-; CHECK-NEXT:    store float [[TMP14]], float* [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP8]], <4 x float> [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[TMP5:%.*]], i64 1
+; CHECK-NEXT:    store float [[TMP10]], float* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP9]], i32 1
+; CHECK-NEXT:    store float [[TMP12]], float* [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %7 = insertelement <4 x float> undef, float %0, i32 0
