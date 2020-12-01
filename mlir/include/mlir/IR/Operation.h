@@ -69,6 +69,9 @@ public:
   /// Remove this operation from its parent block and delete it.
   void erase();
 
+  /// Remove the operation from its parent block, but don't delete it.
+  void remove();
+
   /// Create a deep copy of this operation, remapping any operands that use
   /// values outside of the operation using the map that is provided (leaving
   /// them alone if no entry is present).  Replaces references to cloned

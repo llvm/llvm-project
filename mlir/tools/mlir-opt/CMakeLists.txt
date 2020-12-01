@@ -19,6 +19,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
+    MLIRTestRewrite
     MLIRTestTransforms
     )
 endif()

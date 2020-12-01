@@ -86,6 +86,7 @@ void registerTestMemRefStrideCalculation();
 void registerTestNumberOfBlockExecutionsPass();
 void registerTestNumberOfOperationExecutionsPass();
 void registerTestOpaqueLoc();
+void registerTestPDLByteCodePass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
@@ -155,6 +156,7 @@ void registerTestPasses() {
   test::registerTestNumberOfBlockExecutionsPass();
   test::registerTestNumberOfOperationExecutionsPass();
   test::registerTestOpaqueLoc();
+  test::registerTestPDLByteCodePass();
   test::registerTestRecursiveTypesPass();
   test::registerTestSCFUtilsPass();
   test::registerTestSparsification();
