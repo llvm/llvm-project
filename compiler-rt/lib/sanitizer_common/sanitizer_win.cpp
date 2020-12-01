@@ -956,22 +956,27 @@ void SignalContext::InitPcSpBp() {
 
 uptr SignalContext::GetAddress() const {
   EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
-  return exception_record->ExceptionInformation[1];
+  if (exception_record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+    return exception_record->ExceptionInformation[1];
+  return (uptr)exception_record->ExceptionAddress;
 }
 
 bool SignalContext::IsMemoryAccess() const {
-  return GetWriteFlag() != SignalContext::UNKNOWN;
+  return ((EXCEPTION_RECORD *)siginfo)->ExceptionCode ==
+         EXCEPTION_ACCESS_VIOLATION;
 }
 
-bool SignalContext::IsTrueFaultingAddress() const {
-  // FIXME: Provide real implementation for this. See Linux and Mac variants.
-  return IsMemoryAccess();
-}
+bool SignalContext::IsTrueFaultingAddress() const { return true; }
 
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
+
+  // The write flag is only available for access violation exceptions.
+  if (exception_record->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
+    return SignalContext::UNKNOWN;
+
   // The contents of this array are documented at
-  // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363082(v=vs.85).aspx
+  // https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-exception_record
   // The first element indicates read as 0, write as 1, or execute as 8.  The
   // second element is the faulting address.
   switch (exception_record->ExceptionInformation[0]) {

@@ -51,6 +51,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  time
+  DEF_FILE time.h.def
+  GEN_HDR time.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   threads
   DEF_FILE threads.h.def
   GEN_HDR threads.h
