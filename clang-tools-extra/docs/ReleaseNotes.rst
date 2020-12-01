@@ -82,6 +82,11 @@ New modules
   `Altera SDK for OpenCL: Best Practices Guide
   <https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf>`_.
 
+- New ``concurrency`` module.
+
+  Includes checks related to concurrent programming (e.g. threads, fibers,
+  coroutines, etc.).
+
 New checks
 ^^^^^^^^^^
 
