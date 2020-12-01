@@ -620,47 +620,16 @@ Error DataLayout::setPointerAlignment(uint32_t AddrSpace, Align ABIAlign,
   return Error::success();
 }
 
-/// getAlignmentInfo - Return the alignment (either ABI if ABIInfo = true or
-/// preferred if ABIInfo = false) the layout wants for the specified datatype.
-Align DataLayout::getAlignmentInfo(AlignTypeEnum AlignType, uint32_t BitWidth,
-                                   bool ABIInfo, Type *Ty) const {
-  AlignmentsTy::const_iterator I = findAlignmentLowerBound(AlignType, BitWidth);
-  // See if we found an exact match. Of if we are looking for an integer type,
-  // but don't have an exact match take the next largest integer. This is where
-  // the lower_bound will point to when it fails an exact match.
-  if (I != Alignments.end() && I->AlignType == (unsigned)AlignType &&
-      (I->TypeBitWidth == BitWidth || AlignType == INTEGER_ALIGN))
-    return ABIInfo ? I->ABIAlign : I->PrefAlign;
-
-  if (AlignType == INTEGER_ALIGN) {
-    // If we didn't have a larger value try the largest value we have.
-    if (I != Alignments.begin()) {
-      --I; // Go to the previous entry and see if its an integer.
-      if (I->AlignType == INTEGER_ALIGN)
-        return ABIInfo ? I->ABIAlign : I->PrefAlign;
-    }
-  } else if (AlignType == VECTOR_ALIGN) {
-    // By default, use natural alignment for vector types. This is consistent
-    // with what clang and llvm-gcc do.
-    unsigned Alignment =
-        getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
-    // We're only calculating a natural alignment, so it doesn't have to be
-    // based on the full size for scalable vectors. Using the minimum element
-    // count should be enough here.
-    Alignment *= cast<VectorType>(Ty)->getElementCount().getKnownMinValue();
-    Alignment = PowerOf2Ceil(Alignment);
-    return Align(Alignment);
-   }
-
-  // If we still couldn't find a reasonable default alignment, fall back
-  // to a simple heuristic that the alignment is the first power of two
-  // greater-or-equal to the store size of the type.  This is a reasonable
-  // approximation of reality, and if the user wanted something less
-  // less conservative, they should have specified it explicitly in the data
-  // layout.
-   unsigned Alignment = getTypeStoreSize(Ty);
-   Alignment = PowerOf2Ceil(Alignment);
-   return Align(Alignment);
+Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
+                                      bool abi_or_pref) const {
+  auto I = findAlignmentLowerBound(INTEGER_ALIGN, BitWidth);
+  // If we don't have an exact match, use alignment of next larger integer
+  // type. If there is none, use alignment of largest integer type by going
+  // back one element.
+  if (I == Alignments.end() || I->AlignType != INTEGER_ALIGN)
+    --I;
+  assert(I->AlignType == INTEGER_ALIGN && "Must be integer alignment");
+  return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 }
 
 namespace {
@@ -768,8 +737,6 @@ unsigned DataLayout::getIndexTypeSizeInBits(Type *Ty) const {
   == false) for the requested type \a Ty.
  */
 Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
-  AlignTypeEnum AlignType;
-
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   // Early escape for the non-numeric types.
@@ -790,12 +757,15 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    const Align Align = getAlignmentInfo(AGGREGATE_ALIGN, 0, abi_or_pref, Ty);
+    const LayoutAlignElem &AggregateAlign = Alignments[0];
+    assert(AggregateAlign.AlignType == AGGREGATE_ALIGN &&
+           "Aggregate alignment must be first alignment entry");
+    const Align Align =
+        abi_or_pref ? AggregateAlign.ABIAlign : AggregateAlign.PrefAlign;
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:
-    AlignType = INTEGER_ALIGN;
-    break;
+    return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
   case Type::HalfTyID:
   case Type::BFloatTyID:
   case Type::FloatTyID:
@@ -804,22 +774,45 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   // same size and alignment, so they look the same here.
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
-  case Type::X86_FP80TyID:
-    AlignType = FLOAT_ALIGN;
-    break;
+  case Type::X86_FP80TyID: {
+    unsigned BitWidth = getTypeSizeInBits(Ty).getFixedSize();
+    auto I = findAlignmentLowerBound(FLOAT_ALIGN, BitWidth);
+    if (I != Alignments.end() && I->AlignType == FLOAT_ALIGN &&
+        I->TypeBitWidth == BitWidth)
+      return abi_or_pref ? I->ABIAlign : I->PrefAlign;
+
+    // If we still couldn't find a reasonable default alignment, fall back
+    // to a simple heuristic that the alignment is the first power of two
+    // greater-or-equal to the store size of the type.  This is a reasonable
+    // approximation of reality, and if the user wanted something less
+    // less conservative, they should have specified it explicitly in the data
+    // layout.
+    return Align(PowerOf2Ceil(BitWidth / 8));
+  }
   case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    AlignType = VECTOR_ALIGN;
-    break;
+  case Type::ScalableVectorTyID: {
+    unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinSize();
+    auto I = findAlignmentLowerBound(VECTOR_ALIGN, BitWidth);
+    if (I != Alignments.end() && I->AlignType == VECTOR_ALIGN &&
+        I->TypeBitWidth == BitWidth)
+      return abi_or_pref ? I->ABIAlign : I->PrefAlign;
+
+    // By default, use natural alignment for vector types. This is consistent
+    // with what clang and llvm-gcc do.
+    // TODO: This should probably not be using the alloc size.
+    unsigned Alignment =
+        getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
+    // We're only calculating a natural alignment, so it doesn't have to be
+    // based on the full size for scalable vectors. Using the minimum element
+    // count should be enough here.
+    Alignment *= cast<VectorType>(Ty)->getElementCount().getKnownMinValue();
+    Alignment = PowerOf2Ceil(Alignment);
+    return Align(Alignment);
+  }
   default:
     llvm_unreachable("Bad type for getAlignment!!!");
   }
-
-  // If we're dealing with a scalable vector, we just need the known minimum
-  // size for determining alignment. If not, we'll get the exact size.
-  return getAlignmentInfo(AlignType, getTypeSizeInBits(Ty).getKnownMinSize(),
-                          abi_or_pref, Ty);
 }
 
 /// TODO: Remove this function once the transition to Align is over.
@@ -829,12 +822,6 @@ unsigned DataLayout::getABITypeAlignment(Type *Ty) const {
 
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
-}
-
-/// getABIIntegerTypeAlignment - Return the minimum ABI-required alignment for
-/// an integer type of the specified bitwidth.
-Align DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
-  return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr);
 }
 
 /// TODO: Remove this function once the transition to Align is over.
