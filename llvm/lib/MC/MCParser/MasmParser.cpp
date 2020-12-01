@@ -579,6 +579,9 @@ private:
                       AsmToken::TokenKind EndTok = AsmToken::EndOfStatement);
 
   void printMacroInstantiations();
+
+  bool expandStatement(SMLoc Loc);
+
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
                     SMRange Range = None) const {
     ArrayRef<SMRange> Ranges(Range);
@@ -608,15 +611,15 @@ private:
 
   /// Parse up to a token of kind \p EndTok and return the contents from the
   /// current token up to (but not including) this token; the current token on
-  /// exit will be either this kind or EOF.
-  StringRef parseStringTo(AsmToken::TokenKind EndTok);
+  /// exit will be either this kind or EOF. Reads through instantiated macro
+  /// functions and text macros.
+  SmallVector<StringRef, 1> parseStringRefsTo(AsmToken::TokenKind EndTok);
+  std::string parseStringTo(AsmToken::TokenKind EndTok);
 
   /// Parse up to the end of statement and return the contents from the current
   /// token until the end of the statement; the current token on exit will be
   /// either the EndOfStatement or EOF.
-  StringRef parseStringToEndOfStatement() override {
-    return parseStringTo(AsmToken::EndOfStatement);
-  }
+  StringRef parseStringToEndOfStatement() override;
 
   bool parseTextItem(std::string &Data);
 
@@ -1119,8 +1122,11 @@ const AsmToken &MasmParser::Lex() {
   const AsmToken *tok = &Lexer.Lex();
 
   while (tok->is(AsmToken::Identifier)) {
-    auto it = Variables.find(tok->getIdentifier());
+    auto it = Variables.find(tok->getIdentifier().lower());
+    const llvm::MCAsmMacro *M =
+        getContext().lookupMacro(tok->getIdentifier().lower());
     if (it != Variables.end() && it->second.IsText) {
+      // This is a textmacro; expand it in place.
       std::unique_ptr<MemoryBuffer> Instantiation =
           MemoryBuffer::getMemBufferCopy(it->second.TextValue,
                                          "<instantiation>");
@@ -1132,6 +1138,15 @@ const AsmToken &MasmParser::Lex() {
                       /*EndStatementAtEOF=*/false);
       EndStatementAtEOFStack.push_back(false);
       tok = &Lexer.Lex();
+    } else if (M && M->IsFunction && Lexer.peekTok().is(AsmToken::LParen)) {
+      // This is a macro function invocation; expand it in place.
+      const AsmToken MacroTok = *tok;
+      tok = &Lexer.Lex();
+      if (handleMacroInvocation(M, MacroTok.getLoc())) {
+        Lexer.UnLex(AsmToken(AsmToken::Error, MacroTok.getIdentifier()));
+        tok = &Lexer.Lex();
+      }
+      continue;
     } else {
       break;
     }
@@ -1221,7 +1236,12 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   }
 
   // While we have input, parse each statement.
-  while (Lexer.isNot(AsmToken::Eof)) {
+  while (Lexer.isNot(AsmToken::Eof) ||
+         SrcMgr.getParentIncludeLoc(CurBuffer) != SMLoc()) {
+    // Skip through the EOF at the end of an inclusion.
+    if (Lexer.is(AsmToken::Eof))
+      Lex();
+
     ParseStatementInfo Info(&AsmStrRewrites);
     bool Parsed = parseStatement(Info, nullptr);
 
@@ -1315,18 +1335,62 @@ bool MasmParser::checkForValidSection() {
 
 /// Throw away the rest of the line for testing purposes.
 void MasmParser::eatToEndOfStatement() {
-  while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
+  while (Lexer.isNot(AsmToken::EndOfStatement)) {
+    if (Lexer.is(AsmToken::Eof)) {
+      SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
+      if (ParentIncludeLoc == SMLoc()) {
+        break;
+      }
+
+      EndStatementAtEOFStack.pop_back();
+      jumpToLoc(ParentIncludeLoc, 0, EndStatementAtEOFStack.back());
+    }
+
     Lexer.Lex();
+  }
 
   // Eat EOL.
   if (Lexer.is(AsmToken::EndOfStatement))
     Lexer.Lex();
 }
 
-StringRef MasmParser::parseStringTo(AsmToken::TokenKind EndTok) {
+SmallVector<StringRef, 1>
+MasmParser::parseStringRefsTo(AsmToken::TokenKind EndTok) {
+  SmallVector<StringRef, 1> Refs;
+  const char *Start = getTok().getLoc().getPointer();
+  while (Lexer.isNot(EndTok)) {
+    if (Lexer.is(AsmToken::Eof)) {
+      SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
+      if (ParentIncludeLoc == SMLoc()) {
+        break;
+      }
+      Refs.emplace_back(Start, getTok().getLoc().getPointer() - Start);
+
+      EndStatementAtEOFStack.pop_back();
+      jumpToLoc(ParentIncludeLoc, 0, EndStatementAtEOFStack.back());
+      Lexer.Lex();
+      Start = getTok().getLoc().getPointer();
+    } else {
+      Lexer.Lex();
+    }
+  }
+  Refs.emplace_back(Start, getTok().getLoc().getPointer() - Start);
+  return Refs;
+}
+
+std::string MasmParser::parseStringTo(AsmToken::TokenKind EndTok) {
+  SmallVector<StringRef, 1> Refs = parseStringRefsTo(EndTok);
+  std::string Str;
+  for (StringRef S : Refs) {
+    Str.append(S.str());
+  }
+  return Str;
+}
+
+StringRef MasmParser::parseStringToEndOfStatement() {
   const char *Start = getTok().getLoc().getPointer();
 
-  while (Lexer.isNot(EndTok) && Lexer.isNot(AsmToken::Eof))
+  while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
     Lexer.Lex();
 
   const char *End = getTok().getLoc().getPointer();
@@ -1364,7 +1428,6 @@ bool MasmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 
 /// Parse a primary expression and return it.
 ///  primaryexpr ::= (parenexpr
-///  primaryexpr ::= macro_function "(" macro_arguments ")"
 ///  primaryexpr ::= symbol
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
@@ -1414,12 +1477,6 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return true;
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
       return false;
-    }
-    // Parse macro function invocation.
-    if (const MCAsmMacro *M = getContext().lookupMacro(Identifier)) {
-      if (handleMacroInvocation(M, FirstTokenLoc))
-        return true;
-      return parsePrimaryExpr(Res, EndLoc, nullptr);
     }
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
@@ -1897,6 +1954,7 @@ bool MasmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
 }
 
 /// ParseStatement:
+///   ::= % statement
 ///   ::= EndOfStatement
 ///   ::= Label* Directive ...Operands... EndOfStatement
 ///   ::= Label* Identifier OperandList* EndOfStatement
@@ -1914,6 +1972,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return false;
   }
+
+  // If preceded by an expansion operator, first expand all text macros and
+  // macro functions.
+  if (getTok().is(AsmToken::Percent)) {
+    SMLoc ExpansionLoc = getTok().getLoc();
+    if (parseToken(AsmToken::Percent) || expandStatement(ExpansionLoc))
+      return true;
+  }
+
   // Statements always start with an identifier, unless we're dealing with a
   // processor directive (.386, .686, etc.) that lexes as a real.
   AsmToken ID = getTok();
@@ -1965,6 +2032,11 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex(); // always eat a token
     if (!IDVal.startswith("."))
       return Error(IDLoc, "unexpected token at start of statement");
+  } else if (Lexer.is(AsmToken::Identifier) &&
+             getTok().getString().equals_lower("echo")) {
+    // Intercept echo early to avoid lexical substitution in its message, and
+    // delegate all handling to the appropriate function.
+    return parseDirectiveEcho();
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore) {
       Lex(); // always eat a token
@@ -2084,7 +2156,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // does not understand Labels. This may cause us to see a Hash
     // here instead of a preprocessor line comment.
     if (getTok().is(AsmToken::Hash)) {
-      StringRef CommentStr = parseStringToEndOfStatement();
+      std::string CommentStr = parseStringTo(AsmToken::EndOfStatement);
       Lexer.Lex();
       Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
     }
@@ -2117,7 +2189,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
-  if (const MCAsmMacro *M = getContext().lookupMacro(IDVal)) {
+  if (const MCAsmMacro *M = getContext().lookupMacro(IDVal.lower())) {
     return handleMacroEntry(M, IDLoc);
   }
 
@@ -2344,8 +2416,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveErrorIfe(IDLoc, false);
     case DK_RADIX:
       return parseDirectiveRadix(IDLoc);
-    case DK_ECHO:
-      return parseDirectiveEcho();
     }
 
     return Error(IDLoc, "unknown directive");
@@ -2720,7 +2790,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
       ++I;
       ++Pos;
     }
-    while (isMacroParameterChar(Body[I]) && I + 1 != End)
+    while (I < End && isMacroParameterChar(Body[I]))
       ++I;
 
     const char *Begin = Body.data() + Pos;
@@ -2821,11 +2891,14 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
                                     AsmToken::TokenKind EndTok) {
   if (MP && MP->Vararg) {
     if (Lexer.isNot(EndTok)) {
-      StringRef Str = parseStringTo(EndTok);
-      MA.emplace_back(AsmToken::String, Str);
+      SmallVector<StringRef, 1> Str = parseStringRefsTo(EndTok);
+      for (StringRef S : Str) {
+        MA.emplace_back(AsmToken::String, S);
+      }
     }
     return false;
   }
+
   SMLoc StrLoc = Lexer.getLoc(), EndLoc;
   if (Lexer.is(AsmToken::Less) && isAngleBracketString(StrLoc, EndLoc)) {
     const char *StrChar = StrLoc.getPointer() + 1;
@@ -2855,7 +2928,7 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
 
       if (Lexer.is(AsmToken::Space)) {
         SpaceEaten = true;
-        Lexer.Lex(); // Eat spaces.
+        Lex(); // Eat spaces.
       }
 
       // Spaces can delimit parameters, but could also be part an expression.
@@ -2864,11 +2937,11 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
       if (!IsDarwin) {
         if (isOperator(Lexer.getKind()) && Lexer.isNot(EndTok)) {
           MA.push_back(getTok());
-          Lexer.Lex();
+          Lex();
 
           // Whitespace after an operator can be ignored.
           if (Lexer.is(AsmToken::Space))
-            Lexer.Lex();
+            Lex();
 
           continue;
         }
@@ -2890,7 +2963,7 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
 
     // Append the token to the current argument list.
     MA.push_back(getTok());
-    Lexer.Lex();
+    Lex();
   }
 
   if (ParenLevel != 0)
@@ -3087,6 +3160,9 @@ void MasmParser::handleMacroExit() {
 }
 
 bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
+  if (!M->IsFunction)
+    return Error(NameLoc, "cannot invoke macro procedure as function");
+
   if (parseToken(AsmToken::LParen, "invoking macro function '" + M->Name +
                                        "' requires arguments in parentheses") ||
       handleMacroEntry(M, NameLoc, AsmToken::RParen))
@@ -3303,15 +3379,19 @@ bool MasmParser::parseTextItem(std::string &Data) {
     StringRef ID;
     if (parseIdentifier(ID))
       return true;
+    Data = ID.str();
 
     auto it = Variables.find(ID);
     if (it == Variables.end())
       return true;
 
-    const Variable &Var = it->second;
-    if (!Var.IsText)
-      return true;
-    Data = Var.TextValue;
+    while (it != Variables.end()) {
+      const Variable &Var = it->second;
+      if (!Var.IsText)
+        return true;
+      Data = Var.TextValue;
+      it = Variables.find(Data);
+    }
     return false;
   }
   }
@@ -5482,6 +5562,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
   // Consuming deferred text, so use Lexer.Lex to ignore Lexing Errors.
   AsmToken EndToken, StartToken = getTok();
   unsigned MacroDepth = 0;
+  bool IsMacroFunction = false;
   // Lex the macro definition.
   while (true) {
     // Ignore Lexing errors in macros.
@@ -5493,7 +5574,8 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
     if (getLexer().is(AsmToken::Eof))
       return Error(NameLoc, "no matching 'endm' in definition");
 
-    // Otherwise, check whether we have reach the 'endm'.
+    // Otherwise, check whether we have reached the 'endm'... and determine if
+    // this is a macro function.
     if (getLexer().is(AsmToken::Identifier)) {
       if (getTok().getIdentifier().equals_lower("endm")) {
         if (MacroDepth == 0) { // Outermost macro.
@@ -5507,6 +5589,11 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
           // Otherwise we just found the end of an inner macro.
           --MacroDepth;
         }
+      } else if (getTok().getIdentifier().equals_lower("exitm")) {
+        if (MacroDepth == 0 &&
+            getLexer().peekTok().isNot(AsmToken::EndOfStatement)) {
+          IsMacroFunction = true;
+        }
       } else if (isMacroLikeDirective()) {
         // We allow nested macros. Those aren't instantiated until the
         // outermost macro is expanded so just ignore them for now.
@@ -5518,14 +5605,15 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
     eatToEndOfStatement();
   }
 
-  if (getContext().lookupMacro(Name)) {
+  if (getContext().lookupMacro(Name.lower())) {
     return Error(NameLoc, "macro '" + Name + "' is already defined");
   }
 
   const char *BodyStart = StartToken.getLoc().getPointer();
   const char *BodyEnd = EndToken.getLoc().getPointer();
   StringRef Body = StringRef(BodyStart, BodyEnd - BodyStart);
-  MCAsmMacro Macro(Name, Body, std::move(Parameters), std::move(Locals));
+  MCAsmMacro Macro(Name, Body, std::move(Parameters), std::move(Locals),
+                   IsMacroFunction);
   DEBUG_WITH_TYPE("asm-macros", dbgs() << "Defining new macro:\n";
                   Macro.dump());
   getContext().defineMacro(Name, std::move(Macro));
@@ -5589,9 +5677,9 @@ bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
 
     DEBUG_WITH_TYPE("asm-macros", dbgs()
                                       << "Un-defining macro: " << Name << "\n");
-    if (!getContext().lookupMacro(Name))
+    if (!getContext().lookupMacro(Name.lower()))
       return Error(NameLoc, "macro '" + Name + "' is not defined");
-    getContext().undefineMacro(Name);
+    getContext().undefineMacro(Name.lower());
 
     if (!parseOptionalToken(AsmToken::Comma))
       break;
@@ -5705,16 +5793,17 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
 ///              [[text]]
 ///              [[text]] delimiter [[text]]
 bool MasmParser::parseDirectiveComment(SMLoc DirectiveLoc) {
-  StringRef FirstLine = parseStringToEndOfStatement();
+  std::string FirstLine = parseStringTo(AsmToken::EndOfStatement);
   size_t DelimiterEnd = FirstLine.find_first_of("\b\t\v\f\r\x1A ");
-  StringRef Delimiter = FirstLine.take_front(DelimiterEnd);
+  StringRef Delimiter = StringRef(FirstLine).take_front(DelimiterEnd);
   if (Delimiter.empty())
     return Error(DirectiveLoc, "no delimiter in 'comment' directive");
   do {
     if (getTok().is(AsmToken::Eof))
       return Error(DirectiveLoc, "unmatched delimiter in 'comment' directive");
     Lex();  // eat end of statement
-  } while (!parseStringToEndOfStatement().contains(Delimiter));
+  } while (
+      !StringRef(parseStringTo(AsmToken::EndOfStatement)).contains(Delimiter));
   return parseToken(AsmToken::EndOfStatement,
                     "unexpected token in 'comment' directive");
 }
@@ -5728,7 +5817,7 @@ bool MasmParser::parseDirectiveInclude() {
   SMLoc IncludeLoc = getTok().getLoc();
 
   if (!parseAngleBracketString(Filename))
-    Filename = parseStringToEndOfStatement().str();
+    Filename = parseStringTo(AsmToken::EndOfStatement);
   if (check(!Filename.empty(), "missing filename in 'include' directive") ||
       check(getTok().isNot(AsmToken::EndOfStatement),
             "unexpected token in 'include' directive") ||
@@ -6091,9 +6180,9 @@ bool MasmParser::parseDirectiveError(SMLoc DirectiveLoc) {
     }
   }
 
-  StringRef Message = ".err directive invoked in source file";
+  std::string Message = ".err directive invoked in source file";
   if (Lexer.isNot(AsmToken::EndOfStatement))
-    Message = parseStringToEndOfStatement();
+    Message = parseStringTo(AsmToken::EndOfStatement);
   Lex();
 
   return Error(DirectiveLoc, Message);
@@ -6113,11 +6202,11 @@ bool MasmParser::parseDirectiveErrorIfb(SMLoc DirectiveLoc, bool ExpectBlank) {
   if (parseTextItem(Text))
     return Error(getTok().getLoc(), "missing text item in '.errb' directive");
 
-  StringRef Message = ".errb directive invoked in source file";
+  std::string Message = ".errb directive invoked in source file";
   if (Lexer.isNot(AsmToken::EndOfStatement)) {
     if (parseToken(AsmToken::Comma))
       return addErrorSuffix(" in '.errb' directive");
-    Message = parseStringToEndOfStatement();
+    Message = parseStringTo(AsmToken::EndOfStatement);
   }
   Lex();
 
@@ -6155,11 +6244,11 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
     }
   }
 
-  StringRef Message = ".errdef directive invoked in source file";
+  std::string Message = ".errdef directive invoked in source file";
   if (Lexer.isNot(AsmToken::EndOfStatement)) {
     if (parseToken(AsmToken::Comma))
       return addErrorSuffix(" in '.errdef' directive");
-    Message = parseStringToEndOfStatement();
+    Message = parseStringTo(AsmToken::EndOfStatement);
   }
   Lex();
 
@@ -6202,7 +6291,7 @@ bool MasmParser::parseDirectiveErrorIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
     return TokError("expected string parameter for '.errdif' directive");
   }
 
-  StringRef Message;
+  std::string Message;
   if (ExpectEqual)
     Message = ".erridn directive invoked in source file";
   else
@@ -6210,7 +6299,7 @@ bool MasmParser::parseDirectiveErrorIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
   if (Lexer.isNot(AsmToken::EndOfStatement)) {
     if (parseToken(AsmToken::Comma))
       return addErrorSuffix(" in '.erridn' directive");
-    Message = parseStringToEndOfStatement();
+    Message = parseStringTo(AsmToken::EndOfStatement);
   }
   Lex();
 
@@ -6242,11 +6331,11 @@ bool MasmParser::parseDirectiveErrorIfe(SMLoc DirectiveLoc, bool ExpectZero) {
   if (parseAbsoluteExpression(ExprValue))
     return addErrorSuffix(" in '.erre' directive");
 
-  StringRef Message = ".erre directive invoked in source file";
+  std::string Message = ".erre directive invoked in source file";
   if (Lexer.isNot(AsmToken::EndOfStatement)) {
     if (parseToken(AsmToken::Comma))
       return addErrorSuffix(" in '.erre' directive");
-    Message = parseStringToEndOfStatement();
+    Message = parseStringTo(AsmToken::EndOfStatement);
   }
   Lex();
 
@@ -6455,6 +6544,43 @@ MCAsmMacro *MasmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
   return &MacroLikeBodies.back();
 }
 
+bool MasmParser::expandStatement(SMLoc Loc) {
+  std::string Body = parseStringTo(AsmToken::EndOfStatement);
+  SMLoc EndLoc = getTok().getLoc();
+
+  MCAsmMacroParameters Parameters;
+  MCAsmMacroArguments Arguments;
+  for (const auto &V : Variables) {
+    const Variable &Var = V.getValue();
+    if (Var.IsText) {
+      Parameters.emplace_back();
+      Arguments.emplace_back();
+      MCAsmMacroParameter &P = Parameters.back();
+      MCAsmMacroArgument &A = Arguments.back();
+      P.Name = Var.Name;
+      P.Required = true;
+      A.push_back(AsmToken(AsmToken::String, Var.TextValue));
+    }
+  }
+  MacroLikeBodies.emplace_back(StringRef(), Body, Parameters);
+  MCAsmMacro M = MacroLikeBodies.back();
+
+  // Expand the statement in a new buffer.
+  SmallString<80> Buf;
+  raw_svector_ostream OS(Buf);
+  if (expandMacro(OS, M.Body, M.Parameters, Arguments, M.Locals, EndLoc))
+    return true;
+  std::unique_ptr<MemoryBuffer> Expansion =
+      MemoryBuffer::getMemBufferCopy(OS.str(), "<expansion>");
+
+  // Jump to the expanded statement and prime the lexer.
+  CurBuffer = SrcMgr.AddNewSourceBuffer(std::move(Expansion), EndLoc);
+  Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
+  EndStatementAtEOFStack.push_back(false);
+  Lex();
+  return false;
+}
+
 void MasmParser::instantiateMacroLikeBody(MCAsmMacro *M, SMLoc DirectiveLoc,
                                           raw_svector_ostream &OS) {
   instantiateMacroLikeBody(M, DirectiveLoc, /*ExitLoc=*/getTok().getLoc(), OS);
@@ -6652,7 +6778,7 @@ bool MasmParser::parseDirectiveForc(SMLoc DirectiveLoc, StringRef Directive) {
     // Match ml64.exe; treat all characters to end of statement as a string,
     // ignoring comment markers, then discard anything following a space (using
     // the C locale).
-    Argument = parseStringToEndOfStatement().str();
+    Argument = parseStringTo(AsmToken::EndOfStatement);
     if (getTok().is(AsmToken::EndOfStatement))
       Argument += getTok().getString();
     size_t End = 0;
@@ -6724,7 +6850,8 @@ bool MasmParser::parseDirectiveMSAlign(SMLoc IDLoc, ParseStatementInfo &Info) {
 
 bool MasmParser::parseDirectiveRadix(SMLoc DirectiveLoc) {
   const SMLoc Loc = getLexer().getLoc();
-  StringRef RadixString = parseStringToEndOfStatement().trim();
+  std::string RadixStringRaw = parseStringTo(AsmToken::EndOfStatement);
+  StringRef RadixString = StringRef(RadixStringRaw).trim();
   unsigned Radix;
   if (RadixString.getAsInteger(10, Radix)) {
     return Error(Loc,
@@ -6738,10 +6865,20 @@ bool MasmParser::parseDirectiveRadix(SMLoc DirectiveLoc) {
   return false;
 }
 
+/// parseDirectiveEcho
+///   ::= "echo" message
 bool MasmParser::parseDirectiveEcho() {
-  StringRef Message = parseStringToEndOfStatement();
-  Lex();  // eat end of statement
-  llvm::outs() << Message << '\n';
+  // We're called before the directive is parsed, to avoid triggering lexical
+  // substitutions in the message. Assert that the next token is the directive,
+  // then eat it without using the Parser's Lex method.
+  assert(getTok().is(AsmToken::Identifier) &&
+         getTok().getString().equals_lower("echo"));
+  Lexer.Lex();
+
+  std::string Message = parseStringTo(AsmToken::EndOfStatement);
+  llvm::outs() << Message;
+  if (!StringRef(Message).endswith("\n"))
+    llvm::outs() << '\n';
   return false;
 }
 
