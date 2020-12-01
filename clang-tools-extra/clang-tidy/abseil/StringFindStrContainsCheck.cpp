@@ -29,6 +29,7 @@ using ::clang::transformer::cat;
 using ::clang::transformer::change;
 using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
+using ::clang::transformer::RewriteRule;
 
 static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::std::basic_string_view;"
@@ -69,7 +70,7 @@ MakeRule(const LangOptions &LangOpts,
             hasArgument(1, cxxDefaultArgExpr())),
       onImplicitObjectArgument(expr().bind("string_being_searched")));
 
-  tooling::RewriteRule rule = applyFirst(
+  RewriteRule rule = applyFirst(
       {makeRule(binaryOperator(hasOperatorName("=="),
                                hasOperands(ignoringParenImpCasts(StringNpos),
                                            ignoringParenImpCasts(StringFind))),
