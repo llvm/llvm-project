@@ -159,11 +159,10 @@ using namespace llvm;
 
 /// @{
 /// Metadata attribute names
-static const char *const LLVMLoopVectorizeFollowupAll =
-    "llvm.loop.vectorize.followup_all";
-static const char *const LLVMLoopVectorizeFollowupVectorized =
+const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
+const char LLVMLoopVectorizeFollowupVectorized[] =
     "llvm.loop.vectorize.followup_vectorized";
-static const char *const LLVMLoopVectorizeFollowupEpilogue =
+const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
 

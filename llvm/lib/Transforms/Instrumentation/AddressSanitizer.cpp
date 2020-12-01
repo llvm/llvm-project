@@ -130,56 +130,48 @@ static const size_t kMaxStackMallocSize = 1 << 16;  // 64K
 static const uintptr_t kCurrentStackFrameMagic = 0x41B58AB3;
 static const uintptr_t kRetiredStackFrameMagic = 0x45E0360E;
 
-static const char *const kAsanModuleCtorName = "asan.module_ctor";
-static const char *const kAsanModuleDtorName = "asan.module_dtor";
+const char kAsanModuleCtorName[] = "asan.module_ctor";
+const char kAsanModuleDtorName[] = "asan.module_dtor";
 static const uint64_t kAsanCtorAndDtorPriority = 1;
 // On Emscripten, the system needs more than one priorities for constructors.
 static const uint64_t kAsanEmscriptenCtorAndDtorPriority = 50;
-static const char *const kAsanReportErrorTemplate = "__asan_report_";
-static const char *const kAsanRegisterGlobalsName = "__asan_register_globals";
-static const char *const kAsanUnregisterGlobalsName =
-    "__asan_unregister_globals";
-static const char *const kAsanRegisterImageGlobalsName =
-  "__asan_register_image_globals";
-static const char *const kAsanUnregisterImageGlobalsName =
-  "__asan_unregister_image_globals";
-static const char *const kAsanRegisterElfGlobalsName =
-  "__asan_register_elf_globals";
-static const char *const kAsanUnregisterElfGlobalsName =
-  "__asan_unregister_elf_globals";
-static const char *const kAsanPoisonGlobalsName = "__asan_before_dynamic_init";
-static const char *const kAsanUnpoisonGlobalsName = "__asan_after_dynamic_init";
-static const char *const kAsanInitName = "__asan_init";
-static const char *const kAsanVersionCheckNamePrefix =
-    "__asan_version_mismatch_check_v";
-static const char *const kAsanPtrCmp = "__sanitizer_ptr_cmp";
-static const char *const kAsanPtrSub = "__sanitizer_ptr_sub";
-static const char *const kAsanHandleNoReturnName = "__asan_handle_no_return";
+const char kAsanReportErrorTemplate[] = "__asan_report_";
+const char kAsanRegisterGlobalsName[] = "__asan_register_globals";
+const char kAsanUnregisterGlobalsName[] = "__asan_unregister_globals";
+const char kAsanRegisterImageGlobalsName[] = "__asan_register_image_globals";
+const char kAsanUnregisterImageGlobalsName[] =
+    "__asan_unregister_image_globals";
+const char kAsanRegisterElfGlobalsName[] = "__asan_register_elf_globals";
+const char kAsanUnregisterElfGlobalsName[] = "__asan_unregister_elf_globals";
+const char kAsanPoisonGlobalsName[] = "__asan_before_dynamic_init";
+const char kAsanUnpoisonGlobalsName[] = "__asan_after_dynamic_init";
+const char kAsanInitName[] = "__asan_init";
+const char kAsanVersionCheckNamePrefix[] = "__asan_version_mismatch_check_v";
+const char kAsanPtrCmp[] = "__sanitizer_ptr_cmp";
+const char kAsanPtrSub[] = "__sanitizer_ptr_sub";
+const char kAsanHandleNoReturnName[] = "__asan_handle_no_return";
 static const int kMaxAsanStackMallocSizeClass = 10;
-static const char *const kAsanStackMallocNameTemplate = "__asan_stack_malloc_";
-static const char *const kAsanStackFreeNameTemplate = "__asan_stack_free_";
-static const char *const kAsanGenPrefix = "___asan_gen_";
-static const char *const kODRGenPrefix = "__odr_asan_gen_";
-static const char *const kSanCovGenPrefix = "__sancov_gen_";
-static const char *const kAsanSetShadowPrefix = "__asan_set_shadow_";
-static const char *const kAsanPoisonStackMemoryName =
-    "__asan_poison_stack_memory";
-static const char *const kAsanUnpoisonStackMemoryName =
-    "__asan_unpoison_stack_memory";
+const char kAsanStackMallocNameTemplate[] = "__asan_stack_malloc_";
+const char kAsanStackFreeNameTemplate[] = "__asan_stack_free_";
+const char kAsanGenPrefix[] = "___asan_gen_";
+const char kODRGenPrefix[] = "__odr_asan_gen_";
+const char kSanCovGenPrefix[] = "__sancov_gen_";
+const char kAsanSetShadowPrefix[] = "__asan_set_shadow_";
+const char kAsanPoisonStackMemoryName[] = "__asan_poison_stack_memory";
+const char kAsanUnpoisonStackMemoryName[] = "__asan_unpoison_stack_memory";
 
 // ASan version script has __asan_* wildcard. Triple underscore prevents a
 // linker (gold) warning about attempting to export a local symbol.
-static const char *const kAsanGlobalsRegisteredFlagName =
-    "___asan_globals_registered";
+const char kAsanGlobalsRegisteredFlagName[] = "___asan_globals_registered";
 
-static const char *const kAsanOptionDetectUseAfterReturn =
+const char kAsanOptionDetectUseAfterReturn[] =
     "__asan_option_detect_stack_use_after_return";
 
-static const char *const kAsanShadowMemoryDynamicAddress =
+const char kAsanShadowMemoryDynamicAddress[] =
     "__asan_shadow_memory_dynamic_address";
 
-static const char *const kAsanAllocaPoison = "__asan_alloca_poison";
-static const char *const kAsanAllocasUnpoison = "__asan_allocas_unpoison";
+const char kAsanAllocaPoison[] = "__asan_alloca_poison";
+const char kAsanAllocasUnpoison[] = "__asan_allocas_unpoison";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
