@@ -113,6 +113,7 @@ public:
 
   std::function<Error(const Twine &Msg)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
+  void reportUniqueWarning(const Twine &Msg) const;
 
 protected:
   ScopedPrinter &W;
