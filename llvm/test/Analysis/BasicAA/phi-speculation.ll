@@ -6,6 +6,8 @@ target datalayout =
 ; ptr_phi and ptr2_phi do not alias.
 ; CHECK: test_noalias_1
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
+; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
+; TODO: The incs should also be NoAlias.
 define i32 @test_noalias_1(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -34,7 +36,10 @@ the_exit:
 
 ; CHECK: test_noalias_2
 ; CHECK: NoAlias: i32* %ptr_outer_phi, i32* %ptr_outer_phi2
+; CHECK: MayAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
+; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
+; TODO: The incs should also be NoAlias.
 define i32 @test_noalias_2(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
