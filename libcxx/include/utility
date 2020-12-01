@@ -1506,7 +1506,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<long double>
         // -0.0 and 0.0 should return same hash
         if (__v == 0.0L)
             return 0;
-#if defined(__i386__)
+#if defined(__i386__) || (defined(__x86_64__) && defined(__ILP32__))
         // Zero out padding bits
         union
         {
