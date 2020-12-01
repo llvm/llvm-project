@@ -11,15 +11,17 @@
 struct OptionWithMarshallingInfo {
   const char *Name;
   const char *KeyPath;
-  const char *DefaultValue;
+  const char *ImpliedCheck;
+  const char *ImpliedValue;
 };
 
 static const OptionWithMarshallingInfo MarshallingTable[] = {
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
-  {NAME, #KEYPATH, #DEFAULT_VALUE},
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
+  {NAME, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING
 };
@@ -38,10 +40,16 @@ TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {
   ASSERT_STREQ(MarshallingTable[3].KeyPath, "MarshalledFlagA");
 }
 
-TEST(OptionMarshalling, DefaultAnyOfConstructedDisjunctionOfKeypaths) {
-  ASSERT_STREQ(MarshallingTable[0].DefaultValue, "false");
-  ASSERT_STREQ(MarshallingTable[1].DefaultValue, "false || MarshalledFlagD");
-  ASSERT_STREQ(MarshallingTable[2].DefaultValue, "false || MarshalledFlagD");
-  ASSERT_STREQ(MarshallingTable[3].DefaultValue,
-            "false || MarshalledFlagC || MarshalledFlagB");
+TEST(OptionMarshalling, ImpliedCheckContainsDisjunctionOfKeypaths) {
+  ASSERT_STREQ(MarshallingTable[0].ImpliedCheck, "false");
+
+  ASSERT_STREQ(MarshallingTable[1].ImpliedCheck, "false || MarshalledFlagD");
+  ASSERT_STREQ(MarshallingTable[1].ImpliedValue, "true");
+
+  ASSERT_STREQ(MarshallingTable[2].ImpliedCheck, "false || MarshalledFlagD");
+  ASSERT_STREQ(MarshallingTable[2].ImpliedValue, "true");
+
+  ASSERT_STREQ(MarshallingTable[3].ImpliedCheck,
+               "false || MarshalledFlagC || MarshalledFlagB");
+  ASSERT_STREQ(MarshallingTable[3].ImpliedValue, "true");
 }
