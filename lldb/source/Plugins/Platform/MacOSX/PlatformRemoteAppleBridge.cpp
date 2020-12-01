@@ -172,15 +172,10 @@ bool PlatformRemoteAppleBridge::GetSupportedArchitectureAtIndex(uint32_t idx,
   return false;
 }
 
-
-void PlatformRemoteAppleBridge::GetDeviceSupportDirectoryNames (std::vector<std::string> &dirnames) 
-{
-    dirnames.clear();
-    dirnames.push_back("BridgeOS DeviceSupport");
+llvm::StringRef PlatformRemoteAppleBridge::GetDeviceSupportDirectoryName() {
+  return "BridgeOS DeviceSupport";
 }
 
-std::string PlatformRemoteAppleBridge::GetPlatformName ()
-{
-    return "BridgeOS.platform";
+llvm::StringRef PlatformRemoteAppleBridge::GetPlatformName() {
+  return "BridgeOS.platform";
 }
-
