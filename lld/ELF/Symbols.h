@@ -183,7 +183,7 @@ public:
   // For @@, the name has been truncated by insert(). For @, the name has been
   // truncated by Symbol::parseSymbolVersion().
   const char *getVersionSuffix() const {
-    assert(nameSize != (uint32_t)-1);
+    (void)getName();
     return nameData + nameSize;
   }
 
