@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=cortex-a57 -mtriple=thumb -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=cortex-a57 -mtriple=thumb -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
 
 # CHECK-LABEL: ********** MI Scheduling **********
 # CHECK:       %[[RES:[0-9]+]]:rgpr = t2MLA
