@@ -8591,12 +8591,21 @@ static bool isOpenCLSizeDependentType(ASTContext &C, QualType Ty) {
 static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   if (PT->isPointerType()) {
     QualType PointeeType = PT->getPointeeType();
-    if (PointeeType->isPointerType())
-      return PtrPtrKernelParam;
     if (PointeeType.getAddressSpace() == LangAS::opencl_generic ||
         PointeeType.getAddressSpace() == LangAS::opencl_private ||
         PointeeType.getAddressSpace() == LangAS::Default)
       return InvalidAddrSpacePtrKernelParam;
+
+    if (PointeeType->isPointerType()) {
+      // This is a pointer to pointer parameter.
+      // Recursively check inner type.
+      OpenCLParamType ParamKind = getOpenCLKernelParameterType(S, PointeeType);
+      if (ParamKind == InvalidAddrSpacePtrKernelParam ||
+          ParamKind == InvalidKernelParam)
+        return ParamKind;
+
+      return PtrPtrKernelParam;
+    }
     return PtrKernelParam;
   }
 
@@ -8649,11 +8658,17 @@ static void checkIsValidOpenCLKernelParameter(
 
   switch (getOpenCLKernelParameterType(S, PT)) {
   case PtrPtrKernelParam:
-    // OpenCL v1.2 s6.9.a:
-    // A kernel function argument cannot be declared as a
-    // pointer to a pointer type.
-    S.Diag(Param->getLocation(), diag::err_opencl_ptrptr_kernel_param);
-    D.setInvalidType();
+    // OpenCL v3.0 s6.11.a:
+    // A kernel function argument cannot be declared as a pointer to a pointer
+    // type. [...] This restriction only applies to OpenCL C 1.2 or below.
+    if (S.getLangOpts().OpenCLVersion < 120 &&
+        !S.getLangOpts().OpenCLCPlusPlus) {
+      S.Diag(Param->getLocation(), diag::err_opencl_ptrptr_kernel_param);
+      D.setInvalidType();
+      return;
+    }
+
+    ValidTypes.insert(PT.getTypePtr());
     return;
 
   case InvalidAddrSpacePtrKernelParam:
