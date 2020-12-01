@@ -43,7 +43,7 @@ public:
     bool Demangle = true;
     bool RelativeAddresses = false;
     bool UntagAddresses = false;
-    bool UseNativePDBReader = false;
+    bool UseDIA = false;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;
