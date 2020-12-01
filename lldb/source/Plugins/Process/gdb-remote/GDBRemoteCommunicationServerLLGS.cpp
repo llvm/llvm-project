@@ -503,7 +503,7 @@ static void WriteRegisterValueInHexFixedWidth(
   }
 }
 
-static llvm::Expected<json::Object>
+static llvm::Optional<json::Object>
 GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
 
@@ -512,30 +512,16 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
   json::Object register_object;
 
 #ifdef LLDB_JTHREADSINFO_FULL_REGISTER_SET
-  // Expedite all registers in the first register set (i.e. should be GPRs)
-  // that are not contained in other registers.
-  const RegisterSet *reg_set_p = reg_ctx_sp->GetRegisterSet(0);
-  if (!reg_set_p)
-    return llvm::make_error<llvm::StringError>("failed to get registers",
-                                               llvm::inconvertibleErrorCode());
-  for (const uint32_t *reg_num_p = reg_set_p->registers;
-       *reg_num_p != LLDB_INVALID_REGNUM; ++reg_num_p) {
-    uint32_t reg_num = *reg_num_p;
+  const auto expedited_regs =
+      reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Full);
 #else
-  // Expedite only a couple of registers until we figure out why sending
-  // registers is expensive.
-  static const uint32_t k_expedited_registers[] = {
-      LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP, LLDB_REGNUM_GENERIC_FP,
-      LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM};
-
-  for (const uint32_t *generic_reg_p = k_expedited_registers;
-       *generic_reg_p != LLDB_INVALID_REGNUM; ++generic_reg_p) {
-    uint32_t reg_num = reg_ctx.ConvertRegisterKindToRegisterNumber(
-        eRegisterKindGeneric, *generic_reg_p);
-    if (reg_num == LLDB_INVALID_REGNUM)
-      continue; // Target does not support the given register.
+  const auto expedited_regs =
+      reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Minimal);
 #endif
+  if (expedited_regs.empty())
+    return llvm::None;
 
+  for (auto &reg_num : expedited_regs) {
     const RegisterInfo *const reg_info_p =
         reg_ctx.GetRegisterInfoAtIndex(reg_num);
     if (reg_info_p == nullptr) {
@@ -628,12 +614,8 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     json::Object thread_obj;
 
     if (!abridged) {
-      if (llvm::Expected<json::Object> registers =
-              GetRegistersAsJSON(*thread)) {
+      if (llvm::Optional<json::Object> registers = GetRegistersAsJSON(*thread))
         thread_obj.try_emplace("registers", std::move(*registers));
-      } else {
-        return registers.takeError();
-      }
     }
 
     thread_obj.try_emplace("tid", static_cast<int64_t>(tid));
@@ -814,46 +796,27 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
 
   // Grab the register context.
   NativeRegisterContext& reg_ctx = thread->GetRegisterContext();
-  // Expedite all registers in the first register set (i.e. should be GPRs)
-  // that are not contained in other registers.
-  const RegisterSet *reg_set_p;
-  if (reg_ctx.GetRegisterSetCount() > 0 &&
-      ((reg_set_p = reg_ctx.GetRegisterSet(0)) != nullptr)) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s expediting registers "
-              "from set '%s' (registers set count: %zu)",
-              __FUNCTION__, reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
-              reg_set_p->num_registers);
+  const auto expedited_regs =
+      reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Full);
 
-    for (const uint32_t *reg_num_p = reg_set_p->registers;
-         *reg_num_p != LLDB_INVALID_REGNUM; ++reg_num_p) {
-      const RegisterInfo *const reg_info_p =
-          reg_ctx.GetRegisterInfoAtIndex(*reg_num_p);
-      if (reg_info_p == nullptr) {
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunicationServerLLGS::%s failed to get "
-                  "register info for register set '%s', register index "
-                  "%" PRIu32,
+  for (auto &reg_num : expedited_regs) {
+    const RegisterInfo *const reg_info_p =
+        reg_ctx.GetRegisterInfoAtIndex(reg_num);
+    // Only expediate registers that are not contained in other registers.
+    if (reg_info_p != nullptr && reg_info_p->value_regs == nullptr) {
+      RegisterValue reg_value;
+      Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
+      if (error.Success()) {
+        response.Printf("%.02x:", reg_num);
+        WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
+                                          &reg_value, lldb::eByteOrderBig);
+        response.PutChar(';');
+      } else {
+        LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s failed to read "
+                       "register '%s' index %" PRIu32 ": %s",
                   __FUNCTION__,
-                  reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
-                  *reg_num_p);
-      } else if (reg_info_p->value_regs == nullptr) {
-        // Only expediate registers that are not contained in other registers.
-        RegisterValue reg_value;
-        Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
-        if (error.Success()) {
-          response.Printf("%.02x:", *reg_num_p);
-          WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
-                                            &reg_value, lldb::eByteOrderBig);
-          response.PutChar(';');
-        } else {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunicationServerLLGS::%s failed to read "
-                    "register '%s' index %" PRIu32 ": %s",
-                    __FUNCTION__,
-                    reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
-                    *reg_num_p, error.AsCString());
-        }
+                  reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
+                  reg_num, error.AsCString());
       }
     }
   }
