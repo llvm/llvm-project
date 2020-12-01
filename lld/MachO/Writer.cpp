@@ -113,8 +113,10 @@ public:
 
 class LCDysymtab : public LoadCommand {
 public:
-  LCDysymtab(IndirectSymtabSection *indirectSymtabSection)
-      : indirectSymtabSection(indirectSymtabSection) {}
+  LCDysymtab(SymtabSection *symtabSection,
+             IndirectSymtabSection *indirectSymtabSection)
+      : symtabSection(symtabSection),
+        indirectSymtabSection(indirectSymtabSection) {}
 
   uint32_t getSize() const override { return sizeof(dysymtab_command); }
 
@@ -122,11 +124,19 @@ public:
     auto *c = reinterpret_cast<dysymtab_command *>(buf);
     c->cmd = LC_DYSYMTAB;
     c->cmdsize = getSize();
+
+    c->ilocalsym = 0;
+    c->iextdefsym = c->nlocalsym = symtabSection->getNumLocalSymbols();
+    c->nextdefsym = symtabSection->getNumExternalSymbols();
+    c->iundefsym = c->iextdefsym + c->nextdefsym;
+    c->nundefsym = symtabSection->getNumUndefinedSymbols();
+
     c->indirectsymoff = indirectSymtabSection->fileOff;
     c->nindirectsyms = indirectSymtabSection->getNumSymbols();
   }
 
-  IndirectSymtabSection *indirectSymtabSection = nullptr;
+  SymtabSection *symtabSection;
+  IndirectSymtabSection *indirectSymtabSection;
 };
 
 class LCSegment : public LoadCommand {
@@ -396,7 +406,8 @@ void Writer::createLoadCommands() {
   in.header->addLoadCommand(make<LCDyldInfo>(
       in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
-  in.header->addLoadCommand(make<LCDysymtab>(indirectSymtabSection));
+  in.header->addLoadCommand(
+      make<LCDysymtab>(symtabSection, indirectSymtabSection));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
