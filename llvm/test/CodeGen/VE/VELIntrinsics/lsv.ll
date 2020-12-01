@@ -12,7 +12,7 @@ define void @lsv_vvss(i8* %0, i64 %1, i32 signext %2) {
 ; CHECK-NEXT:    lea %s3, 256
 ; CHECK-NEXT:    lvl %s3
 ; CHECK-NEXT:    vld %v0, 8, %s0
-; CHECK-NEXT:    adds.w.sx %s2, %s2, (0)1
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lsv %v0(%s2), %s1
 ; CHECK-NEXT:    vst %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -38,7 +38,7 @@ define i64 @lvsl_vssl_imm(i8* readonly %0, i32 signext %1) {
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vld %v0, 8, %s0
-; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
+; CHECK-NEXT:    and %s0, %s1, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = tail call fast <256 x double> @llvm.ve.vl.vld.vssl(i64 8, i8* %0, i32 256)
@@ -56,7 +56,7 @@ define double @lvsd_vssl_imm(i8* readonly %0, i32 signext %1) {
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vld %v0, 8, %s0
-; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
+; CHECK-NEXT:    and %s0, %s1, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = tail call fast <256 x double> @llvm.ve.vl.vld.vssl(i64 8, i8* %0, i32 256)
@@ -74,7 +74,7 @@ define float @lvss_vssl_imm(i8* readonly %0, i32 signext %1) {
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vld %v0, 8, %s0
-; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
+; CHECK-NEXT:    and %s0, %s1, (32)0
 ; CHECK-NEXT:    lvs %s0, %v0(%s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = tail call fast <256 x double> @llvm.ve.vl.vld.vssl(i64 8, i8* %0, i32 256)

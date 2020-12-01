@@ -16,13 +16,13 @@ define void @switching_vl(i32 %evl, i32 %evl2, i8* %P, i8* %Q) {
 ; CHECK-NEXT:    lea %s4, 256
 ; CHECK-NEXT:    lvl %s4
 ; CHECK-NEXT:    vld %v0, 8, %s2
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vst %v0, 16, %s3
 ; CHECK-NEXT:    lea %s4, 128
 ; CHECK-NEXT:    lvl %s4
 ; CHECK-NEXT:    vld %v0, 16, %s2
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
+; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vst %v0, 16, %s3
 ; CHECK-NEXT:    lvl %s4
@@ -47,7 +47,7 @@ define void @switching_vl(i32 %evl, i32 %evl2, i8* %P, i8* %Q) {
 define void @stable_vl(i32 %evl, i8* %P, i8* %Q) {
 ; CHECK-LABEL: stable_vl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vld %v0, 8, %s1
 ; CHECK-NEXT:    vst %v0, 16, %s2
