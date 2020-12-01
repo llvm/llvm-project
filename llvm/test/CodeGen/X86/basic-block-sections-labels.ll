@@ -1,5 +1,6 @@
 ; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=labels | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefix=UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefix=NOUNIQ
 
 define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
   br i1 %0, label %2, label %7
@@ -28,6 +29,8 @@ declare i32 @_Z3foov() #1
 
 declare i32 @__gxx_personality_v0(...)
 
+; UNIQ:			.section .text._Z3bazb,"ax",@progbits{{$}}
+; NOUNIQ:		.section .text,"ax",@progbits,unique,1
 ; CHECK-LABEL:	_Z3bazb:
 ; CHECK-LABEL:	.Lfunc_begin0:
 ; CHECK-LABEL:	.LBB_END0_0:
@@ -39,7 +42,9 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.LBB_END0_3:
 ; CHECK-LABEL:	.Lfunc_end0:
 
-; CHECK:	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text
+; UNIQ:			.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
+;; Verify that with -unique-section-names=false, the unique id of the text section gets assigned to the llvm_bb_addr_map section.
+; NOUNIQ:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text,unique,1
 ; CHECK-NEXT:	.quad	.Lfunc_begin0
 ; CHECK-NEXT:	.byte	4
 ; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0

@@ -1014,7 +1014,9 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
+  // Use the text section's begin symbol and unique ID to create a separate
+  // .llvm_bb_addr_map section associated with every unique text section.
   return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, MCSection::NonUniqueID,
+                            Flags, 0, GroupName, ElfSec.getUniqueID(),
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
