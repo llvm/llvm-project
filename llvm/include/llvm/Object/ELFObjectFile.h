@@ -246,6 +246,10 @@ public:
     return SectionRef(toDRI(Sec), this);
   }
 
+  ELFSymbolRef toSymbolRef(const Elf_Shdr *SymTable, unsigned SymbolNum) const {
+    return ELFSymbolRef({toDRI(SymTable, SymbolNum), this});
+  }
+
   bool IsContentValid() const { return ContentValid; }
 
 private:

@@ -5798,53 +5798,64 @@ template <class ELFT> void GNUStyle<ELFT>::printDependentLibs() {
     PrintSection();
 }
 
-// Used for printing symbol names in places where possible errors can be
-// ignored.
-static std::string getSymbolName(const ELFSymbolRef &Sym) {
-  Expected<StringRef> NameOrErr = Sym.getName();
-  if (NameOrErr)
-    return maybeDemangle(*NameOrErr);
-  consumeError(NameOrErr.takeError());
-  return "<?>";
-}
-
 template <class ELFT>
 void DumpStyle<ELFT>::printFunctionStackSize(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
-  // This function ignores potentially erroneous input, unless it is directly
-  // related to stack size reporting.
-  SymbolRef FuncSym;
-  for (const ELFSymbolRef &Symbol : ElfObj.symbols()) {
-    Expected<uint64_t> SymAddrOrErr = Symbol.getAddress();
-    if (!SymAddrOrErr) {
-      consumeError(SymAddrOrErr.takeError());
-      continue;
-    }
-    if (Expected<uint32_t> SymFlags = Symbol.getFlags()) {
-      if (*SymFlags & SymbolRef::SF_Undefined)
-        continue;
-    } else
-      consumeError(SymFlags.takeError());
-    if (Symbol.getELFType() == ELF::STT_FUNC && *SymAddrOrErr == SymValue) {
-      // Check if the symbol is in the right section. FunctionSec == None means
-      // "any section".
-      if (!FunctionSec ||
-          ElfObj.toSectionRef(*FunctionSec).containsSymbol(Symbol)) {
-        FuncSym = Symbol;
+  uint32_t FuncSymIndex = 0;
+  if (const Elf_Shdr *SymTab = this->dumper().getDotSymtabSec()) {
+    if (Expected<Elf_Sym_Range> SymsOrError = Obj.symbols(SymTab)) {
+      uint32_t Index = (uint32_t)-1;
+      for (const Elf_Sym &Sym : *SymsOrError) {
+        ++Index;
+
+        if (Sym.st_shndx == ELF::SHN_UNDEF || Sym.getType() != ELF::STT_FUNC)
+          continue;
+
+        if (Expected<uint64_t> SymAddrOrErr =
+                ElfObj.toSymbolRef(SymTab, Index).getAddress()) {
+          if (SymValue != *SymAddrOrErr)
+            continue;
+        } else {
+          std::string Name = this->dumper().getStaticSymbolName(Index);
+          reportUniqueWarning("unable to get address of symbol '" + Name +
+                              "': " + toString(SymAddrOrErr.takeError()));
+          break;
+        }
+
+        // Check if the symbol is in the right section. FunctionSec == None
+        // means "any section".
+        if (FunctionSec) {
+          if (Expected<const Elf_Shdr *> SecOrErr =
+                  Obj.getSection(Sym, SymTab, this->dumper().getShndxTable())) {
+            if (*FunctionSec != *SecOrErr)
+              continue;
+          } else {
+            std::string Name = this->dumper().getStaticSymbolName(Index);
+            // Note: it is impossible to trigger this error currently, it is
+            // untested.
+            reportUniqueWarning("unable to get section of symbol '" + Name +
+                                "': " + toString(SecOrErr.takeError()));
+            break;
+          }
+        }
+
+        FuncSymIndex = Index;
         break;
       }
+    } else {
+      reportUniqueWarning("unable to read the symbol table: " +
+                          toString(SymsOrError.takeError()));
     }
   }
 
   std::string FuncName = "?";
-  // A valid SymbolRef has a non-null object file pointer.
-  if (FuncSym.BasicSymbolRef::getObject())
-    FuncName = getSymbolName(FuncSym);
+  if (!FuncSymIndex)
+    reportUniqueWarning(
+        "could not identify function symbol for stack size entry in " +
+        describe(Obj, StackSizeSec));
   else
-    reportWarning(
-        createError("could not identify function symbol for stack size entry"),
-        FileName);
+    FuncName = this->dumper().getStaticSymbolName(FuncSymIndex);
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
@@ -5853,13 +5864,10 @@ void DumpStyle<ELFT>::printFunctionStackSize(
   // getULEB128() does not advance Offset if it is not able to extract a valid
   // integer.
   if (*Offset == PrevOffset) {
-    reportWarning(createStringError(object_error::parse_failed,
-                                    "could not extract a valid stack size in " +
-                                        describe(Obj, StackSizeSec)),
-                  FileName);
+    reportUniqueWarning("could not extract a valid stack size from " +
+                        describe(Obj, StackSizeSec));
     return;
   }
-
   printStackSizeEntry(StackSize, FuncName);
 }
 
