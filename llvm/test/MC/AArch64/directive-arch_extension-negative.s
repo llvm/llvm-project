@@ -83,3 +83,8 @@ dc cvap, x7
 ldapr x0, [x1]
 // CHECK: error: instruction requires: rcpc
 // CHECK-NEXT: ldapr x0, [x1]
+
+.arch_extension nols64
+ld64b x0, [x13]
+// CHECK: error: instruction requires: ls64
+// CHECK-NEXT: ld64b x0, [x13]
