@@ -2858,20 +2858,12 @@ static bool isProfitableChain(IVChain &Chain,
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
 
-  // If any LSRUse in the chain is marked as profitable by target, mark this
-  // chain as profitable.
-  for (const IVInc &Inc : Chain.Incs)
-    if (TTI.isProfitableLSRChainElement(Inc.UserInst))
-      return true;
-
-  // If number of registers is not the major cost, we cannot benefit from this
-  // profitable chain which is based on number of registers.
-  // FIXME: add profitable chain optimization for other kinds major cost, for
-  // example number of instructions.
-  if (!TTI.isNumRegsMajorCostOfLSR())
-    return false;
+  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
+    return true;
 
   for (const IVInc &Inc : Chain) {
+    if (TTI.isProfitableLSRChainElement(Inc.UserInst))
+      return true;
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -5635,7 +5627,13 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   }
 
   // Start collecting data and preparing for the solver.
-  CollectChains();
+  // If number of registers is not the major cost, we cannot benefit from the
+  // current profitable chain optimization which is based on number of
+  // registers.
+  // FIXME: add profitable chain optimization for other kinds major cost, for
+  // example number of instructions.
+  if (TTI.isNumRegsMajorCostOfLSR() || StressIVChain)
+    CollectChains();
   CollectInterestingTypesAndFactors();
   CollectFixupsAndInitialFormulae();
   CollectLoopInvariantFixupsAndFormulae();
