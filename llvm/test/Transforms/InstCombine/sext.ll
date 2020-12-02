@@ -105,21 +105,22 @@ define i32 @test8(i8 %a, i32 %f, i1 %p, i32* %z) {
 define i16 @test9(i16 %t, i1 %cond) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[F:%.*]]
-; CHECK:       T:
-; CHECK-NEXT:    br label [[F]]
-; CHECK:       F:
-; CHECK-NEXT:    [[V_OFF0:%.*]] = phi i16 [ [[T:%.*]], [[T]] ], [ 42, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TBB:%.*]], label [[FBB:%.*]]
+; CHECK:       TBB:
+; CHECK-NEXT:    br label [[FBB]]
+; CHECK:       FBB:
+; CHECK-NEXT:    [[V_OFF0:%.*]] = phi i16 [ [[T:%.*]], [[TBB]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i16 [[V_OFF0]]
 ;
 entry:
-  br i1 %cond, label %T, label %F
-T:
-  %t2 = sext i16 %t to i32
-  br label %F
+  br i1 %cond, label %TBB, label %FBB
 
-F:
-  %V = phi i32 [%t2, %T], [42, %entry]
+TBB:
+  %t2 = sext i16 %t to i32
+  br label %FBB
+
+FBB:
+  %V = phi i32 [%t2, %TBB], [42, %entry]
   %W = trunc i32 %V to i16
   ret i16 %W
 }
