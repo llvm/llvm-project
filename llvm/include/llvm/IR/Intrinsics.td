@@ -1518,34 +1518,6 @@ let IntrProperties = [IntrNoMem] in {
                                          [llvm_anyvector_ty]>;
   def int_vector_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_v2_fadd : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                                                         [LLVMMatchType<0>,
-                                                          llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_v2_fmul : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                                                         [LLVMMatchType<0>,
-                                                          llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_add : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                    [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
 }
 
 //===----- Matrix intrinsics ---------------------------------------------===//
