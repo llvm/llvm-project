@@ -2766,16 +2766,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       Cond->getParent() != BB || !Cond->hasOneUse())
     return Changed;
 
-  // Make sure the instruction after the condition is the cond branch.
-  BasicBlock::iterator CondIt = ++Cond->getIterator();
-
-  // Ignore dbg intrinsics.
-  while (isa<DbgInfoIntrinsic>(CondIt))
-    ++CondIt;
-
-  if (&*CondIt != BI)
-    return Changed;
-
   // Only allow this transformation if computing the condition doesn't involve
   // too many instructions and these involved instructions can be executed
   // unconditionally. We denote all involved instructions except the condition
@@ -2783,12 +2773,15 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
   // number of the bonus instructions we'll need to create when cloning into
   // each predecessor does not exceed a certain threshold.
   unsigned NumBonusInsts = 0;
-  for (auto I = BB->begin(); Cond != &*I; ++I) {
-    // Ignore dbg intrinsics.
-    if (isa<DbgInfoIntrinsic>(I))
+  for (Instruction &I : *BB) {
+    // Don't check the branch condition comparison itself.
+    if (&I == Cond)
+      continue;
+    // Ignore dbg intrinsics, and the terminator.
+    if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
       continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&*I))
+    if (!isSafeToSpeculativelyExecute(&I))
       return Changed;
 
     // Account for the cost of duplicating this instruction into each
@@ -2896,13 +2889,15 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     // Note that there may be multiple predecessor blocks, so we cannot move
     // bonus instructions to a predecessor block.
     ValueToValueMapTy VMap; // maps original values to cloned values
-    // We already make sure Cond is the last instruction before BI. Therefore,
-    // all instructions before Cond other than DbgInfoIntrinsic are bonus
-    // instructions.
-    for (auto BonusInst = BB->begin(); Cond != &*BonusInst; ++BonusInst) {
-      if (isa<DbgInfoIntrinsic>(BonusInst))
+    Instruction *CondInPred;
+    for (Instruction &BonusInst : *BB) {
+      if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
         continue;
-      Instruction *NewBonusInst = BonusInst->clone();
+
+      Instruction *NewBonusInst = BonusInst.clone();
+
+      if (&BonusInst == Cond)
+        CondInPred = NewBonusInst;
 
       // When we fold the bonus instructions we want to make sure we
       // reset their debug locations in order to avoid stepping on dead
@@ -2911,7 +2906,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
 
       RemapInstruction(NewBonusInst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      VMap[&*BonusInst] = NewBonusInst;
+      VMap[&BonusInst] = NewBonusInst;
 
       // If we moved a load, we cannot any longer claim any knowledge about
       // its potential value. The previous information might have been valid
@@ -2921,9 +2916,9 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       NewBonusInst->dropUnknownNonDebugMetadata();
 
       PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
-      NewBonusInst->takeName(&*BonusInst);
-      BonusInst->setName(BonusInst->getName() + ".old");
-      BonusInst->replaceUsesWithIf(NewBonusInst, [BB](Use &U) {
+      NewBonusInst->takeName(&BonusInst);
+      BonusInst.setName(BonusInst.getName() + ".old");
+      BonusInst.replaceUsesWithIf(NewBonusInst, [BB](Use &U) {
         auto *User = cast<Instruction>(U.getUser());
         // Ignore uses in the same block as the bonus instruction itself.
         if (User->getParent() == BB)
@@ -2937,20 +2932,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       });
     }
 
-    // Clone Cond into the predecessor basic block, and or/and the
-    // two conditions together.
-    Instruction *CondInPred = Cond->clone();
-
-    // Reset the condition debug location to avoid jumping on dead code
-    // as the result of folding dead branches.
-    CondInPred->setDebugLoc(DebugLoc());
-
-    RemapInstruction(CondInPred, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    PredBlock->getInstList().insert(PBI->getIterator(), CondInPred);
-    CondInPred->takeName(Cond);
-    Cond->setName(CondInPred->getName() + ".old");
-
+    // Now that the Cond was cloned into the predecessor basic block,
+    // or/and the two conditions together.
     if (BI->isConditional()) {
       Instruction *NewCond = cast<Instruction>(
           Builder.CreateBinOp(Opc, PBI->getCondition(), CondInPred, "or.cond"));
