@@ -164,11 +164,11 @@ group("test") {
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
     "//llvm/tools/split-file",
+    "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
-    "//llvm/tools/yaml2obj",
   ]
   if (clang_enable_arcmt) {
     deps += [

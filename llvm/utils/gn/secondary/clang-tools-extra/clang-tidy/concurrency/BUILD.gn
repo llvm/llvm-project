@@ -4,9 +4,9 @@ static_library("concurrency") {
   deps = [
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
-    "//clang/lib/Analysis",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis",
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//clang/lib/Serialization",
