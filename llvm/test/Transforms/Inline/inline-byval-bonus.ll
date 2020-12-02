@@ -15,7 +15,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 %struct.ray = type { %struct.vec3, %struct.vec3 }
 %struct.spoint = type { %struct.vec3, %struct.vec3, %struct.vec3, double }
 
-define i32 @caller(%struct.sphere* %i) {
+define i32 @caller(%struct.sphere* %i) ssp {
   %shadow_ray = alloca %struct.ray, align 8
   call void @fix(%struct.ray* %shadow_ray)
 
