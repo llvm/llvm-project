@@ -610,6 +610,9 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
                 ": could not get the buffer for the member defining symbol " +
                 toMachOString(sym));
 
+  if (tar && c.getParent()->isThin())
+    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
+
   uint32_t modTime = toTimeT(
       CHECK(c.getLastModified(), toString(this) +
                                      ": could not get the modification time "
