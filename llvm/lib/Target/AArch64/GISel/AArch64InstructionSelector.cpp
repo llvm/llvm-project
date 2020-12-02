@@ -2123,16 +2123,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.eraseFromParent();
       return constrainSelectedInstRegOperands(*TestBit, TII, TRI, RBI);
     } else {
-      auto CMP = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
-                     .addDef(AArch64::WZR)
-                     .addUse(CondReg)
+      auto CMP = MIB.buildInstr(AArch64::ANDSWri, {LLT::scalar(32)}, {CondReg})
                      .addImm(1);
-      constrainSelectedInstRegOperands(*CMP.getInstr(), TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*CMP, TII, TRI, RBI);
       auto Bcc =
-          BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::Bcc))
-              .addImm(AArch64CC::EQ)
-              .addMBB(DestMBB);
-
+          MIB.buildInstr(AArch64::Bcc).addImm(AArch64CC::EQ).addMBB(DestMBB);
       I.eraseFromParent();
       return constrainSelectedInstRegOperands(*Bcc.getInstr(), TII, TRI, RBI);
     }
