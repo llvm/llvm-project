@@ -398,11 +398,10 @@ public:
   void writeTo(uint8_t *buf) const override;
 
 private:
-  // An n_strx value of 0 always indicates the empty string, so we must locate
-  // our non-empty string values at positive offsets in the string table.
-  // Therefore we insert a dummy value at position zero.
-  std::vector<StringRef> strings{"\0"};
-  size_t size = 1;
+  // ld64 emits string tables which start with a space and a zero byte. We
+  // match its behavior here since some tools depend on it.
+  std::vector<StringRef> strings{" "};
+  size_t size = 2;
 };
 
 struct SymtabEntry {
