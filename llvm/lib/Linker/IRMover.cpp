@@ -1440,13 +1440,8 @@ Error IRLinker::run() {
 
   // Append the module inline asm string.
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
-    std::string SrcModuleInlineAsm = adjustInlineAsm(SrcM->getModuleInlineAsm(),
-                                                     SrcTriple);
-    if (DstM.getModuleInlineAsm().empty())
-      DstM.setModuleInlineAsm(SrcModuleInlineAsm);
-    else
-      DstM.setModuleInlineAsm(DstM.getModuleInlineAsm() + "\n" +
-                              SrcModuleInlineAsm);
+    DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
+                                               SrcTriple));
   }
 
   // Loop over all of the linked values to compute type mappings.
