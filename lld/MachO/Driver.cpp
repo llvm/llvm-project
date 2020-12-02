@@ -262,7 +262,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
   MemoryBufferRef mbref = *buffer;
   InputFile *newFile = nullptr;
 
-  switch (identify_magic(mbref.getBuffer())) {
+  auto magic = identify_magic(mbref.getBuffer());
+  switch (magic) {
   case file_magic::archive: {
     std::unique_ptr<object::Archive> file = CHECK(
         object::Archive::create(mbref), path + ": failed to parse archive");
@@ -275,8 +276,9 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           inputFiles.push_back(
               make<ObjFile>(member.mbref, member.modTime, path));
-          printWhyLoad((forceLoadArchive ? "-force_load" : "-all_load"),
-                       inputFiles.back());
+          printArchiveMemberLoad(
+              (forceLoadArchive ? "-force_load" : "-all_load"),
+              inputFiles.back());
         }
       }
     } else if (config->forceLoadObjC) {
@@ -293,7 +295,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
           if (hasObjCSection(member.mbref)) {
             inputFiles.push_back(
                 make<ObjFile>(member.mbref, member.modTime, path));
-            printWhyLoad("-ObjC", inputFiles.back());
+            printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
         }
       }
@@ -320,8 +322,13 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
   default:
     error(path + ": unhandled file type");
   }
-  if (newFile)
+  if (newFile) {
+    // printArchiveMemberLoad() prints both .a and .o names, so no need to
+    // print the .a name here.
+    if (config->printEachFile && magic != file_magic::archive)
+      lld::outs() << toString(newFile) << '\n';
     inputFiles.push_back(newFile);
+  }
   return newFile;
 }
 
@@ -640,6 +647,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
+  config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
