@@ -1681,14 +1681,13 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
   }
 
   case APValue::Union:
-    Out << '2';
+    Out << '7';
     mangleType(T, SourceRange(), QMM_Escape);
-    // FIXME: MSVC doesn't mangle the active member, only the type, leading to
-    // collisions if more than one member has the same type.
-    // FIXME: MSVC doesn't yet support unions with no active member, but
-    // there's an obvious mangling for that, so we use it.
-    if (const FieldDecl *FD = V.getUnionField())
-      mangleTemplateArgValue(FD->getType(), V.getUnionValue());
+    if (const FieldDecl *FD = V.getUnionField()) {
+      mangleUnqualifiedName(FD);
+      mangleTemplateArgValue(FD->getType(), V.getUnionValue(),
+                             /*WithType*/false);
+    }
     Out << '@';
     return;
 
