@@ -8398,8 +8398,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // Handle Special Cases - all undef or undef/zero.
   if (UndefMask.countPopulation() == NumElems)
     return DAG.getUNDEF(VT);
-
-  // FIXME: Should we return this as a BUILD_VECTOR instead?
   if ((ZeroMask.countPopulation() + UndefMask.countPopulation()) == NumElems)
     return VT.isInteger() ? DAG.getConstant(0, DL, VT)
                           : DAG.getConstantFP(0.0, DL, VT);
