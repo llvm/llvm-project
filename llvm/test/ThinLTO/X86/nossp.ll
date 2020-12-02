@@ -1,17 +1,17 @@
 ; RUN: split-file %s %t
-; RUN: opt -module-summary %t/a.ll -o %a.bc
-; RUN: opt -module-summary %t/b.ll -o %b.bc
-; RUN: llvm-lto2 run %a.bc %b.bc -o %c.bc -save-temps \
-; RUN:   -r=%a.bc,nossp_caller,px \
-; RUN:   -r=%a.bc,ssp_caller,px \
-; RUN:   -r=%a.bc,nossp_caller2,px \
-; RUN:   -r=%a.bc,ssp_caller2,px \
-; RUN:   -r=%a.bc,nossp_callee,x \
-; RUN:   -r=%a.bc,ssp_callee,x \
-; RUN:   -r=%b.bc,nossp_callee,px \
-; RUN:   -r=%b.bc,ssp_callee,px \
-; RUN:   -r=%b.bc,foo
-; RUN: llvm-dis %c.bc.1.4.opt.bc -o - | FileCheck %s
+; RUN: opt -module-summary %t/a.ll -o %ta.bc
+; RUN: opt -module-summary %t/b.ll -o %tb.bc
+; RUN: llvm-lto2 run %ta.bc %tb.bc -o %tc.bc -save-temps \
+; RUN:   -r=%ta.bc,nossp_caller,px \
+; RUN:   -r=%ta.bc,ssp_caller,px \
+; RUN:   -r=%ta.bc,nossp_caller2,px \
+; RUN:   -r=%ta.bc,ssp_caller2,px \
+; RUN:   -r=%ta.bc,nossp_callee,x \
+; RUN:   -r=%ta.bc,ssp_callee,x \
+; RUN:   -r=%tb.bc,nossp_callee,px \
+; RUN:   -r=%tb.bc,ssp_callee,px \
+; RUN:   -r=%tb.bc,foo
+; RUN: llvm-dis %tc.bc.1.4.opt.bc -o - | FileCheck %s
 
 ;--- a.ll
 
