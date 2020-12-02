@@ -1,10 +1,10 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments \
+; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --no-lto-new-pass-manager \
 ; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-LPM %s
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments \
+; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --no-lto-new-pass-manager \
 ; RUN:   -disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-LPM %s
-; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments \
+; RUN: ld.lld %t.o -o %t2 -mllvm -debug-pass=Arguments --no-lto-new-pass-manager \
 ; RUN:   --plugin-opt=disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-LPM %s
 ; RUN: ld.lld %t.o -o %t2 --lto-new-pass-manager --lto-debug-pass-manager \
 ; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-NPM %s
