@@ -99,13 +99,13 @@ private:
 } // end namespace toolchains
 namespace tools {
 namespace dpu {
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
   Linker(const ToolChain &TC, const char *Script, const char *RtLibDir,
          const char *RtLibName, const char *PathToRtLibLTO,
          const char *PathToRtLibLTOThin, const char *PathToBootstrap,
          const char *McountLibName)
-      : GnuTool("dpu::Linker", "ld.lld", TC) {
+      : Tool("dpu::Linker", "ld.lld", TC) {
     LinkScript = Script;
     RtLibraryPath = RtLibDir;
     RtLibraryName = RtLibName;

@@ -235,7 +235,7 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   TCArgs.AddAllArgs(CmdArgs, options::OPT_L);
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this, TCArgs.MakeArgString(Linker), CmdArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), TCArgs.MakeArgString(Linker), CmdArgs, Inputs));
 }
 } // namespace dpu
 } // namespace tools
