@@ -90,7 +90,7 @@ ProgramHeaders:
 # RUN: llvm-readelf %t2.so --dyn-symbols 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
 
-# NOPHDRS-LLVM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-LLVM: warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-LLVM:      DynamicSymbols [
 # NOPHDRS-LLVM-NEXT:   Symbol {
 # NOPHDRS-LLVM-NEXT:     Name:  (0)
@@ -112,7 +112,7 @@ ProgramHeaders:
 # NOPHDRS-LLVM-NEXT:   }
 # NOPHDRS-LLVM-NEXT: ]
 
-# NOPHDRS-GNU:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-GNU:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-NAMEWARN: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # NOPHDRS-GNU:      Symbol table '[[NAME]]' contains 2 entries:
 # NOPHDRS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
@@ -153,7 +153,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefixes=NOSHT-DYNSYM,NOSHT-DYNSYM-LLVM
 # RUN: llvm-readelf %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefix=NOSHT-DYNSYM
 
-# NOSHT-DYNSYM:           warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
+# NOSHT-DYNSYM:           warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
 # NOSHT-DYNSYM-LLVM:      DynamicSymbols [
 # NOSHT-DYNSYM-LLVM-NEXT: ]
 
@@ -181,7 +181,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-LLVM
 # RUN: llvm-readelf %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-GNU
 
-# BROKEN-DTSYMTAB:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# BROKEN-DTSYMTAB:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # BROKEN-DTSYMTAB-LLVM: Name: foo
 # BROKEN-DTSYMTAB-GNU:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
 

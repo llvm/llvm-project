@@ -437,7 +437,7 @@ DynamicSymbols:
 # RUN: yaml2obj %s --docnum=20 -o %t20
 # RUN: llvm-readobj --dynamic-table %t20 2>&1 | FileCheck -DFILE=%t20 --check-prefix=INVALID-DTSTRTAB %s
 
-# INVALID-DTSTRTAB: warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0xffff0000
+# INVALID-DTSTRTAB: warning: '[[FILE]]': unable to parse DT_STRTAB: virtual address is not in any segment: 0xffff0000
 
 --- !ELF
 FileHeader:
