@@ -343,7 +343,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 unsigned __bit_log2(_Tp __t) _NOEXCEPT
 {
     static_assert(__bitop_unsigned_integer<_Tp>::value, "__bit_log2 requires unsigned");
-    return std::numeric_limits<_Tp>::digits - 1 - __countl_zero(__t);
+    return numeric_limits<_Tp>::digits - 1 - __countl_zero(__t);
 }
 
 template <class _Tp>
