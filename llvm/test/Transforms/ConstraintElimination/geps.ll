@@ -387,7 +387,7 @@ define void @test.ult.gep.shl(i32* readonly %src, i32* readnone %max, i32 %idx, 
 ; CHECK-NEXT:    [[IDX_SHL_1:%.*]] = shl nuw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ADD_PTR_SHL_1:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i32 [[IDX_SHL_1]]
 ; CHECK-NEXT:    [[C_MAX_0:%.*]] = icmp ult i32* [[ADD_PTR_SHL_1]], [[MAX]]
-; CHECK-NEXT:    call void @use(i1 [[C_MAX_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IDX_SHL_2:%.*]] = shl nuw i32 [[IDX]], 2
 ; CHECK-NEXT:    [[ADD_PTR_SHL_2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i32 [[IDX_SHL_2]]
 ; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult i32* [[ADD_PTR_SHL_2]], [[MAX]]
