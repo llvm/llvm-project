@@ -44,6 +44,7 @@
 #include "InputFiles.h"
 #include "Config.h"
 #include "Driver.h"
+#include "Dwarf.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "MachOStructs.h"
@@ -54,6 +55,7 @@
 #include "Symbols.h"
 #include "Target.h"
 
+#include "lld/Common/DWARF.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
@@ -387,6 +389,28 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
   // parsed all the symbols.
   for (size_t i = 0, n = subsections.size(); i < n; ++i)
     parseRelocations(sectionHeaders[i], subsections[i]);
+
+  parseDebugInfo();
+}
+
+void ObjFile::parseDebugInfo() {
+  std::unique_ptr<DwarfObject> dObj = DwarfObject::create(this);
+  if (!dObj)
+    return;
+
+  auto *ctx = make<DWARFContext>(
+      std::move(dObj), "",
+      [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
+      [&](Error warning) {
+        warn(getName() + ": " + toString(std::move(warning)));
+      });
+
+  // TODO: Since object files can contain a lot of DWARF info, we should verify
+  // that we are parsing just the info we need
+  const DWARFContext::compile_unit_range &units = ctx->compile_units();
+  auto it = units.begin();
+  compileUnit = it->get();
+  assert(std::next(it) == units.end());
 }
 
 // The path can point to either a dylib or a .tbd file.

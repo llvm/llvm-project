@@ -9,6 +9,7 @@ add_lld_library(lldMachO2
   UnwindInfoSection.cpp
   Driver.cpp
   DriverUtils.cpp
+  Dwarf.cpp
   ExportTrie.cpp
   InputFiles.cpp
   InputSection.cpp
