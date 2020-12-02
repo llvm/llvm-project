@@ -617,22 +617,71 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   stabs.emplace_back(std::move(stab));
 }
 
-void SymtabSection::emitFunStabs(Defined *defined) {
-  {
-    StabsEntry stab(MachO::N_FUN);
-    stab.sect = 1;
-    stab.strx = stringTableSection.addString(defined->getName());
-    stab.value = defined->getVA();
-    stabs.emplace_back(std::move(stab));
+void SymtabSection::emitEndFunStab(Defined *defined) {
+  StabsEntry stab(MachO::N_FUN);
+  // FIXME this should be the size of the symbol. Using the section size in
+  // lieu is only correct if .subsections_via_symbols is set.
+  stab.value = defined->isec->getSize();
+  stabs.emplace_back(std::move(stab));
+}
+
+void SymtabSection::emitStabs() {
+  std::vector<Defined *> symbolsNeedingStabs;
+  for (const SymtabEntry &entry :
+       concat<SymtabEntry>(localSymbols, externalSymbols)) {
+    Symbol *sym = entry.sym;
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->isAbsolute())
+        continue;
+      InputSection *isec = defined->isec;
+      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->file);
+      if (!file || !file->compileUnit)
+        continue;
+      symbolsNeedingStabs.push_back(defined);
+    }
   }
 
-  {
-    StabsEntry stab(MachO::N_FUN);
-    // FIXME this should be the size of the symbol. Using the section size in
-    // lieu is only correct if .subsections_via_symbols is set.
-    stab.value = defined->isec->getSize();
-    stabs.emplace_back(std::move(stab));
+  llvm::stable_sort(symbolsNeedingStabs, [&](Defined *a, Defined *b) {
+    return a->isec->file->id < b->isec->file->id;
+  });
+
+  // Emit STABS symbols so that dsymutil and/or the debugger can map address
+  // regions in the final binary to the source and object files from which they
+  // originated.
+  InputFile *lastFile = nullptr;
+  for (Defined *defined : symbolsNeedingStabs) {
+    InputSection *isec = defined->isec;
+    ObjFile *file = dyn_cast<ObjFile>(isec->file);
+    assert(file);
+
+    if (lastFile == nullptr || lastFile != file) {
+      if (lastFile != nullptr)
+        emitEndSourceStab();
+      lastFile = file;
+
+      emitBeginSourceStab(file->compileUnit);
+      emitObjectFileStab(file);
+    }
+
+    StabsEntry symStab;
+    symStab.sect = defined->isec->parent->index;
+    symStab.strx = stringTableSection.addString(defined->getName());
+    symStab.value = defined->getVA();
+
+    // XXX is it right to assume that all symbols in __text are function
+    // symbols?
+    if (isec->name == "__text") {
+      symStab.type = MachO::N_FUN;
+      stabs.emplace_back(std::move(symStab));
+      emitEndFunStab(defined);
+    } else {
+      symStab.type = defined->isExternal() ? MachO::N_GSYM : MachO::N_STSYM;
+      stabs.emplace_back(std::move(symStab));
+    }
   }
+
+  if (!stabs.empty())
+    emitEndSourceStab();
 }
 
 void SymtabSection::finalizeContents() {
@@ -663,41 +712,7 @@ void SymtabSection::finalizeContents() {
     }
   }
 
-  InputFile *lastFile = nullptr;
-  for (Symbol *sym : symtab->getSymbols()) {
-    // Emit STABS symbols so that dsymutil and/or the debugger can map address
-    // regions in the final binary to the source and object files from which
-    // they originated.
-    if (auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->isAbsolute())
-        continue;
-
-      InputSection *isec = defined->isec;
-      // XXX is it right to assume that all symbols in __text are function
-      // symbols?
-      if (isec->name == "__text") {
-        ObjFile *file = dyn_cast<ObjFile>(isec->file);
-        assert(file);
-        if (!file->compileUnit)
-          continue;
-
-        if (lastFile == nullptr || lastFile != file) {
-          if (lastFile != nullptr)
-            emitEndSourceStab();
-          lastFile = file;
-
-          emitBeginSourceStab(file->compileUnit);
-          emitObjectFileStab(file);
-        }
-        emitFunStabs(defined);
-      }
-      // TODO emit stabs for non-function symbols too
-    }
-  }
-
-  if (!stabs.empty())
-    emitEndSourceStab();
-
+  emitStabs();
   uint32_t symtabIndex = stabs.size();
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols, undefinedSymbols)) {

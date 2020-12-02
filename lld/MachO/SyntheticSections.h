@@ -410,12 +410,13 @@ struct SymtabEntry {
 };
 
 struct StabsEntry {
-  uint8_t type;
+  uint8_t type = 0;
   uint32_t strx = 0;
   uint8_t sect = 0;
   uint16_t desc = 0;
   uint64_t value = 0;
 
+  StabsEntry() = default;
   explicit StabsEntry(uint8_t type) : type(type) {}
 };
 
@@ -440,7 +441,8 @@ private:
   void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
   void emitEndSourceStab();
   void emitObjectFileStab(ObjFile *);
-  void emitFunStabs(Defined *);
+  void emitEndFunStab(Defined *);
+  void emitStabs();
 
   StringTableSection &stringTableSection;
   // STABS symbols are always local symbols, but we represent them with special
