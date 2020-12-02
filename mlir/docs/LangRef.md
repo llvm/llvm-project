@@ -1369,39 +1369,39 @@ Example:
 
 Similarly to operations, dialects may define custom attribute values. The
 syntactic structure of these values is identical to custom dialect type values,
-except that dialect attributes values are distinguished with a leading '#',
-while dialect types are distinguished with a leading '!'.
+except that dialect attribute values are distinguished with a leading '#', while
+dialect types are distinguished with a leading '!'.
 
 ```
-dialect-attribute ::= '#' opaque-dialect-item
-dialect-attribute ::= '#' pretty-dialect-item
+dialect-attribute-value ::= '#' opaque-dialect-item
+dialect-attribute-value ::= '#' pretty-dialect-item
 ```
 
-Dialect attributes can be specified in a verbose form, e.g. like this:
+Dialect attribute values can be specified in a verbose form, e.g. like this:
 
 ```mlir
-// Complex attribute
+// Complex attribute value.
 #foo<"something<abcd>">
 
-// Even more complex attribute
+// Even more complex attribute value.
 #foo<"something<a%%123^^^>>>">
 ```
 
-Dialect attributes that are simple enough can use the pretty format, which is a
-lighter weight syntax that is equivalent to the above forms:
+Dialect attribute values that are simple enough can use the pretty format, which
+is a lighter weight syntax that is equivalent to the above forms:
 
 ```mlir
 // Complex attribute
 #foo.something<abcd>
 ```
 
-Sufficiently complex dialect attributes are required to use the verbose form for
-generality. For example, the more complex type shown above wouldn't be valid in
-the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
-that are not allowed in the lighter syntax, as well as unbalanced `<>`
-characters.
+Sufficiently complex dialect attribute values are required to use the verbose
+form for generality. For example, the more complex type shown above would not be
+valid in the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains
+characters that are not allowed in the lighter syntax, as well as unbalanced
+`<>` characters.
 
-See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) on how to define dialect
 attribute values.
 
 ### Standard Attribute Values
