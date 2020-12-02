@@ -3,8 +3,17 @@
 # RUN: %lld -o %t %t.o
 # RUN: llvm-objdump --macho --rebase --full-contents %t | FileCheck %s
 
-# RUN: %lld -pie -o %t-pie %t.o
+# RUN: %lld -fatal_warnings -pie -o %t-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
+# RUN: %lld -fatal_warnings -pie -no_pie -o %t-no-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
+# RUN: %lld -fatal_warnings -no_pie -pie -o %t-no-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
+
+# RUN: %lld -platform_version macos 10.6.0 11.0 -o %t-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
+# RUN: %lld -platform_version macos 10.5.0 11.0 -o %t-no-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
 
 # CHECK:       Contents of section __DATA,foo:
 # CHECK-NEXT:  100001000 08100000 01000000
@@ -20,6 +29,10 @@
 # PIE-DAG:  __DATA   bar                0x[[#ADDR + 8]]   pointer
 # PIE-DAG:  __DATA   bar                0x[[#ADDR + 12]]  pointer
 # PIE-DAG:  __DATA   baz                0x[[#ADDR + 20]]  pointer
+
+# NO-PIE:      Rebase table:
+# NO-PIE-NEXT: segment  section            address           type
+# NO-PIE-EMPTY:
 
 .globl _main, _foo, _bar
 
