@@ -138,6 +138,8 @@ enum class BlockType : unsigned {
   F32 = unsigned(wasm::ValType::F32),
   F64 = unsigned(wasm::ValType::F64),
   V128 = unsigned(wasm::ValType::V128),
+  Externref = unsigned(wasm::ValType::EXTERNREF),
+  Funcref = unsigned(wasm::ValType::FUNCREF),
   Exnref = unsigned(wasm::ValType::EXNREF),
   // Multivalue blocks (and other non-void blocks) are only emitted when the
   // blocks will never be exited and are at the ends of functions (see
@@ -320,6 +322,10 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:
   case WebAssembly::ARGUMENT_v2f64_S:
+  case WebAssembly::ARGUMENT_funcref:
+  case WebAssembly::ARGUMENT_funcref_S:
+  case WebAssembly::ARGUMENT_externref:
+  case WebAssembly::ARGUMENT_externref_S:
   case WebAssembly::ARGUMENT_exnref:
   case WebAssembly::ARGUMENT_exnref_S:
     return true;
@@ -340,6 +346,10 @@ inline bool isCopy(unsigned Opc) {
   case WebAssembly::COPY_F64_S:
   case WebAssembly::COPY_V128:
   case WebAssembly::COPY_V128_S:
+  case WebAssembly::COPY_FUNCREF:
+  case WebAssembly::COPY_FUNCREF_S:
+  case WebAssembly::COPY_EXTERNREF:
+  case WebAssembly::COPY_EXTERNREF_S:
   case WebAssembly::COPY_EXNREF:
   case WebAssembly::COPY_EXNREF_S:
     return true;
@@ -360,6 +370,10 @@ inline bool isTee(unsigned Opc) {
   case WebAssembly::TEE_F64_S:
   case WebAssembly::TEE_V128:
   case WebAssembly::TEE_V128_S:
+  case WebAssembly::TEE_FUNCREF:
+  case WebAssembly::TEE_FUNCREF_S:
+  case WebAssembly::TEE_EXTERNREF:
+  case WebAssembly::TEE_EXTERNREF_S:
   case WebAssembly::TEE_EXNREF:
   case WebAssembly::TEE_EXNREF_S:
     return true;
