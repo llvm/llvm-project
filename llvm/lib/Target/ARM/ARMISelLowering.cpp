@@ -289,6 +289,8 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::UDIVREM, VT, Expand);
     setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
+    setOperationAction(ISD::SELECT, VT, Expand);
+    setOperationAction(ISD::SELECT_CC, VT, Expand);
 
     // Vector reductions
     setOperationAction(ISD::VECREDUCE_ADD, VT, Legal);
@@ -335,6 +337,8 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::MLOAD, VT, Custom);
     setOperationAction(ISD::MSTORE, VT, Legal);
+    setOperationAction(ISD::SELECT, VT, Expand);
+    setOperationAction(ISD::SELECT_CC, VT, Expand);
 
     // Pre and Post inc are supported on loads and stores
     for (unsigned im = (unsigned)ISD::PRE_INC;
