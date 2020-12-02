@@ -107,11 +107,10 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:  	.byte	255                             # @LPStart Encoding = omit
 ; ASM32:	.byte	187                             # @TType Encoding = indirect datarel sdata4
 ; ASM64:  .byte	188                             # @TType Encoding = indirect datarel sdata8
-; ASM:  	.uleb128 L..ttbase0-L..ttbaseref0
-; ASM:  L..ttbaseref0:
+; ASM32: 	.byte 37
+; ASM64:  .byte	41
 ; ASM:  	.byte	3                               # Call site Encoding = udata4
-; ASM:  	.uleb128 L..cst_end0-L..cst_begin0
-; ASM:  L..cst_begin0:
+; ASM:  	.byte 26
 ; ASM:  	.vbyte	4, L..tmp0-L..func_begin0       # >> Call Site 1 <<
 ; ASM:  	.vbyte	4, L..tmp1-L..tmp0              #   Call between L..tmp0 and L..tmp1
 ; ASM:  	.vbyte	4, L..tmp2-L..func_begin0       #     jumps to L..tmp2
@@ -140,9 +139,9 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM64:  .vbyte	8, GCC_except_table1
 ; ASM64:  .vbyte	8, __xlcxx_personality_v1[DS]
 
-; ASM:  	.toc
+; ASM:    .toc
 ; ASM:  L..C0:
-; ASM:  	.tc _ZTIi[TC],_ZTIi[UA]
+; ASM:    .tc _ZTIi[TC],_ZTIi[UA]
 
 declare i8* @__cxa_allocate_exception(i32)
 declare void @__cxa_throw(i8*, i8*, i8*)

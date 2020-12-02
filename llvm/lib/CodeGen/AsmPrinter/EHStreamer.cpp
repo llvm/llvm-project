@@ -413,6 +413,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
 
   bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
   bool IsWasm = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::Wasm;
+  bool HasLEB128Directives = Asm->MAI->hasLEB128Directives();
   unsigned CallSiteEncoding =
       IsSJLJ ? static_cast<unsigned>(dwarf::DW_EH_PE_udata4) :
                Asm->getObjFileLowering().getCallSiteEncoding();
@@ -503,6 +504,79 @@ MCSymbol *EHStreamer::emitExceptionTable() {
     Asm->emitEncodingByte(CallSiteEncoding, "Call site");
     Asm->emitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
     Asm->OutStreamer->emitLabel(CstBeginLabel);
+  };
+
+  // An alternative path to EmitTypeTableRefAndCallSiteTableEndRef.
+  // For some platforms, the system assembler does not accept the form of
+  // `.uleb128 label2 - label1`. In those situations, we would need to calculate
+  // the size between label1 and label2 manually.
+  // In this case, we would need to calculate the LSDA size and the call
+  // site table size.
+  auto EmitTypeTableOffsetAndCallSiteTableOffset = [&]() {
+    assert(CallSiteEncoding == dwarf::DW_EH_PE_udata4 && !HasLEB128Directives &&
+           "Targets supporting .uleb128 do not need to take this path.");
+    if (CallSiteRanges.size() > 1)
+      report_fatal_error(
+          "-fbasic-block-sections is not yet supported on "
+          "platforms that do not have general LEB128 directive support.");
+
+    uint64_t CallSiteTableSize = 0;
+    const CallSiteRange &CSRange = CallSiteRanges.back();
+    for (size_t CallSiteIdx = CSRange.CallSiteBeginIdx;
+         CallSiteIdx < CSRange.CallSiteEndIdx; ++CallSiteIdx) {
+      const CallSiteEntry &S = CallSites[CallSiteIdx];
+      // Each call site entry consists of 3 udata4 fields (12 bytes) and
+      // 1 ULEB128 field.
+      CallSiteTableSize += 12 + getULEB128Size(S.Action);
+      assert(isUInt<32>(CallSiteTableSize) && "CallSiteTableSize overflows.");
+    }
+
+    Asm->emitEncodingByte(TTypeEncoding, "@TType");
+    if (HaveTTData) {
+      const unsigned ByteSizeOfCallSiteOffset =
+          getULEB128Size(CallSiteTableSize);
+      uint64_t ActionTableSize = 0;
+      for (const ActionEntry &Action : Actions) {
+        // Each action entry consists of two SLEB128 fields.
+        ActionTableSize += getSLEB128Size(Action.ValueForTypeID) +
+                           getSLEB128Size(Action.NextAction);
+        assert(isUInt<32>(ActionTableSize) && "ActionTableSize overflows.");
+      }
+
+      const unsigned TypeInfoSize =
+          Asm->GetSizeOfEncodedValue(TTypeEncoding) * MF->getTypeInfos().size();
+
+      const uint64_t LSDASizeBeforeAlign =
+          1                          // Call site encoding byte.
+          + ByteSizeOfCallSiteOffset // ULEB128 encoding of CallSiteTableSize.
+          + CallSiteTableSize        // Call site table content.
+          + ActionTableSize;         // Action table content.
+
+      const uint64_t LSDASizeWithoutAlign = LSDASizeBeforeAlign + TypeInfoSize;
+      const unsigned ByteSizeOfLSDAWithoutAlign =
+          getULEB128Size(LSDASizeWithoutAlign);
+      const uint64_t DisplacementBeforeAlign =
+          2 // LPStartEncoding and TypeTableEncoding.
+          + ByteSizeOfLSDAWithoutAlign + LSDASizeBeforeAlign;
+
+      // The type info area starts with 4 byte alignment.
+      const unsigned NeedAlignVal = (4 - DisplacementBeforeAlign % 4) % 4;
+      uint64_t LSDASizeWithAlign = LSDASizeWithoutAlign + NeedAlignVal;
+      const unsigned ByteSizeOfLSDAWithAlign =
+          getULEB128Size(LSDASizeWithAlign);
+
+      // The LSDASizeWithAlign could use 1 byte less padding for alignment
+      // when the data we use to represent the LSDA Size "needs" to be 1 byte
+      // larger than the one previously calculated without alignment.
+      if (ByteSizeOfLSDAWithAlign > ByteSizeOfLSDAWithoutAlign)
+        LSDASizeWithAlign -= 1;
+
+      Asm->OutStreamer->emitULEB128IntValue(LSDASizeWithAlign,
+                                            ByteSizeOfLSDAWithAlign);
+    }
+
+    Asm->emitEncodingByte(CallSiteEncoding, "Call site");
+    Asm->OutStreamer->emitULEB128IntValue(CallSiteTableSize);
   };
 
   // SjLj / Wasm Exception handling
@@ -620,7 +694,10 @@ MCSymbol *EHStreamer::emitExceptionTable() {
             Asm->MAI->getCodePointerSize());
       }
 
-      EmitTypeTableRefAndCallSiteTableEndRef();
+      if (HasLEB128Directives)
+        EmitTypeTableRefAndCallSiteTableEndRef();
+      else
+        EmitTypeTableOffsetAndCallSiteTableOffset();
 
       for (size_t CallSiteIdx = CSRange.CallSiteBeginIdx;
            CallSiteIdx != CSRange.CallSiteEndIdx; ++CallSiteIdx) {
