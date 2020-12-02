@@ -17,6 +17,7 @@
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/TypeFinder.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <utility>
@@ -1438,12 +1439,6 @@ Error IRLinker::run() {
 
   DstM.setTargetTriple(SrcTriple.merge(DstTriple));
 
-  // Append the module inline asm string.
-  if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
-    DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
-                                               SrcTriple));
-  }
-
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
@@ -1473,6 +1468,24 @@ Error IRLinker::run() {
   // after linking GlobalValues so that MDNodes that reference GlobalValues
   // are properly remapped.
   linkNamedMDNodes();
+
+  if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
+    // Append the module inline asm string.
+    DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
+                                               SrcTriple));
+  } else if (IsPerformingImport) {
+    // Import any symver directives for symbols in DstM.
+    ModuleSymbolTable::CollectAsmSymvers(*SrcM,
+                                         [&](StringRef Name, StringRef Alias) {
+      if (DstM.getNamedValue(Name)) {
+        SmallString<256> S(".symver ");
+        S += Name;
+        S += ", ";
+        S += Alias;
+        DstM.appendModuleInlineAsm(S);
+      }
+    });
+  }
 
   // Merge the module flags into the DstM module.
   return linkModuleFlagsMetadata();
