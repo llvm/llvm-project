@@ -1203,3 +1203,48 @@ failure:
 side_exit:
   ret i32 0
 }
+
+define i32 @test17(i32* %p, i32 %len) {
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LEN:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
+; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[ADDR]] unordered, align 4
+; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK:       failure:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %backedge ], [ %len, %entry ]
+  %iv.next = add i32 %iv, -1
+  %cond_1 = icmp eq i32 %iv, 0
+  br i1 %cond_1, label %exit, label %backedge
+
+backedge:
+  %iv.next.wide = zext i32 %iv.next to i64
+  %addr = getelementptr inbounds i32, i32* %p, i64 %iv.next.wide
+  %loaded = load atomic i32, i32* %addr unordered, align 4
+  %cond_2 = icmp eq i32 %loaded, 0
+  br i1 %cond_2, label %failure, label %loop
+
+exit:
+  ret i32 %iv.next
+
+failure:
+  unreachable
+}
