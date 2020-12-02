@@ -122,6 +122,7 @@ add_llvm_component_library(LLVMCodeGen
   PreISelIntrinsicLowering.cpp
   ProcessImplicitDefs.cpp
   PrologEpilogInserter.cpp
+  PseudoProbeInserter.cpp
   PseudoSourceValue.cpp
   RDFGraph.cpp
   RDFLiveness.cpp

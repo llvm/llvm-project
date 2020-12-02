@@ -475,6 +475,9 @@ namespace llvm {
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsPass();
 
+  /// This pass inserts pseudo probe annotation for callsite profiling.
+  FunctionPass *createPseudoProbeInserter();
+
   /// Create IR Type Promotion pass. \see TypePromotion.cpp
   FunctionPass *createTypePromotionPass();
 
