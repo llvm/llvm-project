@@ -22,4 +22,4 @@ jobs:
         env:
           LLVMBOT_TOKEN: ${{ secrets.LLVMBOT_MAIN_SYNC }}
         run: |
-          git push https://$LLVMBOT_TOKEN@github.com/${{ github.repository }} HEAD:temp-test-main
+          git push https://$LLVMBOT_TOKEN@github.com/${{ github.repository }} HEAD:main
