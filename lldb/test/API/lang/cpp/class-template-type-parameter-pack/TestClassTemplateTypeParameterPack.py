@@ -7,6 +7,7 @@ class TestCaseClassTemplateTypeParameterPack(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(oslist=["windows"]) # Fails to read memory from target.
     @no_debug_info_test
     def test(self):
         self.build()
