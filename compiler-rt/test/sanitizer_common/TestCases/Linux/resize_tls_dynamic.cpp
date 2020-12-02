@@ -53,6 +53,5 @@ extern "C" void StoreToTLS(char c) {
 
 // CHECK:      DTLS_Find [[DTLS:0x[a-f0-9]+]] {{[0-9]+}}
 // CHECK-NEXT: DTLS_NextBlock [[DTLS]] 0
-// CHECK:      DTLS_Find [[DTLS:0x[a-f0-9]+]] 255
+// CHECK:      DTLS_Find [[DTLS:0x[a-f0-9]+]] {{255|511}}
 // CHECK-NEXT: DTLS_NextBlock [[DTLS]] 1
-// CHECK-NOT:  DTLS_NextBlock
