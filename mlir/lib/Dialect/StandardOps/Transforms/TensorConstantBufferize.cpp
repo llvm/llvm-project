@@ -67,7 +67,7 @@ GlobalCreator::GlobalCreator(ModuleOp module) {
     symbolTable.insert(global);
     // The symbol table inserts at the end of the module, but globals are a bit
     // nicer if they are at the beginning.
-    global.getOperation()->moveBefore(&module.front());
+    global->moveBefore(&module.front());
     globals[op.getValue()] = global;
   });
 }

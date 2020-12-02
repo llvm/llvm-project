@@ -2776,7 +2776,7 @@ static void print(OpAsmPrinter &p, TupleOp op) {
   p.printOperands(op.getOperands());
   p.printOptionalAttrDict(op.getAttrs());
   p << " : ";
-  llvm::interleaveComma(op.getOperation()->getOperandTypes(), p);
+  llvm::interleaveComma(op->getOperandTypes(), p);
 }
 
 static LogicalResult verify(TupleOp op) { return success(); }

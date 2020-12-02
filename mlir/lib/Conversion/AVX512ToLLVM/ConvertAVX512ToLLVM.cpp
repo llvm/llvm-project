@@ -58,8 +58,7 @@ matchAndRewriteOneToOne(const ConvertToLLVMPattern &lowering,
   if (numResults == 0)
     return rewriter.eraseOp(op), success();
   if (numResults == 1)
-    return rewriter.replaceOp(op, newOp.getOperation()->getResult(0)),
-           success();
+    return rewriter.replaceOp(op, newOp->getResult(0)), success();
 
   // Otherwise, it had been converted to an operation producing a structure.
   // Extract individual results from the structure and return them as list.
@@ -68,8 +67,7 @@ matchAndRewriteOneToOne(const ConvertToLLVMPattern &lowering,
   for (unsigned i = 0; i < numResults; ++i) {
     auto type = typeConverter.convertType(op->getResult(i).getType());
     results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-        op->getLoc(), type, newOp.getOperation()->getResult(0),
-        rewriter.getI64ArrayAttr(i)));
+        op->getLoc(), type, newOp->getResult(0), rewriter.getI64ArrayAttr(i)));
   }
   rewriter.replaceOp(op, results);
   return success();

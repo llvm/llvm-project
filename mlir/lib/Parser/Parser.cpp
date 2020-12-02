@@ -386,7 +386,7 @@ ParseResult OperationParser::popSSANameScope() {
     for (auto entry : forwardRefInCurrentScope) {
       errors.push_back({entry.second.getPointer(), entry.first});
       // Add this block to the top-level region to allow for automatic cleanup.
-      moduleOp.getOperation()->getRegion(0).push_back(entry.first);
+      moduleOp->getRegion(0).push_back(entry.first);
     }
     llvm::array_pod_sort(errors.begin(), errors.end());
 
@@ -2032,7 +2032,7 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
       if (nested && std::next(operations.begin(), 2) == operations.end()) {
         // Merge the data of the nested module operation into 'module'.
         module.setLoc(nested.getLoc());
-        module.setAttrs(nested.getOperation()->getMutableAttrDict());
+        module.setAttrs(nested->getMutableAttrDict());
         bodyBlocks.splice(bodyBlocks.end(), nested.getBodyRegion().getBlocks());
 
         // Erase the original module body.
