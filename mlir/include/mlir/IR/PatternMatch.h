@@ -355,12 +355,14 @@ public:
   std::enable_if_t<!llvm::is_invocable<SingleEntityFn, ArrayRef<PDLValue>,
                                        ArrayAttr, PatternRewriter &>::value>
   registerConstraintFunction(StringRef name, SingleEntityFn &&constraintFn) {
-    registerConstraintFunction(name, [=](ArrayRef<PDLValue> values,
-                                         ArrayAttr constantParams,
-                                         PatternRewriter &rewriter) {
-      assert(values.size() == 1 && "expected values to have a single entity");
-      return constraintFn(values[0], constantParams, rewriter);
-    });
+    registerConstraintFunction(
+        name, [constraintFn = std::forward<SingleEntityFn>(constraintFn)](
+                  ArrayRef<PDLValue> values, ArrayAttr constantParams,
+                  PatternRewriter &rewriter) {
+          assert(values.size() == 1 &&
+                 "expected values to have a single entity");
+          return constraintFn(values[0], constantParams, rewriter);
+        });
   }
 
   /// Register a creation function.
