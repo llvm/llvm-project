@@ -1915,11 +1915,20 @@ Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::x86_sse3_addsub_pd:
   case Intrinsic::x86_sse3_addsub_ps:
   case Intrinsic::x86_avx_addsub_pd_256:
-  case Intrinsic::x86_avx_addsub_ps_256:
+  case Intrinsic::x86_avx_addsub_ps_256: {
+    APInt SubMask = APInt::getSplat(VWidth, APInt(2, 0x1));
+    if (DemandedElts.isSubsetOf(SubMask))
+      return IC.Builder.CreateFSub(II.getArgOperand(0), II.getArgOperand(1));
+
+    APInt AddMask = APInt::getSplat(VWidth, APInt(2, 0x2));
+    if (DemandedElts.isSubsetOf(AddMask))
+      return IC.Builder.CreateFAdd(II.getArgOperand(0), II.getArgOperand(1));
+
     simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
     simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
     UndefElts &= UndefElts2;
     break;
+  }
 
   case Intrinsic::x86_sse2_packssdw_128:
   case Intrinsic::x86_sse2_packsswb_128:
