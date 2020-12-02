@@ -39,7 +39,6 @@ body:             |
     ; GFX9: $vgpr0 = COPY [[GLOBAL_ATOMIC_ADD_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
@@ -82,7 +81,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
@@ -136,7 +134,6 @@ body:             |
     ; GFX9: $vgpr0 = COPY [[GLOBAL_ATOMIC_ADD_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset2047
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2047, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
@@ -191,7 +188,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2047, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset2047_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2047, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
@@ -247,7 +243,6 @@ body:             |
     ; GFX9: $vgpr0 = COPY [[GLOBAL_ATOMIC_ADD_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset2048
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2048, implicit $exec
@@ -312,7 +307,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2048, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset2048_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2048, implicit $exec
@@ -378,7 +372,6 @@ body:             |
     ; GFX9: $vgpr0 = COPY [[GLOBAL_ATOMIC_ADD_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset4095
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
@@ -443,7 +436,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 4095, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset4095_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
@@ -520,7 +512,6 @@ body:             |
     ; GFX9: $vgpr0 = COPY [[GLOBAL_ATOMIC_ADD_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset4097
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4097, implicit $exec
@@ -596,7 +587,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[REG_SEQUENCE1]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 4, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s32_offset4097_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4097, implicit $exec
@@ -652,7 +642,6 @@ body:             |
     ; GFX9: $vgpr0_vgpr1 = COPY [[GLOBAL_ATOMIC_ADD_X2_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s64
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: [[GLOBAL_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = GLOBAL_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 8, addrspace 1)
@@ -695,7 +684,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = GLOBAL_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 8, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s64_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: [[GLOBAL_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = GLOBAL_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 0, 1, 0, implicit $exec :: (load store seq_cst 8, addrspace 1)
@@ -749,7 +737,6 @@ body:             |
     ; GFX9: $vgpr0_vgpr1 = COPY [[GLOBAL_ATOMIC_ADD_X2_RTN]]
     ; GFX10-LABEL: name: global_atomicrmw_add_s64_offset4095
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
@@ -814,7 +801,6 @@ body:             |
     ; GFX9: [[GLOBAL_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = GLOBAL_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 4095, 1, 0, implicit $exec :: (load store seq_cst 8, addrspace 1)
     ; GFX10-LABEL: name: global_atomicrmw_add_s64_offset4095_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec

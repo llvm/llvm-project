@@ -16,7 +16,6 @@ define amdgpu_ps float @xor3(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: xor3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %a, %b
   %result = xor i32 %x, %c
@@ -34,7 +33,6 @@ define amdgpu_ps float @xor3_vgpr_b(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX10-LABEL: xor3_vgpr_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, s2, v0, s3
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %a, %b
   %result = xor i32 %x, %c
@@ -52,7 +50,6 @@ define amdgpu_ps float @xor3_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: xor3_vgpr_all2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, v1, v2, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %b, %c
   %result = xor i32 %a, %x
@@ -70,7 +67,6 @@ define amdgpu_ps float @xor3_vgpr_bc(i32 inreg %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: xor3_vgpr_bc:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, s2, v0, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %a, %b
   %result = xor i32 %x, %c
@@ -88,7 +84,6 @@ define amdgpu_ps float @xor3_vgpr_const(i32 %a, i32 %b) {
 ; GFX10-LABEL: xor3_vgpr_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, v0, v1, 16
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %a, %b
   %result = xor i32 %x, 16
@@ -107,7 +102,6 @@ define amdgpu_ps <2 x float> @xor3_multiuse_outer(i32 %a, i32 %b, i32 %c, i32 %x
 ; GFX10-LABEL: xor3_multiuse_outer:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor3_b32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v0, v3
 ; GFX10-NEXT:    ; return to shader part epilog
   %inner = xor i32 %a, %b
@@ -129,7 +123,6 @@ define amdgpu_ps <2 x float> @xor3_multiuse_inner(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: xor3_multiuse_inner:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_xor_b32_e32 v1, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog
   %inner = xor i32 %a, %b
@@ -158,7 +151,6 @@ define amdgpu_ps float @xor3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ; GFX10-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; GFX10-NEXT:    v_add_f32_e64 v1, s3, 2.0
 ; GFX10-NEXT:    v_add_f32_e64 v2, 0x40400000, s4
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog

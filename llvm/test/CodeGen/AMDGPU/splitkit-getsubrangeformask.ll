@@ -355,7 +355,6 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK:   [[V_OR_B32_e32_67:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[S_ADD_I32_24]], [[V_OR_B32_e32_66]], implicit $exec
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 0, [[V_OR_B32_e32_67]], implicit $exec
   ; CHECK:   undef %691.sub3:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_EQ_U32_e64_]], implicit $exec
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   IMAGE_STORE_V4_V2_gfx10 %691, undef %578:vreg_64, [[S_LOAD_DWORDX8_IMM]], 15, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom "TargetCustom8")
   ; CHECK:   S_ENDPGM 0
 .expVert:

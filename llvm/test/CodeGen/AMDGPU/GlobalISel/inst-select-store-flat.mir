@@ -32,7 +32,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     ; GFX10-LABEL: name: store_flat_s32_to_4
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
@@ -69,7 +68,6 @@ body: |
     ; GFX9: FLAT_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 2)
     ; GFX10-LABEL: name: store_flat_s32_to_2
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 2)
@@ -106,7 +104,6 @@ body: |
     ; GFX9: FLAT_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 1)
     ; GFX10-LABEL: name: store_flat_s32_to_1
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 1)
@@ -144,7 +141,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
     ; GFX10-LABEL: name: store_flat_s64
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
@@ -217,7 +213,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
     ; GFX10-LABEL: name: store_flat_s128
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
@@ -255,7 +250,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
     ; GFX10-LABEL: name: store_flat_v2s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
@@ -292,7 +286,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 12, align 16)
     ; GFX10-LABEL: name: store_flat_v3s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_96 = COPY $vgpr2_vgpr3_vgpr4
     ; GFX10: FLAT_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 12, align 16)
@@ -329,7 +322,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
     ; GFX10-LABEL: name: store_flat_v4s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
@@ -367,7 +359,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     ; GFX10-LABEL: name: store_flat_v2s16
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
@@ -405,7 +396,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
     ; GFX10-LABEL: name: store_flat_v4s16
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
@@ -516,7 +506,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
     ; GFX10-LABEL: name: store_flat_v2s64
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 16)
@@ -554,7 +543,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
     ; GFX10-LABEL: name: store_flat_p1
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 8)
@@ -629,7 +617,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     ; GFX10-LABEL: name: store_flat_p3
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
@@ -703,7 +690,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic 4)
     ; GFX10-LABEL: name: store_atomic_flat_s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic 4)
@@ -741,7 +727,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic 8)
     ; GFX10-LABEL: name: store_atomic_flat_s64
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GFX10: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic 8)
@@ -799,7 +784,6 @@ body: |
     ; GFX9: FLAT_STORE_DWORD [[COPY]], [[COPY1]], 2047, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     ; GFX10-LABEL: name: store_flat_s32_gep_2047
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2047, implicit $exec
