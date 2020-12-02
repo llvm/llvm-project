@@ -664,7 +664,10 @@ class GdbRemoteTestCaseBase(TestBase):
         # Check the bare-minimum expected set of register info keys.
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
-        self.assertTrue("offset" in reg_info)
+
+        if not self.getArchitecture() == 'aarch64':
+            self.assertTrue("offset" in reg_info)
+
         self.assertTrue("encoding" in reg_info)
         self.assertTrue("format" in reg_info)
 
