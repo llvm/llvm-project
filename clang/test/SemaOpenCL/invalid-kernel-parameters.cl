@@ -5,8 +5,14 @@ kernel void half_arg(half x) { } // expected-error{{declaring function parameter
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-// expected-error@+1{{kernel parameter cannot be declared as a pointer to a pointer}}
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0
+// expected-error@+4{{kernel parameter cannot be declared as a pointer to a pointer}}
+// expected-error@+4{{kernel parameter cannot be declared as a pointer to a pointer}}
+// expected-error@+4{{kernel parameter cannot be declared as a pointer to a pointer}}
+#endif
 kernel void no_ptrptr(global int * global *i) { }
+kernel void no_lptrcptr(constant int * local *i) { }
+kernel void no_ptrptrptr(global int * global * global *i) { }
 
 // expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 __kernel void no_privateptr(__private int *i) { }
@@ -16,6 +22,15 @@ __kernel void no_privatearray(__private int i[]) { }
 
 // expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 __kernel void no_addrsp_ptr(int *ptr) { }
+
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+kernel void no_ptr_private_ptr(private int * global *i) { }
+// expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+kernel void no_ptr_ptr_private_ptr(private int * global * global *i) { }
+// expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+kernel void no_ptr_private_ptr_ptr(global int * private * global *i) { }
+// expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+#endif
 
 // Disallowed: parameters with type
 // bool, half, size_t, ptrdiff_t, intptr_t, and uintptr_t
