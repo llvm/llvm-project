@@ -204,12 +204,11 @@ struct KernelTy {
   void *CallStackAddr;
   const char *Name;
 
-  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize,
-           int32_t _device_id, void *_CallStackAddr, const char *_Name,
+  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
+           void *_CallStackAddr, const char *_Name,
            uint32_t _kernarg_segment_size)
       : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
-        device_id(_device_id),
-        CallStackAddr(_CallStackAddr), Name(_Name) {
+        device_id(_device_id), CallStackAddr(_CallStackAddr), Name(_Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
 
     std::string N(_Name);
@@ -1447,8 +1446,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       check("Loading WGSize computation property", err);
     }
 
-    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal,
-                                   device_id, CallStackAddr, e->name,
+    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, device_id,
+                                   CallStackAddr, e->name,
                                    kernarg_segment_size));
     __tgt_offload_entry entry = *e;
     entry.addr = (void *)&KernelsList.back();
