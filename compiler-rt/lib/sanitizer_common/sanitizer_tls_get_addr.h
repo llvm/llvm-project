@@ -47,6 +47,11 @@ struct DTLS {
   uptr last_memalign_ptr;
 };
 
+template <typename Fn>
+void ForEachDVT(DTLS *dtls, const Fn &fn) {
+  for (uptr j = 0; j < dtls->dtv_size; ++j) fn(dtls->dtv[j], j);
+}
+
 // Returns pointer and size of a linker-allocated TLS block.
 // Each block is returned exactly once.
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res, uptr static_tls_begin,
