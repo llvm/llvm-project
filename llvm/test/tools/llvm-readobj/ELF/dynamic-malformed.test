@@ -215,6 +215,9 @@ Sections:
     Type:    SHT_DYNAMIC
     Address: 0x1000
     Entries:
+## Two DT_STRTAB entries are needed to check that we don't report it twice.
+      - Tag:   DT_STRTAB
+        Value: 0x2000000
       - Tag:   DT_STRTAB
         Value: 0x2000000
       - Tag:   DT_STRSZ
