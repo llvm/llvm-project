@@ -48,8 +48,6 @@ extern "C" hsa_status_t hostrpc_terminate();
 
 #include "trace.h"
 
-// Get static gpu grid values from clang target-specific constants managed
-// in the clang header file GpuGridValues.h
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #ifndef TARGET_NAME
@@ -80,7 +78,7 @@ uint32_t TgtStackItemSize = 0;
 #endif
 
 #include "../../common/elf_common.c"
-#include "../../amdgpu/impl/elf_amd.h"
+#include "../impl/elf_amd.h"
 
 
 /// Keep entries table per device
@@ -858,7 +856,7 @@ int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
 
   Elf64_Shdr *section_hash = find_only_SHT_HASH(elf);
   if (!section_hash) {
-     return 1;
+    return 1;
   }
 
   const Elf64_Sym *sym = elf_lookup(elf, base, section_hash, symname);

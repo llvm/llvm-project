@@ -323,13 +323,8 @@ extern DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 extern DEVICE SHARED uint32_t usedMemIdx;
 extern DEVICE SHARED uint32_t usedSlotIdx;
-#ifdef __AMDGCN__
 extern DEVICE SHARED uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-#else
-extern DEVICE SHARED uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-#endif
 extern DEVICE SHARED uint16_t threadLimit;
 extern DEVICE SHARED uint16_t threadsInTeam;
 extern DEVICE SHARED uint16_t nThreads;

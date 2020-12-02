@@ -12,13 +12,6 @@
 #include "common/omptarget.h"
 #include "target_impl.h"
 
-// Set the print format for active threads
-#ifdef __AMDGCN__
-#define _PFT_ % 08x
-#else
-#define _PFT_ % 16lx
-#endif
-
 // Return true if this is the master thread.
 INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
   return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();

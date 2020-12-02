@@ -53,13 +53,14 @@ DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 DEVICE SHARED uint32_t usedMemIdx;
 DEVICE SHARED uint32_t usedSlotIdx;
+
 DEVICE SHARED uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 DEVICE SHARED uint16_t threadLimit;
 DEVICE SHARED uint16_t threadsInTeam;
 DEVICE SHARED uint16_t nThreads;
 // Pointer to this team's OpenMP state object
-DEVICE SHARED omptarget_nvptx_ThreadPrivateContext
-    *omptarget_nvptx_threadPrivateContext;
+DEVICE SHARED
+    omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 
 ////////////////////////////////////////////////////////////////////////////////
 // The team master sets the outlined parallel function in this variable to

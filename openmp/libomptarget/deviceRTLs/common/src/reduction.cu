@@ -191,7 +191,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
       checkSPMDMode(loc), checkRuntimeUninitialized(loc));
 }
 
-
+// This apparently unused function is currently called by flang
 EXTERN
 int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
