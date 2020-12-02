@@ -25,6 +25,9 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <atomic>
 #endif
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <barrier>
+#endif
 #include <bit>
 #include <bitset>
 #include <ccomplex>
@@ -41,6 +44,7 @@
 #include <compare>
 #include <complex>
 #include <complex.h>
+#include <concepts>
 #include <condition_variable>
 #include <csetjmp>
 #include <csignal>
@@ -72,6 +76,9 @@
 #include <inttypes.h>
 #include <iosfwd>
 #include <iterator>
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <latch>
+#endif
 #include <limits>
 #include <limits.h>
 #include <list>
@@ -82,12 +89,16 @@
 #include <mutex>
 #endif
 #include <new>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <queue>
 #include <random>
 #include <ratio>
 #include <scoped_allocator>
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <semaphore>
+#endif
 #include <set>
 #include <setjmp.h>
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -158,8 +169,8 @@
 #include <experimental/map>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
-#include <experimental/simd>
 #include <experimental/set>
+#include <experimental/simd>
 #include <experimental/string>
 #include <experimental/type_traits>
 #include <experimental/unordered_map>
