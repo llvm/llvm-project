@@ -43,13 +43,17 @@ def get_dpu_from_command(command, debugger, target):
         addr = int(command, 16)
     except ValueError:
         success, addr = get_value_from_command(debugger, command, 16)
-        if not(success) and not(re.match(r'.*\..*\..*', command) is None):
-            dpus = dpu_list(debugger, None, None, None)
-            addr = next((dpu[0] for dpu in dpus
-                         if (command ==
-                             str(dpu[1]) + "." + str(dpu[2]) + "." +
-                             str(dpu[3]))),
-                        0)
+        if not success:
+            command_values = command.split('.')
+            if len(command_values) == 3:
+                rank_id = command_values[0]
+                dpus = dpu_list(debugger, None, None, None)
+                if rank_id in dpus:
+                    addr = next((dpu[0] for dpu in dpus[rank_id]
+                                 if (command ==
+                                     str(rank_id) + "." + str(dpu[1]) + "." +
+                                     str(dpu[2]))),
+                                0)
     if addr == 0:
         print("Could not interpret command '" + command + "'")
         return None
@@ -101,9 +105,9 @@ def get_dpu_status(dpus_running, dpus_in_fault, slice_id, dpu_id):
     if (dpu_mask & dpus_running) != 0:
         return "RUNNING"
     elif (dpu_mask & dpus_in_fault) != 0:
-        return "ERROR  "
+        return "ERROR"
     else:
-        return "IDLE   "
+        return "IDLE"
 
 
 def break_to_next_boot_and_get_dpus(debugger, target):
@@ -373,21 +377,83 @@ def dpu_attach(debugger, command, result, internal_dict):
     return target_dpu
 
 
-def print_list(list, result):
+def print_list_rank(rank_id, dpus_info, verbose, status_filter, result):
+    if verbose:
+        for dpu_addr, slice_id, dpu_id, status, program in dpus_info:
+            if status_filter is None or status_filter == status:
+                result.PutCString(
+                    "'%s'  %2u.%u.%u  %7s  '%s'" %
+                    (
+                        str(hex(dpu_addr)),
+                        int(rank_id),
+                        slice_id,
+                        dpu_id,
+                        status,
+                        program
+                    )
+                )
+    else:
+        default_program = dpus_info[0][4]
+        idle = 0
+        running = 0
+        error = 0
+        for dpu_addr, slice_id, dpu_id, status, program in dpus_info:
+            if status == "IDLE":
+                idle += 1
+            if status == "RUNNING":
+                running += 1
+            if status == "ERROR":
+                error += 1
+            if program != default_program:
+                default_program = None
+        result.PutCString(
+            "RANK#%2u: %2u DPUs ( %2u IDLE - %2u RUNNING - %2u ERROR ) '%s'" %
+            (int(rank_id),
+             len(dpus_info),
+                idle,
+                running,
+                error,
+                (default_program if default_program is not None else "DPUs are not loaded with the same program")))
+
+
+def print_list(rank_list, result, command):
     if result is None:
         return
-    result.PutCString("ADDR \t\t\tID \t\tSTATUS \t\tPROGRAM")
-    for (dpu_addr, rank_id, slice_id, dpu_id,
-         status, program) in list:
-        result.PutCString(
-            "'" + str(hex(dpu_addr)) + "' \t"
-            + str(rank_id) + "." + str(slice_id) + "." + str(dpu_id)
-            + " \t" + status + " \t'" + program + "'")
+    verbose = False
+    rank_filter = None
+    status_filter = None
+    if command is not None:
+        args = command.split()
+        nb_args = len(args)
+        for arg_id, arg in enumerate(args):
+            if arg == '-v':
+                verbose = True
+            elif arg == '-r' and nb_args > arg_id + 1:
+                rank_filter = args[arg_id + 1]
+            elif arg[:2] == '-r':
+                rank_filter = arg[2:]
+            elif arg == '-s' and nb_args > arg_id + 1:
+                status_filter = args[arg_id + 1]
+            elif arg[:2] == '-s':
+                status_filter = arg[2:]
+
+    for rank_id, dpus_info in rank_list.items():
+        if rank_filter is None or rank_filter == rank_id:
+            print_list_rank(
+                rank_id,
+                dpus_info,
+                verbose or rank_filter is not None or status_filter is not None,
+                status_filter,
+                result)
 
 
 def dpu_list(debugger, command, result, internal_dict):
     '''
-    usage: dpu_list
+    usage: dpu_list [-v] [-r <rank_id>] [-s <status:IDLE|RUNNING|ERROR>]
+    options:
+    \t-v \tVerbose mode, print detail information for all DPUs
+    \t-r \tFilter DPUs of the specified rank_id
+    \t-s \tFilter DPUs of the specified status
     '''
     target = debugger.GetSelectedTarget()
     if not(check_target(target)):
@@ -405,7 +471,7 @@ def dpu_list(debugger, command, result, internal_dict):
         print("dpu_list: internal error 2 (can't get rank list)")
         return None
 
-    result_list = []
+    result_list = {}
     for each_rank in range(0, nb_allocated_rank.GetValueAsUnsigned()):
         rank = rank_list.GetValueForExpressionPath("[" + str(each_rank) + "]")
         if rank.GetValueAsUnsigned() == 0:
@@ -445,11 +511,11 @@ def dpu_list(debugger, command, result, internal_dict):
                                             slice_id,
                                             dpu_id)
 
-                result_list.append((int(str(dpu.GetAddress()), 16),
-                                    rank_id, slice_id, dpu_id,
-                                    dpu_status, program_path))
+                result_list.setdefault(str(rank_id), []).append((int(str(dpu.GetAddress()), 16),
+                                                                 slice_id, dpu_id,
+                                                                 dpu_status, program_path))
 
-    print_list(result_list, result)
+    print_list(result_list, result, command)
     return result_list
 
 
