@@ -279,3 +279,15 @@ define i32 @test18(i16 %x) {
   ret i32 %ext
 }
 
+define i10 @test19(i10 %i) {
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:    [[D1:%.*]] = shl i10 [[I:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i10 [[D1]], 1
+; CHECK-NEXT:    ret i10 [[D]]
+;
+  %a = trunc i10 %i to i3
+  %b = shl i3 %a, 2
+  %c = ashr i3 %b, 2
+  %d = sext i3 %c to i10
+  ret i10 %d
+}
