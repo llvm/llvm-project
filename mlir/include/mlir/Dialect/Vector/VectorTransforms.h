@@ -150,7 +150,7 @@ struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
       rewriter.eraseOp(op);
       return success();
     }
-    if (op.getOperation()->getNumResults() != 1)
+    if (op->getNumResults() != 1)
       return failure();
     auto resultVector = unrollSingleResultVectorOp(rewriter, op, *targetShape);
     if (resultVector.size() != 1)

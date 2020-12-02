@@ -103,7 +103,7 @@ static Block *getPhiIncomingBlock(Block *block) {
           return incomingBlock;
       // Or the enclosing block itself if no structured control flow ops
       // exists before this loop.
-      return loopOp.getOperation()->getBlock();
+      return loopOp->getBlock();
     }
   }
 
@@ -2065,7 +2065,7 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   SmallVector<uint32_t, 4> operands;
   SmallVector<StringRef, 2> elidedAttrs;
 
-  for (Value operand : op.getOperation()->getOperands()) {
+  for (Value operand : op->getOperands()) {
     auto id = getValueID(operand);
     assert(id && "use before def!");
     operands.push_back(id);

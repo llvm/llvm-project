@@ -63,7 +63,7 @@ void RewriteInsertsPass::runOnOperation() {
         location, compositeType, operands);
 
     lastCompositeInsertOp.replaceAllUsesWith(
-        compositeConstructOp.getOperation()->getResult(0));
+        compositeConstructOp->getResult(0));
 
     // Erase ops.
     for (auto insertOp : llvm::reverse(insertions)) {

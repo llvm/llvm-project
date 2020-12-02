@@ -836,7 +836,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op.getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
-  p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+  p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }
 

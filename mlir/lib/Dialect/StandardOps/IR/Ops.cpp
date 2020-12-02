@@ -617,7 +617,7 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
                                 PatternRewriter &rewriter) const override {
     // Check that the successor block has a single predecessor.
     Block *succ = op.getDest();
-    Block *opParent = op.getOperation()->getBlock();
+    Block *opParent = op->getBlock();
     if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
       return failure();
 
@@ -645,7 +645,7 @@ struct SimplifyPassThroughBr : public OpRewritePattern<BranchOp> {
 
     // Try to collapse the successor if it points somewhere other than this
     // block.
-    if (dest == op.getOperation()->getBlock() ||
+    if (dest == op->getBlock() ||
         failed(collapseBranch(dest, destOperands, destOperandStorage)))
       return failure();
 
@@ -1010,7 +1010,7 @@ struct SimplifyCondBranchIdenticalSuccessors
 
     // Otherwise, if the current block is the only predecessor insert selects
     // for any mismatched branch operands.
-    if (trueDest->getUniquePredecessor() != condbr.getOperation()->getBlock())
+    if (trueDest->getUniquePredecessor() != condbr->getBlock())
       return failure();
 
     // Generate a select for any operands that differ between the two.
@@ -1053,7 +1053,7 @@ struct SimplifyCondBranchFromCondBranchOnSameCondition
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {
     // Check that we have a single distinct predecessor.
-    Block *currentBlock = condbr.getOperation()->getBlock();
+    Block *currentBlock = condbr->getBlock();
     Block *predecessor = currentBlock->getSinglePredecessor();
     if (!predecessor)
       return failure();
@@ -2357,7 +2357,7 @@ void mlir::MemRefReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 /// ```
 static void print(OpAsmPrinter &p, MemRefReinterpretCastOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source() << " ";
   printOffsetsSizesAndStrides(
       p, op, /*offsetPrefix=*/"to offset: ", /*sizePrefix=*/", sizes: ",
@@ -3079,7 +3079,7 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
 /// ```
 static void print(OpAsmPrinter &p, SubViewOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source();
   printOffsetsSizesAndStrides(p, op);
   p << " : " << op.getSourceType() << " to " << op.getType();
@@ -3688,7 +3688,7 @@ OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
 /// ```
 static void print(OpAsmPrinter &p, SubTensorOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source();
   printOffsetsSizesAndStrides(p, op);
   p << " : " << op.getSourceType() << " to " << op.getType();
@@ -3802,7 +3802,7 @@ void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 /// ```
 static void print(OpAsmPrinter &p, SubTensorInsertOp op) {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
+  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source() << " into " << op.dest();
   printOffsetsSizesAndStrides(p, op);
   p << " : " << op.getSourceType() << " into " << op.getType();

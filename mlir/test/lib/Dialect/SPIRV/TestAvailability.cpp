@@ -32,7 +32,7 @@ void PrintOpAvailability::runOnFunction() {
 
   Dialect *spvDialect = getContext().getLoadedDialect("spv");
 
-  f.getOperation()->walk([&](Operation *op) {
+  f->walk([&](Operation *op) {
     if (op->getDialect() != spvDialect)
       return WalkResult::advance();
 

@@ -324,7 +324,7 @@ struct ConvertSelectionOpToSelect
     auto falseValue = getSrcValue(falseBlock);
     auto ptrValue = getDstPtr(trueBlock);
     auto storeOpAttributes =
-        cast<spirv::StoreOp>(trueBlock->front()).getOperation()->getAttrs();
+        cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
 
     auto selectOp = rewriter.create<spirv::SelectOp>(
         selectionOp.getLoc(), trueValue.getType(), brConditionalOp.condition(),
@@ -353,8 +353,7 @@ private:
   }
 
   bool isSameAttrList(spirv::StoreOp lhs, spirv::StoreOp rhs) const {
-    return lhs.getOperation()->getAttrDictionary() ==
-           rhs.getOperation()->getAttrDictionary();
+    return lhs->getAttrDictionary() == rhs->getAttrDictionary();
   }
 
 
@@ -408,8 +407,8 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
     return failure();
   }
 
-  if ((trueBrBranchOp.getOperation()->getSuccessor(0) != mergeBlock) ||
-      (falseBrBranchOp.getOperation()->getSuccessor(0) != mergeBlock)) {
+  if ((trueBrBranchOp->getSuccessor(0) != mergeBlock) ||
+      (falseBrBranchOp->getSuccessor(0) != mergeBlock)) {
     return failure();
   }
 

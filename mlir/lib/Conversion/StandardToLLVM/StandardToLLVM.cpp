@@ -2293,8 +2293,8 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     }
 
     auto promoted = this->typeConverter.promoteOperands(
-        callOp.getLoc(), /*opOperands=*/callOp.getOperation()->getOperands(),
-        operands, rewriter);
+        callOp.getLoc(), /*opOperands=*/callOp->getOperands(), operands,
+        rewriter);
     auto newOp = rewriter.create<LLVM::CallOp>(
         callOp.getLoc(), packedResult ? TypeRange(packedResult) : TypeRange(),
         promoted, callOp.getAttrs());
@@ -2311,7 +2311,7 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
         auto type =
             this->typeConverter.convertType(callOp.getResult(i).getType());
         results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            callOp.getLoc(), type, newOp.getOperation()->getResult(0),
+            callOp.getLoc(), type, newOp->getResult(0),
             rewriter.getI64ArrayAttr(i)));
       }
     }
@@ -2673,8 +2673,8 @@ struct MemRefReinterpretCastOpLowering
   LogicalResult
   matchAndRewrite(MemRefReinterpretCastOp castOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    MemRefReinterpretCastOp::Adaptor adaptor(
-        operands, castOp.getOperation()->getAttrDictionary());
+    MemRefReinterpretCastOp::Adaptor adaptor(operands,
+                                             castOp->getAttrDictionary());
     Type srcType = castOp.source().getType();
 
     Value descriptor;
@@ -3226,8 +3226,8 @@ struct OneToOneLLVMTerminatorLowering
   LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TargetOp>(
-        op, operands, op.getOperation()->getSuccessors(), op.getAttrs());
+    rewriter.replaceOpWithNewOp<TargetOp>(op, operands, op->getSuccessors(),
+                                          op.getAttrs());
     return success();
   }
 };
@@ -3251,7 +3251,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     if (typeConverter.getOptions().useBarePtrCallConv) {
       // For the bare-ptr calling convention, extract the aligned pointer to
       // be returned from the memref descriptor.
-      for (auto it : llvm::zip(op.getOperation()->getOperands(), operands)) {
+      for (auto it : llvm::zip(op->getOperands(), operands)) {
         Type oldTy = std::get<0>(it).getType();
         Value newOperand = std::get<1>(it);
         if (oldTy.isa<MemRefType>()) {
@@ -3837,7 +3837,7 @@ struct GenericAtomicRMWOpLowering
         loopBlock->getParent(), std::next(Region::iterator(loopBlock)));
 
     // Operations range to be moved to `endBlock`.
-    auto opsToMoveStart = atomicOp.getOperation()->getIterator();
+    auto opsToMoveStart = atomicOp->getIterator();
     auto opsToMoveEnd = initBlock->back().getIterator();
 
     // Compute the loaded value and branch to the loop block.
