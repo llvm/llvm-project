@@ -33,7 +33,6 @@ body:             |
     renamable $vgpr0 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
     renamable $sgpr0 = S_BFE_U32 killed renamable $sgpr0, 589836, implicit-def dead $scc
     renamable $vcc_lo = V_CMP_GT_U32_e64 killed $sgpr0, killed $vgpr0, implicit $exec
-    $vcc_hi = IMPLICIT_DEF
     $sgpr0 = S_AND_SAVEEXEC_B32 $vcc_lo, implicit-def $exec, implicit-def $scc, implicit $exec
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1

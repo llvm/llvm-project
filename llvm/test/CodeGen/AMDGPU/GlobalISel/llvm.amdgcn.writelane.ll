@@ -21,7 +21,6 @@ define amdgpu_ps float @test_writelane_s_s_s(i32 inreg %data, i32 inreg %lane, i
 ; GFX10-LABEL: test_writelane_s_s_s:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, s3
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 %lane, i32 %vdst.in)
@@ -47,7 +46,6 @@ define amdgpu_ps float @test_writelane_s_s_imm(i32 inreg %data, i32 inreg %lane)
 ; GFX10-LABEL: test_writelane_s_s_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, s3
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 %lane, i32 42)
@@ -74,7 +72,6 @@ define amdgpu_ps float @test_writelane_k_s_v(i32 inreg %lane, i32 %vdst.in) #0 {
 ; GFX10-LABEL: test_writelane_k_s_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_movk_i32 s0, 0x3e7
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 999, i32 %lane, i32 %vdst.in)
@@ -97,7 +94,6 @@ define amdgpu_ps float @test_writelane_imm_s_v(i32 inreg %lane, i32 %vdst.in) #0
 ; GFX10-LABEL: test_writelane_imm_s_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_writelane_b32 v0, 42, s2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 42, i32 %lane, i32 %vdst.in)
   %writelane.cast = bitcast i32 %writelane to float
@@ -121,7 +117,6 @@ define amdgpu_ps float @test_writelane_imminv2pi_s_v(i32 inreg %lane, i32 %vdst.
 ; GFX10-LABEL: test_writelane_imminv2pi_s_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_writelane_b32 v0, 0.15915494, s2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 bitcast (float 0x3FC45F3060000000 to i32), i32 %lane, i32 %vdst.in)
   %writelane.cast = bitcast i32 %writelane to float
@@ -144,7 +139,6 @@ define amdgpu_ps float @test_writelane_s_imm_v(i32 inreg %data, i32 %vdst.in) #0
 ; GFX10-LABEL: test_writelane_s_imm_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, 23
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 23, i32 %vdst.in)
   %writelane.cast = bitcast i32 %writelane to float
@@ -166,7 +160,6 @@ define amdgpu_ps float @test_writelane_s_k0_v(i32 inreg %data, i32 %vdst.in) #0 
 ; GFX10-LABEL: test_writelane_s_k0_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_movk_i32 s0, 0x43
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, s0
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 67, i32 %vdst.in)
@@ -189,7 +182,6 @@ define amdgpu_ps float @test_writelane_s_k1_v(i32 inreg %data, i32 %vdst.in) #0 
 ; GFX10-LABEL: test_writelane_s_k1_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, 32
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 32, i32 %vdst.in)
   %writelane.cast = bitcast i32 %writelane to float
@@ -219,7 +211,6 @@ define amdgpu_ps float @test_writelane_v_v_v(i32 %data, i32 %lane, i32 %vdst.in)
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v2, s0, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -248,7 +239,6 @@ define amdgpu_ps float @test_writelane_v_s_v(i32 %data, i32 inreg %lane, i32 %vd
 ; GFX10-LABEL: test_writelane_v_s_v:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_writelane_b32 v1, s0, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -286,7 +276,6 @@ define amdgpu_ps float @test_writelane_m0_s_v(i32 inreg %lane, i32 %vdst.in) #0 
 ; GFX10-NEXT:    s_mov_b32 m0, -1
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    v_writelane_b32 v0, m0, s2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %m0, i32 %lane, i32 %vdst.in)
@@ -317,7 +306,6 @@ define amdgpu_ps float @test_writelane_s_m0_v(i32 inreg %data, i32 %vdst.in) #0 
 ; GFX10-NEXT:    s_mov_b32 m0, -1
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    v_writelane_b32 v0, s2, m0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %data, i32 %m0, i32 %vdst.in)

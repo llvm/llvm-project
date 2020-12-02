@@ -29,7 +29,6 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x400000
 ; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
 ; MUBUF-NEXT:    v_add_nc_u32_e64 v40, 4, 0x4000
-; MUBUF-NEXT:    ; implicit-def: $vcc_hi
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+12
@@ -65,7 +64,6 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, 0x400000
-; FLATSCR-NEXT:    ; implicit-def: $vcc_hi
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
