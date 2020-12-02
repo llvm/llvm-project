@@ -67,7 +67,7 @@ public:
     unsigned NewSize = Storage.size() - 1;
     if (NewSize) {
       // Move the slot at the end to the beginning.
-      if (is_trivially_copyable<T>::value)
+      if (std::is_trivially_copyable<T>::value)
         Storage[0] = Storage[NewSize];
       else
         std::swap(Storage[0], Storage[NewSize]);

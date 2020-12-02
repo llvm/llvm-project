@@ -17,10 +17,10 @@
 
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
 #include <new>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -32,7 +32,7 @@ namespace optional_detail {
 struct in_place_t {};
 
 /// Storage for any type.
-template <typename T, bool = is_trivially_copyable<T>::value>
+template <typename T, bool = std::is_trivially_copyable<T>::value>
 class OptionalStorage {
   union {
     char empty;
