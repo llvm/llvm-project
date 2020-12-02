@@ -225,10 +225,12 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
+  Archive *archive = file.get();
+  make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
   std::vector<ArchiveMember> v;
   Error err = Error::success();
-  for (const Archive::Child &c : file->children(err)) {
+  for (const Archive::Child &c : archive->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
@@ -246,17 +248,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
-static void forceLoadArchive(StringRef path) {
-  if (Optional<MemoryBufferRef> buffer = readFile(path)) {
-    for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-      auto file = make<ObjFile>(member.mbref, member.modTime);
-      file->archiveName = buffer->getBufferIdentifier();
-      inputFiles.push_back(file);
-    }
-  }
-}
-
-static InputFile *addFile(StringRef path) {
+static InputFile *addFile(StringRef path, bool forceLoadArchive) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -271,8 +263,14 @@ static InputFile *addFile(StringRef path) {
     if (!file->isEmpty() && !file->hasSymbolTable())
       error(path + ": archive has no index; run ranlib to add one");
 
-    if (config->allLoad) {
-      forceLoadArchive(path);
+    if (config->allLoad || forceLoadArchive) {
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
+        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
+          auto file = make<ObjFile>(member.mbref, member.modTime);
+          file->archiveName = buffer->getBufferIdentifier();
+          inputFiles.push_back(file);
+        }
+      }
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
@@ -320,7 +318,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(path);
+    addFile(path, false);
 }
 
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
@@ -671,10 +669,11 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     // TODO: are any of these better handled via filtered() or getLastArg()?
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(arg->getValue());
+      addFile(arg->getValue(), false);
       break;
     case OPT_weak_library: {
-      auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(arg->getValue()));
+      auto *dylibFile =
+          dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false));
       if (dylibFile)
         dylibFile->forceWeakImport = true;
       break;
@@ -683,13 +682,13 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      forceLoadArchive(arg->getValue());
+      addFile(arg->getValue(), true);
       break;
     case OPT_l:
     case OPT_weak_l: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findLibrary(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
         if (opt.getID() == OPT_weak_l && dylibFile)
           dylibFile->forceWeakImport = true;
         break;
@@ -701,7 +700,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_weak_framework: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findFramework(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
         if (opt.getID() == OPT_weak_framework && dylibFile)
           dylibFile->forceWeakImport = true;
         break;

@@ -584,7 +584,7 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   object::Archive::Child c =
       CHECK(sym.getMember(), toString(this) +
                                  ": could not get the member for symbol " +
-                                 sym.getName());
+                                 toMachOString(sym));
 
   if (!seen.insert(c.getChildOffset()).second)
     return;
@@ -593,13 +593,13 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
       CHECK(c.getMemoryBufferRef(),
             toString(this) +
                 ": could not get the buffer for the member defining symbol " +
-                sym.getName());
+                toMachOString(sym));
 
   uint32_t modTime = toTimeT(
       CHECK(c.getLastModified(), toString(this) +
                                      ": could not get the modification time "
                                      "for the member defining symbol " +
-                                     sym.getName()));
+                                     toMachOString(sym)));
 
   auto file = make<ObjFile>(mb, modTime);
   file->archiveName = getName();
