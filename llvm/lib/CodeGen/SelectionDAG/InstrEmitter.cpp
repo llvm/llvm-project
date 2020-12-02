@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -1133,7 +1134,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
         .addImm(Guid)
         .addImm(Index)
-        .addImm(0) // 0 for block probes
+        .addImm((uint8_t)PseudoProbeType::Block)
         .addImm(Attr);
     break;
   }
