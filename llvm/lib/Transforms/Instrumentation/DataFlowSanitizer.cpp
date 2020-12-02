@@ -109,7 +109,7 @@ using namespace llvm;
 // External symbol to be used when generating the shadow address for
 // architectures with multiple VMAs. Instead of using a constant integer
 // the runtime will set the external mask based on the VMA range.
-static const char *const kDFSanExternShadowPtrMask = "__dfsan_shadow_ptr_mask";
+const char kDFSanExternShadowPtrMask[] = "__dfsan_shadow_ptr_mask";
 
 // The -dfsan-preserve-alignment flag controls whether this pass assumes that
 // alignment requirements provided by the input IR are correct.  For example,
