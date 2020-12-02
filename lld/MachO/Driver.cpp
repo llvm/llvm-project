@@ -212,27 +212,48 @@ getFrameworkSearchPaths(opt::InputArgList &args,
                         {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
+namespace {
+struct ArchiveMember {
+  MemoryBufferRef mbref;
+  uint32_t modTime;
+};
+} // namespace
+
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
+static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> v;
+  std::vector<ArchiveMember> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
+    uint32_t modTime = toTimeT(
+        CHECK(c.getLastModified(), mb.getBufferIdentifier() +
+                                       ": could not get the modification "
+                                       "time for a child of the archive"));
+    v.push_back({mbref, modTime});
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
           ": Archive::children failed: " + toString(std::move(err)));
 
   return v;
+}
+
+static void forceLoadArchive(StringRef path) {
+  if (Optional<MemoryBufferRef> buffer = readFile(path)) {
+    for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
+      auto file = make<ObjFile>(member.mbref, member.modTime);
+      file->archiveName = buffer->getBufferIdentifier();
+      inputFiles.push_back(file);
+    }
+  }
 }
 
 static InputFile *addFile(StringRef path) {
@@ -251,9 +272,7 @@ static InputFile *addFile(StringRef path) {
       error(path + ": archive has no index; run ranlib to add one");
 
     if (config->allLoad) {
-      if (Optional<MemoryBufferRef> buffer = readFile(path))
-        for (MemoryBufferRef member : getArchiveMembers(*buffer))
-          inputFiles.push_back(make<ObjFile>(member));
+      forceLoadArchive(path);
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
@@ -264,16 +283,16 @@ static InputFile *addFile(StringRef path) {
       // consider creating a LazyObjFile class in order to avoid double-loading
       // these files here and below (as part of the ArchiveFile).
       if (Optional<MemoryBufferRef> buffer = readFile(path))
-        for (MemoryBufferRef member : getArchiveMembers(*buffer))
-          if (hasObjCSection(member))
-            inputFiles.push_back(make<ObjFile>(member));
+        for (const ArchiveMember &member : getArchiveMembers(*buffer))
+          if (hasObjCSection(member.mbref))
+            inputFiles.push_back(make<ObjFile>(member.mbref, member.modTime));
     }
 
     newFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref);
+    newFile = make<ObjFile>(mbref, getModTime(path));
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -302,12 +321,6 @@ static void addFileList(StringRef path) {
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
     addFile(path);
-}
-
-static void forceLoadArchive(StringRef path) {
-  if (Optional<MemoryBufferRef> buffer = readFile(path))
-    for (MemoryBufferRef member : getArchiveMembers(*buffer))
-      inputFiles.push_back(make<ObjFile>(member));
 }
 
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",

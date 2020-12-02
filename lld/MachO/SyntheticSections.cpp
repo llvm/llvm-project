@@ -602,13 +602,18 @@ void SymtabSection::emitEndSourceStab() {
 void SymtabSection::emitObjectFileStab(ObjFile *file) {
   StabsEntry stab(MachO::N_OSO);
   stab.sect = target->cpuSubtype;
-  SmallString<261> path(file->getName());
+  SmallString<261> path(!file->archiveName.empty() ? file->archiveName
+                                                   : file->getName());
   std::error_code ec = sys::fs::make_absolute(path);
   if (ec)
-    fatal("failed to get absolute path for " + file->getName());
+    fatal("failed to get absolute path for " + path);
+
+  if (!file->archiveName.empty())
+    path.append({"(", file->getName(), ")"});
 
   stab.strx = stringTableSection.addString(saver.save(path.str()));
   stab.desc = 1;
+  stab.value = file->modTime;
   stabs.emplace_back(std::move(stab));
 }
 
