@@ -5602,11 +5602,11 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
-  const Scope *symbolUnit{FindProgramUnitContaining(symbol)};
-  if (symbolUnit == FindProgramUnitContaining(currScope())) {
+  const Scope &symbolUnit{GetProgramUnitContaining(symbol)};
+  if (symbolUnit == GetProgramUnitContaining(currScope())) {
     return false;
   } else {
-    Scope::Kind kind{DEREF(symbolUnit).kind()};
+    Scope::Kind kind{symbolUnit.kind()};
     return kind == Scope::Kind::Subprogram || kind == Scope::Kind::MainProgram;
   }
 }
