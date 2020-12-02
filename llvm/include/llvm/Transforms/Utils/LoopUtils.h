@@ -213,6 +213,13 @@ Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
 /// Find named metadata for a loop with an integer value.
 llvm::Optional<int> getOptionalIntLoopAttribute(Loop *TheLoop, StringRef Name);
 
+/// Find a combination of metadata ("llvm.loop.vectorize.width" and
+/// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
+/// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
+/// then None is returned.
+Optional<ElementCount>
+getOptionalElementCountLoopAttribute(Loop *TheLoop);
+
 /// Create a new loop identifier for a loop created from a loop transformation.
 ///
 /// @param OrigLoopID The loop ID of the loop before the transformation.

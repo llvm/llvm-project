@@ -8314,11 +8314,16 @@ static bool processLoopInVPlanNativePath(
   LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM, IAI, PSE);
 
   // Get user vectorization factor.
-  const unsigned UserVF = Hints.getWidth();
+  ElementCount UserVF = Hints.getWidth();
+  if (UserVF.isScalable()) {
+    // TODO: Use scalable UserVF once we've added initial support for scalable
+    // vectorization. For now we convert it to fixed width, but this will be
+    // removed in a later patch.
+    UserVF = ElementCount::getFixed(UserVF.getKnownMinValue());
+  }
 
   // Plan how to best vectorize, return the best VF and its cost.
-  const VectorizationFactor VF =
-      LVP.planInVPlanNativePath(ElementCount::getFixed(UserVF));
+  const VectorizationFactor VF = LVP.planInVPlanNativePath(UserVF);
 
   // If we are stress testing VPlan builds, do not attempt to generate vector
   // code. Masked vector code generation support will follow soon.
@@ -8480,12 +8485,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM, IAI, PSE);
 
   // Get user vectorization factor and interleave count.
-  unsigned UserVF = Hints.getWidth();
+  ElementCount UserVF = Hints.getWidth();
+  if (UserVF.isScalable()) {
+    // TODO: Use scalable UserVF once we've added initial support for scalable
+    // vectorization. For now we convert it to fixed width, but this will be
+    // removed in a later patch.
+    UserVF = ElementCount::getFixed(UserVF.getKnownMinValue());
+  }
+
   unsigned UserIC = Hints.getInterleave();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  Optional<VectorizationFactor> MaybeVF =
-      LVP.plan(ElementCount::getFixed(UserVF), UserIC);
+  Optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
 
   VectorizationFactor VF = VectorizationFactor::Disabled();
   unsigned IC = 1;
