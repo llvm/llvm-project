@@ -250,10 +250,10 @@ public:
     // PCH files don't have a signature field in the control block,
     // but LLVM detects DWO CUs by looking for a non-zero DWO id.
     // We use the lower 64 bits for debug info.
+
     uint64_t Signature =
-        Buffer->Signature
-            ? (uint64_t)Buffer->Signature[1] << 32 | Buffer->Signature[0]
-            : ~1ULL;
+        Buffer->Signature ? Buffer->Signature.truncatedValue() : ~1ULL;
+
     Builder->getModuleDebugInfo()->setDwoId(Signature);
 
     // Finalize the Builder.
