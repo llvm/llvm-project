@@ -2896,26 +2896,31 @@ template <class ELFT> void ELFDumper<ELFT>::printAttributes() {
         Sec.sh_type != ELF::SHT_RISCV_ATTRIBUTES)
       continue;
 
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(ObjF.getFileName(), Obj.getSectionContents(Sec));
-    if (Contents[0] != ELFAttrs::Format_Version) {
-      reportWarning(createError(Twine("unrecognised FormatVersion: 0x") +
-                                Twine::utohexstr(Contents[0])),
-                    ObjF.getFileName());
+    ArrayRef<uint8_t> Contents;
+    if (Expected<ArrayRef<uint8_t>> ContentOrErr =
+            Obj.getSectionContents(Sec)) {
+      Contents = *ContentOrErr;
+      if (Contents.empty()) {
+        reportUniqueWarning("the " + describe(Sec) + " is empty");
+        continue;
+      }
+    } else {
+      reportUniqueWarning("unable to read the content of the " + describe(Sec) +
+                          ": " + toString(ContentOrErr.takeError()));
       continue;
     }
-    W.printHex("FormatVersion", Contents[0]);
-    if (Contents.size() == 1)
-      continue;
 
-    // TODO: Delete the redundant FormatVersion check above.
-    if (Machine == EM_ARM) {
-      if (Error E = ARMAttributeParser(&W).parse(Contents, support::little))
-        reportWarning(std::move(E), ObjF.getFileName());
-    } else if (Machine == EM_RISCV) {
-      if (Error E = RISCVAttributeParser(&W).parse(Contents, support::little))
-        reportWarning(std::move(E), ObjF.getFileName());
-    }
+    W.printHex("FormatVersion", Contents[0]);
+
+    auto ParseAttrubutes = [&]() {
+      if (Machine == EM_ARM)
+        return ARMAttributeParser(&W).parse(Contents, support::little);
+      return RISCVAttributeParser(&W).parse(Contents, support::little);
+    };
+
+    if (Error E = ParseAttrubutes())
+      reportUniqueWarning("unable to dump attributes from the " +
+                          describe(Sec) + ": " + toString(std::move(E)));
   }
 }
 
