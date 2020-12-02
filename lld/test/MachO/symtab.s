@@ -4,11 +4,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
 # RUN: %lld -lSystem %t/test.o %t/libfoo.dylib -o %t/test
-# RUN: llvm-readobj --syms --macho-dysymtab %t/test | FileCheck %s
 
+# RUN: llvm-readobj --syms --macho-dysymtab %t/test | FileCheck %s
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _local (1)
+# CHECK-NEXT:     Name: _local (2)
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data (0x4)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
@@ -17,7 +17,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _main (8)
+# CHECK-NEXT:     Name: _main (9)
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
@@ -27,7 +27,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external (54)
+# CHECK-NEXT:     Name: _external (55)
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data (0x4)
@@ -37,7 +37,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external_weak (64)
+# CHECK-NEXT:     Name: _external_weak (65)
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
@@ -48,7 +48,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __dyld_private (102)
+# CHECK-NEXT:     Name: __dyld_private (103)
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data (0x4)
@@ -58,7 +58,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: dyld_stub_binder (14)
+# CHECK-NEXT:     Name: dyld_stub_binder (15)
 # CHECK-NEXT:     Type: Undef (0x0)
 # CHECK-NEXT:     Section:  (0x0)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
@@ -67,7 +67,7 @@
 # CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _dynamic (79)
+# CHECK-NEXT:     Name: _dynamic (80)
 # CHECK-NEXT:     Type: Undef (0x0)
 # CHECK-NEXT:     Section:  (0x0)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
@@ -83,6 +83,11 @@
 # CHECK-NEXT:   nextdefsym: 4
 # CHECK-NEXT:   iundefsym: 5
 # CHECK-NEXT:   nundefsym: 2
+
+## Verify that the first entry in the StringTable is a space.
+# RUN: obj2yaml %t/test | FileCheck %s --check-prefix=YAML
+# YAML:      StringTable:
+# YAML-NEXT: ' '
 
 #--- libfoo.s
 .globl _dynamic
