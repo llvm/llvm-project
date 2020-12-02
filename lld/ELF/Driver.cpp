@@ -1919,17 +1919,46 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
   return v;
 }
 
-// Do renaming for -wrap by updating pointers to symbols.
+// Do renaming for -wrap and foo@v1 by updating pointers to symbols.
 //
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
+static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
+  llvm::TimeTraceScope timeScope("Redirect symbols");
   DenseMap<Symbol *, Symbol *> map;
   for (const WrappedSymbol &w : wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
   }
+  for (Symbol *sym : symtab->symbols()) {
+    // Enumerate symbols with a non-default version (foo@v1).
+    StringRef name = sym->getName();
+    const char *suffix1 = sym->getVersionSuffix();
+    if (suffix1[0] != '@' || suffix1[1] == '@')
+      continue;
+
+    // Check whether the default version foo@@v1 exists. If it exists, the
+    // symbol can be found by the name "foo" in the symbol table.
+    Symbol *maybeDefault = symtab->find(name);
+    if (!maybeDefault)
+      continue;
+    const char *suffix2 = maybeDefault->getVersionSuffix();
+    if (suffix2[0] != '@' || suffix2[1] != '@' ||
+        strcmp(suffix1 + 1, suffix2 + 2) != 0)
+      continue;
+
+    // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
+    map.try_emplace(sym, maybeDefault);
+    // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
+    // definition error.
+    maybeDefault->resolve(*sym);
+    // Eliminate foo@v1 from the symbol table.
+    sym->symbolKind = Symbol::PlaceholderKind;
+  }
+
+  if (map.empty())
+    return;
 
   // Update pointers in input files.
   parallelForEach(objectFiles, [&](InputFile *file) {
@@ -2158,9 +2187,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       !config->thinLTOModulesToCompile.empty())
     return;
 
-  // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(wrapped);
+  // Apply symbol renames for -wrap and combine foo@v1 and foo@@v1.
+  redirectSymbols(wrapped);
 
   {
     llvm::TimeTraceScope timeScope("Aggregate sections");

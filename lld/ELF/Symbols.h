@@ -178,6 +178,15 @@ public:
 
   void parseSymbolVersion();
 
+  // Get the NUL-terminated version suffix ("", "@...", or "@@...").
+  //
+  // For @@, the name has been truncated by insert(). For @, the name has been
+  // truncated by Symbol::parseSymbolVersion().
+  const char *getVersionSuffix() const {
+    assert(nameSize != (uint32_t)-1);
+    return nameData + nameSize;
+  }
+
   bool isInGot() const { return gotIndex != -1U; }
   bool isInPlt() const { return pltIndex != -1U; }
 
