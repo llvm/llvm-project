@@ -1207,11 +1207,12 @@ public:
     if (isa<ScalableVectorType>(RetTy))
       return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
-    unsigned VF = ICA.getVectorFactor();
-    unsigned RetVF =
-        (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
-                             : 1);
-    assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
+    ElementCount VF = ICA.getVectorFactor();
+    ElementCount RetVF =
+        (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getElementCount()
+                             : ElementCount::getFixed(1));
+    assert((RetVF.isScalar() || VF.isScalar()) &&
+           "VF > 1 and RetVF is a vector type");
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
@@ -1221,13 +1222,15 @@ public:
 
     case Intrinsic::cttz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCttz())
+      if (VF.isScalar() && RetVF.isScalar() &&
+          getTLI()->isCheapToSpeculateCttz())
         return TargetTransformInfo::TCC_Basic;
       break;
 
     case Intrinsic::ctlz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCtlz())
+      if (VF.isScalar() && RetVF.isScalar() &&
+          getTLI()->isCheapToSpeculateCtlz())
         return TargetTransformInfo::TCC_Basic;
       break;
 
@@ -1235,7 +1238,7 @@ public:
       return thisT()->getMemcpyCost(ICA.getInst());
 
     case Intrinsic::masked_scatter: {
-      assert(VF == 1 && "Can't vectorize types here.");
+      assert(VF.isScalar() && "Can't vectorize types here.");
       const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
@@ -1244,7 +1247,7 @@ public:
                                              VarMask, Alignment, CostKind, I);
     }
     case Intrinsic::masked_gather: {
-      assert(VF == 1 && "Can't vectorize types here.");
+      assert(VF.isScalar() && "Can't vectorize types here.");
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
@@ -1318,23 +1321,26 @@ public:
     SmallVector<Type *, 4> Types;
     for (const Value *Op : Args) {
       Type *OpTy = Op->getType();
-      assert(VF == 1 || !OpTy->isVectorTy());
-      Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
+      assert(VF.isScalar() || !OpTy->isVectorTy());
+      Types.push_back(VF.isScalar()
+                          ? OpTy
+                          : FixedVectorType::get(OpTy, VF.getKnownMinValue()));
     }
 
-    if (VF > 1 && !RetTy->isVoidTy())
-      RetTy = FixedVectorType::get(RetTy, VF);
+    if (VF.isVector() && !RetTy->isVoidTy())
+      RetTy = FixedVectorType::get(RetTy, VF.getKnownMinValue());
 
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
     // CostModel will pass a vector RetTy and VF is 1.
     unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
-    if (RetVF > 1 || VF > 1) {
+    if (RetVF.isVector() || VF.isVector()) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
         ScalarizationCost +=
             getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
-      ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
+      ScalarizationCost +=
+          getOperandsScalarizationOverhead(Args, VF.getKnownMinValue());
     }
 
     IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF, ScalarizationCost, I);

@@ -79,9 +79,10 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  const CallBase &CI,
-                                                 unsigned Factor) :
-    RetTy(CI.getType()), IID(Id), VF(Factor) {
+                                                 ElementCount Factor)
+    : RetTy(CI.getType()), IID(Id), VF(Factor) {
 
+  assert(!Factor.isScalable() && "Scalable vectors are not yet supported");
   if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
@@ -93,9 +94,9 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  const CallBase &CI,
-                                                 unsigned Factor,
-                                                 unsigned ScalarCost) :
-    RetTy(CI.getType()), IID(Id), VF(Factor), ScalarizationCost(ScalarCost) {
+                                                 ElementCount Factor,
+                                                 unsigned ScalarCost)
+    : RetTy(CI.getType()), IID(Id), VF(Factor), ScalarizationCost(ScalarCost) {
 
   if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
