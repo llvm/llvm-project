@@ -624,6 +624,18 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   Value *IsEqual = nullptr;
   LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons -> "
                     << BB->getName() << "\n");
+
+  // If there is one block that requires splitting, we do it now, i.e.
+  // just before we know we will collapse the chain. The instructions
+  // can be executed before any of the instructions in the chain.
+  const auto ToSplit =
+      std::find_if(Comparisons.begin(), Comparisons.end(),
+                   [](const BCECmpBlock &B) { return B.RequireSplit; });
+  if (ToSplit != Comparisons.end()) {
+    LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
+    ToSplit->split(BB, AA);
+  }
+
   if (Comparisons.size() == 1) {
     LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
     Value *const LhsLoad =
@@ -633,17 +645,6 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     // There are no blocks to merge, just do the comparison.
     IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   } else {
-    // If there is one block that requires splitting, we do it now, i.e.
-    // just before we know we will collapse the chain. The instructions
-    // can be executed before any of the instructions in the chain.
-    const auto ToSplit =
-        std::find_if(Comparisons.begin(), Comparisons.end(),
-                     [](const BCECmpBlock &B) { return B.RequireSplit; });
-    if (ToSplit != Comparisons.end()) {
-      LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
-      ToSplit->split(BB, AA);
-    }
-
     const unsigned TotalSizeBits = std::accumulate(
         Comparisons.begin(), Comparisons.end(), 0u,
         [](int Size, const BCECmpBlock &C) { return Size + C.SizeBits(); });
