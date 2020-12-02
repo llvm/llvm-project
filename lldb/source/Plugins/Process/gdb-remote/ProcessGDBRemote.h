@@ -391,8 +391,8 @@ protected:
 
   bool GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use,
                                              std::string xml_filename,
-                                             uint32_t &cur_reg_num,
-                                             uint32_t &reg_offset);
+                                             uint32_t &cur_reg_remote,
+                                             uint32_t &cur_reg_local);
 
   // Query remote GDBServer for register information
   bool GetGDBServerRegisterInfo(ArchSpec &arch);

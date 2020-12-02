@@ -428,9 +428,6 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo &reg_info,
   assert(set < m_set_reg_nums.size());
   assert(set < m_set_names.size());
   m_set_reg_nums[set].push_back(reg_num);
-  size_t end_reg_offset = reg_info.byte_offset + reg_info.byte_size;
-  if (m_reg_data_byte_size < end_reg_offset)
-    m_reg_data_byte_size = end_reg_offset;
 }
 
 void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
@@ -443,6 +440,28 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
     assert(m_sets.size() == m_set_reg_nums.size());
     m_sets[set].num_registers = m_set_reg_nums[set].size();
     m_sets[set].registers = m_set_reg_nums[set].data();
+  }
+
+  // We are going to create a map between remote (eRegisterKindProcessPlugin)
+  // and local (eRegisterKindLLDB) register numbers. This map will give us
+  // remote register numbers in increasing order for offset calculation.
+  std::map<uint32_t, uint32_t> remote_to_local_regnum_map;
+  for (const auto &reg : m_regs)
+    remote_to_local_regnum_map[reg.kinds[eRegisterKindProcessPlugin]] =
+        reg.kinds[eRegisterKindLLDB];
+
+  // At this stage we manually calculate g/G packet offsets of all primary
+  // registers, only if target XML or qRegisterInfo packet did not send
+  // an offset explicitly.
+  uint32_t reg_offset = 0;
+  for (auto const &regnum_pair : remote_to_local_regnum_map) {
+    if (m_regs[regnum_pair.second].byte_offset == LLDB_INVALID_INDEX32 &&
+        m_regs[regnum_pair.second].value_regs == nullptr) {
+      m_regs[regnum_pair.second].byte_offset = reg_offset;
+
+      reg_offset = m_regs[regnum_pair.second].byte_offset +
+                   m_regs[regnum_pair.second].byte_size;
+    }
   }
 
   // sort and unique all value registers and make sure each is terminated with
@@ -466,10 +485,24 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   // Now update all value_regs with each register info as needed
   const size_t num_regs = m_regs.size();
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_value_regs_map.find(i) != m_value_regs_map.end())
+    if (m_value_regs_map.find(i) != m_value_regs_map.end()) {
       m_regs[i].value_regs = m_value_regs_map[i].data();
-    else
+      // Assign a valid offset to all pseudo registers if not assigned by stub.
+      // Pseudo registers with value_regs list populated will share same offset
+      // as that of their corresponding primary register in value_regs list.
+      if (m_regs[i].byte_offset == LLDB_INVALID_INDEX32) {
+        uint32_t value_regnum = m_regs[i].value_regs[0];
+        if (value_regnum != LLDB_INVALID_INDEX32)
+          m_regs[i].byte_offset =
+              GetRegisterInfoAtIndex(remote_to_local_regnum_map[value_regnum])
+                  ->byte_offset;
+      }
+    } else
       m_regs[i].value_regs = nullptr;
+
+    reg_offset = m_regs[i].byte_offset + m_regs[i].byte_size;
+    if (m_reg_data_byte_size < reg_offset)
+      m_reg_data_byte_size = reg_offset;
   }
 
   // Expand all invalidation dependencies

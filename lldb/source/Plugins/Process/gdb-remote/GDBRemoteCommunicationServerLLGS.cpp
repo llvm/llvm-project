@@ -1788,8 +1788,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     response.PutChar(';');
   }
 
-  response.Printf("bitsize:%" PRIu32 ";offset:%" PRIu32 ";",
-                  reg_info->byte_size * 8, reg_info->byte_offset);
+  response.Printf("bitsize:%" PRIu32 ";", reg_info->byte_size * 8);
+
+  if (!reg_context.RegisterOffsetIsDynamic())
+    response.Printf("offset:%" PRIu32 ";", reg_info->byte_offset);
 
   llvm::StringRef encoding = GetEncodingNameOrEmpty(*reg_info);
   if (!encoding.empty())
@@ -2861,10 +2863,11 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
-    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" offset=\"%" PRIu32
-                    "\" regnum=\"%d\" ",
-                    reg_info->name, reg_info->byte_size * 8,
-                    reg_info->byte_offset, reg_index);
+    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" regnum=\"%d\" ",
+                    reg_info->name, reg_info->byte_size * 8, reg_index);
+
+    if (!reg_context.RegisterOffsetIsDynamic())
+      response.Printf("offset=\"%" PRIu32 "\" ", reg_info->byte_offset);
 
     if (reg_info->alt_name && reg_info->alt_name[0])
       response.Printf("altname=\"%s\" ", reg_info->alt_name);
