@@ -1,4 +1,4 @@
-; RUN: llvm-ml -filetype=asm %s 2>&1 | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - 2>&1 | FileCheck %s
 
 .code
 

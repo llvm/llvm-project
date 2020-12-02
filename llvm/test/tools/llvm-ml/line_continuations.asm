@@ -1,4 +1,4 @@
-# RUN: llvm-ml -filetype=asm %s | FileCheck %s
+# RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
 
 .code
 
