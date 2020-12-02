@@ -52,6 +52,8 @@ static std::unique_ptr<lto::LTO> createLTO() {
   c.OptLevel = config->ltoo;
   c.MAttrs = getMAttrs();
   c.CGOptLevel = args::getCGOptLevel(config->ltoo);
+  c.UseNewPM = config->ltoNewPassManager;
+  c.DebugPassManager = config->ltoDebugPassManager;
 
   if (config->relocatable)
     c.RelocModel = None;
