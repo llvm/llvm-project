@@ -383,12 +383,12 @@ private:
     static_assert(std::is_standard_layout<T>::value ||
                       std::is_pointer<T>::value,
                   "Expected standard layout or pointer");
-    new (reinterpret_cast<void *>(Val.buffer)) T(V);
+    new (reinterpret_cast<void *>(&Val)) T(V);
   }
 
-  template <class T> T *get() { return reinterpret_cast<T *>(Val.buffer); }
+  template <class T> T *get() { return reinterpret_cast<T *>(&Val); }
   template <class T> const T *get() const {
-    return reinterpret_cast<const T *>(Val.buffer);
+    return reinterpret_cast<const T *>(&Val);
   }
   template <class T> void destruct() { get<T>()->~T(); }
 

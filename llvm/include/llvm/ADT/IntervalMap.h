@@ -978,10 +978,7 @@ private:
   Allocator &allocator;
 
   /// Represent data as a node type without breaking aliasing rules.
-  template <typename T>
-  T &dataAs() const {
-    return *bit_cast<T *>(const_cast<char *>(data.buffer));
-  }
+  template <typename T> T &dataAs() const { return *bit_cast<T *>(&data); }
 
   const RootLeaf &rootLeaf() const {
     assert(!branched() && "Cannot acces leaf data in branched root");
@@ -1039,7 +1036,7 @@ private:
 
 public:
   explicit IntervalMap(Allocator &a) : height(0), rootSize(0), allocator(a) {
-    assert((uintptr_t(data.buffer) & (alignof(RootLeaf) - 1)) == 0 &&
+    assert((uintptr_t(&data) & (alignof(RootLeaf) - 1)) == 0 &&
            "Insufficient alignment");
     new(&rootLeaf()) RootLeaf();
   }
