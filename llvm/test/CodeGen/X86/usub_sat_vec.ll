@@ -1161,17 +1161,10 @@ define void @PR48223(<32 x i16>* %p0) {
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; AVX512F-NEXT:    vpmaxuw %ymm2, %ymm1, %ymm3
-; AVX512F-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm3
-; AVX512F-NEXT:    vpmaxuw %ymm2, %ymm0, %ymm2
-; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472,65472]
-; AVX512F-NEXT:    vpaddw %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpaddw %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpandq %zmm0, %zmm2, %zmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rdi)
+; AVX512F-NEXT:    vpsubusw %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsubusw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vmovdqa %ymm0, (%rdi)
+; AVX512F-NEXT:    vmovdqa %ymm1, 32(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
