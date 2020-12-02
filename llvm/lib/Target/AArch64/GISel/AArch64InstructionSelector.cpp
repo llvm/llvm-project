@@ -257,6 +257,11 @@ private:
                             MachineBasicBlock *DstMBB,
                             MachineIRBuilder &MIB) const;
 
+  /// Emit a CB(N)Z instruction which branches to \p DestMBB.
+  MachineInstr *emitCBZ(Register CompareReg, bool IsNegative,
+                        MachineBasicBlock *DestMBB,
+                        MachineIRBuilder &MIB) const;
+
   // Equivalent to the i32shift_a and friends from AArch64InstrInfo.td.
   // We use these manually instead of using the importer since it doesn't
   // support SDNodeXForm.
@@ -1394,9 +1399,7 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
   // Only support EQ and NE. If we have LT, then it *is* possible to fold, but
   // we don't want to do this. When we have an AND and LT, we need a TST/ANDS,
   // so folding would be redundant.
-  if (Pred != CmpInst::Predicate::ICMP_EQ &&
-      Pred != CmpInst::Predicate::ICMP_NE)
-    return false;
+  assert(ICmpInst::isEquality(Pred) && "Expected only eq/ne?");
 
   // Check if the AND has a constant on its RHS which we can use as a mask.
   // If it's a power of 2, then it's the same as checking a specific bit.
@@ -1413,6 +1416,27 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
   // Emit a TB(N)Z.
   emitTestBit(TestReg, Bit, Invert, DstMBB, MIB);
   return true;
+}
+
+MachineInstr *AArch64InstructionSelector::emitCBZ(Register CompareReg,
+                                                  bool IsNegative,
+                                                  MachineBasicBlock *DestMBB,
+                                                  MachineIRBuilder &MIB) const {
+  assert(ProduceNonFlagSettingCondBr && "CBZ does not set flags!");
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  assert(RBI.getRegBank(CompareReg, MRI, TRI)->getID() ==
+             AArch64::GPRRegBankID &&
+         "Expected GPRs only?");
+  auto Ty = MRI.getType(CompareReg);
+  unsigned Width = Ty.getSizeInBits();
+  assert(!Ty.isVector() && "Expected scalar only?");
+  assert(Width <= 64 && "Expected width to be at most 64?");
+  static const unsigned OpcTable[2][2] = {{AArch64::CBZW, AArch64::CBZX},
+                                          {AArch64::CBNZW, AArch64::CBNZX}};
+  unsigned Opc = OpcTable[IsNegative][Width == 64];
+  auto BranchMI = MIB.buildInstr(Opc, {}, {CompareReg}).addMBB(DestMBB);
+  constrainSelectedInstRegOperands(*BranchMI, TII, TRI, RBI);
+  return &*BranchMI;
 }
 
 bool AArch64InstructionSelector::selectCompareBranch(
@@ -1477,51 +1501,39 @@ bool AArch64InstructionSelector::selectCompareBranch(
     }
   }
 
-  if (!VRegAndVal) {
-    std::swap(RHS, LHS);
-    VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
-    LHSMI = getDefIgnoringCopies(LHS, MRI);
+  // Attempt to handle commutative condition codes. Right now, that's only
+  // eq/ne.
+  if (ICmpInst::isEquality(Pred)) {
+    if (!VRegAndVal) {
+      std::swap(RHS, LHS);
+      VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+      LHSMI = getDefIgnoringCopies(LHS, MRI);
+    }
+
+    if (VRegAndVal && VRegAndVal->Value == 0) {
+      // If there's a G_AND feeding into this branch, try to fold it away by
+      // emitting a TB(N)Z instead.
+      if (tryOptAndIntoCompareBranch(LHSMI, VRegAndVal->Value, Pred, DestMBB,
+                                     MIB)) {
+        I.eraseFromParent();
+        return true;
+      }
+
+      // Otherwise, try to emit a CB(N)Z instead.
+      auto LHSTy = MRI.getType(LHS);
+      if (!LHSTy.isVector() && LHSTy.getSizeInBits() <= 64) {
+        emitCBZ(LHS, /*IsNegative = */ Pred == CmpInst::ICMP_NE, DestMBB, MIB);
+        I.eraseFromParent();
+        return true;
+      }
+    }
   }
 
-  if (!VRegAndVal || VRegAndVal->Value != 0) {
-    // If we can't select a CBZ then emit a cmp + Bcc.
-    auto Pred =
-        static_cast<CmpInst::Predicate>(CCMI->getOperand(1).getPredicate());
-    emitIntegerCompare(CCMI->getOperand(2), CCMI->getOperand(3),
-                       CCMI->getOperand(1), MIB);
-    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(Pred);
-    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
-    I.eraseFromParent();
-    return true;
-  }
-
-  // Try to emit a TB(N)Z for an eq or ne condition.
-  if (tryOptAndIntoCompareBranch(LHSMI, VRegAndVal->Value, Pred, DestMBB,
-                                 MIB)) {
-    I.eraseFromParent();
-    return true;
-  }
-
-  const RegisterBank &RB = *RBI.getRegBank(LHS, MRI, TRI);
-  if (RB.getID() != AArch64::GPRRegBankID)
-    return false;
-  if (Pred != CmpInst::ICMP_NE && Pred != CmpInst::ICMP_EQ)
-    return false;
-
-  const unsigned CmpWidth = MRI.getType(LHS).getSizeInBits();
-  unsigned CBOpc = 0;
-  if (CmpWidth <= 32)
-    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZW : AArch64::CBNZW);
-  else if (CmpWidth == 64)
-    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZX : AArch64::CBNZX);
-  else
-    return false;
-
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(CBOpc))
-      .addUse(LHS)
-      .addMBB(DestMBB)
-      .constrainAllUses(TII, TRI, RBI);
-
+  // Couldn't optimize. Emit a compare + bcc.
+  emitIntegerCompare(CCMI->getOperand(2), CCMI->getOperand(3),
+                     CCMI->getOperand(1), MIB);
+  const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(Pred);
+  MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
   I.eraseFromParent();
   return true;
 }
