@@ -77,7 +77,7 @@ static Value *findStoredValue(Value *AllocaValue) {
   if (!Store)
     return nullptr;
   return Store->getValueOperand();
-};
+}
 
 TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
