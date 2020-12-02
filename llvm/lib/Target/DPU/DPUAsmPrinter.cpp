@@ -50,7 +50,7 @@ public:
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O,
                     const char *Modifier = nullptr);
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 };
 } // namespace
 
@@ -93,7 +93,7 @@ void DPUAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
 }
 
-void DPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void DPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   DPUMCInstLower MCInstLowering(OutContext, *this);
 
   MCInst TmpInst;

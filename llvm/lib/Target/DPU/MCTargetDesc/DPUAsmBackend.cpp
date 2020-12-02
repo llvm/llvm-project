@@ -78,8 +78,7 @@ bool DPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
   return false;
 }
 
-void DPUAsmBackend::relaxInstruction(const MCInst &, const MCSubtargetInfo &,
-                                     MCInst &) const {
+void DPUAsmBackend::relaxInstruction(MCInst &, const MCSubtargetInfo &) const {
   llvm_unreachable("no instruction should be relaxed");
 }
 

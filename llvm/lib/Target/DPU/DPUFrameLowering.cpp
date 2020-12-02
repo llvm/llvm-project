@@ -69,7 +69,7 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   MFI.setStackSize(ActualStackSize);
 
   CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, StackSize));
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, -StackSize));
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
@@ -140,7 +140,7 @@ MachineBasicBlock::iterator DPUFrameLowering::eliminateCallFramePseudoInstr(
 }
 
 int DPUFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                             unsigned &FrameReg) const {
+                                             Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Because we use no register but permanently adjust the stack pointer, the

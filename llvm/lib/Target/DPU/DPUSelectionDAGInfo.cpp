@@ -88,7 +88,7 @@ static SDValue EmitMemcpyWM(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
 
 SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   if (AlwaysInline) {
     return SDValue();
@@ -102,8 +102,8 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   int32_t SrcAlign = getSDValueAlignment(Src);
   int32_t DstAlign = getSDValueAlignment(Dst);
-  if ((int32_t)Align > DstAlign)
-    DstAlign = Align;
+  if ((int32_t)Alignment.value() > DstAlign)
+    DstAlign = Alignment.value();
 
   if (DstIsMramPtr) {
     if (SrcIsMramPtr) {
@@ -129,7 +129,7 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
 SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile,
+    SDValue Size, Align Alignment, bool isVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   bool DstIsMramPtr = DstPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
   bool SrcIsMramPtr = SrcPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
@@ -152,7 +152,7 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemmove(
 
 SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile,
+    SDValue Size, Align Alignment, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   bool DstIsMramPtr = DstPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
 
@@ -160,8 +160,8 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemset(
   bool CanFetchConstant = canFetchConstantTo(Size, &Length);
 
   int32_t DstAlign = getSDValueAlignment(Dst);
-  if ((int32_t)Align > DstAlign)
-    DstAlign = Align;
+  if ((int32_t)Alignment.value() > DstAlign)
+    DstAlign = Alignment.value();
 
   if (DstIsMramPtr) {
     if ((DstAlign % MramAlignment == 0) && CanFetchConstant &&

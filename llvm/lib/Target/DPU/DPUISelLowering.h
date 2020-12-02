@@ -188,18 +188,21 @@ static bool canFetchConstantTo(SDValue Value, uint64_t *pValue) {
 
 __attribute__((used)) static int32_t getSDValueAlignment(SDValue Op) {
   if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op)) {
-    return GV->getGlobal()->getAlignment();
+    const DataLayout &DL = GV->getGlobal()->getParent()->getDataLayout();
+    return GV->getGlobal()->getPointerAlignment(DL).value();
   } else if (Op.getOpcode() == ISD::ADD) {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     uint64_t Size;
     if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op0)) {
       if (canFetchConstantTo(Op1, &Size)) {
-        return GV->getGlobal()->getAlignment() + Size;
+        const DataLayout &DL = GV->getGlobal()->getParent()->getDataLayout();
+        return GV->getGlobal()->getPointerAlignment(DL).value() + Size;
       }
     } else if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op1)) {
       if (canFetchConstantTo(Op0, &Size)) {
-        return GV->getGlobal()->getAlignment() + Size;
+        const DataLayout &DL = GV->getGlobal()->getParent()->getDataLayout();
+        return GV->getGlobal()->getPointerAlignment(DL).value() + Size;
       }
     }
   } else if (Op.getOpcode() == ISD::AND) {
@@ -209,7 +212,8 @@ __attribute__((used)) static int32_t getSDValueAlignment(SDValue Op) {
     if (canFetchConstantTo(Op1, &Size)) {
       int32_t ConstantAlign = 1 << __builtin_ctz(Size);
       if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op0)) {
-        int32_t OpAlign = GV->getGlobal()->getAlignment();
+        const DataLayout &DL = GV->getGlobal()->getParent()->getDataLayout();
+        int32_t OpAlign = GV->getGlobal()->getPointerAlignment(DL).value();
         return OpAlign > ConstantAlign ? OpAlign : ConstantAlign;
       } else {
         return ConstantAlign;
@@ -217,7 +221,8 @@ __attribute__((used)) static int32_t getSDValueAlignment(SDValue Op) {
     } else if (canFetchConstantTo(Op0, &Size)) {
       int32_t ConstantAlign = 1 << __builtin_ctz(Size);
       if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op1)) {
-        int32_t OpAlign = GV->getGlobal()->getAlignment();
+        const DataLayout &DL = GV->getGlobal()->getParent()->getDataLayout();
+        int32_t OpAlign = GV->getGlobal()->getPointerAlignment(DL).value();
         return OpAlign > ConstantAlign ? OpAlign : ConstantAlign;
       } else {
         return ConstantAlign;

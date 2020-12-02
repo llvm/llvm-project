@@ -20,6 +20,7 @@
 #include "DPUInstructionDecoder.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCDisassembler/MCExternalSymbolizer.h"
 
 namespace llvm {
 

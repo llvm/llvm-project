@@ -48,7 +48,7 @@ DPUInstrInfo::DPUInstrInfo()
 
 void DPUInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       unsigned SrcReg, bool IsKill, int FI,
+                                       Register SrcReg, bool IsKill, int FI,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   DebugLoc DL = (I != MBB.end()) ? I->getDebugLoc() : DebugLoc();
@@ -75,7 +75,7 @@ void DPUInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void DPUInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
-                                        unsigned DestReg, int FI,
+                                        Register DestReg, int FI,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   DebugLoc DL;

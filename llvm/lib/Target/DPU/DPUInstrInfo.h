@@ -30,13 +30,13 @@ public:
   const DPURegisterInfo &getRegisterInfo() const { return RI; }
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, unsigned SrcReg,
+                           MachineBasicBlock::iterator MBBI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator I, unsigned DestReg,
+                            MachineBasicBlock::iterator I, Register DestReg,
                             int FI, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 

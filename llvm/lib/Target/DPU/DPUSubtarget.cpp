@@ -26,8 +26,8 @@ using namespace llvm;
 
 void DPUSubtarget::anchor() {}
 
-DPUSubtarget::DPUSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, const TargetMachine &TM)
+DPUSubtarget::DPUSubtarget(const Triple &TT, const StringRef &CPU,
+                           const StringRef &FS, const TargetMachine &TM)
     : DPUGenSubtargetInfo(TT, CPU, FS), InstrInfo(), FrameLowering(*this),
       TargetLowering(TM, *this), TSInfo() {}
 

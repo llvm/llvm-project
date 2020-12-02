@@ -102,6 +102,9 @@ public:
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
+  OperandMatchResultTy
+  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
@@ -581,9 +584,14 @@ public:
 
 bool DPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
-  LLVM_DEBUG(dbgs() << "ParseRegister\n");
+  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+}
+
+OperandMatchResultTy
+DPUAsmParser::tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
+  LLVM_DEBUG(dbgs() << "tryParseRegister\n");
   // todo
-  llvm_unreachable("ParseRegister");
+  llvm_unreachable("tryParseRegister");
 }
 
 bool DPUAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -623,7 +631,7 @@ bool DPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
-    Out.EmitInstruction(Inst, SubtargetInfo);
+    Out.emitInstruction(Inst, SubtargetInfo);
     Opcode = Inst.getOpcode();
     return false;
   case Match_MissingFeature:

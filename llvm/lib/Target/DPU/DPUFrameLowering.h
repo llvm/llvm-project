@@ -36,7 +36,7 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
 
 private:
   const DPUSubtarget &STI;

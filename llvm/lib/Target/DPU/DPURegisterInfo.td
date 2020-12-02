@@ -182,7 +182,7 @@ def NZ_OP_REG: RegisterClass<"DPU", [i32], 32, (add GP_REG, ID_REG, ONE, LNEG, M
 class DPUAsmRegOperand<RegisterClass regs> : AsmOperandClass {
   let ParserMethod = "parseAnyRegister";
   let RenderMethod = "addRegOperands";
-  let Name = regs ## "_AsmReg";
+  let Name = regs#"_AsmReg";
 }
 
 class DPURegOperand<RegisterClass regs> : RegisterOperand<regs> {

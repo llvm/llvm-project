@@ -31,7 +31,7 @@ int DPUMachineFunctionInfo::getOffsetFromFrameIndex(int FrameIndex) {
 
 int DPUMachineFunctionInfo::getTemporaryFrameIndex() {
   if (FI == UNDEF_FI)
-    FI = MFI.CreateSpillStackObject(8, 8);
+    FI = MFI.CreateSpillStackObject(8, Align(8));
 
   return FI;
 }

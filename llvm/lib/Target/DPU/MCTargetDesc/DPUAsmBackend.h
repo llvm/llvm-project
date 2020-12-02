@@ -40,7 +40,7 @@ public:
 
     bool fixupNeedsRelaxation(const MCFixup&, uint64_t, const MCRelaxableFragment*, const MCAsmLayout&) const override;
 
-    void relaxInstruction(const MCInst&, const MCSubtargetInfo&, MCInst&) const override;
+    void relaxInstruction(MCInst&, const MCSubtargetInfo&) const override;
 
     bool writeNopData(raw_ostream&, uint64_t) const override;
 

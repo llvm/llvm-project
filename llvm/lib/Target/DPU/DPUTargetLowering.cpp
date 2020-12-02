@@ -1002,7 +1002,7 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
 
     unsigned Size = Flags.getByValSize();
-    unsigned Align = Flags.getByValAlign();
+    Align Align = Flags.getNonZeroByValAlign();
     int FI = MFI.CreateStackObject(Size, Align, false);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue ArgSize = DAG.getConstant(Size, dl, MVT::i32);
@@ -1603,7 +1603,8 @@ SDValue DPUTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   SDValue GlobalBase = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0);
   const SDValue &Wrapped = DAG.getNode(DPUISD::Wrapper, DL, PtrVT, GlobalBase);
 
-  const uint64_t ValueAlignment = GV->getAlignment();
+  const DataLayout &Layout = GV->getParent()->getDataLayout();
+  const uint64_t ValueAlignment = GV->getPointerAlignment(Layout).value();
   const uint64_t ValueSize =
       DAG.getDataLayout().getTypeAllocSize(GV->getValueType());
   const uint64_t ValueContainerSize =

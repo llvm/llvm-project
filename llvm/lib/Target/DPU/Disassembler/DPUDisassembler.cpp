@@ -81,9 +81,6 @@ bool DPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
                                              uint64_t /*Address*/,
                                              bool IsBranch, uint64_t /*Offset*/,
                                              uint64_t /*InstSize*/) {
-  using SymbolInfoTy = std::tuple<uint64_t, StringRef, uint8_t>;
-  using SectionSymbolsTy = std::vector<SymbolInfoTy>;
-
   if (!IsBranch) {
     return false;
   }
@@ -92,12 +89,12 @@ bool DPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
   if (!Symbols)
     return false;
 
-  auto Result = std::find_if(
-      Symbols->begin(), Symbols->end(), [Value](const SymbolInfoTy &Val) {
-        return std::get<0>(Val) == static_cast<uint64_t>(Value);
-      });
+  auto Result = std::find_if(Symbols->begin(), Symbols->end(),
+                             [Value](const SymbolInfoTy& Val) {
+                                return Val.Addr == static_cast<uint64_t>(Value);
+                             });
   if (Result != Symbols->end()) {
-    auto *Sym = Ctx.getOrCreateSymbol(std::get<1>(*Result));
+    auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
     const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);
     Inst.addOperand(MCOperand::createExpr(Add));
     return true;
@@ -118,10 +115,12 @@ static MCDisassembler *createDPUDisassembler(const Target &T,
 }
 
 static MCSymbolizer *
-createDPUSymbolizer(const Triple & /*TT*/, LLVMOpInfoCallback /*GetOpInfo*/,
-                    LLVMSymbolLookupCallback /*SymbolLookUp*/, void *DisInfo,
+createDPUSymbolizer(const Triple & TT, LLVMOpInfoCallback GetOpInfo,
+                    LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                     MCContext *Ctx,
                     std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+  if (SymbolLookUp)
+    return llvm::createMCSymbolizer(TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx, std::move(RelInfo));
   return new DPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
 }
 

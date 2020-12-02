@@ -41,7 +41,7 @@ class DPUSubtarget : public DPUGenSubtargetInfo {
 public:
   // This constructor initializes the data members to match that
   // of the specified triple.
-  DPUSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
+  DPUSubtarget(const Triple &TT, const StringRef &CPU, const StringRef &FS,
                const TargetMachine &TM);
 
   // ParseSubtargetFeatures - Parses features string setting specified
