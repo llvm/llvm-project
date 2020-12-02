@@ -73,10 +73,12 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.o");
   }
 
+  // TODO: set modTime properly
   std::vector<ObjFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i)
     if (!buf[i].empty())
-      ret.push_back(make<ObjFile>(MemoryBufferRef(buf[i], "lto.tmp")));
+      ret.push_back(
+          make<ObjFile>(MemoryBufferRef(buf[i], "lto.tmp"), /*modTime=*/0));
 
   return ret;
 }

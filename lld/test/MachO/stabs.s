@@ -3,22 +3,35 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
+## Set modtimes of the files for deterministic test output.
+# RUN: env TZ=UTC touch -t "197001010000.16" %t/test.o
+# RUN: env TZ=UTC touch -t "197001010000.32" %t/foo.o
+# RUN: rm -f %t/foo.a
+# RUN: llvm-ar rcsU %t/foo.a %t/foo.o
 
 # RUN: %lld -lSystem %t/test.o %t/foo.o -o %t/test
-# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t
+# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o
+
+## Check that we emit the right modtime even when the object file is in an
+## archive.
+# RUN: %lld -lSystem %t/test.o %t/foo.a -o %t/test
+# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\)
 
 ## Check that we emit absolute paths to the object files in our OSO entries
 ## even if our inputs are relative paths.
 # RUN: cd %t && %lld -lSystem test.o foo.o -o test
-# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t
+# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o
+
+# RUN: cd %t && %lld -lSystem %t/test.o %t/foo.a -o %t/test
+# RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\)
 
 # CHECK:      0000000000000000 - 00 0000    SO /tmp/test.cpp
-# CHECK-NEXT: 0000000000000000 - 03 0001   OSO [[DIR]]/test.o
+# CHECK-NEXT: 0000000000000010 - 03 0001   OSO [[DIR]]/test.o
 # CHECK-NEXT: [[#%x, MAIN:]]   - 01 0000   FUN _main
-# CHECK-NEXT: 0000000000000001 - 00 0000   FUN
+# CHECK-NEXT: 0000000000000006 - 00 0000   FUN
 # CHECK-NEXT: 0000000000000000 - 01 0000    SO
 # CHECK-NEXT: 0000000000000000 - 00 0000    SO /foo.cpp
-# CHECK-NEXT: 0000000000000000 - 03 0001   OSO [[DIR]]/foo.o
+# CHECK-NEXT: 0000000000000020 - 03 0001   OSO [[FOO_PATH]]
 # CHECK-NEXT: [[#%x, FOO:]]    - 01 0000   FUN _foo
 # CHECK-NEXT: 0000000000000001 - 00 0000   FUN
 # CHECK-NEXT: 0000000000000000 - 01 0000    SO
@@ -30,6 +43,7 @@
 .globl  _main
 _main:
 Lfunc_begin0:
+  callq _foo
   retq
 Lfunc_end0:
 

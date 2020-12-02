@@ -364,7 +364,8 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   subsections.push_back({{0, isec}});
 }
 
-ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
+ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime)
+    : InputFile(ObjKind, mb), modTime(modTime) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
@@ -592,7 +593,16 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
             toString(this) +
                 ": could not get the buffer for the member defining symbol " +
                 sym.getName());
-  auto file = make<ObjFile>(mb);
+
+  uint32_t modTime = toTimeT(
+      CHECK(c.getLastModified(), toString(this) +
+                                     ": could not get the modification time "
+                                     "for the member defining symbol " +
+                                     sym.getName()));
+
+  auto file = make<ObjFile>(mb, modTime);
+  file->archiveName = getName();
+
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   subsections.insert(subsections.end(), file->subsections.begin(),
                      file->subsections.end());

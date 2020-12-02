@@ -90,10 +90,12 @@ private:
 // .o file
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef mb);
+  explicit ObjFile(MemoryBufferRef mb, uint32_t modTime);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
+  StringRef archiveName = "";
+  const uint32_t modTime;
 
 private:
   void parseDebugInfo();
