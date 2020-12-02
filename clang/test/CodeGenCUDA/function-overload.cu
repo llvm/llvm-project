@@ -12,6 +12,9 @@
 #include "Inputs/cuda.h"
 
 // Check constructors/destructors for D/H functions
+#ifdef __CUDA_ARCH__
+__device__
+#endif
 int x;
 struct s_cd_dh {
   __host__ s_cd_dh() { x = 11; }
