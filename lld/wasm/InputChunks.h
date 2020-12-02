@@ -74,6 +74,7 @@ protected:
       : file(f), live(!config->gcSections), discarded(false), sectionKind(k) {}
   virtual ~InputChunk() = default;
   virtual ArrayRef<uint8_t> data() const = 0;
+  virtual uint64_t getTombstone() const { return 0; }
 
   // Verifies the existing data at relocation targets matches our expectations.
   // This is performed only debug builds as an extra sanity check.
@@ -214,7 +215,7 @@ protected:
 class InputSection : public InputChunk {
 public:
   InputSection(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, InputChunk::Section), section(s) {
+      : InputChunk(f, InputChunk::Section), section(s), tombstoneValue(getTombstoneForSection(s.Name)) {
     assert(section.Type == llvm::wasm::WASM_SEC_CUSTOM);
   }
 
@@ -228,8 +229,11 @@ protected:
   // Offset within the input section.  This is only zero since this chunk
   // type represents an entire input section, not part of one.
   uint32_t getInputSectionOffset() const override { return 0; }
+  uint64_t getTombstone() const override { return tombstoneValue; }
+  static uint64_t getTombstoneForSection(StringRef name);
 
   const WasmSection &section;
+  const uint64_t tombstoneValue;
 };
 
 } // namespace wasm
