@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -O3 -march=x86-64 -mcpu=core2 -stress-ivchain | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -O3 -march=x86 -mcpu=core2 -stress-ivchain | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -O3 -mtriple=x86_64-- -mcpu=core2 -stress-ivchain | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -O3 -mtriple=i686-- -mcpu=core2 -stress-ivchain | FileCheck %s -check-prefix=X86
 
 ; @sharedidx is an unrolled variant of this loop:
 ;  for (unsigned long i = 0; i < len; i += s) {
@@ -17,14 +17,14 @@
 ; X64-NOT: leal ({{.*}},4)
 ; X64: %for.body.1
 
-; X32: sharedidx:
-; X32: %for.body.2
-; X32: add
-; X32: add
-; X32: add
-; X32: add
-; X32: add
-; X32: %for.body.3
+; X86: sharedidx:
+; X86: %for.body.2
+; X86: add
+; X86: add
+; X86: add
+; X86: add
+; X86: add
+; X86: %for.body.3
 define void @sharedidx(i8* nocapture %a, i8* nocapture %b, i8* nocapture %c, i32 %s, i32 %len) nounwind ssp {
 entry:
   %cmp8 = icmp eq i32 %len, 0
