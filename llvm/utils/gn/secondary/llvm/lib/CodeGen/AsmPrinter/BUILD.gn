@@ -15,6 +15,7 @@ static_library("AsmPrinter") {
     "//llvm/lib/Target",
   ]
   sources = [
+    "AIXException.cpp",
     "ARMException.cpp",
     "AccelTable.cpp",
     "AddressPool.cpp",
