@@ -428,12 +428,12 @@ struct DFSanFunction {
   std::vector<Value *> NonZeroChecks;
   bool AvoidNewBlocks;
 
-  struct CachedCombinedShadow {
-    BasicBlock *Block;
+  struct CachedShadow {
+    BasicBlock *Block; // The block where Shadow is defined.
     Value *Shadow;
   };
-  DenseMap<std::pair<Value *, Value *>, CachedCombinedShadow>
-      CachedCombinedShadows;
+  /// Maps a value to its latest shadow value in terms of domination tree.
+  DenseMap<std::pair<Value *, Value *>, CachedShadow> CachedShadows;
   DenseMap<Value *, std::set<Value *>> ShadowElements;
 
   DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI)
@@ -1145,7 +1145,7 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
   auto Key = std::make_pair(V1, V2);
   if (V1 > V2)
     std::swap(Key.first, Key.second);
-  CachedCombinedShadow &CCS = CachedCombinedShadows[Key];
+  CachedShadow &CCS = CachedShadows[Key];
   if (CCS.Block && DT.dominates(CCS.Block, Pos->getParent()))
     return CCS.Shadow;
 
