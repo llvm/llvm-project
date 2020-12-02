@@ -10,6 +10,7 @@
 #define MLIR_PATTERNMATCHER_H
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 
@@ -226,6 +227,189 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
 };
 
 //===----------------------------------------------------------------------===//
+// PDLPatternModule
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// PDLValue
+
+/// Storage type of byte-code interpreter values. These are passed to constraint
+/// functions as arguments.
+class PDLValue {
+  /// The internal implementation type when the value is an Attribute,
+  /// Operation*, or Type. See `impl` below for more details.
+  using AttrOpTypeImplT = llvm::PointerUnion<Attribute, Operation *, Type>;
+
+public:
+  PDLValue(const PDLValue &other) : impl(other.impl) {}
+  PDLValue(std::nullptr_t = nullptr) : impl() {}
+  PDLValue(Attribute value) : impl(value) {}
+  PDLValue(Operation *value) : impl(value) {}
+  PDLValue(Type value) : impl(value) {}
+  PDLValue(Value value) : impl(value) {}
+
+  /// Returns true if the type of the held value is `T`.
+  template <typename T>
+  std::enable_if_t<std::is_same<T, Value>::value, bool> isa() const {
+    return impl.is<Value>();
+  }
+  template <typename T>
+  std::enable_if_t<!std::is_same<T, Value>::value, bool> isa() const {
+    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
+    return attrOpTypeImpl && attrOpTypeImpl.is<T>();
+  }
+
+  /// Attempt to dynamically cast this value to type `T`, returns null if this
+  /// value is not an instance of `T`.
+  template <typename T>
+  std::enable_if_t<std::is_same<T, Value>::value, T> dyn_cast() const {
+    return impl.dyn_cast<T>();
+  }
+  template <typename T>
+  std::enable_if_t<!std::is_same<T, Value>::value, T> dyn_cast() const {
+    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
+    return attrOpTypeImpl && attrOpTypeImpl.dyn_cast<T>();
+  }
+
+  /// Cast this value to type `T`, asserts if this value is not an instance of
+  /// `T`.
+  template <typename T>
+  std::enable_if_t<std::is_same<T, Value>::value, T> cast() const {
+    return impl.get<T>();
+  }
+  template <typename T>
+  std::enable_if_t<!std::is_same<T, Value>::value, T> cast() const {
+    return impl.get<AttrOpTypeImplT>().get<T>();
+  }
+
+  /// Get an opaque pointer to the value.
+  void *getAsOpaquePointer() { return impl.getOpaqueValue(); }
+
+  /// Print this value to the provided output stream.
+  void print(raw_ostream &os);
+
+private:
+  /// The internal opaque representation of a PDLValue. We use a nested
+  /// PointerUnion structure here because `Value` only has 1 low bit
+  /// available, where as the remaining types all have 3.
+  llvm::PointerUnion<AttrOpTypeImplT, Value> impl;
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
+  value.print(os);
+  return os;
+}
+
+//===----------------------------------------------------------------------===//
+// PDLPatternModule
+
+/// A generic PDL pattern constraint function. This function applies a
+/// constraint to a given set of opaque PDLValue entities. The second parameter
+/// is a set of constant value parameters specified in Attribute form. Returns
+/// success if the constraint successfully held, failure otherwise.
+using PDLConstraintFunction = std::function<LogicalResult(
+    ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
+/// A native PDL creation function. This function creates a new PDLValue given
+/// a set of existing PDL values, a set of constant parameters specified in
+/// Attribute form, and a PatternRewriter. Returns the newly created PDLValue.
+using PDLCreateFunction =
+    std::function<PDLValue(ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
+/// A native PDL rewrite function. This function rewrites the given root
+/// operation using the provided PatternRewriter. This method is only invoked
+/// when the corresponding match was successful.
+using PDLRewriteFunction = std::function<void(Operation *, ArrayRef<PDLValue>,
+                                              ArrayAttr, PatternRewriter &)>;
+/// A generic PDL pattern constraint function. This function applies a
+/// constraint to a given opaque PDLValue entity. The second parameter is a set
+/// of constant value parameters specified in Attribute form. Returns success if
+/// the constraint successfully held, failure otherwise.
+using PDLSingleEntityConstraintFunction =
+    std::function<LogicalResult(PDLValue, ArrayAttr, PatternRewriter &)>;
+
+/// This class contains all of the necessary data for a set of PDL patterns, or
+/// pattern rewrites specified in the form of the PDL dialect. This PDL module
+/// contained by this pattern may contain any number of `pdl.pattern`
+/// operations.
+class PDLPatternModule {
+public:
+  PDLPatternModule() = default;
+
+  /// Construct a PDL pattern with the given module.
+  PDLPatternModule(OwningModuleRef pdlModule)
+      : pdlModule(std::move(pdlModule)) {}
+
+  /// Merge the state in `other` into this pattern module.
+  void mergeIn(PDLPatternModule &&other);
+
+  /// Return the internal PDL module of this pattern.
+  ModuleOp getModule() { return pdlModule.get(); }
+
+  //===--------------------------------------------------------------------===//
+  // Function Registry
+
+  /// Register a constraint function.
+  void registerConstraintFunction(StringRef name,
+                                  PDLConstraintFunction constraintFn);
+  /// Register a single entity constraint function.
+  template <typename SingleEntityFn>
+  std::enable_if_t<!llvm::is_invocable<SingleEntityFn, ArrayRef<PDLValue>,
+                                       ArrayAttr, PatternRewriter &>::value>
+  registerConstraintFunction(StringRef name, SingleEntityFn &&constraintFn) {
+    registerConstraintFunction(name, [=](ArrayRef<PDLValue> values,
+                                         ArrayAttr constantParams,
+                                         PatternRewriter &rewriter) {
+      assert(values.size() == 1 && "expected values to have a single entity");
+      return constraintFn(values[0], constantParams, rewriter);
+    });
+  }
+
+  /// Register a creation function.
+  void registerCreateFunction(StringRef name, PDLCreateFunction createFn);
+
+  /// Register a rewrite function.
+  void registerRewriteFunction(StringRef name, PDLRewriteFunction rewriteFn);
+
+  /// Return the set of the registered constraint functions.
+  const llvm::StringMap<PDLConstraintFunction> &getConstraintFunctions() const {
+    return constraintFunctions;
+  }
+  llvm::StringMap<PDLConstraintFunction> takeConstraintFunctions() {
+    return constraintFunctions;
+  }
+  /// Return the set of the registered create functions.
+  const llvm::StringMap<PDLCreateFunction> &getCreateFunctions() const {
+    return createFunctions;
+  }
+  llvm::StringMap<PDLCreateFunction> takeCreateFunctions() {
+    return createFunctions;
+  }
+  /// Return the set of the registered rewrite functions.
+  const llvm::StringMap<PDLRewriteFunction> &getRewriteFunctions() const {
+    return rewriteFunctions;
+  }
+  llvm::StringMap<PDLRewriteFunction> takeRewriteFunctions() {
+    return rewriteFunctions;
+  }
+
+  /// Clear out the patterns and functions within this module.
+  void clear() {
+    pdlModule = nullptr;
+    constraintFunctions.clear();
+    createFunctions.clear();
+    rewriteFunctions.clear();
+  }
+
+private:
+  /// The module containing the `pdl.pattern` operations.
+  OwningModuleRef pdlModule;
+
+  /// The external functions referenced from within the PDL module.
+  llvm::StringMap<PDLConstraintFunction> constraintFunctions;
+  llvm::StringMap<PDLCreateFunction> createFunctions;
+  llvm::StringMap<PDLRewriteFunction> rewriteFunctions;
+};
+
+//===----------------------------------------------------------------------===//
 // PatternRewriter
 //===----------------------------------------------------------------------===//
 
@@ -384,28 +568,28 @@ private:
 //===----------------------------------------------------------------------===//
 
 class OwningRewritePatternList {
-  using PatternListT = std::vector<std::unique_ptr<RewritePattern>>;
+  using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
   OwningRewritePatternList() = default;
 
-  /// Construct a OwningRewritePatternList populated with the pattern `t` of
-  /// type `T`.
-  template <typename T>
-  OwningRewritePatternList(T &&t) {
-    patterns.emplace_back(std::make_unique<T>(std::forward<T>(t)));
+  /// Construct a OwningRewritePatternList populated with the given pattern.
+  OwningRewritePatternList(std::unique_ptr<RewritePattern> pattern) {
+    nativePatterns.emplace_back(std::move(pattern));
   }
+  OwningRewritePatternList(PDLPatternModule &&pattern)
+      : pdlPatterns(std::move(pattern)) {}
 
-  PatternListT::iterator begin() { return patterns.begin(); }
-  PatternListT::iterator end() { return patterns.end(); }
-  PatternListT::const_iterator begin() const { return patterns.begin(); }
-  PatternListT::const_iterator end() const { return patterns.end(); }
-  PatternListT::size_type size() const { return patterns.size(); }
-  void clear() { patterns.clear(); }
+  /// Return the native patterns held in this list.
+  NativePatternListT &getNativePatterns() { return nativePatterns; }
 
-  /// Take ownership of the patterns held by this list.
-  std::vector<std::unique_ptr<RewritePattern>> takePatterns() {
-    return std::move(patterns);
+  /// Return the PDL patterns held in this list.
+  PDLPatternModule &getPDLPatterns() { return pdlPatterns; }
+
+  /// Clear out all of the held patterns in this list.
+  void clear() {
+    nativePatterns.clear();
+    pdlPatterns.clear();
   }
 
   //===--------------------------------------------------------------------===//
@@ -419,31 +603,53 @@ public:
             typename... ConstructorArgs,
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
   OwningRewritePatternList &insert(ConstructorArg &&arg,
-                                   ConstructorArgs &&... args) {
+                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{
-        0, (patterns.emplace_back(std::make_unique<Ts>(arg, args...)), 0)...};
+    (void)std::initializer_list<int>{0, (insertImpl<Ts>(arg, args...), 0)...};
     return *this;
   }
 
   /// Add an instance of each of the pattern types 'Ts'. Return a reference to
   /// `this` for chaining insertions.
   template <typename... Ts> OwningRewritePatternList &insert() {
-    (void)std::initializer_list<int>{
-        0, (patterns.emplace_back(std::make_unique<Ts>()), 0)...};
+    (void)std::initializer_list<int>{0, (insertImpl<Ts>(), 0)...};
     return *this;
   }
 
-  /// Add the given pattern to the pattern list.
-  void insert(std::unique_ptr<RewritePattern> pattern) {
-    patterns.emplace_back(std::move(pattern));
+  /// Add the given native pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  OwningRewritePatternList &insert(std::unique_ptr<RewritePattern> pattern) {
+    nativePatterns.emplace_back(std::move(pattern));
+    return *this;
+  }
+
+  /// Add the given PDL pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  OwningRewritePatternList &insert(PDLPatternModule &&pattern) {
+    pdlPatterns.mergeIn(std::move(pattern));
+    return *this;
   }
 
 private:
-  PatternListT patterns;
+  /// Add an instance of the pattern type 'T'. Return a reference to `this` for
+  /// chaining insertions.
+  template <typename T, typename... Args>
+  std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
+  insertImpl(Args &&...args) {
+    nativePatterns.emplace_back(
+        std::make_unique<T>(std::forward<Args>(args)...));
+  }
+  template <typename T, typename... Args>
+  std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
+  insertImpl(Args &&...args) {
+    pdlPatterns.mergeIn(T(std::forward<Args>(args)...));
+  }
+
+  NativePatternListT nativePatterns;
+  PDLPatternModule pdlPatterns;
 };
 
 } // end namespace mlir

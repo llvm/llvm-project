@@ -61,8 +61,9 @@ const AbstractOperation *OperationName::getAbstractOperation() const {
   return representation.dyn_cast<const AbstractOperation *>();
 }
 
-OperationName OperationName::getFromOpaquePointer(void *pointer) {
-  return OperationName(RepresentationUnion::getFromOpaqueValue(pointer));
+OperationName OperationName::getFromOpaquePointer(const void *pointer) {
+  return OperationName(
+      RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -482,6 +483,12 @@ void Operation::erase() {
     parent->getOperations().erase(this);
   else
     destroy();
+}
+
+/// Remove the operation from its parent block, but don't delete it.
+void Operation::remove() {
+  if (Block *parent = getBlock())
+    parent->getOperations().remove(this);
 }
 
 /// Unlink this operation from its current block and insert it right before
