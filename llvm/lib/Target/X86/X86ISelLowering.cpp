@@ -36248,10 +36248,6 @@ static SDValue combineX86ShufflesRecursively(
   // Handle the all undef/zero cases early.
   if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
     return DAG.getUNDEF(Root.getValueType());
-
-  // TODO - should we handle the mixed zero/undef case as well? Just returning
-  // a zero mask will lose information on undef elements possibly reducing
-  // future combine possibilities.
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
     return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG,
                          SDLoc(Root));
