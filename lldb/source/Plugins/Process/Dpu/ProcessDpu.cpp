@@ -25,6 +25,7 @@
 #include "dpu_types.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/Host.h"
@@ -59,6 +60,8 @@ using namespace lldb_private::dpu;
 using namespace lldb_private::process_dpu;
 using namespace llvm;
 
+LLDB_PLUGIN_DEFINE(ProcessDpu)
+
 namespace {
 // Control interface polling period
 const long k_ci_polling_interval_ns = 10000; /* ns */
@@ -80,7 +83,7 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
                             MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  int terminal_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
+  int terminal_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
   if (terminal_fd == PseudoTerminal::invalid_fd) {
     terminal_fd = open(
         launch_info.GetFileActionForFD(STDOUT_FILENO)->GetPath().str().c_str(),
@@ -176,13 +179,13 @@ ProcessDpu::Factory::Attach(
   sprintf(profile, "backend=hw,rankPath=%s", rank_path);
 
   PseudoTerminal pseudo_terminal;
-  if (!pseudo_terminal.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr,
+  if (!pseudo_terminal.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr,
                                                 0)) {
     return Status("Cannot open first available master on pseudo terminal ")
         .ToError();
   }
 
-  int terminal_fd = pseudo_terminal.ReleaseMasterFileDescriptor();
+  int terminal_fd = pseudo_terminal.ReleasePrimaryFileDescriptor();
   if (terminal_fd == -1) {
     return Status("Cannot release master file descriptor ").ToError();
   }
@@ -246,6 +249,37 @@ ProcessDpu::Factory::Attach(
   return std::unique_ptr<ProcessDpu>(new ProcessDpu(
       pid, terminal_fd, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
+
+lldb_private::ConstString ProcessDpu::GetPluginNameStatic() {
+  static ConstString g_name("dpu");
+  return g_name;
+}
+
+const char *ProcessDpu::GetPluginDescriptionStatic() {
+  return "dpu plug-in.";
+}
+
+lldb::ProcessSP
+ProcessDpu::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+               const lldb_private::FileSpec *crash_file_path) {
+  lldb::ProcessSP process_sp;
+  return process_sp;
+}
+
+void ProcessDpu::Initialize() {
+  static llvm::once_flag g_once_flag;
+
+  llvm::call_once(g_once_flag, []() {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(),
+                                  ProcessDpu::CreateInstance);
+  });
+}
+
+void ProcessDpu::Terminate() {
+  PluginManager::UnregisterPlugin(ProcessDpu::CreateInstance);
+}
+
 
 // -----------------------------------------------------------------------------
 // Public Instance Methods

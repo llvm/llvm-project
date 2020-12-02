@@ -59,6 +59,18 @@ public:
            MainLoop &mainloop) const override;
   };
 
+  static lldb::ProcessSP
+  CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                 const lldb_private::FileSpec *crash_file_path);
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static lldb_private::ConstString GetPluginNameStatic();
+
+  static const char *GetPluginDescriptionStatic();
+
   // ---------------------------------------------------------------------
   // NativeProcessProtocol Interface
   // ---------------------------------------------------------------------
