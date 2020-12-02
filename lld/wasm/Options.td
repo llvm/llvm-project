@@ -17,6 +17,11 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
 }
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
@@ -215,10 +220,7 @@ def thinlto_cache_dir: J<"thinlto-cache-dir=">,
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
-def lto_new_pass_manager: F<"lto-new-pass-manager">,
-  HelpText<"Use new pass manager">;
-def lto_no_new_pass_manager: F<"lto-no-new-pass-manager">,
-  HelpText<"Use legacy pass manager">;
+defm lto_new_pass_manager: BB<"lto-new-pass-manager", "Use new pass manager", "Use legacy pass manager">;
 def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

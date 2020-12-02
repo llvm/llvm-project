@@ -380,7 +380,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoNewPassManager = args.hasFlag(OPT_lto_new_pass_manager,
-                                           OPT_lto_no_new_pass_manager, false);
+                                           OPT_no_lto_new_pass_manager, false);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 0);
