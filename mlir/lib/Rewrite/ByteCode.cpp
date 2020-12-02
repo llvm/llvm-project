@@ -529,7 +529,7 @@ void Generator::generate(pdl_interp::AreEqualOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::AreEqual, op.lhs(), op.rhs(), op.getSuccessors());
 }
 void Generator::generate(pdl_interp::BranchOp op, ByteCodeWriter &writer) {
-  writer.append(OpCode::Branch, SuccessorRange(op));
+  writer.append(OpCode::Branch, SuccessorRange(op.getOperation()));
 }
 void Generator::generate(pdl_interp::CheckAttributeOp op,
                          ByteCodeWriter &writer) {
@@ -637,8 +637,9 @@ void Generator::generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer) {
   ByteCodeField patternIndex = patterns.size();
   patterns.emplace_back(PDLByteCodePattern::create(
       op, rewriterToAddr[op.rewriter().getLeafReference()]));
-  writer.append(OpCode::RecordMatch, patternIndex, SuccessorRange(op),
-                op.matchedOps(), op.inputs());
+  writer.append(OpCode::RecordMatch, patternIndex,
+                SuccessorRange(op.getOperation()), op.matchedOps(),
+                op.inputs());
 }
 void Generator::generate(pdl_interp::ReplaceOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::ReplaceOp, op.operation(), op.replValues());
