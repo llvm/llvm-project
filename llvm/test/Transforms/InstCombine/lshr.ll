@@ -259,4 +259,3 @@ define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
   %sh = lshr <2 x i32> %zx, <i32 3, i32 3>
   ret <2 x i32> %sh
 }
-
