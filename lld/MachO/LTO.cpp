@@ -78,7 +78,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   for (unsigned i = 0; i != maxTasks; ++i)
     if (!buf[i].empty())
       ret.push_back(
-          make<ObjFile>(MemoryBufferRef(buf[i], "lto.tmp"), /*modTime=*/0));
+          make<ObjFile>(MemoryBufferRef(buf[i], "lto.tmp"), /*modTime=*/0, ""));
 
   return ret;
 }

@@ -74,6 +74,17 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
+// Returns "<internal>", "foo.a(bar.o)", or "baz.o".
+std::string lld::toString(const InputFile *f) {
+  if (!f)
+    return "<internal>";
+  if (f->archiveName.empty())
+    return std::string(f->getName());
+  return (path::filename(f->archiveName) + "(" + path::filename(f->getName()) +
+          ")")
+      .str();
+}
+
 std::vector<InputFile *> macho::inputFiles;
 std::unique_ptr<TarWriter> macho::tar;
 int InputFile::idCount = 0;
@@ -365,8 +376,10 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   subsections.push_back({{0, isec}});
 }
 
-ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime)
+ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
     : InputFile(ObjKind, mb), modTime(modTime) {
+  this->archiveName = std::string(archiveName);
+
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
@@ -402,9 +415,11 @@ void ObjFile::parseDebugInfo() {
 
   auto *ctx = make<DWARFContext>(
       std::move(dObj), "",
-      [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
+      [&](Error err) {
+        warn(toString(this) + ": " + toString(std::move(err)));
+      },
       [&](Error warning) {
-        warn(getName() + ": " + toString(std::move(warning)));
+        warn(toString(this) + ": " + toString(std::move(warning)));
       });
 
   // TODO: Since object files can contain a lot of DWARF info, we should verify
@@ -482,7 +497,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     auto *c = reinterpret_cast<const dylib_command *>(cmd);
     dylibName = reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
   } else {
-    error("dylib " + getName() + " missing LC_ID_DYLIB load command");
+    error("dylib " + toString(this) + " missing LC_ID_DYLIB load command");
     return;
   }
 
@@ -500,7 +515,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
                                                    isWeakDef, isTlv));
               });
   } else {
-    error("LC_DYLD_INFO_ONLY not found in " + getName());
+    error("LC_DYLD_INFO_ONLY not found in " + toString(this));
     return;
   }
 
@@ -601,8 +616,7 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
                                      "for the member defining symbol " +
                                      toMachOString(sym)));
 
-  auto file = make<ObjFile>(mb, modTime);
-  file->archiveName = getName();
+  auto file = make<ObjFile>(mb, modTime, getName());
 
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   subsections.insert(subsections.end(), file->subsections.begin(),
@@ -612,9 +626,4 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
     : InputFile(BitcodeKind, mbref) {
   obj = check(lto::InputFile::create(mbref));
-}
-
-// Returns "<internal>" or "baz.o".
-std::string lld::toString(const InputFile *file) {
-  return file ? std::string(file->getName()) : "<internal>";
 }
