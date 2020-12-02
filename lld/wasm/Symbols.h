@@ -160,6 +160,9 @@ public:
   // True if this symbol is a linker-synthesized stub function (traps when
   // called) and should otherwise be treated as missing/undefined.  See
   // SymbolTable::replaceWithUndefined.
+  // These stubs never appear in the table and any table index relocations
+  // against them will produce address 0 (The table index representing
+  // the null function pointer).
   bool isStub : 1;
 
   uint32_t flags;
