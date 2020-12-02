@@ -610,6 +610,12 @@ void Function::clearGC() {
   setValueSubclassDataBit(14, false);
 }
 
+bool Function::hasStackProtectorFnAttr() const {
+  return hasFnAttribute(Attribute::StackProtect) ||
+         hasFnAttribute(Attribute::StackProtectStrong) ||
+         hasFnAttribute(Attribute::StackProtectReq);
+}
+
 /// Copy all additional attributes (those not needed to create a Function) from
 /// the Function Src to this one.
 void Function::copyAttributesFrom(const Function *Src) {

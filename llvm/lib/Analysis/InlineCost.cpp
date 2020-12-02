@@ -2382,6 +2382,15 @@ Optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Call.isNoInline())
     return InlineResult::failure("noinline call site attribute");
 
+  // Don't inline functions if one does not have any stack protector attribute
+  // but the other does.
+  if (Caller->hasStackProtectorFnAttr() && !Callee->hasStackProtectorFnAttr())
+    return InlineResult::failure(
+        "stack protected caller but callee requested no stack protector");
+  if (Callee->hasStackProtectorFnAttr() && !Caller->hasStackProtectorFnAttr())
+    return InlineResult::failure(
+        "stack protected callee but caller requested no stack protector");
+
   return None;
 }
 
@@ -2441,7 +2450,8 @@ InlineResult llvm::isInlineViable(Function &F) {
         continue;
 
       // Disallow recursive calls.
-      if (&F == Call->getCalledFunction())
+      Function *Callee = Call->getCalledFunction();
+      if (&F == Callee)
         return InlineResult::failure("recursive call");
 
       // Disallow calls which expose returns-twice to a function not previously
@@ -2450,8 +2460,8 @@ InlineResult llvm::isInlineViable(Function &F) {
           cast<CallInst>(Call)->canReturnTwice())
         return InlineResult::failure("exposes returns-twice attribute");
 
-      if (Call->getCalledFunction())
-        switch (Call->getCalledFunction()->getIntrinsicID()) {
+      if (Callee)
+        switch (Callee->getIntrinsicID()) {
         default:
           break;
         case llvm::Intrinsic::icall_branch_funnel:
