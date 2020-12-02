@@ -8414,7 +8414,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   assert(LDBase && "Did not find base load for merging consecutive loads");
   unsigned BaseSizeInBits = EltBaseVT.getStoreSizeInBits();
   unsigned BaseSizeInBytes = BaseSizeInBits / 8;
-  int LoadSizeInBits = (1 + LastLoadedElt - FirstLoadedElt) * BaseSizeInBits;
+  int NumLoadedElts = (1 + LastLoadedElt - FirstLoadedElt);
+  int LoadSizeInBits = NumLoadedElts * BaseSizeInBits;
   assert((BaseSizeInBits % 8) == 0 && "Sub-byte element loads detected");
 
   // TODO: Support offsetting the base load.
@@ -8476,7 +8477,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // base pointer. If the vector contains zeros, then attempt to shuffle those
   // elements.
   if (FirstLoadedElt == 0 &&
-      (LastLoadedElt == (int)(NumElems - 1) || IsDereferenceable) &&
+      (NumLoadedElts == (int)NumElems || IsDereferenceable) &&
       (IsConsecutiveLoad || IsConsecutiveLoadWithZeros)) {
     if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
