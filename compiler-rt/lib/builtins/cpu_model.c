@@ -8,9 +8,20 @@
 //
 //  This file is based on LLVM's lib/Support/Host.cpp.
 //  It implements the operating system Host concept and builtin
-//  __cpu_model for the compiler_rt library, for x86 only.
+//  __cpu_model for the compiler_rt library for x86 and
+//  __aarch64_have_lse_atomics for AArch64.
 //
 //===----------------------------------------------------------------------===//
+
+#if defined(HAVE_INIT_PRIORITY)
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__ 101))
+#elif __has_attribute(__constructor__)
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__))
+#else
+// FIXME: For MSVC, we should make a function pointer global in .CRT$X?? so that
+// this runs during initialization.
+#define CONSTRUCTOR_ATTRIBUTE
+#endif
 
 #if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
      defined(_M_X64)) &&                                                       \
@@ -665,16 +676,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 #undef setFeature
 }
 
-#if defined(HAVE_INIT_PRIORITY)
-#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__ 101))
-#elif __has_attribute(__constructor__)
-#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__))
-#else
-// FIXME: For MSVC, we should make a function pointer global in .CRT$X?? so that
-// this runs during initialization.
-#define CONSTRUCTOR_ATTRIBUTE
-#endif
-
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
@@ -749,5 +750,24 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 
   return 0;
 }
-
+#elif defined(__aarch64__)
+// LSE support detection for out-of-line atomics
+// using HWCAP and Auxiliary vector
+_Bool __aarch64_have_lse_atomics
+    __attribute__((visibility("hidden"), nocommon));
+#if defined(__has_include)
+#if __has_include(<sys/auxv.h>)
+#include <sys/auxv.h>
+#ifndef AT_HWCAP
+#define AT_HWCAP 16
 #endif
+#ifndef HWCAP_ATOMICS
+#define HWCAP_ATOMICS (1 << 8)
+#endif
+static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
+  unsigned long hwcap = getauxval(AT_HWCAP);
+  __aarch64_have_lse_atomics = (hwcap & HWCAP_ATOMICS) != 0;
+}
+#endif // defined(__has_include)
+#endif // __has_include(<sys/auxv.h>)
+#endif // defined(__aarch64__)
