@@ -36,12 +36,15 @@
 # CHECK-NEXT:  [[#DATA_ID:]]      __data
 # CHECK-NEXT:  [[#MORE_DATA_ID:]] more_data
 # CHECK-NEXT:  [[#COMM_ID:]]      __common
+# CHECK-NEXT:  [[#MORE_TEXT_ID:]] more_text
 
 # CHECK:       0000000000000000 - 00                     0000    SO /tmp/test.cpp
 # CHECK-NEXT:  0000000000000010 - 03                     0001   OSO [[DIR]]/test.o
 # CHECK-NEXT:  [[#%x, STATIC:]] - 0[[#MORE_DATA_ID + 1]] 0000 STSYM _static_var
 # CHECK-NEXT:  [[#%x, MAIN:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _main
 # CHECK-NEXT:  0000000000000006 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, FUN:]]    - 0[[#MORE_TEXT_ID + 1]] 0000   FUN _fun
+# CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
 # CHECK-NEXT:  [[#%x, GLOB:]]   - 0[[#DATA_ID + 1]]      0000  GSYM _global_var
 # CHECK-NEXT:  [[#%x, ZERO:]]   - 0[[#COMM_ID + 1]]      0000  GSYM _zero
 # CHECK-NEXT:  0000000000000000 - 01                     0000    SO
@@ -53,6 +56,7 @@
 # CHECK-NEXT:  [[#STATIC]]      s _static_var
 # CHECK-NEXT:  [[#MAIN]]        T _main
 # CHECK-NEXT:  {{[0-9af]+}}     A _abs
+# CHECK-NEXT:  [[#FUN]]         S _fun
 # CHECK-NEXT:  [[#GLOB]]        D _global_var
 # CHECK-NEXT:  [[#ZERO]]        S _zero
 # CHECK-NEXT:  [[#FOO]]         T _foo
@@ -120,6 +124,11 @@ Ldebug_info_start0:
 Ldebug_info_end0:
 .subsections_via_symbols
 .section  __DWARF,__debug_line,regular,debug
+
+.section OTHER,more_text,regular,pure_instructions
+.globl _fun
+_fun:
+  ret
 
 #--- foo.s
 .text

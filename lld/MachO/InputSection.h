@@ -76,6 +76,8 @@ public:
   std::vector<Reloc> relocs;
 };
 
+bool isCodeSection(InputSection *);
+
 extern std::vector<InputSection *> inputSections;
 
 } // namespace macho
