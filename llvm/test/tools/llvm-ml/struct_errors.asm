@@ -1,4 +1,4 @@
-# RUN: not llvm-ml -filetype=asm %s 2>&1 | FileCheck %s --dump-input=always
+# RUN: not llvm-ml -filetype=s %s /Fo /dev/null 2>&1 | FileCheck %s --dump-input=always
 
 .data
 int_test STRUCT
