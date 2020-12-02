@@ -37,6 +37,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   HasDotTypeDotSizeDirective = false;
   UseIntegratedAssembler = false;
   NeedsFunctionDescriptors = true;
+
+  ExceptionsType = ExceptionHandling::AIX;
 }
 
 bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {
