@@ -265,6 +265,7 @@ struct ByteCodeWriter {
 
   /// Append a field to the bytecode.
   void append(ByteCodeField field) { bytecode.push_back(field); }
+  void append(OpCode opCode) { bytecode.push_back(opCode); }
 
   /// Append an address to the bytecode.
   void append(ByteCodeAddr field) {
