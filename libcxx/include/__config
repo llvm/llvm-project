@@ -442,20 +442,12 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
 
-#if !(__has_feature(cxx_lambdas))
-#define _LIBCPP_HAS_NO_LAMBDAS
-#endif
-
 #if !(__has_feature(cxx_nullptr))
 #  if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
 #    define nullptr __nullptr
 #  else
 #    define _LIBCPP_HAS_NO_NULLPTR
 #  endif
-#endif
-
-#if !(__has_feature(cxx_auto_type))
-#define _LIBCPP_HAS_NO_AUTO_TYPE
 #endif
 
 // Objective-C++ features (opt-in)
