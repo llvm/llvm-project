@@ -455,7 +455,7 @@ private:
 
 // The indirect symbol table is a list of 32-bit integers that serve as indices
 // into the (actual) symbol table. The indirect symbol table is a
-// concatentation of several sub-arrays of indices, each sub-array belonging to
+// concatenation of several sub-arrays of indices, each sub-array belonging to
 // a separate section. The starting offset of each sub-array is stored in the
 // reserved1 header field of the respective section.
 //
