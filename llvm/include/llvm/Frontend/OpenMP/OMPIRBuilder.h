@@ -116,15 +116,20 @@ public:
   ///                 should be placed.
   /// \param CodeGenIP is the insertion point at which the privatization code
   ///                  should be placed.
-  /// \param Val The value beeing copied/created.
+  /// \param Original The value being copied/created, should not be used in the
+  ///                 generated IR.
+  /// \param Inner The equivalent of \p Original that should be used in the
+  ///              generated IR; this is equal to \p Original if the value is
+  ///              a pointer and can thus be passed directly, otherwise it is
+  ///              an equivalent but different value.
   /// \param ReplVal The replacement value, thus a copy or new created version
-  ///                of \p Val.
+  ///                of \p Inner.
   ///
   /// \returns The new insertion point where code generation continues and
-  ///          \p ReplVal the replacement of \p Val.
+  ///          \p ReplVal the replacement value.
   using PrivatizeCallbackTy = function_ref<InsertPointTy(
-      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &Val,
-      Value *&ReplVal)>;
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &Original,
+      Value &Inner, Value *&ReplVal)>;
 
   /// Description of a LLVM-IR insertion point (IP) and a debug/source location
   /// (filename, line, column, ...).
