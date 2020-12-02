@@ -1509,25 +1509,26 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   // for a truncate.  If the source and dest are the same type, eliminate the
   // trunc and extend and just do shifts.  For example, turn:
   //   %a = trunc i32 %i to i8
-  //   %b = shl i8 %a, 6
-  //   %c = ashr i8 %b, 6
+  //   %b = shl i8 %a, C
+  //   %c = ashr i8 %b, C
   //   %d = sext i8 %c to i32
   // into:
-  //   %a = shl i32 %i, 30
-  //   %d = ashr i32 %a, 30
+  //   %a = shl i32 %i, 32-(8-C)
+  //   %d = ashr i32 %a, 32-(8-C)
   Value *A = nullptr;
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
   Constant *BA = nullptr, *CA = nullptr;
   if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
                         m_Constant(CA))) &&
-      BA == CA && A->getType() == CI.getType()) {
-    unsigned MidSize = Src->getType()->getScalarSizeInBits();
-    unsigned SrcDstSize = CI.getType()->getScalarSizeInBits();
-    Constant *SizeDiff = ConstantInt::get(CA->getType(), SrcDstSize - MidSize);
-    Constant *ShAmt = ConstantExpr::getAdd(CA, SizeDiff);
-    Constant *ShAmtExt = ConstantExpr::getSExt(ShAmt, CI.getType());
-    A = Builder.CreateShl(A, ShAmtExt, CI.getName());
-    return BinaryOperator::CreateAShr(A, ShAmtExt);
+      BA == CA && A->getType() == DestTy) {
+    Constant *WideCurrShAmt = ConstantExpr::getSExt(CA, DestTy);
+    Constant *NumLowbitsLeft = ConstantExpr::getSub(
+        ConstantInt::get(DestTy, SrcTy->getScalarSizeInBits()), WideCurrShAmt);
+    Constant *NewShAmt = ConstantExpr::getSub(
+        ConstantInt::get(DestTy, DestTy->getScalarSizeInBits()),
+        NumLowbitsLeft);
+    A = Builder.CreateShl(A, NewShAmt, CI.getName());
+    return BinaryOperator::CreateAShr(A, NewShAmt);
   }
 
   return nullptr;
