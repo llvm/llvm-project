@@ -9,7 +9,7 @@
 // UNSUPPORTED: lsan, ubsan, android
 
 // FIXME: Investigate
-// XFAIL: ppc && tsan
+// XFAIL: powerpc64 && tsan
 
 #include <string.h>
 
