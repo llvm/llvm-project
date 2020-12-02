@@ -200,10 +200,10 @@ TEST(InstructionsTest, CastInst) {
   Type *V4Int16Ty = FixedVectorType::get(Int16Ty, 4);
   Type *V1Int16Ty = FixedVectorType::get(Int16Ty, 1);
 
-  Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
-  Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
-  Type *VScaleV4Int16Ty = VectorType::get(Int16Ty, 4, true);
-  Type *VScaleV1Int16Ty = VectorType::get(Int16Ty, 1, true);
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  Type *VScaleV2Int64Ty = ScalableVectorType::get(Int64Ty, 2);
+  Type *VScaleV4Int16Ty = ScalableVectorType::get(Int16Ty, 4);
+  Type *VScaleV1Int16Ty = ScalableVectorType::get(Int16Ty, 1);
 
   Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
   Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
@@ -214,15 +214,15 @@ TEST(InstructionsTest, CastInst) {
   Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
   Type *V4Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 4);
-  Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
+  Type *VScaleV4Int32PtrAS1Ty = ScalableVectorType::get(Int32PtrAS1Ty, 4);
   Type *V4Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 4);
 
   Type *V2Int64PtrTy = FixedVectorType::get(Int64PtrTy, 2);
   Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
-  Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
+  Type *VScaleV2Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 2);
   Type *V4Int32PtrTy = FixedVectorType::get(Int32PtrTy, 4);
-  Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
-  Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
+  Type *VScaleV4Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 4);
+  Type *VScaleV4Int64PtrTy = ScalableVectorType::get(Int64PtrTy, 4);
 
   const Constant* c8 = Constant::getNullValue(V8x8Ty);
   const Constant* c64 = Constant::getNullValue(V8x64Ty);
