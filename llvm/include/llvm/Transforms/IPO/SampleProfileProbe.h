@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/Target/TargetMachine.h"
 #include <unordered_map>
 
@@ -25,10 +26,10 @@ namespace llvm {
 class Module;
 
 using BlockIdMap = std::unordered_map<BasicBlock *, uint32_t>;
+using InstructionIdMap = std::unordered_map<Instruction *, uint32_t>;
 
 enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
 
-enum class PseudoProbeType { Block = 0 };
 
 /// Sample profile pseudo prober.
 ///
@@ -42,12 +43,17 @@ public:
 private:
   Function *getFunction() const { return F; }
   uint32_t getBlockId(const BasicBlock *BB) const;
+  uint32_t getCallsiteId(const Instruction *Call) const;
   void computeProbeIdForBlocks();
+  void computeProbeIdForCallsites();
 
   Function *F;
 
   /// Map basic blocks to the their pseudo probe ids.
   BlockIdMap BlockProbeIds;
+
+  /// Map indirect calls to the their pseudo probe ids.
+  InstructionIdMap CallProbeIds;
 
   /// The ID of the last probe, Can be used to number a new probe.
   uint32_t LastProbeId;

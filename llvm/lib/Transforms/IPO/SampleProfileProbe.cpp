@@ -37,8 +37,10 @@ STATISTIC(ArtificialDbgLine,
 
 SampleProfileProber::SampleProfileProber(Function &Func) : F(&Func) {
   BlockProbeIds.clear();
+  CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
   computeProbeIdForBlocks();
+  computeProbeIdForCallsites();
 }
 
 void SampleProfileProber::computeProbeIdForBlocks() {
@@ -47,9 +49,26 @@ void SampleProfileProber::computeProbeIdForBlocks() {
   }
 }
 
+void SampleProfileProber::computeProbeIdForCallsites() {
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      if (!isa<CallBase>(I))
+        continue;
+      if (isa<IntrinsicInst>(&I))
+        continue;
+      CallProbeIds[&I] = ++LastProbeId;
+    }
+  }
+}
+
 uint32_t SampleProfileProber::getBlockId(const BasicBlock *BB) const {
   auto I = BlockProbeIds.find(const_cast<BasicBlock *>(BB));
   return I == BlockProbeIds.end() ? 0 : I->second;
+}
+
+uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
+  auto Iter = CallProbeIds.find(const_cast<Instruction *>(Call));
+  return Iter == CallProbeIds.end() ? 0 : Iter->second;
 }
 
 void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
@@ -58,6 +77,28 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   // Compute a GUID without considering the function's linkage type. This is
   // fine since function name is the only key in the profile database.
   uint64_t Guid = Function::getGUID(F.getName());
+
+  // Assign an artificial debug line to a probe that doesn't come with a real
+  // line. A probe not having a debug line will get an incomplete inline
+  // context. This will cause samples collected on the probe to be counted
+  // into the base profile instead of a context profile. The line number
+  // itself is not important though.
+  auto AssignDebugLoc = [&](Instruction *I) {
+    assert((isa<PseudoProbeInst>(I) || isa<CallBase>(I)) &&
+           "Expecting pseudo probe or call instructions");
+    if (!I->getDebugLoc()) {
+      if (auto *SP = F.getSubprogram()) {
+        auto DIL = DebugLoc::get(0, 0, SP);
+        I->setDebugLoc(DIL);
+        ArtificialDbgLine++;
+        LLVM_DEBUG({
+          dbgs() << "\nIn Function " << F.getName()
+                 << " Probe gets an artificial debug line\n";
+          I->dump();
+        });
+      }
+    }
+  };
 
   // Probe basic blocks.
   for (auto &I : BlockProbeIds) {
@@ -87,19 +128,26 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0)};
     auto *Probe = Builder.CreateCall(ProbeFn, Args);
-    // Assign an artificial debug line to a probe that doesn't come with a real
-    // line. A probe not having a debug line will get an incomplete inline
-    // context. This will cause samples collected on the probe to be counted
-    // into the base profile instead of a context profile. The line number
-    // itself is not important though.
-    if (!Probe->getDebugLoc()) {
-      if (auto *SP = F.getSubprogram()) {
-        auto DIL = DebugLoc::get(0, 0, SP);
-        Probe->setDebugLoc(DIL);
-        ArtificialDbgLine++;
-        LLVM_DEBUG(dbgs() << "\nIn Function " << F.getName() << " Probe "
-                          << Index << " gets an artificial debug line\n";);
-      }
+    AssignDebugLoc(Probe);
+  }
+
+  // Probe both direct calls and indirect calls. Direct calls are probed so that
+  // their probe ID can be used as an call site identifier to represent a
+  // calling context.
+  for (auto &I : CallProbeIds) {
+    auto *Call = I.first;
+    uint32_t Index = I.second;
+    uint32_t Type = cast<CallBase>(Call)->getCalledFunction()
+                        ? (uint32_t)PseudoProbeType::DirectCall
+                        : (uint32_t)PseudoProbeType::IndirectCall;
+    AssignDebugLoc(Call);
+    // Levarge the 32-bit discriminator field of debug data to store the ID and
+    // type of a callsite probe. This gets rid of the dependency on plumbing a
+    // customized metadata through the codegen pipeline.
+    uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(Index, Type);
+    if (auto DIL = Call->getDebugLoc()) {
+      DIL = DIL->cloneWithDiscriminator(V);
+      Call->setDebugLoc(DIL);
     }
   }
 }
