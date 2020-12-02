@@ -24,6 +24,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -230,11 +231,17 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
 
   std::vector<ArchiveMember> v;
   Error err = Error::success();
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = archive->isThin() && tar;
+
   for (const Archive::Child &c : archive->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
+    if (addToTar)
+      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
     uint32_t modTime = toTimeT(
         CHECK(c.getLastModified(), mb.getBufferIdentifier() +
                                        ": could not get the modification "
