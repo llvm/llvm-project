@@ -234,7 +234,11 @@ void __aligned_free_with_fallback(void* ptr) {
   if (is_fallback_ptr(ptr))
     fallback_free(ptr);
   else {
+#if defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+    ::free(ptr);
+#else
     std::__libcpp_aligned_free(ptr);
+#endif
   }
 }
 
