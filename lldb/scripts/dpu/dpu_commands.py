@@ -62,20 +62,13 @@ def get_dpu_from_command(command, debugger, target):
 
 
 def get_rank_id(rank, target):
-    hw_dpu_rank_allocation_parameters_type = \
-        target.FindFirstType("hw_dpu_rank_allocation_parameters_t")
-    if not(hw_dpu_rank_allocation_parameters_type.IsValid()):
-        return -1, -1
-    rank_path = str(
-        rank.GetChildMemberWithName("description")
-        .GetChildMemberWithName("_internals")
-        .GetChildMemberWithName("data")
-        .Cast(hw_dpu_rank_allocation_parameters_type)
-        .GetChildMemberWithName("rank_fs")
-        .GetChildMemberWithName("rank_path")
-    )
-    rank_id = int(re.search('dpu_rank(.+)"', rank_path).group(1))
-    return rank_id
+    full_rank_id = rank.GetChildMemberWithName("rank_id").GetValueAsUnsigned()
+    # See <backends>/api/include/lowlevel/dpu_target_macros.h:DPU_TARGET_SHIFT
+    dpu_target_shift = 28
+    dpu_target_mask = ((1 << dpu_target_shift) - 1)
+    rank_id = full_rank_id & dpu_target_mask
+    target_id = full_rank_id >> dpu_target_shift
+    return rank_id, target_id
 
 
 def get_nb_slices_and_nb_dpus_per_slice(rank, target):
@@ -243,9 +236,9 @@ def dpu_attach(debugger, command, result, internal_dict):
         print("Could not find dpu rank")
         return None
 
-    rank_id = get_rank_id(rank, target)
-    if rank_id == -1:
-        print("Could not attach to simulator (hardware only)")
+    rank_id, target_id = get_rank_id(rank, target)
+    if target_id != 3:  # 3 => dpu_type_t:HW
+        print("Could not attach to DPU (hardware only)")
         return None
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
@@ -477,7 +470,7 @@ def dpu_list(debugger, command, result, internal_dict):
         if rank.GetValueAsUnsigned() == 0:
             continue
 
-        rank_id = get_rank_id(rank, target)
+        rank_id, _ = get_rank_id(rank, target)
 
         nb_slices, nb_dpus_per_slice = \
             get_nb_slices_and_nb_dpus_per_slice(rank, target)
