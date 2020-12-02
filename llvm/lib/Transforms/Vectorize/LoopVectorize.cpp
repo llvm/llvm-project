@@ -1443,7 +1443,8 @@ private:
   /// \return An upper bound for the vectorization factor, a power-of-2 larger
   /// than zero. One is returned if vectorization should best be avoided due
   /// to cost.
-  ElementCount computeFeasibleMaxVF(unsigned ConstTripCount);
+  ElementCount computeFeasibleMaxVF(unsigned ConstTripCount,
+                                    ElementCount UserVF);
 
   /// The vectorization cost is a combination of the cost itself and a boolean
   /// indicating whether any of the contributing operations will actually
@@ -5270,9 +5271,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return None;
   }
 
+  ElementCount MaxVF = computeFeasibleMaxVF(TC, UserVF);
+
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
-    return UserVF ? UserVF : computeFeasibleMaxVF(TC);
+    return MaxVF;
   case CM_ScalarEpilogueNotNeededUsePredicate:
     LLVM_DEBUG(
         dbgs() << "LV: vector predicate hint/switch found.\n"
@@ -5308,7 +5311,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  ElementCount MaxVF = UserVF ? UserVF : computeFeasibleMaxVF(TC);
   assert(!MaxVF.isScalable() &&
          "Scalable vectors do not yet support tail folding");
   assert((UserVF.isNonZero() || isPowerOf2_32(MaxVF.getFixedValue())) &&
@@ -5361,7 +5363,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 }
 
 ElementCount
-LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount) {
+LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
+                                                 ElementCount UserVF) {
+  assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -5372,6 +5376,27 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount) {
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
   unsigned MaxSafeVectorWidthInBits = Legal->getMaxSafeVectorWidthInBits();
+
+  if (UserVF.isNonZero()) {
+    // If legally unsafe, clamp the user vectorization factor to a safe value.
+    unsigned MaxSafeVF = PowerOf2Floor(MaxSafeVectorWidthInBits / WidestType);
+    if (UserVF.getFixedValue() <= MaxSafeVF)
+      return UserVF;
+
+    LLVM_DEBUG(dbgs() << "LV: User VF=" << UserVF
+                      << " is unsafe, clamping to max safe VF=" << MaxSafeVF
+                      << ".\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationFactor",
+                                        TheLoop->getStartLoc(),
+                                        TheLoop->getHeader())
+             << "User-specified vectorization factor "
+             << ore::NV("UserVectorizationFactor", UserVF)
+             << " is unsafe, clamping to maximum safe vectorization factor "
+             << ore::NV("VectorizationFactor", MaxSafeVF);
+    });
+    return ElementCount::getFixed(MaxSafeVF);
+  }
 
   WidestRegister = std::min(WidestRegister, MaxSafeVectorWidthInBits);
 
@@ -7031,9 +7056,12 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.invalidateCostModelingDecisions();
   }
 
-  if (!UserVF.isZero()) {
+  ElementCount MaxVF = MaybeMaxVF.getValue();
+  assert(MaxVF.isNonZero() && "MaxVF is zero.");
+
+  if (!UserVF.isZero() && UserVF.getFixedValue() <= MaxVF.getFixedValue()) {
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
+    assert(isPowerOf2_32(UserVF.getFixedValue()) &&
            "VF needs to be a power of two");
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
@@ -7043,9 +7071,6 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(printPlans(dbgs()));
     return {{UserVF, 0}};
   }
-
-  ElementCount MaxVF = MaybeMaxVF.getValue();
-  assert(MaxVF.isNonZero() && "MaxVF is zero.");
 
   for (ElementCount VF = ElementCount::getFixed(1);
        ElementCount::isKnownLE(VF, MaxVF); VF *= 2) {
