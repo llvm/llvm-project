@@ -160,11 +160,11 @@ struct DynRegionInfo {
     const uint64_t ObjSize = Obj->getMemoryBufferRef().getBufferSize();
 
     if (Size > ObjSize - Offset) {
-      Dumper->reportUniqueWarning(createError(
+      Dumper->reportUniqueWarning(
           "unable to read data at 0x" + Twine::utohexstr(Offset) +
           " of size 0x" + Twine::utohexstr(Size) + " (" + SizePrintName +
           "): it goes past the end of the file of size 0x" +
-          Twine::utohexstr(ObjSize)));
+          Twine::utohexstr(ObjSize));
       return {Start, Start};
     }
 
@@ -182,7 +182,7 @@ struct DynRegionInfo {
           (" or " + EntSizePrintName + " (0x" + Twine::utohexstr(EntSize) + ")")
               .str();
 
-    Dumper->reportUniqueWarning(createError(Msg.c_str()));
+    Dumper->reportUniqueWarning(Msg);
     return {Start, Start};
   }
 };
@@ -522,12 +522,12 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
   }
 
   if (SymTabOrErr->first.size() != VersionsOrErr->size())
-    reportUniqueWarning(
-        createError(describe(Sec) + ": the number of entries (" +
-                    Twine(VersionsOrErr->size()) +
-                    ") does not match the number of symbols (" +
-                    Twine(SymTabOrErr->first.size()) +
-                    ") in the symbol table with index " + Twine(Sec.sh_link)));
+    reportUniqueWarning(describe(Sec) + ": the number of entries (" +
+                        Twine(VersionsOrErr->size()) +
+                        ") does not match the number of symbols (" +
+                        Twine(SymTabOrErr->first.size()) +
+                        ") in the symbol table with index " +
+                        Twine(Sec.sh_link));
 
   if (SymTab)
     std::tie(*SymTab, *StrTab) = *SymTabOrErr;
@@ -717,16 +717,16 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
             Obj.getStringTableForSymtab(*DotSymtabSec))
       StrTable = *StrTableOrErr;
     else
-      reportUniqueWarning(createError(
+      reportUniqueWarning(
           "unable to get the string table for the SHT_SYMTAB section: " +
-          toString(StrTableOrErr.takeError())));
+          toString(StrTableOrErr.takeError()));
 
     if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
       Syms = *SymsOrErr;
     else
       reportUniqueWarning(
-          createError("unable to read symbols from the SHT_SYMTAB section: " +
-                      toString(SymsOrErr.takeError())));
+          "unable to read symbols from the SHT_SYMTAB section: " +
+          toString(SymsOrErr.takeError()));
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.begin() == Syms.end())
@@ -800,6 +800,7 @@ public:
   virtual void printMipsABIFlags() = 0;
   const ELFDumper<ELFT> &dumper() const { return Dumper; }
   void reportUniqueWarning(Error Err) const;
+  void reportUniqueWarning(const Twine &Msg) const;
 
 protected:
   std::vector<GroupSection> getGroups();
@@ -955,6 +956,11 @@ private:
 template <class ELFT>
 void DumpStyle<ELFT>::reportUniqueWarning(Error Err) const {
   this->dumper().reportUniqueWarning(std::move(Err));
+}
+
+template <class ELFT>
+void DumpStyle<ELFT>::reportUniqueWarning(const Twine &Msg) const {
+  this->dumper().reportUniqueWarning(Msg);
 }
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
@@ -1136,9 +1142,8 @@ static std::string maybeDemangle(StringRef Name) {
 template <typename ELFT>
 std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
   auto Warn = [&](Error E) -> std::string {
-    this->reportUniqueWarning(
-        createError("unable to read the name of symbol with index " +
-                    Twine(Index) + ": " + toString(std::move(E))));
+    this->reportUniqueWarning("unable to read the name of symbol with index " +
+                              Twine(Index) + ": " + toString(std::move(E)));
     return "<?>";
   };
 
@@ -1877,9 +1882,9 @@ ELFDumper<ELFT>::findDynamic() {
       break;
     }
   } else {
-    this->reportUniqueWarning(createError(
+    this->reportUniqueWarning(
         "unable to read program headers to locate the PT_DYNAMIC segment: " +
-        toString(PhdrsOrErr.takeError())));
+        toString(PhdrsOrErr.takeError()));
   }
 
   // Try to locate the .dynamic section in the sections header table.
@@ -1895,12 +1900,12 @@ ELFDumper<ELFT>::findDynamic() {
                        ObjF.getMemoryBufferRef().getBufferSize()) ||
                       (DynamicPhdr->p_offset + DynamicPhdr->p_filesz <
                        DynamicPhdr->p_offset))) {
-    reportUniqueWarning(createError(
+    reportUniqueWarning(
         "PT_DYNAMIC segment offset (0x" +
         Twine::utohexstr(DynamicPhdr->p_offset) + ") + file size (0x" +
         Twine::utohexstr(DynamicPhdr->p_filesz) +
         ") exceeds the size of the file (0x" +
-        Twine::utohexstr(ObjF.getMemoryBufferRef().getBufferSize()) + ")"));
+        Twine::utohexstr(ObjF.getMemoryBufferRef().getBufferSize()) + ")");
     // Don't use the broken dynamic header.
     DynamicPhdr = nullptr;
   }
@@ -1909,14 +1914,13 @@ ELFDumper<ELFT>::findDynamic() {
     if (DynamicSec->sh_addr + DynamicSec->sh_size >
             DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
         DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
-      reportUniqueWarning(createError(describe(*DynamicSec) +
-                                      " is not contained within the "
-                                      "PT_DYNAMIC segment"));
+      reportUniqueWarning(describe(*DynamicSec) +
+                          " is not contained within the "
+                          "PT_DYNAMIC segment");
 
     if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
-      reportUniqueWarning(createError(describe(*DynamicSec) +
-                                      " is not at the start of "
-                                      "PT_DYNAMIC segment"));
+      reportUniqueWarning(describe(*DynamicSec) + " is not at the start of "
+                                                  "PT_DYNAMIC segment");
   }
 
   return std::make_pair(DynamicPhdr, DynamicSec);
@@ -1957,9 +1961,9 @@ void ELFDumper<ELFT>::loadDynamicTable() {
       FromSec.EntSizePrintName = "";
       IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
     } else {
-      reportUniqueWarning(createError("unable to read the dynamic table from " +
-                                      describe(*DynamicSec) + ": " +
-                                      toString(RegOrErr.takeError())));
+      reportUniqueWarning("unable to read the dynamic table from " +
+                          describe(*DynamicSec) + ": " +
+                          toString(RegOrErr.takeError()));
     }
   }
 
@@ -1970,7 +1974,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
       DynamicTable = DynamicPhdr ? FromPhdr : FromSec;
       parseDynamicTable();
     } else {
-      reportUniqueWarning(createError("no valid dynamic table was found"));
+      reportUniqueWarning("no valid dynamic table was found");
     }
     return;
   }
@@ -1980,25 +1984,25 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   // verify that.
 
   if (FromPhdr.Addr != FromSec.Addr)
-    reportUniqueWarning(createError("SHT_DYNAMIC section header and PT_DYNAMIC "
-                                    "program header disagree about "
-                                    "the location of the dynamic table"));
+    reportUniqueWarning("SHT_DYNAMIC section header and PT_DYNAMIC "
+                        "program header disagree about "
+                        "the location of the dynamic table");
 
   if (!IsPhdrTableValid && !IsSecTableValid) {
-    reportUniqueWarning(createError("no valid dynamic table was found"));
+    reportUniqueWarning("no valid dynamic table was found");
     return;
   }
 
-  // Information in the PT_DYNAMIC program header has priority over the information
-  // in a section header.
+  // Information in the PT_DYNAMIC program header has priority over the
+  // information in a section header.
   if (IsPhdrTableValid) {
     if (!IsSecTableValid)
-      reportUniqueWarning(createError(
-          "SHT_DYNAMIC dynamic table is invalid: PT_DYNAMIC will be used"));
+      reportUniqueWarning(
+          "SHT_DYNAMIC dynamic table is invalid: PT_DYNAMIC will be used");
     DynamicTable = FromPhdr;
   } else {
-    reportUniqueWarning(createError(
-        "PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used"));
+    reportUniqueWarning(
+        "PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used");
     DynamicTable = FromSec;
   }
 
@@ -2042,9 +2046,9 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
           else
             reportWarning(E.takeError(), ObjF.getFileName());
         } else {
-          reportUniqueWarning(createError(
-              "unable to read dynamic symbols from " + describe(Sec) + ": " +
-              toString(RegOrErr.takeError())));
+          reportUniqueWarning("unable to read dynamic symbols from " +
+                              describe(Sec) + ": " +
+                              toString(RegOrErr.takeError()));
         }
       }
       break;
@@ -2185,8 +2189,8 @@ void ELFDumper<ELFT>::parseDynamicTable() {
       else if (Dyn.getVal() == DT_RELA)
         DynPLTRelRegion.EntSize = sizeof(Elf_Rela);
       else
-        reportUniqueWarning(createError(Twine("unknown DT_PLTREL value of ") +
-                                        Twine((uint64_t)Dyn.getVal())));
+        reportUniqueWarning(Twine("unknown DT_PLTREL value of ") +
+                            Twine((uint64_t)Dyn.getVal()));
       DynPLTRelRegion.EntSizePrintName = "PLTREL entry size";
       break;
     case ELF::DT_JMPREL:
@@ -2203,10 +2207,10 @@ void ELFDumper<ELFT>::parseDynamicTable() {
     const uint64_t FileSize = Obj.getBufSize();
     const uint64_t Offset = (const uint8_t *)StringTableBegin - Obj.base();
     if (StringTableSize > FileSize - Offset)
-      reportUniqueWarning(createError(
+      reportUniqueWarning(
           "the dynamic string table at 0x" + Twine::utohexstr(Offset) +
           " goes past the end of the file (0x" + Twine::utohexstr(FileSize) +
-          ") with DT_STRSZ = 0x" + Twine::utohexstr(StringTableSize)));
+          ") with DT_STRSZ = 0x" + Twine::utohexstr(StringTableSize));
     else
       DynamicStringTable = StringRef(StringTableBegin, StringTableSize);
   }
@@ -2229,14 +2233,13 @@ void ELFDumper<ELFT>::parseDynamicTable() {
     // according to the section header.
     if (HashTable && IsHashTableSupported) {
       if (DynSymRegion->EntSize == 0)
-        reportUniqueWarning(
-            createError("SHT_DYNSYM section has sh_entsize == 0"));
+        reportUniqueWarning("SHT_DYNSYM section has sh_entsize == 0");
       else if (HashTable->nchain != DynSymRegion->Size / DynSymRegion->EntSize)
-        reportUniqueWarning(createError(
+        reportUniqueWarning(
             "hash table nchain (" + Twine(HashTable->nchain) +
             ") differs from symbol count derived from SHT_DYNSYM section "
             "header (" +
-            Twine(DynSymRegion->Size / DynSymRegion->EntSize) + ")"));
+            Twine(DynSymRegion->Size / DynSymRegion->EntSize) + ")");
     }
   }
 
@@ -2261,11 +2264,11 @@ void ELFDumper<ELFT>::parseDynamicTable() {
         (uint64_t)HashTable->nchain * DynSymRegion->EntSize;
     const uint64_t Offset = (const uint8_t *)DynSymRegion->Addr - Obj.base();
     if (DerivedSize > FileSize - Offset)
-      reportUniqueWarning(createError(
+      reportUniqueWarning(
           "the size (0x" + Twine::utohexstr(DerivedSize) +
           ") of the dynamic symbol table at 0x" + Twine::utohexstr(Offset) +
           ", derived from the hash table, goes past the end of the file (0x" +
-          Twine::utohexstr(FileSize) + ") and will be ignored"));
+          Twine::utohexstr(FileSize) + ") and will be ignored");
     else
       DynSymRegion->Size = HashTable->nchain * DynSymRegion->EntSize;
   }
@@ -2438,9 +2441,8 @@ ELFDumper<ELFT>::findSectionByName(StringRef Name) const {
       if (*NameOrErr == Name)
         return &Shdr;
     } else {
-      reportUniqueWarning(createError("unable to read the name of " +
-                                      describe(Shdr) + ": " +
-                                      toString(NameOrErr.takeError())));
+      reportUniqueWarning("unable to read the name of " + describe(Shdr) +
+                          ": " + toString(NameOrErr.takeError()));
     }
   }
   return nullptr;
@@ -2619,13 +2621,13 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
 template <class ELFT>
 StringRef ELFDumper<ELFT>::getDynamicString(uint64_t Value) const {
   if (DynamicStringTable.empty() && !DynamicStringTable.data()) {
-    reportUniqueWarning(createError("string table was not found"));
+    reportUniqueWarning("string table was not found");
     return "<?>";
   }
 
   auto WarnAndReturn = [this](const Twine &Msg, uint64_t Offset) {
-    reportUniqueWarning(createError("string table at offset 0x" +
-                                    Twine::utohexstr(Offset) + Msg));
+    reportUniqueWarning("string table at offset 0x" + Twine::utohexstr(Offset) +
+                        Msg);
     return "<?>";
   };
 
@@ -2838,10 +2840,9 @@ void ELFDumper<ELFT>::printGnuHashTable() {
   Expected<ArrayRef<Elf_Word>> Chains =
       getGnuHashTableChains<ELFT>(DynSymRegion, GnuHashTable);
   if (!Chains) {
-    reportUniqueWarning(
-        createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                    "section: " +
-                    toString(Chains.takeError())));
+    reportUniqueWarning("unable to dump 'Values' for the SHT_GNU_HASH "
+                        "section: " +
+                        toString(Chains.takeError()));
     return;
   }
 
@@ -3324,16 +3325,15 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsReginfo() {
   Expected<ArrayRef<uint8_t>> ContentsOrErr =
       Obj.getSectionContents(*RegInfoSec);
   if (!ContentsOrErr) {
-    this->reportUniqueWarning(createError(
+    this->reportUniqueWarning(
         "unable to read the content of the .reginfo section (" +
-        describe(*RegInfoSec) + "): " + toString(ContentsOrErr.takeError())));
+        describe(*RegInfoSec) + "): " + toString(ContentsOrErr.takeError()));
     return;
   }
 
   if (ContentsOrErr->size() < sizeof(Elf_Mips_RegInfo<ELFT>)) {
-    this->reportUniqueWarning(
-        createError("the .reginfo section has an invalid size (0x" +
-                    Twine::utohexstr(ContentsOrErr->size()) + ")"));
+    this->reportUniqueWarning("the .reginfo section has an invalid size (0x" +
+                              Twine::utohexstr(ContentsOrErr->size()) + ")");
     return;
   }
 
@@ -3422,9 +3422,9 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
     return;
 
   auto Warn = [&](Error &&E) {
-    this->reportUniqueWarning(createError("unable to read the stack map from " +
-                                          describe(*StackMapSection) + ": " +
-                                          toString(std::move(E))));
+    this->reportUniqueWarning("unable to read the stack map from " +
+                              describe(*StackMapSection) + ": " +
+                              toString(std::move(E)));
   };
 
   Expected<ArrayRef<uint8_t>> ContentOrErr =
@@ -3567,19 +3567,19 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
                           const Elf_Shdr &Symtab) -> StringRef {
     Expected<StringRef> StrTableOrErr = Obj.getStringTableForSymtab(Symtab);
     if (!StrTableOrErr) {
-      reportUniqueWarning(createError("unable to get the string table for " +
-                                      describe(Obj, Symtab) + ": " +
-                                      toString(StrTableOrErr.takeError())));
+      reportUniqueWarning("unable to get the string table for " +
+                          describe(Obj, Symtab) + ": " +
+                          toString(StrTableOrErr.takeError()));
       return "<?>";
     }
 
     StringRef Strings = *StrTableOrErr;
     if (Sym.st_name >= Strings.size()) {
-      reportUniqueWarning(createError(
-          "unable to get the name of the symbol with index " + Twine(SymNdx) +
-          ": st_name (0x" + Twine::utohexstr(Sym.st_name) +
-          ") is past the end of the string table of size 0x" +
-          Twine::utohexstr(Strings.size())));
+      reportUniqueWarning("unable to get the name of the symbol with index " +
+                          Twine(SymNdx) + ": st_name (0x" +
+                          Twine::utohexstr(Sym.st_name) +
+                          ") is past the end of the string table of size 0x" +
+                          Twine::utohexstr(Strings.size()));
       return "<?>";
     }
 
@@ -3599,28 +3599,27 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
               Obj.template getEntry<Elf_Sym>(**SymtabOrErr, Sec.sh_info))
         Signature = GetSignature(**SymOrErr, Sec.sh_info, **SymtabOrErr);
       else
-        reportUniqueWarning(createError(
-            "unable to get the signature symbol for " + describe(Obj, Sec) +
-            ": " + toString(SymOrErr.takeError())));
+        reportUniqueWarning("unable to get the signature symbol for " +
+                            describe(Obj, Sec) + ": " +
+                            toString(SymOrErr.takeError()));
     } else {
-      reportUniqueWarning(createError("unable to get the symbol table for " +
-                                      describe(Obj, Sec) + ": " +
-                                      toString(SymtabOrErr.takeError())));
+      reportUniqueWarning("unable to get the symbol table for " +
+                          describe(Obj, Sec) + ": " +
+                          toString(SymtabOrErr.takeError()));
     }
 
     ArrayRef<Elf_Word> Data;
     if (Expected<ArrayRef<Elf_Word>> ContentsOrErr =
             Obj.template getSectionContentsAsArray<Elf_Word>(Sec)) {
       if (ContentsOrErr->empty())
-        reportUniqueWarning(
-            createError("unable to read the section group flag from the " +
-                        describe(Obj, Sec) + ": the section is empty"));
+        reportUniqueWarning("unable to read the section group flag from the " +
+                            describe(Obj, Sec) + ": the section is empty");
       else
         Data = *ContentsOrErr;
     } else {
-      reportUniqueWarning(createError("unable to get the content of the " +
-                                      describe(Obj, Sec) + ": " +
-                                      toString(ContentsOrErr.takeError())));
+      reportUniqueWarning("unable to get the content of the " +
+                          describe(Obj, Sec) + ": " +
+                          toString(ContentsOrErr.takeError()));
     }
 
     Ret.push_back({getPrintableSectionName(Sec),
@@ -3640,10 +3639,10 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
       if (Expected<const Elf_Shdr *> SecOrErr = Obj.getSection(Ndx)) {
         GM.push_back({getPrintableSectionName(**SecOrErr), Ndx});
       } else {
-        reportUniqueWarning(
-            createError("unable to get the section with index " + Twine(Ndx) +
-                        " when dumping the " + describe(Obj, Sec) + ": " +
-                        toString(SecOrErr.takeError())));
+        reportUniqueWarning("unable to get the section with index " +
+                            Twine(Ndx) + " when dumping the " +
+                            describe(Obj, Sec) + ": " +
+                            toString(SecOrErr.takeError()));
         GM.push_back({"<?>", Ndx});
       }
     }
@@ -3673,11 +3672,11 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections() {
       const GroupSection *MainGroup = Map[GM.Index];
       if (MainGroup != &G)
         this->reportUniqueWarning(
-            createError("section with index " + Twine(GM.Index) +
-                        ", included in the group section with index " +
-                        Twine(MainGroup->Index) +
-                        ", was also found in the group section with index " +
-                        Twine(G.Index)));
+            "section with index " + Twine(GM.Index) +
+            ", included in the group section with index " +
+            Twine(MainGroup->Index) +
+            ", was also found in the group section with index " +
+            Twine(G.Index));
       OS << "   [" << format_decimal(GM.Index, 5) << "]   " << GM.Name << "\n";
     }
   }
@@ -3692,9 +3691,9 @@ void GNUStyle<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
   Expected<RelSymbol<ELFT>> Target =
       this->dumper().getRelocationTarget(R, SymTab);
   if (!Target)
-    this->reportUniqueWarning(createError(
-        "unable to print relocation " + Twine(RelIndex) + " in " +
-        describe(this->Obj, Sec) + ": " + toString(Target.takeError())));
+    this->reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
+                              " in " + describe(this->Obj, Sec) + ": " +
+                              toString(Target.takeError()));
   else
     printRelRelaReloc(R, *Target);
 }
@@ -3815,9 +3814,9 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations() {
     if (Expected<size_t> NumOrErr = GetEntriesNum(Sec))
       EntriesNum = std::to_string(*NumOrErr);
     else
-      this->reportUniqueWarning(createError(
-          "unable to get the number of relocations in " +
-          describe(this->Obj, Sec) + ": " + toString(NumOrErr.takeError())));
+      this->reportUniqueWarning("unable to get the number of relocations in " +
+                                describe(this->Obj, Sec) + ": " +
+                                toString(NumOrErr.takeError()));
 
     uintX_t Offset = Sec.sh_offset;
     StringRef Name = this->getPrintableSectionName(Sec);
@@ -4106,9 +4105,9 @@ void GNUStyle<ELFT>::printHashTableSymbols(const Elf_Hash &SysVHash) {
   if (!FirstSym) {
     Optional<DynRegionInfo> DynSymRegion = this->dumper().getDynSymRegion();
     this->reportUniqueWarning(
-        createError(Twine("unable to print symbols for the .hash table: the "
-                          "dynamic symbol table ") +
-                    (DynSymRegion ? "is empty" : "was not found")));
+        Twine("unable to print symbols for the .hash table: the "
+              "dynamic symbol table ") +
+        (DynSymRegion ? "is empty" : "was not found"));
     return;
   }
 
@@ -4146,21 +4145,21 @@ void GNUStyle<ELFT>::printGnuHashTableSymbols(const Elf_GnuHash &GnuHash) {
   const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
   Optional<DynRegionInfo> DynSymRegion = this->dumper().getDynSymRegion();
   if (!FirstSym) {
-    this->reportUniqueWarning(createError(
+    this->reportUniqueWarning(
         Twine("unable to print symbols for the .gnu.hash table: the "
               "dynamic symbol table ") +
-        (DynSymRegion ? "is empty" : "was not found")));
+        (DynSymRegion ? "is empty" : "was not found"));
     return;
   }
 
   auto GetSymbol = [&](uint64_t SymIndex,
                        uint64_t SymsTotal) -> const Elf_Sym * {
     if (SymIndex >= SymsTotal) {
-      this->reportUniqueWarning(createError(
+      this->reportUniqueWarning(
           "unable to print hashed symbol with index " + Twine(SymIndex) +
           ", which is greater than or equal to the number of dynamic symbols "
           "(" +
-          Twine::utohexstr(SymsTotal) + ")"));
+          Twine::utohexstr(SymsTotal) + ")");
       return nullptr;
     }
     return FirstSym + SymIndex;
@@ -4170,10 +4169,9 @@ void GNUStyle<ELFT>::printGnuHashTableSymbols(const Elf_GnuHash &GnuHash) {
       getGnuHashTableChains<ELFT>(DynSymRegion, &GnuHash);
   ArrayRef<Elf_Word> Values;
   if (!ValuesOrErr)
-    this->reportUniqueWarning(
-        createError("unable to get hash values for the SHT_GNU_HASH "
-                    "section: " +
-                    toString(ValuesOrErr.takeError())));
+    this->reportUniqueWarning("unable to get hash values for the SHT_GNU_HASH "
+                              "section: " +
+                              toString(ValuesOrErr.takeError()));
   else
     Values = *ValuesOrErr;
 
@@ -4191,11 +4189,11 @@ void GNUStyle<ELFT>::printGnuHashTableSymbols(const Elf_GnuHash &GnuHash) {
         break;
 
       if (SymIndex < GnuHash.symndx) {
-        this->reportUniqueWarning(createError(
+        this->reportUniqueWarning(
             "unable to read the hash value for symbol with index " +
             Twine(SymIndex) +
             ", which is less than the index of the first hashed symbol (" +
-            Twine(GnuHash.symndx) + ")"));
+            Twine(GnuHash.symndx) + ")");
         break;
       }
 
@@ -4455,8 +4453,8 @@ template <class ELFT> void GNUStyle<ELFT>::printProgramHeaders() {
 
   Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = this->Obj.program_headers();
   if (!PhdrsOrErr) {
-    this->reportUniqueWarning(createError("unable to dump program headers: " +
-                                          toString(PhdrsOrErr.takeError())));
+    this->reportUniqueWarning("unable to dump program headers: " +
+                              toString(PhdrsOrErr.takeError()));
     return;
   }
 
@@ -4509,9 +4507,9 @@ template <class ELFT> void GNUStyle<ELFT>::printSectionMapping() {
 
   Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = this->Obj.program_headers();
   if (!PhdrsOrErr) {
-    this->reportUniqueWarning(createError(
+    this->reportUniqueWarning(
         "can't read program headers to build section to segment mapping: " +
-        toString(PhdrsOrErr.takeError())));
+        toString(PhdrsOrErr.takeError()));
     return;
   }
 
@@ -4710,9 +4708,9 @@ void GNUStyle<ELFT>::printGNUVersionSectionProlog(
           this->Obj.getSection(Sec.sh_link))
     LinkedSecName = this->getPrintableSectionName(**LinkedSecOrErr);
   else
-    this->reportUniqueWarning(
-        createError("invalid section linked to " + describe(this->Obj, Sec) +
-                    ": " + toString(LinkedSecOrErr.takeError())));
+    this->reportUniqueWarning("invalid section linked to " +
+                              describe(this->Obj, Sec) + ": " +
+                              toString(LinkedSecOrErr.takeError()));
 
   OS << " Addr: " << format_hex_no_prefix(Sec.sh_addr, 16)
      << "  Offset: " << format_hex(Sec.sh_offset, 8)
@@ -4747,9 +4745,9 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const Elf_Shdr *Sec) {
     Expected<StringRef> NameOrErr =
         this->dumper().getSymbolVersionByIndex(Ndx, IsDefault);
     if (!NameOrErr) {
-      this->reportUniqueWarning(createError(
-          "unable to get a version for entry " + Twine(I) + " of " +
-          describe(this->Obj, *Sec) + ": " + toString(NameOrErr.takeError())));
+      this->reportUniqueWarning("unable to get a version for entry " +
+                                Twine(I) + " of " + describe(this->Obj, *Sec) +
+                                ": " + toString(NameOrErr.takeError()));
       Versions.emplace_back("<corrupt>");
       continue;
     }
@@ -4906,9 +4904,8 @@ void GNUStyle<ELFT>::printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) {
   Expected<ArrayRef<Elf_Word>> ChainsOrErr = getGnuHashTableChains<ELFT>(
       this->dumper().getDynSymRegion(), &GnuHashTable);
   if (!ChainsOrErr) {
-    this->reportUniqueWarning(
-        createError("unable to print the GNU hash table histogram: " +
-                    toString(ChainsOrErr.takeError())));
+    this->reportUniqueWarning("unable to print the GNU hash table histogram: " +
+                              toString(ChainsOrErr.takeError()));
     return;
   }
 
@@ -5542,9 +5539,9 @@ static void printNotesHelper(
       for (const typename ELFT::Note Note : Obj.notes(S, Err))
         ProcessNoteFn(Note);
       if (Err)
-        Dumper.reportUniqueWarning(
-            createError("unable to read notes from the " + describe(Obj, S) +
-                        ": " + toString(std::move(Err))));
+        Dumper.reportUniqueWarning("unable to read notes from the " +
+                                   describe(Obj, S) + ": " +
+                                   toString(std::move(Err)));
       FinishNotesFn();
     }
     return;
@@ -5552,9 +5549,9 @@ static void printNotesHelper(
 
   Expected<ArrayRef<typename ELFT::Phdr>> PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
-    Dumper.reportUniqueWarning(createError(
+    Dumper.reportUniqueWarning(
         "unable to read program headers to locate the PT_NOTE segment: " +
-        toString(PhdrsOrErr.takeError())));
+        toString(PhdrsOrErr.takeError()));
     return;
   }
 
@@ -5568,9 +5565,9 @@ static void printNotesHelper(
     for (const typename ELFT::Note Note : Obj.notes(P, Err))
       ProcessNoteFn(Note);
     if (Err)
-      Dumper.reportUniqueWarning(createError(
+      Dumper.reportUniqueWarning(
           "unable to read notes from the PT_NOTE segment with index " +
-          Twine(I) + ": " + toString(std::move(Err))));
+          Twine(I) + ": " + toString(std::move(Err)));
     FinishNotesFn();
   }
 }
@@ -5649,9 +5646,8 @@ void DumpStyle<ELFT>::printDependentLibsHelper(
     function_ref<void(const Elf_Shdr &)> OnSectionStart,
     function_ref<void(StringRef, uint64_t)> OnLibEntry) {
   auto Warn = [this](unsigned SecNdx, StringRef Msg) {
-    this->reportUniqueWarning(
-        createError("SHT_LLVM_DEPENDENT_LIBRARIES section at index " +
-                    Twine(SecNdx) + " is broken: " + Msg));
+    this->reportUniqueWarning("SHT_LLVM_DEPENDENT_LIBRARIES section at index " +
+                              Twine(SecNdx) + " is broken: " + Msg);
   };
 
   unsigned I = -1;
@@ -5691,8 +5687,8 @@ void DumpStyle<ELFT>::forEachRelocationDo(
     llvm::function_ref<void(const Elf_Relr &)> RelrFn) {
   auto Warn = [&](Error &&E,
                   const Twine &Prefix = "unable to read relocations from") {
-    this->reportUniqueWarning(createError(Prefix + " " + describe(Obj, Sec) +
-                                          ": " + toString(std::move(E))));
+    this->reportUniqueWarning(Prefix + " " + describe(Obj, Sec) + ": " +
+                              toString(std::move(E)));
   };
 
   // SHT_RELR/SHT_ANDROID_RELR sections do not have an associated symbol table.
@@ -5764,9 +5760,9 @@ StringRef DumpStyle<ELFT>::getPrintableSectionName(const Elf_Shdr &Sec) const {
           Obj.getSectionName(Sec, this->dumper().WarningHandler))
     Name = *SecNameOrErr;
   else
-    this->reportUniqueWarning(createError("unable to get the name of " +
-                                          describe(Obj, Sec) + ": " +
-                                          toString(SecNameOrErr.takeError())));
+    this->reportUniqueWarning("unable to get the name of " +
+                              describe(Obj, Sec) + ": " +
+                              toString(SecNameOrErr.takeError()));
   return Name;
 }
 
@@ -5892,10 +5888,9 @@ void DumpStyle<ELFT>::printStackSize(const Relocation<ELFT> &R,
   Expected<RelSymbol<ELFT>> TargetOrErr =
       this->dumper().getRelocationTarget(R, SymTab);
   if (!TargetOrErr)
-    reportUniqueWarning(
-        createError("unable to get the target of relocation with index " +
-                    Twine(Ndx) + " in " + describe(Obj, RelocSec) + ": " +
-                    toString(TargetOrErr.takeError())));
+    reportUniqueWarning("unable to get the target of relocation with index " +
+                        Twine(Ndx) + " in " + describe(Obj, RelocSec) + ": " +
+                        toString(TargetOrErr.takeError()));
   else
     Sym = TargetOrErr->Sym;
 
@@ -5904,13 +5899,12 @@ void DumpStyle<ELFT>::printStackSize(const Relocation<ELFT> &R,
     Expected<const Elf_Shdr *> SectionOrErr =
         this->Obj.getSection(*Sym, SymTab, this->dumper().getShndxTable());
     if (!SectionOrErr) {
-      reportUniqueWarning(createError(
+      reportUniqueWarning(
           "cannot identify the section for relocation symbol '" +
-          (*TargetOrErr).Name + "': " + toString(SectionOrErr.takeError())));
+          (*TargetOrErr).Name + "': " + toString(SectionOrErr.takeError()));
     } else if (*SectionOrErr != FunctionSec) {
-      reportUniqueWarning(createError("relocation symbol '" +
-                                      (*TargetOrErr).Name +
-                                      "' is not in the expected section"));
+      reportUniqueWarning("relocation symbol '" + (*TargetOrErr).Name +
+                          "' is not in the expected section");
       // Pretend that the symbol is in the correct section and report its
       // stack size anyway.
       FunctionSec = *SectionOrErr;
@@ -5921,11 +5915,10 @@ void DumpStyle<ELFT>::printStackSize(const Relocation<ELFT> &R,
 
   uint64_t Offset = R.Offset;
   if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
-    reportUniqueWarning(createStringError(
-        object_error::parse_failed,
-        "found invalid relocation offset (0x" + Twine::utohexstr(Offset) +
-            ") into " + describe(Obj, StackSizeSec) +
-            " while trying to extract a stack size entry"));
+    reportUniqueWarning("found invalid relocation offset (0x" +
+                        Twine::utohexstr(Offset) + ") into " +
+                        describe(Obj, StackSizeSec) +
+                        " while trying to extract a stack size entry");
     return;
   }
 
@@ -5953,10 +5946,9 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
       // The function address is followed by a ULEB representing the stack
       // size. Check for an extra byte before we try to process the entry.
       if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
-        reportUniqueWarning(createStringError(
-            object_error::parse_failed,
+        reportUniqueWarning(
             describe(Obj, Sec) +
-                " ended while trying to extract a stack size entry"));
+            " ended while trying to extract a stack size entry");
         break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
@@ -5994,10 +5986,9 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
 
     Expected<const Elf_Shdr *> RelSecOrErr = Obj.getSection(Sec.sh_info);
     if (!RelSecOrErr) {
-      reportUniqueWarning(createStringError(
-          object_error::parse_failed,
-          describe(Obj, Sec) + ": failed to get a relocated section: " +
-              toString(RelSecOrErr.takeError())));
+      reportUniqueWarning(describe(Obj, Sec) +
+                          ": failed to get a relocated section: " +
+                          toString(RelSecOrErr.takeError()));
       continue;
     }
 
@@ -6042,11 +6033,10 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
         [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
             const Elf_Shdr *SymTab) {
           if (!IsSupportedFn || !IsSupportedFn(R.Type)) {
-            reportUniqueWarning(createStringError(
-                object_error::parse_failed,
+            reportUniqueWarning(
                 describe(Obj, *RelocSec) +
-                    " contains an unsupported relocation with index " +
-                    Twine(Ndx) + ": " + Obj.getRelocationTypeName(R.Type)));
+                " contains an unsupported relocation with index " + Twine(Ndx) +
+                ": " + Obj.getRelocationTypeName(R.Type));
             return;
           }
 
@@ -6339,11 +6329,11 @@ template <class ELFT> void LLVMStyle<ELFT>::printGroupSections() {
       const GroupSection *MainGroup = Map[GM.Index];
       if (MainGroup != &G)
         this->reportUniqueWarning(
-            createError("section with index " + Twine(GM.Index) +
-                        ", included in the group section with index " +
-                        Twine(MainGroup->Index) +
-                        ", was also found in the group section with index " +
-                        Twine(G.Index)));
+            "section with index " + Twine(GM.Index) +
+            ", included in the group section with index " +
+            Twine(MainGroup->Index) +
+            ", was also found in the group section with index " +
+            Twine(G.Index));
       W.startLine() << GM.Name << " (" << GM.Index << ")\n";
     }
   }
@@ -6379,9 +6369,9 @@ void LLVMStyle<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
   Expected<RelSymbol<ELFT>> Target =
       this->dumper().getRelocationTarget(R, SymTab);
   if (!Target) {
-    this->reportUniqueWarning(createError(
-        "unable to print relocation " + Twine(RelIndex) + " in " +
-        describe(this->Obj, Sec) + ": " + toString(Target.takeError())));
+    this->reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
+                              " in " + describe(this->Obj, Sec) + ": " +
+                              toString(Target.takeError()));
     return;
   }
 
@@ -6633,8 +6623,8 @@ template <class ELFT> void LLVMStyle<ELFT>::printProgramHeaders() {
 
   Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = this->Obj.program_headers();
   if (!PhdrsOrErr) {
-    this->reportUniqueWarning(createError("unable to dump program headers: " +
-                                          toString(PhdrsOrErr.takeError())));
+    this->reportUniqueWarning("unable to dump program headers: " +
+                              toString(PhdrsOrErr.takeError()));
     return;
   }
 
@@ -6753,8 +6743,8 @@ template <class ELFT> void LLVMStyle<ELFT>::printCGProfile() {
           *this->dumper().getDotCGProfileSec());
   if (!CGProfileOrErr) {
     this->reportUniqueWarning(
-        createError("unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: " +
-                    toString(CGProfileOrErr.takeError())));
+        "unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+        toString(CGProfileOrErr.takeError()));
     return;
   }
 
@@ -6903,31 +6893,30 @@ template <class ELFT> void LLVMStyle<ELFT>::printELFLinkerOptions() {
     Expected<ArrayRef<uint8_t>> ContentsOrErr =
         this->Obj.getSectionContents(Shdr);
     if (!ContentsOrErr) {
-      this->reportUniqueWarning(
-          createError("unable to read the content of the "
-                      "SHT_LLVM_LINKER_OPTIONS section: " +
-                      toString(ContentsOrErr.takeError())));
+      this->reportUniqueWarning("unable to read the content of the "
+                                "SHT_LLVM_LINKER_OPTIONS section: " +
+                                toString(ContentsOrErr.takeError()));
       continue;
     }
     if (ContentsOrErr->empty())
       continue;
 
     if (ContentsOrErr->back() != 0) {
-      this->reportUniqueWarning(
-          createError("SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
-                      " is broken: the "
-                      "content is not null-terminated"));
+      this->reportUniqueWarning("SHT_LLVM_LINKER_OPTIONS section at index " +
+                                Twine(I) +
+                                " is broken: the "
+                                "content is not null-terminated");
       continue;
     }
 
     SmallVector<StringRef, 16> Strings;
     toStringRef(ContentsOrErr->drop_back()).split(Strings, '\0');
     if (Strings.size() % 2 != 0) {
-      this->reportUniqueWarning(createError(
+      this->reportUniqueWarning(
           "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
           " is broken: an incomplete "
           "key-value pair was found. The last possible key was: \"" +
-          Strings.back() + "\""));
+          Strings.back() + "\"");
       continue;
     }
 

@@ -39,10 +39,12 @@ ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
 ObjDumper::~ObjDumper() {}
 
 void ObjDumper::reportUniqueWarning(Error Err) const {
-  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-    cantFail(WarningHandler(EI.message()),
-             "WarningHandler should always return ErrorSuccess");
-  });
+  reportUniqueWarning(toString(std::move(Err)));
+}
+
+void ObjDumper::reportUniqueWarning(const Twine &Msg) const {
+  cantFail(WarningHandler(Msg),
+           "WarningHandler should always return ErrorSuccess");
 }
 
 static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
