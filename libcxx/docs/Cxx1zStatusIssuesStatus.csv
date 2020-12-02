@@ -103,7 +103,7 @@
 "","","",""
 "`2192 <https://wg21.link/LWG2192>`__","Validity and return type of ``std::abs(0u)``\  is unclear","Jacksonville","|Complete|"
 "`2276 <https://wg21.link/LWG2276>`__","Missing requirement on ``std::promise::set_exception``\ ","Jacksonville","|Complete|"
-"`2296 <https://wg21.link/LWG2296>`__","``std::addressof``\  should be ``constexpr``\ ","Jacksonville","Complete (Clang Only)"
+"`2296 <https://wg21.link/LWG2296>`__","``std::addressof``\  should be ``constexpr``\ ","Jacksonville","|Complete|"
 "`2450 <https://wg21.link/LWG2450>`__","``(greater|less|greater_equal|less_equal)<void>``\  do not yield a total order for pointers","Jacksonville","|Complete|"
 "`2520 <https://wg21.link/LWG2520>`__","N4089 broke initializing ``unique_ptr<T[]>``\  from a ``nullptr``\ ","Jacksonville","|Complete|"
 "`2522 <https://wg21.link/LWG2522>`__","[fund.ts.v2] Contradiction in ``set_default_resource``\  specification","Jacksonville","|Complete|"
