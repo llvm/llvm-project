@@ -420,11 +420,20 @@ struct StabsEntry {
   explicit StabsEntry(uint8_t type) : type(type) {}
 };
 
+// Symbols of the same type must be laid out contiguously: we choose to emit
+// all local symbols first, then external symbols, and finally undefined
+// symbols. For each symbol type, the LC_DYSYMTAB load command will record the
+// range (start index and total number) of those symbols in the symbol table.
 class SymtabSection : public LinkEditSection {
 public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
-  size_t getNumSymbols() const { return stabs.size() + symbols.size(); }
+  uint32_t getNumSymbols() const;
+  uint32_t getNumLocalSymbols() const {
+    return stabs.size() + localSymbols.size();
+  }
+  uint32_t getNumExternalSymbols() const { return externalSymbols.size(); }
+  uint32_t getNumUndefinedSymbols() const { return undefinedSymbols.size(); }
   uint64_t getRawSize() const override;
   void writeTo(uint8_t *buf) const override;
 
@@ -435,8 +444,12 @@ private:
   void emitFunStabs(Defined *);
 
   StringTableSection &stringTableSection;
+  // STABS symbols are always local symbols, but we represent them with special
+  // entries because they may use fields like n_sect and n_desc differently.
   std::vector<StabsEntry> stabs;
-  std::vector<SymtabEntry> symbols;
+  std::vector<SymtabEntry> localSymbols;
+  std::vector<SymtabEntry> externalSymbols;
+  std::vector<SymtabEntry> undefinedSymbols;
 };
 
 // The indirect symbol table is a list of 32-bit integers that serve as indices
