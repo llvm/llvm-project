@@ -936,9 +936,9 @@ Status NativeRegisterContextLinux_arm64::ReadGPR() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGPRBuffer();
-  ioVec.iov_len = GetGPRSize();
+  ioVec.iov_len = GetGPRBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+  error = ReadRegisterSet(&ioVec, GetGPRBufferSize(), NT_PRSTATUS);
 
   if (error.Success())
     m_gpr_is_valid = true;
@@ -953,11 +953,11 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGPRBuffer();
-  ioVec.iov_len = GetGPRSize();
+  ioVec.iov_len = GetGPRBufferSize();
 
   m_gpr_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+  return WriteRegisterSet(&ioVec, GetGPRBufferSize(), NT_PRSTATUS);
 }
 
 Status NativeRegisterContextLinux_arm64::ReadFPR() {
