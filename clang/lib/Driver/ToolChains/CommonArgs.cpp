@@ -37,7 +37,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -598,7 +597,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Need this flag to turn on new pass manager via Gold plugin.
   if (Args.hasFlag(options::OPT_fexperimental_new_pass_manager,
                    options::OPT_fno_experimental_new_pass_manager,
-                   /* Default */ LLVM_ENABLE_NEW_PASS_MANAGER)) {
+                   /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER)) {
     CmdArgs.push_back("-plugin-opt=new-pass-manager");
   }
 
