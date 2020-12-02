@@ -4,10 +4,10 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @__dfsan_arg_tls
-; CHECK: = external thread_local(initialexec) global [64 x i16]
+; CHECK: = external thread_local(initialexec) global [100 x i64]
 
 ; CHECK-LABEL: @__dfsan_retval_tls
-; CHECK: = external thread_local(initialexec) global i16
+; CHECK: = external thread_local(initialexec) global [100 x i64]
 
 declare i32 @f(i32)
 declare float @llvm.sqrt.f32(float)
