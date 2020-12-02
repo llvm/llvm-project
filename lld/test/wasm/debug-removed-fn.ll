@@ -3,7 +3,7 @@
 ; RUN: llvm-dwarfdump -debug-line -debug-ranges %t.wasm | FileCheck %s
 
 ; CHECK: Address
-; CHECK: 0x0000000000000003
+; CHECK: 0x0000000000000005
 ; CHECK: 0x0000000000000000
 
 ; CHECK: .debug_ranges contents:

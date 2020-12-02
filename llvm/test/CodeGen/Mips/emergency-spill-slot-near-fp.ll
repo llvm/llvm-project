@@ -2,9 +2,6 @@
 ; Check that register scavenging spill slot is close to $fp.
 target triple="mipsel--"
 
-; FIXME: After recent rework to FastISel, don't know how to trigger the
-; emergency spill slot.  Filed PR48301.
-; XFAIL: *
 @var = external global i32
 @ptrvar = external global i8*
 
