@@ -100,8 +100,7 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   [[ANDSXri:%[0-9]+]]:gpr64 = ANDSXri %copy, 8000, implicit-def $nzcv
-  ; CHECK:   %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
-  ; CHECK:   TBNZW %cmp, 0, %bb.1
+  ; CHECK:   Bcc 11, %bb.1, implicit $nzcv
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -133,8 +132,7 @@ body:             |
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   %zero:gpr64 = COPY $xzr
   ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %zero, %copy, implicit-def $nzcv
-  ; CHECK:   %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
-  ; CHECK:   TBNZW %cmp, 0, %bb.1
+  ; CHECK:   Bcc 11, %bb.1, implicit $nzcv
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
