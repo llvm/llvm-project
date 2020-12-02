@@ -64,7 +64,7 @@ def get_dpu_from_command(command, debugger, target):
 def get_rank_id(rank, target):
     full_rank_id = rank.GetChildMemberWithName("rank_id").GetValueAsUnsigned()
     # See <backends>/api/include/lowlevel/dpu_target_macros.h:DPU_TARGET_SHIFT
-    dpu_target_shift = 28
+    dpu_target_shift = 12
     dpu_target_mask = ((1 << dpu_target_shift) - 1)
     rank_id = full_rank_id & dpu_target_mask
     target_id = full_rank_id >> dpu_target_shift
