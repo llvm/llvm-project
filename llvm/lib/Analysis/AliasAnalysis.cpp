@@ -843,6 +843,13 @@ void AAResultsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<ExternalAAWrapperPass>();
 }
 
+AAManager::Result AAManager::run(Function &F, FunctionAnalysisManager &AM) {
+  Result R(AM.getResult<TargetLibraryAnalysis>(F));
+  for (auto &Getter : ResultGetters)
+    (*Getter)(F, AM, R);
+  return R;
+}
+
 AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
                                         BasicAAResult &BAR) {
   AAResults AAR(P.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));

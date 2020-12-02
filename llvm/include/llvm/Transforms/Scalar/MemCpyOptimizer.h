@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_MEMCPYOPTIMIZER_H
 #define LLVM_TRANSFORMS_SCALAR_MEMCPYOPTIMIZER_H
 
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include <cstdint>
@@ -22,11 +21,14 @@
 
 namespace llvm {
 
+class AAResults;
 class AssumptionCache;
+class CallBase;
 class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
+class LoadInst;
 class MemCpyInst;
 class MemMoveInst;
 class MemoryDependenceResults;
@@ -40,7 +42,7 @@ class Value;
 class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   MemoryDependenceResults *MD = nullptr;
   TargetLibraryInfo *TLI = nullptr;
-  AliasAnalysis *AA = nullptr;
+  AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
   MemorySSA *MSSA = nullptr;
@@ -52,9 +54,9 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for the old PM.
-  bool runImpl(Function &F, MemoryDependenceResults *MD_,
-               TargetLibraryInfo *TLI_, AliasAnalysis *AA_,
-               AssumptionCache *AC_, DominatorTree *DT_, MemorySSA *MSSA_);
+  bool runImpl(Function &F, MemoryDependenceResults *MD, TargetLibraryInfo *TLI,
+               AAResults *AA, AssumptionCache *AC, DominatorTree *DT,
+               MemorySSA *MSSA);
 
 private:
   // Helper functions
