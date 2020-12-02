@@ -108,7 +108,6 @@ struct __libcpp_locale_guard {
 };
 #endif
 
-
 class _LIBCPP_TYPE_VIS locale;
 
 template <class _Facet>
@@ -1074,10 +1073,10 @@ protected:
     virtual int do_max_length() const  _NOEXCEPT;
 };
 
-// template <> class codecvt<char16_t, char, mbstate_t>
+// template <> class codecvt<char16_t, char, mbstate_t> // deprecated in C++20
 
 template <>
-class _LIBCPP_TYPE_VIS codecvt<char16_t, char, mbstate_t>
+class _LIBCPP_TYPE_VIS _LIBCPP_DEPRECATED_IN_CXX20 codecvt<char16_t, char, mbstate_t>
     : public locale::facet,
       public codecvt_base
 {
@@ -1160,10 +1159,100 @@ protected:
     virtual int do_max_length() const  _NOEXCEPT;
 };
 
-// template <> class codecvt<char32_t, char, mbstate_t>
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+
+// template <> class codecvt<char16_t, char8_t, mbstate_t> // C++20
 
 template <>
-class _LIBCPP_TYPE_VIS codecvt<char32_t, char, mbstate_t>
+class _LIBCPP_TYPE_VIS codecvt<char16_t, char8_t, mbstate_t>
+    : public locale::facet,
+      public codecvt_base
+{
+public:
+    typedef char16_t  intern_type;
+    typedef char8_t   extern_type;
+    typedef mbstate_t state_type;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit codecvt(size_t __refs = 0)
+        : locale::facet(__refs) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    result out(state_type& __st,
+               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const
+    {
+        return do_out(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    result unshift(state_type& __st,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const
+    {
+        return do_unshift(__st, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    result in(state_type& __st,
+              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const
+    {
+        return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int encoding() const  _NOEXCEPT
+    {
+        return do_encoding();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool always_noconv() const  _NOEXCEPT
+    {
+        return do_always_noconv();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const
+    {
+        return do_length(__st, __frm, __end, __mx);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int max_length() const  _NOEXCEPT
+    {
+        return do_max_length();
+    }
+
+    static locale::id id;
+
+protected:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit codecvt(const char*, size_t __refs = 0)
+        : locale::facet(__refs) {}
+
+    ~codecvt();
+
+    virtual result do_out(state_type& __st,
+                          const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                          extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
+    virtual result do_in(state_type& __st,
+                         const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                         intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
+    virtual result do_unshift(state_type& __st,
+                              extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
+    virtual int do_encoding() const  _NOEXCEPT;
+    virtual bool do_always_noconv() const  _NOEXCEPT;
+    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const;
+    virtual int do_max_length() const  _NOEXCEPT;
+};
+
+#endif
+
+// template <> class codecvt<char32_t, char, mbstate_t> // deprecated in C++20
+
+template <>
+class _LIBCPP_TYPE_VIS _LIBCPP_DEPRECATED_IN_CXX20 codecvt<char32_t, char, mbstate_t>
     : public locale::facet,
       public codecvt_base
 {
@@ -1246,6 +1335,96 @@ protected:
     virtual int do_max_length() const  _NOEXCEPT;
 };
 
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+
+// template <> class codecvt<char32_t, char8_t, mbstate_t> // C++20
+
+template <>
+class _LIBCPP_TYPE_VIS codecvt<char32_t, char8_t, mbstate_t>
+    : public locale::facet,
+      public codecvt_base
+{
+public:
+    typedef char32_t  intern_type;
+    typedef char8_t   extern_type;
+    typedef mbstate_t state_type;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit codecvt(size_t __refs = 0)
+        : locale::facet(__refs) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    result out(state_type& __st,
+               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const
+    {
+        return do_out(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    result unshift(state_type& __st,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const
+    {
+        return do_unshift(__st, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    result in(state_type& __st,
+              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const
+    {
+        return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int encoding() const  _NOEXCEPT
+    {
+        return do_encoding();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool always_noconv() const  _NOEXCEPT
+    {
+        return do_always_noconv();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const
+    {
+        return do_length(__st, __frm, __end, __mx);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    int max_length() const  _NOEXCEPT
+    {
+        return do_max_length();
+    }
+
+    static locale::id id;
+
+protected:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit codecvt(const char*, size_t __refs = 0)
+        : locale::facet(__refs) {}
+
+    ~codecvt();
+
+    virtual result do_out(state_type& __st,
+                          const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                          extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
+    virtual result do_in(state_type& __st,
+                         const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                         intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
+    virtual result do_unshift(state_type& __st,
+                              extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
+    virtual int do_encoding() const  _NOEXCEPT;
+    virtual bool do_always_noconv() const  _NOEXCEPT;
+    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const;
+    virtual int do_max_length() const  _NOEXCEPT;
+};
+
+#endif
+
 // template <class _InternT, class _ExternT, class _StateT> class codecvt_byname
 
 template <class _InternT, class _ExternT, class _StateT>
@@ -1263,15 +1442,21 @@ protected:
     ~codecvt_byname();
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _InternT, class _ExternT, class _StateT>
 codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname()
 {
 }
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>)
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DEPRECATED_IN_CXX20 codecvt_byname<char16_t, char, mbstate_t>) // deprecated in C++20
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DEPRECATED_IN_CXX20 codecvt_byname<char32_t, char, mbstate_t>) // deprecated in C++20
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>) // C++20
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>) // C++20
+#endif
 
 template <size_t _Np>
 struct __narrow_to_utf8
@@ -1295,12 +1480,14 @@ struct __narrow_to_utf8<8>
     }
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS __narrow_to_utf8<16>
     : public codecvt<char16_t, char, mbstate_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     __narrow_to_utf8() : codecvt<char16_t, char, mbstate_t>(1) {}
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
     _LIBCPP_EXPORTED_FROM_ABI ~__narrow_to_utf8();
 
@@ -1329,12 +1516,14 @@ struct _LIBCPP_TEMPLATE_VIS __narrow_to_utf8<16>
     }
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS __narrow_to_utf8<32>
     : public codecvt<char32_t, char, mbstate_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     __narrow_to_utf8() : codecvt<char32_t, char, mbstate_t>(1) {}
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
     _LIBCPP_EXPORTED_FROM_ABI ~__narrow_to_utf8();
 
@@ -1385,12 +1574,14 @@ struct __widen_from_utf8<8>
     }
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<16>
     : public codecvt<char16_t, char, mbstate_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     __widen_from_utf8() : codecvt<char16_t, char, mbstate_t>(1) {}
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
     _LIBCPP_EXPORTED_FROM_ABI ~__widen_from_utf8();
 
@@ -1419,12 +1610,14 @@ struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<16>
     }
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<32>
     : public codecvt<char32_t, char, mbstate_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     __widen_from_utf8() : codecvt<char32_t, char, mbstate_t>(1) {}
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
     _LIBCPP_EXPORTED_FROM_ABI ~__widen_from_utf8();
 
