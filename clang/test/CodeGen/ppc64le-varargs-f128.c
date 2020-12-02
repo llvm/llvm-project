@@ -5,45 +5,92 @@
 // RUN:   -target-cpu pwr9 -target-feature +float128 \
 // RUN:   -o - %s | FileCheck %s -check-prefix=IBM
 
+// RUN: %clang -target powerpc64le-unknown-linux-gnu -S -emit-llvm \
+// RUN:   -fopenmp-targets=ppc64le -mfloat128 -mabi=ieeelongdouble -mcpu=pwr9 \
+// RUN:   -Xopenmp-target=ppc64le -mcpu=pwr9 -Xopenmp-target=ppc64le \
+// RUN:   -mfloat128 -fopenmp=libomp -o - %s | FileCheck %s -check-prefix=OMP
+
 #include <stdarg.h>
 
-// IEEE-LABEL: define fp128 @f128(i32 signext %n, ...)
-// IEEE: call void @llvm.va_start(i8* %{{[0-9a-zA-Z_.]+}})
-// IEEE: %[[P1:[0-9a-zA-Z_.]+]] = add i64 %{{[0-9a-zA-Z_.]+}}, 15
-// IEEE: %[[P2:[0-9a-zA-Z_.]+]] = and i64 %[[P1]], -16
-// IEEE: %[[P3:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[P2]] to i8*
-// IEEE: %[[P4:[0-9a-zA-Z_.]+]] = bitcast i8* %[[P3]] to fp128*
-// IEEE: %{{[0-9a-zA-Z_.]+}} = load fp128, fp128* %[[P4]], align 16
-// IEEE: call void @llvm.va_end(i8* %{{[0-9a-zA-Z_.]+}})
-__float128 f128(int n, ...) {
+void foo_ld(long double);
+void foo_fq(__float128);
+
+// Verify cases when OpenMP target's and host's long-double semantics differ.
+
+// OMP-LABEL: define internal void @.omp_outlined.
+// OMP: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8**
+// OMP: %[[V2:[0-9a-zA-Z_.]+]] = bitcast i8* %[[CUR]] to ppc_fp128*
+// OMP: %[[V3:[0-9a-zA-Z_.]+]] = load ppc_fp128, ppc_fp128* %[[V2]], align 8
+// OMP: call void @foo_ld(ppc_fp128 %[[V3]])
+
+// OMP-LABEL: define dso_local void @omp
+// OMP: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
+// OMP: call void @llvm.va_start(i8* %[[AP1]])
+// OMP: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]], align 8
+// OMP: %[[V0:[0-9a-zA-Z_.]+]] = ptrtoint i8* %[[CUR]] to i64
+// OMP: %[[V1:[0-9a-zA-Z_.]+]] = add i64 %[[V0]], 15
+// OMP: %[[V2:[0-9a-zA-Z_.]+]] = and i64 %[[V1]], -16
+// OMP: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
+// OMP: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
+// OMP: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
+// OMP: call void @foo_ld(fp128 %[[V4]])
+void omp(int n, ...) {
   va_list ap;
   va_start(ap, n);
-  __float128 x = va_arg(ap, __float128);
+  foo_ld(va_arg(ap, long double));
+  #pragma omp target parallel
+  for (int i = 1; i < n; ++i) {
+    foo_ld(va_arg(ap, long double));
+  }
   va_end(ap);
-  return x;
 }
 
-// IEEE-LABEL: define fp128 @long_double(i32 signext %n, ...)
-// IEEE: call void @llvm.va_start(i8* %{{[0-9a-zA-Z_.]+}})
-// IEEE: %[[P1:[0-9a-zA-Z_.]+]] = add i64 %{{[0-9a-zA-Z_.]+}}, 15
-// IEEE: %[[P2:[0-9a-zA-Z_.]+]] = and i64 %[[P1]], -16
-// IEEE: %[[P3:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[P2]] to i8*
-// IEEE: %[[P4:[0-9a-zA-Z_.]+]] = bitcast i8* %[[P3]] to fp128*
-// IEEE: %{{[0-9a-zA-Z_.]+}} = load fp128, fp128* %[[P4]], align 16
-// IEEE: call void @llvm.va_end(i8* %{{[0-9a-zA-Z_.]+}})
-
-// IBM-LABEL: define ppc_fp128 @long_double(i32 signext %n, ...)
-// IBM: call void @llvm.va_start(i8* %{{[0-9a-zA-Z_.]+}})
-// IBM: %[[P1:[0-9a-zA-Z_.]+]] = add i64 %{{[0-9a-zA-Z_.]+}}, 15
-// IBM: %[[P2:[0-9a-zA-Z_.]+]] = and i64 %[[P1]], -16
-// IBM: %[[P3:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[P2]] to i8*
-// IBM: %[[P4:[0-9a-zA-Z_.]+]] = bitcast i8* %[[P3]] to ppc_fp128*
-// IBM: %{{[0-9a-zA-Z_.]+}} = load ppc_fp128, ppc_fp128* %[[P4]], align 16
-// IBM: call void @llvm.va_end(i8* %{{[0-9a-zA-Z_.]+}})
-long double long_double(int n, ...) {
+// IEEE-LABEL: define void @f128
+// IEEE: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
+// IEEE: call void @llvm.va_start(i8* %[[AP1]])
+// IEEE: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
+// IEEE: %[[V0:[0-9a-zA-Z_.]+]] = ptrtoint i8* %[[CUR]] to i64
+// IEEE: %[[V1:[0-9a-zA-Z_.]+]] = add i64 %[[V0]], 15
+// IEEE: %[[V2:[0-9a-zA-Z_.]+]] = and i64 %[[V1]], -16
+// IEEE: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
+// IEEE: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
+// IEEE: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
+// IEEE: call void @foo_fq(fp128 %[[V4]])
+// IEEE: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
+// IEEE: call void @llvm.va_end(i8* %[[AP2]])
+void f128(int n, ...) {
   va_list ap;
   va_start(ap, n);
-  long double x = va_arg(ap, long double);
+  foo_fq(va_arg(ap, __float128));
   va_end(ap);
-  return x;
+}
+
+// IEEE-LABEL: define void @long_double
+// IEEE: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
+// IEEE: call void @llvm.va_start(i8* %[[AP1]])
+// IEEE: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
+// IEEE: %[[V0:[0-9a-zA-Z_.]+]] = ptrtoint i8* %[[CUR]] to i64
+// IEEE: %[[V1:[0-9a-zA-Z_.]+]] = add i64 %[[V0]], 15
+// IEEE: %[[V2:[0-9a-zA-Z_.]+]] = and i64 %[[V1]], -16
+// IEEE: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
+// IEEE: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
+// IEEE: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
+// IEEE: call void @foo_ld(fp128 %[[V4]])
+// IEEE: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
+// IEEE: call void @llvm.va_end(i8* %[[AP2]])
+
+// IBM-LABEL: define void @long_double
+// IBM: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
+// IBM: call void @llvm.va_start(i8* %[[AP1]])
+// IBM: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
+// IBM: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[CUR]] to ppc_fp128*
+// IBM: %[[V4:[0-9a-zA-Z_.]+]] = load ppc_fp128, ppc_fp128* %[[V3]], align 8
+// IBM: call void @foo_ld(ppc_fp128 %[[V4]])
+// IBM: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
+// IBM: call void @llvm.va_end(i8* %[[AP2]])
+void long_double(int n, ...) {
+  va_list ap;
+  va_start(ap, n);
+  foo_ld(va_arg(ap, long double));
+  va_end(ap);
 }
