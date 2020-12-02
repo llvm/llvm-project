@@ -11,7 +11,7 @@
 
 namespace clang {
 namespace api_notes {
-void CommonEntityInfo::dump(llvm::raw_ostream &OS) {
+void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
   if (Unavailable)
     OS << "[Unavailable] (" << UnavailableMsg << ")" << ' ';
   if (UnavailableInSwift)
@@ -23,8 +23,8 @@ void CommonEntityInfo::dump(llvm::raw_ostream &OS) {
   OS << '\n';
 }
 
-void CommonTypeInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<CommonEntityInfo &>(*this).dump(OS);
+void CommonTypeInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const CommonEntityInfo &>(*this).dump(OS);
   if (SwiftBridge)
     OS << "Swift Briged Type: " << *SwiftBridge << ' ';
   if (NSErrorDomain)
@@ -45,8 +45,8 @@ void ObjCContextInfo::dump(llvm::raw_ostream &OS) {
   OS << '\n';
 }
 
-void VariableInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<CommonEntityInfo &>(*this).dump(OS);
+void VariableInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const CommonEntityInfo &>(*this).dump(OS);
   if (NullabilityAudited)
     OS << "Audited Nullability: " << Nullable << ' ';
   if (!Type.empty())
@@ -54,23 +54,23 @@ void VariableInfo::dump(llvm::raw_ostream &OS) {
   OS << '\n';
 }
 
-void ObjCPropertyInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<VariableInfo &>(*this).dump(OS);
+void ObjCPropertyInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const VariableInfo &>(*this).dump(OS);
   if (SwiftImportAsAccessorsSpecified)
     OS << (SwiftImportAsAccessors ? "[SwiftImportAsAccessors] " : "");
   OS << '\n';
 }
 
-void ParamInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<VariableInfo &>(*this).dump(OS);
+void ParamInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const VariableInfo &>(*this).dump(OS);
   if (NoEscapeSpecified)
     OS << (NoEscape ? "[NoEscape] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
 }
 
-void FunctionInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<CommonEntityInfo &>(*this).dump(OS);
+void FunctionInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const CommonEntityInfo &>(*this).dump(OS);
   OS << (NullabilityAudited ? "[NullabilityAudited] " : "")
      << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   if (!ResultType.empty())
@@ -97,8 +97,8 @@ void TagInfo::dump(llvm::raw_ostream &OS) {
   OS << '\n';
 }
 
-void TypedefInfo::dump(llvm::raw_ostream &OS) {
-  static_cast<CommonTypeInfo &>(*this).dump(OS);
+void TypedefInfo::dump(llvm::raw_ostream &OS) const {
+  static_cast<const CommonTypeInfo &>(*this).dump(OS);
   if (SwiftWrapper)
     OS << "Swift Type: " << static_cast<long>(*SwiftWrapper) << ' ';
   OS << '\n';
