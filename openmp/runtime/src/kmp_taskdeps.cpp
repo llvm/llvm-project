@@ -786,7 +786,8 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
   }
 
   int thread_finished = FALSE;
-  kmp_flag_32 flag((std::atomic<kmp_uint32> *)&node.dn.npredecessors, 0U);
+  kmp_flag_32<false, false> flag(
+      (std::atomic<kmp_uint32> *)&node.dn.npredecessors, 0U);
   while (node.dn.npredecessors > 0) {
     flag.execute_tasks(thread, gtid, FALSE,
                        &thread_finished USE_ITT_BUILD_ARG(NULL),
