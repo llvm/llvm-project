@@ -12,7 +12,7 @@
 # RUN: llvm-nm %t/out
 # RUN: %lld %t/main.o %t/lib_thin.a -o %t/out
 # RUN: llvm-nm %t/out
-# RUN: %lld /%t/main.o -force_load %t/lib_thin.a -o %t/out
+# RUN: %lld %t/main.o -force_load %t/lib_thin.a -o %t/out
 # RUN: llvm-nm %t/out
 
 # RUN: rm %t/lib.o
