@@ -12,18 +12,18 @@
 # RUN: cd %t && %lld -lSystem test.o foo.o -o test
 # RUN: llvm-nm -pa %t/test | FileCheck %s -DDIR=%t
 
-# CHECK-DAG:  [[#%x, MAIN:]]   T _main
-# CHECK-DAG:  [[#%x, FOO: ]]   T _foo
 # CHECK:      0000000000000000 - 00 0000    SO /tmp/test.cpp
 # CHECK-NEXT: 0000000000000000 - 03 0001   OSO [[DIR]]/test.o
-# CHECK-NEXT: [[#MAIN]]        - 01 0000   FUN _main
+# CHECK-NEXT: [[#%x, MAIN:]]   - 01 0000   FUN _main
 # CHECK-NEXT: 0000000000000001 - 00 0000   FUN
 # CHECK-NEXT: 0000000000000000 - 01 0000    SO
 # CHECK-NEXT: 0000000000000000 - 00 0000    SO /foo.cpp
 # CHECK-NEXT: 0000000000000000 - 03 0001   OSO [[DIR]]/foo.o
-# CHECK-NEXT: [[#FOO]]         - 01 0000   FUN _foo
+# CHECK-NEXT: [[#%x, FOO:]]    - 01 0000   FUN _foo
 # CHECK-NEXT: 0000000000000001 - 00 0000   FUN
 # CHECK-NEXT: 0000000000000000 - 01 0000    SO
+# CHECK-NEXT: [[#MAIN]]        T _main
+# CHECK-NEXT: [[#FOO]]         T _foo
 
 #--- test.s
 .text

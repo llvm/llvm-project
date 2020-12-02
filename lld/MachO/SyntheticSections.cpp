@@ -19,6 +19,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -630,14 +631,35 @@ void SymtabSection::emitFunStabs(Defined *defined) {
 }
 
 void SymtabSection::finalizeContents() {
+  // Local symbols aren't in the SymbolTable, so we walk the list of object
+  // files to gather them.
+  for (InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file)) {
+      for (Symbol *sym : objFile->symbols) {
+        // TODO: when we implement -dead_strip, we should filter out symbols
+        // that belong to dead sections.
+        if (auto *defined = dyn_cast<Defined>(sym)) {
+          if (!defined->isExternal()) {
+            uint32_t strx = stringTableSection.addString(sym->getName());
+            localSymbols.push_back({sym, strx});
+          }
+        }
+      }
+    }
+  }
+
+  for (Symbol *sym : symtab->getSymbols()) {
+    uint32_t strx = stringTableSection.addString(sym->getName());
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      assert(defined->isExternal());
+      externalSymbols.push_back({sym, strx});
+    } else if (sym->isInGot() || sym->isInStubs()) {
+      undefinedSymbols.push_back({sym, strx});
+    }
+  }
+
   InputFile *lastFile = nullptr;
   for (Symbol *sym : symtab->getSymbols()) {
-    // TODO support other symbol types
-    if (isa<Defined>(sym) || sym->isInGot() || sym->isInStubs()) {
-      sym->symtabIndex = symbols.size();
-      symbols.push_back({sym, stringTableSection.addString(sym->getName())});
-    }
-
     // Emit STABS symbols so that dsymutil and/or the debugger can map address
     // regions in the final binary to the source and object files from which
     // they originated.
@@ -670,13 +692,35 @@ void SymtabSection::finalizeContents() {
 
   if (!stabs.empty())
     emitEndSourceStab();
+
+  uint32_t symtabIndex = stabs.size();
+  for (const SymtabEntry &entry :
+       concat<SymtabEntry>(localSymbols, externalSymbols, undefinedSymbols)) {
+    entry.sym->symtabIndex = symtabIndex++;
+  }
+}
+
+uint32_t SymtabSection::getNumSymbols() const {
+  return stabs.size() + localSymbols.size() + externalSymbols.size() +
+         undefinedSymbols.size();
 }
 
 void SymtabSection::writeTo(uint8_t *buf) const {
   auto *nList = reinterpret_cast<structs::nlist_64 *>(buf);
-  for (const SymtabEntry &entry : symbols) {
+  // Emit the stabs entries before the "real" symbols. We cannot emit them
+  // after as that would render Symbol::symtabIndex inaccurate.
+  for (const StabsEntry &entry : stabs) {
     nList->n_strx = entry.strx;
-    // TODO support other symbol types
+    nList->n_type = entry.type;
+    nList->n_sect = entry.sect;
+    nList->n_desc = entry.desc;
+    nList->n_value = entry.value;
+    ++nList;
+  }
+
+  for (const SymtabEntry &entry : concat<const SymtabEntry>(
+           localSymbols, externalSymbols, undefinedSymbols)) {
+    nList->n_strx = entry.strx;
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       if (defined->isAbsolute()) {
@@ -684,24 +728,14 @@ void SymtabSection::writeTo(uint8_t *buf) const {
         nList->n_sect = MachO::NO_SECT;
         nList->n_value = defined->value;
       } else {
-        nList->n_type = MachO::N_EXT | MachO::N_SECT;
+        nList->n_type =
+            (defined->isExternal() ? MachO::N_EXT : 0) | MachO::N_SECT;
         nList->n_sect = defined->isec->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
       nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
     }
-    ++nList;
-  }
-
-  // Emit the stabs entries after the "real" symbols. We cannot emit them
-  // before as that would render Symbol::symtabIndex inaccurate.
-  for (const StabsEntry &entry : stabs) {
-    nList->n_strx = entry.strx;
-    nList->n_type = entry.type;
-    nList->n_sect = entry.sect;
-    nList->n_desc = entry.desc;
-    nList->n_value = entry.value;
     ++nList;
   }
 }
