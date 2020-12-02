@@ -20,6 +20,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -53,6 +54,15 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
 
 TargetLoweringObjectFile::~TargetLoweringObjectFile() {
   delete Mang;
+}
+
+unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
+  // If target does not have LEB128 directives, we would need the
+  // call site encoding to be udata4 so that the alternative path
+  // for not having LEB128 directives could work.
+  if (!getContext().getAsmInfo()->hasLEB128Directives())
+    return dwarf::DW_EH_PE_udata4;
+  return CallSiteEncoding;
 }
 
 static bool isNullOrUndef(const Constant *C) {
