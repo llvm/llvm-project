@@ -266,9 +266,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          auto file = make<ObjFile>(member.mbref, member.modTime);
-          file->archiveName = buffer->getBufferIdentifier();
-          inputFiles.push_back(file);
+          inputFiles.push_back(
+              make<ObjFile>(member.mbref, member.modTime, path));
         }
       }
     } else if (config->forceLoadObjC) {
@@ -280,17 +279,21 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
       // we already found that it contains an ObjC symbol. We should also
       // consider creating a LazyObjFile class in order to avoid double-loading
       // these files here and below (as part of the ArchiveFile).
-      if (Optional<MemoryBufferRef> buffer = readFile(path))
-        for (const ArchiveMember &member : getArchiveMembers(*buffer))
-          if (hasObjCSection(member.mbref))
-            inputFiles.push_back(make<ObjFile>(member.mbref, member.modTime));
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
+        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
+          if (hasObjCSection(member.mbref)) {
+            inputFiles.push_back(
+                make<ObjFile>(member.mbref, member.modTime, path));
+          }
+        }
+      }
     }
 
     newFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path));
+    newFile = make<ObjFile>(mbref, getModTime(path), "");
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -737,7 +740,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     parseOrderFile(orderFile);
 
   if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-    error("undefined symbol: " + config->entry->getName());
+    error("undefined symbol: " + toString(*config->entry));
     return false;
   }
 

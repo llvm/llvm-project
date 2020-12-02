@@ -62,11 +62,16 @@ public:
   StringRef getName() const { return name; }
 
   MemoryBufferRef mb;
+
   std::vector<Symbol *> symbols;
   ArrayRef<llvm::MachO::section_64> sectionHeaders;
   std::vector<SubsectionMap> subsections;
   // Provides an easy way to sort InputFiles deterministically.
   const int id;
+
+  // If not empty, this stores the name of the archive containing this file.
+  // We use this string for creating error messages.
+  std::string archiveName;
 
 protected:
   InputFile(Kind kind, MemoryBufferRef mb)
@@ -94,11 +99,10 @@ private:
 // .o file
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef mb, uint32_t modTime);
+  explicit ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
-  StringRef archiveName = "";
   const uint32_t modTime;
 
 private:

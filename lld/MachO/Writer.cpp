@@ -390,7 +390,7 @@ void Writer::scanRelocations() {
       if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (isa<Undefined>(s))
           error("undefined symbol " + toString(*s) + ", referenced from " +
-                sys::path::filename(isec->file->getName()));
+                toString(isec->file));
         else
           target->prepareSymbolRelocation(s, isec, r);
       } else {
@@ -617,7 +617,7 @@ void Writer::createOutputSections() {
       if (ssec->isNeeded())
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
     } else {
-      error("section from " + it->second->firstSection()->file->getName() +
+      error("section from " + toString(it->second->firstSection()->file) +
             " conflicts with synthetic section " + ssec->segname + "," +
             ssec->name);
     }
