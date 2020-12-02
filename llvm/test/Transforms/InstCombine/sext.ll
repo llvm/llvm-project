@@ -166,8 +166,8 @@ define <2 x i32> @test10_vec_nonuniform(<2 x i32> %i) {
 
 define <2 x i32> @test10_vec_undef(<2 x i32> %i) {
 ; CHECK-LABEL: @test10_vec_undef(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 0>
-; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i32> [[D1]], <i32 30, i32 0>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 24>
+; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i32> [[D1]], <i32 30, i32 24>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
@@ -281,8 +281,8 @@ define i32 @test18(i16 %x) {
 
 define i10 @test19(i10 %i) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[D1:%.*]] = shl i10 [[I:%.*]], 1
-; CHECK-NEXT:    [[D:%.*]] = ashr exact i10 [[D1]], 1
+; CHECK-NEXT:    [[D1:%.*]] = shl i10 [[I:%.*]], 9
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i10 [[D1]], 9
 ; CHECK-NEXT:    ret i10 [[D]]
 ;
   %a = trunc i10 %i to i3
