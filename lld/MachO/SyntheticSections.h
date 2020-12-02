@@ -20,6 +20,10 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
+class DWARFUnit;
+} // namespace llvm
+
 namespace lld {
 namespace macho {
 
@@ -48,6 +52,7 @@ constexpr const char ehFrame[] = "__eh_frame";
 class Defined;
 class DylibSymbol;
 class LoadCommand;
+class ObjFile;
 
 class SyntheticSection : public OutputSection {
 public:
@@ -405,16 +410,32 @@ struct SymtabEntry {
   size_t strx;
 };
 
+struct StabsEntry {
+  uint8_t type;
+  uint32_t strx = 0;
+  uint8_t sect = 0;
+  uint16_t desc = 0;
+  uint64_t value = 0;
+
+  explicit StabsEntry(uint8_t type) : type(type) {}
+};
+
 class SymtabSection : public LinkEditSection {
 public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
-  size_t getNumSymbols() const { return symbols.size(); }
+  size_t getNumSymbols() const { return stabs.size() + symbols.size(); }
   uint64_t getRawSize() const override;
   void writeTo(uint8_t *buf) const override;
 
 private:
+  void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
+  void emitEndSourceStab();
+  void emitObjectFileStab(ObjFile *);
+  void emitFunStabs(Defined *);
+
   StringTableSection &stringTableSection;
+  std::vector<StabsEntry> stabs;
   std::vector<SymtabEntry> symbols;
 };
 
