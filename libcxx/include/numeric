@@ -335,14 +335,17 @@ exclusive_scan(_InputIterator __first, _InputIterator __last,
 {
     if (__first != __last)
     {
-        _Tp __saved = __init;
-        do
+        _Tp __tmp(__b(__init, *__first));
+        while (true)
         {
-            __init = __b(__init, *__first);
-            *__result = __saved;
-            __saved = __init;
+            *__result = _VSTD::move(__init);
             ++__result;
-        } while (++__first != __last);
+            ++__first;
+            if (__first == __last)
+                break;
+            __init = _VSTD::move(__tmp);
+            __tmp = __b(__init, *__first);
+        }
     }
     return __result;
 }
