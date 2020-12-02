@@ -8,8 +8,31 @@ declare void @usei8ptr(i8* %ptr)
 ; Ensure that we do not crash when looking at such a weird bitcast.
 define i1 @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr1vec, i8* %ptr2) {
 ; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
+; CHECK-NEXT:    [[PTR1:%.*]] = bitcast <1 x i8*> [[PTR1VEC:%.*]] to i8*
+; CHECK-NEXT:    call void @usei8ptr(i8* [[PTR1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[PTR1]], [[PTR2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
   %ptr1 = bitcast <1 x i8*> %ptr1vec to i8*
   call void @usei8ptr(i8* %ptr1)
   %cmp = icmp eq i8* %ptr1, %ptr2
   ret i1 %cmp
+}
+
+; TODO: these should return poison
+
+define i1 @poison(i32 %x) {
+; CHECK-LABEL: @poison(
+; CHECK-NEXT:    ret i1 undef
+;
+  %v = icmp eq i32 %x, poison
+  ret i1 %v
+}
+
+define i1 @poison2(i32 %x) {
+; CHECK-LABEL: @poison2(
+; CHECK-NEXT:    ret i1 false
+;
+  %v = icmp slt i32 %x, poison
+  ret i1 %v
 }
