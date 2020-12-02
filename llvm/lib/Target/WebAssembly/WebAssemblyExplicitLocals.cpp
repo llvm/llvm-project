@@ -96,6 +96,10 @@ static unsigned getDropOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::DROP_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::DROP_V128;
+  if (RC == &WebAssembly::FUNCREFRegClass)
+    return WebAssembly::DROP_FUNCREF;
+  if (RC == &WebAssembly::EXTERNREFRegClass)
+    return WebAssembly::DROP_EXTERNREF;
   if (RC == &WebAssembly::EXNREFRegClass)
     return WebAssembly::DROP_EXNREF;
   llvm_unreachable("Unexpected register class");
