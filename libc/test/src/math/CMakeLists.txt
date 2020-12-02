@@ -686,6 +686,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquof_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquof
@@ -699,6 +701,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquo_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquo
@@ -712,6 +716,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquol_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquol
