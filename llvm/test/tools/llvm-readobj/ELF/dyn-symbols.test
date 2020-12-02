@@ -451,11 +451,15 @@ DynamicSymbols: []
 ## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
 #     value of the symbol size for the platform.
 # RUN: yaml2obj %s -D BITS=32 --docnum=12 -o %t12
-# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
-# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
 # RUN: yaml2obj %s -D BITS=64 --docnum=12 -o %t13
-# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
-# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
 
 # DYNSYM-SIZE-INVALID3: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x10){{$}}
 # DYNSYM-SIZE-INVALID4: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x18){{$}}
@@ -502,6 +506,8 @@ Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Entries:
+      - Tag:   DT_SYMENT
+        Value: 0x123
       - Tag:   DT_SYMENT
         Value: 0x123
       - Tag:   DT_NULL
