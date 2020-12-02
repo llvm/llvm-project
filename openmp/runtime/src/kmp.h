@@ -255,6 +255,10 @@ typedef union kmp_team kmp_team_p;
 typedef union kmp_info kmp_info_p;
 typedef union kmp_root kmp_root_p;
 
+template <bool C = false, bool S = true> class kmp_flag_32;
+template <bool C = false, bool S = true> class kmp_flag_64;
+class kmp_flag_oncore;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1317,6 +1321,84 @@ static inline void __kmp_x86_pause(void) { _mm_pause(); }
       }                                                                        \
     }                                                                          \
   }
+
+// User-level Monitor/Mwait
+#if KMP_HAVE_UMWAIT
+// We always try for UMWAIT first
+#if KMP_HAVE_WAITPKG_INTRINSICS
+#if KMP_HAVE_IMMINTRIN_H
+#include <immintrin.h>
+#elif KMP_HAVE_INTRIN_H
+#include <intrin.h>
+#endif
+#endif // KMP_HAVE_WAITPKG_INTRINSICS
+KMP_ATTRIBUTE_TARGET_WAITPKG
+static inline int
+__kmp_tpause(uint32_t hint, uint64_t counter) {
+#if !KMP_HAVE_WAITPKG_INTRINSICS
+  uint32_t timeHi = uint32_t(counter >> 32);
+  uint32_t timeLo = uint32_t(counter & 0xffffffff);
+  char flag;
+  __asm__ volatile("#tpause\n.byte 0x66, 0x0F, 0xAE, 0xF1\n"
+                   "setb   %0"
+                   : "=r"(flag)
+                   : "a"(timeLo), "d"(timeHi), "c"(hint)
+                   :);
+  return flag;
+#else
+  return _tpause(hint, counter);
+#endif
+}
+KMP_ATTRIBUTE_TARGET_WAITPKG
+static inline void
+__kmp_umonitor(void *cacheline) {
+#if !KMP_HAVE_WAITPKG_INTRINSICS
+  __asm__ volatile("# umonitor\n.byte 0xF3, 0x0F, 0xAE, 0x01 "
+                   :
+                   : "a"(cacheline)
+                   :);
+#else
+  _umonitor(cacheline);
+#endif
+}
+KMP_ATTRIBUTE_TARGET_WAITPKG
+static inline int
+__kmp_umwait(uint32_t hint, uint64_t counter) {
+#if !KMP_HAVE_WAITPKG_INTRINSICS
+  uint32_t timeHi = uint32_t(counter >> 32);
+  uint32_t timeLo = uint32_t(counter & 0xffffffff);
+  char flag;
+  __asm__ volatile("#umwait\n.byte 0xF2, 0x0F, 0xAE, 0xF1\n"
+                   "setb   %0"
+                   : "=r"(flag)
+                   : "a"(timeLo), "d"(timeHi), "c"(hint)
+                   :);
+  return flag;
+#else
+  return _umwait(hint, counter);
+#endif
+}
+#elif KMP_HAVE_MWAIT
+#if KMP_OS_UNIX
+#include <pmmintrin.h>
+#else
+#include <intrin.h>
+#endif
+#if KMP_OS_UNIX
+__attribute__((target("sse3")))
+#endif
+static inline void
+__kmp_mm_monitor(void *cacheline, unsigned extensions, unsigned hints) {
+  _mm_monitor(cacheline, extensions, hints);
+}
+#if KMP_OS_UNIX
+__attribute__((target("sse3")))
+#endif
+static inline void
+__kmp_mm_mwait(unsigned extensions, unsigned hints) {
+  _mm_mwait(extensions, hints);
+}
+#endif // KMP_HAVE_UMWAIT
 
 /* ------------------------------------------------------------------------ */
 /* Support datatypes for the orphaned construct nesting checks.             */
@@ -3094,6 +3176,13 @@ static inline void __kmp_assert_valid_gtid(kmp_int32 gtid) {
     KMP_FATAL(ThreadIdentInvalid);
 }
 
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+extern int __kmp_user_level_mwait; // TRUE or FALSE; from KMP_USER_LEVEL_MWAIT
+extern int __kmp_umwait_enabled; // Runtime check if user-level mwait enabled
+extern int __kmp_mwait_enabled; // Runtime check if ring3 mwait is enabled
+extern int __kmp_mwait_hints; // Hints to pass in to mwait
+#endif
+
 /* ------------------------------------------------------------------------- */
 
 extern kmp_global_t __kmp_global; /* global status */
@@ -3296,17 +3385,14 @@ extern kmp_uint32 __kmp_wait_4(kmp_uint32 volatile *spinner, kmp_uint32 checker,
 extern void __kmp_wait_4_ptr(void *spinner, kmp_uint32 checker,
                              kmp_uint32 (*pred)(void *, kmp_uint32), void *obj);
 
-class kmp_flag_32;
-class kmp_flag_64;
-class kmp_flag_oncore;
-extern void __kmp_wait_64(kmp_info_t *this_thr, kmp_flag_64 *flag,
+extern void __kmp_wait_64(kmp_info_t *this_thr, kmp_flag_64<> *flag,
                           int final_spin
 #if USE_ITT_BUILD
                           ,
                           void *itt_sync_obj
 #endif
                           );
-extern void __kmp_release_64(kmp_flag_64 *flag);
+extern void __kmp_release_64(kmp_flag_64<> *flag);
 
 extern void __kmp_infinite_loop(void);
 
@@ -3403,13 +3489,6 @@ extern void __kmp_terminate_thread(int gtid);
 extern int __kmp_try_suspend_mx(kmp_info_t *th);
 extern void __kmp_lock_suspend_mx(kmp_info_t *th);
 extern void __kmp_unlock_suspend_mx(kmp_info_t *th);
-
-extern void __kmp_suspend_32(int th_gtid, kmp_flag_32 *flag);
-extern void __kmp_suspend_64(int th_gtid, kmp_flag_64 *flag);
-extern void __kmp_suspend_oncore(int th_gtid, kmp_flag_oncore *flag);
-extern void __kmp_resume_32(int target_gtid, kmp_flag_32 *flag);
-extern void __kmp_resume_64(int target_gtid, kmp_flag_64 *flag);
-extern void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag);
 
 extern void __kmp_elapsed(double *);
 extern void __kmp_elapsed_tick(double *);
@@ -3534,28 +3613,6 @@ extern kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
                                                        int gtid,
                                                        kmp_task_t *task);
 extern void __kmp_fulfill_event(kmp_event_t *event);
-
-int __kmp_execute_tasks_32(kmp_info_t *thread, kmp_int32 gtid,
-                           kmp_flag_32 *flag, int final_spin,
-                           int *thread_finished,
-#if USE_ITT_BUILD
-                           void *itt_sync_obj,
-#endif /* USE_ITT_BUILD */
-                           kmp_int32 is_constrained);
-int __kmp_execute_tasks_64(kmp_info_t *thread, kmp_int32 gtid,
-                           kmp_flag_64 *flag, int final_spin,
-                           int *thread_finished,
-#if USE_ITT_BUILD
-                           void *itt_sync_obj,
-#endif /* USE_ITT_BUILD */
-                           kmp_int32 is_constrained);
-int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
-                               kmp_flag_oncore *flag, int final_spin,
-                               int *thread_finished,
-#if USE_ITT_BUILD
-                               void *itt_sync_obj,
-#endif /* USE_ITT_BUILD */
-                               kmp_int32 is_constrained);
 
 extern void __kmp_free_task_team(kmp_info_t *thread,
                                  kmp_task_team_t *task_team);
@@ -3919,5 +3976,47 @@ extern void __kmp_omp_display_env(int verbose);
 #ifdef __cplusplus
 }
 #endif
+
+template <bool C, bool S>
+extern void __kmp_suspend_32(int th_gtid, kmp_flag_32<C, S> *flag);
+template <bool C, bool S>
+extern void __kmp_suspend_64(int th_gtid, kmp_flag_64<C, S> *flag);
+extern void __kmp_suspend_oncore(int th_gtid, kmp_flag_oncore *flag);
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+template <bool C, bool S>
+extern void __kmp_mwait_32(int th_gtid, kmp_flag_32<C, S> *flag);
+template <bool C, bool S>
+extern void __kmp_mwait_64(int th_gtid, kmp_flag_64<C, S> *flag);
+extern void __kmp_mwait_oncore(int th_gtid, kmp_flag_oncore *flag);
+#endif
+template <bool C, bool S>
+extern void __kmp_resume_32(int target_gtid, kmp_flag_32<C, S> *flag);
+template <bool C, bool S>
+extern void __kmp_resume_64(int target_gtid, kmp_flag_64<C, S> *flag);
+extern void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag);
+
+template <bool C, bool S>
+int __kmp_execute_tasks_32(kmp_info_t *thread, kmp_int32 gtid,
+                           kmp_flag_32<C, S> *flag, int final_spin,
+                           int *thread_finished,
+#if USE_ITT_BUILD
+                           void *itt_sync_obj,
+#endif /* USE_ITT_BUILD */
+                           kmp_int32 is_constrained);
+template <bool C, bool S>
+int __kmp_execute_tasks_64(kmp_info_t *thread, kmp_int32 gtid,
+                           kmp_flag_64<C, S> *flag, int final_spin,
+                           int *thread_finished,
+#if USE_ITT_BUILD
+                           void *itt_sync_obj,
+#endif /* USE_ITT_BUILD */
+                           kmp_int32 is_constrained);
+int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
+                               kmp_flag_oncore *flag, int final_spin,
+                               int *thread_finished,
+#if USE_ITT_BUILD
+                               void *itt_sync_obj,
+#endif /* USE_ITT_BUILD */
+                               kmp_int32 is_constrained);
 
 #endif /* KMP_H */
