@@ -147,6 +147,7 @@ static_library("CodeGen") {
     "PreISelIntrinsicLowering.cpp",
     "ProcessImplicitDefs.cpp",
     "PrologEpilogInserter.cpp",
+    "PseudoProbeInserter.cpp",
     "PseudoSourceValue.cpp",
     "RDFGraph.cpp",
     "RDFLiveness.cpp",
