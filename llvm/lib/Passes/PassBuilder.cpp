@@ -838,20 +838,16 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
                                     std::string ProfileFile,
                                     std::string ProfileRemappingFile) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
-  // Generally running simplification passes and the inliner with an high
-  // threshold results in smaller executables, but there may be cases where
-  // the size grows, so let's be conservative here and skip this simplification
-  // at -Os/Oz. We will not do this  inline for context sensistive PGO (when
-  // IsCS is true).
-  if (!Level.isOptimizingForSize() && !IsCS && !DisablePreInliner) {
+  if (!IsCS && !DisablePreInliner) {
     InlineParams IP;
 
     IP.DefaultThreshold = PreInlineThreshold;
 
-    // FIXME: The hint threshold has the same value used by the regular inliner.
-    // This should probably be lowered after performance testing.
+    // FIXME: The hint threshold has the same value used by the regular inliner
+    // when not optimzing for size. This should probably be lowered after
+    // performance testing.
     // FIXME: this comment is cargo culted from the old pass manager, revisit).
-    IP.HintThreshold = 325;
+    IP.HintThreshold = Level.isOptimizingForSize() ? PreInlineThreshold : 325;
     ModuleInlinerWrapperPass MIWP(IP, DebugLogging);
     CGSCCPassManager &CGPipeline = MIWP.getPM();
 
