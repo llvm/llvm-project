@@ -193,6 +193,8 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
 
   bool doFinalization(Module &M) override;
+
+  void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
 };
 
 } // end anonymous namespace
@@ -2054,6 +2056,23 @@ void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
             llvm::Twine("_", llvm::utostr(Index++)),
         cast<Function>(S.Func));
   }
+}
+
+void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
+                                          unsigned Encoding) {
+  if (GV) {
+    MCSymbol *TypeInfoSym = TM.getSymbol(GV);
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym);
+    const MCSymbol *TOCBaseSym =
+        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
+            ->getQualNameSymbol();
+    auto &Ctx = OutStreamer->getContext();
+    const MCExpr *Exp =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
+                                MCSymbolRefExpr::create(TOCBaseSym, Ctx), Ctx);
+    OutStreamer->emitValue(Exp, GetSizeOfEncodedValue(Encoding));
+  } else
+    OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
 }
 
 // Return a pass that prints the PPC assembly code for a MachineFunction to the

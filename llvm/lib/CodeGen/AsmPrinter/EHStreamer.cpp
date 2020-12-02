@@ -288,11 +288,13 @@ void EHStreamer::computeCallSiteTable(
       assert(BeginLabel == LandingPad->BeginLabels[P.RangeIndex] &&
              "Inconsistent landing pad map!");
 
-      // For Dwarf exception handling (SjLj handling doesn't use this). If some
-      // instruction between the previous try-range and this one may throw,
-      // create a call-site entry with no landing pad for the region between the
-      // try-ranges.
-      if (SawPotentiallyThrowing && Asm->MAI->usesCFIForEH()) {
+      // For Dwarf and AIX exception handling (SjLj handling doesn't use this).
+      // If some instruction between the previous try-range and this one may
+      // throw, create a call-site entry with no landing pad for the region
+      // between the try-ranges.
+      if (SawPotentiallyThrowing &&
+          (Asm->MAI->usesCFIForEH() ||
+           Asm->MAI->getExceptionHandlingType() == ExceptionHandling::AIX)) {
         CallSites.push_back({LastLabel, BeginLabel, nullptr, 0});
         PreviousIsInvoke = false;
       }
