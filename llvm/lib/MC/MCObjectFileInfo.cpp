@@ -883,6 +883,14 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // The TOC-base always has 0 size, but 4 byte alignment.
   TOCBaseSection->setAlignment(Align(4));
 
+  LSDASection = Ctx->getXCOFFSection(".gcc_except_table",
+                                     XCOFF::StorageMappingClass::XMC_RO,
+                                     XCOFF::XTY_SD, SectionKind::getReadOnly());
+
+  CompactUnwindSection =
+      Ctx->getXCOFFSection(".eh_info_table", XCOFF::StorageMappingClass::XMC_RW,
+                           XCOFF::XTY_SD, SectionKind::getData());
+
   // DWARF sections for XCOFF are not csects. They are special STYP_DWARF
   // sections, and the individual DWARF sections are distinguished by their
   // section subtype.

@@ -113,6 +113,8 @@ const EHPersonality
 EHPersonality::MSVC_CxxFrameHandler3 = { "__CxxFrameHandler3", nullptr };
 const EHPersonality
 EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
+const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
+                                                   nullptr};
 
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const LangOptions &L) {
@@ -161,6 +163,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
+  if (T.isOSAIX())
+    return EHPersonality::XL_CPlusPlus;
   if (L.SjLjExceptions)
     return EHPersonality::GNU_CPlusPlus_SJLJ;
   if (L.DWARFExceptions)
