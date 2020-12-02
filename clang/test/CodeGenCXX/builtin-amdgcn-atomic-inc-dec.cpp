@@ -124,7 +124,7 @@ __attribute__((device)) void test_shared64() {
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__UINT32_TYPE__ global_val32;
+__attribute__((device)) __UINT32_TYPE__ global_val32;
 __attribute__((device)) void test_global32() {
   // CHECK-LABEL: test_global32
   // CHECK: %0 = load i32, i32* addrspacecast (i32 addrspace(1)* @global_val32 to i32*), align 4
@@ -138,7 +138,7 @@ __attribute__((device)) void test_global32() {
   global_val32 = __builtin_amdgcn_atomic_dec32(&global_val32, global_val32, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__UINT64_TYPE__ global_val64;
+__attribute__((device)) __UINT64_TYPE__ global_val64;
 __attribute__((device)) void test_global64() {
   // CHECK-LABEL: test_global64
   // CHECK: %0 = load i64, i64* addrspacecast (i64 addrspace(1)* @global_val64 to i64*), align 8
