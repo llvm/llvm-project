@@ -275,7 +275,7 @@ static bool __kmp_task_is_allowed(int gtid, const kmp_int32 is_constrained,
   }
   // Check mutexinoutset dependencies, acquire locks
   kmp_depnode_t *node = tasknew->td_depnode;
-  if (node && (node->dn.mtx_num_locks > 0)) {
+  if (UNLIKELY(node && (node->dn.mtx_num_locks > 0))) {
     for (int i = 0; i < node->dn.mtx_num_locks; ++i) {
       KMP_DEBUG_ASSERT(node->dn.mtx_locks[i] != NULL);
       if (__kmp_test_lock(node->dn.mtx_locks[i], gtid))
@@ -332,7 +332,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   KA_TRACE(20,
            ("__kmp_push_task: T#%d trying to push task %p.\n", gtid, taskdata));
 
-  if (taskdata->td_flags.tiedness == TASK_UNTIED) {
+  if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
@@ -344,7 +344,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   }
 
   // The first check avoids building task_team thread data if serialized
-  if (taskdata->td_flags.task_serial) {
+  if (UNLIKELY(taskdata->td_flags.task_serial)) {
     KA_TRACE(20, ("__kmp_push_task: T#%d team serialized; returning "
                   "TASK_NOT_PUSHED for task %p\n",
                   gtid, taskdata));
@@ -354,7 +354,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   // Now that serialized tasks have returned, we can assume that we are not in
   // immediate exec mode
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
-  if (!KMP_TASKING_ENABLED(task_team)) {
+  if (UNLIKELY(!KMP_TASKING_ENABLED(task_team))) {
     __kmp_enable_tasking(task_team, thread);
   }
   KMP_DEBUG_ASSERT(TCR_4(task_team->tt.tt_found_tasks) == TRUE);
@@ -364,7 +364,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   thread_data = &task_team->tt.tt_threads_data[tid];
 
   // No lock needed since only owner can allocate
-  if (thread_data->td.td_deque == NULL) {
+  if (UNLIKELY(thread_data->td.td_deque == NULL)) {
     __kmp_alloc_task_deque(thread, thread_data);
   }
 
@@ -824,7 +824,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   }
 #endif /* BUILD_TIED_TASK_STACK */
 
-  if (taskdata->td_flags.tiedness == TASK_UNTIED) {
+  if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to check the counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = KMP_ATOMIC_DEC(&taskdata->td_untied_count) - 1;
@@ -1175,7 +1175,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   kmp_taskdata_t *parent_task = thread->th.th_current_task;
   size_t shareds_offset;
 
-  if (!TCR_4(__kmp_init_middle))
+  if (UNLIKELY(!TCR_4(__kmp_init_middle)))
     __kmp_middle_initialize();
 
   KA_TRACE(10, ("__kmp_task_alloc(enter): T#%d loc=%p, flags=(0x%x) "
@@ -1433,8 +1433,8 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       30, ("__kmp_invoke_task(enter): T#%d invoking task %p, current_task=%p\n",
            gtid, taskdata, current_task));
   KMP_DEBUG_ASSERT(task);
-  if (taskdata->td_flags.proxy == TASK_PROXY &&
-      taskdata->td_flags.complete == 1) {
+  if (UNLIKELY(taskdata->td_flags.proxy == TASK_PROXY &&
+               taskdata->td_flags.complete == 1)) {
     // This is a proxy task that was already completed but it needs to run
     // its bottom-half finish
     KA_TRACE(
@@ -1476,7 +1476,7 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
   // TODO: cancel tasks if the parallel region has also been cancelled
   // TODO: check if this sequence can be hoisted above __kmp_task_start
   // if cancellation has been enabled for this run ...
-  if (__kmp_omp_cancellation) {
+  if (UNLIKELY(__kmp_omp_cancellation)) {
     thread = __kmp_threads[gtid];
     kmp_team_t *this_team = thread->th.th_team;
     kmp_taskgroup_t *taskgroup = taskdata->td_taskgroup;
@@ -1855,7 +1855,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
 
 #if USE_ITT_BUILD
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -1875,7 +1875,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
       }
     }
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with children
 #endif /* USE_ITT_BUILD */
@@ -1961,7 +1961,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 
 #if USE_ITT_BUILD
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
     if (!taskdata->td_flags.team_serial) {
@@ -1984,7 +1984,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
       }
     }
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -2486,7 +2486,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     // For ITT the taskgroup wait is similar to taskwait until we need to
     // distinguish them
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -2520,7 +2520,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #endif
 
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with descendants
 #endif /* USE_ITT_BUILD */
