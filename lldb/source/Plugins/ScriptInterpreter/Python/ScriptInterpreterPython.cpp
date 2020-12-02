@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
+#include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
@@ -213,6 +214,12 @@ extern "C" bool LLDBSWIGPythonRunScriptKeywordValue(
 extern "C" void *
 LLDBSWIGPython_GetDynamicSetting(void *module, const char *setting,
                                  const lldb::TargetSP &target_sp);
+
+static ScriptInterpreterPythonImpl *GetPythonInterpreter(Debugger &debugger) {
+  ScriptInterpreter *script_interpreter =
+      debugger.GetScriptInterpreter(true, lldb::eScriptLanguagePython);
+  return static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
+}
 
 static bool g_initialized = false;
 
@@ -1825,11 +1832,10 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
     return {};
 
   Debugger &debugger = thread_plan_sp->GetTarget().GetDebugger();
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
+      GetPythonInterpreter(debugger);
 
-  if (!script_interpreter)
+  if (!python_interpreter)
     return {};
 
   void *ret_val;
@@ -1929,11 +1935,10 @@ ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
     return StructuredData::GenericSP();
 
   Debugger &debugger = bkpt_sp->GetTarget().GetDebugger();
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
+      GetPythonInterpreter(debugger);
 
-  if (!script_interpreter)
+  if (!python_interpreter)
     return StructuredData::GenericSP();
 
   void *ret_val;
@@ -2003,11 +2008,10 @@ StructuredData::GenericSP ScriptInterpreterPythonImpl::CreateScriptedStopHook(
     return StructuredData::GenericSP();
   }
 
-  ScriptInterpreter *script_interpreter = m_debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
+      GetPythonInterpreter(m_debugger);
 
-  if (!script_interpreter) {
+  if (!python_interpreter) {
     error.SetErrorString("No script interpreter for scripted stop-hook.");
     return StructuredData::GenericSP();
   }
@@ -2103,11 +2107,10 @@ ScriptInterpreterPythonImpl::CreateSyntheticScriptedProvider(
     return StructuredData::ObjectSP();
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      (ScriptInterpreterPythonImpl *)script_interpreter;
+      GetPythonInterpreter(debugger);
 
-  if (!script_interpreter)
+  if (!python_interpreter)
     return StructuredData::ObjectSP();
 
   void *ret_val = nullptr;
@@ -2274,11 +2277,10 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
     return true;
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      (ScriptInterpreterPythonImpl *)script_interpreter;
+      GetPythonInterpreter(debugger);
 
-  if (!script_interpreter)
+  if (!python_interpreter)
     return true;
 
   if (python_function_name && python_function_name[0]) {
@@ -2340,11 +2342,10 @@ bool ScriptInterpreterPythonImpl::WatchpointCallbackFunction(
     return true;
 
   Debugger &debugger = target->GetDebugger();
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   ScriptInterpreterPythonImpl *python_interpreter =
-      (ScriptInterpreterPythonImpl *)script_interpreter;
+      GetPythonInterpreter(debugger);
 
-  if (!script_interpreter)
+  if (!python_interpreter)
     return true;
 
   if (python_function_name && python_function_name[0]) {
