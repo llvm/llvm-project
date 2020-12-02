@@ -38,6 +38,7 @@ Getting Started with libc++
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
+   Contributing
    Cxx1yStatus
    Cxx1zStatus
    Cxx2aStatus
