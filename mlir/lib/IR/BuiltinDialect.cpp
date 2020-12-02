@@ -228,9 +228,9 @@ static LogicalResult verify(ModuleOp op) {
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
                                 mlir::SymbolTable::getVisibilityAttrName()},
             attr.first.strref()))
-      return op.emitOpError()
-             << "can only contain dialect-specific attributes, found: '"
-             << attr.first << "'";
+      return op.emitOpError() << "can only contain attributes with "
+                                 "dialect-prefixed names, found: '"
+                              << attr.first << "'";
   }
 
   return success();
