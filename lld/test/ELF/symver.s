@@ -5,6 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/ref.s -o %t/ref.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/ref1.s -o %t/ref1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/ref1p.s -o %t/ref1p.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/ref1w.s -o %t/ref1w.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/def1.s -o %t/def1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/def1w.s -o %t/def1w.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/hid1.s -o %t/hid1.o
@@ -45,13 +46,16 @@
 # CHECK-EMPTY:
 
 ## foo@@v2 does not resolve undefined foo@v1.
-## TODO Undefined 'foo@v1' should be errored.
-# RUN: ld.lld -shared --soname=t --version-script=%t/ver %t/ref.o %t/ref1.o %t/def2.o -o %t2
-# RUN: llvm-readelf --dyn-syms %t2 | FileCheck %s --check-prefix=CHECK2
+# RUN: not ld.lld -shared --soname=t --version-script=%t/ver %t/ref.o %t/ref1.o %t/def2.o \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNDEF
 
-# CHECK2:       1: {{.*}} NOTYPE GLOBAL DEFAULT UND   foo{{$}}
-# CHECK2-NEXT:  2: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo@@v2
-# CHECK2-EMPTY:
+# UNDEF: error: undefined symbol: foo@v1
+
+## An undefined weak unversioned symbol is not errored. However, an undefined
+## weak versioned symbol should still be errored because we cannot construct
+## a Verneed entry (Verneed::vn_file is unavailable).
+# RUN: not ld.lld -shared --version-script=%t/ver %t/ref1w.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNDEF
 
 ## foo@@v2 resolves undefined foo while foo@v1 resolves undefined foo@v1.
 # RUN: ld.lld -shared --soname=t --version-script=%t/ver %t/ref.o %t/ref1.o %t/hid1.o %t/def2.o -o %t3
@@ -128,15 +132,15 @@
 
 ## Test --wrap on @ and @@.
 
-## TODO Error because __wrap_foo@v1 is not defined.
+## Error because __wrap_foo@v1 is not defined.
 ## Note: GNU ld errors "no symbol version section for versioned symbol `__wrap_foo@v1'".
-# RUN: ld.lld -shared --soname=t --version-script=%t/ver --wrap=foo@v1 %t/ref.o %t/ref1.o %t/def1.o %t/wrap.o -o %t.w3
-# RUN: llvm-readobj -r %t.w3 | FileCheck %s --check-prefix=W3REL
+# RUN: not ld.lld -shared --soname=t --version-script=%t/ver --wrap=foo@v1 %t/ref.o %t/ref1.o %t/def1.o %t/wrap.o \
+# RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=W3
 
-# W3REL:      .rela.plt {
-# W3REL-NEXT:   R_X86_64_JUMP_SLOT foo@@v1 0x0
-# W3REL-NEXT:   R_X86_64_JUMP_SLOT - 0x0
-# W3REL-NEXT: }
+# W3:      error: undefined symbol: __wrap_foo@v1
+# W3-NEXT: >>> referenced by {{.*}}ref1.o:(.text+0x1)
+# W3-NEXT: >>> did you mean: __wrap_foo{{$}}
+# W3-NEXT: >>> defined in: {{.*}}wrap.o
 
 ## foo@v1 is correctly wrapped.
 # RUN: ld.lld -shared --soname=t --version-script=%t/ver --wrap=foo@v1 %t/ref.o %t/ref1.o %t/def1.o %t/wrap1.o -o %t.w4
@@ -180,6 +184,11 @@ call foo
 
 #--- ref1p.s
 .protected foo
+.symver foo, foo@@@v1
+call foo
+
+#--- ref1w.s
+.weak foo
 .symver foo, foo@@@v1
 call foo
 
