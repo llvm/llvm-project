@@ -26,7 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -120,7 +119,7 @@ namespace {
     // is overkill of this end.
     short IntVal = 0;
 
-    AlignedCharArrayUnion<APFloat> FpValBuf;
+    std::aligned_union_t<1, APFloat> FpValBuf;
   };
 
   /// FAddend is used to represent floating-point addend. An addend is
