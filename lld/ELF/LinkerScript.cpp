@@ -987,11 +987,6 @@ static bool isDiscardable(OutputSection &sec) {
   if (sec.name == "/DISCARD/")
     return true;
 
-  // We do not remove empty sections that are explicitly
-  // assigned to any segment.
-  if (!sec.phdrs.empty())
-    return false;
-
   // We do not want to remove OutputSections with expressions that reference
   // symbols even if the OutputSection is empty. We want to ensure that the
   // expressions can be evaluated and report an error if they cannot.
@@ -1017,6 +1012,18 @@ static bool isDiscardable(OutputSection &sec) {
   return true;
 }
 
+static void maybePropagatePhdrs(OutputSection &sec,
+                                std::vector<StringRef> &phdrs) {
+  if (sec.phdrs.empty()) {
+    // To match the bfd linker script behaviour, only propagate program
+    // headers to sections that are allocated.
+    if (sec.flags & SHF_ALLOC)
+      sec.phdrs = phdrs;
+  } else {
+    phdrs = sec.phdrs;
+  }
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -1040,6 +1047,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t flags = SHF_ALLOC;
 
+  std::vector<StringRef> defPhdrs;
   for (BaseCommand *&cmd : sectionCommands) {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
@@ -1061,6 +1069,18 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (isEmpty)
       sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
                             SHF_WRITE | SHF_EXECINSTR);
+
+    // The code below may remove empty output sections. We should save the
+    // specified program headers (if exist) and propagate them to subsequent
+    // sections which do not specify program headers.
+    // An example of such a linker script is:
+    // SECTIONS { .empty : { *(.empty) } :rw
+    //            .foo : { *(.foo) } }
+    // Note: at this point the order of output sections has not been finalized,
+    // because orphans have not been inserted into their expected positions. We
+    // will handle them in adjustSectionsAfterSorting().
+    if (sec->sectionIndex != UINT32_MAX)
+      maybePropagatePhdrs(*sec, defPhdrs);
 
     if (isEmpty && isDiscardable(*sec)) {
       sec->markDead();
@@ -1106,20 +1126,9 @@ void LinkerScript::adjustSectionsAfterSorting() {
 
   // Walk the commands and propagate the program headers to commands that don't
   // explicitly specify them.
-  for (BaseCommand *base : sectionCommands) {
-    auto *sec = dyn_cast<OutputSection>(base);
-    if (!sec)
-      continue;
-
-    if (sec->phdrs.empty()) {
-      // To match the bfd linker script behaviour, only propagate program
-      // headers to sections that are allocated.
-      if (sec->flags & SHF_ALLOC)
-        sec->phdrs = defPhdrs;
-    } else {
-      defPhdrs = sec->phdrs;
-    }
-  }
+  for (BaseCommand *base : sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(base))
+      maybePropagatePhdrs(*sec, defPhdrs);
 }
 
 static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
