@@ -275,8 +275,6 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           inputFiles.push_back(
               make<ObjFile>(member.mbref, member.modTime, path));
-          printWhyLoad((forceLoadArchive ? "-force_load" : "-all_load"),
-                       inputFiles.back());
         }
       }
     } else if (config->forceLoadObjC) {
@@ -293,7 +291,6 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
           if (hasObjCSection(member.mbref)) {
             inputFiles.push_back(
                 make<ObjFile>(member.mbref, member.modTime, path));
-            printWhyLoad("-ObjC", inputFiles.back());
           }
         }
       }
@@ -640,7 +637,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
-  config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
