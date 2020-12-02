@@ -370,6 +370,25 @@ to be used simultaneously.
 The Loop Vectorizer uses a cost model to decide when it is profitable to unroll loops.
 The decision to unroll the loop depends on the register pressure and the generated code size. 
 
+Epilogue Vectorization
+^^^^^^^^^^^^^^^^^^^^^^
+
+When vectorizing a loop, often a scalar remainder (epilogue) loop is necessary
+to execute tail iterations of the loop if the loop trip count is unknown or it
+does not evenly divide the vectorization and unroll factors. When the
+vectorization and unroll factors are large, it's possible for loops with smaller
+trip counts to end up spending most of their time in the scalar (rather than
+the vector) code. In order to address this issue, the inner loop vectorizer is
+enhanced with a feature that allows it to vectorize epilogue loops with a
+vectorization and unroll factor combination that makes it more likely for small
+trip count loops to still execute in vectorized code. The diagram below shows
+the CFG for a typical epilogue vectorized loop with runtime checks. As
+illustrated the control flow is structured in a way that avoids duplicating the
+runtime pointer checks and optimizes the path length for loops that have very
+small trip counts.
+
+.. image:: epilogue-vectorization-cfg.png
+
 Performance
 -----------
 
