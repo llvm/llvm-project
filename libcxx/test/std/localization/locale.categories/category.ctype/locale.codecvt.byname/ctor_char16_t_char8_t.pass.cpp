@@ -6,22 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// This test relies on P0482 being fixed, which isn't in
+// older Apple dylibs
+//
+// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9 
+
 // <locale>
 
-// template <> class codecvt_byname<char32_t, char, mbstate_t>
+// template <> class codecvt_byname<char16_t, char8_t, mbstate_t>
 
 // explicit codecvt_byname(const char* nm, size_t refs = 0);
 // explicit codecvt_byname(const string& nm, size_t refs = 0);
-
-// This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <locale>
 #include <cassert>
 
 #include "test_macros.h"
 
-typedef std::codecvt_byname<char32_t, char, std::mbstate_t> F;
+typedef std::codecvt_byname<char16_t, char8_t, std::mbstate_t> F;
 
 class my_facet
     : public F
