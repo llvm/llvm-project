@@ -262,7 +262,7 @@ struct __type_info_implementations {
    private:
     // The unique bit is the top bit. It is expected that __type_name_t is 64 bits when
     // this implementation is actually used.
-    typedef std::integral_constant<__type_name_t,
+    typedef integral_constant<__type_name_t,
       (1ULL << ((__CHAR_BIT__ * sizeof(__type_name_t)) - 1))> __non_unique_rtti_bit;
 
     _LIBCPP_INLINE_VISIBILITY

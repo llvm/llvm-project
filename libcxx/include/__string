@@ -92,7 +92,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(value_type const*, size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, std::allocator<_CharType> const&)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, allocator<_CharType> const&)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_not_of(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::~basic_string()) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_not_of(value_type const*, size_type, size_type) const) \
@@ -108,7 +108,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, std::allocator<_CharType> const&)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, allocator<_CharType> const&)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(size_type, value_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*)) \
@@ -158,7 +158,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, std::allocator<_CharType> const&)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, allocator<_CharType> const&)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(size_type, value_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*)) \

@@ -970,7 +970,7 @@ _Size
 __loadword(const void* __p)
 {
     _Size __r;
-    std::memcpy(&__r, __p, sizeof(__r));
+    _VSTD::memcpy(&__r, __p, sizeof(__r));
     return __r;
 }
 
@@ -1189,7 +1189,7 @@ __murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
     __v = __weak_hash_len_32_with_seeds(__s, __v.second * __k1, __x + __w.first);
     __w = __weak_hash_len_32_with_seeds(__s + 32, __z + __w.second,
                                         __y + __loadword<_Size>(__s + 16));
-    std::swap(__z, __x);
+    _VSTD::swap(__z, __x);
     __s += 64;
     __len -= 64;
   } while (__len != 0);
@@ -1593,7 +1593,7 @@ using __check_hash_requirements _LIBCPP_NODEBUG_TYPE  = integral_constant<bool,
     __invokable_r<size_t, _Hash, _Key const&>::value
 >;
 
-template <class _Key, class _Hash = std::hash<_Key> >
+template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG_TYPE = integral_constant<bool,
     __check_hash_requirements<_Key, _Hash>::value &&
     is_default_constructible<_Hash>::value

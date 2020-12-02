@@ -1027,7 +1027,7 @@ template <bool _UsePointerTraits> struct __to_address_helper;
 
 template <> struct __to_address_helper<true> {
     template <class _Pointer>
-    using __return_type = decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()));
+    using __return_type = decltype(pointer_traits<_Pointer>::to_address(_VSTD::declval<const _Pointer&>()));
 
     template <class _Pointer>
     _LIBCPP_CONSTEXPR
@@ -1062,7 +1062,7 @@ template <> struct __to_address_helper<false> {
     template <class _Pointer>
     _LIBCPP_CONSTEXPR
     static __return_type<_Pointer>
-    __do_it(const _Pointer &__p) _NOEXCEPT { return std::__to_address(__p.operator->()); }
+    __do_it(const _Pointer &__p) _NOEXCEPT { return _VSTD::__to_address(__p.operator->()); }
 };
 
 
@@ -1332,7 +1332,7 @@ struct __has_destroy : false_type {};
 template <class _Alloc, class _Pointer>
 struct __has_destroy<_Alloc, _Pointer, typename __void_t<
     decltype(_VSTD::declval<_Alloc>().destroy(_VSTD::declval<_Pointer>()))
->::type> : std::true_type {};
+>::type> : true_type {};
 
 template <class _Alloc>
 struct __has_max_size
@@ -1373,9 +1373,9 @@ template <class _Alloc,
     >
 struct __is_cpp17_move_insertable;
 template <class _Alloc>
-struct __is_cpp17_move_insertable<_Alloc, true> : std::true_type {};
+struct __is_cpp17_move_insertable<_Alloc, true> : true_type {};
 template <class _Alloc>
-struct __is_cpp17_move_insertable<_Alloc, false> : std::is_move_constructible<typename _Alloc::value_type> {};
+struct __is_cpp17_move_insertable<_Alloc, false> : is_move_constructible<typename _Alloc::value_type> {};
 
 template <class _Alloc,
     bool = __has_construct<_Alloc, typename _Alloc::value_type*, const typename _Alloc::value_type&>::value && !__is_default_allocator<_Alloc>::value
@@ -1385,7 +1385,7 @@ template <class _Alloc>
 struct __is_cpp17_copy_insertable<_Alloc, true> : __is_cpp17_move_insertable<_Alloc> {};
 template <class _Alloc>
 struct __is_cpp17_copy_insertable<_Alloc, false> : integral_constant<bool,
-    std::is_copy_constructible<typename _Alloc::value_type>::value &&
+    is_copy_constructible<typename _Alloc::value_type>::value &&
     __is_cpp17_move_insertable<_Alloc>::value>
   {};
 
@@ -1842,8 +1842,8 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
     if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp)))
         {
-            std::align_val_t __al =
-                std::align_val_t(std::alignment_of<_Tp>::value);
+            align_val_t __al =
+                align_val_t(alignment_of<_Tp>::value);
             __r.first = static_cast<_Tp*>(::operator new(
                 __n * sizeof(_Tp), __al, nothrow));
         } else {
@@ -2045,7 +2045,7 @@ public:
   template <class _U1, class _U2>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
   __compressed_pair(_U1&& __t1, _U2&& __t2)
-      : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
+      : _Base1(_VSTD::forward<_U1>(__t1)), _Base2(_VSTD::forward<_U2>(__t2)) {}
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class... _Args1, class... _Args2>
@@ -2083,7 +2083,7 @@ public:
     _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
                __is_nothrow_swappable<_T2>::value)
   {
-    using std::swap;
+    using _VSTD::swap;
     swap(first(), __x.first());
     swap(second(), __x.second());
   }
@@ -3081,7 +3081,7 @@ _ForwardIt uninitialized_move(_InputIt __first, _InputIt __last, _ForwardIt __fi
     try {
 #endif
     for (; __first != __last; (void)++__idx, ++__first)
-        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt(_VSTD::move(*__first));
     return __idx;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
@@ -3101,7 +3101,7 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
     try {
 #endif
     for (; __n > 0; ++__idx, (void)++__first, --__n)
-        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
+        ::new((void*)_VSTD::addressof(*__idx)) _Vt(_VSTD::move(*__first));
     return {__first, __idx};
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
@@ -4972,7 +4972,7 @@ struct __builtin_new_allocator {
         : __size_(__size), __align_(__align) {}
 
     void operator()(void* p) const _NOEXCEPT {
-        std::__libcpp_deallocate(p, __size_, __align_);
+        _VSTD::__libcpp_deallocate(p, __size_, __align_);
     }
 
    private:
@@ -4983,13 +4983,13 @@ struct __builtin_new_allocator {
   typedef unique_ptr<void, __builtin_new_deleter> __holder_t;
 
   static __holder_t __allocate_bytes(size_t __s, size_t __align) {
-      return __holder_t(std::__libcpp_allocate(__s, __align),
+      return __holder_t(_VSTD::__libcpp_allocate(__s, __align),
                      __builtin_new_deleter(__s, __align));
   }
 
   static void __deallocate_bytes(void* __p, size_t __s,
                                  size_t __align) _NOEXCEPT {
-      std::__libcpp_deallocate(__p, __s, __align);
+      _VSTD::__libcpp_deallocate(__p, __s, __align);
   }
 
   template <class _Tp>
