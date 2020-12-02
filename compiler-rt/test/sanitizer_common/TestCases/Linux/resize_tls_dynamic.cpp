@@ -8,6 +8,9 @@
 // Do not intercept __tls_get_addr
 // UNSUPPORTED: lsan, ubsan, android
 
+// FIXME: Investigate
+// XFAIL: ppc && tsan
+
 #include <string.h>
 
 #ifndef BUILD_DSO
