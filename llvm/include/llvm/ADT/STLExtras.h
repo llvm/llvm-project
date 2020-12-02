@@ -1428,7 +1428,7 @@ template <typename T>
 // is trivially copyable.
 using sort_trivially_copyable = conjunction<
     std::is_pointer<T>,
-    std::is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
+    is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
 } // namespace detail
 
 // Provide wrappers to std::sort which shuffle the elements before sorting
