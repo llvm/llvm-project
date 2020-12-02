@@ -555,6 +555,21 @@ static const char *getReproduceOption(opt::InputArgList &args) {
   return getenv("LLD_REPRODUCE");
 }
 
+static bool isPie(opt::InputArgList &args) {
+  if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
+    return false;
+
+  // TODO: add logic here as we support more archs. E.g. i386 should default
+  // to PIE from 10.7, arm64 should always be PIE, etc
+  assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
+
+  if (config->platform.kind == MachO::PlatformKind::macOS &&
+      config->platform.minimum >= VersionTuple(10, 6))
+    return true;
+
+  return args.hasArg(OPT_pie);
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -690,8 +705,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   config->isPic = config->outputType == MH_DYLIB ||
-                  config->outputType == MH_BUNDLE ||
-                  (config->outputType == MH_EXECUTE && args.hasArg(OPT_pie));
+                  config->outputType == MH_BUNDLE || isPie(args);
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
