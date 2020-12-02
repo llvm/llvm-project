@@ -455,6 +455,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BasicBlock *InsertBB = Builder.GetInsertBlock();
   Function *OuterFn = InsertBB->getParent();
 
+  // Save the outer alloca block because the insertion iterator may get
+  // invalidated and we still need this later.
+  BasicBlock *OuterAllocaBlock = OuterAllocaIP.getBlock();
+
   // Vector to remember instructions we used only during the modeling but which
   // we want to delete at the end.
   SmallVector<Instruction *, 4> ToBeDeleted;
@@ -522,7 +526,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // Add some fake uses for OpenMP provided arguments.
   ToBeDeleted.push_back(Builder.CreateLoad(TIDAddr, "tid.addr.use"));
-  ToBeDeleted.push_back(Builder.CreateLoad(ZeroAddr, "zero.addr.use"));
+  Instruction *ZeroAddrUse = Builder.CreateLoad(ZeroAddr, "zero.addr.use");
+  ToBeDeleted.push_back(ZeroAddrUse);
 
   // ThenBB
   //   |
@@ -691,11 +696,37 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     if (&V == TIDAddr || &V == ZeroAddr)
       return;
 
-    SmallVector<Use *, 8> Uses;
+    SetVector<Use *> Uses;
     for (Use &U : V.uses())
       if (auto *UserI = dyn_cast<Instruction>(U.getUser()))
         if (ParallelRegionBlockSet.count(UserI->getParent()))
-          Uses.push_back(&U);
+          Uses.insert(&U);
+
+    // __kmpc_fork_call expects extra arguments as pointers. If the input
+    // already has a pointer type, everything is fine. Otherwise, store the
+    // value onto stack and load it back inside the to-be-outlined region. This
+    // will ensure only the pointer will be passed to the function.
+    // FIXME: if there are more than 15 trailing arguments, they must be
+    // additionally packed in a struct.
+    Value *Inner = &V;
+    if (!V.getType()->isPointerTy()) {
+      IRBuilder<>::InsertPointGuard Guard(Builder);
+      LLVM_DEBUG(llvm::dbgs() << "Forwarding input as pointer: " << V << "\n");
+
+      Builder.restoreIP(OuterAllocaIP);
+      Value *Ptr =
+          Builder.CreateAlloca(V.getType(), nullptr, V.getName() + ".reloaded");
+
+      // Store to stack at end of the block that currently branches to the entry
+      // block of the to-be-outlined region.
+      Builder.SetInsertPoint(InsertBB,
+                             InsertBB->getTerminator()->getIterator());
+      Builder.CreateStore(&V, Ptr);
+
+      // Load back next to allocations in the to-be-outlined region.
+      Builder.restoreIP(InnerAllocaIP);
+      Inner = Builder.CreateLoad(Ptr);
+    }
 
     Value *ReplacementValue = nullptr;
     CallInst *CI = dyn_cast<CallInst>(&V);
@@ -703,7 +734,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       ReplacementValue = PrivTID;
     } else {
       Builder.restoreIP(
-          PrivCB(InnerAllocaIP, Builder.saveIP(), V, ReplacementValue));
+          PrivCB(InnerAllocaIP, Builder.saveIP(), V, *Inner, ReplacementValue));
       assert(ReplacementValue &&
              "Expected copy/create callback to set replacement value!");
       if (ReplacementValue == &V)
@@ -713,6 +744,20 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     for (Use *UPtr : Uses)
       UPtr->set(ReplacementValue);
   };
+
+  // Reset the inner alloca insertion as it will be used for loading the values
+  // wrapped into pointers before passing them into the to-be-outlined region.
+  // Configure it to insert immediately after the fake use of zero address so
+  // that they are available in the generated body and so that the
+  // OpenMP-related values (thread ID and zero address pointers) remain leading
+  // in the argument list.
+  InnerAllocaIP = IRBuilder<>::InsertPoint(
+      ZeroAddrUse->getParent(), ZeroAddrUse->getNextNode()->getIterator());
+
+  // Reset the outer alloca insertion point to the entry of the relevant block
+  // in case it was invalidated.
+  OuterAllocaIP = IRBuilder<>::InsertPoint(
+      OuterAllocaBlock, OuterAllocaBlock->getFirstInsertionPt());
 
   for (Value *Input : Inputs) {
     LLVM_DEBUG(dbgs() << "Captured input: " << *Input << "\n");

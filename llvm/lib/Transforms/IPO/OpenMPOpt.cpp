@@ -631,9 +631,9 @@ private:
       EndBB->getTerminator()->setSuccessor(0, CGEndBB);
     };
 
-    auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                      Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
-      ReplacementValue = &VPtr;
+    auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
+                      Value &Inner, Value *&ReplacementValue) -> InsertPointTy {
+      ReplacementValue = &Inner;
       return CodeGenIP;
     };
 
