@@ -17214,6 +17214,28 @@ TEST_F(FormatTest, LikelyUnlikely) {
                Style);
 }
 
+TEST_F(FormatTest, PenaltyIndentedWhitespace) {
+  verifyFormat("Constructor()\n"
+               "    : aaaaaa(aaaaaa), aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "                          aaaa(aaaaaaaaaaaaaaaaaa, "
+               "aaaaaaaaaaaaaaaaaat))");
+  verifyFormat("Constructor()\n"
+               "    : aaaaaaaaaaaaa(aaaaaa), "
+               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaa)");
+
+  FormatStyle StyleWithWhitespacePenalty = getLLVMStyle();
+  StyleWithWhitespacePenalty.PenaltyIndentedWhitespace = 5;
+  verifyFormat("Constructor()\n"
+               "    : aaaaaa(aaaaaa),\n"
+               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "          aaaa(aaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaat))",
+               StyleWithWhitespacePenalty);
+  verifyFormat("Constructor()\n"
+               "    : aaaaaaaaaaaaa(aaaaaa), "
+               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaa)",
+               StyleWithWhitespacePenalty);
+}
+
 TEST_F(FormatTest, LLVMDefaultStyle) {
   FormatStyle Style = getLLVMStyle();
   verifyFormat("extern \"C\" {\n"
