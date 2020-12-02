@@ -503,8 +503,8 @@ Target ID
 ---------
 
 AMDGPU supports target IDs. See `Clang Offload Bundler
-<https://clang.llvm.org/docs/ClangOffload.html>`_ for a general description. The
-AMDGPU target specific information is:
+<https://clang.llvm.org/docs/ClangOffloadBundler.html>`_ for a general
+description. The AMDGPU target specific information is:
 
 **processor**
   Is a AMDGPU processor or alternative processor name specified in
@@ -529,7 +529,7 @@ Embedding Bundled Code Objects
 
 AMDGPU supports the HIP and OpenMP languages that perform code object embedding
 as described in `Clang Offload Bundler
-<https://clang.llvm.org/docs/ClangOffload.html>`_.
+<https://clang.llvm.org/docs/ClangOffloadBundler.html>`_.
 
 .. _amdgpu-address-spaces:
 
