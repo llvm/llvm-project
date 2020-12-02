@@ -8077,73 +8077,54 @@ bool Sema::CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous) {
   return false;
 }
 
-namespace {
-struct FindOverriddenMethod {
-  Sema *S;
-  CXXMethodDecl *Method;
-
-  /// Member lookup function that determines whether a given C++
-  /// method overrides a method in a base class, to be used with
-  /// CXXRecordDecl::lookupInBases().
-  bool operator()(const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-    RecordDecl *BaseRecord =
-        Specifier->getType()->castAs<RecordType>()->getDecl();
-
-    DeclarationName Name = Method->getDeclName();
-
-    // FIXME: Do we care about other names here too?
-    if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
-      // We really want to find the base class destructor here.
-      QualType T = S->Context.getTypeDeclType(BaseRecord);
-      CanQualType CT = S->Context.getCanonicalType(T);
-
-      Name = S->Context.DeclarationNames.getCXXDestructorName(CT);
-    }
-
-    for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
-         Path.Decls = Path.Decls.slice(1)) {
-      NamedDecl *D = Path.Decls.front();
-      if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
-        if (MD->isVirtual() &&
-            !S->IsOverload(
-                Method, MD, /*UseMemberUsingDeclRules=*/false,
-                /*ConsiderCudaAttrs=*/true,
-                // C++2a [class.virtual]p2 does not consider requires clauses
-                // when overriding.
-                /*ConsiderRequiresClauses=*/false))
-          return true;
-      }
-    }
-
-    return false;
-  }
-};
-} // end anonymous namespace
-
 /// AddOverriddenMethods - See if a method overrides any in the base classes,
 /// and if so, check that it's a valid override and remember it.
 bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
-  // Look for methods in base classes that this method might override.
-  CXXBasePaths Paths;
-  FindOverriddenMethod FOM;
-  FOM.Method = MD;
-  FOM.S = this;
-  bool AddedAny = false;
-  if (DC->lookupInBases(FOM, Paths)) {
-    for (auto *I : Paths.found_decls()) {
-      if (CXXMethodDecl *OldMD = dyn_cast<CXXMethodDecl>(I)) {
-        MD->addOverriddenMethod(OldMD->getCanonicalDecl());
-        if (!CheckOverridingFunctionReturnType(MD, OldMD) &&
-            !CheckOverridingFunctionAttributes(MD, OldMD) &&
-            !CheckOverridingFunctionExceptionSpec(MD, OldMD) &&
-            !CheckIfOverriddenFunctionIsMarkedFinal(MD, OldMD)) {
-          AddedAny = true;
-        }
-      }
-    }
-  }
+  llvm::SmallPtrSet<const CXXMethodDecl*, 4> Overridden;
 
-  return AddedAny;
+  // Look for methods in base classes that this method might override.
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/false,
+                     /*DetectVirtual=*/false);
+  auto VisitBase = [&] (const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+    CXXRecordDecl *BaseRecord = Specifier->getType()->getAsCXXRecordDecl();
+    DeclarationName Name = MD->getDeclName();
+
+    if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
+      // We really want to find the base class destructor here.
+      QualType T = Context.getTypeDeclType(BaseRecord);
+      CanQualType CT = Context.getCanonicalType(T);
+      Name = Context.DeclarationNames.getCXXDestructorName(CT);
+    }
+
+    for (NamedDecl *BaseND : BaseRecord->lookup(Name)) {
+      CXXMethodDecl *BaseMD =
+          dyn_cast<CXXMethodDecl>(BaseND->getCanonicalDecl());
+      if (!BaseMD || !BaseMD->isVirtual() ||
+          IsOverload(MD, BaseMD, /*UseMemberUsingDeclRules=*/false,
+                     /*ConsiderCudaAttrs=*/true,
+                     // C++2a [class.virtual]p2 does not consider requires
+                     // clauses when overriding.
+                     /*ConsiderRequiresClauses=*/false))
+        continue;
+
+      if (Overridden.insert(BaseMD).second) {
+        MD->addOverriddenMethod(BaseMD);
+        CheckOverridingFunctionReturnType(MD, BaseMD);
+        CheckOverridingFunctionAttributes(MD, BaseMD);
+        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
+      }
+
+      // A method can only override one function from each base class. We
+      // don't track indirectly overridden methods from bases of bases.
+      return true;
+    }
+
+    return false;
+  };
+
+  DC->lookupInBases(VisitBase, Paths);
+  return !Overridden.empty();
 }
 
 namespace {
