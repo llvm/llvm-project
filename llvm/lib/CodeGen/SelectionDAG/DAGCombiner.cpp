@@ -9758,7 +9758,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
       }
 
       if (Other && Other.getNumOperands() == 2 && Other.getOperand(0) == LHS) {
-        SDValue CondLHS = LHS, CondRHS = RHS;
+        SDValue CondRHS = RHS;
         SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
 
         // Look for a general sub with unsigned saturation first.
