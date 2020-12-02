@@ -194,5 +194,137 @@ entry:
 
 }
 
+; Function Attrs: nounwind readnone
+define i1 @f64_to_si1(double %X) #0 {
+; FPCVT-LABEL: f64_to_si1:
+; FPCVT:       # %bb.0: # %entry
+; FPCVT-NEXT:    fctiwz 0, 1
+; FPCVT-NEXT:    addi 3, 1, -4
+; FPCVT-NEXT:    stfiwx 0, 0, 3
+; FPCVT-NEXT:    lwz 3, -4(1)
+; FPCVT-NEXT:    blr
+;
+; PPC64-LABEL: f64_to_si1:
+; PPC64:       # %bb.0: # %entry
+; PPC64-NEXT:    addi 3, 1, -4
+; PPC64-NEXT:    fctiwz 0, 1
+; PPC64-NEXT:    stfiwx 0, 0, 3
+; PPC64-NEXT:    lwz 3, -4(1)
+; PPC64-NEXT:    blr
+;
+; PWR9-LABEL: f64_to_si1:
+; PWR9:       # %bb.0: # %entry
+; PWR9-NEXT:    xscvdpsxws 0, 1
+; PWR9-NEXT:    mffprwz 3, 0
+; PWR9-NEXT:    blr
+entry:
+  %conv = fptosi double %X to i1
+  ret i1 %conv
+
+}
+
+; Function Attrs: nounwind readnone
+define i1 @f64_to_ui1(double %X) #0 {
+; FPCVT-LABEL: f64_to_ui1:
+; FPCVT:       # %bb.0: # %entry
+; FPCVT-NEXT:    fctiwz 0, 1
+; FPCVT-NEXT:    addi 3, 1, -4
+; FPCVT-NEXT:    stfiwx 0, 0, 3
+; FPCVT-NEXT:    lwz 3, -4(1)
+; FPCVT-NEXT:    blr
+;
+; PPC64-LABEL: f64_to_ui1:
+; PPC64:       # %bb.0: # %entry
+; PPC64-NEXT:    addi 3, 1, -4
+; PPC64-NEXT:    fctiwz 0, 1
+; PPC64-NEXT:    stfiwx 0, 0, 3
+; PPC64-NEXT:    lwz 3, -4(1)
+; PPC64-NEXT:    blr
+;
+; PWR9-LABEL: f64_to_ui1:
+; PWR9:       # %bb.0: # %entry
+; PWR9-NEXT:    xscvdpsxws 0, 1
+; PWR9-NEXT:    mffprwz 3, 0
+; PWR9-NEXT:    blr
+entry:
+  %conv = fptoui double %X to i1
+  ret i1 %conv
+
+}
+
+; Function Attrs: nounwind readnone
+define double @si1_to_f64(i1 %X) #0 {
+; FPCVT-LABEL: si1_to_f64:
+; FPCVT:       # %bb.0: # %entry
+; FPCVT-NEXT:    andi. 3, 3, 1
+; FPCVT-NEXT:    li 4, 0
+; FPCVT-NEXT:    li 3, -1
+; FPCVT-NEXT:    iselgt 3, 3, 4
+; FPCVT-NEXT:    addi 4, 1, -4
+; FPCVT-NEXT:    stw 3, -4(1)
+; FPCVT-NEXT:    lfiwax 0, 0, 4
+; FPCVT-NEXT:    fcfid 1, 0
+; FPCVT-NEXT:    blr
+;
+; PPC64-LABEL: si1_to_f64:
+; PPC64:       # %bb.0: # %entry
+; PPC64-NEXT:    andi. 3, 3, 1
+; PPC64-NEXT:    li 4, -1
+; PPC64-NEXT:    li 3, 0
+; PPC64-NEXT:    bc 12, 1, .LBB6_1
+; PPC64-NEXT:    b .LBB6_2
+; PPC64-NEXT:  .LBB6_1: # %entry
+; PPC64-NEXT:    addi 3, 4, 0
+; PPC64-NEXT:  .LBB6_2: # %entry
+; PPC64-NEXT:    std 3, -8(1)
+; PPC64-NEXT:    lfd 0, -8(1)
+; PPC64-NEXT:    fcfid 1, 0
+; PPC64-NEXT:    blr
+;
+; PWR9-LABEL: si1_to_f64:
+; PWR9:       # %bb.0: # %entry
+; PWR9-NEXT:    andi. 3, 3, 1
+; PWR9-NEXT:    li 3, 0
+; PWR9-NEXT:    li 4, -1
+; PWR9-NEXT:    iselgt 3, 4, 3
+; PWR9-NEXT:    mtfprwa 0, 3
+; PWR9-NEXT:    xscvsxddp 1, 0
+; PWR9-NEXT:    blr
+entry:
+  %conv = sitofp i1 %X to double
+  ret double %conv
+
+}
+
+; Function Attrs: nounwind readnone
+define double @ui1_to_f64(i1 %X) #0 {
+; FPCVT-LABEL: ui1_to_f64:
+; FPCVT:       # %bb.0: # %entry
+; FPCVT-NEXT:    clrlwi 3, 3, 31
+; FPCVT-NEXT:    addi 4, 1, -4
+; FPCVT-NEXT:    stw 3, -4(1)
+; FPCVT-NEXT:    lfiwax 0, 0, 4
+; FPCVT-NEXT:    fcfid 1, 0
+; FPCVT-NEXT:    blr
+;
+; PPC64-LABEL: ui1_to_f64:
+; PPC64:       # %bb.0: # %entry
+; PPC64-NEXT:    clrldi 3, 3, 63
+; PPC64-NEXT:    std 3, -8(1)
+; PPC64-NEXT:    lfd 0, -8(1)
+; PPC64-NEXT:    fcfid 1, 0
+; PPC64-NEXT:    blr
+;
+; PWR9-LABEL: ui1_to_f64:
+; PWR9:       # %bb.0: # %entry
+; PWR9-NEXT:    clrlwi 3, 3, 31
+; PWR9-NEXT:    mtfprwa 0, 3
+; PWR9-NEXT:    xscvsxddp 1, 0
+; PWR9-NEXT:    blr
+entry:
+  %conv = uitofp i1 %X to double
+  ret double %conv
+
+}
 attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
 
