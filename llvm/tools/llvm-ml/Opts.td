@@ -31,6 +31,9 @@ def help : MLFlag<"?">,
            HelpText<"Display available options">;
 def help_long : MLFlag<"help">, Alias<help>;
 def assemble_only : MLFlag<"c">, HelpText<"Assemble only; do not link">;
+def define : MLJoinedOrSeparate<"D">, MetaVarName<"<macro>=<value>">,
+             HelpText<"Define <macro> to <value> (or blank if <value> "
+                      "omitted)">;
 def output_file : MLJoinedOrSeparate<"Fo">, HelpText<"Names the output file">;
 def include_path : MLJoinedOrSeparate<"I">,
                    HelpText<"Sets path for include files">;
@@ -72,7 +75,6 @@ def coff_object_file : UnsupportedFlag<"coff">, HelpText<"">;
 def preserve_identifier_case : UnsupportedFlag<"Cp">, HelpText<"">;
 def uppercase_identifiers : UnsupportedFlag<"Cu">, HelpText<"">;
 def preserve_extern_case : UnsupportedFlag<"Cx">, HelpText<"">;
-def define : UnsupportedJoinedOrSeparate<"D">, HelpText<"">;
 def output_preprocessed : UnsupportedFlag<"EP">, HelpText<"">;
 def errorreport : UnsupportedJoined<"ERRORREPORT">, HelpText<"">;
 def stacksize : UnsupportedSeparate<"F">, HelpText<"">;

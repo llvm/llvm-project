@@ -147,6 +147,17 @@ static int AssembleInput(StringRef ProgName, const Target *TheTarget,
   Parser->getLexer().setLexMasmHexFloats(true);
   Parser->getLexer().setLexMasmStrings(true);
 
+  auto Defines = InputArgs.getAllArgValues(OPT_define);
+  for (StringRef Define : Defines) {
+    const auto NameValue = Define.split('=');
+    StringRef Name = NameValue.first, Value = NameValue.second;
+    if (Parser->defineMacro(Name, Value)) {
+      WithColor::error(errs(), ProgName)
+          << "can't define macro '" << Name << "' = '" << Value << "'\n";
+      return 1;
+    }
+  }
+
   int Res = Parser->Run(/*NoInitialTextSection=*/true);
 
   return Res;
