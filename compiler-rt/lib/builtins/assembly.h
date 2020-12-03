@@ -37,12 +37,8 @@
 #define FILE_LEVEL_DIRECTIVE
 #if defined(__arm__) || defined(__aarch64__)
 #define SYMBOL_IS_FUNC(name) .type name,%function
-#define FUNC_ALIGN                                                             \
-  .text SEPARATOR                                                              \
-  .balign 16 SEPARATOR
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
-#define FUNC_ALIGN
 #endif
 #define CONST_SECTION .section .rodata
 
@@ -67,6 +63,14 @@
 
 #define NO_EXEC_STACK_DIRECTIVE
 
+#endif
+
+#if defined(__arm__) || defined(__aarch64__)
+#define FUNC_ALIGN                                                             \
+  .text SEPARATOR                                                              \
+  .balign 16 SEPARATOR
+#else
+#define FUNC_ALIGN
 #endif
 
 // BTI and PAC gnu property note
@@ -270,7 +274,8 @@
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
 #else
 #define END_COMPILERRT_FUNCTION(name)
-#define END_COMPILERRT_OUTLINE_FUNCTION(name)
+#define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
+  CFI_END
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H
