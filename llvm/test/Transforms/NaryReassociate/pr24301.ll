@@ -2,21 +2,42 @@
 ; RUN: opt < %s -nary-reassociate -S | FileCheck %s
 ; RUN: opt < %s -passes='nary-reassociate' -S | FileCheck %s
 
-define i32 @foo(i32 %tmp4) {
+define i32 @foo(i32 %t4) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4:%.*]], 8
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP5]], -128
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 119, [[TMP4]]
-; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP21]], -128
-; CHECK-NEXT:    ret i32 [[TMP23]]
+; CHECK-NEXT:    [[T5:%.*]] = add i32 [[T4:%.*]], 8
+; CHECK-NEXT:    [[T14:%.*]] = add i32 [[T5]], -128
+; CHECK-NEXT:    [[T21:%.*]] = add i32 119, [[T4]]
+; CHECK-NEXT:    [[T23:%.*]] = add i32 [[T21]], -128
+; CHECK-NEXT:    ret i32 [[T23]]
 ;
 entry:
-  %tmp5 = add i32 %tmp4, 8
-  %tmp13 = add i32 %tmp4, -128  ; deleted
-  %tmp14 = add i32 %tmp13, 8    ; => %tmp5 + -128
-  %tmp21 = add i32 119, %tmp4
-  ; do not rewrite %tmp23 against %tmp13 because %tmp13 is already deleted
-  %tmp23 = add i32 %tmp21, -128
-  ret i32 %tmp23
+  %t5 = add i32 %t4, 8
+  %t13 = add i32 %t4, -128  ; deleted
+  %t14 = add i32 %t13, 8    ; => %t5 + -128
+  %t21 = add i32 119, %t4
+  ; do not rewrite %t23 against %t13 because %t13 is already deleted
+  %t23 = add i32 %t21, -128
+  ret i32 %t23
+}
+
+; This is essentially the same test as the previous one but intermidiate result (t14) has a use.
+define i32 @foo2(i32 %t4) {
+; CHECK-LABEL: @foo2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T5:%.*]] = add i32 [[T4:%.*]], 8
+; CHECK-NEXT:    [[T14:%.*]] = add i32 [[T5]], -128
+; CHECK-NEXT:    [[T21:%.*]] = add i32 119, [[T4]]
+; CHECK-NEXT:    [[T23:%.*]] = add i32 [[T21]], -128
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[T14]], [[T23]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %t5 = add i32 %t4, 8
+  %t13 = add i32 %t4, -128  ; deleted
+  %t14 = add i32 %t13, 8    ; => %t5 + -128
+  %t21 = add i32 119, %t4
+  %t23 = add i32 %t21, -128
+  %res = add i32 %t14, %t23
+  ret i32 %res
 }
