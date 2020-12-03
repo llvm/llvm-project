@@ -183,11 +183,11 @@ evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
                        std::function<Constant *(Constant *)> Func) {
   Constant *Val;
   while (!(Val = Func(Ptr))) {
-    // If Ty is a struct, we can convert the pointer to the struct
+    // If Ty is a non-opaque struct, we can convert the pointer to the struct
     // into a pointer to its first member.
     // FIXME: This could be extended to support arrays as well.
     Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
-    if (!isa<StructType>(Ty))
+    if (!isa<StructType>(Ty) || cast<StructType>(Ty)->isOpaque())
       break;
 
     IntegerType *IdxTy = IntegerType::get(Ty->getContext(), 32);
