@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/Archive.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -24,7 +24,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -116,18 +115,17 @@ static ExitOnError ExitOnErr;
 // link path for the specified file to try to find it...
 //
 static std::unique_ptr<Module> loadFile(const char *argv0,
-                                        std::unique_ptr<MemoryBuffer> Buffer,
+                                        const std::string &FN,
                                         LLVMContext &Context,
                                         bool MaterializeMetadata = true) {
   SMDiagnostic Err;
   if (Verbose)
-    errs() << "Loading '" << Buffer->getBufferIdentifier() << "'\n";
+    errs() << "Loading '" << FN << "'\n";
   std::unique_ptr<Module> Result;
   if (DisableLazyLoad)
-    Result = parseIR(*Buffer, Err, Context);
+    Result = parseIRFile(FN, Err, Context);
   else
-    Result =
-        getLazyIRModule(std::move(Buffer), Err, Context, !MaterializeMetadata);
+    Result = getLazyIRFileModule(FN, Err, Context, !MaterializeMetadata);
 
   if (!Result) {
     Err.print(argv0, errs());
@@ -143,17 +141,19 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
 }
 
 static std::unique_ptr<Module> loadArFile(const char *Argv0,
-                                          std::unique_ptr<MemoryBuffer> Buffer,
+                                          const std::string &ArchiveName,
                                           LLVMContext &Context, Linker &L,
                                           unsigned OrigFlags,
                                           unsigned ApplicableFlags) {
   std::unique_ptr<Module> Result(new Module("ArchiveModule", Context));
-  StringRef ArchiveName = Buffer->getBufferIdentifier();
   if (Verbose)
     errs() << "Reading library archive file '" << ArchiveName
            << "' to memory\n";
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+    MemoryBuffer::getFile(ArchiveName, -1, false);
+  ExitOnErr(errorCodeToError(Buf.getError()));
   Error Err = Error::success();
-  object::Archive Archive(*Buffer, Err);
+  object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
   ExitOnErr(std::move(Err));
   for (const object::Archive::Child &C : Archive.children(Err)) {
     Expected<StringRef> Ename = C.getName();
@@ -287,9 +287,7 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
 
   auto ModuleLoader = [&DestModule](const char *argv0,
                                     const std::string &Identifier) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Identifier)));
-    return loadFile(argv0, std::move(Buffer), DestModule.getContext(), false);
+    return loadFile(argv0, Identifier, DestModule.getContext(), false);
   };
 
   ModuleLazyLoaderCache ModuleLoaderCache(ModuleLoader);
@@ -351,14 +349,10 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(File)));
-
     std::unique_ptr<Module> M =
-        identify_magic(Buffer->getBuffer()) == file_magic::archive
-            ? loadArFile(argv0, std::move(Buffer), Context, L, Flags,
-                         ApplicableFlags)
-            : loadFile(argv0, std::move(Buffer), Context);
+      (llvm::sys::path::extension(File) == ".a")
+          ? loadArFile(argv0, File, Context, L, Flags, ApplicableFlags)
+          : loadFile(argv0, File, Context);
     if (!M.get()) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
