@@ -2479,8 +2479,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
 
   // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
   if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
-    APInt C0 = N0->getConstantOperandAPInt(0);
-    APInt C1 = N1->getConstantOperandAPInt(0);
+    const APInt &C0 = N0->getConstantOperandAPInt(0);
+    const APInt &C1 = N1->getConstantOperandAPInt(0);
     return DAG.getVScale(DL, VT, C0 + C1);
   }
 
@@ -2488,9 +2488,9 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if ((N0.getOpcode() == ISD::ADD) &&
       (N0.getOperand(1).getOpcode() == ISD::VSCALE) &&
       (N1.getOpcode() == ISD::VSCALE)) {
-    auto VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
-    auto VS1 = N1->getConstantOperandAPInt(0);
-    auto VS = DAG.getVScale(DL, VT, VS0 + VS1);
+    const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
+    const APInt &VS1 = N1->getConstantOperandAPInt(0);
+    SDValue VS = DAG.getVScale(DL, VT, VS0 + VS1);
     return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), VS);
   }
 
@@ -3436,7 +3436,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // canonicalize (sub X, (vscale * C)) to (add X,  (vscale * -C))
   if (N1.getOpcode() == ISD::VSCALE) {
-    APInt IntVal = N1.getConstantOperandAPInt(0);
+    const APInt &IntVal = N1.getConstantOperandAPInt(0);
     return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
@@ -3809,8 +3809,8 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   // Fold (mul (vscale * C0), C1) to (vscale * (C0 * C1)).
   if (N0.getOpcode() == ISD::VSCALE)
     if (ConstantSDNode *NC1 = isConstOrConstSplat(N1)) {
-      APInt C0 = N0.getConstantOperandAPInt(0);
-      APInt C1 = NC1->getAPIntValue();
+      const APInt &C0 = N0.getConstantOperandAPInt(0);
+      const APInt &C1 = NC1->getAPIntValue();
       return DAG.getVScale(SDLoc(N), VT, C0 * C1);
     }
 
@@ -8223,10 +8223,9 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // Fold (shl (vscale * C0), C1) to (vscale * (C0 << C1)).
   if (N0.getOpcode() == ISD::VSCALE)
     if (ConstantSDNode *NC1 = isConstOrConstSplat(N->getOperand(1))) {
-      auto DL = SDLoc(N);
-      APInt C0 = N0.getConstantOperandAPInt(0);
-      APInt C1 = NC1->getAPIntValue();
-      return DAG.getVScale(DL, VT, C0 << C1);
+      const APInt &C0 = N0.getConstantOperandAPInt(0);
+      const APInt &C1 = NC1->getAPIntValue();
+      return DAG.getVScale(SDLoc(N), VT, C0 << C1);
     }
 
   return SDValue();
