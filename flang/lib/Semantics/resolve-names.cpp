@@ -623,6 +623,7 @@ public:
   void BeginModule(const parser::Name &, bool isSubmodule);
   bool BeginSubmodule(const parser::Name &, const parser::ParentIdentifier &);
   void ApplyDefaultAccess();
+  void AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
 
 private:
   // The default access spec for this module.
@@ -630,7 +631,7 @@ private:
   // The location of the last AccessStmt without access-ids, if any.
   std::optional<SourceName> prevAccessStmt_;
   // The scope of the module during a UseStmt
-  const Scope *useModuleScope_{nullptr};
+  Scope *useModuleScope_{nullptr};
 
   Symbol &SetAccess(const SourceName &, Attr attr, Symbol * = nullptr);
   // A rename in a USE statement: local => use
@@ -641,7 +642,8 @@ private:
   // Record a use from useModuleScope_ of use Name/Symbol as local Name/Symbol
   SymbolRename AddUse(const SourceName &localName, const SourceName &useName);
   SymbolRename AddUse(const SourceName &, const SourceName &, Symbol *);
-  void AddUse(const SourceName &, Symbol &localSymbol, const Symbol &useSymbol);
+  void DoAddUse(const SourceName &, const SourceName &, Symbol &localSymbol,
+      const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
   Scope *FindModule(const parser::Name &, Scope *ancestor = nullptr);
 };
@@ -2300,8 +2302,14 @@ bool ModuleVisitor::Pre(const parser::Rename::Operators &x) {
 // Set useModuleScope_ to the Scope of the module being used.
 bool ModuleVisitor::Pre(const parser::UseStmt &x) {
   useModuleScope_ = FindModule(x.moduleName);
-  return useModuleScope_ != nullptr;
+  if (!useModuleScope_) {
+    return false;
+  }
+  // use the name from this source file
+  useModuleScope_->symbol()->ReplaceName(x.moduleName.source);
+  return true;
 }
+
 void ModuleVisitor::Post(const parser::UseStmt &x) {
   if (const auto *list{std::get_if<std::list<parser::Rename>>(&x.u)}) {
     // Not a use-only: collect the names that were used in renames,
@@ -2321,13 +2329,12 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     for (const auto &[name, symbol] : *useModuleScope_) {
       if (symbol->attrs().test(Attr::PUBLIC) &&
           !symbol->attrs().test(Attr::INTRINSIC) &&
-          !symbol->detailsIf<MiscDetails>()) {
-        if (useNames.count(name) == 0) {
-          auto *localSymbol{FindInScope(currScope(), name)};
-          if (!localSymbol) {
-            localSymbol = &CopySymbol(name, *symbol);
-          }
-          AddUse(x.moduleName.source, *localSymbol, *symbol);
+          !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
+        SourceName location{x.moduleName.source};
+        if (auto *localSymbol{FindInScope(currScope(), name)}) {
+          DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
+        } else {
+          DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
         }
       }
     }
@@ -2356,7 +2363,7 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
     return {};
   }
   auto &localSymbol{MakeSymbol(localName)};
-  AddUse(useName, localSymbol, *useSymbol);
+  DoAddUse(useName, localName, localSymbol, *useSymbol);
   return {&localSymbol, useSymbol};
 }
 
@@ -2367,14 +2374,14 @@ static void ConvertToUseError(
   const auto *useDetails{symbol.detailsIf<UseDetails>()};
   if (!useDetails) {
     auto &genericDetails{symbol.get<GenericDetails>()};
-    useDetails = &genericDetails.useDetails().value();
+    useDetails = &genericDetails.uses().at(0)->get<UseDetails>();
   }
   symbol.set_details(
       UseErrorDetails{*useDetails}.add_occurrence(location, module));
 }
 
-void ModuleVisitor::AddUse(
-    const SourceName &location, Symbol &localSymbol, const Symbol &useSymbol) {
+void ModuleVisitor::DoAddUse(const SourceName &location,
+    const SourceName &localName, Symbol &localSymbol, const Symbol &useSymbol) {
   localSymbol.attrs() = useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
   localSymbol.flags() = useSymbol.flags();
   if (auto *useDetails{localSymbol.detailsIf<UseDetails>()}) {
@@ -2386,23 +2393,18 @@ void ModuleVisitor::AddUse(
       // use-associating generics with the same names: merge them into a
       // new generic in this scope
       auto generic1{ultimate.get<GenericDetails>()};
-      generic1.set_useDetails(*useDetails);
+      AddGenericUse(generic1, localName, useSymbol);
+      generic1.AddUse(localSymbol);
       // useSymbol has specific g and so does generic1
       auto &generic2{useSymbol.get<GenericDetails>()};
-      if (generic1.specific() && generic2.specific() &&
-          generic1.specific() != generic2.specific()) {
-        Say(location,
-            "Generic interface '%s' has ambiguous specific procedures"
-            " from modules '%s' and '%s'"_err_en_US,
-            localSymbol.name(), GetUsedModule(*useDetails).name(),
-            useSymbol.owner().GetName().value());
-      } else if (generic1.derivedType() && generic2.derivedType() &&
+      if (generic1.derivedType() && generic2.derivedType() &&
           generic1.derivedType() != generic2.derivedType()) {
         Say(location,
             "Generic interface '%s' has ambiguous derived types"
             " from modules '%s' and '%s'"_err_en_US,
             localSymbol.name(), GetUsedModule(*useDetails).name(),
             useSymbol.owner().GetName().value());
+        context().SetError(localSymbol);
       } else {
         generic1.CopyFrom(generic2);
       }
@@ -2411,26 +2413,33 @@ void ModuleVisitor::AddUse(
     } else {
       ConvertToUseError(localSymbol, location, *useModuleScope_);
     }
-  } else {
-    auto *genericDetails{localSymbol.detailsIf<GenericDetails>()};
-    if (genericDetails && genericDetails->useDetails()) {
-      // localSymbol came from merging two use-associated generics
-      if (auto *useDetails{useSymbol.detailsIf<GenericDetails>()}) {
-        genericDetails->CopyFrom(*useDetails);
+  } else if (auto *genericDetails{localSymbol.detailsIf<GenericDetails>()}) {
+    if (const auto *useDetails{useSymbol.detailsIf<GenericDetails>()}) {
+      AddGenericUse(*genericDetails, localName, useSymbol);
+      if (genericDetails->derivedType() && useDetails->derivedType() &&
+          genericDetails->derivedType() != useDetails->derivedType()) {
+        Say(location,
+            "Generic interface '%s' has ambiguous derived types"
+            " from modules '%s' and '%s'"_err_en_US,
+            localSymbol.name(),
+            genericDetails->derivedType()->owner().GetName().value(),
+            useDetails->derivedType()->owner().GetName().value());
       } else {
-        ConvertToUseError(localSymbol, location, *useModuleScope_);
+        genericDetails->CopyFrom(*useDetails);
       }
-    } else if (auto *details{localSymbol.detailsIf<UseErrorDetails>()}) {
-      details->add_occurrence(location, *useModuleScope_);
-    } else if (!localSymbol.has<UnknownDetails>()) {
-      Say(location,
-          "Cannot use-associate '%s'; it is already declared in this scope"_err_en_US,
-          localSymbol.name())
-          .Attach(localSymbol.name(), "Previous declaration of '%s'"_en_US,
-              localSymbol.name());
     } else {
-      localSymbol.set_details(UseDetails{location, useSymbol});
+      ConvertToUseError(localSymbol, location, *useModuleScope_);
     }
+  } else if (auto *details{localSymbol.detailsIf<UseErrorDetails>()}) {
+    details->add_occurrence(location, *useModuleScope_);
+  } else if (!localSymbol.has<UnknownDetails>()) {
+    Say(location,
+        "Cannot use-associate '%s'; it is already declared in this scope"_err_en_US,
+        localName)
+        .Attach(localSymbol.name(), "Previous declaration of '%s'"_en_US,
+            localName);
+  } else {
+    localSymbol.set_details(UseDetails{localName, useSymbol});
   }
 }
 
@@ -2441,6 +2450,12 @@ void ModuleVisitor::AddUse(const GenericSpecInfo &info) {
         AddUse(name, name, info.FindInScope(context(), *useModuleScope_))};
     info.Resolve(rename.use);
   }
+}
+
+// Create a UseDetails symbol for this USE and add it to generic
+void ModuleVisitor::AddGenericUse(
+    GenericDetails &generic, const SourceName &name, const Symbol &useSymbol) {
+  generic.AddUse(currScope().MakeSymbol(name, {}, UseDetails{name, useSymbol}));
 }
 
 bool ModuleVisitor::BeginSubmodule(
@@ -2574,9 +2589,9 @@ void InterfaceVisitor::AddSpecificProcs(
 // this generic interface. Resolve those names to symbols.
 void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
-  std::set<SourceName> namesSeen; // to check for duplicate names
+  SymbolSet symbolsSeen;
   for (const Symbol &symbol : details.specificProcs()) {
-    namesSeen.insert(symbol.name());
+    symbolsSeen.insert(symbol);
   }
   auto range{specificProcs_.equal_range(&generic)};
   for (auto it{range.first}; it != range.second; ++it) {
@@ -2613,7 +2628,7 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
         }
       }
     }
-    if (!namesSeen.insert(name->source).second) {
+    if (!symbolsSeen.insert(*symbol).second) {
       Say(name->source,
           "Procedure '%s' is already specified in generic '%s'"_err_en_US,
           name->source, MakeOpName(generic.name()));
@@ -6127,7 +6142,10 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
     }
     Symbol &ultimate{existing->GetUltimate()};
     if (auto *ultimateDetails{ultimate.detailsIf<GenericDetails>()}) {
+      // convert a use-associated generic into a local generic
       genericDetails.CopyFrom(*ultimateDetails);
+      AddGenericUse(genericDetails, existing->name(),
+          existing->get<UseDetails>().symbol());
     } else if (ultimate.has<SubprogramDetails>() ||
         ultimate.has<SubprogramNameDetails>()) {
       genericDetails.set_specific(ultimate);

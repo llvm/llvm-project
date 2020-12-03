@@ -155,6 +155,7 @@ private:
   MaybeExpr expr_;
   std::optional<int> rank_;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
 // An entity known to be an object.
 class ObjectEntityDetails : public EntityDetails {
@@ -432,6 +433,7 @@ public:
   const SymbolVector &specificProcs() const { return specificProcs_; }
   const std::vector<SourceName> &bindingNames() const { return bindingNames_; }
   void AddSpecificProc(const Symbol &, SourceName bindingName);
+  const SymbolVector &uses() const { return uses_; }
 
   // specific and derivedType indicate a specific procedure or derived type
   // with the same name as this generic. Only one of them may be set.
@@ -441,6 +443,7 @@ public:
   Symbol *derivedType() { return derivedType_; }
   const Symbol *derivedType() const { return derivedType_; }
   void set_derivedType(Symbol &derivedType);
+  void AddUse(const Symbol &);
 
   // Copy in specificProcs, specific, and derivedType from another generic
   void CopyFrom(const GenericDetails &);
@@ -450,22 +453,19 @@ public:
   const Symbol *CheckSpecific() const;
   Symbol *CheckSpecific();
 
-  const std::optional<UseDetails> &useDetails() const { return useDetails_; }
-  void set_useDetails(const UseDetails &details) { useDetails_ = details; }
-
 private:
   GenericKind kind_;
   // all of the specific procedures for this generic
   SymbolVector specificProcs_;
   std::vector<SourceName> bindingNames_;
+  // Symbols used from other modules merged into this one
+  SymbolVector uses_;
   // a specific procedure with the same name as this generic, if any
   Symbol *specific_{nullptr};
   // a derived type with the same name as this generic, if any
   Symbol *derivedType_{nullptr};
-  // If two USEs of generics were merged to form this one, this is the
-  // UseDetails for one of them. Used for reporting USE errors.
-  std::optional<UseDetails> useDetails_;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
 class UnknownDetails {};
 
