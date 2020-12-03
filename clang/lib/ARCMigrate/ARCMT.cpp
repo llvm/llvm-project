@@ -416,9 +416,11 @@ bool arcmt::getFileRemappings(std::vector<std::pair<std::string,std::string> > &
   if (err)
     return true;
 
-  PreprocessorOptions PPOpts;
-  remapper.applyMappings(PPOpts);
-  remap = PPOpts.RemappedFiles;
+  remapper.forEachMapping(
+      [&](StringRef From, StringRef To) {
+        remap.push_back(std::make_pair(From.str(), To.str()));
+      },
+      [](StringRef, const llvm::MemoryBufferRef &) {});
 
   return false;
 }
