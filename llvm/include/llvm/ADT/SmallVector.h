@@ -948,6 +948,64 @@ struct SmallVectorStorage {
 /// well-defined.
 template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 
+/// Forward declaration of SmallVector so that
+/// calculateSmallVectorDefaultInlinedElements can reference
+/// `sizeof(SmallVector<T, 0>)`.
+template <typename T, unsigned N> class LLVM_GSL_OWNER SmallVector;
+
+/// Helper class for calculating the default number of inline elements for
+/// `SmallVector<T>`.
+///
+/// This should be migrated to a constexpr function when our minimum
+/// compiler support is enough for multi-statement constexpr functions.
+template <typename T> struct CalculateSmallVectorDefaultInlinedElements {
+  // Parameter controlling the default number of inlined elements
+  // for `SmallVector<T>`.
+  //
+  // The default number of inlined elements ensures that
+  // 1. There is at least one inlined element.
+  // 2. `sizeof(SmallVector<T>) <= kPreferredSmallVectorSizeof` unless
+  // it contradicts 1.
+  static constexpr size_t kPreferredSmallVectorSizeof = 64;
+
+  // static_assert that sizeof(T) is not "too big".
+  //
+  // Because our policy guarantees at least one inlined element, it is possible
+  // for an arbitrarily large inlined element to allocate an arbitrarily large
+  // amount of inline storage. We generally consider it an antipattern for a
+  // SmallVector to allocate an excessive amount of inline storage, so we want
+  // to call attention to these cases and make sure that users are making an
+  // intentional decision if they request a lot of inline storage.
+  //
+  // We want this assertion to trigger in pathological cases, but otherwise
+  // not be too easy to hit. To accomplish that, the cutoff is actually somewhat
+  // larger than kPreferredSmallVectorSizeof (otherwise,
+  // `SmallVector<SmallVector<T>>` would be one easy way to trip it, and that
+  // pattern seems useful in practice).
+  //
+  // One wrinkle is that this assertion is in theory non-portable, since
+  // sizeof(T) is in general platform-dependent. However, we don't expect this
+  // to be much of an issue, because most LLVM development happens on 64-bit
+  // hosts, and therefore sizeof(T) is expected to *decrease* when compiled for
+  // 32-bit hosts, dodging the issue. The reverse situation, where development
+  // happens on a 32-bit host and then fails due to sizeof(T) *increasing* on a
+  // 64-bit host, is expected to be very rare.
+  static_assert(
+      sizeof(T) <= 256,
+      "You are trying to use a default number of inlined elements for "
+      "`SmallVector<T>` but `sizeof(T)` is really big! Please use an "
+      "explicit number of inlined elements with `SmallVector<T, N>` to make "
+      "sure you really want that much inline storage.");
+
+  // Discount the size of the header itself when calculating the maximum inline
+  // bytes.
+  static constexpr size_t PreferredInlineBytes =
+      kPreferredSmallVectorSizeof - sizeof(SmallVector<T, 0>);
+  static constexpr size_t NumElementsThatFit = PreferredInlineBytes / sizeof(T);
+  static constexpr size_t value =
+      NumElementsThatFit == 0 ? 1 : NumElementsThatFit;
+};
+
 /// This is a 'vector' (really, a variable-sized array), optimized
 /// for the case when the array is small.  It contains some number of elements
 /// in-place, which allows it to avoid heap allocation when the actual number of
@@ -956,7 +1014,8 @@ template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 ///
 /// Note that this does not attempt to be exception safe.
 ///
-template <typename T, unsigned N>
+template <typename T,
+          unsigned N = CalculateSmallVectorDefaultInlinedElements<T>::value>
 class LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
                                    SmallVectorStorage<T, N> {
 public:
