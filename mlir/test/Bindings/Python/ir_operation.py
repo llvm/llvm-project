@@ -537,3 +537,17 @@ def testSingleResultProperty():
   print(module.body.operations[2])
 
 run(testSingleResultProperty)
+
+# CHECK-LABEL: TEST: testPrintInvalidOperation
+def testPrintInvalidOperation():
+  ctx = Context()
+  with Location.unknown(ctx):
+    module = Operation.create("module", regions=1)
+    # This block does not have a terminator, it may crash the custom printer.
+    # Verify that we fallback to the generic printer for safety.
+    block = module.regions[0].blocks.append()
+    print(module)
+    # CHECK: // Verification failed, printing generic form
+    # CHECK: "module"() ( {
+    # CHECK: }) : () -> ()
+run(testPrintInvalidOperation)
