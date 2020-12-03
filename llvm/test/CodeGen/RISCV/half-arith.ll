@@ -321,3 +321,88 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
   %1 = call half @llvm.fma.f16(half %nega, half %b, half %c)
   ret half %1
 }
+
+define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fmadd_s_contract:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fmadd_s_contract:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
+; RV64IZFH-NEXT:    ret
+  %1 = fmul contract half %a, %b
+  %2 = fadd contract half %1, %c
+  ret half %2
+}
+
+define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fmsub_s_contract:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmv.h.x ft0, zero
+; RV32IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV32IZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fmsub_s_contract:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmv.h.x ft0, zero
+; RV64IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV64IZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
+; RV64IZFH-NEXT:    ret
+  %c_ = fadd half 0.0, %c ; avoid negation using xor
+  %1 = fmul contract half %a, %b
+  %2 = fsub contract half %1, %c_
+  ret half %2
+}
+
+define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fnmadd_s_contract:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmv.h.x ft0, zero
+; RV32IZFH-NEXT:    fadd.h ft1, fa0, ft0
+; RV32IZFH-NEXT:    fadd.h ft2, fa1, ft0
+; RV32IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV32IZFH-NEXT:    fnmadd.h fa0, ft1, ft2, ft0
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fnmadd_s_contract:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmv.h.x ft0, zero
+; RV64IZFH-NEXT:    fadd.h ft1, fa0, ft0
+; RV64IZFH-NEXT:    fadd.h ft2, fa1, ft0
+; RV64IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV64IZFH-NEXT:    fnmadd.h fa0, ft1, ft2, ft0
+; RV64IZFH-NEXT:    ret
+  %a_ = fadd half 0.0, %a ; avoid negation using xor
+  %b_ = fadd half 0.0, %b ; avoid negation using xor
+  %c_ = fadd half 0.0, %c ; avoid negation using xor
+  %1 = fmul contract half %a_, %b_
+  %2 = fneg half %1
+  %3 = fsub contract half %2, %c_
+  ret half %3
+}
+
+define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fnmsub_s_contract:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmv.h.x ft0, zero
+; RV32IZFH-NEXT:    fadd.h ft1, fa0, ft0
+; RV32IZFH-NEXT:    fadd.h ft0, fa1, ft0
+; RV32IZFH-NEXT:    fnmsub.h fa0, ft1, ft0, fa2
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fnmsub_s_contract:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmv.h.x ft0, zero
+; RV64IZFH-NEXT:    fadd.h ft1, fa0, ft0
+; RV64IZFH-NEXT:    fadd.h ft0, fa1, ft0
+; RV64IZFH-NEXT:    fnmsub.h fa0, ft1, ft0, fa2
+; RV64IZFH-NEXT:    ret
+  %a_ = fadd half 0.0, %a ; avoid negation using xor
+  %b_ = fadd half 0.0, %b ; avoid negation using xor
+  %1 = fmul contract half %a_, %b_
+  %2 = fsub contract half %c, %1
+  ret half %2
+}
