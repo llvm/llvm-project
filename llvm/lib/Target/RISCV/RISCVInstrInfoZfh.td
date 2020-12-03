@@ -17,23 +17,15 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def SDT_RISCVFMV_H_X_RV32
-    : SDTypeProfile<1, 1, [SDTCisVT<0, f16>, SDTCisVT<1, i32>]>;
-def SDT_RISCVFMV_H_X_RV64
-    : SDTypeProfile<1, 1, [SDTCisVT<0, f16>, SDTCisVT<1, i64>]>;
-def SDT_RISCVFMV_X_ANYEXTH_RV64
-    : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f16>]>;
-def SDT_RISCVFMV_X_ANYEXTH_RV32
-    : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, f16>]>;
+def SDT_RISCVFMV_H_X
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f16>, SDTCisVT<1, XLenVT>]>;
+def SDT_RISCVFMV_X_ANYEXTH
+    : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisVT<1, f16>]>;
 
-def riscv_fmv_h_x_rv32
-    : SDNode<"RISCVISD::FMV_H_X_RV32", SDT_RISCVFMV_H_X_RV32>;
-def riscv_fmv_h_x_rv64
-    : SDNode<"RISCVISD::FMV_H_X_RV64", SDT_RISCVFMV_H_X_RV64>;
-def riscv_fmv_x_anyexth_rv64
-    : SDNode<"RISCVISD::FMV_X_ANYEXTH_RV64", SDT_RISCVFMV_X_ANYEXTH_RV64>;
-def riscv_fmv_x_anyexth_rv32
-    : SDNode<"RISCVISD::FMV_X_ANYEXTH_RV32", SDT_RISCVFMV_X_ANYEXTH_RV32>;
+def riscv_fmv_h_x
+    : SDNode<"RISCVISD::FMV_H_X", SDT_RISCVFMV_H_X>;
+def riscv_fmv_x_anyexth
+    : SDNode<"RISCVISD::FMV_X_ANYEXTH", SDT_RISCVFMV_X_ANYEXTH>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -349,16 +341,17 @@ defm : LdPat<load, FLH>;
 defm : StPat<store, FSH, FPR16>;
 
 /// Float conversion operations
+
 // f32 -> f16, f16 -> f32
 def : Pat<(fpround FPR32:$rs1), (FCVT_H_S FPR32:$rs1, 0b111)>;
 def : Pat<(fpextend FPR16:$rs1), (FCVT_S_H FPR16:$rs1)>;
 
+// Moves (no conversion)
+def : Pat<(riscv_fmv_h_x GPR:$src), (FMV_H_X GPR:$src)>;
+def : Pat<(riscv_fmv_x_anyexth FPR16:$src), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfh, IsRV32] in {
-def : Pat<(riscv_fmv_h_x_rv32 GPR:$src), (FMV_H_X GPR:$src)>;
-def : Pat<(riscv_fmv_x_anyexth_rv32 FPR16:$src), (FMV_X_H FPR16:$src)>;
-
 // float->[u]int. Round-to-zero must be used.
 def : Pat<(fp_to_sint FPR16:$rs1), (FCVT_W_H $rs1, 0b001)>;
 def : Pat<(fp_to_uint FPR16:$rs1), (FCVT_WU_H $rs1, 0b001)>;
@@ -369,9 +362,6 @@ def : Pat<(uint_to_fp GPR:$rs1), (FCVT_H_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtZfh, IsRV32]
 
 let Predicates = [HasStdExtZfh, IsRV64] in {
-def : Pat<(riscv_fmv_h_x_rv64 GPR:$src), (FMV_H_X GPR:$src)>;
-def : Pat<(riscv_fmv_x_anyexth_rv64 FPR16:$src), (FMV_X_H FPR16:$src)>;
-
 // FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
 // because fpto[u|s]i produces poison if the value can't fit into the target.
 // We match the single case below because fcvt.wu.s sign-extends its result so
