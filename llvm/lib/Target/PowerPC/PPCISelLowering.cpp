@@ -12760,9 +12760,10 @@ static int getEstimateRefinementSteps(EVT VT, const PPCSubtarget &Subtarget) {
 
 SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
                                             const DenormalMode &Mode) const {
-  // TODO - add support for v2f64/v4f32
+  // We only have VSX Vector Test for software Square Root.
   EVT VT = Op.getValueType();
-  if (VT != MVT::f64)
+  if (VT != MVT::f64 &&
+      ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX()))
     return SDValue();
 
   SDLoc DL(Op);
@@ -12788,9 +12789,10 @@ SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
 SDValue
 PPCTargetLowering::getSqrtResultForDenormInput(SDValue Op,
                                                SelectionDAG &DAG) const {
-  // TODO - add support for v2f64/v4f32
+  // We only have VSX Vector Square Root.
   EVT VT = Op.getValueType();
-  if (VT != MVT::f64)
+  if (VT != MVT::f64 &&
+      ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX()))
     return TargetLowering::getSqrtResultForDenormInput(Op, DAG);
 
   return DAG.getNode(PPCISD::FSQRT, SDLoc(Op), VT, Op);
