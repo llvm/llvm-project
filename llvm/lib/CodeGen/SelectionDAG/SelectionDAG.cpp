@@ -9317,7 +9317,7 @@ bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
 
 /// isOperand - Return true if this node is an operand of N.
 bool SDValue::isOperandOf(const SDNode *N) const {
-  return any_of(N->op_values(), [this](SDValue Op) { return *this == Op; });
+  return is_contained(N->op_values(), *this);
 }
 
 bool SDNode::isOperandOf(const SDNode *N) const {
