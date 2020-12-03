@@ -6,8 +6,6 @@
 // CHECK: %class.B = type { %class.A }
 // CHECK: %"class.std::type_info" = type { i32 (...)**, i8* }
 
-// CHECK: $_ZN1A3fooEv.stub = comdat any
-// CHECK: $_ZN1B3fooEv.stub = comdat any
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
 

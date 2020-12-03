@@ -5,7 +5,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-LABEL: name: raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -24,7 +23,6 @@ define amdgpu_ps <2 x float> @raw_tbuffer_load_v2f32__sgpr_rsrc__vgpr_voffset__s
   ; CHECK-LABEL: name: raw_tbuffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -46,7 +44,6 @@ define amdgpu_ps <3 x float> @raw_tbuffer_load_v3f32__sgpr_rsrc__vgpr_voffset__s
   ; CHECK-LABEL: name: raw_tbuffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -70,7 +67,6 @@ define amdgpu_ps <4 x float> @raw_tbuffer_load_v4f32__sgpr_rsrc__vgpr_voffset__s
   ; CHECK-LABEL: name: raw_tbuffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -97,7 +93,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $sgpr2, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -142,7 +137,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-LABEL: name: raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -161,7 +155,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-LABEL: name: raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -180,7 +173,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-LABEL: name: raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc_glc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -199,7 +191,6 @@ define amdgpu_ps float @raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-LABEL: name: raw_tbuffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
-  ; CHECK:   $vcc_hi = IMPLICIT_DEF
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4

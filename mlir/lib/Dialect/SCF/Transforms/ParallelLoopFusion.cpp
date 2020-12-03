@@ -59,7 +59,7 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
     // Stop if the memref is defined in secondPloop body. Careful alias analysis
     // is needed.
     auto *memrefDef = load.getMemRef().getDefiningOp();
-    if (memrefDef && memrefDef->getBlock() == load.getOperation()->getBlock())
+    if (memrefDef && memrefDef->getBlock() == load->getBlock())
       return WalkResult::interrupt();
 
     auto write = bufferStores.find(load.getMemRef());

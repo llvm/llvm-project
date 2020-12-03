@@ -51,6 +51,7 @@
 // RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=gold -flto -fdiagnostics-hotness-threshold=100 -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS
 // RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=lld -flto=thin -fdiagnostics-hotness-threshold=100 -fsave-optimization-record=some-format -foptimization-record-file=FOO.txt %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-CUSTOM
 // RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=lld -flto=thin -fdiagnostics-hotness-threshold=100 -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-RPASS
+// RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=lld -flto=thin -fdiagnostics-hotness-threshold=auto -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-AUTO
 
 // CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-filename="
 // CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-passes=inline"
@@ -75,3 +76,5 @@
 // CHECK-PASS-RPASS-SAME: "--plugin-opt=-pass-remarks-missed=inline"
 // CHECK-PASS-RPASS-SAME: "--plugin-opt=-pass-remarks-analysis=inline"
 // CHECK-PASS-RPASS-SAME: "--plugin-opt=opt-remarks-hotness-threshold=100"
+
+// CHECK-PASS-AUTO:   "--plugin-opt=opt-remarks-hotness-threshold=auto"

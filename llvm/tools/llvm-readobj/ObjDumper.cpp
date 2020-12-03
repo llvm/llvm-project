@@ -26,9 +26,25 @@ static inline Error createError(const Twine &Msg) {
   return createStringError(object::object_error::parse_failed, Msg);
 }
 
-ObjDumper::ObjDumper(ScopedPrinter &Writer) : W(Writer) {}
+ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
+  // Dumper reports all non-critical errors as warnings.
+  // It does not print the same warning more than once.
+  WarningHandler = [=](const Twine &Msg) {
+    if (Warnings.insert(Msg.str()).second)
+      reportWarning(createError(Msg), ObjName);
+    return Error::success();
+  };
+}
 
-ObjDumper::~ObjDumper() {
+ObjDumper::~ObjDumper() {}
+
+void ObjDumper::reportUniqueWarning(Error Err) const {
+  reportUniqueWarning(toString(std::move(Err)));
+}
+
+void ObjDumper::reportUniqueWarning(const Twine &Msg) const {
+  cantFail(WarningHandler(Msg),
+           "WarningHandler should always return ErrorSuccess");
 }
 
 static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {

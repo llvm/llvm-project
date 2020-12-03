@@ -8,8 +8,11 @@
 
 #include "llvm/MC/MCAsmInfoXCOFF.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
 
 void MCAsmInfoXCOFF::anchor() {}
 
@@ -20,6 +23,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
   UseDotAlignForAlignment = true;
+  if (UseLEB128Directives == cl::BOU_UNSET)
+    HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   ZeroDirectiveSupportsNonZeroValue = false;
   AsciiDirective = nullptr; // not supported
@@ -37,6 +42,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   HasDotTypeDotSizeDirective = false;
   UseIntegratedAssembler = false;
   NeedsFunctionDescriptors = true;
+
+  ExceptionsType = ExceptionHandling::AIX;
 }
 
 bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {

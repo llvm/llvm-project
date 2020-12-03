@@ -175,7 +175,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
             "Unexpected failure to move transfer read out of loop");
 
       // Hoist write after.
-      transferWrite.getOperation()->moveAfter(loop);
+      transferWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
       OpBuilder b(transferRead);

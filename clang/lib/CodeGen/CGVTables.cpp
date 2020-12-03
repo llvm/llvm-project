@@ -641,7 +641,7 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
 
   llvm::Constant *target;
   if (auto *func = dyn_cast<llvm::Function>(globalVal)) {
-    target = getOrCreateRelativeStub(func, stubLinkage, isCompleteDtor);
+    target = llvm::DSOLocalEquivalent::get(func);
   } else {
     llvm::SmallString<16> rttiProxyName(globalVal->getName());
     rttiProxyName.append(".rtti_proxy");
@@ -667,74 +667,6 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
 
   builder.addRelativeOffsetToPosition(CGM.Int32Ty, target,
                                       /*position=*/vtableAddressPoint);
-}
-
-llvm::Function *CodeGenVTables::getOrCreateRelativeStub(
-    llvm::Function *func, llvm::GlobalValue::LinkageTypes stubLinkage,
-    bool isCompleteDtor) const {
-  // A complete object destructor can later be substituted in the vtable for an
-  // appropriate base object destructor when optimizations are enabled. This can
-  // happen for child classes that don't have their own destructor. In the case
-  // where a parent virtual destructor is not guaranteed to be in the same
-  // linkage unit as the child vtable, it's possible for an external reference
-  // for this destructor to be substituted into the child vtable, preventing it
-  // from being in rodata. If this function is a complete virtual destructor, we
-  // can just force a stub to be emitted for it.
-  if (func->isDSOLocal() && !isCompleteDtor)
-    return func;
-
-  llvm::SmallString<16> stubName(func->getName());
-  stubName.append(".stub");
-
-  // Instead of taking the offset between the vtable and virtual function
-  // directly, we emit a dso_local stub that just contains a tail call to the
-  // original virtual function and take the offset between that and the
-  // vtable. We do this because there are some cases where the original
-  // function that would've been inserted into the vtable is not dso_local
-  // which may require some kind of dynamic relocation which prevents the
-  // vtable from being readonly. On x86_64, taking the offset between the
-  // function and the vtable gets lowered to the offset between the PLT entry
-  // for the function and the vtable which gives us a PLT32 reloc. On AArch64,
-  // right now only CALL26 and JUMP26 instructions generate PLT relocations,
-  // so we manifest them with stubs that are just jumps to the original
-  // function.
-  auto &module = CGM.getModule();
-  llvm::Function *stub = module.getFunction(stubName);
-  if (stub) {
-    assert(stub->isDSOLocal() &&
-           "The previous definition of this stub should've been dso_local.");
-    return stub;
-  }
-
-  stub = llvm::Function::Create(func->getFunctionType(), stubLinkage, stubName,
-                                module);
-
-  // Propogate function attributes.
-  stub->setAttributes(func->getAttributes());
-
-  stub->setDSOLocal(true);
-  stub->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  if (!stub->hasLocalLinkage()) {
-    stub->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    stub->setComdat(module.getOrInsertComdat(stubName));
-  }
-
-  // Fill the stub with a tail call that will be optimized.
-  llvm::BasicBlock *block =
-      llvm::BasicBlock::Create(module.getContext(), "entry", stub);
-  llvm::IRBuilder<> block_builder(block);
-  llvm::SmallVector<llvm::Value *, 8> args;
-  for (auto &arg : stub->args())
-    args.push_back(&arg);
-  llvm::CallInst *call = block_builder.CreateCall(func, args);
-  call->setAttributes(func->getAttributes());
-  call->setTailCall();
-  if (call->getType()->isVoidTy())
-    block_builder.CreateRetVoid();
-  else
-    block_builder.CreateRet(call);
-
-  return stub;
 }
 
 bool CodeGenVTables::useRelativeLayout() const {

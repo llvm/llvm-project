@@ -220,18 +220,21 @@ static void fillL1TilingAndMatmulToVectorPatterns(
     FuncOp funcOp, StringRef startMarker,
     SmallVectorImpl<OwningRewritePatternList> &patternsVector) {
   MLIRContext *ctx = funcOp.getContext();
-  patternsVector.emplace_back(LinalgTilingPattern<MatmulOp>(
+  patternsVector.emplace_back(std::make_unique<LinalgTilingPattern<MatmulOp>>(
       ctx,
       LinalgTilingOptions().setTileSizes({8, 12, 16}).setInterchange({1, 0, 2}),
       LinalgMarker(Identifier::get(startMarker, ctx),
                    Identifier::get("L1", ctx))));
 
-  patternsVector.emplace_back(LinalgPromotionPattern<MatmulOp>(
-      ctx, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgMarker(Identifier::get("L1", ctx), Identifier::get("VEC", ctx))));
+  patternsVector.emplace_back(
+      std::make_unique<LinalgPromotionPattern<MatmulOp>>(
+          ctx, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
+          LinalgMarker(Identifier::get("L1", ctx),
+                       Identifier::get("VEC", ctx))));
 
-  patternsVector.emplace_back(LinalgVectorizationPattern<MatmulOp>(
-      ctx, LinalgMarker(Identifier::get("VEC", ctx))));
+  patternsVector.emplace_back(
+      std::make_unique<LinalgVectorizationPattern<MatmulOp>>(
+          ctx, LinalgMarker(Identifier::get("VEC", ctx))));
   patternsVector.back()
       .insert<LinalgVectorizationPattern<FillOp>,
               LinalgVectorizationPattern<CopyOp>>(ctx);
@@ -437,7 +440,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("START", ctx),
                                           stage1Patterns);
   } else if (testMatmulToVectorPatterns2dTiling) {
-    stage1Patterns.emplace_back(LinalgTilingPattern<MatmulOp>(
+    stage1Patterns.emplace_back(std::make_unique<LinalgTilingPattern<MatmulOp>>(
         ctx,
         LinalgTilingOptions()
             .setTileSizes({768, 264, 768})

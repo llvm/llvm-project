@@ -47,7 +47,9 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: [[LLD: ".*lld"]] {{.*}} "-o" "[[IMG_DEV1:.*out]]" [[A_BC1]] [[B_BC1]]
+// CHECK: [[LLD: ".*lld.*"]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "-plugin-opt=mcpu=gfx803"
+// CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[A_BC1]] [[B_BC1]]
 
 // generate image for device side path on gfx900
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -71,13 +73,15 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: [[LLD]] {{.*}} "-o" "[[IMG_DEV2:.*out]]" [[A_BC2]] [[B_BC2]]
+// CHECK: [[LLD]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "-plugin-opt=mcpu=gfx900"
+// CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[A_BC2]] [[B_BC2]]
 
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
 
-// CHECK: [[MC:".*llvm-mc"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*llvm-mc.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
 
 // CHECK: [[AR:".*llvm-ar.*"]] "rcsD" "{{.*}}.out" [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]

@@ -3702,7 +3702,7 @@ TemplateDeclaration Declaration
 )txt"}));
 }
 
-TEST_P(BuildSyntaxTreeTest, ExplicitClassTemplateInstantation_Definition) {
+TEST_P(BuildSyntaxTreeTest, ExplicitClassTemplateInstantiation_Definition) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3724,7 +3724,7 @@ ExplicitTemplateInstantiation
 )txt"}));
 }
 
-TEST_P(BuildSyntaxTreeTest, ExplicitClassTemplateInstantation_Declaration) {
+TEST_P(BuildSyntaxTreeTest, ExplicitClassTemplateInstantiation_Declaration) {
   if (!GetParam().isCXX()) {
     return;
   }

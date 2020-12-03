@@ -84,9 +84,9 @@ emplaceOrGetReplacementSymbol(KeyTy key, SymbolOpTy symbolOp,
 /// binding and spec_id, repectively, happen to hash to the same value.
 static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
   llvm::hash_code hashCode(0);
-  hashCode = llvm::hash_combine(symbolOp.getOperation()->getName());
+  hashCode = llvm::hash_combine(symbolOp->getName());
 
-  for (auto attr : symbolOp.getOperation()->getAttrs()) {
+  for (auto attr : symbolOp->getAttrs()) {
     if (attr.first == SymbolTable::getSymbolAttrName())
       continue;
     hashCode = llvm::hash_combine(hashCode, attr);

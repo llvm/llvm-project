@@ -29,6 +29,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 namespace llvm {
@@ -43,8 +44,14 @@ namespace llvm {
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind { HK_WIDTH, HK_UNROLL, HK_FORCE, HK_ISVECTORIZED,
-                  HK_PREDICATE };
+  enum HintKind {
+    HK_WIDTH,
+    HK_UNROLL,
+    HK_FORCE,
+    HK_ISVECTORIZED,
+    HK_PREDICATE,
+    HK_SCALABLE
+  };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -73,6 +80,9 @@ class LoopVectorizeHints {
   /// Vector Predicate
   Hint Predicate;
 
+  /// Says whether we should use fixed width or scalable vectorization.
+  Hint Scalable;
+
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
 
@@ -98,7 +108,9 @@ public:
   /// Dumps all the hint information.
   void emitRemarkWithHints() const;
 
-  unsigned getWidth() const { return Width.Value; }
+  ElementCount getWidth() const {
+    return ElementCount::get(Width.Value, isScalable());
+  }
   unsigned getInterleave() const { return Interleave.Value; }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
   unsigned getPredicate() const { return Predicate.Value; }
@@ -108,6 +120,8 @@ public:
       return FK_Disabled;
     return (ForceKind)Force.Value;
   }
+
+  bool isScalable() const { return Scalable.Value; }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.
@@ -119,7 +133,9 @@ public:
     // enabled by default because can be unsafe or inefficient. For example,
     // reordering floating-point operations will change the way round-off
     // error accumulates in the loop.
-    return getForce() == LoopVectorizeHints::FK_Enabled || getWidth() > 1;
+    ElementCount EC = getWidth();
+    return getForce() == LoopVectorizeHints::FK_Enabled ||
+           EC.getKnownMinValue() > 1;
   }
 
   bool isPotentiallyUnsafe() const {

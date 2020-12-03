@@ -169,7 +169,7 @@ static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
   IntegerAttr attr =
       builder.getIntegerAttr(targetType, targetBits / sourceBits);
   auto idx = builder.create<spirv::ConstantOp>(loc, targetType, attr);
-  auto lastDim = op.getOperation()->getOperand(op.getNumOperands() - 1);
+  auto lastDim = op->getOperand(op.getNumOperands() - 1);
   auto indices = llvm::to_vector<4>(op.indices());
   // There are two elements if this is a 1-D tensor.
   assert(indices.size() == 2);
@@ -874,8 +874,7 @@ IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
 
   // Shift the bits to the rightmost.
   // ____XXXX________ -> ____________XXXX
-  Value lastDim = accessChainOp.getOperation()->getOperand(
-      accessChainOp.getNumOperands() - 1);
+  Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
   Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
   Value result = rewriter.create<spirv::ShiftRightArithmeticOp>(
       loc, spvLoadOp.getType(), spvLoadOp, offset);
@@ -991,8 +990,7 @@ IntStoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
   // The step 1 to step 3 are done by AtomicAnd as one atomic step, and the step
   // 4 to step 6 are done by AtomicOr as another atomic step.
   assert(accessChainOp.indices().size() == 2);
-  Value lastDim = accessChainOp.getOperation()->getOperand(
-      accessChainOp.getNumOperands() - 1);
+  Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
   Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
 
   // Create a mask to clear the destination. E.g., if it is the second i8 in

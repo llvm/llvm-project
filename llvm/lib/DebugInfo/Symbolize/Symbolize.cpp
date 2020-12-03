@@ -557,11 +557,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
 
-      PDB_ReaderType ReaderType = PDB_ReaderType::Native;
-#if LLVM_ENABLE_DIA_SDK
-      if (!Opts.UseNativePDBReader)
-        ReaderType = PDB_ReaderType::DIA;
-#endif
+      PDB_ReaderType ReaderType =
+          Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
       if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                     Session)) {
         Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());

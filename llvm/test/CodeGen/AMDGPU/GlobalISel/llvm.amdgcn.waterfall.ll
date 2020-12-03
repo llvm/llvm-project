@@ -68,7 +68,6 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX10-32-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-32-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX10-32-NEXT:    s_mov_b32 s2, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    v_lshlrev_b64 v[0:1], 3, v[0:1]
 ; GFX10-32-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v2, v0
 ; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
@@ -175,7 +174,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img(<8 x i32> addrspace
 ; GFX10-32-LABEL: test_waterfall_non_uniform_img:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s6, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v13, 0
@@ -376,7 +374,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX10-32-LABEL: test_waterfall_non_uniform_img_single_read:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s6, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-32-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -573,7 +570,6 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:  BB3_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s5, s6, v0
@@ -698,7 +694,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
 ; GFX10-32-LABEL: test_waterfall_non_uniform_img_multi_rl:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v5, v1
@@ -839,7 +834,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspa
 ; GFX10-32-LABEL: test_waterfall_non_uni_img_2_idx:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v5, v1
@@ -1017,7 +1011,6 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX10-32-NEXT:    v_mov_b32_e32 v10, s1
 ; GFX10-32-NEXT:    v_mov_b32_e32 v9, s0
 ; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    v_lshlrev_b64 v[7:8], 5, v[0:1]
 ; GFX10-32-NEXT:    v_add_co_u32_e64 v11, vcc_lo, v9, v7
 ; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v12, vcc_lo, v10, v8, vcc_lo
@@ -1101,7 +1094,6 @@ define amdgpu_ps void @test_remove_waterfall_last_use(<8 x i32> addrspace(4)* in
 ; GFX10-32-LABEL: test_remove_waterfall_last_use:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x0
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-32-NEXT:    image_store v[2:5], v1, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10-32-NEXT:    s_endpgm
@@ -1146,7 +1138,6 @@ define amdgpu_ps <4 x float> @test_remove_waterfall_multi_rl(<8 x i32> addrspace
 ; GFX10-32-LABEL: test_remove_waterfall_multi_rl:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    s_mov_b32 s6, s5
 ; GFX10-32-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
@@ -1243,7 +1234,6 @@ define amdgpu_ps <4 x float> @test_keep_waterfall_multi_rl(<8 x i32> addrspace(4
 ; GFX10-32-LABEL: test_keep_waterfall_multi_rl:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s5, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v5, v1
@@ -1393,7 +1383,6 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-32-LABEL: test_waterfall_sample_with_kill:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s5, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v13, 0
@@ -1671,7 +1660,6 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX10-32-LABEL: test_waterfall_multi_begin:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX10-32-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
@@ -1990,7 +1978,6 @@ define amdgpu_ps <4 x float> @test_waterfall_full_idx_multi_begin(<8 x i32> addr
 ; GFX10-32-LABEL: test_waterfall_full_idx_multi_begin:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-32-NEXT:    v_ashrrev_i32_e32 v1, 31, v0

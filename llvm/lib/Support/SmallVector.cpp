@@ -108,7 +108,7 @@ void SmallVectorBase<Size_T>::grow_pod(void *FirstEl, size_t MinSize,
 template class llvm::SmallVectorBase<uint32_t>;
 
 // Disable the uint64_t instantiation for 32-bit builds.
-// Both uint32_t and uint64_t instantations are needed for 64-bit builds.
+// Both uint32_t and uint64_t instantiations are needed for 64-bit builds.
 // This instantiation will never be used in 32-bit builds, and will cause
 // warnings when sizeof(Size_T) > sizeof(size_t).
 #if SIZE_MAX > UINT32_MAX

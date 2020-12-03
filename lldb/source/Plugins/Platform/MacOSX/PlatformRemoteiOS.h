@@ -47,12 +47,8 @@ public:
                                        lldb_private::ArchSpec &arch) override;
 
 protected:
-
-  // lldb_private::PlatformRemoteDarwinDevice functions
-
-  void GetDeviceSupportDirectoryNames (std::vector<std::string> &dirnames) override;
-
-  std::string GetPlatformName () override;
+  llvm::StringRef GetDeviceSupportDirectoryName() override;
+  llvm::StringRef GetPlatformName() override;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEIOS_H

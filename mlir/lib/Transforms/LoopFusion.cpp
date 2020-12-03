@@ -1541,7 +1541,7 @@ public:
 
           // Move 'dstAffineForOp' before 'insertPointInst' if needed.
           if (insertPointInst != dstAffineForOp.getOperation())
-            dstAffineForOp.getOperation()->moveBefore(insertPointInst);
+            dstAffineForOp->moveBefore(insertPointInst);
 
           // Update edges between 'srcNode' and 'dstNode'.
           mdg->updateEdges(srcNode->id, dstNode->id, memref,
@@ -1732,7 +1732,7 @@ public:
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
       if (insertPointInst != dstForInst.getOperation()) {
-        dstForInst.getOperation()->moveBefore(insertPointInst);
+        dstForInst->moveBefore(insertPointInst);
       }
       // Update data dependence graph state post fusion.
       updateStateAfterSiblingFusion(sibNode, dstNode);

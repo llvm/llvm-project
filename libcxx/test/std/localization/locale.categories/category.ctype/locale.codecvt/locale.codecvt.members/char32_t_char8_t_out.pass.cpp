@@ -6,6 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// This test relies on P0482 being fixed, which isn't in
+// older Apple dylibs
+//
+// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9 
+
 // <locale>
 
 // template <> class codecvt<char32_t, char8_t, mbstate_t>
@@ -13,11 +26,6 @@
 // result out(stateT& state,
 //            const internT* from, const internT* from_end, const internT*& from_next,
 //            externT* to, externT* to_end, externT*& to_next) const;
-
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// C++20 codecvt specializations for char8_t are not yet implemented:
-// UNSUPPORTED: libc++
 
 #include <cassert>
 #include <locale>

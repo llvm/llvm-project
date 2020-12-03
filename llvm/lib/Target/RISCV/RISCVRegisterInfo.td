@@ -16,14 +16,23 @@ class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let AltNames = alt;
 }
 
-class RISCVReg32<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
+class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;
   let AltNames = alt;
 }
 
+def sub_16 : SubRegIndex<16>;
+class RISCVReg32<RISCVReg16 subreg> : Register<""> {
+  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
+  let SubRegs = [subreg];
+  let SubRegIndices = [sub_16];
+  let AsmName = subreg.AsmName;
+  let AltNames = subreg.AltNames;
+}
+
 // Because RISCVReg64 register have AsmName and AltNames that alias with their
-// 32-bit sub-register, RISCVAsmParser will need to coerce a register number
-// from a RISCVReg32 to the equivalent RISCVReg64 when appropriate.
+// 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
+// from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
 def sub_32 : SubRegIndex<32>;
 class RISCVReg64<RISCVReg32 subreg> : Register<""> {
   let HWEncoding{4-0} = subreg.HWEncoding{4-0};
@@ -179,38 +188,43 @@ def SP : RegisterClass<"RISCV", [XLenVT], 32, (add X2)> {
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {
-  def F0_F  : RISCVReg32<0, "f0", ["ft0"]>, DwarfRegNum<[32]>;
-  def F1_F  : RISCVReg32<1, "f1", ["ft1"]>, DwarfRegNum<[33]>;
-  def F2_F  : RISCVReg32<2, "f2", ["ft2"]>, DwarfRegNum<[34]>;
-  def F3_F  : RISCVReg32<3, "f3", ["ft3"]>, DwarfRegNum<[35]>;
-  def F4_F  : RISCVReg32<4, "f4", ["ft4"]>, DwarfRegNum<[36]>;
-  def F5_F  : RISCVReg32<5, "f5", ["ft5"]>, DwarfRegNum<[37]>;
-  def F6_F  : RISCVReg32<6, "f6", ["ft6"]>, DwarfRegNum<[38]>;
-  def F7_F  : RISCVReg32<7, "f7", ["ft7"]>, DwarfRegNum<[39]>;
-  def F8_F  : RISCVReg32<8, "f8", ["fs0"]>, DwarfRegNum<[40]>;
-  def F9_F  : RISCVReg32<9, "f9", ["fs1"]>, DwarfRegNum<[41]>;
-  def F10_F : RISCVReg32<10,"f10", ["fa0"]>, DwarfRegNum<[42]>;
-  def F11_F : RISCVReg32<11,"f11", ["fa1"]>, DwarfRegNum<[43]>;
-  def F12_F : RISCVReg32<12,"f12", ["fa2"]>, DwarfRegNum<[44]>;
-  def F13_F : RISCVReg32<13,"f13", ["fa3"]>, DwarfRegNum<[45]>;
-  def F14_F : RISCVReg32<14,"f14", ["fa4"]>, DwarfRegNum<[46]>;
-  def F15_F : RISCVReg32<15,"f15", ["fa5"]>, DwarfRegNum<[47]>;
-  def F16_F : RISCVReg32<16,"f16", ["fa6"]>, DwarfRegNum<[48]>;
-  def F17_F : RISCVReg32<17,"f17", ["fa7"]>, DwarfRegNum<[49]>;
-  def F18_F : RISCVReg32<18,"f18", ["fs2"]>, DwarfRegNum<[50]>;
-  def F19_F : RISCVReg32<19,"f19", ["fs3"]>, DwarfRegNum<[51]>;
-  def F20_F : RISCVReg32<20,"f20", ["fs4"]>, DwarfRegNum<[52]>;
-  def F21_F : RISCVReg32<21,"f21", ["fs5"]>, DwarfRegNum<[53]>;
-  def F22_F : RISCVReg32<22,"f22", ["fs6"]>, DwarfRegNum<[54]>;
-  def F23_F : RISCVReg32<23,"f23", ["fs7"]>, DwarfRegNum<[55]>;
-  def F24_F : RISCVReg32<24,"f24", ["fs8"]>, DwarfRegNum<[56]>;
-  def F25_F : RISCVReg32<25,"f25", ["fs9"]>, DwarfRegNum<[57]>;
-  def F26_F : RISCVReg32<26,"f26", ["fs10"]>, DwarfRegNum<[58]>;
-  def F27_F : RISCVReg32<27,"f27", ["fs11"]>, DwarfRegNum<[59]>;
-  def F28_F : RISCVReg32<28,"f28", ["ft8"]>, DwarfRegNum<[60]>;
-  def F29_F : RISCVReg32<29,"f29", ["ft9"]>, DwarfRegNum<[61]>;
-  def F30_F : RISCVReg32<30,"f30", ["ft10"]>, DwarfRegNum<[62]>;
-  def F31_F : RISCVReg32<31,"f31", ["ft11"]>, DwarfRegNum<[63]>;
+  def F0_H  : RISCVReg16<0, "f0", ["ft0"]>, DwarfRegNum<[32]>;
+  def F1_H  : RISCVReg16<1, "f1", ["ft1"]>, DwarfRegNum<[33]>;
+  def F2_H  : RISCVReg16<2, "f2", ["ft2"]>, DwarfRegNum<[34]>;
+  def F3_H  : RISCVReg16<3, "f3", ["ft3"]>, DwarfRegNum<[35]>;
+  def F4_H  : RISCVReg16<4, "f4", ["ft4"]>, DwarfRegNum<[36]>;
+  def F5_H  : RISCVReg16<5, "f5", ["ft5"]>, DwarfRegNum<[37]>;
+  def F6_H  : RISCVReg16<6, "f6", ["ft6"]>, DwarfRegNum<[38]>;
+  def F7_H  : RISCVReg16<7, "f7", ["ft7"]>, DwarfRegNum<[39]>;
+  def F8_H  : RISCVReg16<8, "f8", ["fs0"]>, DwarfRegNum<[40]>;
+  def F9_H  : RISCVReg16<9, "f9", ["fs1"]>, DwarfRegNum<[41]>;
+  def F10_H : RISCVReg16<10,"f10", ["fa0"]>, DwarfRegNum<[42]>;
+  def F11_H : RISCVReg16<11,"f11", ["fa1"]>, DwarfRegNum<[43]>;
+  def F12_H : RISCVReg16<12,"f12", ["fa2"]>, DwarfRegNum<[44]>;
+  def F13_H : RISCVReg16<13,"f13", ["fa3"]>, DwarfRegNum<[45]>;
+  def F14_H : RISCVReg16<14,"f14", ["fa4"]>, DwarfRegNum<[46]>;
+  def F15_H : RISCVReg16<15,"f15", ["fa5"]>, DwarfRegNum<[47]>;
+  def F16_H : RISCVReg16<16,"f16", ["fa6"]>, DwarfRegNum<[48]>;
+  def F17_H : RISCVReg16<17,"f17", ["fa7"]>, DwarfRegNum<[49]>;
+  def F18_H : RISCVReg16<18,"f18", ["fs2"]>, DwarfRegNum<[50]>;
+  def F19_H : RISCVReg16<19,"f19", ["fs3"]>, DwarfRegNum<[51]>;
+  def F20_H : RISCVReg16<20,"f20", ["fs4"]>, DwarfRegNum<[52]>;
+  def F21_H : RISCVReg16<21,"f21", ["fs5"]>, DwarfRegNum<[53]>;
+  def F22_H : RISCVReg16<22,"f22", ["fs6"]>, DwarfRegNum<[54]>;
+  def F23_H : RISCVReg16<23,"f23", ["fs7"]>, DwarfRegNum<[55]>;
+  def F24_H : RISCVReg16<24,"f24", ["fs8"]>, DwarfRegNum<[56]>;
+  def F25_H : RISCVReg16<25,"f25", ["fs9"]>, DwarfRegNum<[57]>;
+  def F26_H : RISCVReg16<26,"f26", ["fs10"]>, DwarfRegNum<[58]>;
+  def F27_H : RISCVReg16<27,"f27", ["fs11"]>, DwarfRegNum<[59]>;
+  def F28_H : RISCVReg16<28,"f28", ["ft8"]>, DwarfRegNum<[60]>;
+  def F29_H : RISCVReg16<29,"f29", ["ft9"]>, DwarfRegNum<[61]>;
+  def F30_H : RISCVReg16<30,"f30", ["ft10"]>, DwarfRegNum<[62]>;
+  def F31_H : RISCVReg16<31,"f31", ["ft11"]>, DwarfRegNum<[63]>;
+
+  foreach Index = 0-31 in {
+    def F#Index#_F : RISCVReg32<!cast<RISCVReg16>("F"#Index#"_H")>,
+      DwarfRegNum<[!add(Index, 32)]>;
+  }
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
@@ -220,6 +234,14 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
+def FPR16 : RegisterClass<"RISCV", [f16], 16, (add
+    (sequence "F%u_H", 0, 7),
+    (sequence "F%u_H", 10, 17),
+    (sequence "F%u_H", 28, 31),
+    (sequence "F%u_H", 8, 9),
+    (sequence "F%u_H", 18, 27)
+)>;
+
 def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
     (sequence "F%u_F", 0, 7),
     (sequence "F%u_F", 10, 17),

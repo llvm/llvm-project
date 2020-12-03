@@ -260,17 +260,21 @@ ProgramHeaders:
 ## Show we print a warning when the symbol index of a dynamic relocation is too
 ## large (goes past the end of the dynamic symbol table).
 # RUN: yaml2obj --docnum=5 %s -o %t12
-# RUN: llvm-readobj --dyn-relocations %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=LLVM-INVALID-DYNSYM
-# RUN: llvm-readelf --dyn-relocations %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=GNU-INVALID-DYNSYM
+# RUN: llvm-readobj --dyn-relocations %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=LLVM-INVALID-DYNSYM
+# RUN: llvm-readelf --dyn-relocations %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=GNU-INVALID-DYNSYM
 
 # LLVM-INVALID-DYNSYM:      Dynamic Relocations {
 # LLVM-INVALID-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: index is greater than or equal to the number of dynamic symbols (2)
 # LLVM-INVALID-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-INVALID-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
 # LLVM-INVALID-DYNSYM-NEXT: }
 
-# GNU-INVALID-DYNSYM:      'RELA' relocation section at offset 0x78 contains 24 bytes:
+# GNU-INVALID-DYNSYM:      'RELA' relocation section at offset 0x78 contains 48 bytes:
 # GNU-INVALID-DYNSYM-NEXT: Offset            Info             Type             Symbol's Value   Symbol's Name + Addend
 # GNU-INVALID-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: index is greater than or equal to the number of dynamic symbols (2)
+# GNU-INVALID-DYNSYM-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                     <corrupt> + 0
 # GNU-INVALID-DYNSYM-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                     <corrupt> + 0
 
 --- !ELF
@@ -285,13 +289,15 @@ Sections:
     Relocations:
       - Type:   R_X86_64_NONE
         Symbol: 0x2
+      - Type:   R_X86_64_NONE
+        Symbol: 0x2
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
       - Tag:   DT_RELA
         Value: 0x0
       - Tag:   DT_RELASZ
-        Value: 0x18
+        Value: 0x30
       - Tag:   DT_RELAENT
         Value: 0x18
       - Tag:   DT_NULL

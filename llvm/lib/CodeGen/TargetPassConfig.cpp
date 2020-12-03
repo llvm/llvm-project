@@ -735,6 +735,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     LLVM_FALLTHROUGH;
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
+  case ExceptionHandling::AIX:
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
@@ -1038,6 +1039,10 @@ void TargetPassConfig::addMachinePasses() {
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
+
+  // Insert pseudo probe annotation for callsite profiling
+  if (TM->Options.PseudoProbeForProfiling)
+    addPass(createPseudoProbeInserter());
 
   AddingMachinePasses = false;
 }

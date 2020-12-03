@@ -55,7 +55,7 @@ static MachO::CPUSubTypeARM getARMSubType(const Triple &T) {
 }
 
 static MachO::CPUSubTypeARM64 getARM64SubType(const Triple &T) {
-  assert(T.isAArch64() || T.getArch() == Triple::aarch64_32);
+  assert(T.isAArch64());
   if (T.isArch32Bit())
     return (MachO::CPUSubTypeARM64)MachO::CPU_SUBTYPE_ARM64_32_V8;
   if (T.getArchName() == "arm64e")
@@ -84,9 +84,7 @@ Expected<uint32_t> MachO::getCPUType(const Triple &T) {
   if (T.isARM() || T.isThumb())
     return MachO::CPU_TYPE_ARM;
   if (T.isAArch64())
-    return MachO::CPU_TYPE_ARM64;
-  if (T.getArch() == Triple::aarch64_32)
-    return MachO::CPU_TYPE_ARM64_32;
+    return T.isArch32Bit() ? MachO::CPU_TYPE_ARM64_32 : MachO::CPU_TYPE_ARM64;
   if (T.getArch() == Triple::ppc)
     return MachO::CPU_TYPE_POWERPC;
   if (T.getArch() == Triple::ppc64)

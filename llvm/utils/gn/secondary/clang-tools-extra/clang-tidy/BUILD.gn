@@ -70,6 +70,7 @@ group("all-checks") {
     "//clang-tools-extra/clang-tidy/boost",
     "//clang-tools-extra/clang-tidy/bugprone",
     "//clang-tools-extra/clang-tidy/cert",
+    "//clang-tools-extra/clang-tidy/concurrency",
     "//clang-tools-extra/clang-tidy/cppcoreguidelines",
     "//clang-tools-extra/clang-tidy/darwin",
     "//clang-tools-extra/clang-tidy/fuchsia",

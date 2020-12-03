@@ -44,6 +44,11 @@ public:
 
   void InvalidateAllRegisters() override;
 
+  std::vector<uint32_t>
+  GetExpeditedRegisters(ExpeditedRegs expType) const override;
+
+  bool RegisterOffsetIsDynamic() const override { return true; }
+
   // Hardware breakpoints/watchpoint management functions
 
   uint32_t NumSupportedHardwareBreakpoints() override;
@@ -92,6 +97,10 @@ protected:
 
   void *GetGPRBuffer() override { return &m_gpr_arm64; }
 
+  // GetGPRBufferSize returns sizeof arm64 GPR ptrace buffer, it is different
+  // from GetGPRSize which returns sizeof RegisterInfoPOSIX_arm64::GPR.
+  size_t GetGPRBufferSize() { return sizeof(m_gpr_arm64); }
+
   void *GetFPRBuffer() override { return &m_fpr; }
 
   size_t GetFPRSize() override { return sizeof(m_fpr); }
@@ -103,7 +112,7 @@ private:
 
   bool m_sve_header_is_valid;
 
-  RegisterInfoPOSIX_arm64::GPR m_gpr_arm64; // 64-bit general purpose registers.
+  struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
   RegisterInfoPOSIX_arm64::FPU
       m_fpr; // floating-point registers including extended register sets.

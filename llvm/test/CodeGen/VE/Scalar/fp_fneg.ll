@@ -53,15 +53,16 @@ define double @fneg_double(double %0) {
 define fp128 @fneg_quad(fp128 %0) {
 ; CHECK-LABEL: fneg_quad:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s1, 176(, %s11)
-; CHECK-NEXT:    st %s0, 184(, %s11)
-; CHECK-NEXT:    ld1b.zx %s0, 191(, %s11)
+; CHECK-NEXT:    st %s1, (, %s11)
+; CHECK-NEXT:    st %s0, 8(, %s11)
+; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    lea %s1, 128
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    st1b %s0, 191(, %s11)
-; CHECK-NEXT:    ld %s1, 176(, %s11)
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    st1b %s0, 15(, %s11)
+; CHECK-NEXT:    ld %s1, (, %s11)
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 16, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = fneg fp128 %0
   ret fp128 %2
 }

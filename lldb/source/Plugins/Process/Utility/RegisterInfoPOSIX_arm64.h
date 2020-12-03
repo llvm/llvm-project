@@ -29,6 +29,7 @@ public:
   };
 
   // based on RegisterContextDarwin_arm64.h
+  LLVM_PACKED_START
   struct GPR {
     uint64_t x[29]; // x0-x28
     uint64_t fp;    // x29
@@ -37,6 +38,7 @@ public:
     uint64_t pc;    // pc
     uint32_t cpsr;  // cpsr
   };
+  LLVM_PACKED_END
 
   // based on RegisterContextDarwin_arm64.h
   struct VReg {
@@ -101,6 +103,7 @@ public:
   uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
+  uint32_t GetRegNumSVEVG() const;
 
 private:
   typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>

@@ -16,6 +16,95 @@ New entries should be added directly below the "Version" header.
 Version 12.0
 ------------
 
+* [libc++] [P0482] [C++20] Implement missing bits for codecvt and codecvt_byname.
+
+  This commit added new instantiations with char8_t for classes codecvt and
+  codecvt_byname in <locale> in the library.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
+  Symbol added: __ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZTINSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: _ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
+  Symbol added: _ZTSNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
+  Symbol added: _ZTSNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+
 * XXXXXXX - [libc++] Instantiate additional <iostream> members in the dylib
 
   This commit added new explicit instantiations for classes in <iostream> in

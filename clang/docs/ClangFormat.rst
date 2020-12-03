@@ -248,6 +248,9 @@ In an SVN client, you can do:
 The option `-U0` will create a diff without context lines (the script would format
 those as well).
 
+These commands use the file paths shown in the diff output
+so they will only work from the root of the repository.
+
 Current State of Clang Format for LLVM
 ======================================
 

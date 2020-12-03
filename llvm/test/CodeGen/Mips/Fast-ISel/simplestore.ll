@@ -9,8 +9,8 @@
 define void @foo()  {
 entry:
   store i32 12345, i32* @abcd, align 4
-; CHECK: 	addiu	$[[REG1:[0-9]+]], $zero, 12345
 ; CHECK: 	lw	$[[REG2:[0-9]+]], %got(abcd)(${{[0-9]+}})
+; CHECK: 	addiu	$[[REG1:[0-9]+]], $zero, 12345
 ; CHECK: 	sw	$[[REG1]], 0($[[REG2]])
   ret void
 }

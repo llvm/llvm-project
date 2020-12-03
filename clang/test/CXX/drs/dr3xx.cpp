@@ -1109,9 +1109,9 @@ namespace dr385 { // dr385: yes
   void h(B b) { b.f(); }
 
   struct D { int n; }; // expected-note {{member}}
-  struct E : protected D {}; // expected-note 2{{protected}}
+  struct E : protected D {}; // expected-note {{protected}}
   struct F : E { friend int i(E); };
-  int i(E e) { return e.n; } // expected-error {{protected base}} expected-error {{protected member}}
+  int i(E e) { return e.n; } // expected-error {{protected member}}
 }
 
 namespace dr387 { // dr387: yes

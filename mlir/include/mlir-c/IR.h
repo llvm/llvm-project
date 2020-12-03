@@ -18,6 +18,7 @@
 #ifndef MLIR_C_IR_H
 #define MLIR_C_IR_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "mlir-c/Support.h"
@@ -82,10 +83,10 @@ typedef struct MlirNamedAttribute MlirNamedAttribute;
 MLIR_CAPI_EXPORTED MlirContext mlirContextCreate();
 
 /// Checks if two contexts are equal.
-MLIR_CAPI_EXPORTED int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
+MLIR_CAPI_EXPORTED bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
 /// Checks whether a context is null.
-static inline int mlirContextIsNull(MlirContext context) {
+static inline bool mlirContextIsNull(MlirContext context) {
   return !context.ptr;
 }
 
@@ -94,10 +95,10 @@ MLIR_CAPI_EXPORTED void mlirContextDestroy(MlirContext context);
 
 /// Sets whether unregistered dialects are allowed in this context.
 MLIR_CAPI_EXPORTED void
-mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
+mlirContextSetAllowUnregisteredDialects(MlirContext context, bool allow);
 
 /// Returns whether the context allows unregistered dialects.
-MLIR_CAPI_EXPORTED int
+MLIR_CAPI_EXPORTED bool
 mlirContextGetAllowUnregisteredDialects(MlirContext context);
 
 /** Returns the number of dialects registered with the given context. A
@@ -126,14 +127,14 @@ MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 MLIR_CAPI_EXPORTED MlirContext mlirDialectGetContext(MlirDialect dialect);
 
 /// Checks if the dialect is null.
-static inline int mlirDialectIsNull(MlirDialect dialect) {
+static inline bool mlirDialectIsNull(MlirDialect dialect) {
   return !dialect.ptr;
 }
 
 /** Checks if two dialects that belong to the same context are equal. Dialects
  * from different contexts will not compare equal. */
-MLIR_CAPI_EXPORTED int mlirDialectEqual(MlirDialect dialect1,
-                                        MlirDialect dialect2);
+MLIR_CAPI_EXPORTED bool mlirDialectEqual(MlirDialect dialect1,
+                                         MlirDialect dialect2);
 
 /// Returns the namespace of the given dialect.
 MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
@@ -151,6 +152,14 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 
 /// Gets the context that a location was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirLocationGetContext(MlirLocation location);
+
+/// Checks if the location is null.
+static inline bool mlirLocationIsNull(MlirLocation location) {
+  return !location.ptr;
+}
+
+/// Checks if two locations are equal.
+MLIR_CAPI_EXPORTED bool mlirLocationEqual(MlirLocation l1, MlirLocation l2);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -177,7 +186,7 @@ MLIR_CAPI_EXPORTED MlirContext mlirModuleGetContext(MlirModule module);
 MLIR_CAPI_EXPORTED MlirBlock mlirModuleGetBody(MlirModule module);
 
 /// Checks whether a module is null.
-static inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
+static inline bool mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
 /// Takes a module owned by the caller and deletes it.
 MLIR_CAPI_EXPORTED void mlirModuleDestroy(MlirModule module);
@@ -262,7 +271,7 @@ mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
  * debug information is printed in a more readable 'pretty' form. Note: The
  * IR generated with 'prettyForm' is not parsable. */
 MLIR_CAPI_EXPORTED void
-mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, int prettyForm);
+mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool prettyForm);
 
 /// Always print operations in the generic form.
 MLIR_CAPI_EXPORTED void
@@ -287,12 +296,12 @@ mlirOperationCreate(const MlirOperationState *state);
 MLIR_CAPI_EXPORTED void mlirOperationDestroy(MlirOperation op);
 
 /// Checks whether the underlying operation is null.
-static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
+static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 
 /** Checks whether two operation handles point to the same operation. This does
  * not perform deep comparison. */
-MLIR_CAPI_EXPORTED int mlirOperationEqual(MlirOperation op,
-                                          MlirOperation other);
+MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
+                                           MlirOperation other);
 
 /// Gets the name of the operation as an identifier.
 MLIR_CAPI_EXPORTED MlirIdentifier mlirOperationGetName(MlirOperation op);
@@ -355,10 +364,10 @@ MLIR_CAPI_EXPORTED void mlirOperationSetAttributeByName(MlirOperation op,
                                                         MlirStringRef name,
                                                         MlirAttribute attr);
 
-/** Removes an attribute by name. Returns 0 if the attribute was not found
- * and !0 if removed. */
-MLIR_CAPI_EXPORTED int mlirOperationRemoveAttributeByName(MlirOperation op,
-                                                          MlirStringRef name);
+/** Removes an attribute by name. Returns false if the attribute was not found
+ * and true if removed. */
+MLIR_CAPI_EXPORTED bool mlirOperationRemoveAttributeByName(MlirOperation op,
+                                                           MlirStringRef name);
 
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -388,7 +397,7 @@ MLIR_CAPI_EXPORTED MlirRegion mlirRegionCreate();
 MLIR_CAPI_EXPORTED void mlirRegionDestroy(MlirRegion region);
 
 /// Checks whether a region is null.
-static inline int mlirRegionIsNull(MlirRegion region) { return !region.ptr; }
+static inline bool mlirRegionIsNull(MlirRegion region) { return !region.ptr; }
 
 /// Gets the first block in the region.
 MLIR_CAPI_EXPORTED MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
@@ -430,11 +439,11 @@ MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs,
 MLIR_CAPI_EXPORTED void mlirBlockDestroy(MlirBlock block);
 
 /// Checks whether a block is null.
-static inline int mlirBlockIsNull(MlirBlock block) { return !block.ptr; }
+static inline bool mlirBlockIsNull(MlirBlock block) { return !block.ptr; }
 
 /** Checks whether two blocks handles point to the same block. This does not
  * perform deep comparison. */
-MLIR_CAPI_EXPORTED int mlirBlockEqual(MlirBlock block, MlirBlock other);
+MLIR_CAPI_EXPORTED bool mlirBlockEqual(MlirBlock block, MlirBlock other);
 
 /** Returns the block immediately following the given block in its parent
  * region. */
@@ -489,16 +498,16 @@ mlirBlockPrint(MlirBlock block, MlirStringCallback callback, void *userData);
 //===----------------------------------------------------------------------===//
 
 /// Returns whether the value is null.
-static inline int mlirValueIsNull(MlirValue value) { return !value.ptr; }
+static inline bool mlirValueIsNull(MlirValue value) { return !value.ptr; }
 
 /// Returns 1 if two values are equal, 0 otherwise.
-int mlirValueEqual(MlirValue value1, MlirValue value2);
+bool mlirValueEqual(MlirValue value1, MlirValue value2);
 
 /// Returns 1 if the value is a block argument, 0 otherwise.
-MLIR_CAPI_EXPORTED int mlirValueIsABlockArgument(MlirValue value);
+MLIR_CAPI_EXPORTED bool mlirValueIsABlockArgument(MlirValue value);
 
 /// Returns 1 if the value is an operation result, 0 otherwise.
-MLIR_CAPI_EXPORTED int mlirValueIsAOpResult(MlirValue value);
+MLIR_CAPI_EXPORTED bool mlirValueIsAOpResult(MlirValue value);
 
 /** Returns the block in which this value is defined as an argument. Asserts if
  * the value is not a block argument. */
@@ -543,10 +552,10 @@ MLIR_CAPI_EXPORTED MlirType mlirTypeParseGet(MlirContext context,
 MLIR_CAPI_EXPORTED MlirContext mlirTypeGetContext(MlirType type);
 
 /// Checks whether a type is null.
-static inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
+static inline bool mlirTypeIsNull(MlirType type) { return !type.ptr; }
 
 /// Checks if two types are equal.
-MLIR_CAPI_EXPORTED int mlirTypeEqual(MlirType t1, MlirType t2);
+MLIR_CAPI_EXPORTED bool mlirTypeEqual(MlirType t1, MlirType t2);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -572,10 +581,10 @@ MLIR_CAPI_EXPORTED MlirContext mlirAttributeGetContext(MlirAttribute attribute);
 MLIR_CAPI_EXPORTED MlirType mlirAttributeGetType(MlirAttribute attribute);
 
 /// Checks whether an attribute is null.
-static inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+static inline bool mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
 /// Checks if two attributes are equal.
-MLIR_CAPI_EXPORTED int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
+MLIR_CAPI_EXPORTED bool mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
 
 /** Prints an attribute by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -600,8 +609,8 @@ MLIR_CAPI_EXPORTED MlirIdentifier mlirIdentifierGet(MlirContext context,
                                                     MlirStringRef str);
 
 /// Checks whether two identifiers are the same.
-MLIR_CAPI_EXPORTED int mlirIdentifierEqual(MlirIdentifier ident,
-                                           MlirIdentifier other);
+MLIR_CAPI_EXPORTED bool mlirIdentifierEqual(MlirIdentifier ident,
+                                            MlirIdentifier other);
 
 /// Gets the string value of the identifier.
 MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);

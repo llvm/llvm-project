@@ -8,6 +8,7 @@ add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(sys)
 add_subdirectory(threads)
+add_subdirectory(time)
 add_subdirectory(unistd)
 
 set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_integration_test.cpp)

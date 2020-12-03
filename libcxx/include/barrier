@@ -288,7 +288,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b(__count, std::move(__completion)) {
+        : __b(__count, _VSTD::move(__completion)) {
     }
 
     barrier(barrier const&) = delete;
@@ -302,7 +302,7 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __phase) const
     {
-        __b.wait(std::move(__phase));
+        __b.wait(_VSTD::move(__phase));
     }
 	_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait()

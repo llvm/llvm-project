@@ -79,6 +79,8 @@ def DoublePtr : PtrType<DoubleType>;
 
 def SigHandlerT : NamedType<"__sighandler_t">;
 
+def TimeTType : NamedType<"time_t">;
+
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 

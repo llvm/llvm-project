@@ -954,7 +954,7 @@ void mlir::getDependenceComponents(
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOps;
-  forOp.getOperation()->walk([&](Operation *op) {
+  forOp->walk([&](Operation *op) {
     if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
       loadAndStoreOps.push_back(op);
   });

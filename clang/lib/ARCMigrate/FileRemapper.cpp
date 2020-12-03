@@ -190,6 +190,21 @@ bool FileRemapper::overwriteOriginal(DiagnosticsEngine &Diag,
   return false;
 }
 
+void FileRemapper::forEachMapping(
+    llvm::function_ref<void(StringRef, StringRef)> CaptureFile,
+    llvm::function_ref<void(StringRef, const llvm::MemoryBufferRef &)>
+        CaptureBuffer) const {
+  for (auto &Mapping : FromToMappings) {
+    if (const FileEntry *FE = Mapping.second.dyn_cast<const FileEntry *>()) {
+      CaptureFile(Mapping.first->getName(), FE->getName());
+      continue;
+    }
+    CaptureBuffer(
+        Mapping.first->getName(),
+        Mapping.second.get<llvm::MemoryBuffer *>()->getMemBufferRef());
+  }
+}
+
 void FileRemapper::applyMappings(PreprocessorOptions &PPOpts) const {
   for (MappingsTy::const_iterator
          I = FromToMappings.begin(), E = FromToMappings.end(); I != E; ++I) {

@@ -1098,6 +1098,13 @@ public:
   /// either; the entire thing is pretty badly mangled.
   virtual bool hasProtectedVisibility() const { return true; }
 
+  /// Does this target aim for semantic compatibility with
+  /// Microsoft C++ code using dllimport/export attributes?
+  virtual bool shouldDLLImportComdatSymbols() const {
+    return getTriple().isWindowsMSVCEnvironment() ||
+           getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4CPU();
+  }
+
   /// An optional hook that targets can implement to perform semantic
   /// checking on attribute((section("foo"))) specifiers.
   ///

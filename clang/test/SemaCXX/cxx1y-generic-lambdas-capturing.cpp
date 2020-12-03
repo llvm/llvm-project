@@ -675,7 +675,7 @@ int foo()
         f(x, c);
         f(y, c);
         int i = x;
-        // This use will always be an error regardless of instantatiation
+        // This use will always be an error regardless of instantiation
         // so diagnose this early.
         const int &r = x; //expected-error{{variable}}
       };

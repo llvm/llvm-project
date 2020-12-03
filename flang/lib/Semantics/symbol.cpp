@@ -168,6 +168,10 @@ void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
+void GenericDetails::AddUse(const Symbol &use) {
+  CHECK(use.has<UseDetails>());
+  uses_.push_back(use);
+}
 
 const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
@@ -188,10 +192,7 @@ Symbol *GenericDetails::CheckSpecific() {
 void GenericDetails::CopyFrom(const GenericDetails &from) {
   CHECK(specificProcs_.size() == bindingNames_.size());
   CHECK(from.specificProcs_.size() == from.bindingNames_.size());
-  if (from.specific_) {
-    CHECK(!specific_ || specific_ == from.specific_);
-    specific_ = from.specific_;
-  }
+  kind_ = from.kind_;
   if (from.derivedType_) {
     CHECK(!derivedType_ || derivedType_ == from.derivedType_);
     derivedType_ = from.derivedType_;
@@ -257,8 +258,12 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
-              auto *derived{this->detailsIf<DerivedTypeDetails>()};
+              const auto *derived{detailsIf<DerivedTypeDetails>()};
               return derived && derived->isForwardReferenced();
+            },
+            [&](const UseDetails &x) {
+              const auto *use{detailsIf<UseDetails>()};
+              return use && use->symbol() == x.symbol();
             },
             [](const auto &) { return false; },
         },
@@ -375,6 +380,26 @@ llvm::raw_ostream &operator<<(
   return os;
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const GenericDetails &x) {
+  os << ' ' << x.kind().ToString();
+  DumpBool(os, "(specific)", x.specific() != nullptr);
+  DumpBool(os, "(derivedType)", x.derivedType() != nullptr);
+  if (const auto &uses{x.uses()}; !uses.empty()) {
+    os << " (uses:";
+    char sep{' '};
+    for (const Symbol &use : uses) {
+      const Symbol &ultimate{use.GetUltimate()};
+      os << sep << ultimate.name() << "->"
+         << ultimate.owner().GetName().value();
+      sep = ',';
+    }
+    os << ')';
+  }
+  os << " procs:";
+  DumpSymbolVector(os, x.specificProcs());
+  return os;
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   os << DetailsToString(details);
   std::visit( //
@@ -411,13 +436,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             }
           },
           [](const HostAssocDetails &) {},
-          [&](const GenericDetails &x) {
-            os << ' ' << x.kind().ToString();
-            DumpBool(os, "(specific)", x.specific() != nullptr);
-            DumpBool(os, "(derivedType)", x.derivedType() != nullptr);
-            os << " procs:";
-            DumpSymbolVector(os, x.specificProcs());
-          },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());

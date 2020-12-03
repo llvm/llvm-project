@@ -502,8 +502,38 @@ endif()
 set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
+  cpu_model.c
   aarch64/fp_mode.c
 )
+
+# Generate outline atomics helpers from lse.S base
+set(CUSTOM_FLAGS ${CMAKE_C_FLAGS})
+if(NOT ANDROID)
+  append_list_if(COMPILER_RT_HAS_VISIBILITY_HIDDEN_FLAG -DVISIBILITY_HIDDEN CUSTOM_FLAGS)
+endif()
+append_list_if(COMPILER_RT_HAS_ASM_LSE -DHAS_ASM_LSE CUSTOM_FLAGS)
+string(REPLACE " " "\t" CUSTOM_FLAGS "${CUSTOM_FLAGS}")
+
+foreach(pat cas swp ldadd ldclr ldeor ldset)
+  foreach(size 1 2 4 8 16)
+    foreach(model 1 2 3 4)
+      if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
+        set(helper_asm outline_atomic_${pat}${size}_${model}.S)
+        add_custom_command(
+          OUTPUT ${helper_asm}
+          COMMAND ${CMAKE_C_COMPILER} -E ${CUSTOM_FLAGS} -DL_${pat} -DSIZE=${size} -DMODEL=${model}
+                  ${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S -o ${helper_asm}
+          DEPENDS aarch64/lse.S assembly.h
+        )
+        set_source_files_properties(${helper_asm} PROPERTIES GENERATED TRUE)
+        set(aarch64_SOURCES
+          ${aarch64_SOURCES}
+          ${helper_asm}
+        )
+      endif()
+    endforeach(model)
+  endforeach(size)
+endforeach(pat)
 
 if (MINGW)
   set(aarch64_SOURCES

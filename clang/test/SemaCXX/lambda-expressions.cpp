@@ -521,6 +521,10 @@ void foo() {
       return undeclared_error; // expected-error {{use of undeclared identifier}}
     return 0;
   };
+  auto bar = []() {
+    return undef(); // expected-error {{use of undeclared identifier}}
+    return 0; // verify no init_conversion_failed diagnostic emitted.
+  };
 }
 }
 

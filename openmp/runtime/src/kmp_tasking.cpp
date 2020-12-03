@@ -275,7 +275,7 @@ static bool __kmp_task_is_allowed(int gtid, const kmp_int32 is_constrained,
   }
   // Check mutexinoutset dependencies, acquire locks
   kmp_depnode_t *node = tasknew->td_depnode;
-  if (node && (node->dn.mtx_num_locks > 0)) {
+  if (UNLIKELY(node && (node->dn.mtx_num_locks > 0))) {
     for (int i = 0; i < node->dn.mtx_num_locks; ++i) {
       KMP_DEBUG_ASSERT(node->dn.mtx_locks[i] != NULL);
       if (__kmp_test_lock(node->dn.mtx_locks[i], gtid))
@@ -332,7 +332,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   KA_TRACE(20,
            ("__kmp_push_task: T#%d trying to push task %p.\n", gtid, taskdata));
 
-  if (taskdata->td_flags.tiedness == TASK_UNTIED) {
+  if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
@@ -344,7 +344,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   }
 
   // The first check avoids building task_team thread data if serialized
-  if (taskdata->td_flags.task_serial) {
+  if (UNLIKELY(taskdata->td_flags.task_serial)) {
     KA_TRACE(20, ("__kmp_push_task: T#%d team serialized; returning "
                   "TASK_NOT_PUSHED for task %p\n",
                   gtid, taskdata));
@@ -354,7 +354,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   // Now that serialized tasks have returned, we can assume that we are not in
   // immediate exec mode
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
-  if (!KMP_TASKING_ENABLED(task_team)) {
+  if (UNLIKELY(!KMP_TASKING_ENABLED(task_team))) {
     __kmp_enable_tasking(task_team, thread);
   }
   KMP_DEBUG_ASSERT(TCR_4(task_team->tt.tt_found_tasks) == TRUE);
@@ -364,7 +364,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   thread_data = &task_team->tt.tt_threads_data[tid];
 
   // No lock needed since only owner can allocate
-  if (thread_data->td.td_deque == NULL) {
+  if (UNLIKELY(thread_data->td.td_deque == NULL)) {
     __kmp_alloc_task_deque(thread, thread_data);
   }
 
@@ -824,7 +824,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   }
 #endif /* BUILD_TIED_TASK_STACK */
 
-  if (taskdata->td_flags.tiedness == TASK_UNTIED) {
+  if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to check the counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = KMP_ATOMIC_DEC(&taskdata->td_untied_count) - 1;
@@ -846,17 +846,6 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
                     "resuming task %p\n",
                     gtid, taskdata, resumed_task));
       return;
-    }
-  }
-
-  // Check mutexinoutset dependencies, release locks
-  kmp_depnode_t *node = taskdata->td_depnode;
-  if (node && (node->dn.mtx_num_locks < 0)) {
-    // negative num_locks means all locks were acquired
-    node->dn.mtx_num_locks = -node->dn.mtx_num_locks;
-    for (int i = node->dn.mtx_num_locks - 1; i >= 0; --i) {
-      KMP_DEBUG_ASSERT(node->dn.mtx_locks[i] != NULL);
-      __kmp_release_lock(node->dn.mtx_locks[i], gtid);
     }
   }
 
@@ -931,7 +920,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
 #endif
 
     // Only need to keep track of count if team parallel and tasking not
-    // serialized, or task is detachable and event has already been fulfilled 
+    // serialized, or task is detachable and event has already been fulfilled
     if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser) ||
         taskdata->td_flags.detachable == TASK_DETACHABLE) {
       // Predecrement simulated by "- 1" calculation
@@ -1186,7 +1175,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   kmp_taskdata_t *parent_task = thread->th.th_current_task;
   size_t shareds_offset;
 
-  if (!TCR_4(__kmp_init_middle))
+  if (UNLIKELY(!TCR_4(__kmp_init_middle)))
     __kmp_middle_initialize();
 
   KA_TRACE(10, ("__kmp_task_alloc(enter): T#%d loc=%p, flags=(0x%x) "
@@ -1444,8 +1433,8 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       30, ("__kmp_invoke_task(enter): T#%d invoking task %p, current_task=%p\n",
            gtid, taskdata, current_task));
   KMP_DEBUG_ASSERT(task);
-  if (taskdata->td_flags.proxy == TASK_PROXY &&
-      taskdata->td_flags.complete == 1) {
+  if (UNLIKELY(taskdata->td_flags.proxy == TASK_PROXY &&
+               taskdata->td_flags.complete == 1)) {
     // This is a proxy task that was already completed but it needs to run
     // its bottom-half finish
     KA_TRACE(
@@ -1487,7 +1476,7 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
   // TODO: cancel tasks if the parallel region has also been cancelled
   // TODO: check if this sequence can be hoisted above __kmp_task_start
   // if cancellation has been enabled for this run ...
-  if (__kmp_omp_cancellation) {
+  if (UNLIKELY(__kmp_omp_cancellation)) {
     thread = __kmp_threads[gtid];
     kmp_team_t *this_team = thread->th.th_team;
     kmp_taskgroup_t *taskgroup = taskdata->td_taskgroup;
@@ -1866,7 +1855,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
 
 #if USE_ITT_BUILD
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -1876,9 +1865,10 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
     must_wait = must_wait || (thread->th.th_task_team != NULL &&
                               thread->th.th_task_team->tt.tt_found_proxy_tasks);
     if (must_wait) {
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
-                             &(taskdata->td_incomplete_child_tasks)),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *,
+                &(taskdata->td_incomplete_child_tasks)),
+          0U);
       while (KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
@@ -1886,7 +1876,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
       }
     }
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with children
 #endif /* USE_ITT_BUILD */
@@ -1972,7 +1962,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 
 #if USE_ITT_BUILD
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
     if (!taskdata->td_flags.team_serial) {
@@ -1984,7 +1974,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
             thread->th.ompt_thread_info.ompt_task_yielded = 1;
 #endif
           __kmp_execute_tasks_32(
-              thread, gtid, NULL, FALSE,
+              thread, gtid, (kmp_flag_32<> *)NULL, FALSE,
               &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
               __kmp_task_stealing_constraint);
 #if OMPT_SUPPORT
@@ -1995,7 +1985,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
       }
     }
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -2497,7 +2487,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     // For ITT the taskgroup wait is similar to taskwait until we need to
     // distinguish them
     void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
@@ -2512,8 +2502,8 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     if (!taskdata->td_flags.team_serial ||
         (thread->th.th_task_team != NULL &&
          thread->th.th_task_team->tt.tt_found_proxy_tasks)) {
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)), 0U);
       while (KMP_ATOMIC_LD_ACQ(&taskgroup->count) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
@@ -2531,7 +2521,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #endif
 
 #if USE_ITT_BUILD
-    if (itt_sync_obj != NULL)
+    if (UNLIKELY(itt_sync_obj != NULL))
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with descendants
 #endif /* USE_ITT_BUILD */
@@ -3021,8 +3011,9 @@ static inline int __kmp_execute_tasks_template(
   }
 }
 
+template <bool C, bool S>
 int __kmp_execute_tasks_32(
-    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32 *flag, int final_spin,
+    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32<C, S> *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
     kmp_int32 is_constrained) {
   return __kmp_execute_tasks_template(
@@ -3030,8 +3021,9 @@ int __kmp_execute_tasks_32(
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
 
+template <bool C, bool S>
 int __kmp_execute_tasks_64(
-    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_64 *flag, int final_spin,
+    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_64<C, S> *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
     kmp_int32 is_constrained) {
   return __kmp_execute_tasks_template(
@@ -3047,6 +3039,23 @@ int __kmp_execute_tasks_oncore(
       thread, gtid, flag, final_spin,
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
+
+template int
+__kmp_execute_tasks_32<false, false>(kmp_info_t *, kmp_int32,
+                                     kmp_flag_32<false, false> *, int,
+                                     int *USE_ITT_BUILD_ARG(void *), kmp_int32);
+
+template int __kmp_execute_tasks_64<false, true>(kmp_info_t *, kmp_int32,
+                                                 kmp_flag_64<false, true> *,
+                                                 int,
+                                                 int *USE_ITT_BUILD_ARG(void *),
+                                                 kmp_int32);
+
+template int __kmp_execute_tasks_64<true, false>(kmp_info_t *, kmp_int32,
+                                                 kmp_flag_64<true, false> *,
+                                                 int,
+                                                 int *USE_ITT_BUILD_ARG(void *),
+                                                 kmp_int32);
 
 // __kmp_enable_tasking: Allocate task team and resume threads sleeping at the
 // next barrier so they can assist in executing enqueued tasks.
@@ -3597,9 +3606,10 @@ void __kmp_task_team_wait(
       // Worker threads may have dropped through to release phase, but could
       // still be executing tasks. Wait here for tasks to complete. To avoid
       // memory contention, only master thread checks termination condition.
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
-                             &task_team->tt.tt_unfinished_threads),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *,
+                &task_team->tt.tt_unfinished_threads),
+          0U);
       flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     // Deactivate the old task team, so that the worker threads will stop
@@ -3621,7 +3631,7 @@ void __kmp_task_team_wait(
 }
 
 // __kmp_tasking_barrier:
-// This routine may only called when __kmp_tasking_mode == tskm_extra_barrier.
+// This routine is called only when __kmp_tasking_mode == tskm_extra_barrier.
 // Internal function to execute all tasks prior to a regular barrier or a join
 // barrier. It is a full barrier itself, which unfortunately turns regular
 // barriers into double barriers and join barriers into 1 1/2 barriers.
@@ -3635,7 +3645,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
 #if USE_ITT_BUILD
   KMP_FSYNC_SPIN_INIT(spin, NULL);
 #endif /* USE_ITT_BUILD */
-  kmp_flag_32 spin_flag(spin, 0U);
+  kmp_flag_32<false, false> spin_flag(spin, 0U);
   while (!spin_flag.execute_tasks(thread, gtid, TRUE,
                                   &flag USE_ITT_BUILD_ARG(NULL), 0)) {
 #if USE_ITT_BUILD

@@ -936,9 +936,9 @@ Status NativeRegisterContextLinux_arm64::ReadGPR() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGPRBuffer();
-  ioVec.iov_len = GetGPRSize();
+  ioVec.iov_len = GetGPRBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+  error = ReadRegisterSet(&ioVec, GetGPRBufferSize(), NT_PRSTATUS);
 
   if (error.Success())
     m_gpr_is_valid = true;
@@ -953,11 +953,11 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGPRBuffer();
-  ioVec.iov_len = GetGPRSize();
+  ioVec.iov_len = GetGPRBufferSize();
 
   m_gpr_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
+  return WriteRegisterSet(&ioVec, GetGPRBufferSize(), NT_PRSTATUS);
 }
 
 Status NativeRegisterContextLinux_arm64::ReadFPR() {
@@ -1123,6 +1123,16 @@ void *NativeRegisterContextLinux_arm64::GetSVEBuffer() {
     return m_sve_ptrace_payload.data() + SVE_PT_FPSIMD_OFFSET;
 
   return m_sve_ptrace_payload.data();
+}
+
+std::vector<uint32_t> NativeRegisterContextLinux_arm64::GetExpeditedRegisters(
+    ExpeditedRegs expType) const {
+  std::vector<uint32_t> expedited_reg_nums =
+      NativeRegisterContext::GetExpeditedRegisters(expType);
+  if (m_sve_state == SVEState::FPSIMD || m_sve_state == SVEState::Full)
+    expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSVEVG());
+
+  return expedited_reg_nums;
 }
 
 #endif // defined (__arm64__) || defined (__aarch64__)

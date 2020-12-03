@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
+#include "Config.h"
 #include "InputFiles.h"
 
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 
@@ -68,7 +72,14 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingCount;
   SmallVector<const char *, 256> vec(argv.data(), argv.data() + argv.size());
 
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
+  cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
   opt::InputArgList args = ParseArgs(vec, missingIndex, missingCount);
+
+  // Handle -fatal_warnings early since it converts missing argument warnings
+  // to errors.
+  errorHandler().fatalWarnings = args.hasArg(OPT_fatal_warnings);
 
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
@@ -90,6 +101,55 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   PrintHelp(lld::outs(), (std::string(argv0) + " [options] file...").c_str(),
             "LLVM Linker", showHidden);
   lld::outs() << "\n";
+}
+
+static std::string rewritePath(StringRef s) {
+  if (fs::exists(s))
+    return relativeToRoot(s);
+  return std::string(s);
+}
+
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
+std::string macho::createResponseFile(const opt::InputArgList &args) {
+  SmallString<0> data;
+  raw_svector_ostream os(data);
+
+  // Copy the command line to the output while rewriting paths.
+  for (auto *arg : args) {
+    switch (arg->getOption().getID()) {
+    case OPT_reproduce:
+      break;
+    case OPT_INPUT:
+      os << quote(rewritePath(arg->getValue())) << "\n";
+      break;
+    case OPT_o:
+      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
+      break;
+    case OPT_filelist:
+      if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
+        for (StringRef path : args::getLines(*buffer))
+          os << quote(rewritePath(path)) << "\n";
+      break;
+    case OPT_force_load:
+    case OPT_rpath:
+    case OPT_syslibroot:
+    case OPT_F:
+    case OPT_L:
+    case OPT_order_file:
+      os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))
+         << "\n";
+      break;
+    case OPT_sectcreate:
+      os << arg->getSpelling() << " " << quote(arg->getValue(0)) << " "
+         << quote(arg->getValue(1)) << " "
+         << quote(rewritePath(arg->getValue(2))) << "\n";
+      break;
+    default:
+      os << toString(*arg) << "\n";
+    }
+  }
+  return std::string(data.str());
 }
 
 Optional<std::string> macho::resolveDylibPath(StringRef path) {
@@ -115,4 +175,21 @@ Optional<DylibFile *> macho::makeDylibFromTAPI(MemoryBufferRef mbref,
     return {};
   }
   return make<DylibFile>(**result, umbrella);
+}
+
+uint32_t macho::getModTime(StringRef path) {
+  fs::file_status stat;
+  if (!fs::status(path, stat))
+    if (fs::exists(stat))
+      return toTimeT(stat.getLastModificationTime());
+
+  warn("failed to get modification time of " + path);
+  return 0;
+}
+
+void macho::printWhyLoad(StringRef reason, const InputFile *f) {
+  if (!config->printWhyLoad)
+    return;
+  lld::outs() << reason << " forced load of " << toString(f)
+              << '\n';
 }

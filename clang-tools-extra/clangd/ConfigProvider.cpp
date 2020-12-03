@@ -103,7 +103,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
            I != E; ++I) {
         // Avoid weird non-substring cases like phantom "." components.
         // In practice, Component is a substring for all "normal" ancestors.
-        if (I->end() < Parent.begin() && I->end() > Parent.end())
+        if (I->end() < Parent.begin() || I->end() > Parent.end())
           continue;
         Ancestors.emplace_back(Parent.begin(), I->end() - Parent.begin());
       }

@@ -963,8 +963,7 @@ public:
 
 private:
   // The root data is either a RootLeaf or a RootBranchData instance.
-  alignas(RootLeaf) alignas(RootBranchData)
-      AlignedCharArrayUnion<RootLeaf, RootBranchData> data;
+  AlignedCharArrayUnion<RootLeaf, RootBranchData> data;
 
   // Tree height.
   // 0: Leaves in root.

@@ -2708,12 +2708,12 @@ clamp(const _Tp& __v, const _Tp& __lo, const _Tp& __hi)
 
 template <class _ForwardIterator, class _Compare>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX11
-std::pair<_ForwardIterator, _ForwardIterator>
+pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
   static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
         "std::minmax_element requires a ForwardIterator");
-  std::pair<_ForwardIterator, _ForwardIterator> __result(__first, __first);
+  pair<_ForwardIterator, _ForwardIterator> __result(__first, __first);
   if (__first != __last)
   {
       if (++__first != __last)
@@ -2759,7 +2759,7 @@ minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __com
 template <class _ForwardIterator>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-std::pair<_ForwardIterator, _ForwardIterator>
+pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last)
 {
     return _VSTD::minmax_element(__first, __last,
@@ -2798,7 +2798,7 @@ minmax(initializer_list<_Tp> __t, _Compare __comp)
     typedef typename initializer_list<_Tp>::const_iterator _Iter;
     _Iter __first = __t.begin();
     _Iter __last  = __t.end();
-    std::pair<_Tp, _Tp> __result(*__first, *__first);
+    pair<_Tp, _Tp> __result(*__first, *__first);
 
     ++__first;
     if (__t.size() % 2 == 0)
@@ -3074,7 +3074,7 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
     if (_Rp == 0)
         return static_cast<result_type>(_Eng(__g, _Dt)());
     size_t __w = _Dt - __libcpp_clz(_Rp) - 1;
-    if ((_Rp & (std::numeric_limits<_UIntType>::max() >> (_Dt - __w))) != 0)
+    if ((_Rp & (numeric_limits<_UIntType>::max() >> (_Dt - __w))) != 0)
         ++__w;
     _Eng __e(__g, __w);
     _UIntType __u;

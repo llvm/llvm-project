@@ -184,6 +184,8 @@ public:
 
   virtual bool isParsingMasm() const { return false; }
 
+  virtual bool defineMacro(StringRef Name, StringRef Value) { return true; }
+
   virtual bool lookUpField(StringRef Name, AsmFieldInfo &Info) const {
     return true;
   }

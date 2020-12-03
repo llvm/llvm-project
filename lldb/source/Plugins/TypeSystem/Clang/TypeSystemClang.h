@@ -332,10 +332,11 @@ public:
   class TemplateParameterInfos {
   public:
     bool IsValid() const {
-      if (args.empty())
+      // Having a pack name but no packed args doesn't make sense, so mark
+      // these template parameters as invalid.
+      if (pack_name && !packed_args)
         return false;
       return args.size() == names.size() &&
-        ((bool)pack_name == (bool)packed_args) &&
         (!packed_args || !packed_args->packed_args);
     }
 

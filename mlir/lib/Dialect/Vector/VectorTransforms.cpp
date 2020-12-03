@@ -2162,7 +2162,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // Don't split transfer operations directly under IfOp, this avoids applying
   // the pattern recursively.
   // TODO: improve the filtering condition to make it more applicable.
-  if (isa<scf::IfOp>(xferOp.getOperation()->getParentOp()))
+  if (isa<scf::IfOp>(xferOp->getParentOp()))
     return failure();
   return success();
 }

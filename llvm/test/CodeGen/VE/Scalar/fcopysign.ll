@@ -67,20 +67,21 @@ declare double @llvm.copysign.f64(double, double)
 define fp128 @copysign_quad_var(fp128 %0, fp128 %1) {
 ; CHECK-LABEL: copysign_quad_var:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s3, 192(, %s11)
-; CHECK-NEXT:    st %s2, 200(, %s11)
-; CHECK-NEXT:    st %s1, 176(, %s11)
-; CHECK-NEXT:    st %s0, 184(, %s11)
-; CHECK-NEXT:    ld1b.zx %s0, 207(, %s11)
-; CHECK-NEXT:    ld1b.zx %s1, 191(, %s11)
+; CHECK-NEXT:    st %s3, 16(, %s11)
+; CHECK-NEXT:    st %s2, 24(, %s11)
+; CHECK-NEXT:    st %s1, (, %s11)
+; CHECK-NEXT:    st %s0, 8(, %s11)
+; CHECK-NEXT:    ld1b.zx %s0, 31(, %s11)
+; CHECK-NEXT:    ld1b.zx %s1, 15(, %s11)
 ; CHECK-NEXT:    lea %s2, 128
 ; CHECK-NEXT:    and %s0, %s0, %s2
 ; CHECK-NEXT:    and %s1, %s1, (57)0
 ; CHECK-NEXT:    or %s0, %s1, %s0
-; CHECK-NEXT:    st1b %s0, 191(, %s11)
-; CHECK-NEXT:    ld %s1, 176(, %s11)
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    st1b %s0, 15(, %s11)
+; CHECK-NEXT:    ld %s1, (, %s11)
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = tail call fast fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
   ret fp128 %3
 }
@@ -121,20 +122,21 @@ define fp128 @copysign_quad_zero(fp128 %0) {
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s2)
 ; CHECK-NEXT:    ld %s4, 8(, %s2)
 ; CHECK-NEXT:    ld %s5, (, %s2)
-; CHECK-NEXT:    st %s1, 192(, %s11)
-; CHECK-NEXT:    st %s0, 200(, %s11)
-; CHECK-NEXT:    st %s5, 176(, %s11)
-; CHECK-NEXT:    st %s4, 184(, %s11)
-; CHECK-NEXT:    ld1b.zx %s0, 207(, %s11)
-; CHECK-NEXT:    ld1b.zx %s1, 191(, %s11)
+; CHECK-NEXT:    st %s1, 16(, %s11)
+; CHECK-NEXT:    st %s0, 24(, %s11)
+; CHECK-NEXT:    st %s5, (, %s11)
+; CHECK-NEXT:    st %s4, 8(, %s11)
+; CHECK-NEXT:    ld1b.zx %s0, 31(, %s11)
+; CHECK-NEXT:    ld1b.zx %s1, 15(, %s11)
 ; CHECK-NEXT:    lea %s2, 128
 ; CHECK-NEXT:    and %s0, %s0, %s2
 ; CHECK-NEXT:    and %s1, %s1, (57)0
 ; CHECK-NEXT:    or %s0, %s1, %s0
-; CHECK-NEXT:    st1b %s0, 191(, %s11)
-; CHECK-NEXT:    ld %s1, 176(, %s11)
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    st1b %s0, 15(, %s11)
+; CHECK-NEXT:    ld %s1, (, %s11)
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call fast fp128 @llvm.copysign.f128(fp128 0xL00000000000000000000000000000000, fp128 %0)
   ret fp128 %2
 }
@@ -176,20 +178,21 @@ define fp128 @copysign_quad_const(fp128 %0) {
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s2)
 ; CHECK-NEXT:    ld %s4, 8(, %s2)
 ; CHECK-NEXT:    ld %s5, (, %s2)
-; CHECK-NEXT:    st %s1, 192(, %s11)
-; CHECK-NEXT:    st %s0, 200(, %s11)
-; CHECK-NEXT:    st %s5, 176(, %s11)
-; CHECK-NEXT:    st %s4, 184(, %s11)
-; CHECK-NEXT:    ld1b.zx %s0, 207(, %s11)
-; CHECK-NEXT:    ld1b.zx %s1, 191(, %s11)
+; CHECK-NEXT:    st %s1, 16(, %s11)
+; CHECK-NEXT:    st %s0, 24(, %s11)
+; CHECK-NEXT:    st %s5, (, %s11)
+; CHECK-NEXT:    st %s4, 8(, %s11)
+; CHECK-NEXT:    ld1b.zx %s0, 31(, %s11)
+; CHECK-NEXT:    ld1b.zx %s1, 15(, %s11)
 ; CHECK-NEXT:    lea %s2, 128
 ; CHECK-NEXT:    and %s0, %s0, %s2
 ; CHECK-NEXT:    and %s1, %s1, (57)0
 ; CHECK-NEXT:    or %s0, %s1, %s0
-; CHECK-NEXT:    st1b %s0, 191(, %s11)
-; CHECK-NEXT:    ld %s1, 176(, %s11)
-; CHECK-NEXT:    ld %s0, 184(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    st1b %s0, 15(, %s11)
+; CHECK-NEXT:    ld %s1, (, %s11)
+; CHECK-NEXT:    ld %s0, 8(, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call fast fp128 @llvm.copysign.f128(fp128 0xL0000000000000000C000000000000000, fp128 %0)
   ret fp128 %2
 }

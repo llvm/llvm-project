@@ -160,7 +160,7 @@ public:
       decl = rhs.decl;
     }
 
-    bool Valid() { return (ctx != nullptr || decl != nullptr); }
+    bool Valid() const { return (ctx != nullptr || decl != nullptr); }
 
     clang::ASTContext *ctx;
     clang::Decl *decl;

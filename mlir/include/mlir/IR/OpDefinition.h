@@ -102,6 +102,9 @@ public:
   /// This implicitly converts to Operation*.
   operator Operation *() const { return state; }
 
+  /// Shortcut of `->` to access a member of Operation.
+  Operation *operator->() const { return state; }
+
   /// Return the operation that this refers to.
   Operation *getOperation() { return state; }
 

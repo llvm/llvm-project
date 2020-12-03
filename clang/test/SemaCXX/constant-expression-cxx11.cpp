@@ -1807,11 +1807,10 @@ namespace PR15884 {
 }
 
 namespace AfterError {
-  // FIXME: Suppress the 'no return statements' diagnostic if the body is invalid.
-  constexpr int error() { // expected-error {{no return statement}}
+  constexpr int error() {
     return foobar; // expected-error {{undeclared identifier}}
   }
-  constexpr int k = error();
+  constexpr int k = error(); // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
 }
 
 namespace std {

@@ -52,3 +52,23 @@ end:
   %counter.lcssa = phi i32 [ %x, %entry ]
   ret i32 %counter.lcssa
 }
+
+define i32 @poison(i1 %cond, i32 %v) {
+; CHECK-LABEL: @poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i32 [[V:%.*]]
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %w = phi i32 [%v, %A], [poison, %B]
+  ret i32 %w
+}

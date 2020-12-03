@@ -47,6 +47,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strlen
+    libc.src.string.strncpy
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
@@ -66,6 +67,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
+
+    # time.h entrypoints
+    libc.src.time.mktime
 
     # unistd.h entrypoints
     libc.src.unistd.write

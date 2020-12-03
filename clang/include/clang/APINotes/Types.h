@@ -105,7 +105,7 @@ public:
     return *this;
   }
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const CommonEntityInfo &LHS,
@@ -176,7 +176,7 @@ public:
     return *this;
   }
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
@@ -338,7 +338,7 @@ public:
     return *this;
   }
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const VariableInfo &LHS, const VariableInfo &RHS) {
@@ -394,7 +394,7 @@ public:
     return *this;
   }
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const ObjCPropertyInfo &LHS,
@@ -464,7 +464,7 @@ public:
 
   friend bool operator==(const ParamInfo &, const ParamInfo &);
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const ParamInfo &LHS, const ParamInfo &RHS) {
@@ -582,7 +582,7 @@ private:
   }
 
 public:
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
@@ -717,7 +717,7 @@ public:
 
   friend bool operator==(const TypedefInfo &, const TypedefInfo &);
 
-  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
 };
 
 inline bool operator==(const TypedefInfo &LHS, const TypedefInfo &RHS) {

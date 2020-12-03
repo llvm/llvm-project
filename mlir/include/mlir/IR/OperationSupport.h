@@ -349,7 +349,7 @@ public:
   void *getAsOpaquePointer() const {
     return static_cast<void *>(representation.getOpaqueValue());
   }
-  static OperationName getFromOpaquePointer(void *pointer);
+  static OperationName getFromOpaquePointer(const void *pointer);
 
 private:
   RepresentationUnion representation;

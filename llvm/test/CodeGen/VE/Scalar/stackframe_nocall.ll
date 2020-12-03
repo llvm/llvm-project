@@ -29,12 +29,7 @@ define i8* @test_frame0(i8* nocapture readnone %0, i8* readnone returned %1) {
 define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; CHECK-LABEL: test_frame32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    st %s9, (, %s11)
-; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
-; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s11, -208(, %s11)
+; CHECK-NEXT:    adds.l %s11, -32, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -47,23 +42,14 @@ define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
-; CHECK-NEXT:    lea %s0, 176(, %s11)
-; CHECK-NEXT:    st1b %s1, 176(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
-; CHECK-NEXT:    ld %s10, 8(, %s11)
-; CHECK-NEXT:    ld %s9, (, %s11)
+; CHECK-NEXT:    lea %s0, (, %s11)
+; CHECK-NEXT:    st1b %s1, (, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; PIC-LABEL: test_frame32:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
-; PIC-NEXT:    st %s15, 24(, %s11)
-; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -208(, %s11)
+; PIC-NEXT:    adds.l %s11, -32, %s11
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -76,13 +62,9 @@ define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; PIC-NEXT:    or %s0, 0, %s62
 ; PIC-NEXT:  .LBB1_2:
 ; PIC-NEXT:    ld1b.zx %s1, (, %s0)
-; PIC-NEXT:    lea %s0, 176(, %s11)
-; PIC-NEXT:    st1b %s1, 176(, %s11)
-; PIC-NEXT:    or %s11, 0, %s9
-; PIC-NEXT:    ld %s16, 32(, %s11)
-; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
+; PIC-NEXT:    lea %s0, (, %s11)
+; PIC-NEXT:    st1b %s1, (, %s11)
+; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
   %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
@@ -105,8 +87,6 @@ define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    st %s17, 40(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
@@ -139,8 +119,6 @@ define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly 
 ; CHECK-NEXT:    st1b %s1, (, %s2)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s17, 40(, %s11)
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -217,23 +195,8 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ;
 ; PIC-LABEL: test_frame0_var:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -176(, %s11)
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB3_2
-; PIC-NEXT:  # %bb.1:
-; PIC-NEXT:    ld %s61, 24(, %s14)
-; PIC-NEXT:    or %s62, 0, %s0
-; PIC-NEXT:    lea %s63, 315
-; PIC-NEXT:    shm.l %s63, (%s61)
-; PIC-NEXT:    shm.l %s8, 8(%s61)
-; PIC-NEXT:    shm.l %s11, 16(%s61)
-; PIC-NEXT:    monc
-; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB3_2:
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
@@ -244,11 +207,8 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ; PIC-NEXT:    ld %s1, (%s1, %s15)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s1)
 ; PIC-NEXT:    st1b %s1, (, %s0)
-; PIC-NEXT:    or %s11, 0, %s9
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %3 = load i8, i8* @data, align 1
   store i8 %3, i8* %0, align 1
@@ -259,12 +219,7 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; CHECK-LABEL: test_frame32_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    st %s9, (, %s11)
-; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
-; CHECK-NEXT:    or %s9, 0, %s11
-; CHECK-NEXT:    lea %s11, -208(, %s11)
+; CHECK-NEXT:    adds.l %s11, -32, %s11
 ; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
@@ -280,23 +235,16 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, data@hi(, %s0)
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
-; CHECK-NEXT:    lea %s0, 176(, %s11)
-; CHECK-NEXT:    st1b %s1, 176(, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
-; CHECK-NEXT:    ld %s10, 8(, %s11)
-; CHECK-NEXT:    ld %s9, (, %s11)
+; CHECK-NEXT:    lea %s0, (, %s11)
+; CHECK-NEXT:    st1b %s1, (, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; PIC-LABEL: test_frame32_var:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    st %s9, (, %s11)
-; PIC-NEXT:    st %s10, 8(, %s11)
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    or %s9, 0, %s11
-; PIC-NEXT:    lea %s11, -208(, %s11)
+; PIC-NEXT:    adds.l %s11, -32, %s11
 ; PIC-NEXT:    brge.l.t %s11, %s8, .LBB4_2
 ; PIC-NEXT:  # %bb.1:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
@@ -317,13 +265,11 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; PIC-NEXT:    lea.sl %s0, data@got_hi(, %s0)
 ; PIC-NEXT:    ld %s0, (%s0, %s15)
 ; PIC-NEXT:    ld1b.zx %s1, (, %s0)
-; PIC-NEXT:    lea %s0, 176(, %s11)
-; PIC-NEXT:    st1b %s1, 176(, %s11)
-; PIC-NEXT:    or %s11, 0, %s9
+; PIC-NEXT:    lea %s0, (, %s11)
+; PIC-NEXT:    st1b %s1, (, %s11)
+; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
-; PIC-NEXT:    ld %s10, 8(, %s11)
-; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
   %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
@@ -340,8 +286,6 @@ define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture reado
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
 ; CHECK-NEXT:    st %s10, 8(, %s11)
-; CHECK-NEXT:    st %s15, 24(, %s11)
-; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    st %s17, 40(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
@@ -374,8 +318,6 @@ define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture reado
 ; CHECK-NEXT:    st1b %s1, (, %s2)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s17, 40(, %s11)
-; CHECK-NEXT:    ld %s16, 32(, %s11)
-; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)

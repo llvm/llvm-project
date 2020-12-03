@@ -26,7 +26,6 @@ define i8 @test_i8(i8 %new) {
 ; CHECK-PIC: ldr x[[VAR_ADDR:[0-9]+]], [x[[HIREG]], :got_lo12:var8]
 ; CHECK-PIC: ldrb {{w[0-9]+}}, [x[[VAR_ADDR]]]
 
-; CHECK-FAST-LABEL: test_i8:
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var8
 ; CHECK-FAST: ldrb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
 
@@ -44,7 +43,6 @@ define i16 @test_i16(i16 %new) {
 ; CHECK: ldrh {{w[0-9]+}}, [x[[HIREG]], :lo12:var16]
 ; CHECK: strh {{w[0-9]+}}, [x[[HIREG]], :lo12:var16]
 
-; CHECK-FAST-LABEL: test_i16:
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var16
 ; CHECK-FAST: ldrh {{w[0-9]+}}, [x[[HIREG]], :lo12:var16]
 }
@@ -58,7 +56,6 @@ define i32 @test_i32(i32 %new) {
 ; CHECK: ldr {{w[0-9]+}}, [x[[HIREG]], :lo12:var32]
 ; CHECK: str {{w[0-9]+}}, [x[[HIREG]], :lo12:var32]
 
-; CHECK-FAST-LABEL: test_i32:
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var32
 ; CHECK-FAST: add {{x[0-9]+}}, x[[HIREG]], :lo12:var32
 }
@@ -72,7 +69,6 @@ define i64 @test_i64(i64 %new) {
 ; CHECK: ldr {{x[0-9]+}}, [x[[HIREG]], :lo12:var64]
 ; CHECK: str {{x[0-9]+}}, [x[[HIREG]], :lo12:var64]
 
-; CHECK-FAST-LABEL: test_i64:
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var64
 ; CHECK-FAST: add {{x[0-9]+}}, x[[HIREG]], :lo12:var64
 }
@@ -83,7 +79,6 @@ define i64* @test_addr() {
 ; CHECK: adrp [[HIREG:x[0-9]+]], var64
 ; CHECK: add x0, [[HIREG]], :lo12:var64
 
-; CHECK-FAST-LABEL: test_addr:
 ; CHECK-FAST: adrp [[HIREG:x[0-9]+]], var64
 ; CHECK-FAST: add x0, [[HIREG]], :lo12:var64
 }

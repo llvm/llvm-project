@@ -110,9 +110,7 @@ BT::BitMask HexagonEvaluator::mask(Register Reg, unsigned Sub) const {
   llvm_unreachable("Unexpected register/subregister");
 }
 
-uint16_t HexagonEvaluator::getPhysRegBitWidth(Register Reg) const {
-  assert(Reg.isPhysical());
-
+uint16_t HexagonEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
   using namespace Hexagon;
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
   if (HST.useHVXOps()) {

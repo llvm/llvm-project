@@ -17,6 +17,13 @@ define arm_aapcs_vfpcc <4 x float> @arm_max_no_idx_f32_mve(float* %pSrc, i32 %bl
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
 ; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
 entry:
   br label %do.body
 
