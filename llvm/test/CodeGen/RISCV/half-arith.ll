@@ -302,6 +302,30 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
+define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fnmadd_s_2:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmv.h.x ft0, zero
+; RV32IZFH-NEXT:    fadd.h ft1, fa1, ft0
+; RV32IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV32IZFH-NEXT:    fnmadd.h fa0, ft1, fa0, ft0
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fnmadd_s_2:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmv.h.x ft0, zero
+; RV64IZFH-NEXT:    fadd.h ft1, fa1, ft0
+; RV64IZFH-NEXT:    fadd.h ft0, fa2, ft0
+; RV64IZFH-NEXT:    fnmadd.h fa0, ft1, fa0, ft0
+; RV64IZFH-NEXT:    ret
+  %b_ = fadd half 0.0, %b
+  %c_ = fadd half 0.0, %c
+  %negb = fsub half -0.0, %b_
+  %negc = fsub half -0.0, %c_
+  %1 = call half @llvm.fma.f16(half %a, half %negb, half %negc)
+  ret half %1
+}
+
 define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32IZFH-LABEL: fnmsub_s:
 ; RV32IZFH:       # %bb.0:
@@ -319,6 +343,26 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
   %a_ = fadd half 0.0, %a
   %nega = fsub half -0.0, %a_
   %1 = call half @llvm.fma.f16(half %nega, half %b, half %c)
+  ret half %1
+}
+
+define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fnmsub_s_2:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fmv.h.x ft0, zero
+; RV32IZFH-NEXT:    fadd.h ft0, fa1, ft0
+; RV32IZFH-NEXT:    fnmsub.h fa0, ft0, fa0, fa2
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fnmsub_s_2:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fmv.h.x ft0, zero
+; RV64IZFH-NEXT:    fadd.h ft0, fa1, ft0
+; RV64IZFH-NEXT:    fnmsub.h fa0, ft0, fa0, fa2
+; RV64IZFH-NEXT:    ret
+  %b_ = fadd half 0.0, %b
+  %negb = fsub half -0.0, %b_
+  %1 = call half @llvm.fma.f16(half %a, half %negb, half %c)
   ret half %1
 }
 
