@@ -255,7 +255,7 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   // We found some types in dependent base classes.  Recover as if the user
   // wrote 'typename MyClass::II' instead of 'II'.  We'll fully resolve the
   // lookup during template instantiation.
-  S.Diag(NameLoc, diag::ext_found_via_dependent_bases_lookup) << &II;
+  S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
   auto *NNS = NestedNameSpecifier::Create(Context, nullptr, false,
