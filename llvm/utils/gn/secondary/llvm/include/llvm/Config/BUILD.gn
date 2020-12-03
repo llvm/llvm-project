@@ -89,6 +89,7 @@ write_cmake_config("config") {
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_SIGNAL_H=1",
+    "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
