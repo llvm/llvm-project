@@ -849,6 +849,11 @@ public:
   /// Source range covering the explicit template parameter list (if it exists).
   SourceRange ExplicitTemplateParamsRange;
 
+  /// The requires-clause immediately following the explicit template parameter
+  /// list, if any. (Note that there may be another requires-clause included as
+  /// part of the lambda-declarator.)
+  ExprResult RequiresClause;
+
   /// If this is a generic lambda, and the template parameter
   /// list has been created (from the TemplateParams) then store
   /// a reference to it (cache it to avoid reconstructing it).

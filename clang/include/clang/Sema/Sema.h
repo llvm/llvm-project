@@ -6551,7 +6551,8 @@ public:
   /// on a lambda (if it exists) in C++2a.
   void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
                                                 ArrayRef<NamedDecl *> TParams,
-                                                SourceLocation RAngleLoc);
+                                                SourceLocation RAngleLoc,
+                                                ExprResult RequiresClause);
 
   /// Introduce the lambda parameters into scope.
   void addLambdaParameters(
