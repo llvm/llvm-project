@@ -573,10 +573,10 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
   if (SubArchName == "powerpcspe")
     return Triple::PPCSubArch_spe;
 
-  StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
-
   if (SubArchName == "arm64e")
-    return Triple::AArch64SubArch_E;
+    return Triple::AArch64SubArch_arm64e;
+
+  StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
   // For now, this is the small part. Early return.
   if (ARMSubArch.empty())
@@ -1651,6 +1651,9 @@ VersionTuple Triple::getMinimumSupportedOSVersion() const {
     // ARM64 slice is supported starting from Mac Catalyst 14 (macOS 11).
     // ARM64 simulators are supported for iOS 14+.
     if (isMacCatalystEnvironment() || isSimulatorEnvironment())
+      return VersionTuple(14, 0, 0);
+    // ARM64e slice is supported starting from iOS 14.
+    if (isArm64e())
       return VersionTuple(14, 0, 0);
     break;
   case Triple::TvOS:

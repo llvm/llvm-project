@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Darwin.h"
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -74,9 +75,6 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
-  // Preserve the original string for those -arch options that aren't
-  // reflected in ArchKind but still affect code generation.  It's not
-  // clear why these aren't just reflected in ArchKind, though.
   if (Str == "x86_64h" || Str == "arm64e")
     T.setArchName(Str);
 
@@ -909,7 +907,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
     return "arm64_32";
 
   case llvm::Triple::aarch64: {
-    if (getTriple().getArchName() == "arm64e")
+    if (getTriple().isArm64e())
       return "arm64e";
     return "arm64";
   }
@@ -1052,6 +1050,9 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
   if (isTargetMacOSBased() && getArch() == llvm::Triple::x86)
     return;
   if (isTargetAppleSiliconMac())
+    return;
+  // ARC runtime is supported everywhere on arm64e.
+  if (getTriple().isArm64e())
     return;
 
   ObjCRuntime runtime = getDefaultObjCRuntime(/*nonfragile*/ true);

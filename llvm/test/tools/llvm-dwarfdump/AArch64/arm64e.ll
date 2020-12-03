@@ -1,6 +1,6 @@
 ; RUN: llc -O0 %s -filetype=obj -o - \
 ; RUN:   | llvm-dwarfdump -arch arm64e - | FileCheck %s
-; CHECK: file format Mach-O arm64e
+; CHECK: file format Mach-O arm64
 
 source_filename = "/tmp/empty.c"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
