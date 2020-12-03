@@ -127,12 +127,15 @@ private:
       return !operator==(Other);
     }
 
-    void dump() const { print(dbgs()); }
+    void dump() const {
+      print(dbgs());
+      dbgs() << "\n";
+    }
     void print(raw_ostream &OS) const {
       OS << "(V=" << V->getName()
 	 << ", zextbits=" << ZExtBits
 	 << ", sextbits=" << SExtBits
-	 << ", scale=" << Scale << ")\n";
+	 << ", scale=" << Scale << ")";
     }
   };
 
@@ -148,7 +151,10 @@ private:
     // Is GEP index scale compile-time constant.
     bool HasCompileTimeConstantScale;
 
-    void dump() const { print(dbgs()); }
+    void dump() const {
+      print(dbgs());
+      dbgs() << "\n";
+    }
     void print(raw_ostream &OS) const {
       OS << "(DecomposedGEP Base=" << Base->getName()
 	 << ", Offset=" << Offset
@@ -159,7 +165,7 @@ private:
        VarIndices[i].print(OS);
       }
       OS << "], HasCompileTimeConstantScale=" << HasCompileTimeConstantScale
-	 << ")\n";
+	 << ")";
     }
   };
 
