@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -mfloat-abi hard -triple armv7-unknown-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM32
 // RUN: %clang_cc1 -mfloat-abi hard -triple aarch64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM64
 // RUN: %clang_cc1 -mfloat-abi hard -triple x86_64-unknown-windows-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -mfloat-abi hard -triple aarch64-unknown-windows-msvc -emit-llvm -o - %s | FileCheck %s --check-prefix=WOA64
 
 #if defined(__x86_64__)
 #define CC __attribute__((vectorcall))
@@ -104,3 +105,71 @@ struct HVAWithEmptyBitField : Float1, Float2 {
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z19with_empty_bitfield20HVAWithEmptyBitField(%struct.HVAWithEmptyBitField %a.coerce)
 // X64: define dso_local x86_vectorcallcc void @"\01_Z19with_empty_bitfield20HVAWithEmptyBitField@@16"(%struct.HVAWithEmptyBitField inreg %a.coerce)
 void CC with_empty_bitfield(HVAWithEmptyBitField a) {}
+
+namespace pr47611 {
+// MSVC on Arm includes "isCXX14Aggregate" as part of its definition of
+// Homogeneous Floating-point Aggregate (HFA). Additionally, it has a different
+// handling of C++14 aggregates, which can lead to confusion.
+
+// Pod is a trivial HFA.
+struct Pod {
+  double b[2];
+};
+// Not an aggregate according to C++14 spec => not HFA according to MSVC.
+struct NotCXX14Aggregate {
+  NotCXX14Aggregate();
+  Pod p;
+};
+// NotPod is a C++14 aggregate. But not HFA, because it contains
+// NotCXX14Aggregate (which itself is not HFA because it's not a C++14
+// aggregate).
+struct NotPod {
+  NotCXX14Aggregate x;
+};
+struct Empty {};
+// A class with a base is returned using the sret calling convetion by MSVC.
+struct HasEmptyBase : public Empty {
+  double b[2];
+};
+struct HasPodBase : public Pod {};
+// WOA64-LABEL: define dso_local %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* %x)
+Pod copy(Pod *x) { return *x; } // MSVC: ldp d0,d1,[x0], Clang: ldp d0,d1,[x0]
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg noalias sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, %"struct.pr47611::NotCXX14Aggregate"* %x)
+NotCXX14Aggregate copy(NotCXX14Aggregate *x) { return *x; } // MSVC: stp x8,x9,[x0], Clang: str q0,[x0]
+// WOA64-LABEL: define dso_local [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* %x)
+NotPod copy(NotPod *x) { return *x; }
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg noalias sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, %"struct.pr47611::HasEmptyBase"* %x)
+HasEmptyBase copy(HasEmptyBase *x) { return *x; }
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg noalias sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, %"struct.pr47611::HasPodBase"* %x)
+HasPodBase copy(HasPodBase *x) { return *x; }
+
+void call_copy_pod(Pod *pod) {
+  *pod = copy(pod);
+  // WOA64-LABEL: define dso_local void @"?call_copy_pod@pr47611@@YAXPEAUPod@1@@Z"
+  // WOA64: %{{.*}} = call %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* %{{.*}})
+}
+
+void call_copy_notcxx14aggregate(NotCXX14Aggregate *notcxx14aggregate) {
+  *notcxx14aggregate = copy(notcxx14aggregate);
+  // WOA64-LABEL: define dso_local void @"?call_copy_notcxx14aggregate@pr47611@@YAXPEAUNotCXX14Aggregate@1@@Z"
+  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, %"struct.pr47611::NotCXX14Aggregate"* %{{.*}})
+}
+
+void call_copy_notpod(NotPod *notPod) {
+  *notPod = copy(notPod);
+  // WOA64-LABEL: define dso_local void @"?call_copy_notpod@pr47611@@YAXPEAUNotPod@1@@Z"
+  // WOA64: %{{.*}} = call [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* %{{.*}})
+}
+
+void call_copy_hasemptybase(HasEmptyBase *hasEmptyBase) {
+  *hasEmptyBase = copy(hasEmptyBase);
+  // WOA64-LABEL: define dso_local void @"?call_copy_hasemptybase@pr47611@@YAXPEAUHasEmptyBase@1@@Z"
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, %"struct.pr47611::HasEmptyBase"* %{{.*}})
+}
+
+void call_copy_haspodbase(HasPodBase *hasPodBase) {
+  *hasPodBase = copy(hasPodBase);
+  // WOA64-LABEL: define dso_local void @"?call_copy_haspodbase@pr47611@@YAXPEAUHasPodBase@1@@Z"
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, %"struct.pr47611::HasPodBase"* %{{.*}})
+}
+}; // namespace pr47611
