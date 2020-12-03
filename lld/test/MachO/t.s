@@ -12,7 +12,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
 
-# RUN: %lld %t/main.o %t/baz.o %t/bar.a %t/libfoo.dylib -lSystem -o /dev/null -t | FileCheck -DPATH='%:t' %s
+# RUN: %lld %t/main.o %t/baz.o %t/bar.a %t/libfoo.dylib -lSystem -o /dev/null -t | FileCheck -DPATH='%t' %s
 
 # CHECK-DAG: bar.a(bar.o)
 # CHECK-DAG: [[PATH]]/main.o
