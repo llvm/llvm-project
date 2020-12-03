@@ -65,26 +65,22 @@ declare half @llvm.fmuladd.f16(half, half, half)
 define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
 ; RV32IZFH-LABEL: fmuladd_f16:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    fmul.h ft0, fa0, fa1
-; RV32IZFH-NEXT:    fadd.h fa0, ft0, fa2
+; RV32IZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fmuladd_f16:
 ; RV32IDZFH:       # %bb.0:
-; RV32IDZFH-NEXT:    fmul.h ft0, fa0, fa1
-; RV32IDZFH-NEXT:    fadd.h fa0, ft0, fa2
+; RV32IDZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fmuladd_f16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fmul.h ft0, fa0, fa1
-; RV64IZFH-NEXT:    fadd.h fa0, ft0, fa2
+; RV64IZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fmuladd_f16:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    fmul.h ft0, fa0, fa1
-; RV64IDZFH-NEXT:    fadd.h fa0, ft0, fa2
+; RV64IDZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; RV64IDZFH-NEXT:    ret
   %1 = call half @llvm.fmuladd.f16(half %a, half %b, half %c)
   ret half %1
