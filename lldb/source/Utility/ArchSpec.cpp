@@ -298,6 +298,8 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
      SUBTYPE_MASK},
     {ArchSpec::eCore_arm_armv7em, llvm::MachO::CPU_TYPE_ARM, 16, UINT32_MAX,
      SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_arm64, llvm::MachO::CPU_TYPE_ARM64, 2, UINT32_MAX,
+     SUBTYPE_MASK}, // FIXME: This should be arm64e once the triple exists.
     {ArchSpec::eCore_arm_arm64, llvm::MachO::CPU_TYPE_ARM64, 1, UINT32_MAX,
      SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64, llvm::MachO::CPU_TYPE_ARM64, 0, UINT32_MAX,
