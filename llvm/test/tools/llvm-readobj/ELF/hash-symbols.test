@@ -328,12 +328,15 @@ ProgramHeaders:
 ## the bucket array pointing to a cycle.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5.so
-# RUN: llvm-readelf --hash-symbols %t5.so 2>&1 | FileCheck %s -DFILE=%t5.so --check-prefix=BROKEN
+# RUN: llvm-readelf --hash-symbols %t5.so 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t5.so --check-prefix=BROKEN --implicit-check-not=warning:
 
 # BROKEN:      Symbol table of .hash for image:
 # BROKEN-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
 # BROKEN-NEXT:    1   0: 00000000     0 NOTYPE  LOCAL  DEFAULT UND aaa
 # BROKEN: warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain
+# BROKEN-NEXT:    1   1: 00000000     0 NOTYPE  LOCAL  DEFAULT UND aaa
+# BROKEN-NOT: {{.}}
 
 --- !ELF
 FileHeader:
@@ -344,7 +347,7 @@ Sections:
   - Name:    .hash
     Type:    SHT_HASH
     Link:    .dynsym
-    Bucket:  [ 1 ]
+    Bucket:  [ 1, 1 ]
     Chain:   [ 1, 1 ]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
@@ -355,8 +358,7 @@ Sections:
       - Tag:   DT_HASH
         Value: 0x0
 DynamicSymbols:
-  - Name:    aaa
-  - Name:    bbb
+  - Name: aaa
 ProgramHeaders:
   - Type:     PT_LOAD
     FirstSec: .hash
