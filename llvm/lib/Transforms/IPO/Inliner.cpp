@@ -711,7 +711,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   //
   // Note that this particular order of processing is actually critical to
   // avoid very bad behaviors. Consider *highly connected* call graphs where
-  // each function contains a small amonut of code and a couple of calls to
+  // each function contains a small amount of code and a couple of calls to
   // other functions. Because the LLVM inliner is fundamentally a bottom-up
   // inliner, it can handle gracefully the fact that these all appear to be
   // reasonable inlining candidates as it will flatten things until they become
