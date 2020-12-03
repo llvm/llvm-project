@@ -25,6 +25,27 @@ class Function;
 class MDNode;
 class MemoryLocation;
 
+/// This is a simple wrapper around an MDNode which provides a higher-level
+/// interface by hiding the details of how alias analysis information is encoded
+/// in its operands.
+class AliasScopeNode {
+  const MDNode *Node = nullptr;
+
+public:
+  AliasScopeNode() = default;
+  explicit AliasScopeNode(const MDNode *N) : Node(N) {}
+
+  /// Get the MDNode for this AliasScopeNode.
+  const MDNode *getNode() const { return Node; }
+
+  /// Get the MDNode for this AliasScopeNode's domain.
+  const MDNode *getDomain() const {
+    if (Node->getNumOperands() < 2)
+      return nullptr;
+    return dyn_cast_or_null<MDNode>(Node->getOperand(1));
+  }
+};
+
 /// A simple AA result which uses scoped-noalias metadata to answer queries.
 class ScopedNoAliasAAResult : public AAResultBase<ScopedNoAliasAAResult> {
   friend AAResultBase<ScopedNoAliasAAResult>;
