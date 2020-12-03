@@ -11,7 +11,6 @@
 
 #include <fenv.h>
 #include <stdint.h>
-#include <xmmintrin.h>
 
 namespace __llvm_libc {
 namespace fputil {
@@ -89,6 +88,16 @@ static inline void clearX87Exceptions() {
   __asm__ __volatile__("fnclex" : : :);
 }
 
+static inline uint32_t getMXCSR() {
+  uint32_t w;
+  __asm__ __volatile__("stmxcsr %0" : "=m"(w)::);
+  return w;
+}
+
+static inline void writeMXCSR(uint32_t w) {
+  __asm__ __volatile__("ldmxcsr %0" : : "m"(w) :);
+}
+
 } // namespace internal
 
 static inline int clearExcept(int excepts) {
@@ -99,9 +108,9 @@ static inline int clearExcept(int excepts) {
   // really required.
   internal::clearX87Exceptions();
 
-  uint32_t mxcsr = _mm_getcsr();
+  uint32_t mxcsr = internal::getMXCSR();
   mxcsr &= ~internal::getStatusValueForExcept(excepts);
-  _mm_setcsr(mxcsr);
+  internal::writeMXCSR(mxcsr);
   return 0;
 }
 
@@ -110,7 +119,7 @@ static inline int testExcept(int excepts) {
   // Check both x87 status word and MXCSR.
   return internal::exceptionStatusToMacro(
       (statusValue & internal::getX87StatusWord()) |
-      (statusValue & _mm_getcsr()));
+      (statusValue & internal::getMXCSR()));
 }
 
 static inline int raiseExcept(int excepts) {
@@ -119,15 +128,15 @@ static inline int raiseExcept(int excepts) {
   // followed with an fwait instruction before writing the flag for the
   // next exception.
   uint16_t statusValue = internal::getStatusValueForExcept(excepts);
-  uint32_t sse = _mm_getcsr();
-  sse = sse | statusValue;
-  _mm_setcsr(sse);
+  uint32_t mxcsr = internal::getMXCSR();
+  mxcsr = mxcsr | statusValue;
+  internal::writeMXCSR(mxcsr);
   return 0;
 }
 
 static inline int getRound() {
   uint16_t bitValue =
-      (_mm_getcsr() >> internal::MXCSRRoundingControlBitPosition) & 0x3;
+      (internal::getMXCSR() >> internal::MXCSRRoundingControlBitPosition) & 0x3;
   switch (bitValue) {
   case internal::RoundingControlValue::ToNearest:
     return FE_TONEAREST;
@@ -169,11 +178,11 @@ static inline int setRound(int mode) {
   internal::writeX87ControlWord(x87Control);
 
   uint32_t mxcsrValue = bitValue << internal::MXCSRRoundingControlBitPosition;
-  uint32_t mxcsrControl = _mm_getcsr();
+  uint32_t mxcsrControl = internal::getMXCSR();
   mxcsrControl =
       (mxcsrControl & ~(0x3 << internal::MXCSRRoundingControlBitPosition)) |
       mxcsrValue;
-  _mm_setcsr(mxcsrControl);
+  internal::writeMXCSR(mxcsrControl);
 
   return 0;
 }
