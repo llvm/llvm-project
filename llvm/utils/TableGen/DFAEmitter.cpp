@@ -346,8 +346,7 @@ Transition::Transition(Record *R, Automaton *Parent) {
     } else if (isa<IntRecTy>(SymbolV->getType())) {
       Actions.emplace_back(nullptr, R->getValueAsInt(A), "");
       Types.emplace_back("unsigned");
-    } else if (isa<StringRecTy>(SymbolV->getType()) ||
-               isa<CodeRecTy>(SymbolV->getType())) {
+    } else if (isa<StringRecTy>(SymbolV->getType())) {
       Actions.emplace_back(nullptr, 0, std::string(R->getValueAsString(A)));
       Types.emplace_back("std::string");
     } else {

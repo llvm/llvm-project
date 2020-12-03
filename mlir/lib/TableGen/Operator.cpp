@@ -547,12 +547,12 @@ StringRef Operator::getSummary() const {
 
 bool Operator::hasAssemblyFormat() const {
   auto *valueInit = def.getValueInit("assemblyFormat");
-  return isa<llvm::CodeInit, llvm::StringInit>(valueInit);
+  return isa<llvm::StringInit>(valueInit);
 }
 
 StringRef Operator::getAssemblyFormat() const {
   return TypeSwitch<llvm::Init *, StringRef>(def.getValueInit("assemblyFormat"))
-      .Case<llvm::StringInit, llvm::CodeInit>(
+      .Case<llvm::StringInit>(
           [&](auto *init) { return init->getValue(); });
 }
 

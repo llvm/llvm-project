@@ -287,9 +287,9 @@ value. The static function ``get()`` can be used to obtain the singleton
 
 This class, a subclass of ``Init``, acts as the parent class of the classes
 that represent specific value types (except for the unset value). These
-classes include ``BitInit``, ``BitsInit``, ``CodeInit``, ``DagInit``,
-``DefInit``, ``IntInit``, ``ListInit``, and ``StringInit``. (There are
-additional derived types used by the TableGen parser.)
+classes include ``BitInit``, ``BitsInit``, ``DagInit``, ``DefInit``,
+``IntInit``, ``ListInit``, and ``StringInit``. (There are additional derived
+types used by the TableGen parser.)
 
 This class includes a data member that specifies the ``RecTy`` type of the
 value. It provides a function to get that ``RecTy`` type.
@@ -329,18 +329,6 @@ The class provides the following additional functions.
 * A function to get the number of bits in the sequence.
 
 * A function that gets a bit specified by an integer index.
-
-``CodeInit``
-~~~~~~~~~~~~
-
-The ``CodeInit`` class is a subclass of ``TypedInit``. Its instances
-represent arbitrary-length strings produced from ``code`` literals in the
-TableGen files. It includes a data member that contains a ``StringRef`` of
-the value.
-
-The class provides the usual ``get()`` and ``getValue()`` functions. The
-latter function returns the ``StringRef``.
-
 
 ``DagInit``
 ~~~~~~~~~~~
