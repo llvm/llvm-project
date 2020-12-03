@@ -621,10 +621,6 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
 
   auto file = make<ObjFile>(mb, modTime, getName());
 
-  // ld64 doesn't demangle sym here even with -demangle. Match that, so
-  // intentionally no call to toMachOString() here.
-  printWhyLoad(sym.getName(), file);
-
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   subsections.insert(subsections.end(), file->subsections.begin(),
                      file->subsections.end());

@@ -19,7 +19,6 @@ namespace lld {
 namespace macho {
 
 class DylibFile;
-class InputFile;
 
 class MachOOptTable : public llvm::opt::OptTable {
 public:
@@ -45,8 +44,6 @@ llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
                                               DylibFile *umbrella = nullptr);
 
 uint32_t getModTime(llvm::StringRef path);
-
-void printWhyLoad(StringRef reason, const InputFile *);
 
 } // namespace macho
 } // namespace lld

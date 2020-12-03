@@ -426,7 +426,8 @@ def commons : Separate<["-"], "commons">,
 def grp_introspect : OptionGroup<"introspect">, HelpText<"INTROSPECTING THE LINKER">;
 
 def why_load : Flag<["-"], "why_load">,
-     HelpText<"Log why each object file is loaded from a static library">,
+     HelpText<"Log the symbol that compels loading of each object file from a static library">,
+     Flags<[HelpHidden]>,
      Group<grp_introspect>;
 def whyload : Flag<["-"], "whyload">,
      Alias<why_load>,
