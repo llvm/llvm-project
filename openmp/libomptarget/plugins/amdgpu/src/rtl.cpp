@@ -184,7 +184,7 @@ struct KernelTy {
   int8_t ExecutionMode;
   int16_t ConstWGSize;
   int32_t device_id;
-  void *CallStackAddr;
+  void *CallStackAddr = nullptr;
   const char *Name;
 
   KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
@@ -322,7 +322,8 @@ public:
   std::vector<std::pair<std::unique_ptr<void, atmiFreePtrDeletor>, uint64_t>>
       deviceStateStore;
 
-  static const int HardTeamLimit = 1 << 20; // 1 Meg
+  static const unsigned HardTeamLimit =
+      (1 << 16) - 1; // 64K needed to fit in uint16
   static const int DefaultNumTeams = 128;
   static const int Max_Teams =
       llvm::omp::AMDGPUGpuGridValues[llvm::omp::GVIDX::GV_Max_Teams];
@@ -648,7 +649,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DeviceInfo.ComputeUnits[device_id] = compute_units;
     DP("Using %d compute unis per grid\n", DeviceInfo.ComputeUnits[device_id]);
   }
-  if (print_kernel_trace > 1)
+  if (print_kernel_trace == 4)
     fprintf(stderr, "Device#%-2d CU's: %2d\n", device_id,
             DeviceInfo.ComputeUnits[device_id]);
 
@@ -926,6 +927,27 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
 
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                                                  __tgt_device_image *image) {
+  // This function loads the device image onto gpu[device_id] and does other
+  // per-image initialization work. Specifically:
+  //
+  // - Initialize an omptarget_device_environmentTy instance embedded in the
+  //   image at the symbol "omptarget_device_environment"
+  //   Fields debug_level, device_num, num_devices. Used by the deviceRTL.
+  //
+  // - Allocate a large array per-gpu (could be moved to init_device)
+  //   - Read a uint64_t at symbol omptarget_nvptx_device_State_size
+  //   - Allocate at least that many bytes of gpu memory
+  //   - Zero initialize it
+  //   - Write the pointer to the symbol omptarget_nvptx_device_State
+  //
+  // - Pulls some per-kernel information together from various sources and
+  //   records it in the KernelsList for quicker access later
+  //
+  // The initialization can be done before or after loading the image onto the
+  // gpu. This function presently does a mixture. Using the hsa api to get/set
+  // the information is simpler to implement, in exchange for more complicated
+  // runtime behaviour. E.g. launching a kernel or using dma to get eight bytes
+  // back from the gpu vs a hashtable lookup on the host.
 
   const size_t img_size = (char *)image->ImageEnd - (char *)image->ImageStart;
 
@@ -962,7 +984,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     if (si.size != sizeof(host_device_env)) {
       return ATMI_STATUS_ERROR;
     }
-    DP("Setting global device environment %lu bytes\n", si.size);
+    DP("Setting global device environment %u bytes\n", si.size);
     uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
     void *pos = (char *)data + offset;
     memcpy(pos, &host_device_env, sizeof(host_device_env));
@@ -1145,7 +1167,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       uint16_t TSize;
       uint16_t WG_Size;
       uint8_t Mode;
-      uint8_t HostServices;
     };
     struct KernDescValType KernDescVal;
     std::string KernDescNameStr(e->name);
@@ -1154,7 +1175,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     void *KernDescPtr;
     uint32_t KernDescSize;
-    void *CallStackAddr;
+    void *CallStackAddr = nullptr;
     err = interop_get_symbol_info((char *)image->ImageStart, img_size,
                                   KernDescName, &KernDescPtr, &KernDescSize);
 
@@ -1176,7 +1197,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       DP("KernDesc: TSize: %d\n", KernDescVal.TSize);
       DP("KernDesc: WG_Size: %d\n", KernDescVal.WG_Size);
       DP("KernDesc: Mode: %d\n", KernDescVal.Mode);
-      DP("KernDesc: HostServices: %x\n", KernDescVal.HostServices);
 
       // Get ExecMode
       ExecModeVal = KernDescVal.Mode;
@@ -1359,7 +1379,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
   if (Max_Teams > DeviceInfo.HardTeamLimit)
     Max_Teams = DeviceInfo.HardTeamLimit;
 
-  if (print_kernel_trace > 1) {
+  if (print_kernel_trace == 4) {
     fprintf(stderr, "RTLDeviceInfoTy::Max_Teams: %d\n",
             RTLDeviceInfoTy::Max_Teams);
     fprintf(stderr, "Max_Teams: %d\n", Max_Teams);
@@ -1392,7 +1412,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);
   }
-  if (print_kernel_trace > 1)
+  if (print_kernel_trace == 4)
     fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
   DP("Preparing %d threads\n", threadsPerGroup);
 
@@ -1405,7 +1425,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     num_groups = Max_Teams;
   DP("Set default num of groups %d\n", num_groups);
 
-  if (print_kernel_trace > 1) {
+  if (print_kernel_trace == 4) {
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "num_teams: %d\n", num_teams);
   }
@@ -1425,7 +1445,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
   if (num_teams > 0) {
     num_groups = (num_teams < num_groups) ? num_teams : num_groups;
   }
-  if (print_kernel_trace > 1) {
+  if (print_kernel_trace == 4) {
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "DeviceInfo.EnvNumTeams %d\n", DeviceInfo.EnvNumTeams);
     fprintf(stderr, "DeviceInfo.EnvTeamLimit %d\n", DeviceInfo.EnvTeamLimit);
@@ -1458,13 +1478,13 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     }
     if (num_groups > Max_Teams) {
       num_groups = Max_Teams;
-      if (print_kernel_trace > 1)
+      if (print_kernel_trace == 4)
         fprintf(stderr, "Limiting num_groups %d to Max_Teams %d \n", num_groups,
                 Max_Teams);
     }
     if (num_groups > num_teams && num_teams > 0) {
       num_groups = num_teams;
-      if (print_kernel_trace > 1)
+      if (print_kernel_trace == 4)
         fprintf(stderr, "Limiting num_groups %d to clause num_teams %d \n",
                 num_groups, num_teams);
     }
@@ -1478,7 +1498,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
         num_groups > DeviceInfo.EnvMaxTeamsDefault)
       num_groups = DeviceInfo.EnvMaxTeamsDefault;
   }
-  if (print_kernel_trace > 1) {
+  if (print_kernel_trace == 4) {
     fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "loop_tripcount: %ld\n", loop_tripcount);
@@ -1556,7 +1576,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
                 loop_tripcount // From run_region arg
   );
 
-  if (print_kernel_trace > 0)
+  if (print_kernel_trace == 4)
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     fprintf(stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
