@@ -252,3 +252,36 @@ declare void @foo6(...)
 declare void @foo3(...)
 declare void @foo4(...)
 declare void @foo5(...)
+
+;; Check TLS references
+@tlsptr = external thread_local global i32*
+@tlsdst = external thread_local global i32
+@tlssrc = external thread_local global i32
+
+define void @test8() nounwind {
+entry:
+    store i32* @tlsdst, i32** @tlsptr
+    %tmp.s = load i32, i32* @tlssrc
+    store i32 %tmp.s, i32* @tlsdst
+    ret void
+
+; CHECK-LABEL:	test8:
+; CHECK-I686:	calll	.L8$pb
+; CHECK-I686-NEXT:	.L8$pb:
+; CHECK-I686-NEXT:	popl
+; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L8$pb), %ebx
+; CHECK-I686-DAG:	leal	tlsdst@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
+; CHECK-I686-DAG:	leal	tlsptr@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
+; CHECK-I686-DAG:	leal	tlssrc@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
+; CHECK-X32-DAG:	leaq	tlsdst@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
+; CHECK-X32-DAG:	leaq	tlsptr@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
+; CHECK-X32-DAG:	leaq	tlssrc@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
+; CHECK-I686:	ret
+; CHECK-X32:	retq
+}
