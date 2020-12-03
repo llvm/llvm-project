@@ -383,3 +383,12 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p9 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-GOODVERS %s
 // RV32-EXPERIMENTAL-V-GOODVERS: "-target-feature" "+experimental-v"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izfh -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZFH-NOFLAG %s
+// RV32-EXPERIMENTAL-ZFH-NOFLAG: error: invalid arch name 'rv32izfh'
+// RV32-EXPERIMENTAL-ZFH-NOFLAG: requires '-menable-experimental-extensions'
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izfh0p1 -menable-experimental-extensions -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZFH %s
+// RV32-EXPERIMENTAL-ZFH: "-target-feature" "+experimental-zfh"
