@@ -27,7 +27,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
