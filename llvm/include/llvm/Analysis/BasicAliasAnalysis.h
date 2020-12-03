@@ -126,6 +126,14 @@ private:
     bool operator!=(const VariableGEPIndex &Other) const {
       return !operator==(Other);
     }
+
+    void dump() const { print(dbgs()); }
+    void print(raw_ostream &OS) const {
+      OS << "(V=" << V->getName()
+	 << ", zextbits=" << ZExtBits
+	 << ", sextbits=" << SExtBits
+	 << ", scale=" << Scale << ")";
+    }
   };
 
   // Represents the internal structure of a GEP, decomposed into a base pointer,
@@ -139,6 +147,20 @@ private:
     SmallVector<VariableGEPIndex, 4> VarIndices;
     // Is GEP index scale compile-time constant.
     bool HasCompileTimeConstantScale;
+
+    void dump() const { print(dbgs()); }
+    void print(raw_ostream &OS) const {
+      OS << "(DecomposedGEP Base=" << Base->getName()
+	 << ", Offset=" << Offset
+	 << ", VarIndices=[" << Offset;
+      for (size_t i = 0; i < VarIndices.size(); i++) {
+       if (i != 0)
+         OS << ", ";
+       VarIndices[i].print(OS);
+      }
+      OS << "], HasCompileTimeConstantScale=" << HasCompileTimeConstantScale
+	 << ")";
+    }
   };
 
   /// Tracks phi nodes we have visited.
