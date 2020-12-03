@@ -135,8 +135,8 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
-    auto rangeDescriptorTy =
-        convertRangeType(rangeOp.getType().cast<RangeType>(), typeConverter);
+    auto rangeDescriptorTy = convertRangeType(
+        rangeOp.getType().cast<RangeType>(), *getTypeConverter());
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
@@ -181,7 +181,7 @@ public:
     edsc::ScopedContext context(rewriter, op->getLoc());
     ReshapeOpAdaptor adaptor(operands);
     BaseViewConversionHelper baseDesc(adaptor.src());
-    BaseViewConversionHelper desc(typeConverter.convertType(dstType));
+    BaseViewConversionHelper desc(typeConverter->convertType(dstType));
     desc.setAllocatedPtr(baseDesc.allocatedPtr());
     desc.setAlignedPtr(baseDesc.alignedPtr());
     desc.setOffset(baseDesc.offset());
@@ -214,11 +214,11 @@ public:
 
     auto sliceOp = cast<SliceOp>(op);
     auto memRefType = sliceOp.getBaseViewType();
-    auto int64Ty = typeConverter.convertType(rewriter.getIntegerType(64))
+    auto int64Ty = typeConverter->convertType(rewriter.getIntegerType(64))
                        .cast<LLVM::LLVMType>();
 
     BaseViewConversionHelper desc(
-        typeConverter.convertType(sliceOp.getShapedType()));
+        typeConverter->convertType(sliceOp.getShapedType()));
 
     // TODO: extract sizes and emit asserts.
     SmallVector<Value, 4> strides(memRefType.getRank());
