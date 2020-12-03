@@ -666,6 +666,11 @@ def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
 def OpNonNorm : TEST_Op<"op_nonnorm"> {
   let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
 }
+// Test for memrefs normalization of an op that has normalizable memref results.
+def OpNormRet : TEST_Op<"op_norm_ret", [MemRefsNormalizable]> {
+  let arguments = (ins AnyMemRef:$X);
+  let results = (outs AnyMemRef:$Y, AnyMemRef:$Z);
+}
 
 // Test for memrefs normalization of an op with a reference to a function
 // symbol.

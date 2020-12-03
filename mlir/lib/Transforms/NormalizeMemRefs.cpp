@@ -36,6 +36,7 @@ struct NormalizeMemRefs : public NormalizeMemRefsBase<NormalizeMemRefs> {
   void updateFunctionSignature(FuncOp funcOp, ModuleOp moduleOp);
   void setCalleesAndCallersNonNormalizable(FuncOp funcOp, ModuleOp moduleOp,
                                            DenseSet<FuncOp> &normalizableFuncs);
+  Operation *createOpResultsNormalized(FuncOp funcOp, Operation *oldOp);
 };
 
 } // end anonymous namespace
@@ -384,6 +385,59 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
     funcOp.front().eraseArgument(argIndex + 1);
   }
 
+  // Walk over normalizable operations to normalize memrefs of the operation
+  // results. When `op` has memrefs with affine map in the operation results,
+  // new operation containin normalized memrefs is created. Then, the memrefs
+  // are replaced. `CallOp` is skipped here because it is handled in
+  // `updateFunctionSignature()`.
+  funcOp.walk([&](Operation *op) {
+    if (op->hasTrait<OpTrait::MemRefsNormalizable>() &&
+        op->getNumResults() > 0 && !isa<CallOp>(op) && !funcOp.isExternal()) {
+      // Create newOp containing normalized memref in the operation result.
+      Operation *newOp = createOpResultsNormalized(funcOp, op);
+      // When all of the operation results have no memrefs or memrefs without
+      // affine map, `newOp` is the same with `op` and following process is
+      // skipped.
+      if (op != newOp) {
+        bool replacingMemRefUsesFailed = false;
+        for (unsigned resIndex : llvm::seq<unsigned>(0, op->getNumResults())) {
+          // Replace all uses of the old memrefs.
+          Value oldMemRef = op->getResult(resIndex);
+          Value newMemRef = newOp->getResult(resIndex);
+          MemRefType oldMemRefType = oldMemRef.getType().dyn_cast<MemRefType>();
+          // Check whether the operation result is MemRef type.
+          if (!oldMemRefType)
+            continue;
+          MemRefType newMemRefType = newMemRef.getType().cast<MemRefType>();
+          if (oldMemRefType == newMemRefType)
+            continue;
+          // TODO: Assume single layout map. Multiple maps not supported.
+          AffineMap layoutMap = oldMemRefType.getAffineMaps().front();
+          if (failed(replaceAllMemRefUsesWith(oldMemRef,
+                                              /*newMemRef=*/newMemRef,
+                                              /*extraIndices=*/{},
+                                              /*indexRemap=*/layoutMap,
+                                              /*extraOperands=*/{},
+                                              /*symbolOperands=*/{},
+                                              /*domInstFilter=*/nullptr,
+                                              /*postDomInstFilter=*/nullptr,
+                                              /*allowDereferencingOps=*/true,
+                                              /*replaceInDeallocOp=*/true))) {
+            newOp->erase();
+            replacingMemRefUsesFailed = true;
+            continue;
+          }
+        }
+        if (!replacingMemRefUsesFailed) {
+          // Replace other ops with new op and delete the old op when the
+          // replacement succeeded.
+          op->replaceAllUsesWith(newOp);
+          op->erase();
+        }
+      }
+    }
+  });
+
   // In a normal function, memrefs in the return type signature gets normalized
   // as a result of normalization of functions arguments, AllocOps or CallOps'
   // result types. Since an external function doesn't have a body, memrefs in
@@ -416,4 +470,50 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
     funcOp.setType(newFuncType);
   }
   updateFunctionSignature(funcOp, moduleOp);
+}
+
+/// Create an operation containing normalized memrefs in the operation results.
+/// When the results of `oldOp` have memrefs with affine map, the memrefs are
+/// normalized, and new operation containing them in the operation results is
+/// returned. If all of the results of `oldOp` have no memrefs or memrefs
+/// without affine map, `oldOp` is returned without modification.
+Operation *NormalizeMemRefs::createOpResultsNormalized(FuncOp funcOp,
+                                                       Operation *oldOp) {
+  // Prepare OperationState to create newOp containing normalized memref in
+  // the operation results.
+  OperationState result(oldOp->getLoc(), oldOp->getName());
+  result.addOperands(oldOp->getOperands());
+  result.addAttributes(oldOp->getAttrs());
+  // Add normalized MemRefType to the OperationState.
+  SmallVector<Type, 4> resultTypes;
+  OpBuilder b(funcOp);
+  bool resultTypeNormalized = false;
+  for (unsigned resIndex : llvm::seq<unsigned>(0, oldOp->getNumResults())) {
+    auto resultType = oldOp->getResult(resIndex).getType();
+    MemRefType memrefType = resultType.dyn_cast<MemRefType>();
+    // Check whether the operation result is MemRef type.
+    if (!memrefType) {
+      resultTypes.push_back(resultType);
+      continue;
+    }
+    // Fetch a new memref type after normalizing the old memref.
+    MemRefType newMemRefType = normalizeMemRefType(memrefType, b,
+                                                   /*numSymbolicOperands=*/0);
+    if (newMemRefType == memrefType) {
+      // Either memrefType already had an identity map or the map couldn't
+      // be transformed to an identity map.
+      resultTypes.push_back(memrefType);
+      continue;
+    }
+    resultTypes.push_back(newMemRefType);
+    resultTypeNormalized = true;
+  }
+  result.addTypes(resultTypes);
+  // When all of the results of `oldOp` have no memrefs or memrefs without
+  // affine map, `oldOp` is returned without modification.
+  if (resultTypeNormalized) {
+    OpBuilder bb(oldOp);
+    return bb.createOperation(result);
+  } else
+    return oldOp;
 }
