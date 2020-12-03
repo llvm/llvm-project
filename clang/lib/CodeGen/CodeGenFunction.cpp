@@ -771,6 +771,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
         SanOpts.Mask &= ~SanitizerKind::Null;
 
+  // Add pointer authentication attributes.
+  const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
+  if (CodeGenOpts.PointerAuth.ReturnAddresses)
+    Fn->addFnAttr("ptrauth-returns");
+  if (CodeGenOpts.PointerAuth.FunctionPointers)
+    Fn->addFnAttr("ptrauth-calls");
+  if (CodeGenOpts.PointerAuth.IndirectGotos)
+    Fn->addFnAttr("ptrauth-indirect-gotos");
+  if (CodeGenOpts.PointerAuth.AuthTraps)
+    Fn->addFnAttr("ptrauth-auth-traps");
+
   // Apply xray attributes to the function (as a string, for now)
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
     if (CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
