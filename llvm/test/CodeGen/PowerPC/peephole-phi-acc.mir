@@ -1,0 +1,825 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 %s -o - \
+# RUN:   -run-pass=ppc-mi-peepholes -verify-machineinstrs | FileCheck %s
+
+# Test the peephole replacing unprimed accumulator PHI nodes by primed
+# accumulator PHI nodes. We have a test for the simple case (PHI nodes with COPY
+# operands), a test for PHI nodes with IMPLICIT_DEF operands, a test for PHI
+# nodes with operands being other PHI nodes on unprimed accumulators and a test
+# with an unprimed accumulator PHI node cycle.
+
+--- |
+  define dso_local void @phiCopy(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  entry:
+    %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
+    %tobool.not = icmp eq i32 %i, 0
+    br i1 %tobool.not, label %if.end, label %if.then
+
+  if.then:
+    %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+    br label %if.end
+
+  if.end:
+    %vq.0 = phi <512 x i1> [ %1, %if.then ], [ %0, %entry ]
+    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    ret void
+  }
+
+  declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
+
+  declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
+
+  define dso_local void @phiCopyUndef(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  entry:
+    %tobool.not = icmp eq i32 %i, 0
+    br i1 %tobool.not, label %if.end, label %if.then
+
+  if.then:
+    %0 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> undef, <16 x i8> %vc, <16 x i8> %vc)
+    br label %if.end
+
+  if.end:
+    %vq.0 = phi <512 x i1> [ %0, %if.then ], [ undef, %entry ]
+    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    ret void
+  }
+
+  define dso_local void @phiPhis(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  entry:
+    %cmp6 = icmp sgt i32 %i, 0
+    br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %0 = add i32 %i, -1
+    %xtraiter = and i32 %i, 7
+    %1 = icmp ult i32 %0, 7
+    br i1 %1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+
+  for.body.preheader.new:
+    %unroll_iter = and i32 %i, -8
+    %2 = add i32 %unroll_iter, -8
+    %3 = zext i32 %2 to i64
+    %4 = lshr i64 %3, 3
+    %5 = add nuw nsw i64 %4, 1
+    call void @llvm.set.loop.iterations.i64(i64 %5)
+    br label %for.body
+
+  for.cond.cleanup.loopexit.unr-lcssa:
+    %vq.07.unr = phi <512 x i1> [ undef, %for.body.preheader ], [ %18, %for.body ]
+    %lcmp.mod.not = icmp eq i32 %xtraiter, 0
+    br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil.preheader
+
+  for.body.epil.preheader:
+    %6 = add nsw i32 %xtraiter, -1
+    %7 = zext i32 %6 to i64
+    %8 = add nuw nsw i64 %7, 1
+    call void @llvm.set.loop.iterations.i64(i64 %8)
+    br label %for.body.epil
+
+  for.body.epil:
+    %vq.07.epil = phi <512 x i1> [ %9, %for.body.epil ], [ %vq.07.unr, %for.body.epil.preheader ]
+    %9 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %vq.07.epil, <16 x i8> %vc, <16 x i8> %vc)
+    %10 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %10, label %for.body.epil, label %for.cond.cleanup
+
+  for.cond.cleanup:
+    %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ], [ %9, %for.body.epil ]
+    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    ret void
+
+  for.body:
+    %vq.07 = phi <512 x i1> [ undef, %for.body.preheader.new ], [ %18, %for.body ]
+    %11 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %vq.07, <16 x i8> %vc, <16 x i8> %vc)
+    %12 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %11, <16 x i8> %vc, <16 x i8> %vc)
+    %13 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %12, <16 x i8> %vc, <16 x i8> %vc)
+    %14 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %13, <16 x i8> %vc, <16 x i8> %vc)
+    %15 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %14, <16 x i8> %vc, <16 x i8> %vc)
+    %16 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %15, <16 x i8> %vc, <16 x i8> %vc)
+    %17 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %16, <16 x i8> %vc, <16 x i8> %vc)
+    %18 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %17, <16 x i8> %vc, <16 x i8> %vc)
+    %19 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %19, label %for.body, label %for.cond.cleanup.loopexit.unr-lcssa
+  }
+
+  define dso_local void @phiCycle(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  entry:
+    %cmp6 = icmp sgt i32 %i, 0
+    br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %0 = add i32 %i, -1
+    %xtraiter = and i32 %i, 7
+    %1 = icmp ult i32 %0, 7
+    br i1 %1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+
+  for.body.preheader.new:
+    %unroll_iter = and i32 %i, -8
+    %2 = add i32 %unroll_iter, -8
+    %3 = zext i32 %2 to i64
+    %4 = lshr i64 %3, 3
+    %5 = add nuw nsw i64 %4, 1
+    call void @llvm.set.loop.iterations.i64(i64 %5)
+    br label %for.body
+
+  for.cond.cleanup.loopexit.unr-lcssa:
+    %vq.07.unr = phi <512 x i1> [ undef, %for.body.preheader ], [ %18, %for.body ], [ %vq.07.epil, %for.body.epil ]
+    %lcmp.mod.not = icmp eq i32 %xtraiter, 0
+    br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil.preheader
+
+  for.body.epil.preheader:
+    %6 = add nsw i32 %xtraiter, -1
+    %7 = zext i32 %6 to i64
+    %8 = add nuw nsw i64 %7, 1
+    call void @llvm.set.loop.iterations.i64(i64 %8)
+    br label %for.body.epil
+
+  for.body.epil:
+    %vq.07.epil = phi <512 x i1> [ %9, %for.body.epil ], [ %vq.07.unr, %for.body.epil.preheader ]
+    %9 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %vq.07.epil, <16 x i8> %vc, <16 x i8> %vc)
+    %10 = call i1 @llvm.loop.decrement.i64(i64 1)
+    %test = icmp ult i32 %0, 7
+    br i1 %test, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.epil
+    ;br i1 %10, label %for.body.epil, label %for.cond.cleanup
+
+  for.cond.cleanup:
+    %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ]
+    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    ret void
+
+  for.body:
+    %vq.07 = phi <512 x i1> [ undef, %for.body.preheader.new ], [ %18, %for.body ]
+    %11 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %vq.07, <16 x i8> %vc, <16 x i8> %vc)
+    %12 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %11, <16 x i8> %vc, <16 x i8> %vc)
+    %13 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %12, <16 x i8> %vc, <16 x i8> %vc)
+    %14 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %13, <16 x i8> %vc, <16 x i8> %vc)
+    %15 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %14, <16 x i8> %vc, <16 x i8> %vc)
+    %16 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %15, <16 x i8> %vc, <16 x i8> %vc)
+    %17 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %16, <16 x i8> %vc, <16 x i8> %vc)
+    %18 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %17, <16 x i8> %vc, <16 x i8> %vc)
+    %19 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %19, label %for.body, label %for.cond.cleanup.loopexit.unr-lcssa
+  }
+
+  declare void @llvm.set.loop.iterations.i64(i64)
+
+  declare i1 @llvm.loop.decrement.i64(i64)
+
+...
+---
+name:            phiCopy
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: uaccrc, preferred-register: '' }
+  - { id: 1, class: uaccrc, preferred-register: '' }
+  - { id: 2, class: uaccrc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: vrrc, preferred-register: '' }
+  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: accrc, preferred-register: '' }
+  - { id: 8, class: crrc, preferred-register: '' }
+  - { id: 9, class: vsrc, preferred-register: '' }
+  - { id: 10, class: accrc, preferred-register: '' }
+  - { id: 11, class: accrc, preferred-register: '' }
+  - { id: 12, class: accrc, preferred-register: '' }
+  - { id: 13, class: accrc, preferred-register: '' }
+  - { id: 14, class: vsrc, preferred-register: '' }
+  - { id: 15, class: vsrprc, preferred-register: '' }
+  - { id: 16, class: vsrprc, preferred-register: '' }
+  - { id: 17, class: vsrc, preferred-register: '' }
+  - { id: 18, class: vsrprc, preferred-register: '' }
+  - { id: 19, class: vsrprc, preferred-register: '' }
+  - { id: 20, class: vsrc, preferred-register: '' }
+  - { id: 21, class: vsrprc, preferred-register: '' }
+  - { id: 22, class: vsrprc, preferred-register: '' }
+  - { id: 23, class: vsrc, preferred-register: '' }
+  - { id: 24, class: vsrprc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$v2', virtual-reg: '%4' }
+  - { reg: '$x7', virtual-reg: '%5' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $x3, $v2, $x7
+
+    %5:g8rc_and_g8rc_nox0 = COPY $x7
+    %4:vrrc = COPY $v2
+    %3:g8rc = COPY $x3
+    %6:gprc = COPY %3.sub_32
+    %7:accrc = XXSETACCZ
+    %0:uaccrc = COPY %7
+    %8:crrc = CMPLWI killed %6, 0
+    BCC 76, killed %8, %bb.2
+    B %bb.1
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    %9:vsrc = COPY %4
+    %11:accrc = COPY %7
+    %10:accrc = XVF32GERPP %11, %9, %9
+    %1:uaccrc = COPY %10
+
+  bb.2.if.end:
+    ; We check that the PHI node on primed accumulator is inserted after
+    ; the label.
+    ; CHECK-LABEL: name: phiCopy
+    ; CHECK-LABEL: bb.{{[0-9]}}.if.end:
+    ; CHECK-NEXT: :accrc = PHI %7, %bb.0, %10, %bb.1
+    ; CHECK-NEXT: %2:uaccrc = PHI
+    %2:uaccrc = PHI %0, %bb.0, %1, %bb.1
+    %13:accrc = COPY %2
+    %12:accrc = XXMFACC %13
+    %14:vsrc = COPY %12.sub_vsx1
+    %16:vsrprc = IMPLICIT_DEF
+    %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
+    %17:vsrc = COPY %12.sub_vsx0
+    %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
+    STXVP killed %18, 32, %5 :: (store 32 into %ir.ptr + 32)
+    %19:vsrprc = COPY %12.sub_pair1
+    %20:vsrc = COPY %19.sub_vsx1
+    %22:vsrprc = IMPLICIT_DEF
+    %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
+    %23:vsrc = COPY %19.sub_vsx0
+    %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
+    STXVP killed %24, 0, %5 :: (store 32 into %ir.ptr, align 64)
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+name:            phiCopyUndef
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: uaccrc, preferred-register: '' }
+  - { id: 1, class: uaccrc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: vrrc, preferred-register: '' }
+  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 5, class: uaccrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: crrc, preferred-register: '' }
+  - { id: 8, class: vsrc, preferred-register: '' }
+  - { id: 9, class: accrc, preferred-register: '' }
+  - { id: 10, class: uaccrc, preferred-register: '' }
+  - { id: 11, class: accrc, preferred-register: '' }
+  - { id: 12, class: accrc, preferred-register: '' }
+  - { id: 13, class: accrc, preferred-register: '' }
+  - { id: 14, class: vsrc, preferred-register: '' }
+  - { id: 15, class: vsrprc, preferred-register: '' }
+  - { id: 16, class: vsrprc, preferred-register: '' }
+  - { id: 17, class: vsrc, preferred-register: '' }
+  - { id: 18, class: vsrprc, preferred-register: '' }
+  - { id: 19, class: vsrprc, preferred-register: '' }
+  - { id: 20, class: vsrc, preferred-register: '' }
+  - { id: 21, class: vsrprc, preferred-register: '' }
+  - { id: 22, class: vsrprc, preferred-register: '' }
+  - { id: 23, class: vsrc, preferred-register: '' }
+  - { id: 24, class: vsrprc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%2' }
+  - { reg: '$v2', virtual-reg: '%3' }
+  - { reg: '$x7', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.3(0x30000000), %bb.1(0x50000000)
+    liveins: $x3, $v2, $x7
+
+    %4:g8rc_and_g8rc_nox0 = COPY $x7
+    %3:vrrc = COPY $v2
+    %2:g8rc = COPY $x3
+    %6:gprc = COPY %2.sub_32
+    %7:crrc = CMPLWI killed %6, 0
+    BCC 68, killed %7, %bb.1
+
+  bb.3:
+    successors: %bb.2(0x80000000)
+
+    %5:uaccrc = IMPLICIT_DEF
+    B %bb.2
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    %8:vsrc = COPY %3
+    %10:uaccrc = IMPLICIT_DEF
+    %11:accrc = COPY %10
+    %9:accrc = XVF32GERPP %11, %8, %8
+    %0:uaccrc = COPY %9
+
+  bb.2.if.end:
+    ; We check that the PHI node on primed accumulator is inserted after
+    ; the label.
+    ; CHECK-LABEL: name: phiCopyUndef
+    ; CHECK-LABEL: bb.{{[0-9]}}.if.end:
+    ; CHECK-NEXT: :accrc = PHI
+    ; CHECK-NEXT: %1:uaccrc = PHI
+    %1:uaccrc = PHI %5, %bb.3, %0, %bb.1
+    %13:accrc = COPY %1
+    %12:accrc = XXMFACC %13
+    %14:vsrc = COPY %12.sub_vsx1
+    %16:vsrprc = IMPLICIT_DEF
+    %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
+    %17:vsrc = COPY %12.sub_vsx0
+    %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
+    STXVP killed %18, 32, %4 :: (store 32 into %ir.ptr + 32)
+    %19:vsrprc = COPY %12.sub_pair1
+    %20:vsrc = COPY %19.sub_vsx1
+    %22:vsrprc = IMPLICIT_DEF
+    %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
+    %23:vsrc = COPY %19.sub_vsx0
+    %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
+    STXVP killed %24, 0, %4 :: (store 32 into %ir.ptr, align 64)
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+name:            phiPhis
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 1, class: uaccrc, preferred-register: '' }
+  - { id: 2, class: uaccrc, preferred-register: '' }
+  - { id: 3, class: uaccrc, preferred-register: '' }
+  - { id: 4, class: uaccrc, preferred-register: '' }
+  - { id: 5, class: uaccrc, preferred-register: '' }
+  - { id: 6, class: uaccrc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: vrrc, preferred-register: '' }
+  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 10, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 11, class: uaccrc, preferred-register: '' }
+  - { id: 12, class: crrc, preferred-register: '' }
+  - { id: 13, class: uaccrc, preferred-register: '' }
+  - { id: 14, class: gprc, preferred-register: '' }
+  - { id: 15, class: crrc, preferred-register: '' }
+  - { id: 16, class: uaccrc, preferred-register: '' }
+  - { id: 17, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 18, class: gprc, preferred-register: '' }
+  - { id: 19, class: g8rc, preferred-register: '' }
+  - { id: 20, class: g8rc, preferred-register: '' }
+  - { id: 21, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 22, class: g8rc, preferred-register: '' }
+  - { id: 23, class: vsrc, preferred-register: '' }
+  - { id: 24, class: accrc, preferred-register: '' }
+  - { id: 25, class: accrc, preferred-register: '' }
+  - { id: 26, class: accrc, preferred-register: '' }
+  - { id: 27, class: accrc, preferred-register: '' }
+  - { id: 28, class: accrc, preferred-register: '' }
+  - { id: 29, class: accrc, preferred-register: '' }
+  - { id: 30, class: accrc, preferred-register: '' }
+  - { id: 31, class: accrc, preferred-register: '' }
+  - { id: 32, class: accrc, preferred-register: '' }
+  - { id: 33, class: crrc, preferred-register: '' }
+  - { id: 34, class: gprc, preferred-register: '' }
+  - { id: 35, class: g8rc, preferred-register: '' }
+  - { id: 36, class: g8rc, preferred-register: '' }
+  - { id: 37, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 38, class: g8rc, preferred-register: '' }
+  - { id: 39, class: vsrc, preferred-register: '' }
+  - { id: 40, class: accrc, preferred-register: '' }
+  - { id: 41, class: accrc, preferred-register: '' }
+  - { id: 42, class: accrc, preferred-register: '' }
+  - { id: 43, class: accrc, preferred-register: '' }
+  - { id: 44, class: vsrc, preferred-register: '' }
+  - { id: 45, class: vsrprc, preferred-register: '' }
+  - { id: 46, class: vsrprc, preferred-register: '' }
+  - { id: 47, class: vsrc, preferred-register: '' }
+  - { id: 48, class: vsrprc, preferred-register: '' }
+  - { id: 49, class: vsrprc, preferred-register: '' }
+  - { id: 50, class: vsrc, preferred-register: '' }
+  - { id: 51, class: vsrprc, preferred-register: '' }
+  - { id: 52, class: vsrprc, preferred-register: '' }
+  - { id: 53, class: vsrc, preferred-register: '' }
+  - { id: 54, class: vsrprc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%7' }
+  - { reg: '$v2', virtual-reg: '%8' }
+  - { reg: '$x7', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.8(0x30000000)
+    liveins: $x3, $v2, $x7
+
+    %9:g8rc_and_g8rc_nox0 = COPY $x7
+    %8:vrrc = COPY $v2
+    %7:g8rc = COPY $x3
+    %10:gprc_and_gprc_nor0 = COPY %7.sub_32
+    %12:crrc = CMPWI %10, 1
+    BCC 4, killed %12, %bb.1
+
+  bb.8:
+    successors: %bb.6(0x80000000)
+
+    %11:uaccrc = IMPLICIT_DEF
+    B %bb.6
+
+  bb.1.for.body.preheader:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
+
+    %14:gprc = ADDI %10, -1
+    %0:gprc_and_gprc_nor0 = RLWINM %10, 0, 29, 31
+    %13:uaccrc = IMPLICIT_DEF
+    %15:crrc = CMPLWI killed %14, 7
+    BCC 12, killed %15, %bb.3
+    B %bb.2
+
+  bb.2.for.body.preheader.new:
+    successors: %bb.7(0x80000000)
+
+    %17:gprc_and_gprc_nor0 = RLWINM %10, 0, 0, 28
+    %18:gprc = ADDI killed %17, -8
+    %20:g8rc = IMPLICIT_DEF
+    %19:g8rc = INSERT_SUBREG %20, killed %18, %subreg.sub_32
+    %21:g8rc_and_g8rc_nox0 = RLWINM8 %19, 29, 3, 31
+    %22:g8rc = nuw nsw ADDI8 killed %21, 1
+    MTCTR8loop killed %22, implicit-def dead $ctr8
+    %16:uaccrc = IMPLICIT_DEF
+    B %bb.7
+
+  bb.3.for.cond.cleanup.loopexit.unr-lcssa:
+    successors: %bb.6(0x30000000), %bb.4(0x50000000)
+
+    %1:uaccrc = PHI %13, %bb.1, %6, %bb.7
+    %33:crrc = CMPLWI %0, 0
+    BCC 76, killed %33, %bb.6
+    B %bb.4
+
+  bb.4.for.body.epil.preheader:
+    successors: %bb.5(0x80000000)
+
+    %34:gprc = nsw ADDI %0, -1
+    %36:g8rc = IMPLICIT_DEF
+    %35:g8rc = INSERT_SUBREG %36, killed %34, %subreg.sub_32
+    %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
+    %38:g8rc = nuw nsw ADDI8 killed %37, 1
+    MTCTR8loop killed %38, implicit-def dead $ctr8
+
+  bb.5.for.body.epil:
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+    ; We check that the PHI node on primed accumulator is inserted after
+    ; the label.
+    ; CHECK-LABEL: name: phiPhis
+    ; CHECK-LABEL: bb.{{[0-9]}}.for.body.epil:
+    ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
+    ; CHECK-NEXT: {{ }}
+    ; CHECK-NEXT: :accrc = PHI
+    ; CHECK-NEXT: %2:uaccrc = PHI
+    %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
+    %39:vsrc = COPY %8
+    %41:accrc = COPY %2
+    %40:accrc = XVF32GERPP %41, %39, %39
+    %3:uaccrc = COPY %40
+    BDNZ8 %bb.5, implicit-def dead $ctr8, implicit $ctr8
+    B %bb.6
+
+  bb.6.for.cond.cleanup:
+    %4:uaccrc = PHI %11, %bb.8, %1, %bb.3, %3, %bb.5
+    %43:accrc = COPY %4
+    %42:accrc = XXMFACC %43
+    %44:vsrc = COPY %42.sub_vsx1
+    %46:vsrprc = IMPLICIT_DEF
+    %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
+    %47:vsrc = COPY %42.sub_vsx0
+    %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
+    STXVP killed %48, 96, %9 :: (store 32 into %ir.add.ptr + 32)
+    %49:vsrprc = COPY %42.sub_pair1
+    %50:vsrc = COPY %49.sub_vsx1
+    %52:vsrprc = IMPLICIT_DEF
+    %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
+    %53:vsrc = COPY %49.sub_vsx0
+    %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
+    STXVP killed %54, 64, %9 :: (store 32 into %ir.add.ptr, align 64)
+    BLR8 implicit $lr8, implicit $rm
+
+  bb.7.for.body:
+    successors: %bb.7(0x7c000000), %bb.3(0x04000000)
+
+    %5:uaccrc = PHI %16, %bb.2, %6, %bb.7
+    %23:vsrc = COPY %8
+    %25:accrc = COPY %5
+    %24:accrc = XVF32GERPP %25, %23, %23
+    %26:accrc = XVF32GERPP %24, %23, %23
+    %27:accrc = XVF32GERPP %26, %23, %23
+    %28:accrc = XVF32GERPP %27, %23, %23
+    %29:accrc = XVF32GERPP %28, %23, %23
+    %30:accrc = XVF32GERPP %29, %23, %23
+    %31:accrc = XVF32GERPP %30, %23, %23
+    %32:accrc = XVF32GERPP %31, %23, %23
+    %6:uaccrc = COPY %32
+    BDNZ8 %bb.7, implicit-def dead $ctr8, implicit $ctr8
+    B %bb.3
+
+...
+---
+name:            phiCycle
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 1, class: uaccrc, preferred-register: '' }
+  - { id: 2, class: uaccrc, preferred-register: '' }
+  - { id: 3, class: uaccrc, preferred-register: '' }
+  - { id: 4, class: uaccrc, preferred-register: '' }
+  - { id: 5, class: uaccrc, preferred-register: '' }
+  - { id: 6, class: uaccrc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: vrrc, preferred-register: '' }
+  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 10, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 11, class: uaccrc, preferred-register: '' }
+  - { id: 12, class: crrc, preferred-register: '' }
+  - { id: 13, class: uaccrc, preferred-register: '' }
+  - { id: 14, class: gprc, preferred-register: '' }
+  - { id: 15, class: crrc, preferred-register: '' }
+  - { id: 16, class: uaccrc, preferred-register: '' }
+  - { id: 17, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 18, class: gprc, preferred-register: '' }
+  - { id: 19, class: g8rc, preferred-register: '' }
+  - { id: 20, class: g8rc, preferred-register: '' }
+  - { id: 21, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 22, class: g8rc, preferred-register: '' }
+  - { id: 23, class: vsrc, preferred-register: '' }
+  - { id: 24, class: accrc, preferred-register: '' }
+  - { id: 25, class: accrc, preferred-register: '' }
+  - { id: 26, class: accrc, preferred-register: '' }
+  - { id: 27, class: accrc, preferred-register: '' }
+  - { id: 28, class: accrc, preferred-register: '' }
+  - { id: 29, class: accrc, preferred-register: '' }
+  - { id: 30, class: accrc, preferred-register: '' }
+  - { id: 31, class: accrc, preferred-register: '' }
+  - { id: 32, class: accrc, preferred-register: '' }
+  - { id: 33, class: crrc, preferred-register: '' }
+  - { id: 34, class: gprc, preferred-register: '' }
+  - { id: 35, class: g8rc, preferred-register: '' }
+  - { id: 36, class: g8rc, preferred-register: '' }
+  - { id: 37, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 38, class: g8rc, preferred-register: '' }
+  - { id: 39, class: vsrc, preferred-register: '' }
+  - { id: 40, class: accrc, preferred-register: '' }
+  - { id: 41, class: accrc, preferred-register: '' }
+  - { id: 42, class: accrc, preferred-register: '' }
+  - { id: 43, class: accrc, preferred-register: '' }
+  - { id: 44, class: vsrc, preferred-register: '' }
+  - { id: 45, class: vsrprc, preferred-register: '' }
+  - { id: 46, class: vsrprc, preferred-register: '' }
+  - { id: 47, class: vsrc, preferred-register: '' }
+  - { id: 48, class: vsrprc, preferred-register: '' }
+  - { id: 49, class: vsrprc, preferred-register: '' }
+  - { id: 50, class: vsrc, preferred-register: '' }
+  - { id: 51, class: vsrprc, preferred-register: '' }
+  - { id: 52, class: vsrprc, preferred-register: '' }
+  - { id: 53, class: vsrc, preferred-register: '' }
+  - { id: 54, class: vsrprc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%7' }
+  - { reg: '$v2', virtual-reg: '%8' }
+  - { reg: '$x7', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.8(0x30000000)
+    liveins: $x3, $v2, $x7
+
+    %9:g8rc_and_g8rc_nox0 = COPY $x7
+    %8:vrrc = COPY $v2
+    %7:g8rc = COPY $x3
+    %10:gprc_and_gprc_nor0 = COPY %7.sub_32
+    %12:crrc = CMPWI %10, 1
+    BCC 4, killed %12, %bb.1
+
+  bb.8:
+    successors: %bb.6(0x80000000)
+
+    %11:uaccrc = IMPLICIT_DEF
+    B %bb.6
+
+  bb.1.for.body.preheader:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
+
+    %14:gprc = ADDI %10, -1
+    %0:gprc_and_gprc_nor0 = RLWINM %10, 0, 29, 31
+    %13:uaccrc = IMPLICIT_DEF
+    %15:crrc = CMPLWI %14, 7
+    BCC 12, killed %15, %bb.3
+    B %bb.2
+
+  bb.2.for.body.preheader.new:
+    successors: %bb.7(0x80000000)
+
+    %17:gprc_and_gprc_nor0 = RLWINM %10, 0, 0, 28
+    %18:gprc = ADDI killed %17, -8
+    %20:g8rc = IMPLICIT_DEF
+    %19:g8rc = INSERT_SUBREG %20, killed %18, %subreg.sub_32
+    %21:g8rc_and_g8rc_nox0 = RLWINM8 %19, 29, 3, 31
+    %22:g8rc = nuw nsw ADDI8 killed %21, 1
+    MTCTR8loop killed %22, implicit-def dead $ctr8
+    %16:uaccrc = IMPLICIT_DEF
+    B %bb.7
+
+  bb.3.for.cond.cleanup.loopexit.unr-lcssa:
+    successors: %bb.6(0x30000000), %bb.4(0x50000000)
+    ; We check that no phi node is inserted in the block.
+    ; CHECK-LABEL: name: phiCycle
+    ; CHECK-LABEL: bb.{{[0-9]}}.for.cond.cleanup.loopexit.unr-lcssa:
+    ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
+    ; CHECK-NEXT: {{ }}
+    ; CHECK-NEXT: %1:uaccrc = PHI
+    ; CHECK-NEXT: %33:crrc
+    %1:uaccrc = PHI %13, %bb.1, %6, %bb.7, %2, %bb.5
+    %33:crrc = CMPLWI %0, 0
+    BCC 76, killed %33, %bb.6
+    B %bb.4
+
+  bb.4.for.body.epil.preheader:
+    successors: %bb.5(0x80000000)
+
+    %34:gprc = nsw ADDI %0, -1
+    %36:g8rc = IMPLICIT_DEF
+    %35:g8rc = INSERT_SUBREG %36, killed %34, %subreg.sub_32
+    %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
+    %38:g8rc = nuw nsw ADDI8 killed %37, 1
+    MTCTR8loop killed %38, implicit-def dead $ctr8
+
+  bb.5.for.body.epil:
+    successors: %bb.3(0x40000000), %bb.5(0x7c000000)
+    ; We check that no phi node is inserted in the block.
+    ; CHECK-LABEL: bb.{{[0-9]}}.for.body.epil:
+    ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
+    ; CHECK-NEXT: {{ }}
+    ; CHECK-NEXT: %2:uaccrc = PHI
+    ; CHECK-NEXT: %39:vsrc
+    %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
+    %39:vsrc = COPY %8
+    %41:accrc = COPY %2
+    %40:accrc = XVF32GERPP %41, %39, %39
+    %3:uaccrc = COPY %40
+    %15:crrc = CMPLWI %14, 7
+    BCC 12, killed %15, %bb.5
+    B %bb.3
+
+  bb.6.for.cond.cleanup:
+    %4:uaccrc = PHI %11, %bb.8, %1, %bb.3
+    %43:accrc = COPY %4
+    %42:accrc = XXMFACC %43
+    %44:vsrc = COPY %42.sub_vsx1
+    %46:vsrprc = IMPLICIT_DEF
+    %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
+    %47:vsrc = COPY %42.sub_vsx0
+    %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
+    STXVP killed %48, 96, %9 :: (store 32 into %ir.add.ptr + 32)
+    %49:vsrprc = COPY %42.sub_pair1
+    %50:vsrc = COPY %49.sub_vsx1
+    %52:vsrprc = IMPLICIT_DEF
+    %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
+    %53:vsrc = COPY %49.sub_vsx0
+    %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
+    STXVP killed %54, 64, %9 :: (store 32 into %ir.add.ptr, align 64)
+    BLR8 implicit $lr8, implicit $rm
+
+  bb.7.for.body:
+    successors: %bb.7(0x7c000000), %bb.3(0x04000000)
+
+    %5:uaccrc = PHI %16, %bb.2, %6, %bb.7
+    %23:vsrc = COPY %8
+    %25:accrc = COPY %5
+    %24:accrc = XVF32GERPP %25, %23, %23
+    %26:accrc = XVF32GERPP %24, %23, %23
+    %27:accrc = XVF32GERPP %26, %23, %23
+    %28:accrc = XVF32GERPP %27, %23, %23
+    %29:accrc = XVF32GERPP %28, %23, %23
+    %30:accrc = XVF32GERPP %29, %23, %23
+    %31:accrc = XVF32GERPP %30, %23, %23
+    %32:accrc = XVF32GERPP %31, %23, %23
+    %6:uaccrc = COPY %32
+    BDNZ8 %bb.7, implicit-def dead $ctr8, implicit $ctr8
+    B %bb.3
+
+...
