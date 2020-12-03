@@ -1,17 +1,18 @@
-//===-- Implementation of hypotf function ---------------------------------===//
+//===-- Implementation header for hypot -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "src/__support/common.h"
-#include "utils/FPUtil/Hypot.h"
+
+#ifndef LLVM_LIBC_SRC_MATH_HYPOT_H
+#define LLVM_LIBC_SRC_MATH_HYPOT_H
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(hypotf)(float x, float y) {
-  return __llvm_libc::fputil::hypot(x, y);
-}
+double hypot(double x, double y);
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_MATH_HYPOT_H
