@@ -47,9 +47,6 @@ struct Program;
 struct ModuleLikeUnit;
 struct FunctionLikeUnit;
 
-// TODO: A collection of Evaluations can obviously be any of the container
-// types; leaving this as a std::list _for now_ because we reserve the right to
-// insert PFT nodes in any order in O(1) time.
 using EvaluationList = std::list<Evaluation>;
 using LabelEvalMap = llvm::DenseMap<Fortran::parser::Label, Evaluation *>;
 
@@ -222,7 +219,7 @@ struct Evaluation : EvaluationVariant {
       : EvaluationVariant{a},
         parentVariant{parentVariant}, position{position}, label{label} {}
 
-  /// Construct ctor
+  /// Construct and Directive ctor
   template <typename A>
   Evaluation(const A &a, const ParentVariant &parentVariant)
       : EvaluationVariant{a}, parentVariant{parentVariant} {
@@ -354,7 +351,7 @@ struct Evaluation : EvaluationVariant {
   Evaluation *constructExit{nullptr};    // set for constructs
   bool isNewBlock{false};                // evaluation begins a new basic block
   bool isUnstructured{false};  // evaluation has unstructured control flow
-  bool skip{false};            // evaluation has been processed in advance
+  bool negateCondition{false}; // If[Then]Stmt condition must be negated
   mlir::Block *block{nullptr}; // isNewBlock block
   llvm::SmallVector<mlir::Block *, 1> localBlocks{}; // construct local blocks
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
