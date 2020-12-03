@@ -2032,25 +2032,6 @@ public:
   bool keepUnsetBits() const override { return true; }
 };
 
-/// Resolve all references to a specific RecordVal.
-//
-// TODO: This is used for resolving references to template arguments, in a
-//       rather inefficient way. Change those uses to resolve all template
-//       arguments simultaneously and get rid of this class.
-class RecordValResolver final : public Resolver {
-  const RecordVal *RV;
-
-public:
-  explicit RecordValResolver(Record &R, const RecordVal *RV)
-      : Resolver(&R), RV(RV) {}
-
-  Init *resolve(Init *VarName) override {
-    if (VarName == RV->getNameInit())
-      return RV->getValue();
-    return nullptr;
-  }
-};
-
 /// Delegate resolving to a sub-resolver, but shadow some variable names.
 class ShadowResolver final : public Resolver {
   Resolver &R;
