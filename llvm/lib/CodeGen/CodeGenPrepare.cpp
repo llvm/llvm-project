@@ -5304,14 +5304,10 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 ///
 /// If the final index isn't a vector or is a splat, we can emit a scalar GEP
 /// followed by a GEP with an all zeroes vector index. This will enable
-/// SelectionDAGBuilder to use a the scalar GEP as the uniform base and have a
+/// SelectionDAGBuilder to use the scalar GEP as the uniform base and have a
 /// zero index.
 bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
                                                Value *Ptr) {
-  // FIXME: Support scalable vectors.
-  if (isa<ScalableVectorType>(Ptr->getType()))
-    return false;
-
   Value *NewAddr;
 
   if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
@@ -5370,7 +5366,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     if (!RewriteGEP && Ops.size() == 2)
       return false;
 
-    unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
+    auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
 
@@ -5380,7 +5376,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     // and a vector GEP with all zeroes final index.
     if (!Ops[FinalIndex]->getType()->isVectorTy()) {
       NewAddr = Builder.CreateGEP(Ops[0], makeArrayRef(Ops).drop_front());
-      auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
+      auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
       NewAddr = Builder.CreateGEP(NewAddr, Constant::getNullValue(IndexTy));
     } else {
       Value *Base = Ops[0];
@@ -5403,13 +5399,13 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     if (!V)
       return false;
 
-    unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
+    auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
 
     // Emit a vector GEP with a scalar pointer and all 0s vector index.
     Type *ScalarIndexTy = DL->getIndexType(V->getType()->getScalarType());
-    auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
+    auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
     NewAddr = Builder.CreateGEP(V, Constant::getNullValue(IndexTy));
   } else {
     // Constant, SelectionDAGBuilder knows to check if its a splat.
