@@ -33,6 +33,12 @@ TEST_MACROS();
 #include <atomic>
 TEST_MACROS();
 #endif
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <barrier>
+TEST_MACROS();
+#endif
+#include <bit>
+TEST_MACROS();
 #include <bitset>
 TEST_MACROS();
 #include <cassert>
@@ -59,9 +65,13 @@ TEST_MACROS();
 TEST_MACROS();
 #include <cmath>
 TEST_MACROS();
+#include <compare>
+TEST_MACROS();
 #include <complex>
 TEST_MACROS();
 #include <complex.h>
+TEST_MACROS();
+#include <concepts>
 TEST_MACROS();
 #include <condition_variable>
 TEST_MACROS();
@@ -99,6 +109,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <exception>
 TEST_MACROS();
+#include <execution>
+TEST_MACROS();
+#include <fenv.h>
+TEST_MACROS();
 #include <filesystem>
 TEST_MACROS();
 #include <float.h>
@@ -119,6 +133,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <iterator>
 TEST_MACROS();
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <latch>
+TEST_MACROS();
+#endif
 #include <limits>
 TEST_MACROS();
 #include <limits.h>
@@ -137,6 +155,8 @@ TEST_MACROS();
 #endif
 #include <new>
 TEST_MACROS();
+#include <numbers>
+TEST_MACROS();
 #include <numeric>
 TEST_MACROS();
 #include <optional>
@@ -149,6 +169,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <scoped_allocator>
 TEST_MACROS();
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <semaphore>
+TEST_MACROS();
+#endif
 #include <set>
 TEST_MACROS();
 #include <setjmp.h>
@@ -207,6 +231,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <vector>
 TEST_MACROS();
+#include <version>
+TEST_MACROS();
 #include <wchar.h>
 TEST_MACROS();
 #include <wctype.h>
@@ -251,6 +277,10 @@ TEST_MACROS();
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
 TEST_MACROS();
+#if defined(__cpp_coroutines)
+#include <experimental/coroutine>
+TEST_MACROS();
+#endif
 #include <experimental/deque>
 TEST_MACROS();
 #include <experimental/filesystem>
@@ -270,6 +300,8 @@ TEST_MACROS();
 #include <experimental/propagate_const>
 TEST_MACROS();
 #include <experimental/set>
+TEST_MACROS();
+#include <experimental/simd>
 TEST_MACROS();
 #include <experimental/string>
 TEST_MACROS();

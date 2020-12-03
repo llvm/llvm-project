@@ -30,9 +30,9 @@
 #include <array>
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <atomic>
-#include <latch>
+#endif
+#ifndef _LIBCPP_HAS_NO_THREADS
 #include <barrier>
-#include <semaphore>
 #endif
 #include <bit>
 #include <bitset>
@@ -83,6 +83,9 @@
 #include <inttypes.h>
 #include <iosfwd>
 #include <iterator>
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <latch>
+#endif
 #include <limits>
 #include <limits.h>
 #include <list>
@@ -100,6 +103,9 @@
 #include <random>
 #include <ratio>
 #include <scoped_allocator>
+#ifndef _LIBCPP_HAS_NO_THREADS
+#include <semaphore>
+#endif
 #include <set>
 #include <setjmp.h>
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -170,8 +176,8 @@
 #include <experimental/map>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
-#include <experimental/simd>
 #include <experimental/set>
+#include <experimental/simd>
 #include <experimental/string>
 #include <experimental/type_traits>
 #include <experimental/unordered_map>
