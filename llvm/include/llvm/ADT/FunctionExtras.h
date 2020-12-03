@@ -57,7 +57,7 @@ namespace detail {
 
 template <typename T>
 using EnableIfTrivial =
-    std::enable_if_t<std::is_trivially_move_constructible<T>::value &&
+    std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
 
 template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
@@ -83,8 +83,8 @@ protected:
   template <typename T>
   using AdjustedParamT = typename std::conditional<
       !std::is_reference<T>::value &&
-          std::is_trivially_copy_constructible<T>::value &&
-          std::is_trivially_move_constructible<T>::value &&
+          llvm::is_trivially_copy_constructible<T>::value &&
+          llvm::is_trivially_move_constructible<T>::value &&
           IsSizeLessThanThresholdT<T>::value,
       T, T &>::type;
 
