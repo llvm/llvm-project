@@ -61,13 +61,15 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
-
-private:
-  bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
-  bool optimizeCallInst(CallInst *CI, bool &ModifiedDT);
 };
 
 } // end anonymous namespace
+
+static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
+                          const TargetTransformInfo *TTI, const DataLayout *DL);
+static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
+                             const TargetTransformInfo *TTI,
+                             const DataLayout *DL);
 
 char ScalarizeMaskedMemIntrin::ID = 0;
 
@@ -834,7 +836,7 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
     for (Function::iterator I = F.begin(); I != F.end();) {
       BasicBlock *BB = &*I++;
       bool ModifiedDTOnIteration = false;
-      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration);
+      MadeChange |= optimizeBlock(*BB, ModifiedDTOnIteration, TTI, DL);
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
@@ -847,13 +849,15 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
   return EverMadeChange;
 }
 
-bool ScalarizeMaskedMemIntrin::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
+static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
+                          const TargetTransformInfo *TTI,
+                          const DataLayout *DL) {
   bool MadeChange = false;
 
   BasicBlock::iterator CurInstIterator = BB.begin();
   while (CurInstIterator != BB.end()) {
     if (CallInst *CI = dyn_cast<CallInst>(&*CurInstIterator++))
-      MadeChange |= optimizeCallInst(CI, ModifiedDT);
+      MadeChange |= optimizeCallInst(CI, ModifiedDT, TTI, DL);
     if (ModifiedDT)
       return true;
   }
@@ -861,8 +865,9 @@ bool ScalarizeMaskedMemIntrin::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   return MadeChange;
 }
 
-bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
-                                                bool &ModifiedDT) {
+static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
+                             const TargetTransformInfo *TTI,
+                             const DataLayout *DL) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
     // The scalarization code below does not work for scalable vectors.
