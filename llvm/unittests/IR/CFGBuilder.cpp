@@ -267,10 +267,11 @@ TEST(CFGBuilder, Rebuild) {
   EXPECT_TRUE(isa<SwitchInst>(B.getOrAddBlock("d")->getTerminator()));
 }
 
-static_assert(is_trivially_copyable<succ_iterator>::value,
+static_assert(std::is_trivially_copyable<succ_iterator>::value,
               "trivially copyable");
-static_assert(is_trivially_copyable<const_succ_iterator>::value,
+static_assert(std::is_trivially_copyable<const_succ_iterator>::value,
               "trivially copyable");
-static_assert(is_trivially_copyable<succ_range>::value, "trivially copyable");
-static_assert(is_trivially_copyable<const_succ_range>::value,
+static_assert(std::is_trivially_copyable<succ_range>::value,
+              "trivially copyable");
+static_assert(std::is_trivially_copyable<const_succ_range>::value,
               "trivially copyable");
