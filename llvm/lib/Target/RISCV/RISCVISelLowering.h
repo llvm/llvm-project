@@ -53,18 +53,15 @@ enum NodeType : unsigned {
   // FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
   // XLEN is the only legal integer width.
   //
-  // FMV_H_X_RV32/RV64 match the semantics of the FMV.H.X.
-  // FMV_X_ANYEXTH_RV32/RV64 are similar to FMV.X.H but has an any-extended
-  // result.
+  // FMV_H_X matches the semantics of the FMV.H.X.
+  // FMV_X_ANYEXTH is similar to FMV.X.H but has an any-extended result.
   // FMV_W_X_RV64 matches the semantics of the FMV.W.X.
   // FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
   //
   // This is a more convenient semantic for producing dagcombines that remove
   // unnecessary GPR->FPR->GPR moves.
-  FMV_H_X_RV32,
-  FMV_H_X_RV64,
-  FMV_X_ANYEXTH_RV32,
-  FMV_X_ANYEXTH_RV64,
+  FMV_H_X,
+  FMV_X_ANYEXTH,
   FMV_W_X_RV64,
   FMV_X_ANYEXTW_RV64,
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target

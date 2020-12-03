@@ -385,6 +385,7 @@ defm : StPat<store, FSW, FPR32>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtF, IsRV32] in {
+// Moves (no conversion)
 def : Pat<(bitconvert GPR:$rs1), (FMV_W_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR32:$rs1), (FMV_X_W FPR32:$rs1)>;
 
@@ -398,6 +399,7 @@ def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
+// Moves (no conversion)
 def : Pat<(riscv_fmv_w_x_rv64 GPR:$src), (FMV_W_X GPR:$src)>;
 def : Pat<(riscv_fmv_x_anyextw_rv64 FPR32:$src), (FMV_X_W FPR32:$src)>;
 def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
