@@ -37,6 +37,16 @@ def cvt_f32_ubyteN : GICombineRule<
          [{ return PostLegalizerHelper.matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
   (apply [{ PostLegalizerHelper.applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
+// Combine support that removes amdgcn_waterfall_readfirstlane or amdgcn_waterfall_begin intrinsics when
+// the index is uniform
+def rm_uniform_wf_matchdata : GIDefMatchData<"AMDGPURegBankCombinerHelper::RmUniformWFMatchInfo">;
+
+def rm_uniform_wf : GICombineRule<
+  (defs root:$uniform_wf_candidate, rm_uniform_wf_matchdata:$matchinfo),
+  (match (wip_match_opcode G_INTRINSIC_W_SIDE_EFFECTS):$uniform_wf_candidate,
+         [{ return RegBankHelper.matchRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -56,6 +66,8 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", []> {
+  "AMDGPUGenRegBankCombinerHelper", [rm_uniform_wf]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
+  let StateClass = "AMDGPURegBankCombinerHelperState";
+  let AdditionalArguments = [];
 }

@@ -2158,6 +2158,1403 @@ define amdgpu_ps <4 x float> @test_waterfall_full_idx_multi_begin(<8 x i32> addr
   ret <4 x float> %r1
 }
 
+define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32> addrspace(4)* inreg %in,
+; VI-LABEL: test_waterfall_multi_begin_uniform_idx_1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b64 s[6:7], exec
+; VI-NEXT:    s_wqm_b64 exec, exec
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 4, v[1:2]
+; VI-NEXT:    v_mov_b32_e32 v3, s2
+; VI-NEXT:    v_add_u32_e32 v1, vcc, v3, v1
+; VI-NEXT:    v_addc_u32_e32 v2, vcc, v4, v2, vcc
+; VI-NEXT:    flat_load_dwordx4 v[5:8], v[1:2]
+; VI-NEXT:    s_mov_b32 s4, s5
+; VI-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
+; VI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 5
+; VI-NEXT:    s_add_u32 s0, s0, s4
+; VI-NEXT:    s_addc_u32 s1, s1, s5
+; VI-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
+; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
+; VI-NEXT:    v_mov_b32_e32 v3, 0
+; VI-NEXT:    s_mov_b64 s[2:3], exec
+; VI-NEXT:    v_mov_b32_e32 v4, 0
+; VI-NEXT:  BB13_1: ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], s1, v0
+; VI-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
+; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    v_mov_b32_e32 v10, s1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s16, v5
+; VI-NEXT:    v_readfirstlane_b32 s17, v6
+; VI-NEXT:    v_readfirstlane_b32 s18, v7
+; VI-NEXT:    v_readfirstlane_b32 s19, v8
+; VI-NEXT:    v_mov_b32_e32 v9, s0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_nop 2
+; VI-NEXT:    image_sample v[9:12], v[9:10], s[8:15], s[16:19] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, v1, v9
+; VI-NEXT:    v_or_b32_e32 v2, v2, v10
+; VI-NEXT:    v_or_b32_e32 v3, v3, v11
+; VI-NEXT:    v_or_b32_e32 v4, v4, v12
+; VI-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; VI-NEXT:    s_cbranch_execnz BB13_1
+; VI-NEXT:  ; %bb.2:
+; VI-NEXT:    s_mov_b64 exec, s[2:3]
+; VI-NEXT:    s_and_b64 exec, exec, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v0, v1
+; VI-NEXT:    v_mov_b32_e32 v1, v2
+; VI-NEXT:    v_mov_b32_e32 v2, v3
+; VI-NEXT:    v_mov_b32_e32 v3, v4
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: test_waterfall_multi_begin_uniform_idx_1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9-NEXT:    s_wqm_b64 exec, exec
+; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, s3
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 4, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_add_co_u32_e32 v1, vcc, v3, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, v4, v2, vcc
+; GFX9-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX9-NEXT:    s_mov_b32 s4, s5
+; GFX9-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
+; GFX9-NEXT:    s_lshl_b64 s[4:5], s[4:5], 5
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, s5
+; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
+; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    s_mov_b64 s[2:3], exec
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:  BB13_1: ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], s1, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_mov_b32 s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v10, s1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s16, v5
+; GFX9-NEXT:    v_readfirstlane_b32 s17, v6
+; GFX9-NEXT:    v_readfirstlane_b32 s18, v7
+; GFX9-NEXT:    v_readfirstlane_b32 s19, v8
+; GFX9-NEXT:    v_mov_b32_e32 v9, s0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_nop 2
+; GFX9-NEXT:    image_sample v[9:12], v[9:10], s[8:15], s[16:19] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v9
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v10
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v11
+; GFX9-NEXT:    v_or_b32_e32 v4, v4, v12
+; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz BB13_1
+; GFX9-NEXT:  ; %bb.2:
+; GFX9-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_begin_uniform_idx_1:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, s3
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, s2
+; GFX10-32-NEXT:    s_mov_b32 s6, s5
+; GFX10-32-NEXT:    v_lshlrev_b64 v[1:2], 4, v[1:2]
+; GFX10-32-NEXT:    s_bfe_i64 s[2:3], s[6:7], 0x200000
+; GFX10-32-NEXT:    s_lshl_b64 s[2:3], s[2:3], 5
+; GFX10-32-NEXT:    s_add_u32 s0, s0, s2
+; GFX10-32-NEXT:    v_add_co_u32_e64 v1, vcc_lo, v3, v1
+; GFX10-32-NEXT:    s_addc_u32 s1, s1, s3
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v4, v2, vcc_lo
+; GFX10-32-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-32-NEXT:    s_mov_b32 s0, 0
+; GFX10-32-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-32-NEXT:  BB13_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s3, s1
+; GFX10-32-NEXT:    s_mov_b32 s1, s0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v5
+; GFX10-32-NEXT:    v_mov_b32_e32 v10, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s19, v8
+; GFX10-32-NEXT:    v_mov_b32_e32 v9, s0
+; GFX10-32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-32-NEXT:    s_nop 2
+; GFX10-32-NEXT:    image_sample v[9:12], v[9:10], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_or_b32_e32 v4, v4, v9
+; GFX10-32-NEXT:    v_or_b32_e32 v1, v1, v10
+; GFX10-32-NEXT:    v_or_b32_e32 v2, v2, v11
+; GFX10-32-NEXT:    v_or_b32_e32 v3, v3, v12
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
+; GFX10-32-NEXT:    s_cbranch_execnz BB13_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s2
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v4
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_begin_uniform_idx_1:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX10-64-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, s3
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, s2
+; GFX10-64-NEXT:    s_mov_b32 s4, s5
+; GFX10-64-NEXT:    v_mov_b32_e32 v15, 0
+; GFX10-64-NEXT:    v_lshlrev_b64 v[1:2], 4, v[1:2]
+; GFX10-64-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
+; GFX10-64-NEXT:    s_lshl_b64 s[2:3], s[2:3], 5
+; GFX10-64-NEXT:    s_add_u32 s0, s0, s2
+; GFX10-64-NEXT:    v_add_co_u32_e64 v1, vcc, v3, v1
+; GFX10-64-NEXT:    s_addc_u32 s1, s1, s3
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v2, vcc, v4, v2, vcc
+; GFX10-64-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-64-NEXT:    s_mov_b32 s0, 0
+; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-64-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-64-NEXT:  BB13_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[4:5], s1, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
+; GFX10-64-NEXT:    s_mov_b32 s1, s0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v5
+; GFX10-64-NEXT:    v_mov_b32_e32 v10, s1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v6
+; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v7
+; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v8
+; GFX10-64-NEXT:    v_mov_b32_e32 v9, s0
+; GFX10-64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-64-NEXT:    s_nop 2
+; GFX10-64-NEXT:    image_sample v[9:12], v[9:10], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_or_b32_e32 v3, v3, v9
+; GFX10-64-NEXT:    v_or_b32_e32 v1, v1, v10
+; GFX10-64-NEXT:    v_or_b32_e32 v2, v2, v11
+; GFX10-64-NEXT:    v_or_b32_e32 v15, v15, v12
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    s_cbranch_execnz BB13_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v15
+; GFX10-64-NEXT:    ; return to shader part epilog
+       <4 x i32> addrspace(4)* inreg %s_in, i32 inreg %idx1, i32 %idx2, i32 inreg %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32> addrspace(4)* inreg %in,
+; VI-LABEL: test_waterfall_multi_begin_uniform_idx_2:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b64 s[6:7], exec
+; VI-NEXT:    s_wqm_b64 exec, exec
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; VI-NEXT:    v_mov_b32_e32 v4, s1
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; VI-NEXT:    v_mov_b32_e32 v3, s0
+; VI-NEXT:    v_add_u32_e32 v5, vcc, v3, v1
+; VI-NEXT:    v_addc_u32_e32 v6, vcc, v4, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v9, vcc, 16, v5
+; VI-NEXT:    v_addc_u32_e32 v10, vcc, 0, v6, vcc
+; VI-NEXT:    flat_load_dwordx4 v[5:8], v[5:6]
+; VI-NEXT:    flat_load_dwordx4 v[9:12], v[9:10]
+; VI-NEXT:    s_mov_b32 s4, s5
+; VI-NEXT:    s_bfe_i64 s[0:1], s[4:5], 0x200000
+; VI-NEXT:    s_lshl_b64 s[0:1], s[0:1], 4
+; VI-NEXT:    s_add_u32 s0, s2, s0
+; VI-NEXT:    s_addc_u32 s1, s3, s1
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; VI-NEXT:    s_mov_b32 s4, 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
+; VI-NEXT:    v_mov_b32_e32 v3, 0
+; VI-NEXT:    s_mov_b64 s[8:9], exec
+; VI-NEXT:    v_mov_b32_e32 v4, 0
+; VI-NEXT:  BB14_1: ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    v_readfirstlane_b32 s5, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[10:11], s5, v0
+; VI-NEXT:    s_and_saveexec_b64 s[10:11], s[10:11]
+; VI-NEXT:    s_mov_b32 s5, s4
+; VI-NEXT:    v_mov_b32_e32 v14, s5
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_readfirstlane_b32 s12, v5
+; VI-NEXT:    v_readfirstlane_b32 s13, v6
+; VI-NEXT:    v_readfirstlane_b32 s14, v7
+; VI-NEXT:    v_readfirstlane_b32 s15, v8
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s16, v9
+; VI-NEXT:    v_readfirstlane_b32 s17, v10
+; VI-NEXT:    v_readfirstlane_b32 s18, v11
+; VI-NEXT:    v_readfirstlane_b32 s19, v12
+; VI-NEXT:    v_mov_b32_e32 v13, s4
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_nop 2
+; VI-NEXT:    image_sample v[13:16], v[13:14], s[12:19], s[0:3] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, v1, v13
+; VI-NEXT:    v_or_b32_e32 v2, v2, v14
+; VI-NEXT:    v_or_b32_e32 v3, v3, v15
+; VI-NEXT:    v_or_b32_e32 v4, v4, v16
+; VI-NEXT:    s_xor_b64 exec, exec, s[10:11]
+; VI-NEXT:    s_cbranch_execnz BB14_1
+; VI-NEXT:  ; %bb.2:
+; VI-NEXT:    s_mov_b64 exec, s[8:9]
+; VI-NEXT:    s_and_b64 exec, exec, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v0, v1
+; VI-NEXT:    v_mov_b32_e32 v1, v2
+; VI-NEXT:    v_mov_b32_e32 v2, v3
+; VI-NEXT:    v_mov_b32_e32 v3, v4
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: test_waterfall_multi_begin_uniform_idx_2:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9-NEXT:    s_wqm_b64 exec, exec
+; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, s1
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v3, s0
+; GFX9-NEXT:    v_add_co_u32_e32 v9, vcc, v3, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v10, vcc, v4, v2, vcc
+; GFX9-NEXT:    global_load_dwordx4 v[5:8], v[9:10], off
+; GFX9-NEXT:    global_load_dwordx4 v[9:12], v[9:10], off offset:16
+; GFX9-NEXT:    s_mov_b32 s4, s5
+; GFX9-NEXT:    s_bfe_i64 s[0:1], s[4:5], 0x200000
+; GFX9-NEXT:    s_lshl_b64 s[0:1], s[0:1], 4
+; GFX9-NEXT:    s_add_u32 s0, s2, s0
+; GFX9-NEXT:    s_addc_u32 s1, s3, s1
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX9-NEXT:    s_mov_b32 s4, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    s_mov_b64 s[8:9], exec
+; GFX9-NEXT:  BB14_1: ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[10:11], s5, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[10:11], s[10:11]
+; GFX9-NEXT:    s_mov_b32 s5, s4
+; GFX9-NEXT:    v_mov_b32_e32 v14, s5
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_readfirstlane_b32 s12, v5
+; GFX9-NEXT:    v_readfirstlane_b32 s13, v6
+; GFX9-NEXT:    v_readfirstlane_b32 s14, v7
+; GFX9-NEXT:    v_readfirstlane_b32 s15, v8
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s16, v9
+; GFX9-NEXT:    v_readfirstlane_b32 s17, v10
+; GFX9-NEXT:    v_readfirstlane_b32 s18, v11
+; GFX9-NEXT:    v_readfirstlane_b32 s19, v12
+; GFX9-NEXT:    v_mov_b32_e32 v13, s4
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_nop 2
+; GFX9-NEXT:    image_sample v[13:16], v[13:14], s[12:19], s[0:3] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v13
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v14
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v15
+; GFX9-NEXT:    v_or_b32_e32 v4, v4, v16
+; GFX9-NEXT:    s_xor_b64 exec, exec, s[10:11]
+; GFX9-NEXT:    s_cbranch_execnz BB14_1
+; GFX9-NEXT:  ; %bb.2:
+; GFX9-NEXT:    s_mov_b64 exec, s[8:9]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_begin_uniform_idx_2:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, s1
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, s0
+; GFX10-32-NEXT:    s_mov_b32 s6, s5
+; GFX10-32-NEXT:    v_mov_b32_e32 v19, 0
+; GFX10-32-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX10-32-NEXT:    s_bfe_i64 s[0:1], s[6:7], 0x200000
+; GFX10-32-NEXT:    v_mov_b32_e32 v23, 0
+; GFX10-32-NEXT:    s_lshl_b64 s[0:1], s[0:1], 4
+; GFX10-32-NEXT:    s_mov_b32 s6, 0
+; GFX10-32-NEXT:    s_add_u32 s0, s2, s0
+; GFX10-32-NEXT:    v_add_co_u32_e64 v1, vcc_lo, v3, v1
+; GFX10-32-NEXT:    s_addc_u32 s1, s3, s1
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v4, v2, vcc_lo
+; GFX10-32-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-32-NEXT:    s_mov_b32 s5, exec_lo
+; GFX10-32-NEXT:    s_clause 0x1
+; GFX10-32-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX10-32-NEXT:    global_load_dwordx4 v[9:12], v[1:2], off offset:16
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-32-NEXT:  BB14_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s7, s7, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s16, s7
+; GFX10-32-NEXT:    s_mov_b32 s7, s6
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
+; GFX10-32-NEXT:    v_mov_b32_e32 v14, s7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s11, v8
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v9
+; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v10
+; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v11
+; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-32-NEXT:    v_mov_b32_e32 v13, s6
+; GFX10-32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-32-NEXT:    s_nop 2
+; GFX10-32-NEXT:    image_sample v[13:16], v[13:14], s[8:15], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_or_b32_e32 v19, v19, v13
+; GFX10-32-NEXT:    v_or_b32_e32 v23, v23, v14
+; GFX10-32-NEXT:    v_or_b32_e32 v2, v2, v15
+; GFX10-32-NEXT:    v_or_b32_e32 v3, v3, v16
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s16
+; GFX10-32-NEXT:    s_cbranch_execnz BB14_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s5
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v19
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v23
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_begin_uniform_idx_2:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX10-64-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v7, s1
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, s0
+; GFX10-64-NEXT:    s_mov_b32 s4, s5
+; GFX10-64-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-64-NEXT:    v_lshlrev_b64 v[8:9], 5, v[1:2]
+; GFX10-64-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-64-NEXT:    s_lshl_b64 s[4:5], s[4:5], 4
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-64-NEXT:    s_add_u32 s4, s2, s4
+; GFX10-64-NEXT:    v_add_co_u32_e64 v10, vcc, v6, v8
+; GFX10-64-NEXT:    s_addc_u32 s5, s3, s5
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v11, vcc, v7, v9, vcc
+; GFX10-64-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-64-NEXT:    s_mov_b32 s0, 0
+; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-64-NEXT:    s_clause 0x1
+; GFX10-64-NEXT:    global_load_dwordx4 v[6:9], v[10:11], off
+; GFX10-64-NEXT:    global_load_dwordx4 v[10:13], v[10:11], off offset:16
+; GFX10-64-NEXT:  BB14_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[4:5], s1, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
+; GFX10-64-NEXT:    s_mov_b32 s1, s0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v6
+; GFX10-64-NEXT:    v_mov_b32_e32 v15, s1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v7
+; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v8
+; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v9
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v10
+; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v11
+; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v12
+; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v13
+; GFX10-64-NEXT:    v_mov_b32_e32 v14, s0
+; GFX10-64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-64-NEXT:    s_nop 2
+; GFX10-64-NEXT:    image_sample v[14:17], v[14:15], s[12:19], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_or_b32_e32 v5, v5, v14
+; GFX10-64-NEXT:    v_or_b32_e32 v2, v2, v15
+; GFX10-64-NEXT:    v_or_b32_e32 v3, v3, v16
+; GFX10-64-NEXT:    v_or_b32_e32 v4, v4, v17
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    s_cbranch_execnz BB14_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, v2
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v5
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v4
+; GFX10-64-NEXT:    ; return to shader part epilog
+       <4 x i32> addrspace(4)* inreg %s_in, i32 %idx1, i32 inreg %idx2, i32 %s_idx, i32 inreg %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32> addrspace(4)* inreg %in,
+; VI-LABEL: test_waterfall_multi_begin_uniform_idx_3:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_wqm_b64 exec, exec
+; VI-NEXT:    v_mov_b32_e32 v3, v2
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; VI-NEXT:    v_mov_b32_e32 v5, s1
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; VI-NEXT:    v_mov_b32_e32 v4, s0
+; VI-NEXT:    v_add_u32_e32 v9, vcc, v4, v1
+; VI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; VI-NEXT:    v_addc_u32_e32 v10, vcc, v5, v2, vcc
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 4, v[3:4]
+; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_mov_b32_e32 v3, s2
+; VI-NEXT:    v_add_u32_e32 v1, vcc, v3, v1
+; VI-NEXT:    v_addc_u32_e32 v2, vcc, v4, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v13, vcc, 16, v9
+; VI-NEXT:    v_addc_u32_e32 v14, vcc, 0, v10, vcc
+; VI-NEXT:    flat_load_dwordx4 v[5:8], v[1:2]
+; VI-NEXT:    flat_load_dwordx4 v[9:12], v[9:10]
+; VI-NEXT:    flat_load_dwordx4 v[13:16], v[13:14]
+; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
+; VI-NEXT:    s_mov_b64 s[2:3], exec
+; VI-NEXT:    v_mov_b32_e32 v4, 0
+; VI-NEXT:    v_mov_b32_e32 v3, 0
+; VI-NEXT:  BB15_1: ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; VI-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    v_mov_b32_e32 v18, s1
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_readfirstlane_b32 s8, v9
+; VI-NEXT:    v_readfirstlane_b32 s9, v10
+; VI-NEXT:    v_readfirstlane_b32 s10, v11
+; VI-NEXT:    v_readfirstlane_b32 s11, v12
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s12, v13
+; VI-NEXT:    v_readfirstlane_b32 s13, v14
+; VI-NEXT:    v_readfirstlane_b32 s14, v15
+; VI-NEXT:    v_readfirstlane_b32 s15, v16
+; VI-NEXT:    v_readfirstlane_b32 s16, v5
+; VI-NEXT:    v_readfirstlane_b32 s17, v6
+; VI-NEXT:    v_readfirstlane_b32 s18, v7
+; VI-NEXT:    v_readfirstlane_b32 s19, v8
+; VI-NEXT:    v_mov_b32_e32 v17, s0
+; VI-NEXT:    s_nop 3
+; VI-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, v1, v17
+; VI-NEXT:    v_or_b32_e32 v2, v2, v18
+; VI-NEXT:    v_or_b32_e32 v4, v4, v19
+; VI-NEXT:    v_or_b32_e32 v3, v3, v20
+; VI-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; VI-NEXT:    s_cbranch_execnz BB15_1
+; VI-NEXT:  ; %bb.2:
+; VI-NEXT:    s_mov_b64 exec, s[2:3]
+; VI-NEXT:    s_and_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v1
+; VI-NEXT:    v_mov_b32_e32 v1, v2
+; VI-NEXT:    v_mov_b32_e32 v2, v4
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: test_waterfall_multi_begin_uniform_idx_3:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-NEXT:    s_wqm_b64 exec, exec
+; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, s1
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v4, s0
+; GFX9-NEXT:    v_add_co_u32_e32 v13, vcc, v4, v1
+; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NEXT:    v_addc_co_u32_e32 v14, vcc, v5, v2, vcc
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 4, v[3:4]
+; GFX9-NEXT:    v_mov_b32_e32 v4, s3
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_add_co_u32_e32 v1, vcc, v3, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, v4, v2, vcc
+; GFX9-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX9-NEXT:    global_load_dwordx4 v[9:12], v[13:14], off
+; GFX9-NEXT:    global_load_dwordx4 v[13:16], v[13:14], off offset:16
+; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    s_mov_b64 s[2:3], exec
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:  BB15_1: ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX9-NEXT:    s_mov_b32 s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v18, s1
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_readfirstlane_b32 s8, v9
+; GFX9-NEXT:    v_readfirstlane_b32 s9, v10
+; GFX9-NEXT:    v_readfirstlane_b32 s10, v11
+; GFX9-NEXT:    v_readfirstlane_b32 s11, v12
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s12, v13
+; GFX9-NEXT:    v_readfirstlane_b32 s13, v14
+; GFX9-NEXT:    v_readfirstlane_b32 s14, v15
+; GFX9-NEXT:    v_readfirstlane_b32 s15, v16
+; GFX9-NEXT:    v_readfirstlane_b32 s16, v5
+; GFX9-NEXT:    v_readfirstlane_b32 s17, v6
+; GFX9-NEXT:    v_readfirstlane_b32 s18, v7
+; GFX9-NEXT:    v_readfirstlane_b32 s19, v8
+; GFX9-NEXT:    v_mov_b32_e32 v17, s0
+; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v17
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v18
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v19
+; GFX9-NEXT:    v_or_b32_e32 v4, v4, v20
+; GFX9-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX9-NEXT:    s_cbranch_execnz BB15_1
+; GFX9-NEXT:  ; %bb.2:
+; GFX9-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_begin_uniform_idx_3:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v12, s1
+; GFX10-32-NEXT:    v_mov_b32_e32 v11, s0
+; GFX10-32-NEXT:    v_mov_b32_e32 v7, s3
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX10-32-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX10-32-NEXT:    v_mov_b32_e32 v6, s2
+; GFX10-32-NEXT:    v_mov_b32_e32 v23, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v27, 0
+; GFX10-32-NEXT:    v_lshlrev_b64 v[3:4], 4, v[3:4]
+; GFX10-32-NEXT:    s_mov_b32 s0, 0
+; GFX10-32-NEXT:    v_add_co_u32_e64 v1, vcc_lo, v11, v1
+; GFX10-32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v12, v2, vcc_lo
+; GFX10-32-NEXT:    v_add_co_u32_e64 v3, vcc_lo, v6, v3
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, v7, v4, vcc_lo
+; GFX10-32-NEXT:    s_clause 0x1
+; GFX10-32-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX10-32-NEXT:    global_load_dwordx4 v[9:12], v[1:2], off offset:16
+; GFX10-32-NEXT:    global_load_dwordx4 v[13:16], v[3:4], off
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-32-NEXT:  BB15_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s3, s1
+; GFX10-32-NEXT:    s_mov_b32 s1, s0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
+; GFX10-32-NEXT:    v_mov_b32_e32 v18, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s11, v8
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v9
+; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v10
+; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v11
+; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v13
+; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v14
+; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v15
+; GFX10-32-NEXT:    v_readfirstlane_b32 s19, v16
+; GFX10-32-NEXT:    v_mov_b32_e32 v17, s0
+; GFX10-32-NEXT:    s_nop 3
+; GFX10-32-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_or_b32_e32 v23, v23, v17
+; GFX10-32-NEXT:    v_or_b32_e32 v27, v27, v18
+; GFX10-32-NEXT:    v_or_b32_e32 v2, v2, v19
+; GFX10-32-NEXT:    v_or_b32_e32 v3, v3, v20
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
+; GFX10-32-NEXT:    s_cbranch_execnz BB15_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s2
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v23
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v27
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_begin_uniform_idx_3:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-64-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v10, s3
+; GFX10-64-NEXT:    v_mov_b32_e32 v9, s2
+; GFX10-64-NEXT:    v_mov_b32_e32 v8, s1
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX10-64-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX10-64-NEXT:    v_mov_b32_e32 v7, s0
+; GFX10-64-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, 0
+; GFX10-64-NEXT:    v_lshlrev_b64 v[3:4], 4, v[3:4]
+; GFX10-64-NEXT:    s_mov_b32 s0, 0
+; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-64-NEXT:    v_add_co_u32_e64 v9, vcc, v9, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v10, vcc, v10, v4, vcc
+; GFX10-64-NEXT:    v_add_co_u32_e64 v1, vcc, v7, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v2, vcc, v8, v2, vcc
+; GFX10-64-NEXT:    global_load_dwordx4 v[7:10], v[9:10], off
+; GFX10-64-NEXT:    s_clause 0x1
+; GFX10-64-NEXT:    global_load_dwordx4 v[11:14], v[1:2], off
+; GFX10-64-NEXT:    global_load_dwordx4 v[15:18], v[1:2], off offset:16
+; GFX10-64-NEXT:  BB15_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX10-64-NEXT:    s_mov_b32 s1, s0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v11
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, s1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v12
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v13
+; GFX10-64-NEXT:    v_readfirstlane_b32 s11, v14
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v15
+; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v16
+; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v17
+; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v18
+; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v7
+; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v8
+; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v9
+; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v10
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-64-NEXT:    s_nop 3
+; GFX10-64-NEXT:    image_sample v[19:22], v[1:2], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_or_b32_e32 v5, v5, v19
+; GFX10-64-NEXT:    v_or_b32_e32 v6, v6, v20
+; GFX10-64-NEXT:    v_or_b32_e32 v3, v3, v21
+; GFX10-64-NEXT:    v_or_b32_e32 v4, v4, v22
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    s_cbranch_execnz BB15_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v5
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, v6
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v4
+; GFX10-64-NEXT:    ; return to shader part epilog
+       <4 x i32> addrspace(4)* inreg %s_in, i32 inreg %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32> addrspace(4)* inreg %in,
+; VI-LABEL: test_waterfall_multi_begin_uniform_idx_4:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_wqm_b64 exec, exec
+; VI-NEXT:    v_mov_b32_e32 v3, v2
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; VI-NEXT:    v_mov_b32_e32 v5, s1
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; VI-NEXT:    v_mov_b32_e32 v4, s0
+; VI-NEXT:    v_add_u32_e32 v9, vcc, v4, v1
+; VI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; VI-NEXT:    v_addc_u32_e32 v10, vcc, v5, v2, vcc
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 4, v[3:4]
+; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_mov_b32_e32 v3, s2
+; VI-NEXT:    v_add_u32_e32 v1, vcc, v3, v1
+; VI-NEXT:    v_addc_u32_e32 v2, vcc, v4, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v13, vcc, 16, v9
+; VI-NEXT:    v_addc_u32_e32 v14, vcc, 0, v10, vcc
+; VI-NEXT:    flat_load_dwordx4 v[5:8], v[1:2]
+; VI-NEXT:    flat_load_dwordx4 v[9:12], v[9:10]
+; VI-NEXT:    flat_load_dwordx4 v[13:16], v[13:14]
+; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
+; VI-NEXT:    s_mov_b64 s[2:3], exec
+; VI-NEXT:    v_mov_b32_e32 v4, 0
+; VI-NEXT:    v_mov_b32_e32 v3, 0
+; VI-NEXT:  BB16_1: ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; VI-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    v_mov_b32_e32 v18, s1
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_readfirstlane_b32 s8, v9
+; VI-NEXT:    v_readfirstlane_b32 s9, v10
+; VI-NEXT:    v_readfirstlane_b32 s10, v11
+; VI-NEXT:    v_readfirstlane_b32 s11, v12
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s12, v13
+; VI-NEXT:    v_readfirstlane_b32 s13, v14
+; VI-NEXT:    v_readfirstlane_b32 s14, v15
+; VI-NEXT:    v_readfirstlane_b32 s15, v16
+; VI-NEXT:    v_readfirstlane_b32 s16, v5
+; VI-NEXT:    v_readfirstlane_b32 s17, v6
+; VI-NEXT:    v_readfirstlane_b32 s18, v7
+; VI-NEXT:    v_readfirstlane_b32 s19, v8
+; VI-NEXT:    v_mov_b32_e32 v17, s0
+; VI-NEXT:    s_nop 3
+; VI-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v1, v1, v17
+; VI-NEXT:    v_or_b32_e32 v2, v2, v18
+; VI-NEXT:    v_or_b32_e32 v4, v4, v19
+; VI-NEXT:    v_or_b32_e32 v3, v3, v20
+; VI-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; VI-NEXT:    s_cbranch_execnz BB16_1
+; VI-NEXT:  ; %bb.2:
+; VI-NEXT:    s_mov_b64 exec, s[2:3]
+; VI-NEXT:    s_and_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, v1
+; VI-NEXT:    v_mov_b32_e32 v1, v2
+; VI-NEXT:    v_mov_b32_e32 v2, v4
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: test_waterfall_multi_begin_uniform_idx_4:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-NEXT:    s_wqm_b64 exec, exec
+; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, s1
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v4, s0
+; GFX9-NEXT:    v_add_co_u32_e32 v13, vcc, v4, v1
+; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NEXT:    v_addc_co_u32_e32 v14, vcc, v5, v2, vcc
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 4, v[3:4]
+; GFX9-NEXT:    v_mov_b32_e32 v4, s3
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_add_co_u32_e32 v1, vcc, v3, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, v4, v2, vcc
+; GFX9-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX9-NEXT:    global_load_dwordx4 v[9:12], v[13:14], off
+; GFX9-NEXT:    global_load_dwordx4 v[13:16], v[13:14], off offset:16
+; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    s_mov_b64 s[2:3], exec
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:  BB16_1: ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX9-NEXT:    s_mov_b32 s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v18, s1
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_readfirstlane_b32 s8, v9
+; GFX9-NEXT:    v_readfirstlane_b32 s9, v10
+; GFX9-NEXT:    v_readfirstlane_b32 s10, v11
+; GFX9-NEXT:    v_readfirstlane_b32 s11, v12
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s12, v13
+; GFX9-NEXT:    v_readfirstlane_b32 s13, v14
+; GFX9-NEXT:    v_readfirstlane_b32 s14, v15
+; GFX9-NEXT:    v_readfirstlane_b32 s15, v16
+; GFX9-NEXT:    v_readfirstlane_b32 s16, v5
+; GFX9-NEXT:    v_readfirstlane_b32 s17, v6
+; GFX9-NEXT:    v_readfirstlane_b32 s18, v7
+; GFX9-NEXT:    v_readfirstlane_b32 s19, v8
+; GFX9-NEXT:    v_mov_b32_e32 v17, s0
+; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v17
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v18
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v19
+; GFX9-NEXT:    v_or_b32_e32 v4, v4, v20
+; GFX9-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX9-NEXT:    s_cbranch_execnz BB16_1
+; GFX9-NEXT:  ; %bb.2:
+; GFX9-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_begin_uniform_idx_4:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v12, s1
+; GFX10-32-NEXT:    v_mov_b32_e32 v11, s0
+; GFX10-32-NEXT:    v_mov_b32_e32 v7, s3
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX10-32-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX10-32-NEXT:    v_mov_b32_e32 v6, s2
+; GFX10-32-NEXT:    v_mov_b32_e32 v23, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v27, 0
+; GFX10-32-NEXT:    v_lshlrev_b64 v[3:4], 4, v[3:4]
+; GFX10-32-NEXT:    s_mov_b32 s0, 0
+; GFX10-32-NEXT:    v_add_co_u32_e64 v1, vcc_lo, v11, v1
+; GFX10-32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v12, v2, vcc_lo
+; GFX10-32-NEXT:    v_add_co_u32_e64 v3, vcc_lo, v6, v3
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, v7, v4, vcc_lo
+; GFX10-32-NEXT:    s_clause 0x1
+; GFX10-32-NEXT:    global_load_dwordx4 v[5:8], v[1:2], off
+; GFX10-32-NEXT:    global_load_dwordx4 v[9:12], v[1:2], off offset:16
+; GFX10-32-NEXT:    global_load_dwordx4 v[13:16], v[3:4], off
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-32-NEXT:  BB16_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s3, s1
+; GFX10-32-NEXT:    s_mov_b32 s1, s0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
+; GFX10-32-NEXT:    v_mov_b32_e32 v18, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s11, v8
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v9
+; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v10
+; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v11
+; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v13
+; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v14
+; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v15
+; GFX10-32-NEXT:    v_readfirstlane_b32 s19, v16
+; GFX10-32-NEXT:    v_mov_b32_e32 v17, s0
+; GFX10-32-NEXT:    s_nop 3
+; GFX10-32-NEXT:    image_sample v[17:20], v[17:18], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_or_b32_e32 v23, v23, v17
+; GFX10-32-NEXT:    v_or_b32_e32 v27, v27, v18
+; GFX10-32-NEXT:    v_or_b32_e32 v2, v2, v19
+; GFX10-32-NEXT:    v_or_b32_e32 v3, v3, v20
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
+; GFX10-32-NEXT:    s_cbranch_execnz BB16_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s2
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v23
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v27
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_begin_uniform_idx_4:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-64-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v10, s3
+; GFX10-64-NEXT:    v_mov_b32_e32 v9, s2
+; GFX10-64-NEXT:    v_mov_b32_e32 v8, s1
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX10-64-NEXT:    v_lshlrev_b64 v[1:2], 5, v[1:2]
+; GFX10-64-NEXT:    v_mov_b32_e32 v7, s0
+; GFX10-64-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, 0
+; GFX10-64-NEXT:    v_lshlrev_b64 v[3:4], 4, v[3:4]
+; GFX10-64-NEXT:    s_mov_b32 s0, 0
+; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-64-NEXT:    v_add_co_u32_e64 v9, vcc, v9, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v10, vcc, v10, v4, vcc
+; GFX10-64-NEXT:    v_add_co_u32_e64 v1, vcc, v7, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v2, vcc, v8, v2, vcc
+; GFX10-64-NEXT:    global_load_dwordx4 v[7:10], v[9:10], off
+; GFX10-64-NEXT:    s_clause 0x1
+; GFX10-64-NEXT:    global_load_dwordx4 v[11:14], v[1:2], off
+; GFX10-64-NEXT:    global_load_dwordx4 v[15:18], v[1:2], off offset:16
+; GFX10-64-NEXT:  BB16_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX10-64-NEXT:    s_mov_b32 s1, s0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v11
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, s1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v12
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v13
+; GFX10-64-NEXT:    v_readfirstlane_b32 s11, v14
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v15
+; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v16
+; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v17
+; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v18
+; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v7
+; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v8
+; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v9
+; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v10
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-64-NEXT:    s_nop 3
+; GFX10-64-NEXT:    image_sample v[19:22], v[1:2], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_or_b32_e32 v5, v5, v19
+; GFX10-64-NEXT:    v_or_b32_e32 v6, v6, v20
+; GFX10-64-NEXT:    v_or_b32_e32 v3, v3, v21
+; GFX10-64-NEXT:    v_or_b32_e32 v4, v4, v22
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    s_cbranch_execnz BB16_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v5
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, v6
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v4
+; GFX10-64-NEXT:    ; return to shader part epilog
+       <4 x i32> addrspace(4)* inreg %s_in, i32 %idx1, i32 inreg %idx2, i32 %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_idx_1_2loops(
+; VI-LABEL: test_waterfall_multi_begin_uniform_idx_1_2loops:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_wqm_b64 exec, exec
+; VI-NEXT:    v_mov_b32_e32 v4, v0
+; VI-NEXT:    v_mov_b32_e32 v0, v3
+; VI-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NEXT:    v_mov_b32_e32 v5, v1
+; VI-NEXT:    v_mov_b32_e32 v7, s1
+; VI-NEXT:    v_lshlrev_b64 v[1:2], 5, v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v6, s0
+; VI-NEXT:    v_add_u32_e32 v6, vcc, v6, v1
+; VI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NEXT:    v_lshlrev_b64 v[0:1], 4, v[0:1]
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, v7, v2, vcc
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v13, vcc, 16, v6
+; VI-NEXT:    v_addc_u32_e32 v14, vcc, 0, v7, vcc
+; VI-NEXT:    flat_load_dwordx4 v[9:12], v[0:1]
+; VI-NEXT:    flat_load_dwordx4 v[17:20], v[6:7]
+; VI-NEXT:    flat_load_dwordx4 v[13:16], v[13:14]
+; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    s_mov_b64 s[2:3], exec
+; VI-NEXT:    v_mov_b32_e32 v8, 0
+; VI-NEXT:    v_mov_b32_e32 v3, 0
+; VI-NEXT:  BB17_1: ; =>This Inner Loop Header: Depth=1
+; VI-NEXT:    v_readfirstlane_b32 s8, v5
+; VI-NEXT:    v_readfirstlane_b32 s1, v4
+; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v4
+; VI-NEXT:    v_cmp_eq_u32_e64 s[8:9], s8, v5
+; VI-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
+; VI-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    v_mov_b32_e32 v7, s1
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_readfirstlane_b32 s8, v17
+; VI-NEXT:    v_readfirstlane_b32 s9, v18
+; VI-NEXT:    v_readfirstlane_b32 s10, v19
+; VI-NEXT:    v_readfirstlane_b32 s11, v20
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s12, v13
+; VI-NEXT:    v_readfirstlane_b32 s13, v14
+; VI-NEXT:    v_readfirstlane_b32 s14, v15
+; VI-NEXT:    v_readfirstlane_b32 s15, v16
+; VI-NEXT:    v_readfirstlane_b32 s16, v9
+; VI-NEXT:    v_readfirstlane_b32 s17, v10
+; VI-NEXT:    v_readfirstlane_b32 s18, v11
+; VI-NEXT:    v_readfirstlane_b32 s19, v12
+; VI-NEXT:    v_mov_b32_e32 v6, s0
+; VI-NEXT:    s_nop 3
+; VI-NEXT:    image_sample v[21:24], v[6:7], s[8:15], s[16:19] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v0, v0, v21
+; VI-NEXT:    v_or_b32_e32 v1, v1, v22
+; VI-NEXT:    v_or_b32_e32 v8, v8, v23
+; VI-NEXT:    v_or_b32_e32 v3, v3, v24
+; VI-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; VI-NEXT:    s_cbranch_execnz BB17_1
+; VI-NEXT:  ; %bb.2:
+; VI-NEXT:    s_mov_b64 exec, s[2:3]
+; VI-NEXT:    s_and_b64 exec, exec, s[4:5]
+; VI-NEXT:    v_readfirstlane_b32 s0, v17
+; VI-NEXT:    v_readfirstlane_b32 s1, v18
+; VI-NEXT:    v_readfirstlane_b32 s2, v19
+; VI-NEXT:    v_readfirstlane_b32 s3, v20
+; VI-NEXT:    v_readfirstlane_b32 s4, v13
+; VI-NEXT:    v_readfirstlane_b32 s5, v14
+; VI-NEXT:    v_readfirstlane_b32 s6, v15
+; VI-NEXT:    v_readfirstlane_b32 s7, v16
+; VI-NEXT:    v_readfirstlane_b32 s8, v9
+; VI-NEXT:    v_readfirstlane_b32 s9, v10
+; VI-NEXT:    v_readfirstlane_b32 s10, v11
+; VI-NEXT:    v_readfirstlane_b32 s11, v12
+; VI-NEXT:    v_mov_b32_e32 v2, v8
+; VI-NEXT:    s_nop 3
+; VI-NEXT:    image_sample v[4:7], v[6:7], s[0:7], s[8:11] dmask:0xf
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: test_waterfall_multi_begin_uniform_idx_1_2loops:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-NEXT:    s_wqm_b64 exec, exec
+; GFX9-NEXT:    v_mov_b32_e32 v4, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v3
+; GFX9-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NEXT:    v_mov_b32_e32 v5, v1
+; GFX9-NEXT:    v_mov_b32_e32 v7, s1
+; GFX9-NEXT:    v_lshlrev_b64 v[1:2], 5, v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v6, s0
+; GFX9-NEXT:    v_add_co_u32_e32 v6, vcc, v6, v1
+; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 4, v[0:1]
+; GFX9-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v2, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX9-NEXT:    global_load_dwordx4 v[9:12], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[17:20], v[6:7], off
+; GFX9-NEXT:    global_load_dwordx4 v[13:16], v[6:7], off offset:16
+; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    s_mov_b64 s[2:3], exec
+; GFX9-NEXT:    v_mov_b32_e32 v8, 0
+; GFX9-NEXT:  BB17_1: ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    v_readfirstlane_b32 s8, v5
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v4
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[8:9], s8, v5
+; GFX9-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
+; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX9-NEXT:    s_mov_b32 s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v7, s1
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_readfirstlane_b32 s8, v17
+; GFX9-NEXT:    v_readfirstlane_b32 s9, v18
+; GFX9-NEXT:    v_readfirstlane_b32 s10, v19
+; GFX9-NEXT:    v_readfirstlane_b32 s11, v20
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s12, v13
+; GFX9-NEXT:    v_readfirstlane_b32 s13, v14
+; GFX9-NEXT:    v_readfirstlane_b32 s14, v15
+; GFX9-NEXT:    v_readfirstlane_b32 s15, v16
+; GFX9-NEXT:    v_readfirstlane_b32 s16, v9
+; GFX9-NEXT:    v_readfirstlane_b32 s17, v10
+; GFX9-NEXT:    v_readfirstlane_b32 s18, v11
+; GFX9-NEXT:    v_readfirstlane_b32 s19, v12
+; GFX9-NEXT:    v_mov_b32_e32 v6, s0
+; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    image_sample v[21:24], v[6:7], s[8:15], s[16:19] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_or_b32_e32 v0, v0, v21
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v22
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v23
+; GFX9-NEXT:    v_or_b32_e32 v8, v8, v24
+; GFX9-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX9-NEXT:    s_cbranch_execnz BB17_1
+; GFX9-NEXT:  ; %bb.2:
+; GFX9-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v17
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v18
+; GFX9-NEXT:    v_readfirstlane_b32 s2, v19
+; GFX9-NEXT:    v_readfirstlane_b32 s3, v20
+; GFX9-NEXT:    v_readfirstlane_b32 s4, v13
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v14
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v15
+; GFX9-NEXT:    v_readfirstlane_b32 s7, v16
+; GFX9-NEXT:    v_readfirstlane_b32 s8, v9
+; GFX9-NEXT:    v_readfirstlane_b32 s9, v10
+; GFX9-NEXT:    v_readfirstlane_b32 s10, v11
+; GFX9-NEXT:    v_readfirstlane_b32 s11, v12
+; GFX9-NEXT:    v_mov_b32_e32 v3, v8
+; GFX9-NEXT:    s_nop 3
+; GFX9-NEXT:    image_sample v[4:7], v[6:7], s[0:7], s[8:11] dmask:0xf
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_begin_uniform_idx_1_2loops:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v3
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX10-32-NEXT:    v_mov_b32_e32 v5, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v12, s1
+; GFX10-32-NEXT:    v_mov_b32_e32 v11, s0
+; GFX10-32-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX10-32-NEXT:    v_lshlrev_b64 v[2:3], 5, v[2:3]
+; GFX10-32-NEXT:    v_mov_b32_e32 v8, s3
+; GFX10-32-NEXT:    v_mov_b32_e32 v7, s2
+; GFX10-32-NEXT:    v_mov_b32_e32 v27, 0
+; GFX10-32-NEXT:    v_lshlrev_b64 v[0:1], 4, v[0:1]
+; GFX10-32-NEXT:    v_mov_b32_e32 v31, 0
+; GFX10-32-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v11, v2
+; GFX10-32-NEXT:    v_mov_b32_e32 v35, 0
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v12, v3, vcc_lo
+; GFX10-32-NEXT:    v_mov_b32_e32 v26, 0
+; GFX10-32-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v7, v0
+; GFX10-32-NEXT:    s_mov_b32 s0, 0
+; GFX10-32-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v8, v1, vcc_lo
+; GFX10-32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-32-NEXT:    s_clause 0x1
+; GFX10-32-NEXT:    global_load_dwordx4 v[14:17], v[2:3], off
+; GFX10-32-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX10-32-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX10-32-NEXT:  BB17_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX10-32-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v4
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s3, s3, v5
+; GFX10-32-NEXT:    s_and_b32 s1, s1, s3
+; GFX10-32-NEXT:    s_and_saveexec_b32 s3, s1
+; GFX10-32-NEXT:    s_mov_b32 s1, s0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v14
+; GFX10-32-NEXT:    v_mov_b32_e32 v19, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v15
+; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v16
+; GFX10-32-NEXT:    v_readfirstlane_b32 s11, v17
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v10
+; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v11
+; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v12
+; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v13
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v8
+; GFX10-32-NEXT:    v_readfirstlane_b32 s19, v9
+; GFX10-32-NEXT:    v_mov_b32_e32 v18, s0
+; GFX10-32-NEXT:    s_nop 3
+; GFX10-32-NEXT:    image_sample v[20:23], v[18:19], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_or_b32_e32 v27, v27, v20
+; GFX10-32-NEXT:    v_or_b32_e32 v31, v31, v21
+; GFX10-32-NEXT:    v_or_b32_e32 v35, v35, v22
+; GFX10-32-NEXT:    v_or_b32_e32 v26, v26, v23
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
+; GFX10-32-NEXT:    s_cbranch_execnz BB17_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s2
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
+; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v14
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v15
+; GFX10-32-NEXT:    v_readfirstlane_b32 s2, v16
+; GFX10-32-NEXT:    v_readfirstlane_b32 s3, v17
+; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v10
+; GFX10-32-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v12
+; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v13
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v8
+; GFX10-32-NEXT:    v_readfirstlane_b32 s11, v9
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v27
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v31
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, v35
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, v26
+; GFX10-32-NEXT:    s_nop 0
+; GFX10-32-NEXT:    image_sample v[4:7], v[18:19], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_begin_uniform_idx_1_2loops:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-64-NEXT:    s_wqm_b64 exec, exec
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v5, v1
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX10-64-NEXT:    v_mov_b32_e32 v9, s3
+; GFX10-64-NEXT:    v_mov_b32_e32 v8, s2
+; GFX10-64-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v16, s1
+; GFX10-64-NEXT:    v_lshlrev_b64 v[2:3], 5, v[2:3]
+; GFX10-64-NEXT:    v_mov_b32_e32 v15, s0
+; GFX10-64-NEXT:    s_mov_b32 s0, 0
+; GFX10-64-NEXT:    v_lshlrev_b64 v[10:11], 4, v[0:1]
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-64-NEXT:    v_add_co_u32_e64 v8, vcc, v8, v10
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v9, vcc, v9, v11, vcc
+; GFX10-64-NEXT:    v_add_co_u32_e64 v6, vcc, v15, v2
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-64-NEXT:    v_add_co_ci_u32_e32 v7, vcc, v16, v3, vcc
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-64-NEXT:    global_load_dwordx4 v[9:12], v[8:9], off
+; GFX10-64-NEXT:    s_clause 0x1
+; GFX10-64-NEXT:    global_load_dwordx4 v[17:20], v[6:7], off
+; GFX10-64-NEXT:    global_load_dwordx4 v[13:16], v[6:7], off offset:16
+; GFX10-64-NEXT:  BB17_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v5
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[8:9], s8, v5
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[6:7], s1, v4
+; GFX10-64-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
+; GFX10-64-NEXT:    s_mov_b32 s1, s0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v17
+; GFX10-64-NEXT:    v_mov_b32_e32 v7, s1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v18
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v19
+; GFX10-64-NEXT:    v_readfirstlane_b32 s11, v20
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v13
+; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v14
+; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v15
+; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v16
+; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v9
+; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v10
+; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v11
+; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v12
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, s0
+; GFX10-64-NEXT:    s_nop 3
+; GFX10-64-NEXT:    image_sample v[21:24], v[6:7], s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_or_b32_e32 v0, v0, v21
+; GFX10-64-NEXT:    v_or_b32_e32 v1, v1, v22
+; GFX10-64-NEXT:    v_or_b32_e32 v2, v2, v23
+; GFX10-64-NEXT:    v_or_b32_e32 v3, v3, v24
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    s_cbranch_execnz BB17_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v17
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v18
+; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v19
+; GFX10-64-NEXT:    v_readfirstlane_b32 s3, v20
+; GFX10-64-NEXT:    v_readfirstlane_b32 s4, v13
+; GFX10-64-NEXT:    v_readfirstlane_b32 s5, v14
+; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v15
+; GFX10-64-NEXT:    v_readfirstlane_b32 s7, v16
+; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v9
+; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v10
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v11
+; GFX10-64-NEXT:    v_readfirstlane_b32 s11, v12
+; GFX10-64-NEXT:    s_nop 4
+; GFX10-64-NEXT:    image_sample v[4:7], v[6:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    ; return to shader part epilog
+       <8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
+       i32 %idx1, i32 %idx2, i32 inreg %idx3, i32 inreg%idx4,
+       i32 %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  %tok2 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx3)
+  %tok3 = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %tok2, i32 %idx4)
+  %s_rsrc1 = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok3, <8 x i32> %rsrc)
+  %s_srsrc1 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok3, <4 x i32> %srsrc)
+  %r2 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc1, <4 x i32> %s_srsrc1, i1 false, i32 0, i32 0)
+  %r3 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok3, <4 x float> %r2)
+
+  %insert = insertvalue { <4 x float>, <4 x float> } undef, <4 x float> %r1, 0
+  %insert1 = insertvalue { <4 x float>, <4 x float> } %insert, <4 x float> %r3, 1
+  ret {<4 x float> , <4 x float>} %insert1
+}
 
 declare i32 @llvm.amdgcn.waterfall.begin.i32(i32, i32) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v2i32(i32, <2 x i32>) #6
