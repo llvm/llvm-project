@@ -274,6 +274,8 @@ bool AddUsing::prepare(const Selection &Inputs) {
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
     if (auto E = T->getAs<ElaboratedTypeLoc>()) {
       QualifierToRemove = E.getQualifierLoc();
+      if (!QualifierToRemove)
+        return false;
 
       auto SpelledTokens =
           TB.spelledForExpanded(TB.expandedTokens(E.getSourceRange()));
