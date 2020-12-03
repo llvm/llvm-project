@@ -5252,24 +5252,13 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
     addToWorklistIfAllowed(Cmp);
 
-  // Holds consecutive and consecutive-like pointers. Consecutive-like pointers
-  // are pointers that are treated like consecutive pointers during
-  // vectorization. The pointer operands of interleaved accesses are an
-  // example.
-  SmallSetVector<Value *, 8> ConsecutiveLikePtrs;
-
-  // Holds pointer operands of instructions that are possibly non-uniform.
-  SmallPtrSet<Value *, 8> PossibleNonUniformPtrs;
-
   auto isUniformDecision = [&](Instruction *I, ElementCount VF) {
     InstWidening WideningDecision = getWideningDecision(I, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
 
-    // The address of a uniform mem op is itself uniform.  We exclude stores
-    // here as there's an assumption in the current code that all uses of
-    // uniform instructions are uniform and, as noted below, uniform stores are
-    // still handled via replication (i.e. aren't uniform after vectorization).
+    // A uniform memory op is itself uniform.  We exclude uniform stores
+    // here as they demand the last lane, not the first one.
     if (isa<LoadInst>(I) && Legal->isUniformMemOp(*I)) {
       assert(WideningDecision == CM_Scalarize);
       return true;
@@ -5287,14 +5276,15 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     return getLoadStorePointerOperand(I) == Ptr && isUniformDecision(I, VF);
   };
   
-  // Iterate over the instructions in the loop, and collect all
-  // consecutive-like pointer operands in ConsecutiveLikePtrs. If it's possible
-  // that a consecutive-like pointer operand will be scalarized, we collect it
-  // in PossibleNonUniformPtrs instead. We use two sets here because a single
-  // getelementptr instruction can be used by both vectorized and scalarized
-  // memory instructions. For example, if a loop loads and stores from the same
-  // location, but the store is conditional, the store will be scalarized, and
-  // the getelementptr won't remain uniform.
+  // Holds a list of values which are known to have at least one uniform use.
+  // Note that there may be other uses which aren't uniform.  A "uniform use"
+  // here is something which only demands lane 0 of the unrolled iterations;
+  // it does not imply that all lanes produce the same value (e.g. this is not 
+  // the usual meaning of uniform)
+  SmallPtrSet<Value *, 8> HasUniformUse;
+
+  // Scan the loop for instructions which are either a) known to have only
+  // lane 0 demanded or b) are uses which demand only lane 0 of their operand.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       // If there's no pointer operand, there's nothing to do.
@@ -5302,45 +5292,31 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       if (!Ptr)
         continue;
 
-      // For now, avoid walking use lists in other functions.
-      // TODO: Rewrite this algorithm from uses up.
-      if (!isa<Instruction>(Ptr) && !isa<Argument>(Ptr))
-        continue;
-
-      // A uniform memory op is itself uniform.  We exclude stores here as we
-      // haven't yet added dedicated logic in the CLONE path and rely on
-      // REPLICATE + DSE for correctness.
+      // A uniform memory op is itself uniform.  We exclude uniform stores
+      // here as they demand the last lane, not the first one.
       if (isa<LoadInst>(I) && Legal->isUniformMemOp(I))
         addToWorklistIfAllowed(&I);
 
-      // True if all users of Ptr are memory accesses that have Ptr as their
-      // pointer operand.  Since loops are assumed to be in LCSSA form, this
-      // disallows uses outside the loop as well.
-      auto UsersAreMemAccesses =
-          llvm::all_of(Ptr->users(), [&](User *U) -> bool {
-            return getLoadStorePointerOperand(U) == Ptr;
-          });
-
-      // Ensure the memory instruction will not be scalarized or used by
-      // gather/scatter, making its pointer operand non-uniform. If the pointer
-      // operand is used by any instruction other than a memory access, we
-      // conservatively assume the pointer operand may be non-uniform.
-      if (!UsersAreMemAccesses || !isUniformDecision(&I, VF))
-        PossibleNonUniformPtrs.insert(Ptr);
-
-      // If the memory instruction will be vectorized and its pointer operand
-      // is consecutive-like, or interleaving - the pointer operand should
-      // remain uniform.
-      else
-        ConsecutiveLikePtrs.insert(Ptr);
+      if (isUniformDecision(&I, VF)) {
+        assert(isVectorizedMemAccessUse(&I, Ptr) && "consistency check");
+        HasUniformUse.insert(Ptr);
+      }
     }
 
-  // Add to the Worklist all consecutive and consecutive-like pointers that
-  // aren't also identified as possibly non-uniform.
-  for (auto *V : ConsecutiveLikePtrs)
-    if (!PossibleNonUniformPtrs.count(V))
-      if (auto *I = dyn_cast<Instruction>(V))
-        addToWorklistIfAllowed(I);
+  // Add to the worklist any operands which have *only* uniform (e.g. lane 0
+  // demanding) users.  Since loops are assumed to be in LCSSA form, this
+  // disallows uses outside the loop as well.
+  for (auto *V : HasUniformUse) {
+    if (isOutOfScope(V))
+      continue;
+    auto *I = cast<Instruction>(V);
+    auto UsersAreMemAccesses =
+      llvm::all_of(I->users(), [&](User *U) -> bool {
+        return isVectorizedMemAccessUse(cast<Instruction>(U), V);
+      });
+    if (UsersAreMemAccesses)
+      addToWorklistIfAllowed(I);
+  }
 
   // Expand Worklist in topological order: whenever a new instruction
   // is added , its users should be already inside Worklist.  It ensures
