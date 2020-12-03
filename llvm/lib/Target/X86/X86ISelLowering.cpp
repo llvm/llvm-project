@@ -19123,12 +19123,20 @@ LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
   return GetTLSADDR(DAG, Chain, GA, &InFlag, PtrVT, X86::EAX, X86II::MO_TLSGD);
 }
 
-// Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit
+// Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit LP64
 static SDValue
 LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
   return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
                     X86::RAX, X86II::MO_TLSGD);
+}
+
+// Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
+static SDValue
+LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
+                                 const EVT PtrVT) {
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
+                    X86::EAX, X86II::MO_TLSGD);
 }
 
 static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
@@ -19241,8 +19249,11 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
     switch (model) {
       case TLSModel::GeneralDynamic:
-        if (Subtarget.is64Bit())
-          return LowerToTLSGeneralDynamicModel64(GA, DAG, PtrVT);
+        if (Subtarget.is64Bit()) {
+          if (Subtarget.isTarget64BitLP64())
+            return LowerToTLSGeneralDynamicModel64(GA, DAG, PtrVT);
+          return LowerToTLSGeneralDynamicModelX32(GA, DAG, PtrVT);
+        }
         return LowerToTLSGeneralDynamicModel32(GA, DAG, PtrVT);
       case TLSModel::LocalDynamic:
         return LowerToTLSLocalDynamicModel(GA, DAG, PtrVT,
@@ -33511,8 +33522,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   default: llvm_unreachable("Unexpected instr type to insert");
   case X86::TLS_addr32:
   case X86::TLS_addr64:
+  case X86::TLS_addrX32:
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
+  case X86::TLS_base_addrX32:
     return EmitLoweredTLSAddr(MI, BB);
   case X86::INDIRECT_THUNK_CALL32:
   case X86::INDIRECT_THUNK_CALL64:
