@@ -292,13 +292,14 @@ const NamedDecl *getPreferredDecl(const NamedDecl *D) {
   return D;
 }
 
-std::vector<LocatedSymbol> findOverrides(llvm::DenseSet<SymbolID> IDs,
-                                         const SymbolIndex *Index,
-                                         llvm::StringRef MainFilePath) {
+std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
+                                            RelationKind Predicate,
+                                            const SymbolIndex *Index,
+                                            llvm::StringRef MainFilePath) {
   if (IDs.empty())
     return {};
   RelationsRequest Req;
-  Req.Predicate = RelationKind::OverriddenBy;
+  Req.Predicate = Predicate;
   Req.Subjects = std::move(IDs);
   std::vector<LocatedSymbol> Results;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
@@ -458,7 +459,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     });
   }
 
-  auto Overrides = findOverrides(VirtualMethods, Index, MainFilePath);
+  auto Overrides = findImplementors(VirtualMethods, RelationKind::OverriddenBy,
+                                    Index, MainFilePath);
   Result.insert(Result.end(), Overrides.begin(), Overrides.end());
   return Result;
 }
@@ -1239,12 +1241,20 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
   }
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  llvm::DenseSet<SymbolID> VirtualMethods;
-  for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations))
-    if (const CXXMethodDecl *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND))
-      if (CXXMD->isVirtual())
-        VirtualMethods.insert(getSymbolID(ND));
-  return findOverrides(std::move(VirtualMethods), Index, *MainFilePath);
+  llvm::DenseSet<SymbolID> IDs;
+  RelationKind QueryKind;
+  for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations)) {
+    if (const auto *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+      if (CXXMD->isVirtual()) {
+        IDs.insert(getSymbolID(ND));
+        QueryKind = RelationKind::OverriddenBy;
+      }
+    } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
+      IDs.insert(getSymbolID(RD));
+      QueryKind = RelationKind::BaseOf;
+    }
+  }
+  return findImplementors(std::move(IDs), QueryKind, Index, *MainFilePath);
 }
 
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
