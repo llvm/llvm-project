@@ -652,8 +652,11 @@ const char *regionListEnsureTerminatorParserCode = R"(
 ///
 /// {0}: The name of the region.
 const char *optionalRegionParserCode = R"(
-  if (parser.parseOptionalRegion(*{0}Region))
-    return ::mlir::failure();
+  {
+     auto parseResult = parser.parseOptionalRegion(*{0}Region);
+     if (parseResult.hasValue() && failed(*parseResult))
+       return ::mlir::failure();
+  }
 )";
 
 /// The code snippet used to generate a parser call for a region.

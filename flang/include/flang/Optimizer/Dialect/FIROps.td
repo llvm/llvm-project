@@ -2856,7 +2856,8 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
 
     // Parse the optional table body.
     mlir::Region *body = result.addRegion();
-    if (parser.parseOptionalRegion(*body, llvm::None, llvm::None))
+    OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
+    if (parseResult.hasValue() && failed(*parseResult))
       return mlir::failure();
 
     ensureTerminator(*body, parser.getBuilder(), result.location);

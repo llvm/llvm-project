@@ -1754,8 +1754,9 @@ static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
 
   // Parse the optional function body.
   auto *body = state.addRegion();
-  return parser.parseOptionalRegion(
+  OptionalParseResult result = parser.parseOptionalRegion(
       *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  return failure(result.hasValue() && failed(*result));
 }
 
 static void print(spirv::FuncOp fnOp, OpAsmPrinter &printer) {
