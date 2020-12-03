@@ -1566,16 +1566,16 @@ static Error elf2yaml(raw_ostream &Out, const object::ELFFile<ELFT> &Obj,
 Error elf2yaml(raw_ostream &Out, const object::ObjectFile &Obj) {
   std::unique_ptr<DWARFContext> DWARFCtx = DWARFContext::create(Obj);
   if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(&Obj))
-    return elf2yaml(Out, *ELFObj->getELFFile(), std::move(DWARFCtx));
+    return elf2yaml(Out, ELFObj->getELFFile(), std::move(DWARFCtx));
 
   if (const auto *ELFObj = dyn_cast<object::ELF32BEObjectFile>(&Obj))
-    return elf2yaml(Out, *ELFObj->getELFFile(), std::move(DWARFCtx));
+    return elf2yaml(Out, ELFObj->getELFFile(), std::move(DWARFCtx));
 
   if (const auto *ELFObj = dyn_cast<object::ELF64LEObjectFile>(&Obj))
-    return elf2yaml(Out, *ELFObj->getELFFile(), std::move(DWARFCtx));
+    return elf2yaml(Out, ELFObj->getELFFile(), std::move(DWARFCtx));
 
   if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(&Obj))
-    return elf2yaml(Out, *ELFObj->getELFFile(), std::move(DWARFCtx));
+    return elf2yaml(Out, ELFObj->getELFFile(), std::move(DWARFCtx));
 
   llvm_unreachable("unknown ELF file format");
 }

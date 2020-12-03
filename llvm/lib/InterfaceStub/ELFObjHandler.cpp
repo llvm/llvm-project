@@ -585,15 +585,15 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   using Elf_Sym_Range = typename ELFT::SymRange;
   using Elf_Sym = typename ELFT::Sym;
   std::unique_ptr<ELFStub> DestStub = std::make_unique<ELFStub>();
-  const ELFFile<ELFT> *ElfFile = ElfObj.getELFFile();
+  const ELFFile<ELFT> &ElfFile = ElfObj.getELFFile();
   // Fetch .dynamic table.
-  Expected<Elf_Dyn_Range> DynTable = ElfFile->dynamicEntries();
+  Expected<Elf_Dyn_Range> DynTable = ElfFile.dynamicEntries();
   if (!DynTable) {
     return DynTable.takeError();
   }
 
   // Fetch program headers.
-  Expected<Elf_Phdr_Range> PHdrs = ElfFile->program_headers();
+  Expected<Elf_Phdr_Range> PHdrs = ElfFile.program_headers();
   if (!PHdrs) {
     return PHdrs.takeError();
   }
@@ -604,8 +604,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
     return std::move(Err);
 
   // Get pointer to in-memory location of .dynstr section.
-  Expected<const uint8_t *> DynStrPtr =
-      ElfFile->toMappedAddr(DynEnt.StrTabAddr);
+  Expected<const uint8_t *> DynStrPtr = ElfFile.toMappedAddr(DynEnt.StrTabAddr);
   if (!DynStrPtr)
     return appendToError(DynStrPtr.takeError(),
                          "when locating .dynstr section contents");
@@ -614,7 +613,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
                    DynEnt.StrSize);
 
   // Populate Arch from ELF header.
-  DestStub->Arch = ElfFile->getHeader().e_machine;
+  DestStub->Arch = ElfFile.getHeader().e_machine;
 
   // Populate SoName from .dynamic entries and dynamic string table.
   if (DynEnt.SONameOffset.hasValue()) {
@@ -637,13 +636,13 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   }
 
   // Populate Symbols from .dynsym table and dynamic string table.
-  Expected<uint64_t> SymCount = getNumSyms(DynEnt, *ElfFile);
+  Expected<uint64_t> SymCount = getNumSyms(DynEnt, ElfFile);
   if (!SymCount)
     return SymCount.takeError();
   if (*SymCount > 0) {
     // Get pointer to in-memory location of .dynsym section.
     Expected<const uint8_t *> DynSymPtr =
-        ElfFile->toMappedAddr(DynEnt.DynSymAddr);
+        ElfFile.toMappedAddr(DynEnt.DynSymAddr);
     if (!DynSymPtr)
       return appendToError(DynSymPtr.takeError(),
                            "when locating .dynsym section contents");
