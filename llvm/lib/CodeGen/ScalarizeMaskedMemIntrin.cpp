@@ -42,9 +42,6 @@ using namespace llvm;
 namespace {
 
 class ScalarizeMaskedMemIntrin : public FunctionPass {
-  const TargetTransformInfo *TTI = nullptr;
-  const DataLayout *DL = nullptr;
-
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -66,10 +63,10 @@ public:
 } // end anonymous namespace
 
 static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
-                          const TargetTransformInfo *TTI, const DataLayout *DL);
+                          const TargetTransformInfo &TTI, const DataLayout &DL);
 static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
-                             const TargetTransformInfo *TTI,
-                             const DataLayout *DL);
+                             const TargetTransformInfo &TTI,
+                             const DataLayout &DL);
 
 char ScalarizeMaskedMemIntrin::ID = 0;
 
@@ -827,8 +824,8 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
 bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
   bool EverMadeChange = false;
 
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  DL = &F.getParent()->getDataLayout();
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  auto &DL = F.getParent()->getDataLayout();
 
   bool MadeChange = true;
   while (MadeChange) {
@@ -850,8 +847,8 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
 }
 
 static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
-                          const TargetTransformInfo *TTI,
-                          const DataLayout *DL) {
+                          const TargetTransformInfo &TTI,
+                          const DataLayout &DL) {
   bool MadeChange = false;
 
   BasicBlock::iterator CurInstIterator = BB.begin();
@@ -866,8 +863,8 @@ static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
 }
 
 static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
-                             const TargetTransformInfo *TTI,
-                             const DataLayout *DL) {
+                             const TargetTransformInfo &TTI,
+                             const DataLayout &DL) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
     // The scalarization code below does not work for scalable vectors.
@@ -881,14 +878,14 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       break;
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
-      if (TTI->isLegalMaskedLoad(
+      if (TTI.isLegalMaskedLoad(
               CI->getType(),
               cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue()))
         return false;
       scalarizeMaskedLoad(CI, ModifiedDT);
       return true;
     case Intrinsic::masked_store:
-      if (TTI->isLegalMaskedStore(
+      if (TTI.isLegalMaskedStore(
               CI->getArgOperand(0)->getType(),
               cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue()))
         return false;
@@ -899,8 +896,8 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
           cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       Type *LoadTy = CI->getType();
       Align Alignment =
-          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), LoadTy);
-      if (TTI->isLegalMaskedGather(LoadTy, Alignment))
+          DL.getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), LoadTy);
+      if (TTI.isLegalMaskedGather(LoadTy, Alignment))
         return false;
       scalarizeMaskedGather(CI, ModifiedDT);
       return true;
@@ -910,19 +907,19 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
           cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       Type *StoreTy = CI->getArgOperand(0)->getType();
       Align Alignment =
-          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), StoreTy);
-      if (TTI->isLegalMaskedScatter(StoreTy, Alignment))
+          DL.getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), StoreTy);
+      if (TTI.isLegalMaskedScatter(StoreTy, Alignment))
         return false;
       scalarizeMaskedScatter(CI, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_expandload:
-      if (TTI->isLegalMaskedExpandLoad(CI->getType()))
+      if (TTI.isLegalMaskedExpandLoad(CI->getType()))
         return false;
       scalarizeMaskedExpandLoad(CI, ModifiedDT);
       return true;
     case Intrinsic::masked_compressstore:
-      if (TTI->isLegalMaskedCompressStore(CI->getArgOperand(0)->getType()))
+      if (TTI.isLegalMaskedCompressStore(CI->getArgOperand(0)->getType()))
         return false;
       scalarizeMaskedCompressStore(CI, ModifiedDT);
       return true;
