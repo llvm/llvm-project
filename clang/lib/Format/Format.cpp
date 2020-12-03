@@ -2179,7 +2179,8 @@ static void sortCppIncludes(const FormatStyle &Style,
   // Deduplicate #includes.
   Indices.erase(std::unique(Indices.begin(), Indices.end(),
                             [&](unsigned LHSI, unsigned RHSI) {
-                              return Includes[LHSI].Text == Includes[RHSI].Text;
+                              return Includes[LHSI].Text.trim() ==
+                                     Includes[RHSI].Text.trim();
                             }),
                 Indices.end());
 
