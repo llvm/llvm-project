@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
+#include "Config.h"
 #include "InputFiles.h"
 
 #include "lld/Common/Args.h"
@@ -184,4 +185,11 @@ uint32_t macho::getModTime(StringRef path) {
 
   warn("failed to get modification time of " + path);
   return 0;
+}
+
+void macho::printWhyLoad(StringRef reason, const InputFile *f) {
+  if (!config->printWhyLoad)
+    return;
+  lld::outs() << reason << " forced load of " << toString(f)
+              << '\n';
 }

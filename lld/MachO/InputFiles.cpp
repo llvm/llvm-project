@@ -619,7 +619,16 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
                                      "for the member defining symbol " +
                                      toMachOString(sym)));
 
+  // `sym` is owned by a LazySym, which will be replace<>() by make<ObjFile>
+  // and become invalid after that call. Copy it to the stack so we can refer
+  // to it later.
+  const object::Archive::Symbol sym_copy = sym;
+
   auto file = make<ObjFile>(mb, modTime, getName());
+
+  // ld64 doesn't demangle sym here even with -demangle. Match that, so
+  // intentionally no call to toMachOString() here.
+  printWhyLoad(sym_copy.getName(), file);
 
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   subsections.insert(subsections.end(), file->subsections.begin(),
