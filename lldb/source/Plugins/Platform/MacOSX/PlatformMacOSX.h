@@ -13,7 +13,7 @@
 
 class PlatformMacOSX : public PlatformDarwin {
 public:
-  PlatformMacOSX(bool is_host);
+  PlatformMacOSX();
 
   // Class functions
   static lldb::PlatformSP CreateInstance(bool force,
@@ -23,13 +23,13 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic(bool is_host);
+  static lldb_private::ConstString GetPluginNameStatic();
 
-  static const char *GetDescriptionStatic(bool is_host);
+  static const char *GetDescriptionStatic();
 
   // lldb_private::PluginInterface functions
   lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic(IsHost());
+    return GetPluginNameStatic();
   }
 
   uint32_t GetPluginVersion() override { return 1; }
@@ -41,25 +41,13 @@ public:
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr) override;
 
-  const char *GetDescription() override {
-    return GetDescriptionStatic(IsHost());
-  }
-
-  lldb_private::Status
-  GetSymbolFile(const lldb_private::FileSpec &platform_file,
-                const lldb_private::UUID *uuid_ptr,
-                lldb_private::FileSpec &local_file);
+  const char *GetDescription() override { return GetDescriptionStatic(); }
 
   lldb_private::Status
   GetFile(const lldb_private::FileSpec &source,
           const lldb_private::FileSpec &destination) override {
     return PlatformDarwin::GetFile(source, destination);
   }
-
-  lldb_private::Status
-  GetFileWithUUID(const lldb_private::FileSpec &platform_file,
-                  const lldb_private::UUID *uuid_ptr,
-                  lldb_private::FileSpec &local_file) override;
 
   bool GetSupportedArchitectureAtIndex(uint32_t idx,
                                        lldb_private::ArchSpec &arch) override;
