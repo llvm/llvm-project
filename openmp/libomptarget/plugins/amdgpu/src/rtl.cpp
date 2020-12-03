@@ -183,17 +183,15 @@ struct KernelTy {
   // 1 - Generic mode (with master warp)
   int8_t ExecutionMode;
   int16_t ConstWGSize;
-  int8_t MaxParLevel;
   int32_t device_id;
   void *CallStackAddr;
   const char *Name;
 
-  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int8_t _MaxParLevel,
-           int32_t _device_id, void *_CallStackAddr, const char *_Name,
+  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
+           void *_CallStackAddr, const char *_Name,
            uint32_t _kernarg_segment_size)
       : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
-        MaxParLevel(_MaxParLevel), device_id(_device_id),
-        CallStackAddr(_CallStackAddr), Name(_Name) {
+        device_id(_device_id), CallStackAddr(_CallStackAddr), Name(_Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
 
     std::string N(_Name);
@@ -1140,9 +1138,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     // get flat group size if present, else Default_WG_Size
     int16_t WGSizeVal = RTLDeviceInfoTy::Default_WG_Size;
 
-    // Max parallel level
-    int16_t MaxParLevVal = 0;
-
     // get Kernel Descriptor if present.
     // Keep struct in sync wih getTgtAttributeStructQTy in CGOpenMPRuntime.cpp
     struct KernDescValType {
@@ -1151,7 +1146,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       uint16_t WG_Size;
       uint8_t Mode;
       uint8_t HostServices;
-      uint8_t MaxParallelLevel;
     };
     struct KernDescValType KernDescVal;
     std::string KernDescNameStr(e->name);
@@ -1183,31 +1177,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       DP("KernDesc: WG_Size: %d\n", KernDescVal.WG_Size);
       DP("KernDesc: Mode: %d\n", KernDescVal.Mode);
       DP("KernDesc: HostServices: %x\n", KernDescVal.HostServices);
-      DP("KernDesc: MaxParallelLevel: %x\n", KernDescVal.MaxParallelLevel);
-
-      // gather location of callStack and size of struct
-      MaxParLevVal = KernDescVal.MaxParallelLevel;
-      if (MaxParLevVal > 0) {
-        uint32_t varsize;
-        const char *CsNam = "omptarget_nest_par_call_stack";
-        err = atmi_interop_hsa_get_symbol_info(place, CsNam, &CallStackAddr,
-                                               &varsize);
-        if (err != ATMI_STATUS_SUCCESS) {
-          fprintf(stderr, "Addr of %s failed\n", CsNam);
-          return NULL;
-        }
-        void *StructSizePtr;
-        const char *SsNam = "omptarget_nest_par_call_struct_size";
-        err = interop_get_symbol_info((char *)image->ImageStart, img_size,
-                                      SsNam, &StructSizePtr, &varsize);
-        if ((err != ATMI_STATUS_SUCCESS) ||
-            (varsize != sizeof(TgtStackItemSize))) {
-          fprintf(stderr, "Addr of %s failed\n", SsNam);
-          return NULL;
-        }
-        memcpy(&TgtStackItemSize, StructSizePtr, sizeof(TgtStackItemSize));
-        DP("Size of our struct is %d\n", TgtStackItemSize);
-      }
 
       // Get ExecMode
       ExecModeVal = KernDescVal.Mode;
@@ -1298,8 +1267,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       check("Loading WGSize computation property", err);
     }
 
-    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, MaxParLevVal,
-                                   device_id, CallStackAddr, e->name,
+    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, device_id,
+                                   CallStackAddr, e->name,
                                    kernarg_segment_size));
     __tgt_offload_entry entry = *e;
     entry.addr = (void *)&KernelsList.back();
@@ -1518,34 +1487,6 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
      threadsPerGroup);
 }
 
-static void *AllocateNestedParallelCallMemory(int MaxParLevel, int NumGroups,
-                                              int ThreadsPerGroup,
-                                              int device_id,
-                                              void *CallStackAddr, int SPMD) {
-  if (print_kernel_trace > 1)
-    fprintf(stderr, "MaxParLevel %d SPMD %d NumGroups %d NumThrds %d\n",
-            MaxParLevel, SPMD, NumGroups, ThreadsPerGroup);
-  // Total memory needed is Teams * Threads * ParLevels
-  size_t NestedMemSize =
-      MaxParLevel * NumGroups * ThreadsPerGroup * TgtStackItemSize * 4;
-
-  if (print_kernel_trace > 1)
-    fprintf(stderr, "NestedMemSize %ld \n", NestedMemSize);
-  assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  void *TgtPtr = NULL;
-  atmi_status_t err =
-      atmi_malloc(&TgtPtr, NestedMemSize, get_gpu_mem_place(device_id));
-  err = DeviceInfo.freesignalpool_memcpy_h2d(CallStackAddr, &TgtPtr,
-                                             sizeof(void *), device_id);
-  if (print_kernel_trace > 2)
-    fprintf(stderr, "CallSck %lx TgtPtr %lx *TgtPtr %lx \n",
-            (long)CallStackAddr, (long)&TgtPtr, (long)TgtPtr);
-  if (err != ATMI_STATUS_SUCCESS) {
-    fprintf(stderr, "Mem not wrtten to target, err %d\n", err);
-  }
-  return TgtPtr; // we need to free this after kernel.
-}
-
 static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
   uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
   bool full = true;
@@ -1581,8 +1522,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
     int32_t thread_limit, uint64_t loop_tripcount) {
-  static pthread_mutex_t nested_parallel_mutex = PTHREAD_MUTEX_INITIALIZER;
-
   // Set the context we are using
   // update thread limit content in gpu memory if un-initialized or specified
   // from host
@@ -1617,14 +1556,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
                 loop_tripcount // From run_region arg
   );
 
-  void *TgtCallStack = NULL;
-  if (KernelInfo->MaxParLevel > 0) {
-    pthread_mutex_lock(&nested_parallel_mutex);
-    TgtCallStack = AllocateNestedParallelCallMemory(
-        KernelInfo->MaxParLevel, num_groups, threadsPerGroup,
-        KernelInfo->device_id, KernelInfo->CallStackAddr,
-        KernelInfo->ExecutionMode);
-  }
   if (print_kernel_trace > 0)
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     fprintf(stderr,
@@ -1741,12 +1672,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   }
 
   DP("Kernel completed\n");
-  // Free call stack for nested
-  if (TgtCallStack) {
-    pthread_mutex_unlock(&nested_parallel_mutex);
-    atmi_free(TgtCallStack);
-  }
-
   return OFFLOAD_SUCCESS;
 }
 
