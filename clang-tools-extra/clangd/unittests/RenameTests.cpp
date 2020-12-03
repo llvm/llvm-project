@@ -816,6 +816,13 @@ TEST(RenameTest, WithinFileRename) {
           [[F^oo]] foo = static_cast<[[F^oo]]>(boo);
         }
       )cpp",
+
+      // ObjC, should not crash.
+      R"cpp(
+        @interface ObjC {
+          char [[da^ta]];
+        } @end
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -823,6 +830,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
     auto AST = TU.build();
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
