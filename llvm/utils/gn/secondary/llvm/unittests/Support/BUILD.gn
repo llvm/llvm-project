@@ -85,7 +85,6 @@ unittest("SupportTests") {
     "TrailingObjectsTest.cpp",
     "TrigramIndexTest.cpp",
     "TypeNameTest.cpp",
-    "TypeTraitsTest.cpp",
     "UnicodeTest.cpp",
     "VersionTupleTest.cpp",
     "VirtualFileSystemTest.cpp",
