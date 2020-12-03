@@ -38,7 +38,7 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
 
   BitTracker::BitMask mask(Register Reg, unsigned Sub) const override;
 
-  uint16_t getPhysRegBitWidth(Register Reg) const override;
+  uint16_t getPhysRegBitWidth(MCRegister Reg) const override;
 
   const TargetRegisterClass &composeWithSubRegIndex(
         const TargetRegisterClass &RC, unsigned Idx) const override;

@@ -485,7 +485,7 @@ struct BitTracker::MachineEvaluator {
     llvm_unreachable("Unimplemented composeWithSubRegIndex");
   }
   // Return the size in bits of the physical register Reg.
-  virtual uint16_t getPhysRegBitWidth(Register Reg) const;
+  virtual uint16_t getPhysRegBitWidth(MCRegister Reg) const;
 
   const TargetRegisterInfo &TRI;
   MachineRegisterInfo &MRI;
