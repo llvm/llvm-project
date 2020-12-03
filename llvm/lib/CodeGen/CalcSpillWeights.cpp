@@ -64,7 +64,7 @@ static Register copyHint(const MachineInstr *MI, unsigned Reg,
     return Sub == HSub ? HReg : Register();
 
   const TargetRegisterClass *rc = MRI.getRegClass(Reg);
-  Register CopiedPReg = (HSub ? TRI.getSubReg(HReg, HSub) : HReg);
+  MCRegister CopiedPReg = HSub ? TRI.getSubReg(HReg, HSub) : HReg.asMCReg();
   if (rc->contains(CopiedPReg))
     return CopiedPReg;
 
