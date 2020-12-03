@@ -95,7 +95,53 @@ def StdC : StandardSpec<"stdc"> {
           >,
       ]
   >;
-     
+
+  HeaderSpec Fenv = HeaderSpec<
+      "fenv.h",
+      [
+          Macro<"FE_DIVBYZERO">,
+          Macro<"FE_INEXACT">,
+          Macro<"FE_INVALID">,
+          Macro<"FE_OVERFLOW">,
+          Macro<"FE_UNDERFLOW">,
+          Macro<"FE_ALL_EXCEPT">,
+
+          Macro<"FE_DOWNWARD">,
+          Macro<"FE_TONEAREST">,
+          Macro<"FE_TOWARDZERO">,
+          Macro<"FE_UPWARD">
+      ],
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "feclearexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fetestexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "feraiseexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fesetround",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fegetround",
+              RetValSpec<IntType>,
+              []
+          >,
+      ]
+  >;
+ 
   HeaderSpec String = HeaderSpec<
       "string.h",
       [
@@ -491,6 +537,7 @@ def StdC : StandardSpec<"stdc"> {
     Assert,
     CType,
     Errno,
+    Fenv,
     Math,
     String,
     StdIO,
