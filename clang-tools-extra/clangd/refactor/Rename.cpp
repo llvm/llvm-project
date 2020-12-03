@@ -129,7 +129,8 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
     // CXXMethodDecl::getInstantiatedFromMemberFunction for the field because
     // Clang AST does not store relevant information about the field that is
     // instantiated.
-    const auto *FieldParent = dyn_cast<CXXRecordDecl>(Field->getParent());
+    const auto *FieldParent =
+        dyn_cast_or_null<CXXRecordDecl>(Field->getParent());
     if (!FieldParent)
       return Field->getCanonicalDecl();
     FieldParent = FieldParent->getTemplateInstantiationPattern();
