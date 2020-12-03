@@ -24,4 +24,78 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL:func @defer_wait(%{{.*}}: index)
+  func @defer_wait(%sz : index) {
+    // CHECK: %[[a0:.*]], %[[f0:.*]] = async.execute
+    %a0 = async.execute {
+      // CHECK: %[[t:.*]] = gpu.launch_func async
+      gpu.launch_func @kernels::@kernel
+          blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+      // CHECK-NOT: gpu.wait
+      // CHECK: async.yield %[[t]]
+      async.yield
+    }
+
+    // CHECK: %[[a1:.*]], %[[f1:.*]] = async.execute
+    // CHECK-SAME: %[[f0]]
+    %a1 = async.execute [%a0] {
+      // CHECK: %[[t:.*]] = gpu.launch_func async
+      gpu.launch_func @kernels::@kernel
+          blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+      // CHECK-NOT: gpu.wait
+      // CHECK: async.yield %[[t]]
+      async.yield
+    }
+
+    // CHECK: async.await %[[a1]]
+    // CHECK: %[[t:.*]] = async.await %[[f1]]
+    // CHECK: gpu.wait [%[[t]]]
+    async.await %a1 : !async.token
+    return
+  }
+
+  // CHECK-LABEL:func @defer_wait_blocked_by_side_effect(%{{.*}}: index)
+  func @defer_wait_blocked_by_side_effect(%sz : index) {
+    // CHECK: %[[a:.*]] = async.execute
+    %a = async.execute {
+      // CHECK: %[[t:.*]] = gpu.launch_func async
+      gpu.launch_func @kernels::@kernel
+          blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+      // CHECK: gpu.wait [%[[t]]]
+      call @foo() : () -> ()
+      async.yield
+    }
+
+    // CHECK: async.await %[[a]]
+    // CHECK-NOT: gpu.wait
+    async.await %a : !async.token
+    return
+  }
+
+  // CHECK-LABEL:func @defer_wait_pass_through(%{{.*}}: index)
+  func @defer_wait_pass_through(%sz : index) {
+    // CHECK: %[[a0:.*]], %[[f0:.*]] = async.execute
+    %a0 = async.execute {
+      // CHECK: %[[t:.*]] = gpu.launch_func async
+      gpu.launch_func @kernels::@kernel
+          blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+      // CHECK-NOT: gpu.wait
+      // CHECK: async.yield %[[t]]
+      async.yield
+    }
+
+    // CHECK: %[[a1:.*]], %[[f1:.*]] = async.execute
+    // CHECK-SAME: %[[f0]]
+    %a1 = async.execute [%a0] {
+      // CHECK-NOT: gpu.wait
+      // CHECK: async.yield %{{.*}}
+      async.yield
+    }
+
+    // CHECK: async.await %[[a1]]
+    // CHECK: %[[t:.*]] = async.await %[[f1]]
+    // CHECK: gpu.wait [%[[t]]]
+    async.await %a1 : !async.token
+    return
+  }
 }
