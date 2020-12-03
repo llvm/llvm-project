@@ -13,7 +13,7 @@
 //         && OutputIterator<OutIter, InIter2::reference>
 //         && HasLess<InIter2::value_type, InIter1::value_type>
 //         && HasLess<InIter1::value_type, InIter2::value_type>
-//   constpexr OutIter       // constexpr after C++17
+//   constexpr OutIter       // constexpr after C++17
 //   set_intersection(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2,
 //                    OutIter result);
 

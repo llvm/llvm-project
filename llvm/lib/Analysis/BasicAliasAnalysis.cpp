@@ -877,8 +877,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       // If this is a no-capture pointer argument, see if we can tell that it
       // is impossible to alias the pointer we're checking.
       AliasResult AR = getBestAAResults().alias(
-          MemoryLocation(*CI, LocationSize::unknown()),
-          MemoryLocation(Object, LocationSize::unknown()), AAQI);
+          MemoryLocation::getBeforeOrAfter(*CI),
+          MemoryLocation::getBeforeOrAfter(Object), AAQI);
       if (AR != MustAlias)
         IsMustAlias = false;
       // Operand doesn't alias 'Object', continue looking for other aliases
@@ -924,7 +924,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   if (isMallocOrCallocLikeFn(Call, &TLI)) {
     // Be conservative if the accessed pointer may alias the allocation -
     // fallback to the generic handling below.
-    if (getBestAAResults().alias(MemoryLocation(Call, LocationSize::unknown()),
+    if (getBestAAResults().alias(MemoryLocation::getBeforeOrAfter(Call),
                                  Loc, AAQI) == NoAlias)
       return ModRefInfo::NoModRef;
   }
@@ -1245,9 +1245,9 @@ AliasResult BasicAAResult::aliasGEP(
     if (isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
       return NoAlias;
     // Do the base pointers alias?
-    AliasResult BaseAlias =
-        aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(),
-                   UnderlyingV2, LocationSize::unknown(), AAMDNodes(), AAQI);
+    AliasResult BaseAlias = aliasCheck(
+        UnderlyingV1, LocationSize::beforeOrAfterPointer(), AAMDNodes(),
+        UnderlyingV2, LocationSize::beforeOrAfterPointer(), AAMDNodes(), AAQI);
 
     // For GEPs with identical offsets, we can preserve the size and AAInfo
     // when performing the alias check on the underlying objects.
@@ -1295,9 +1295,9 @@ AliasResult BasicAAResult::aliasGEP(
     if (!V1Size.hasValue() && !V2Size.hasValue())
       return MayAlias;
 
-    AliasResult R = aliasCheck(UnderlyingV1, LocationSize::unknown(),
-                               AAMDNodes(), V2, LocationSize::unknown(),
-                               V2AAInfo, AAQI, nullptr, UnderlyingV2);
+    AliasResult R = aliasCheck(
+        UnderlyingV1, LocationSize::beforeOrAfterPointer(), AAMDNodes(),
+        V2, V2Size, V2AAInfo, AAQI, nullptr, UnderlyingV2);
     if (R != MustAlias) {
       // If V2 may alias GEP base pointer, conservatively returns MayAlias.
       // If V2 is known not to alias GEP base pointer, then the two values
@@ -1336,9 +1336,7 @@ AliasResult BasicAAResult::aliasGEP(
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      // We need to know that V2Size is not unknown, otherwise we might have
-      // stripped a gep with negative index ('gep <ptr>, -1, ...).
-      if (V1Size.hasValue() && V2Size.hasValue()) {
+      if (V1Size.hasValue()) {
         if ((-DecompGEP1.Offset).ult(V1Size.getValue()))
           return PartialAlias;
         return NoAlias;
@@ -1518,27 +1516,16 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     }
 
   SmallVector<Value *, 4> V1Srcs;
-  // For a recursive phi, that recurses through a contant gep, we can perform
-  // aliasing calculations using the other phi operands with an unknown size to
-  // specify that an unknown number of elements after the initial value are
-  // potentially accessed.
+  // If a phi operand recurses back to the phi, we can still determine NoAlias
+  // if we don't alias the underlying objects of the other phi operands, as we
+  // know that the recursive phi needs to be based on them in some way.
   bool isRecursive = false;
   auto CheckForRecPhi = [&](Value *PV) {
     if (!EnableRecPhiAnalysis)
       return false;
-    if (GEPOperator *PVGEP = dyn_cast<GEPOperator>(PV)) {
-      // Check whether the incoming value is a GEP that advances the pointer
-      // result of this PHI node (e.g. in a loop). If this is the case, we
-      // would recurse and always get a MayAlias. Handle this case specially
-      // below. We need to ensure that the phi is inbounds and has a constant
-      // positive operand so that we can check for alias with the initial value
-      // and an unknown but positive size.
-      if (PVGEP->getPointerOperand() == PN && PVGEP->isInBounds() &&
-          PVGEP->getNumIndices() == 1 && isa<ConstantInt>(PVGEP->idx_begin()) &&
-          !cast<ConstantInt>(PVGEP->idx_begin())->isNegative()) {
-        isRecursive = true;
-        return true;
-      }
+    if (getUnderlyingObject(PV) == PN) {
+      isRecursive = true;
+      return true;
     }
     return false;
   };
@@ -1584,11 +1571,11 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   if (V1Srcs.empty())
     return MayAlias;
 
-  // If this PHI node is recursive, set the size of the accessed memory to
-  // unknown to represent all the possible values the GEP could advance the
-  // pointer to.
+  // If this PHI node is recursive, indicate that the pointer may be moved
+  // across iterations. We can only prove NoAlias if different underlying
+  // objects are involved.
   if (isRecursive)
-    PNSize = LocationSize::unknown();
+    PNSize = LocationSize::beforeOrAfterPointer();
 
   // In the recursive alias queries below, we may compare values from two
   // different loop iterations. Keep track of visited phi blocks, which will
@@ -1725,6 +1712,18 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           O1, getMinimalExtentFrom(*V2, V2Size, DL, NullIsValidLocation), DL,
           TLI, NullIsValidLocation)))
     return NoAlias;
+
+  // If one the accesses may be before the accessed pointer, canonicalize this
+  // by using unknown after-pointer sizes for both accesses. This is
+  // equivalent, because regardless of which pointer is lower, one of them
+  // will always came after the other, as long as the underlying objects aren't
+  // disjoint. We do this so that the rest of BasicAA does not have to deal
+  // with accesses before the base pointer, and to improve cache utilization by
+  // merging equivalent states.
+  if (V1Size.mayBeBeforePointer() || V2Size.mayBeBeforePointer()) {
+    V1Size = LocationSize::afterPointer();
+    V2Size = LocationSize::afterPointer();
+  }
 
   // Check the cache before climbing up use-def chains. This also terminates
   // otherwise infinitely recursive queries.

@@ -115,12 +115,13 @@ define <8 x i32> @umin.v8i32(<8 x i32> %v0, <8 x i32> %v1) {
 }
 
 ; COST-LABEL: umin.v2i64
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %v0, <2 x i64> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %v0, <2 x i64> %v1)
 
 ; CODE-LABEL: umin.v2i64
 ; CODE:       bb.0
-; CODE:        csel
-; CODE:        csel
+; CODE-NEXT:   uqsub v{{.*}}.2d, v{{.*}}.2d, v{{.*}}.2d
+; CODE-NEXT:   sub v{{.*}}.2d, v{{.*}}.2d, v{{.*}}.2d
+; CODE-NEXT:   ret
 
 declare <2 x i64> @llvm.umin.v2i64(<2 x i64>, <2 x i64>)
 define <2 x i64> @umin.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
@@ -369,12 +370,13 @@ define <8 x i32> @umax.v8i32(<8 x i32> %v0, <8 x i32> %v1) {
 }
 
 ; COST-LABEL: umax.v2i64
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %v0, <2 x i64> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %v0, <2 x i64> %v1)
 
 ; CODE-LABEL: umax.v2i64
 ; CODE:       bb.0
-; CODE:        csel
-; CODE:        csel
+; CODE-NEXT:   uqsub v{{.*}}.2d, v{{.*}}.2d, v{{.*}}.2d
+; CODE-NEXT:   add v{{.*}}.2d, v{{.*}}.2d, v{{.*}}.2d
+; CODE-NEXT:   ret
 
 declare <2 x i64> @llvm.umax.v2i64(<2 x i64>, <2 x i64>)
 define <2 x i64> @umax.v2i64(<2 x i64> %v0, <2 x i64> %v1) {

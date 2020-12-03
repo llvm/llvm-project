@@ -239,7 +239,7 @@ namespace {
       llvm::TargetLibraryInfo TLI(TLII);
       llvm::AliasAnalysis AA(TLI);
       llvm::AliasSetTracker X(AA);
-      X.add(nullptr, llvm::LocationSize::unknown(),
+      X.add(nullptr, llvm::LocationSize::beforeOrAfterPointer(),
             llvm::AAMDNodes()); // for -print-alias-sets
       (void) llvm::AreStatisticsEnabled();
       (void) llvm::sys::RunningOnValgrind();

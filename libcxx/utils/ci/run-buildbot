@@ -88,6 +88,13 @@ function check-cxx-cxxabi() {
     ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
 }
 
+# TODO: The goal is to test this against all configurations. We should also move
+#       this to the Lit test suite instead of being a separate CMake target.
+function check-abi-list() {
+    echo "+++ Running the libc++ ABI list test"
+    ninja -C "${BUILD_DIR}" check-cxx-abilist
+}
+
 function check-cxx-benchmarks() {
     echo "--- Running the benchmarks"
     ninja -C "${BUILD_DIR}" check-cxx-benchmarks
@@ -100,6 +107,7 @@ generic-cxx03)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
     check-cxx-cxxabi
+    check-abi-list
 ;;
 generic-cxx11)
     export CC=clang
@@ -107,6 +115,7 @@ generic-cxx11)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
     check-cxx-cxxabi
+    check-abi-list
 ;;
 generic-cxx14)
     export CC=clang
@@ -114,6 +123,7 @@ generic-cxx14)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
     check-cxx-cxxabi
+    check-abi-list
 ;;
 generic-cxx17)
     export CC=clang
@@ -121,6 +131,7 @@ generic-cxx17)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
     check-cxx-cxxabi
+    check-abi-list
 ;;
 generic-cxx2a)
     export CC=clang
@@ -128,6 +139,7 @@ generic-cxx2a)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake"
     check-cxx-cxxabi
+    check-abi-list
 ;;
 generic-noexceptions)
     export CC=clang

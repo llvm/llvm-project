@@ -854,7 +854,7 @@ TBVectorExt::TBVectorExt(StringRef TBvectorStrRef) {
 #define GETVALUEWITHMASK(X) (Data & (TracebackTable::X))
 #define GETVALUEWITHMASKSHIFT(X, S)                                            \
   ((Data & (TracebackTable::X)) >> (TracebackTable::S))
-uint8_t TBVectorExt::geNumberOfVRSaved() const {
+uint8_t TBVectorExt::getNumberOfVRSaved() const {
   return GETVALUEWITHMASKSHIFT(NumberOfVRSavedMask, NumberOfVRSavedShift);
 }
 

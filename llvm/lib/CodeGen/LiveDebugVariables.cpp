@@ -1022,10 +1022,10 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf) {
   return Changed;
 }
 
-static void removeDebugValues(MachineFunction &mf) {
+static void removeDebugInstrs(MachineFunction &mf) {
   for (MachineBasicBlock &MBB : mf) {
     for (auto MBBI = MBB.begin(), MBBE = MBB.end(); MBBI != MBBE; ) {
-      if (!MBBI->isDebugValue()) {
+      if (!MBBI->isDebugInstr()) {
         ++MBBI;
         continue;
       }
@@ -1038,7 +1038,7 @@ bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
   if (!EnableLDV)
     return false;
   if (!mf.getFunction().getSubprogram()) {
-    removeDebugValues(mf);
+    removeDebugInstrs(mf);
     return false;
   }
   if (!pImpl)

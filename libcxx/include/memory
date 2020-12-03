@@ -1912,7 +1912,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY _Tp* release() _NOEXCEPT
     {
         _Tp* __t = __ptr_;
-        __ptr_ = 0;
+        __ptr_ = nullptr;
         return __t;
     }
     _LIBCPP_INLINE_VISIBILITY void reset(_Tp* __p = 0) _NOEXCEPT
@@ -2853,7 +2853,7 @@ public:
         : __size_(__s) {}
 
     template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void __incr(_Tp*) _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY void __incr() _NOEXCEPT
         {__incr(integral_constant<bool, is_trivially_destructible<_Tp>::value>());}
 
     template <class _Tp>
@@ -3545,7 +3545,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool unique() const _NOEXCEPT {return use_count() == 1;}
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {return get() != 0;}
+    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {return get() != nullptr;}
     template <class _Up>
         _LIBCPP_INLINE_VISIBILITY
         bool owner_before(shared_ptr<_Up> const& __p) const _NOEXCEPT
@@ -3649,8 +3649,8 @@ template<class _Tp>
 inline
 _LIBCPP_CONSTEXPR
 shared_ptr<_Tp>::shared_ptr() _NOEXCEPT
-    : __ptr_(0),
-      __cntrl_(0)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
 }
 
@@ -3658,8 +3658,8 @@ template<class _Tp>
 inline
 _LIBCPP_CONSTEXPR
 shared_ptr<_Tp>::shared_ptr(nullptr_t) _NOEXCEPT
-    : __ptr_(0),
-      __cntrl_(0)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
 }
 
@@ -3704,7 +3704,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
 template<class _Tp>
 template<class _Dp>
 shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
-    : __ptr_(0)
+    : __ptr_(nullptr)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
@@ -3755,7 +3755,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
 template<class _Tp>
 template<class _Dp, class _Alloc>
 shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
-    : __ptr_(0)
+    : __ptr_(nullptr)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
@@ -3819,8 +3819,8 @@ shared_ptr<_Tp>::shared_ptr(shared_ptr&& __r) _NOEXCEPT
     : __ptr_(__r.__ptr_),
       __cntrl_(__r.__cntrl_)
 {
-    __r.__ptr_ = 0;
-    __r.__cntrl_ = 0;
+    __r.__ptr_ = nullptr;
+    __r.__cntrl_ = nullptr;
 }
 
 template<class _Tp>
@@ -3832,8 +3832,8 @@ shared_ptr<_Tp>::shared_ptr(shared_ptr<_Yp>&& __r,
     : __ptr_(__r.__ptr_),
       __cntrl_(__r.__cntrl_)
 {
-    __r.__ptr_ = 0;
-    __r.__cntrl_ = 0;
+    __r.__ptr_ = nullptr;
+    __r.__cntrl_ = nullptr;
 }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
@@ -4368,7 +4368,7 @@ public:
         {return __cntrl_ ? __cntrl_->use_count() : 0;}
     _LIBCPP_INLINE_VISIBILITY
     bool expired() const _NOEXCEPT
-        {return __cntrl_ == 0 || __cntrl_->use_count() == 0;}
+        {return __cntrl_ == nullptr || __cntrl_->use_count() == 0;}
     shared_ptr<_Tp> lock() const _NOEXCEPT;
     template<class _Up>
         _LIBCPP_INLINE_VISIBILITY
@@ -4392,8 +4392,8 @@ template<class _Tp>
 inline
 _LIBCPP_CONSTEXPR
 weak_ptr<_Tp>::weak_ptr() _NOEXCEPT
-    : __ptr_(0),
-      __cntrl_(0)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
 }
 
@@ -4439,8 +4439,8 @@ weak_ptr<_Tp>::weak_ptr(weak_ptr&& __r) _NOEXCEPT
     : __ptr_(__r.__ptr_),
       __cntrl_(__r.__cntrl_)
 {
-    __r.__ptr_ = 0;
-    __r.__cntrl_ = 0;
+    __r.__ptr_ = nullptr;
+    __r.__cntrl_ = nullptr;
 }
 
 template<class _Tp>
@@ -4452,8 +4452,8 @@ weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp>&& __r,
     : __ptr_(__r.__ptr_),
       __cntrl_(__r.__cntrl_)
 {
-    __r.__ptr_ = 0;
-    __r.__cntrl_ = 0;
+    __r.__ptr_ = nullptr;
+    __r.__cntrl_ = nullptr;
 }
 
 template<class _Tp>
@@ -4555,7 +4555,7 @@ shared_ptr<_Tp>::shared_ptr(const weak_ptr<_Yp>& __r,
     : __ptr_(__r.__ptr_),
       __cntrl_(__r.__cntrl_ ? __r.__cntrl_->lock() : __r.__cntrl_)
 {
-    if (__cntrl_ == 0)
+    if (__cntrl_ == nullptr)
         __throw_bad_weak_ptr();
 }
 

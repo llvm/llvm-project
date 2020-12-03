@@ -25,7 +25,7 @@ class TestUniquePtr(TestBase):
 
         self.expect_expr(
             "s",
-            result_type="std::unique_ptr<int, std::default_delete<int> >",
+            result_type="std::unique_ptr<int>",
             result_summary="3",
             result_children=[ValueCheck(name="__value_")])
         self.expect_expr("*s", result_type="int", result_value="3")

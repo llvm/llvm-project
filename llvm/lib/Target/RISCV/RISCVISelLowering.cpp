@@ -1222,14 +1222,15 @@ static Optional<RISCVBitmanipPat> matchRISCVBitmanipPat(SDValue Op) {
 //   (or (BITMANIP_SHL x), (BITMANIP_SRL x))
 static SDValue combineORToGREV(SDValue Op, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
-  if (Op.getSimpleValueType() == Subtarget.getXLenVT() ||
-      (Subtarget.is64Bit() && Op.getSimpleValueType() == MVT::i32)) {
+  EVT VT = Op.getValueType();
+
+  if (VT == Subtarget.getXLenVT() || (Subtarget.is64Bit() && VT == MVT::i32)) {
     auto LHS = matchRISCVBitmanipPat(Op.getOperand(0));
     auto RHS = matchRISCVBitmanipPat(Op.getOperand(1));
     if (LHS && RHS && LHS->formsPairWith(*RHS)) {
       SDLoc DL(Op);
       return DAG.getNode(
-          RISCVISD::GREVI, DL, Op.getValueType(), LHS->Op,
+          RISCVISD::GREVI, DL, VT, LHS->Op,
           DAG.getTargetConstant(LHS->ShAmt, DL, Subtarget.getXLenVT()));
     }
   }
@@ -1246,8 +1247,9 @@ static SDValue combineORToGREV(SDValue Op, SelectionDAG &DAG,
 // pattern will be matched to GORC via the first rule above.
 static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
-  if (Op.getSimpleValueType() == Subtarget.getXLenVT() ||
-      (Subtarget.is64Bit() && Op.getSimpleValueType() == MVT::i32)) {
+  EVT VT = Op.getValueType();
+
+  if (VT == Subtarget.getXLenVT() || (Subtarget.is64Bit() && VT == MVT::i32)) {
     SDLoc DL(Op);
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
@@ -1257,8 +1259,8 @@ static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
          {std::make_pair(Op0, Op1), std::make_pair(Op1, Op0)}) {
       if (OpPair.first.getOpcode() == RISCVISD::GREVI &&
           OpPair.first.getOperand(0) == OpPair.second)
-        return DAG.getNode(RISCVISD::GORCI, DL, Op.getValueType(),
-                           OpPair.second, OpPair.first.getOperand(1));
+        return DAG.getNode(RISCVISD::GORCI, DL, VT, OpPair.second,
+                           OpPair.first.getOperand(1));
     }
 
     // OR is commutable so canonicalize its OR operand to the left
@@ -1278,7 +1280,7 @@ static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
     auto RHS = matchRISCVBitmanipPat(Op1);
     if (LHS && RHS && LHS->formsPairWith(*RHS) && LHS->Op == OrOp1) {
       return DAG.getNode(
-          RISCVISD::GORCI, DL, Op.getValueType(), LHS->Op,
+          RISCVISD::GORCI, DL, VT, LHS->Op,
           DAG.getTargetConstant(LHS->ShAmt, DL, Subtarget.getXLenVT()));
     }
   }

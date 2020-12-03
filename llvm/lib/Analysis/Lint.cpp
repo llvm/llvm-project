@@ -190,8 +190,8 @@ void Lint::visitFunction(Function &F) {
 void Lint::visitCallBase(CallBase &I) {
   Value *Callee = I.getCalledOperand();
 
-  visitMemoryReference(I, MemoryLocation(Callee, LocationSize::unknown()),
-                       None, nullptr, MemRef::Callee);
+  visitMemoryReference(I, MemoryLocation::getAfter(Callee), None, nullptr,
+                       MemRef::Callee);
 
   if (Function *F = dyn_cast<Function>(findValue(Callee,
                                                  /*OffsetOk=*/false))) {
@@ -295,7 +295,7 @@ void Lint::visitCallBase(CallBase &I) {
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
       // overlap is not distinguished from the case where nothing is known.
-      auto Size = LocationSize::unknown();
+      auto Size = LocationSize::afterPointer();
       if (const ConstantInt *Len =
               dyn_cast<ConstantInt>(findValue(MCI->getLength(),
                                               /*OffsetOk=*/false)))
@@ -586,9 +586,8 @@ void Lint::visitVAArgInst(VAArgInst &I) {
 }
 
 void Lint::visitIndirectBrInst(IndirectBrInst &I) {
-  visitMemoryReference(
-      I, MemoryLocation(I.getAddress(), LocationSize::unknown()),
-      None, nullptr, MemRef::Branchee);
+  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()), None,
+                       nullptr, MemRef::Branchee);
 
   Assert(I.getNumDestinations() != 0,
          "Undefined behavior: indirectbr with no destinations", &I);

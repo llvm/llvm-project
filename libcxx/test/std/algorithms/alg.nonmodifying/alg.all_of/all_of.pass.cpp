@@ -9,7 +9,7 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     constpexr bool       // constexpr after C++17
+//     constexpr bool       // constexpr after C++17
 //   all_of(InputIterator first, InputIterator last, Predicate pred);
 
 #include <algorithm>

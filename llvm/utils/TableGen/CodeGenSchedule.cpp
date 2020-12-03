@@ -1337,11 +1337,11 @@ public:
 
   PredTransitions(CodeGenSchedModels &sm): SchedModels(sm) {}
 
-  void substituteVariantOperand(const SmallVectorImpl<unsigned> &RWSeq,
+  bool substituteVariantOperand(const SmallVectorImpl<unsigned> &RWSeq,
                                 bool IsRead, bool IsForAnyCPU,
                                 unsigned StartIdx);
 
-  void substituteVariants(const PredTransition &Trans);
+  bool substituteVariants(const PredTransition &Trans);
 
 #ifndef NDEBUG
   void dump() const;
@@ -1432,22 +1432,6 @@ static bool hasAliasedVariants(const CodeGenSchedRW &RW,
           return true;
       }
     }
-  }
-  return false;
-}
-
-static bool hasVariant(ArrayRef<PredTransition> Transitions,
-                       CodeGenSchedModels &SchedModels) {
-  for (const PredTransition &PTI : Transitions) {
-    for (const SmallVectorImpl<unsigned> &WSI : PTI.WriteSequences)
-      for (unsigned WI : WSI)
-        if (hasAliasedVariants(SchedModels.getSchedWrite(WI), SchedModels))
-          return true;
-
-    for (const SmallVectorImpl<unsigned> &RSI : PTI.ReadSequences)
-      for (unsigned RI : RSI)
-        if (hasAliasedVariants(SchedModels.getSchedRead(RI), SchedModels))
-          return true;
   }
   return false;
 }
@@ -1628,7 +1612,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
 // operand. StartIdx is an index into TransVec where partial results
 // starts. RWSeq must be applied to all transitions between StartIdx and the end
 // of TransVec.
-void PredTransitions::substituteVariantOperand(
+bool PredTransitions::substituteVariantOperand(
     const SmallVectorImpl<unsigned> &RWSeq, bool IsRead, bool IsForAnyCPU,
     unsigned StartIdx) {
 
@@ -1644,6 +1628,7 @@ void PredTransitions::substituteVariantOperand(
     return !IntersectingVariants.empty();
   };
 
+  bool Subst = false;
   // Visit each original RW within the current sequence.
   for (SmallVectorImpl<unsigned>::const_iterator
          RWI = RWSeq.begin(), RWE = RWSeq.end(); RWI != RWE; ++RWI) {
@@ -1664,6 +1649,7 @@ void PredTransitions::substituteVariantOperand(
       }
       HasAliases = true;
       WasPushed |= CollectAndAddVariants(TransIdx, SchedRW);
+      Subst |= WasPushed;
     }
     if (IsRead && IsForAnyCPU && HasAliases && !WasPushed) {
       // If we're here this means that in some sched class:
@@ -1678,9 +1664,10 @@ void PredTransitions::substituteVariantOperand(
       TransVec.reserve(TransVec.size() + 1);
       TransVec.emplace_back(TransVec[StartIdx].PredTerm);
       TransVec.back().ReadSequences.emplace_back();
-      CollectAndAddVariants(TransVec.size() - 1, SchedRW);
+      Subst |= CollectAndAddVariants(TransVec.size() - 1, SchedRW);
     }
   }
+  return Subst;
 }
 
 // For each variant of a Read/Write in Trans, substitute the sequence of
@@ -1689,10 +1676,11 @@ void PredTransitions::substituteVariantOperand(
 // predicates should result in linear growth in the total number variants.
 //
 // This is one step in a breadth-first search of nested variants.
-void PredTransitions::substituteVariants(const PredTransition &Trans) {
+bool PredTransitions::substituteVariants(const PredTransition &Trans) {
   // Build up a set of partial results starting at the back of
   // PredTransitions. Remember the first new transition.
   unsigned StartIdx = TransVec.size();
+  bool Subst = false;
   TransVec.emplace_back(Trans.PredTerm, Trans.ProcIndices);
 
   bool IsForAnyCPU = llvm::count(Trans.ProcIndices, 0);
@@ -1705,7 +1693,8 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
       I->WriteSequences.emplace_back();
     }
-    substituteVariantOperand(*WSI, /*IsRead=*/false, IsForAnyCPU, StartIdx);
+    Subst |=
+        substituteVariantOperand(*WSI, /*IsRead=*/false, IsForAnyCPU, StartIdx);
   }
   // Visit each original read sequence.
   for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
@@ -1716,8 +1705,10 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
       I->ReadSequences.emplace_back();
     }
-    substituteVariantOperand(*RSI, /*IsRead=*/true, IsForAnyCPU, StartIdx);
+    Subst |=
+        substituteVariantOperand(*RSI, /*IsRead=*/true, IsForAnyCPU, StartIdx);
   }
+  return Subst;
 }
 
 static void addSequences(CodeGenSchedModels &SchedModels,
@@ -1823,13 +1814,15 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
 
   // Collect all PredTransitions for individual operands.
   // Iterate until no variant writes remain.
-  while (hasVariant(LastTransitions, *this)) {
+  bool SubstitutedAny;
+  do {
+    SubstitutedAny = false;
     PredTransitions Transitions(*this);
     for (const PredTransition &Trans : LastTransitions)
-      Transitions.substituteVariants(Trans);
+      SubstitutedAny |= Transitions.substituteVariants(Trans);
     LLVM_DEBUG(Transitions.dump());
     LastTransitions.swap(Transitions.TransVec);
-  }
+  } while (SubstitutedAny);
   // If the first transition has no variants, nothing to do.
   if (LastTransitions[0].PredTerm.empty())
     return;

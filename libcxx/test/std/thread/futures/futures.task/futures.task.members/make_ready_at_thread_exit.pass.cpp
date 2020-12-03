@@ -18,6 +18,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 class A
@@ -85,14 +86,14 @@ int main(int, char**)
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        std::thread(func0, std::move(p)).detach();
+        support::make_test_thread(func0, std::move(p)).detach();
         assert(f.get() == 105.0);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        std::thread(func1, std::move(p)).detach();
+        support::make_test_thread(func1, std::move(p)).detach();
         try
         {
             f.get();
@@ -106,12 +107,12 @@ int main(int, char**)
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        std::thread(func2, std::move(p)).detach();
+        support::make_test_thread(func2, std::move(p)).detach();
         assert(f.get() == 105.0);
     }
     {
         std::packaged_task<double(int, char)> p;
-        std::thread t(func3, std::move(p));
+        std::thread t = support::make_test_thread(func3, std::move(p));
         t.join();
     }
 #endif

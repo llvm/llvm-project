@@ -131,6 +131,8 @@ VPValue *VPRecipeBase::toVPValue() {
     return V;
   if (auto *V = dyn_cast<VPWidenRecipe>(this))
     return V;
+  if (auto *V = dyn_cast<VPReplicateRecipe>(this))
+    return V;
   return nullptr;
 }
 
@@ -148,6 +150,8 @@ const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPReplicateRecipe>(this))
     return V;
   return nullptr;
 }
@@ -233,14 +237,8 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks;
 
-  VPValue DummyValue;
-  for (VPBlockBase *Block : depth_first(Entry)) {
-    // Drop all references in VPBasicBlocks and replace all uses with
-    // DummyValue.
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(Block))
-      VPBB->dropAllReferences(&DummyValue);
+  for (VPBlockBase *Block : depth_first(Entry))
     Blocks.push_back(Block);
-  }
 
   for (VPBlockBase *Block : Blocks)
     delete Block;
@@ -382,6 +380,13 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
       for (unsigned I = 0, E = User->getNumOperands(); I != E; I++)
         User->setOperand(I, NewValue);
   }
+}
+
+void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
+  for (VPBlockBase *Block : depth_first(Entry))
+    // Drop all references in VPBasicBlocks and replace all uses with
+    // DummyValue.
+    Block->dropAllReferences(NewValue);
 }
 
 void VPRegionBlock::execute(VPTransformState *State) {
@@ -962,7 +967,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
-    << VPlanIngredient(Ingredient);
+    << VPlanIngredient(getUnderlyingInstr());
   if (AlsoPack)
     O << " (S->V)";
 }

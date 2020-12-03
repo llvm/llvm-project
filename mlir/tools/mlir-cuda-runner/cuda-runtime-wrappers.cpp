@@ -107,6 +107,16 @@ extern "C" void mgpuEventRecord(CUevent event, CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
+  CUdeviceptr ptr;
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  return reinterpret_cast<void *>(ptr);
+}
+
+extern "C" void mgpuMemFree(void *ptr, CUstream /*stream*/) {
+  CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(ptr)));
+}
+
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the CUDA runtime. Helpful until we have

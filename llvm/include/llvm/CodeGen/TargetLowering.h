@@ -4286,6 +4286,13 @@ public:
     return SDValue();
   }
 
+  /// Return a target-dependent result if the input operand is not suitable for
+  /// use with a square root estimate calculation.
+  virtual SDValue getSqrtResultForDenormInput(SDValue Operand,
+                                              SelectionDAG &DAG) const {
+    return DAG.getConstantFP(0.0, SDLoc(Operand), Operand.getValueType());
+  }
+
   //===--------------------------------------------------------------------===//
   // Legalization utility functions
   //

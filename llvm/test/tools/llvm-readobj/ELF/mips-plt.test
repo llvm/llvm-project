@@ -89,14 +89,10 @@ DynamicSymbols:
 ## Check we report errors when dynamic tags, needed for dumping PLT, are missing.
 
 # RUN: yaml2obj --docnum=2 -DTAG=DT_MIPS_PLTGOT %s -o %t.err1.o
-# RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o --check-prefix=ERR1
-
-# ERR1: error: '[[FILE]]': cannot find JMPREL dynamic tag
+# RUN: llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o --check-prefixes=NO-OUTPUT,ERR1
 
 # RUN: yaml2obj --docnum=2 -DTAG=DT_JMPREL %s -o %t.err2.o
-# RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o --check-prefix=ERR2
-
-# ERR2: error: '[[FILE]]': cannot find MIPS_PLTGOT dynamic tag
+# RUN: llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o --check-prefixes=NO-OUTPUT,ERR2
 
 --- !ELF
 FileHeader:
@@ -115,14 +111,10 @@ Sections:
 
 ## Check we report errors when we are unable to find PLTGOT/JMPREL sections.
 # RUN: yaml2obj --docnum=3 %s -DVAL1=0xffff -o %t.err3.o
-# RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
-
-# ERR3: error: '[[FILE]]': there is no non-empty PLTGOT section at 0xffff
+# RUN: llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefixes=NO-OUTPUT,ERR3
 
 # RUN: yaml2obj --docnum=3 %s -DVAL2=0xffff -o %t.err4.o
-# RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix ERR4
-
-# ERR4: error: '[[FILE]]': there is no non-empty RELPLT section at 0xffff
+# RUN: llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefixes=NO-OUTPUT,ERR4
 
 --- !ELF
 FileHeader:
@@ -150,19 +142,29 @@ DynamicSymbols: []
 ## Check we report errors when we are unable to dump PLTGOT properly.
 
 # RUN: yaml2obj --docnum=3 -DVAL1=0x100 %s -o %t.err5.o
-# RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix ERR5
-
-# ERR5: error: '[[FILE]]': unable to read PLTGOT section content: section [index 2] has a sh_offset (0x70) + sh_size (0xffffffff) that is greater than the file size (0x280)
+# RUN: llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefixes=NO-OUTPUT,ERR5
 
 # RUN: yaml2obj --docnum=3 -DVAL2=0x100 -DLINK=0xaaaaaaaa %s -o %t.err6.o
-# RUN: not llvm-readobj -A %t.err6.o 2>&1 | FileCheck %s -DFILE=%t.err6.o -check-prefix ERR6
-
-# ERR6: error: '[[FILE]]': unable to get a symbol table linked to the SHT_PROGBITS section with index 2: invalid section index: 2863311530
+# RUN: llvm-readobj -A %t.err6.o 2>&1 | FileCheck %s -DFILE=%t.err6.o -check-prefixes=NO-OUTPUT,ERR6
 
 # RUN: yaml2obj --docnum=3 -DVAL2=0x100 %s -o %t.err7.o
-# RUN: not llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o -check-prefix ERR7
+# RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o -check-prefixes=NO-OUTPUT,ERR7
 
-# ERR7: error: '[[FILE]]': unable to get a string table for the SHT_DYNAMIC section with index 1: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
+# NO-OUTPUT:      LoadName: <Not found>
+# NO-OUTPUT-NEXT: There is no .MIPS.abiflags section in the file.
+# NO-OUTPUT-NEXT: There is no .MIPS.options section in the file.
+# NO-OUTPUT-NEXT: There is no .reginfo section in the file.
+
+# ERR1-NEXT: warning: '[[FILE]]': cannot find JMPREL dynamic tag
+# ERR2-NEXT: warning: '[[FILE]]': cannot find MIPS_PLTGOT dynamic tag
+# ERR3-NEXT: warning: '[[FILE]]': there is no non-empty PLTGOT section at 0xffff
+# ERR4-NEXT: warning: '[[FILE]]': there is no non-empty RELPLT section at 0xffff
+# ERR5-NEXT: warning: '[[FILE]]': unable to read PLTGOT section content: section [index 2] has a sh_offset (0x70) + sh_size (0xffffffff) that is greater than the file size (0x280)
+# ERR6-NEXT: warning: '[[FILE]]': unable to get a symbol table linked to the SHT_PROGBITS section with index 2: invalid section index: 2863311530
+# ERR7-NEXT: warning: '[[FILE]]': unable to get a string table for the SHT_DYNAMIC section with index 1: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
+
+# NO-OUTPUT-EMPTY:
+# NO-OUTPUT-NOT: {{.}}
 
 ## Check how we print PLT entries when they are unnamed section symbols.
 # RUN: yaml2obj --docnum=4 %s -o %t3

@@ -20,13 +20,9 @@ class TestVectorOfVectors(TestBase):
                                           "// Set break point at this line.",
                                           lldb.SBFileSpec("main.cpp"))
 
-        vector_type = "std::vector<int, std::allocator<int> >"
-        vector_of_vector_type = "std::vector<" + vector_type + \
-            ", std::allocator<std::vector<int, std::allocator<int> > > >"
-        size_type = (
-            "std::vector<std::vector<int, std::allocator<int> >, " +
-            "std::allocator<std::vector<int, std::allocator<int> > >" +
-            " >::size_type")
+        vector_type = "std::vector<int>"
+        vector_of_vector_type = "std::vector<" + vector_type + " >"
+        size_type = vector_of_vector_type + "::size_type"
         value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
 
         self.runCmd("settings set target.import-std-module true")
@@ -35,13 +31,13 @@ class TestVectorOfVectors(TestBase):
             "a",
             result_type=vector_of_vector_type,
             result_children=[
-                ValueCheck(type="std::vector<int, std::allocator<int> >",
+                ValueCheck(type="std::vector<int>",
                            children=[
                                ValueCheck(value='1'),
                                ValueCheck(value='2'),
                                ValueCheck(value='3'),
                            ]),
-                ValueCheck(type="std::vector<int, std::allocator<int> >",
+                ValueCheck(type="std::vector<int>",
                            children=[
                                ValueCheck(value='3'),
                                ValueCheck(value='2'),

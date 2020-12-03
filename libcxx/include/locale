@@ -257,11 +257,11 @@ __scan_keyword(_InputIterator& __b, _InputIterator __e,
     const unsigned char __does_match = '\2';
     unsigned char __statbuf[100];
     unsigned char* __status = __statbuf;
-    unique_ptr<unsigned char, void(*)(void*)> __stat_hold(0, free);
+    unique_ptr<unsigned char, void(*)(void*)> __stat_hold(nullptr, free);
     if (__nkw > sizeof(__statbuf))
     {
         __status = (unsigned char*)malloc(__nkw);
-        if (__status == 0)
+        if (__status == nullptr)
             __throw_bad_alloc();
         __stat_hold.reset(__status);
     }
@@ -1560,14 +1560,14 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
                                    (int)__iob.precision(), __v);
     else
         __nc = __libcpp_snprintf_l(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-    unique_ptr<char, void(*)(void*)> __nbh(0, free);
+    unique_ptr<char, void(*)(void*)> __nbh(nullptr, free);
     if (__nc > static_cast<int>(__nbuf-1))
     {
         if (__specify_precision)
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
         else
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-        if (__nb == 0)
+        if (__nb == nullptr)
             __throw_bad_alloc();
         __nbh.reset(__nb);
     }
@@ -1611,14 +1611,14 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
                                    (int)__iob.precision(), __v);
     else
         __nc = __libcpp_snprintf_l(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-    unique_ptr<char, void(*)(void*)> __nbh(0, free);
+    unique_ptr<char, void(*)(void*)> __nbh(nullptr, free);
     if (__nc > static_cast<int>(__nbuf-1))
     {
         if (__specify_precision)
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
         else
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-        if (__nb == 0)
+        if (__nb == nullptr)
             __throw_bad_alloc();
         __nbh.reset(__nb);
     }
@@ -3104,11 +3104,11 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
         __ct.widen(__src, __src + (sizeof(__src)-1), __atoms);
         char __nbuf[__bz];
         char* __nc = __nbuf;
-        unique_ptr<char, void(*)(void*)> __h(0, free);
+        unique_ptr<char, void(*)(void*)> __h(nullptr, free);
         if (__wn - __wb.get() > __bz-2)
         {
             __h.reset((char*)malloc(static_cast<size_t>(__wn - __wb.get() + 2)));
-            if (__h.get() == 0)
+            if (__h.get() == nullptr)
                 __throw_bad_alloc();
             __nc = __h.get();
         }
@@ -3393,13 +3393,13 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     char_type __digits[__bs];
     char_type* __db = __digits;
     size_t __n = static_cast<size_t>(snprintf(__bb, __bs, "%.0Lf", __units));
-    unique_ptr<char, void(*)(void*)> __hn(0, free);
+    unique_ptr<char, void(*)(void*)> __hn(nullptr, free);
     unique_ptr<char_type, void(*)(void*)> __hd(0, free);
     // secure memory for digit storage
     if (__n > __bs-1)
     {
         __n = static_cast<size_t>(__libcpp_asprintf_l(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units));
-        if (__bb == 0)
+        if (__bb == nullptr)
             __throw_bad_alloc();
         __hn.reset(__bb);
         __hd.reset((char_type*)malloc(__n * sizeof(char_type)));
@@ -3919,7 +3919,7 @@ private:
     wbuffer_convert(const wbuffer_convert&);
     wbuffer_convert& operator=(const wbuffer_convert&);
 public:
-    _LIBCPP_EXPLICIT_AFTER_CXX11 wbuffer_convert(streambuf* __bytebuf = 0,
+    _LIBCPP_EXPLICIT_AFTER_CXX11 wbuffer_convert(streambuf* __bytebuf = nullptr,
             _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
     ~wbuffer_convert();
 
@@ -3957,9 +3957,9 @@ private:
 template <class _Codecvt, class _Elem, class _Tr>
 wbuffer_convert<_Codecvt, _Elem, _Tr>::
     wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt, state_type __state)
-    : __extbuf_(0),
-      __extbufnext_(0),
-      __extbufend_(0),
+    : __extbuf_(nullptr),
+      __extbufnext_(nullptr),
+      __extbufend_(nullptr),
       __ebs_(0),
       __intbuf_(0),
       __ibs_(0),
@@ -4332,12 +4332,12 @@ template <class _Codecvt, class _Elem, class _Tr>
 wbuffer_convert<_Codecvt, _Elem, _Tr>*
 wbuffer_convert<_Codecvt, _Elem, _Tr>::__close()
 {
-    wbuffer_convert* __rt = 0;
-    if (__cv_ != 0 && __bufptr_ != 0)
+    wbuffer_convert* __rt = nullptr;
+    if (__cv_ != nullptr && __bufptr_ != nullptr)
     {
         __rt = this;
         if ((__cm_ & ios_base::out) && sync())
-            __rt = 0;
+            __rt = nullptr;
     }
     return __rt;
 }

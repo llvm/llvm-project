@@ -689,6 +689,9 @@ def : Pat<(xor (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
           (SBINV GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (shiftop<srl> GPR:$rs1, GPR:$rs2), 1),
           (SBEXT GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(shiftop<shl> 1, GPR:$rs2),
+          (SBSET X0, GPR:$rs2)>;
 }
 
 let Predicates = [HasStdExtZbb] in {
@@ -727,7 +730,8 @@ def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
-def : Pat<(rotr (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, (i32 8))>;
+def : Pat<(rotr (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, 8)>;
+def : Pat<(rotl (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, 8)>;
 def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i32 24))>;
 def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i32 31))>;
 } // Predicates = [HasStdExtZbp, IsRV32]
@@ -905,6 +909,9 @@ def : Pat<(sext_inreg (xor (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
           (SBINVW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
           (SBEXTW GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(riscv_sllw 1, GPR:$rs2),
+          (SBSETW X0, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
@@ -915,6 +922,8 @@ def : Pat<(SROIWPat GPR:$rs1, uimmlog2xlen:$shamt),
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
+def : Pat<(riscv_rorw (riscv_greviw GPR:$rs1, 24), (i64 16)), (GREVIW GPR:$rs1, 8)>;
+def : Pat<(riscv_rolw (riscv_greviw GPR:$rs1, 24), (i64 16)), (GREVIW GPR:$rs1, 8)>;
 def : Pat<(riscv_greviw GPR:$rs1, timm:$shamt), (GREVIW GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_gorciw GPR:$rs1, timm:$shamt), (GORCIW GPR:$rs1, timm:$shamt)>;
 } // Predicates = [HasStdExtZbp, IsRV64]

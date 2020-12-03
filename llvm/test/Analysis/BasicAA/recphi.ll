@@ -141,10 +141,10 @@ if.end: ; preds = %f.exit
 ; CHECK:         NoAlias:      [3 x i16]* %int_arr.10, i16** %argv.6.par
 ; CHECK:         NoAlias:      i16* %_tmp1, i16** %argv.6.par
 ; CHECK:         PartialAlias: [3 x i16]* %int_arr.10, i16* %_tmp1
-; CHECK:         MayAlias:     i16* %ls1.9.0, i16** %argv.6.par
+; CHECK:         NoAlias:      i16* %ls1.9.0, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %ls1.9.0
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %ls1.9.0
-; CHECK:         MayAlias:     i16* %_tmp7, i16** %argv.6.par
+; CHECK:         NoAlias:      i16* %_tmp7, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %_tmp7
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %_tmp7
 ; CHECK:         NoAlias:      i16* %_tmp7, i16* %ls1.9.0
@@ -191,9 +191,9 @@ bb5:                                              ; preds = %bb3, %bb4
 ; CHECK-LABEL: Function: dynamic_offset
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: MayAlias: i8* %p, i8* %p.base
-; CHECK: MayAlias: i8* %a, i8* %p
+; CHECK: NoAlias:  i8* %a, i8* %p
 ; CHECK: MayAlias: i8* %p.base, i8* %p.next
-; CHECK: MayAlias: i8* %a, i8* %p.next
+; CHECK: NoAlias:  i8* %a, i8* %p.next
 ; CHECK: MayAlias: i8* %p, i8* %p.next
 define void @dynamic_offset(i1 %c, i8* noalias %p.base) {
 entry:

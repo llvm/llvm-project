@@ -32,38 +32,71 @@ class OpenCLOptions {
   };
   llvm::StringMap<Info> OptMap;
 public:
+  /// Check if \c Ext is a recognized OpenCL extension.
+  ///
+  /// \param Ext - Extension to look up.
+  /// \returns \c true if \c Ext is known, \c false otherwise.
   bool isKnown(llvm::StringRef Ext) const {
     return OptMap.find(Ext) != OptMap.end();
   }
 
+  /// Check if \c Ext is an enabled OpenCL extension.
+  ///
+  /// \param Ext - Extension to look up.
+  /// \returns \c true if \c Ext is known and enabled, \c false otherwise.
   bool isEnabled(llvm::StringRef Ext) const {
-    return OptMap.find(Ext)->second.Enabled;
+    auto E = OptMap.find(Ext);
+    return E != OptMap.end() && E->second.Enabled;
   }
 
-  // Is supported as either an extension or an (optional) core feature for
-  // OpenCL version \p CLVer.
+  /// Check if \c Ext is supported as either an extension or an (optional) core
+  /// feature for the given OpenCL version.
+  ///
+  /// \param Ext - Extension to look up.
+  /// \param LO - \c LangOptions specifying the OpenCL version.
+  /// \returns \c true if \c Ext is known and supported, \c false otherwise.
   bool isSupported(llvm::StringRef Ext, const LangOptions &LO) const {
+    auto E = OptMap.find(Ext);
+    if (E == OptMap.end()) {
+      return false;
+    }
     // In C++ mode all extensions should work at least as in v2.0.
     auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
-    auto I = OptMap.find(Ext)->getValue();
+    auto I = E->getValue();
     return I.Supported && I.Avail <= CLVer;
   }
 
-  // Is supported (optional) OpenCL core features for OpenCL version \p CLVer.
-  // For supported extension, return false.
+  /// Check if \c Ext is supported as an (optional) OpenCL core features for
+  /// the given OpenCL version.
+  ///
+  /// \param Ext - Extension to look up.
+  /// \param LO - \c LangOptions specifying the OpenCL version.
+  /// \returns \c true if \c Ext is known and supported, \c false otherwise.
   bool isSupportedCore(llvm::StringRef Ext, const LangOptions &LO) const {
+    auto E = OptMap.find(Ext);
+    if (E == OptMap.end()) {
+      return false;
+    }
     // In C++ mode all extensions should work at least as in v2.0.
     auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
-    auto I = OptMap.find(Ext)->getValue();
+    auto I = E->getValue();
     return I.Supported && I.Avail <= CLVer && I.Core != ~0U && CLVer >= I.Core;
   }
 
-  // Is supported OpenCL extension for OpenCL version \p CLVer.
-  // For supported (optional) core feature, return false.
+  /// Check if \c Ext is a supported OpenCL extension for the given OpenCL
+  /// version.
+  ///
+  /// \param Ext - Extension to look up.
+  /// \param LO - \c LangOptions specifying the OpenCL version.
+  /// \returns \c true if \c Ext is known and supported, \c false otherwise.
   bool isSupportedExtension(llvm::StringRef Ext, const LangOptions &LO) const {
+    auto E = OptMap.find(Ext);
+    if (E == OptMap.end()) {
+      return false;
+    }
     // In C++ mode all extensions should work at least as in v2.0.
     auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
-    auto I = OptMap.find(Ext)->getValue();
+    auto I = E->getValue();
     return I.Supported && I.Avail <= CLVer && (I.Core == ~0U || CLVer < I.Core);
   }
 

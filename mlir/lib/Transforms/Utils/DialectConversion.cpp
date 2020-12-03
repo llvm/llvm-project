@@ -364,11 +364,6 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
       // If the argument is still used, replace it with the generated cast.
       if (!origArg.use_empty())
         origArg.replaceAllUsesWith(mapping.lookupOrDefault(castValue));
-
-      // If all users of the cast were removed, we can drop it. Otherwise, keep
-      // the operation alive and let the user handle any remaining usages.
-      if (castValue.use_empty() && castValue.getDefiningOp())
-        castValue.getDefiningOp()->erase();
     }
   }
 }

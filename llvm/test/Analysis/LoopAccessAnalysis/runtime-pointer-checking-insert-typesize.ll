@@ -1,5 +1,5 @@
-; RUN: opt -loop-accesses -analyze < %s >/dev/null 2>%t
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+; RUN: opt -loop-accesses -analyze -enable-new-pm=0 %s | FileCheck %s
+; RUN: opt -passes='print-access-info' -disable-output < %s 2>&1 | FileCheck %s
 
 ; This regression test is defending against a TypeSize warning 'assumption that
 ; TypeSize is not scalable'. This warning cropped up in
@@ -7,7 +7,7 @@
 ; this function was previously unaware of scalable types.
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning: {{.*}}TypeSize is not scalable
+; CHECK-NOT: warning: {{.*}}TypeSize is not scalable
 
 define void @runtime_pointer_checking_insert_typesize(<vscale x 4 x i32>* %a,
                                                       <vscale x 4 x i32>* %b) {
