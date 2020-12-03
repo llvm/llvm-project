@@ -27,6 +27,15 @@ __device__ void dev_capture_dev_ref_by_copy(int *out) {
   [=](){ *out = ref;}();
 }
 
+// DEV-LABEL: @_ZZ28dev_capture_dev_rval_by_copyPiENKUlvE_clEv(
+// DEV: store i32 3
+__device__ void dev_capture_dev_rval_by_copy(int *out) {
+  constexpr int a = 1;
+  constexpr int b = 2;
+  constexpr int c = a + b;
+  [=](){ *out = c;}();
+}
+
 // DEV-LABEL: @_ZZ26dev_capture_dev_ref_by_refPiENKUlvE_clEv(
 // DEV: %[[VAL:.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @global_device_var to i32*)
 // DEV: %[[VAL2:.*]] = add nsw i32 %[[VAL]], 1
