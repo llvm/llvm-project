@@ -78,10 +78,10 @@ llvm::Optional<StringRef> TypeDef::getMnemonic() const {
   return def->getValueAsOptionalString("mnemonic");
 }
 llvm::Optional<StringRef> TypeDef::getPrinterCode() const {
-  return def->getValueAsOptionalCode("printer");
+  return def->getValueAsOptionalString("printer");
 }
 llvm::Optional<StringRef> TypeDef::getParserCode() const {
-  return def->getValueAsOptionalCode("parser");
+  return def->getValueAsOptionalString("parser");
 }
 bool TypeDef::genAccessors() const {
   return def->getValueAsBit("genAccessors");
@@ -114,7 +114,7 @@ llvm::Optional<StringRef> TypeParameter::getAllocator() const {
     llvm::RecordVal *code = typeParameter->getDef()->getValue("allocator");
     if (!code)
       return llvm::Optional<StringRef>();
-    if (llvm::CodeInit *ci = dyn_cast<llvm::CodeInit>(code->getValue()))
+    if (llvm::StringInit *ci = dyn_cast<llvm::StringInit>(code->getValue()))
       return ci->getValue();
     if (isa<llvm::UnsetInit>(code->getValue()))
       return llvm::Optional<StringRef>();

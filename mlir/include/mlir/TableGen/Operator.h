@@ -28,7 +28,6 @@
 #include "llvm/Support/SMLoc.h"
 
 namespace llvm {
-class CodeInit;
 class DefInit;
 class Record;
 class StringInit;

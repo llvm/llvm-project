@@ -59,8 +59,6 @@ json::Value JSONEmitter::translateInit(const Init &I) {
     return Int->getValue();
   } else if (auto *Str = dyn_cast<StringInit>(&I)) {
     return Str->getValue();
-  } else if (auto *Code = dyn_cast<CodeInit>(&I)) {
-    return Code->getValue();
   } else if (auto *List = dyn_cast<ListInit>(&I)) {
     json::Array array;
     for (auto val : *List)
