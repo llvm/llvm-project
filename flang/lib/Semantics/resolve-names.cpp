@@ -6194,7 +6194,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   // TODO: what about instantiations in BLOCK?
   CheckSaveStmts();
   CheckCommonBlocks();
-  CheckEquivalenceSets();
+  if (!inInterfaceBlock()) {
+    // TODO: warn for the case where the EQUIVALENCE statement is in a
+    // procedure declaration in an interface block
+    CheckEquivalenceSets();
+  }
 }
 
 // Analyze the bodies of statement functions now that the symbols in this
