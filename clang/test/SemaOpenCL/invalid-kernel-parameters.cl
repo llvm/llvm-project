@@ -23,7 +23,12 @@ __kernel void no_privatearray(__private int i[]) { }
 // expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 __kernel void no_addrsp_ptr(int *ptr) { }
 
+// expected-error@+1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
+__kernel void no_defaultarray(int i[]) { }
+
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+kernel void no_genericptr(generic int *ptr) { }
+// expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 kernel void no_ptr_private_ptr(private int * global *i) { }
 // expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 kernel void no_ptr_ptr_private_ptr(private int * global * global *i) { }
@@ -31,6 +36,8 @@ kernel void no_ptr_ptr_private_ptr(private int * global * global *i) { }
 kernel void no_ptr_private_ptr_ptr(global int * private * global *i) { }
 // expected-error@-1{{pointer arguments to kernel functions must reside in '__global', '__constant' or '__local' address space}}
 #endif
+
+void no_addrspace_param(global int x) { } // expected-error{{parameter may not be qualified with an address space}}
 
 // Disallowed: parameters with type
 // bool, half, size_t, ptrdiff_t, intptr_t, and uintptr_t
