@@ -450,6 +450,11 @@ private:
     builder->create<mlir::CondBranchOp>(loc, bcc, trueTarget, llvm::None,
                                         falseTarget, llvm::None);
   }
+  void genFIRConditionalBranch(mlir::Value cond,
+                               Fortran::lower::pft::Evaluation *trueTarget,
+                               Fortran::lower::pft::Evaluation *falseTarget) {
+    genFIRConditionalBranch(cond, trueTarget->block, falseTarget->block);
+  }
   void genFIRConditionalBranch(const Fortran::parser::ScalarLogicalExpr &expr,
                                mlir::Block *trueTarget,
                                mlir::Block *falseTarget) {
@@ -464,9 +469,9 @@ private:
     genFIRConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
   // Termination of symbolically referenced execution units
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
 
   /// END of program
   ///
@@ -539,27 +544,6 @@ private:
   //
   // Statements that have control-flow semantics
   //
-
-  template <typename A>
-  std::pair<mlir::OpBuilder::InsertPoint, fir::IfOp>
-  genIfCondition(const A *stmt, bool withElse = true) {
-    auto cond = createFIRExpr(
-        toLocation(),
-        Fortran::semantics::GetExpr(
-            std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t)));
-    auto bcc = builder->createConvert(toLocation(), builder->getI1Type(), cond);
-    auto ifOp = builder->create<fir::IfOp>(toLocation(), bcc, withElse);
-    auto insPt = builder->saveInsertionPoint();
-    builder->setInsertionPointToStart(&ifOp.thenRegion().front());
-    return {insPt, ifOp};
-  }
-
-  mlir::Value genFIRLoopIndex(const Fortran::parser::ScalarExpr &x,
-                              mlir::Type t) {
-    auto loc = toLocation();
-    mlir::Value v = createFIRExpr(loc, Fortran::semantics::GetExpr(x));
-    return builder->createConvert(loc, t, v);
-  }
 
   mlir::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
     if (auto func = builder->getNamedFunction(name)) {
@@ -983,43 +967,46 @@ private:
     }
   }
 
-  /// Generate structured or unstructured FIR for an IF statement.
-  void genFIR(const Fortran::parser::IfStmt &stmt) {
-    auto &eval = getEval();
-    if (eval.lowerAsUnstructured()) {
-      genFIRConditionalBranch(
-          std::get<Fortran::parser::ScalarLogicalExpr>(stmt.t),
-          eval.lexicalSuccessor, eval.controlSuccessor);
-      return;
-    }
-
-    // Generate fir.if.
-    auto pair = genIfCondition(&stmt, /*withElse=*/false);
-    genFIR(*eval.lexicalSuccessor, /*unstructuredContext=*/false);
-    eval.lexicalSuccessor->skip = true;
-    builder->restoreInsertionPoint(pair.first);
+  /// Generate an If[Then]Stmt condition or its negation.
+  template <typename A>
+  mlir::Value genIfCondition(const A *stmt, bool negate = false) {
+    auto loc = toLocation();
+    auto cond = builder->createConvert(
+        loc, builder->getI1Type(),
+        createFIRExpr(
+            loc, Fortran::semantics::GetExpr(
+                     std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t))));
+    if (negate)
+      cond = builder->create<mlir::XOrOp>(
+          loc, cond, builder->createIntegerConstant(loc, cond.getType(), 1));
+    return cond;
   }
 
   /// Generate structured or unstructured FIR for an IF construct.
+  /// The initial statement may be either an IfStmt or an IfThenStmt.
   void genFIR(const Fortran::parser::IfConstruct &) {
+    auto loc = toLocation();
     auto &eval = getEval();
     if (eval.lowerAsStructured()) {
       // Structured fir.if nest.
-      fir::IfOp nestedIf;
-      mlir::OpBuilder::InsertPoint insPt;
+      fir::IfOp topIfOp, currentIfOp;
       for (auto &e : eval.getNestedEvaluations()) {
+        auto genIfOp = [&](mlir::Value cond) {
+          auto ifOp = builder->create<fir::IfOp>(loc, cond, /*withElse=*/true);
+          builder->setInsertionPointToStart(&ifOp.thenRegion().front());
+          return ifOp;
+        };
         if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
-          // fir.if op
-          std::tie(insPt, nestedIf) = genIfCondition(s);
+          topIfOp = currentIfOp = genIfOp(genIfCondition(s, e.negateCondition));
+        } else if (auto *s = e.getIf<Fortran::parser::IfStmt>()) {
+          topIfOp = currentIfOp = genIfOp(genIfCondition(s, e.negateCondition));
         } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
-          // otherwise block, then nested fir.if
-          builder->setInsertionPointToStart(&nestedIf.elseRegion().front());
-          std::tie(std::ignore, nestedIf) = genIfCondition(s);
+          builder->setInsertionPointToStart(&currentIfOp.elseRegion().front());
+          currentIfOp = genIfOp(genIfCondition(s));
         } else if (e.isA<Fortran::parser::ElseStmt>()) {
-          // otherwise block
-          builder->setInsertionPointToStart(&nestedIf.elseRegion().front());
+          builder->setInsertionPointToStart(&currentIfOp.elseRegion().front());
         } else if (e.isA<Fortran::parser::EndIfStmt>()) {
-          builder->restoreInsertionPoint(insPt);
+          builder->setInsertionPointAfter(topIfOp);
         } else {
           genFIR(e, /*unstructuredContext=*/false);
         }
@@ -1029,21 +1016,22 @@ private:
 
     // Unstructured branch sequence.
     for (auto &e : eval.getNestedEvaluations()) {
-      const Fortran::parser::ScalarLogicalExpr *cond = nullptr;
+      auto genIfBranch = [&](mlir::Value cond) {
+        if (e.lexicalSuccessor == e.controlSuccessor) // empty block -> exit
+          genFIRConditionalBranch(cond, e.parentConstruct->constructExit,
+                                  e.controlSuccessor);
+        else // non-empty block
+          genFIRConditionalBranch(cond, e.lexicalSuccessor, e.controlSuccessor);
+      };
       if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
         maybeStartBlock(e.block);
-        cond = &std::get<Fortran::parser::ScalarLogicalExpr>(s->t);
+        genIfBranch(genIfCondition(s, e.negateCondition));
+      } else if (auto *s = e.getIf<Fortran::parser::IfStmt>()) {
+        maybeStartBlock(e.block);
+        genIfBranch(genIfCondition(s, e.negateCondition));
       } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
         startBlock(e.block);
-        cond = &std::get<Fortran::parser::ScalarLogicalExpr>(s->t);
-      }
-      if (cond) {
-        genFIRConditionalBranch(
-            *cond,
-            e.lexicalSuccessor == e.controlSuccessor
-                ? e.parentConstruct->constructExit // empty block --> exit
-                : e.lexicalSuccessor,              // nonempty block
-            e.controlSuccessor);
+        genIfBranch(genIfCondition(s));
       } else {
         genFIR(e);
       }
@@ -1221,6 +1209,7 @@ private:
   void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
   void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {} // nop
   void genFIR(const Fortran::parser::ForallConstructStmt &) {}   // nop
+  void genFIR(const Fortran::parser::IfStmt &stmt) {}            // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
 
@@ -1715,9 +1704,6 @@ private:
   /// Generate the FIR for the Evaluation `eval`.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               bool unstructuredContext = true) {
-    if (eval.skip)
-      return; // rhs of IfStmt has already been processed
-
     if (unstructuredContext) {
       // When transitioning from unstructured to structured code,
       // the structured code could be a target that starts a new block.

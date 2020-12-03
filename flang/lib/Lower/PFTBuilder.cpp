@@ -104,12 +104,54 @@ public:
                                              stmt.position, stmt.label});
         return false;
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
-        addEvaluation(
-            makeEvaluationAction(stmt.unwrapped, stmt.position, stmt.label));
-        return true;
+        return std::visit(
+            common::visitors{
+                [&](const common::Indirection<parser::IfStmt> &x) {
+                  convertIfStmt(x.value(), stmt.position, stmt.label);
+                  return false;
+                },
+                [&](const auto &x) {
+                  addEvaluation(lower::pft::Evaluation{
+                      removeIndirection(x), parentVariantStack.back(),
+                      stmt.position, stmt.label});
+                  return true;
+                },
+            },
+            stmt.unwrapped.u);
       }
     }
     return true;
+  }
+
+  /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
+  /// first statement of the construct.
+  void convertIfStmt(const parser::IfStmt &ifStmt, parser::CharBlock position,
+                     std::optional<parser::Label> label) {
+    // Generate a skeleton IfConstruct parse node.  Its components are never
+    // referenced.  The actual components are available via the IfConstruct
+    // evaluation's nested evaluationList, with the ifStmt in the position of
+    // the otherwise normal IfThenStmt.  Caution: All other PFT nodes reference
+    // front end generated parse nodes; this is an exceptional case.
+    static const auto ifConstruct = parser::IfConstruct{
+        parser::Statement<parser::IfThenStmt>{
+            std::nullopt,
+            parser::IfThenStmt{
+                std::optional<parser::Name>{},
+                parser::ScalarLogicalExpr{parser::LogicalExpr{parser::Expr{
+                    parser::LiteralConstant{parser::LogicalLiteralConstant{
+                        false, std::optional<parser::KindParam>{}}}}}}}},
+        parser::Block{}, std::list<parser::IfConstruct::ElseIfBlock>{},
+        std::optional<parser::IfConstruct::ElseBlock>{},
+        parser::Statement<parser::EndIfStmt>{std::nullopt,
+                                             parser::EndIfStmt{std::nullopt}}};
+    enterConstructOrDirective(ifConstruct);
+    addEvaluation(lower::pft::Evaluation{ifStmt, parentVariantStack.back(),
+                                         position, label});
+    Pre(std::get<parser::UnlabeledStatement<parser::ActionStmt>>(ifStmt.t));
+    static const auto endIfStmt = parser::EndIfStmt{std::nullopt};
+    addEvaluation(
+        lower::pft::Evaluation{endIfStmt, parentVariantStack.back(), {}, {}});
+    exitConstructOrDirective();
   }
 
   template <typename A>
@@ -243,6 +285,7 @@ private:
   }
 
   void exitFunction() {
+    rewriteIfGotos();
     endFunctionBody();
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
     processEntryPoints();
@@ -266,6 +309,7 @@ private:
   }
 
   void exitConstructOrDirective() {
+    rewriteIfGotos();
     popEvaluationList();
     parentVariantStack.pop_back();
     constructAndDirectiveStack.pop_back();
@@ -369,6 +413,93 @@ private:
     evaluationListStack.pop_back();
   }
 
+  /// Rewrite IfConstructs containing a GotoStmt to eliminate an unstructured
+  /// branch and a trivial basic block.  The pre-branch-analysis code:
+  ///
+  ///       <<IfConstruct>>
+  ///         1 If[Then]Stmt: if(cond) goto L
+  ///         2 GotoStmt: goto L
+  ///         3 EndIfStmt
+  ///       <<End IfConstruct>>
+  ///       4 Statement: ...
+  ///       5 Statement: ...
+  ///       6 Statement: L ...
+  ///
+  /// becomes:
+  ///
+  ///       <<IfConstruct>>
+  ///         1 If[Then]Stmt [negate]: if(cond) goto L
+  ///         4 Statement: ...
+  ///         5 Statement: ...
+  ///         3 EndIfStmt
+  ///       <<End IfConstruct>>
+  ///       6 Statement: L ...
+  ///
+  /// The If[Then]Stmt condition is implicitly negated.  It is not modified
+  /// in the PFT.  It must be negated when generating FIR.  The GotoStmt is
+  /// deleted.
+  ///
+  /// The transformation is only valid for forward branch targets at the same
+  /// construct nesting level as the IfConstruct.  The result must not violate
+  /// construct nesting requirements or contain an EntryStmt.  The result
+  /// is subject to normal un/structured code classification analysis.  The
+  /// result is allowed to violate the F18 Clause 11.1.2.1 prohibition on
+  /// transfer of control into the interior of a construct block, as that does
+  /// not compromise correct code generation.  When two transformation
+  /// candidates overlap, at least one must be disallowed.  In such cases,
+  /// the current heuristic favors simple code generation, which happens to
+  /// favor later candidates over earlier candidates.  That choice is probably
+  /// not significant, but could be changed.
+  ///
+  void rewriteIfGotos() {
+    using T = struct {
+      lower::pft::EvaluationList::iterator ifConstructIt;
+      parser::Label ifTargetLabel;
+    };
+    llvm::SmallVector<T, 8> ifExpansionStack;
+    auto &evaluationList = *evaluationListStack.back();
+    for (auto it = evaluationList.begin(), end = evaluationList.end();
+         it != end; ++it) {
+      auto &eval = *it;
+      if (eval.isA<parser::EntryStmt>()) {
+        ifExpansionStack.clear();
+        continue;
+      }
+      auto firstStmt = [](lower::pft::Evaluation *e) {
+        return e->isConstruct() ? &*e->evaluationList->begin() : e;
+      };
+      auto &targetEval = *firstStmt(&eval);
+      if (targetEval.label) {
+        while (!ifExpansionStack.empty() &&
+               ifExpansionStack.back().ifTargetLabel == *targetEval.label) {
+          auto ifConstructIt = ifExpansionStack.back().ifConstructIt;
+          auto successorIt = std::next(ifConstructIt);
+          if (successorIt != it) {
+            auto &ifBodyList = *ifConstructIt->evaluationList;
+            auto gotoStmtIt = std::next(ifBodyList.begin());
+            assert(gotoStmtIt->isA<parser::GotoStmt>() && "expected GotoStmt");
+            ifBodyList.erase(gotoStmtIt);
+            auto &ifStmt = *ifBodyList.begin();
+            ifStmt.negateCondition = true;
+            ifStmt.lexicalSuccessor = firstStmt(&*successorIt);
+            auto endIfStmtIt = std::prev(ifBodyList.end());
+            std::prev(it)->lexicalSuccessor = &*endIfStmtIt;
+            endIfStmtIt->lexicalSuccessor = firstStmt(&*it);
+            ifBodyList.splice(endIfStmtIt, evaluationList, successorIt, it);
+            for (; successorIt != endIfStmtIt; ++successorIt)
+              successorIt->parentConstruct = &*ifConstructIt;
+          }
+          ifExpansionStack.pop_back();
+        }
+      }
+      if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
+        if (auto *gotoStmt = std::next(eval.evaluationList->begin())
+                                 ->getIf<parser::GotoStmt>())
+          ifExpansionStack.push_back({it, gotoStmt->v});
+      }
+    }
+  }
+
   /// Mark I/O statement ERR, EOR, and END specifier branch targets.
   /// Mark an I/O statement with an assigned format as unstructured.
   template <typename A>
@@ -440,7 +571,7 @@ private:
     // ancestors must be marked as unstructured.
     auto *sourceConstruct = sourceEvaluation.parentConstruct;
     auto *targetConstruct = targetEvaluation.parentConstruct;
-    if (targetEvaluation.isConstructStmt() &&
+    if (targetConstruct &&
         &targetConstruct->getFirstNestedEvaluation() == &targetEvaluation)
       // A branch to an initial constructStmt is a branch to the construct.
       targetConstruct = targetConstruct->parentConstruct;
@@ -518,7 +649,6 @@ private:
   void analyzeBranches(lower::pft::Evaluation *parentConstruct,
                        std::list<lower::pft::Evaluation> &evaluationList) {
     lower::pft::Evaluation *lastConstructStmtEvaluation{};
-    lower::pft::Evaluation *lastIfStmtEvaluation{};
     for (auto &eval : evaluationList) {
       eval.visit(common::visitors{
           // Action statements (except I/O statements)
@@ -550,7 +680,10 @@ private:
             markBranchTarget(eval, *construct->constructExit);
           },
           [&](const parser::GotoStmt &s) { markBranchTarget(eval, s.v); },
-          [&](const parser::IfStmt &) { lastIfStmtEvaluation = &eval; },
+          [&](const parser::IfStmt &) {
+            eval.lexicalSuccessor->isNewBlock = true;
+            lastConstructStmtEvaluation = &eval;
+          },
           [&](const parser::ReturnStmt &) {
             eval.isUnstructured = true;
             if (eval.lexicalSuccessor->lexicalSuccessor)
@@ -762,18 +895,6 @@ private:
       if (eval.evaluationList)
         analyzeBranches(&eval, *eval.evaluationList);
 
-      // Insert branch links for an unstructured IF statement.
-      if (lastIfStmtEvaluation && lastIfStmtEvaluation != &eval) {
-        // eval is the action substatement of an IfStmt.
-        if (eval.lowerAsUnstructured()) {
-          eval.isNewBlock = true;
-          markSuccessorAsNewBlock(eval);
-          lastIfStmtEvaluation->isUnstructured = true;
-        }
-        lastIfStmtEvaluation->controlSuccessor = &eval.nonNopSuccessor();
-        lastIfStmtEvaluation = nullptr;
-      }
-
       // Set the successor of the last statement in an IF or SELECT block.
       if (!eval.controlSuccessor && eval.lexicalSuccessor &&
           eval.lexicalSuccessor->isIntermediateConstructStmt()) {
@@ -900,6 +1021,8 @@ public:
       outputStream << '*';
     outputStream << name << bang;
     if (eval.isActionStmt() || eval.isConstructStmt()) {
+      if (eval.negateCondition)
+        outputStream << " [negate]";
       if (eval.controlSuccessor)
         outputStream << " -> " << eval.controlSuccessor->printIndex;
     } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
