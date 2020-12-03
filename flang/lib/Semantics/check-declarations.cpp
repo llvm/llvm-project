@@ -120,11 +120,12 @@ class DistinguishabilityHelper {
 public:
   DistinguishabilityHelper(SemanticsContext &context) : context_{context} {}
   void Add(const Symbol &, GenericKind, const Symbol &, const Procedure &);
-  void Check();
+  void Check(const Scope &);
 
 private:
-  void SayNotDistinguishable(
-      const SourceName &, GenericKind, const Symbol &, const Symbol &);
+  void SayNotDistinguishable(const Scope &, const SourceName &, GenericKind,
+      const Symbol &, const Symbol &);
+  void AttachDeclaration(parser::Message &, const Scope &, const Symbol &);
 
   SemanticsContext &context_;
   struct ProcedureInfo {
@@ -1020,7 +1021,7 @@ void CheckHelper::CheckSpecificsAreDistinguishable(
       helper.Add(generic, kind, specific, *procedure);
     }
   }
-  helper.Check();
+  helper.Check(generic.owner());
 }
 
 static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
@@ -1637,7 +1638,7 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
       }
     }
   }
-  helper.Check();
+  helper.Check(scope);
 }
 
 void SubprogramMatchHelper::Check(
@@ -1859,7 +1860,7 @@ void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
   }
 }
 
-void DistinguishabilityHelper::Check() {
+void DistinguishabilityHelper::Check(const Scope &scope) {
   for (const auto &[name, info] : nameToInfo_) {
     auto count{info.size()};
     for (std::size_t i1{0}; i1 < count - 1; ++i1) {
@@ -1870,15 +1871,17 @@ void DistinguishabilityHelper::Check() {
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
         if (!distinguishable(proc1, proc2)) {
-          SayNotDistinguishable(name, kind1, symbol1, symbol2);
+          SayNotDistinguishable(
+              GetTopLevelUnitContaining(scope), name, kind1, symbol1, symbol2);
         }
       }
     }
   }
 }
 
-void DistinguishabilityHelper::SayNotDistinguishable(const SourceName &name,
-    GenericKind kind, const Symbol &proc1, const Symbol &proc2) {
+void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
+    const SourceName &name, GenericKind kind, const Symbol &proc1,
+    const Symbol &proc2) {
   std::string name1{proc1.name().ToString()};
   std::string name2{proc2.name().ToString()};
   if (kind.IsOperator() || kind.IsAssignment()) {
@@ -1890,12 +1893,34 @@ void DistinguishabilityHelper::SayNotDistinguishable(const SourceName &name,
       name2 = proc2.owner().GetName()->ToString() + '%' + name2;
     }
   }
-  auto &msg{context_.Say(name,
-      "Generic '%s' may not have specific procedures '%s' and '%s'"
-      " as their interfaces are not distinguishable"_err_en_US,
-      MakeOpName(name), name1, name2)};
-  evaluate::AttachDeclaration(msg, proc1);
-  evaluate::AttachDeclaration(msg, proc2);
+  parser::Message *msg;
+  if (scope.sourceRange().Contains(name)) {
+    msg = &context_.Say(name,
+        "Generic '%s' may not have specific procedures '%s' and"
+        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        MakeOpName(name), name1, name2);
+  } else {
+    msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
+        "USE-associated generic '%s' may not have specific procedures '%s' and"
+        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        MakeOpName(name), name1, name2);
+  }
+  AttachDeclaration(*msg, scope, proc1);
+  AttachDeclaration(*msg, scope, proc2);
+}
+
+// `evaluate::AttachDeclaration` doesn't handle the generic case where `proc`
+// comes from a different module but is not necessarily use-associated.
+void DistinguishabilityHelper::AttachDeclaration(
+    parser::Message &msg, const Scope &scope, const Symbol &proc) {
+  const Scope &unit{GetTopLevelUnitContaining(proc)};
+  if (unit == scope) {
+    evaluate::AttachDeclaration(msg, proc);
+  } else {
+    msg.Attach(unit.GetName().value(),
+        "'%s' is USE-associated from module '%s'"_en_US, proc.name(),
+        unit.GetName().value());
+  }
 }
 
 void CheckDeclarations(SemanticsContext &context) {
