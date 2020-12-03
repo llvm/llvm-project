@@ -549,29 +549,22 @@ private:
   // Statements that have control-flow semantics
   //
 
+  /// Generate an If[Then]Stmt condition or its negation.
   template <typename A>
-  std::pair<mlir::OpBuilder::InsertPoint, fir::IfOp>
-  genIfCondition(const A *stmt, bool withElse = true) {
+  mlir::Value genIfCondition(const A *stmt, bool negate = false) {
+    auto loc = toLocation();
     Fortran::lower::StatementContext stmtCtx;
-    auto cond = createFIRExpr(
-        toLocation(),
+    auto condExpr = createFIRExpr(
+        loc,
         Fortran::semantics::GetExpr(
             std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t)),
         stmtCtx);
     stmtCtx.finalize();
-    auto bcc = builder->createConvert(toLocation(), builder->getI1Type(), cond);
-    auto ifOp = builder->create<fir::IfOp>(toLocation(), bcc, withElse);
-    auto insPt = builder->saveInsertionPoint();
-    builder->setInsertionPointToStart(&ifOp.thenRegion().front());
-    return {insPt, ifOp};
-  }
-
-  mlir::Value genFIRLoopIndex(const Fortran::parser::ScalarExpr &x,
-                              Fortran::lower::StatementContext &stmtCtx,
-                              mlir::Type t) {
-    auto loc = toLocation();
-    mlir::Value v = createFIRExpr(loc, Fortran::semantics::GetExpr(x), stmtCtx);
-    return builder->createConvert(loc, t, v);
+    auto cond = builder->createConvert(loc, builder->getI1Type(), condExpr);
+    if (negate)
+      cond = builder->create<mlir::XOrOp>(
+          loc, cond, builder->createIntegerConstant(loc, cond.getType(), 1));
+    return cond;
   }
 
   mlir::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
@@ -1006,21 +999,6 @@ private:
       if (&info != &incrementLoopNestInfo.front()) // not outermost
         startBlock(info.exitBlock); // latch block of enclosing dimension
     }
-  }
-
-  /// Generate an If[Then]Stmt condition or its negation.
-  template <typename A>
-  mlir::Value genIfCondition(const A *stmt, bool negate = false) {
-    auto loc = toLocation();
-    auto cond = builder->createConvert(
-        loc, builder->getI1Type(),
-        createFIRExpr(
-            loc, Fortran::semantics::GetExpr(
-                     std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t))));
-    if (negate)
-      cond = builder->create<mlir::XOrOp>(
-          loc, cond, builder->createIntegerConstant(loc, cond.getType(), 1));
-    return cond;
   }
 
   /// Generate structured or unstructured FIR for an IF construct.

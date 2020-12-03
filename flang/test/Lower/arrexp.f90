@@ -17,6 +17,26 @@ subroutine test1(a,b,c,n)
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
 end subroutine test1
 
+! CHECK-LINE: func @_QPtest1b
+subroutine test1b(a,b,c,d,n)
+  integer :: n
+  real, intent(out) :: a(n)
+  real, intent(in) :: b(n), c(n), d(n)
+  ! CHECK-DAG: %[[A:.*]] = fir.array_load %arg0(%
+  ! CHECK-DAG: %[[B:.*]] = fir.array_load %arg1(%
+  ! CHECK-DAG: %[[C:.*]] = fir.array_load %arg2(%
+  ! CHECK-DAG: %[[D:.*]] = fir.array_load %arg3(%
+  ! CHECK: %[[T:.*]] = fir.do_loop
+  ! CHECK-DAG: %[[Bi:.*]] = fir.array_fetch %[[B]]
+  ! CHECK-DAG: %[[Ci:.*]] = fir.array_fetch %[[C]]
+  ! CHECK: %[[rv1:.*]] = fir.addf %[[Bi]], %[[Ci]]
+  ! CHECK: %[[Di:.*]] = fir.array_fetch %[[D]]
+  ! CHECK: %[[rv:.*]] = fir.addf %[[rv1]], %[[Di]]
+  ! CHECK: fir.array_update %{{.*}}, %[[rv]], %
+  a = b + c + d
+  ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
+end subroutine test1b
+
 ! CHECK-LINE: func @_QPtest2
 subroutine test2(a,b,c)
   real, intent(out) :: a(:)
