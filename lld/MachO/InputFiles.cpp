@@ -383,6 +383,13 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
+  if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
+    auto *c = reinterpret_cast<const linker_option_command *>(cmd);
+    StringRef data{reinterpret_cast<const char *>(c + 1),
+                   c->cmdsize - sizeof(linker_option_command)};
+    parseLCLinkerOption(this, c->count, data);
+  }
+
   if (const load_command *cmd = findCommand(hdr, LC_SEGMENT_64)) {
     auto *c = reinterpret_cast<const segment_command_64 *>(cmd);
     sectionHeaders = ArrayRef<section_64>{

@@ -36,6 +36,8 @@ enum {
 #undef OPTION
 };
 
+void parseLCLinkerOption(InputFile*, unsigned argc, StringRef data);
+
 std::string createResponseFile(const llvm::opt::InputArgList &args);
 
 // Check for both libfoo.dylib and libfoo.tbd (in that order).
