@@ -49,26 +49,30 @@ AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
 
 namespace internal {
 
-bool NotUnaryOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                      BoundNodesTreeBuilder *Builder,
-                      ArrayRef<DynTypedMatcher> InnerMatchers);
+static bool notUnaryOperator(const DynTypedNode &DynNode,
+                             ASTMatchFinder *Finder,
+                             BoundNodesTreeBuilder *Builder,
+                             ArrayRef<DynTypedMatcher> InnerMatchers);
 
-bool AllOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                           BoundNodesTreeBuilder *Builder,
-                           ArrayRef<DynTypedMatcher> InnerMatchers);
+static bool allOfVariadicOperator(const DynTypedNode &DynNode,
+                                  ASTMatchFinder *Finder,
+                                  BoundNodesTreeBuilder *Builder,
+                                  ArrayRef<DynTypedMatcher> InnerMatchers);
 
-bool EachOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                            BoundNodesTreeBuilder *Builder,
-                            ArrayRef<DynTypedMatcher> InnerMatchers);
+static bool eachOfVariadicOperator(const DynTypedNode &DynNode,
+                                   ASTMatchFinder *Finder,
+                                   BoundNodesTreeBuilder *Builder,
+                                   ArrayRef<DynTypedMatcher> InnerMatchers);
 
-bool AnyOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                           BoundNodesTreeBuilder *Builder,
-                           ArrayRef<DynTypedMatcher> InnerMatchers);
+static bool anyOfVariadicOperator(const DynTypedNode &DynNode,
+                                  ASTMatchFinder *Finder,
+                                  BoundNodesTreeBuilder *Builder,
+                                  ArrayRef<DynTypedMatcher> InnerMatchers);
 
-bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
-                                ASTMatchFinder *Finder,
-                                BoundNodesTreeBuilder *Builder,
-                                ArrayRef<DynTypedMatcher> InnerMatchers);
+static bool optionallyVariadicOperator(const DynTypedNode &DynNode,
+                                       ASTMatchFinder *Finder,
+                                       BoundNodesTreeBuilder *Builder,
+                                       ArrayRef<DynTypedMatcher> InnerMatchers);
 
 bool matchesAnyBase(const CXXRecordDecl &Node,
                     const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
@@ -225,21 +229,21 @@ DynTypedMatcher::constructVariadic(DynTypedMatcher::VariadicOperator Op,
     }
     return DynTypedMatcher(
         SupportedKind, RestrictKind,
-        new VariadicMatcher<AllOfVariadicOperator>(std::move(InnerMatchers)));
+        new VariadicMatcher<allOfVariadicOperator>(std::move(InnerMatchers)));
 
   case VO_AnyOf:
     return DynTypedMatcher(
         SupportedKind, RestrictKind,
-        new VariadicMatcher<AnyOfVariadicOperator>(std::move(InnerMatchers)));
+        new VariadicMatcher<anyOfVariadicOperator>(std::move(InnerMatchers)));
 
   case VO_EachOf:
     return DynTypedMatcher(
         SupportedKind, RestrictKind,
-        new VariadicMatcher<EachOfVariadicOperator>(std::move(InnerMatchers)));
+        new VariadicMatcher<eachOfVariadicOperator>(std::move(InnerMatchers)));
 
   case VO_Optionally:
     return DynTypedMatcher(SupportedKind, RestrictKind,
-                           new VariadicMatcher<OptionallyVariadicOperator>(
+                           new VariadicMatcher<optionallyVariadicOperator>(
                                std::move(InnerMatchers)));
 
   case VO_UnaryNot:
@@ -247,7 +251,7 @@ DynTypedMatcher::constructVariadic(DynTypedMatcher::VariadicOperator Op,
     // vector.
     return DynTypedMatcher(
         SupportedKind, RestrictKind,
-        new VariadicMatcher<NotUnaryOperator>(std::move(InnerMatchers)));
+        new VariadicMatcher<notUnaryOperator>(std::move(InnerMatchers)));
   }
   llvm_unreachable("Invalid Op value.");
 }
@@ -354,9 +358,10 @@ void BoundNodesTreeBuilder::addMatch(const BoundNodesTreeBuilder &Other) {
   Bindings.append(Other.Bindings.begin(), Other.Bindings.end());
 }
 
-bool NotUnaryOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                      BoundNodesTreeBuilder *Builder,
-                      ArrayRef<DynTypedMatcher> InnerMatchers) {
+static bool notUnaryOperator(const DynTypedNode &DynNode,
+                             ASTMatchFinder *Finder,
+                             BoundNodesTreeBuilder *Builder,
+                             ArrayRef<DynTypedMatcher> InnerMatchers) {
   if (InnerMatchers.size() != 1)
     return false;
 
@@ -374,9 +379,10 @@ bool NotUnaryOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   return !InnerMatchers[0].matches(DynNode, Finder, &Discard);
 }
 
-bool AllOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                           BoundNodesTreeBuilder *Builder,
-                           ArrayRef<DynTypedMatcher> InnerMatchers) {
+static bool allOfVariadicOperator(const DynTypedNode &DynNode,
+                                  ASTMatchFinder *Finder,
+                                  BoundNodesTreeBuilder *Builder,
+                                  ArrayRef<DynTypedMatcher> InnerMatchers) {
   // allOf leads to one matcher for each alternative in the first
   // matcher combined with each alternative in the second matcher.
   // Thus, we can reuse the same Builder.
@@ -385,9 +391,10 @@ bool AllOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   });
 }
 
-bool EachOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                            BoundNodesTreeBuilder *Builder,
-                            ArrayRef<DynTypedMatcher> InnerMatchers) {
+static bool eachOfVariadicOperator(const DynTypedNode &DynNode,
+                                   ASTMatchFinder *Finder,
+                                   BoundNodesTreeBuilder *Builder,
+                                   ArrayRef<DynTypedMatcher> InnerMatchers) {
   BoundNodesTreeBuilder Result;
   bool Matched = false;
   for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
@@ -401,9 +408,10 @@ bool EachOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   return Matched;
 }
 
-bool AnyOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
-                           BoundNodesTreeBuilder *Builder,
-                           ArrayRef<DynTypedMatcher> InnerMatchers) {
+static bool anyOfVariadicOperator(const DynTypedNode &DynNode,
+                                  ASTMatchFinder *Finder,
+                                  BoundNodesTreeBuilder *Builder,
+                                  ArrayRef<DynTypedMatcher> InnerMatchers) {
   for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
     BoundNodesTreeBuilder Result = *Builder;
     if (InnerMatcher.matches(DynNode, Finder, &Result)) {
@@ -414,10 +422,10 @@ bool AnyOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   return false;
 }
 
-bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
-                                ASTMatchFinder *Finder,
-                                BoundNodesTreeBuilder *Builder,
-                                ArrayRef<DynTypedMatcher> InnerMatchers) {
+static bool
+optionallyVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
+                           BoundNodesTreeBuilder *Builder,
+                           ArrayRef<DynTypedMatcher> InnerMatchers) {
   if (InnerMatchers.size() != 1)
     return false;
 
