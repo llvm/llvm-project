@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/OptBisect.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,6 +30,7 @@ namespace llvm {
 
 class Module;
 class Function;
+class PassInstrumentationCallbacks;
 
 /// Instrumentation to print IR before/after passes.
 ///
@@ -47,11 +47,15 @@ private:
   void printAfterPass(StringRef PassID, Any IR);
   void printAfterPassInvalidated(StringRef PassID);
 
+  bool shouldPrintBeforePass(StringRef PassID);
+  bool shouldPrintAfterPass(StringRef PassID);
+
   using PrintModuleDesc = std::tuple<const Module *, std::string, StringRef>;
 
   void pushModuleDesc(StringRef PassID, Any IR);
   PrintModuleDesc popModuleDesc(StringRef PassID);
 
+  PassInstrumentationCallbacks *PIC;
   /// Stack of Module description, enough to print the module after a given
   /// pass.
   SmallVector<PrintModuleDesc, 2> ModuleDescStack;
