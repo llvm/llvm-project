@@ -173,9 +173,22 @@ struct CompletionCandidate {
 
   // Returns a token identifying the overload set this is part of.
   // 0 indicates it's not part of any overload set.
-  size_t overloadSet(const CodeCompleteOptions &Opts) const {
+  size_t overloadSet(const CodeCompleteOptions &Opts, llvm::StringRef FileName,
+                     IncludeInserter *Inserter) const {
     if (!Opts.BundleOverloads.getValueOr(false))
       return 0;
+
+    // Depending on the index implementation, we can see different header
+    // strings (literal or URI) mapping to the same file. We still want to
+    // bundle those, so we must resolve the header to be included here.
+    std::string HeaderForHash;
+    if (Inserter)
+      if (auto Header = headerToInsertIfAllowed(Opts))
+        if (auto HeaderFile = toHeaderFile(*Header, FileName))
+          if (auto Spelled =
+                  Inserter->calculateIncludePath(*HeaderFile, FileName))
+            HeaderForHash = *Spelled;
+
     llvm::SmallString<256> Scratch;
     if (IndexResult) {
       switch (IndexResult->SymInfo.Kind) {
@@ -192,7 +205,7 @@ struct CompletionCandidate {
         // This could break #include insertion.
         return llvm::hash_combine(
             (IndexResult->Scope + IndexResult->Name).toStringRef(Scratch),
-            headerToInsertIfAllowed(Opts).getValueOr(""));
+            HeaderForHash);
       default:
         return 0;
       }
@@ -206,8 +219,7 @@ struct CompletionCandidate {
         llvm::raw_svector_ostream OS(Scratch);
         D->printQualifiedName(OS);
       }
-      return llvm::hash_combine(Scratch,
-                                headerToInsertIfAllowed(Opts).getValueOr(""));
+      return llvm::hash_combine(Scratch, HeaderForHash);
     }
     assert(IdentifierResult);
     return 0;
@@ -1570,7 +1582,8 @@ private:
         assert(IdentifierResult);
         C.Name = IdentifierResult->Name;
       }
-      if (auto OverloadSet = C.overloadSet(Opts)) {
+      if (auto OverloadSet = C.overloadSet(
+              Opts, FileName, Inserter ? Inserter.getPointer() : nullptr)) {
         auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
         if (Ret.second)
           Bundles.emplace_back();
