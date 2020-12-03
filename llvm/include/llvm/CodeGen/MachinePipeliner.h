@@ -40,8 +40,6 @@
 #ifndef LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
 #define LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
 
-#include "llvm/Analysis/AliasAnalysis.h"
-
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -51,6 +49,7 @@
 
 namespace llvm {
 
+class AAResults;
 class NodeSet;
 class SMSchedule;
 
@@ -92,15 +91,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<LiveIntervals>();
-    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
   void preprocessPhiNodes(MachineBasicBlock &B);
@@ -285,7 +276,7 @@ public:
   static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
 private:
-  void addLoopCarriedDependences(AliasAnalysis *AA);
+  void addLoopCarriedDependences(AAResults *AA);
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();

@@ -102,7 +102,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -128,6 +127,8 @@ struct AbstractAttribute;
 struct InformationCache;
 struct AAIsDead;
 
+class AAManager;
+class AAResults;
 class Function;
 
 /// The value passed to the line option that defines the maximal initialization
@@ -863,9 +864,7 @@ struct InformationCache {
   }
 
   /// Return AliasAnalysis Result for function \p F.
-  AAResults *getAAResultsForFunction(const Function &F) {
-    return AG.getAnalysis<AAManager>(F);
-  }
+  AAResults *getAAResultsForFunction(const Function &F);
 
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.

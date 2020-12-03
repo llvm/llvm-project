@@ -30,6 +30,7 @@
 #include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InlineAsm.h"
@@ -62,7 +63,7 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  AliasAnalysis *AA;
+  AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
   ARCRuntimeEntryPoints EP;
@@ -195,7 +196,7 @@ bool ObjCARCContract::contractAutorelease(Function &F, Instruction *Autorelease,
 static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
                                                          Instruction *Release,
                                                          ProvenanceAnalysis &PA,
-                                                         AliasAnalysis *AA) {
+                                                         AAResults *AA) {
   StoreInst *Store = nullptr;
   bool SawRelease = false;
 
