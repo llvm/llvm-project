@@ -1062,7 +1062,6 @@ public:
     auto genFullDim = [&](const auto &arr, mlir::Value delta) -> mlir::Value {
       mlir::Value total = zero;
       assert(arr.getExtents().size() == aref.subscript().size());
-      // unsigned idx = 0;
       unsigned dim = 0;
       for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
         auto subVal = genComponent(sub);
@@ -1088,16 +1087,13 @@ public:
       return builder.create<fir::CoordinateOp>(
           loc, refTy, base, llvm::ArrayRef<mlir::Value>{total});
     };
-    auto genArraySlice = [&](const auto &arr) -> mlir::Value {
-      // FIXME: create a loop nest and copy the array slice into a temp
-      // We need some context here, since we could also box as an argument
-      llvm::report_fatal_error("TODO: array slice not supported");
-    };
     return si.match(
         [&](const Fortran::lower::SymbolBox::FullDim &arr)
             -> fir::ExtendedValue {
-          if (/*!inArrayContext() &&*/ isSlice(aref))
-            return genArraySlice(arr);
+          // FIXME: this check can be removed when slicing is implemented
+          if (isSlice(aref))
+            llvm::report_fatal_error(
+                "slice should be handled in array expression context");
           return genFullDim(arr, one);
         },
         [&](const Fortran::lower::SymbolBox::CharFullDim &arr)
@@ -1151,10 +1147,10 @@ public:
     };
     return exv.match(
         [&](const fir::ArrayBoxValue &arr) {
-          if (/*!inArrayContext() &&*/ isSlice(aref)) {
-            TODO("");
-            return mlir::Value{};
-          }
+          // FIXME: this check can be removed when slicing is implemented
+          if (isSlice(aref))
+            llvm::report_fatal_error(
+                "slicing should be handled in array expresion context");
           return genWithShape(arr);
         },
         [&](const fir::CharArrayBoxValue &arr) {
@@ -1782,6 +1778,12 @@ public:
     return ScalarExprLowering{getLoc(), converter, symMap, stmtCtx}.genval(x);
   }
 
+  // Lower the expression in a scalar context to a (boxed) reference.
+  template <typename A>
+  ExtValue asScalarRef(const A &x) {
+    return ScalarExprLowering{getLoc(), converter, symMap, stmtCtx}.gen(x);
+  }
+
   // An expression with non-zero rank is an array expression.
   template <typename A>
   static bool isArray(const A &x) {
@@ -1791,6 +1793,7 @@ public:
   template <typename A, typename = std::enable_if_t<Fortran::common::HasMember<
                             A, Fortran::evaluate::TypelessExpression>>>
   CC genarr(const A &x) {
+    // FIXME: replace this with a report_fatal_error if no longer called
     auto result = asScalar(x);
     return [=](IterSpace) { return result; };
   }
@@ -1951,7 +1954,7 @@ public:
     };
   }
   CC genarr(const Fortran::semantics::SymbolRef &sym) {
-    auto extMemref = symMap.lookupSymbol(sym).toExtendedValue();
+    auto extMemref = asScalarRef(sym);
     auto memref = fir::getBase(extMemref);
     auto arrTy = fir::dyn_cast_ptrEleTy(memref.getType());
     auto loc = getLoc();
@@ -2052,15 +2055,22 @@ private:
 } // namespace
 
 namespace {
-// FIXME: The `AnyTraverse` pattern doesn't short-circuit its visitation. That
-// is, the entire `Ev::Expr` tree is visited, but only the first non-`None`
-// result wins. The root cause is the use of `Combine()` in the `Traverse`
-// visitor pattern. Furthermore, the `operator()` methods are all `const`, a
-// usage obstacle such that any visitor class has to use `mutable` internal
-// state to be able to carry its own context.
+/// WIP: this is a stub at the moment. The issue being addressed is when there
+/// is a subexpression such as `A + B` where A has non-zero rank and the
+/// subexpression is part of a larger expression. Operationally, `A + B` creates
+/// a temporary array. The shape of that temporary may or may not be constant at
+/// compile-time. The algorithm discovers the shape (regardless of whether it is
+/// constant) of the temporary by walking over the subexpression.
 struct IntraexprShapeAnalyzer
     : public Fortran::evaluate::AnyTraverse<IntraexprShapeAnalyzer,
                                             Fortran::lower::SymbolBox> {
+  // FIXME: The `AnyTraverse` pattern doesn't short-circuit its visitation. That
+  // is, the entire `Ev::Expr` tree is visited, but only the first non-`None`
+  // result wins. The root cause is the use of `Combine()` in the `Traverse`
+  // visitor pattern. Furthermore, the `operator()` methods are all `const`, a
+  // usage obstacle such that any visitor class has to use `mutable` internal
+  // state to be able to carry its own context.
+
   using Result = Fortran::lower::SymbolBox;
   using Base = Fortran::evaluate::AnyTraverse<IntraexprShapeAnalyzer, Result>;
 

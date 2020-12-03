@@ -67,7 +67,7 @@ fir::ExtendedValue createStringLiteral(mlir::Location loc,
                                        AbstractConverter &converter,
                                        llvm::StringRef str, std::uint64_t len);
 
-/// Create and return an projection of a subspace of an array value. This is the
+/// Create and return a projection of a subspace of an array value. This is the
 /// lhs onto which a newly constructed array value can be merged.
 fir::ArrayLoadOp
 createSomeArraySubspace(AbstractConverter &converter,
