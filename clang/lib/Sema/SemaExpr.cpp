@@ -2134,6 +2134,73 @@ static void emitEmptyLookupTypoDiagnostic(
                          SemaRef.PDiag(NoteID));
 }
 
+/// Diagnose a lookup that found results in an enclosing class during error
+/// recovery. This usually indicates that the results were found in a dependent
+/// base class that could not be searched as part of a template definition.
+/// Always issues a diagnostic (though this may be only a warning in MS
+/// compatibility mode).
+///
+/// Return \c true if the error is unrecoverable, or \c false if the caller
+/// should attempt to recover using these lookup results.
+bool Sema::DiagnoseDependentMemberLookup(LookupResult &R) {
+  // During a default argument instantiation the CurContext points
+  // to a CXXMethodDecl; but we can't apply a this-> fixit inside a
+  // function parameter list, hence add an explicit check.
+  bool isDefaultArgument =
+      !CodeSynthesisContexts.empty() &&
+      CodeSynthesisContexts.back().Kind ==
+          CodeSynthesisContext::DefaultFunctionArgumentInstantiation;
+  CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
+  bool isInstance = CurMethod && CurMethod->isInstance() &&
+                    R.getNamingClass() == CurMethod->getParent() &&
+                    !isDefaultArgument;
+
+  // There are two ways we can find a class-scope declaration during template
+  // instantiation that we did not find in the template definition: if it is a
+  // member of a dependent base class, or if it is declared after the point of
+  // use in the same class. Distinguish these by comparing the class in which
+  // the member was found to the naming class of the lookup.
+  unsigned DiagID = diag::err_found_in_dependent_base;
+  unsigned NoteID = diag::note_member_declared_at;
+  if (R.getRepresentativeDecl()->getDeclContext()->Equals(R.getNamingClass())) {
+    DiagID = getLangOpts().MSVCCompat ? diag::ext_found_later_in_class
+                                      : diag::err_found_later_in_class;
+  } else if (getLangOpts().MSVCCompat) {
+    DiagID = diag::ext_found_in_dependent_base;
+    NoteID = diag::note_dependent_member_use;
+  }
+
+  if (isInstance) {
+    // Give a code modification hint to insert 'this->'.
+    Diag(R.getNameLoc(), DiagID)
+        << R.getLookupName()
+        << FixItHint::CreateInsertion(R.getNameLoc(), "this->");
+    CheckCXXThisCapture(R.getNameLoc());
+  } else {
+    // FIXME: Add a FixItHint to insert 'Base::' or 'Derived::' (assuming
+    // they're not shadowed).
+    Diag(R.getNameLoc(), DiagID) << R.getLookupName();
+  }
+
+  for (NamedDecl *D : R)
+    Diag(D->getLocation(), NoteID);
+
+  // Return true if we are inside a default argument instantiation
+  // and the found name refers to an instance member function, otherwise
+  // the caller will try to create an implicit member call and this is wrong
+  // for default arguments.
+  //
+  // FIXME: Is this special case necessary? We could allow the caller to
+  // diagnose this.
+  if (isDefaultArgument && ((*R.begin())->isCXXInstanceMember())) {
+    Diag(R.getNameLoc(), diag::err_member_call_without_object);
+    return true;
+  }
+
+  // Tell the callee to try to recover.
+  return false;
+}
+
 /// Diagnose an empty lookup.
 ///
 /// \return false if new lookup candidates were found
@@ -2165,46 +2232,20 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         // Don't give errors about ambiguities in this lookup.
         R.suppressDiagnostics();
 
-        // During a default argument instantiation the CurContext points
-        // to a CXXMethodDecl; but we can't apply a this-> fixit inside a
-        // function parameter list, hence add an explicit check.
-        bool isDefaultArgument =
-            !CodeSynthesisContexts.empty() &&
-            CodeSynthesisContexts.back().Kind ==
-                CodeSynthesisContext::DefaultFunctionArgumentInstantiation;
-        CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
-        bool isInstance = CurMethod &&
-                          CurMethod->isInstance() &&
-                          DC == CurMethod->getParent() && !isDefaultArgument;
-
-        // Give a code modification hint to insert 'this->'.
-        // TODO: fixit for inserting 'Base<T>::' in the other cases.
-        // Actually quite difficult!
-        if (getLangOpts().MSVCCompat)
-          diagnostic = diag::ext_found_via_dependent_bases_lookup;
-        if (isInstance) {
-          Diag(R.getNameLoc(), diagnostic) << Name
-            << FixItHint::CreateInsertion(R.getNameLoc(), "this->");
-          CheckCXXThisCapture(R.getNameLoc());
-        } else {
-          Diag(R.getNameLoc(), diagnostic) << Name;
+        // If there's a best viable function among the results, only mention
+        // that one in the notes.
+        OverloadCandidateSet Candidates(R.getNameLoc(),
+                                        OverloadCandidateSet::CSK_Normal);
+        AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args, Candidates);
+        OverloadCandidateSet::iterator Best;
+        if (Candidates.BestViableFunction(*this, R.getNameLoc(), Best) ==
+            OR_Success) {
+          R.clear();
+          R.addDecl(Best->FoundDecl.getDecl(), Best->FoundDecl.getAccess());
+          R.resolveKind();
         }
 
-        // Do we really want to note all of these?
-        for (NamedDecl *D : R)
-          Diag(D->getLocation(), diag::note_dependent_var_use);
-
-        // Return true if we are inside a default argument instantiation
-        // and the found name refers to an instance member function, otherwise
-        // the function calling DiagnoseEmptyLookup will try to create an
-        // implicit member call and this is wrong for default argument.
-        if (isDefaultArgument && ((*R.begin())->isCXXInstanceMember())) {
-          Diag(R.getNameLoc(), diag::err_member_call_without_object);
-          return true;
-        }
-
-        // Tell the callee to try to recover.
-        return false;
+        return DiagnoseDependentMemberLookup(R);
       }
 
       R.clear();

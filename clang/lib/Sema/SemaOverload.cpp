@@ -12750,6 +12750,16 @@ void Sema::AddOverloadedCallCandidates(UnresolvedLookupExpr *ULE,
                                          CandidateSet, PartialOverloading);
 }
 
+/// Add the call candidates from the given set of lookup results to the given
+/// overload set. Non-function lookup results are ignored.
+void Sema::AddOverloadedCallCandidates(
+    LookupResult &R, TemplateArgumentListInfo *ExplicitTemplateArgs,
+    ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet) {
+  for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I)
+    AddOverloadedCallCandidate(*this, I.getPair(), ExplicitTemplateArgs, Args,
+                               CandidateSet, false, /*KnownValid*/ false);
+}
+
 /// Determine whether a declaration with the specified name could be moved into
 /// a different namespace.
 static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
@@ -12769,13 +12779,11 @@ static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
 /// correctly implement two-stage name lookup.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
-static bool
-DiagnoseTwoPhaseLookup(Sema &SemaRef, SourceLocation FnLoc,
-                       const CXXScopeSpec &SS, LookupResult &R,
-                       OverloadCandidateSet::CandidateSetKind CSK,
-                       TemplateArgumentListInfo *ExplicitTemplateArgs,
-                       ArrayRef<Expr *> Args,
-                       bool *DoDiagnoseEmptyLookup = nullptr) {
+static bool DiagnoseTwoPhaseLookup(
+    Sema &SemaRef, SourceLocation FnLoc, const CXXScopeSpec &SS,
+    LookupResult &R, OverloadCandidateSet::CandidateSetKind CSK,
+    TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
+    CXXRecordDecl **FoundInClass = nullptr) {
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
     return false;
 
@@ -12788,26 +12796,32 @@ DiagnoseTwoPhaseLookup(Sema &SemaRef, SourceLocation FnLoc,
     if (!R.empty()) {
       R.suppressDiagnostics();
 
-      if (isa<CXXRecordDecl>(DC)) {
-        // Don't diagnose names we find in classes; we get much better
-        // diagnostics for these from DiagnoseEmptyLookup.
-        R.clear();
-        if (DoDiagnoseEmptyLookup)
-          *DoDiagnoseEmptyLookup = true;
+      OverloadCandidateSet Candidates(FnLoc, CSK);
+      SemaRef.AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args,
+                                          Candidates);
+
+      OverloadCandidateSet::iterator Best;
+      OverloadingResult OR =
+          Candidates.BestViableFunction(SemaRef, FnLoc, Best);
+
+      if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        // We either found non-function declarations or a best viable function
+        // at class scope. A class-scope lookup result disables ADL. Don't
+        // look past this, but let the caller know that we found something that
+        // either is, or might be, usable in this class.
+        if (FoundInClass) {
+          *FoundInClass = RD;
+          if (OR == OR_Success) {
+            R.clear();
+            R.addDecl(Best->FoundDecl.getDecl(), Best->FoundDecl.getAccess());
+            R.resolveKind();
+          }
+        }
         return false;
       }
 
-      OverloadCandidateSet Candidates(FnLoc, CSK);
-      for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I)
-        AddOverloadedCallCandidate(SemaRef, I.getPair(),
-                                   ExplicitTemplateArgs, Args,
-                                   Candidates, false, /*KnownValid*/ false);
-
-      OverloadCandidateSet::iterator Best;
-      if (Candidates.BestViableFunction(SemaRef, FnLoc, Best) != OR_Success) {
-        // No viable functions. Don't bother the user with notes for functions
-        // which don't work and shouldn't be found anyway.
-        R.clear();
+      if (OR != OR_Success) {
+        // There wasn't a unique best function or function template.
         return false;
       }
 
@@ -12902,6 +12916,12 @@ public:
 }
 
 /// Attempts to recover from a call where no functions were found.
+///
+/// This function will do one of three things:
+///  * Diagnose, recover, and return a recovery expression.
+///  * Diagnose, fail to recover, and return ExprError().
+///  * Do not diagnose, do not recover, and return ExprResult(). The caller is
+///    expected to diagnose as appropriate.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                       UnresolvedLookupExpr *ULE,
@@ -12914,9 +12934,8 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   //
   // template <typename T> auto foo(T t) -> decltype(foo(t)) {}
   // template <typename T> auto foo(T t) -> decltype(foo(&t)) {}
-  //
   if (SemaRef.IsBuildingRecoveryCallExpr)
-    return ExprError();
+    return ExprResult();
   BuildRecoveryCallExprRAII RCE(SemaRef);
 
   CXXScopeSpec SS;
@@ -12932,10 +12951,14 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
 
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
-  bool DoDiagnoseEmptyLookup = EmptyLookup;
-  if (!DiagnoseTwoPhaseLookup(
-          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
-          ExplicitTemplateArgs, Args, &DoDiagnoseEmptyLookup)) {
+  CXXRecordDecl *FoundInClass = nullptr;
+  if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
+                             OverloadCandidateSet::CSK_Normal,
+                             ExplicitTemplateArgs, Args, &FoundInClass)) {
+    // OK, diagnosed a two-phase lookup issue.
+  } else if (EmptyLookup) {
+    // Try to recover from an empty lookup with typo correction.
+    R.clear();
     NoTypoCorrectionCCC NoTypoValidator{};
     FunctionCallFilterCCC FunctionCallValidator(SemaRef, Args.size(),
                                                 ExplicitTemplateArgs != nullptr,
@@ -12944,12 +12967,24 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
         AllowTypoCorrection
             ? static_cast<CorrectionCandidateCallback &>(FunctionCallValidator)
             : static_cast<CorrectionCandidateCallback &>(NoTypoValidator);
-    if (!DoDiagnoseEmptyLookup ||
-        SemaRef.DiagnoseEmptyLookup(S, SS, R, Validator, ExplicitTemplateArgs,
+    if (SemaRef.DiagnoseEmptyLookup(S, SS, R, Validator, ExplicitTemplateArgs,
                                     Args))
       return ExprError();
+  } else if (FoundInClass && SemaRef.getLangOpts().MSVCCompat) {
+    // We found a usable declaration of the name in a dependent base of some
+    // enclosing class.
+    // FIXME: We should also explain why the candidates found by name lookup
+    // were not viable.
+    if (SemaRef.DiagnoseDependentMemberLookup(R))
+      return ExprError();
+  } else {
+    // We had viable candidates and couldn't recover; let the caller diagnose
+    // this.
+    return ExprResult();
   }
 
+  // If we get here, we should have issued a diagnostic and formed a recovery
+  // lookup result.
   assert(!R.empty() && "lookup results empty despite recovery");
 
   // If recovery created an ambiguity, just bail out.
@@ -13110,11 +13145,6 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                                            OverloadCandidateSet::iterator *Best,
                                            OverloadingResult OverloadResult,
                                            bool AllowTypoCorrection) {
-  if (CandidateSet->empty())
-    return BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc, Args,
-                                 RParenLoc, /*EmptyLookup=*/true,
-                                 AllowTypoCorrection);
-
   switch (OverloadResult) {
   case OR_Success: {
     FunctionDecl *FDecl = (*Best)->Function;
@@ -13132,9 +13162,9 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     // have meant to call.
     ExprResult Recovery = BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc,
                                                 Args, RParenLoc,
-                                                /*EmptyLookup=*/false,
+                                                CandidateSet->empty(),
                                                 AllowTypoCorrection);
-    if (!Recovery.isInvalid())
+    if (Recovery.isInvalid() || Recovery.isUsable())
       return Recovery;
 
     // If the user passes in a function that we can't take the address of, we

@@ -82,12 +82,12 @@ namespace dr213 { // dr213: yes
   template <class T> struct A : T {
     void h(T t) {
       char &r1 = f(t);
-      int &r2 = g(t); // expected-error {{undeclared}}
+      int &r2 = g(t); // expected-error {{explicit qualification required to use member 'g' from dependent base class}}
     }
   };
   struct B {
     int &f(B);
-    int &g(B); // expected-note {{in dependent base class}}
+    int &g(B); // expected-note {{here}}
   };
   char &f(B);
 
