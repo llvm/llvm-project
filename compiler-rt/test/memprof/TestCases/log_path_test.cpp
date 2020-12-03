@@ -27,6 +27,8 @@
 // RUN: %clangxx_memprof  %s -o %t -DPROFILE_NAME_VAR="/dev/null/INVALID"
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID --dump-input=always
 
+#include <sanitizer/memprof_interface.h>
+
 #ifdef PROFILE_NAME_VAR
 #define xstr(s) str(s)
 #define str(s) #s
@@ -39,6 +41,7 @@ int main(int argc, char **argv) {
   char *x = (char *)malloc(10);
   memset(x, 0, 10);
   free(x);
+  __memprof_profile_dump();
   return 0;
 }
 // CHECK-GOOD: Memory allocation stack id

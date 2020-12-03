@@ -546,3 +546,44 @@ func @nested_while_ops(%arg0: f32) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: @ifs_in_parallel
+// CHECK: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: i1, %[[ARG4:.*]]: i1)
+func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5: i1) {
+  // CHECK:   br ^[[LOOP_LATCH:.*]](%[[ARG0]] : index)
+  // CHECK: ^[[LOOP_LATCH]](%[[LOOP_IV:.*]]: index):
+  // CHECK:   %[[LOOP_COND:.*]] = cmpi "slt", %[[LOOP_IV]], %[[ARG1]] : index
+  // CHECK:   cond_br %[[LOOP_COND]], ^[[LOOP_BODY:.*]], ^[[LOOP_CONT:.*]]
+  // CHECK: ^[[LOOP_BODY]]:
+  // CHECK:   cond_br %[[ARG3]], ^[[IF1_THEN:.*]], ^[[IF1_CONT:.*]]
+  // CHECK: ^[[IF1_THEN]]:
+  // CHECK:   cond_br %[[ARG4]], ^[[IF2_THEN:.*]], ^[[IF2_ELSE:.*]]
+  // CHECK: ^[[IF2_THEN]]:
+  // CHECK:   %{{.*}} = "test.if2"() : () -> index
+  // CHECK:   br ^[[IF2_MERGE:.*]](%{{.*}} : index)
+  // CHECK: ^[[IF2_ELSE]]:
+  // CHECK:   %{{.*}} = "test.else2"() : () -> index
+  // CHECK:   br ^[[IF2_MERGE]](%{{.*}} : index)
+  // CHECK: ^[[IF2_MERGE]](%{{.*}}: index):
+  // CHECK:   br ^[[IF2_CONT:.*]]
+  // CHECK: ^[[IF2_CONT]]:
+  // CHECK:   br ^[[IF1_CONT]]
+  // CHECK: ^[[IF1_CONT]]:
+  // CHECK:   %{{.*}} = addi %[[LOOP_IV]], %[[ARG2]] : index
+  // CHECK:   br ^[[LOOP_LATCH]](%{{.*}} : index)
+  scf.parallel (%i) = (%arg1) to (%arg2) step (%arg3) {
+    scf.if %arg4 {
+      %0 = scf.if %arg5 -> (index) {
+        %1 = "test.if2"() : () -> index
+        scf.yield %1 : index
+      } else {
+        %2 = "test.else2"() : () -> index
+        scf.yield %2 : index
+      }
+    }
+    scf.yield
+  }
+
+  // CHECK: ^[[LOOP_CONT]]:
+  // CHECK:   return
+  return
+}

@@ -284,7 +284,7 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
   ret void
 }
 
-define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i32 %b, [4096 x i8] addrspace(5)* byval align 4 %arg) #5 {
+define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i32 %b, [4096 x i8] addrspace(5)* byval([4096 x i8]) align 4 %arg) #5 {
 ; If the size of the offset exceeds the MUBUF offset field we need another
 ; scratch VGPR to hold the offset.
 

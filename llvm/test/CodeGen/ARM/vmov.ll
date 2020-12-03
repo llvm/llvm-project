@@ -228,7 +228,7 @@ define arm_aapcs_vfpcc <2 x i64> @v_movQi64() nounwind {
 
 ; Check for correct assembler printing for immediate values.
 %struct.int8x8_t = type { <8 x i8> }
-define arm_aapcs_vfpcc void @vdupn128(%struct.int8x8_t* noalias nocapture sret %agg.result) nounwind {
+define arm_aapcs_vfpcc void @vdupn128(%struct.int8x8_t* noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
 ; CHECK-LABEL: vdupn128:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0x80
@@ -240,7 +240,7 @@ entry:
   ret void
 }
 
-define arm_aapcs_vfpcc void @vdupnneg75(%struct.int8x8_t* noalias nocapture sret %agg.result) nounwind {
+define arm_aapcs_vfpcc void @vdupnneg75(%struct.int8x8_t* noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
 ; CHECK-LABEL: vdupnneg75:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0xb5

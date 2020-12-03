@@ -155,8 +155,9 @@ void AArch64TargetInfo::fillValidCPUList(
 
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
-  // FIXME: Armv8.1 makes __ARM_FEATURE_CRC32 mandatory. Handle it here.
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
+  Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
+  Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
@@ -176,8 +177,6 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Also include the Armv8.3 defines
-  // FIXME: Armv8.4 makes __ARM_FEATURE_ATOMICS, defined in GCC, mandatory.
-  // Add and handle it here.
   getTargetDefinesARMV83A(Opts, Builder);
 }
 
@@ -304,6 +303,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
+  if (HasLSE)
+    Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
+
   if (HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
     Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
@@ -377,8 +379,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 
-  if (Opts.ArmSveVectorBits)
+  if (Opts.ArmSveVectorBits) {
     Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.ArmSveVectorBits));
+    Builder.defineMacro("__ARM_FEATURE_SVE_VECTOR_OPERATORS");
+  }
 }
 
 ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
@@ -416,6 +420,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasSVE2BitPerm = false;
   HasMatmulFP64 = false;
   HasMatmulFP32 = false;
+  HasLSE = false;
 
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
@@ -497,6 +502,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMatMul = true;
     if (Feature == "+bf16")
       HasBFloat16 = true;
+    if (Feature == "+lse")
+      HasLSE = true;
   }
 
   setDataLayout();

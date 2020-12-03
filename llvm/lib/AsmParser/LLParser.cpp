@@ -1699,14 +1699,14 @@ bool LLParser::parseOptionalParamAttrs(AttrBuilder &B) {
     }
     case lltok::kw_byval: {
       Type *Ty;
-      if (parseOptionalTypeAttr(Ty, lltok::kw_byval))
+      if (parseRequiredTypeAttr(Ty, lltok::kw_byval))
         return true;
       B.addByValAttr(Ty);
       continue;
     }
     case lltok::kw_sret: {
       Type *Ty;
-      if (parseOptionalTypeAttr(Ty, lltok::kw_sret))
+      if (parseRequiredTypeAttr(Ty, lltok::kw_sret))
         return true;
       B.addStructRetAttr(Ty);
       continue;
@@ -2628,22 +2628,6 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
   return false;
 }
 
-/// parseByValWithOptionalType
-///   ::= byval
-///   ::= byval(<ty>)
-bool LLParser::parseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName) {
-  Result = nullptr;
-  if (!EatIfPresent(AttrName))
-    return true;
-  if (!EatIfPresent(lltok::lparen))
-    return false;
-  if (parseType(Result))
-    return true;
-  if (!EatIfPresent(lltok::rparen))
-    return error(Lex.getLoc(), "expected ')'");
-  return false;
-}
-
 /// parseRequiredTypeAttr
 ///   ::= attrname(<ty>)
 bool LLParser::parseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName) {
@@ -3289,6 +3273,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
     break;
   case lltok::kw_null: ID.Kind = ValID::t_Null; break;
   case lltok::kw_undef: ID.Kind = ValID::t_Undef; break;
+  case lltok::kw_poison: ID.Kind = ValID::t_Poison; break;
   case lltok::kw_zeroinitializer: ID.Kind = ValID::t_Zero; break;
   case lltok::kw_none: ID.Kind = ValID::t_None; break;
 
@@ -3487,6 +3472,39 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
     }
 
     ID.ConstantVal = BlockAddress::get(F, BB);
+    ID.Kind = ValID::t_Constant;
+    return false;
+  }
+
+  case lltok::kw_dso_local_equivalent: {
+    // ValID ::= 'dso_local_equivalent' @foo
+    Lex.Lex();
+
+    ValID Fn;
+
+    if (parseValID(Fn))
+      return true;
+
+    if (Fn.Kind != ValID::t_GlobalID && Fn.Kind != ValID::t_GlobalName)
+      return error(Fn.Loc,
+                   "expected global value name in dso_local_equivalent");
+
+    // Try to find the function (but skip it if it's forward-referenced).
+    GlobalValue *GV = nullptr;
+    if (Fn.Kind == ValID::t_GlobalID) {
+      if (Fn.UIntVal < NumberedVals.size())
+        GV = NumberedVals[Fn.UIntVal];
+    } else if (!ForwardRefVals.count(Fn.StrVal)) {
+      GV = M->getNamedValue(Fn.StrVal);
+    }
+
+    assert(GV && "Could not find a corresponding global variable");
+
+    if (!GV->getValueType()->isFunctionTy())
+      return error(Fn.Loc, "expected a function, alias to function, or ifunc "
+                           "in dso_local_equivalent");
+
+    ID.ConstantVal = DSOLocalEquivalent::get(GV);
     ID.Kind = ValID::t_Constant;
     return false;
   }
@@ -5519,10 +5537,15 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
       return error(ID.Loc, "invalid type for none constant");
     V = Constant::getNullValue(Ty);
     return false;
+  case ValID::t_Poison:
+    // FIXME: LabelTy should not be a first-class type.
+    if (!Ty->isFirstClassType() || Ty->isLabelTy())
+      return error(ID.Loc, "invalid type for poison constant");
+    V = PoisonValue::get(Ty);
+    return false;
   case ValID::t_Constant:
     if (ID.ConstantVal->getType() != Ty)
       return error(ID.Loc, "constant expression type mismatch");
-
     V = ID.ConstantVal;
     return false;
   case ValID::t_ConstantStruct:

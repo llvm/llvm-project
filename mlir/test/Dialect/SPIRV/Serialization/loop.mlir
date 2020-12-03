@@ -44,9 +44,9 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^header
 
 // CHECK-NEXT:   ^bb4:
-// CHECK-NEXT:     spv._merge
+// CHECK-NEXT:     spv.mlir.merge
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -94,8 +94,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^header(%14 : i32)
 // CHECK-NEXT:   ^bb3:
     ^merge:
-// CHECK-NEXT:     spv._merge
-      spv._merge
+// CHECK-NEXT:     spv.mlir.merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -174,8 +174,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK-NEXT:     ^bb4:
       ^merge:
-// CHECK-NEXT:       spv._merge
-        spv._merge
+// CHECK-NEXT:       spv.mlir.merge
+        spv.mlir.merge
       } // end inner loop
 
 // CHECK:          spv.Branch ^bb4
@@ -194,9 +194,9 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^header
 
 // CHECK-NEXT:   ^bb5:
-// CHECK-NEXT:     spv._merge
+// CHECK-NEXT:     spv.mlir.merge
     ^merge:
-      spv._merge
+      spv.mlir.merge
     } // end outer loop
     spv.Return
   }

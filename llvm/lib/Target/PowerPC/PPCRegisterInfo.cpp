@@ -156,6 +156,10 @@ PPCRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
+  if (Subtarget.isAIXABI() &&
+      (Subtarget.hasAltivec() && !TM.getAIXExtendedAltivecABI()))
+    report_fatal_error("the default AIX Altivec ABI is not yet "
+                       "supported.");
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
     if (!TM.isPPC64() && Subtarget.isAIXABI())
       report_fatal_error("AnyReg unimplemented on 32-bit AIX.");
@@ -202,8 +206,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
-  if (Subtarget.isAIXABI())
+  if (Subtarget.isAIXABI()) {
+    if (Subtarget.hasAltivec())
+      return CSR_AIX32_Altivec_SaveList;
     return CSR_AIX32_SaveList;
+  }
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
   else if (Subtarget.hasSPE())
@@ -224,8 +231,10 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (Subtarget.isAIXABI()) {
-    assert(!Subtarget.hasAltivec() && "Altivec is not implemented on AIX yet.");
-    return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
+    return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
+                                                  : CSR_PPC64_RegMask)
+                        : (Subtarget.hasAltivec() ? CSR_AIX32_Altivec_RegMask
+                                                  : CSR_AIX32_RegMask);
   }
 
   if (CC == CallingConv::Cold) {

@@ -2520,6 +2520,9 @@ public:
   EXPECT_UNAVAILABLE(Header + "void fun() { ::ban::fo^o(); }");
   EXPECT_AVAILABLE(Header + "void fun() { banana::fo^o(); }");
 
+  // Do not offer code action on typo-corrections.
+  EXPECT_UNAVAILABLE(Header + "/*error-ok*/c^c C;");
+
   // Check that we do not trigger in header files.
   FileName = "test.h";
   ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.
@@ -2793,7 +2796,106 @@ using one::two::ff;using one::two::ee;
 
 void fun() {
   ff();
-})cpp"}};
+})cpp"},
+            // using alias; insert using for the spelled name.
+            {R"cpp(
+#include "test.hpp"
+
+void fun() {
+  one::u^u u;
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using one::uu;
+
+void fun() {
+  uu u;
+})cpp"},
+            // using namespace.
+            {R"cpp(
+#include "test.hpp"
+using namespace one;
+namespace {
+two::c^c C;
+})cpp",
+             R"cpp(
+#include "test.hpp"
+using namespace one;
+namespace {using two::cc;
+
+cc C;
+})cpp"},
+            // Type defined in main file, make sure using is after that.
+            {R"cpp(
+namespace xx {
+  struct yy {};
+}
+
+x^x::yy X;
+)cpp",
+             R"cpp(
+namespace xx {
+  struct yy {};
+}
+
+using xx::yy;
+
+yy X;
+)cpp"},
+            // Type defined in main file via "using", insert after that.
+            {R"cpp(
+#include "test.hpp"
+
+namespace xx {
+  using yy = one::two::cc;
+}
+
+x^x::yy X;
+)cpp",
+             R"cpp(
+#include "test.hpp"
+
+namespace xx {
+  using yy = one::two::cc;
+}
+
+using xx::yy;
+
+yy X;
+)cpp"},
+            // Using must come after function definition.
+            {R"cpp(
+namespace xx {
+  void yy();
+}
+
+void fun() {
+  x^x::yy();
+}
+)cpp",
+             R"cpp(
+namespace xx {
+  void yy();
+}
+
+using xx::yy;
+
+void fun() {
+  yy();
+}
+)cpp"},
+            // Existing using with non-namespace part.
+            {R"cpp(
+#include "test.hpp"
+using one::two::ee::ee_one;
+one::t^wo::cc c;
+)cpp",
+             R"cpp(
+#include "test.hpp"
+using one::two::cc;using one::two::ee::ee_one;
+cc c;
+)cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
     for (const auto &SubCase : expandCases(Case.TestSource)) {
@@ -2801,7 +2903,7 @@ void fun() {
 namespace one {
 void oo() {}
 namespace two {
-enum ee {};
+enum ee {ee_one};
 void ff() {}
 class cc {
 public:
@@ -2809,6 +2911,7 @@ public:
   static void mm() {}
 };
 }
+using uu = two::cc;
 })cpp";
       EXPECT_EQ(apply(SubCase, &EditedFiles), Case.ExpectedSource);
     }
@@ -2990,6 +3093,12 @@ TEST_F(PopulateSwitchTest, Test) {
           // Duplicated constant names all in switch
           Function,
           R""(enum Enum {A,B,b=B}; ^switch (A) {case A:case B:break;})"",
+          "unavailable",
+      },
+      {
+          // Enum is dependent type
+          File,
+          R""(template<typename T> void f() {enum Enum {A}; ^switch (A) {}})"",
           "unavailable",
       },
   };

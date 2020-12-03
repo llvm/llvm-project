@@ -197,7 +197,7 @@ entry:
   store i64 1000000, i64* %y, align 8
   %0 = load i64, i64* %y, align 8
   %1 = load i64, i64* %y, align 8
-  %call = call i32 (i32, i32, i32, i32, i32, ...) @foo(i32 1, i32 2, i32 3, i32 4, i32 5, i64 %0, %struct.AAA* byval align 4 @aaa, i32 4, i64 %1)
+  %call = call i32 (i32, i32, i32, i32, i32, ...) @foo(i32 1, i32 2, i32 3, i32 4, i32 5, i64 %0, %struct.AAA* byval(%struct.AAA) align 4 @aaa, i32 4, i64 %1)
   store i32 %call, i32* %x, align 4
   %2 = load i32, i32* %x, align 4
   %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), i32 %2)

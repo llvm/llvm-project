@@ -537,7 +537,8 @@ public:
   static lldb::ProcessSP FindPlugin(lldb::TargetSP target_sp,
                                     llvm::StringRef plugin_name,
                                     lldb::ListenerSP listener_sp,
-                                    const FileSpec *crash_file_path);
+                                    const FileSpec *crash_file_path,
+                                    bool can_connect);
 
   /// Static function that can be used with the \b host function
   /// Host::StartMonitoringChildProcess ().
@@ -1399,6 +1400,8 @@ public:
   ///     Returns \b true if the process is still valid, \b false
   ///     otherwise.
   virtual bool IsAlive();
+
+  virtual bool IsLiveDebugSession() const { return true; };
 
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't
@@ -2559,9 +2562,7 @@ void PruneThreadPlans();
   ///  \return
   ///     The supported trace type or an \a llvm::Error if tracing is
   ///     not supported for the inferior.
-  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType() {
-    return llvm::make_error<UnimplementedError>();
-  }
+  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType();
 
   // This calls a function of the form "void * (*)(void)".
   bool CallVoidArgVoidPtrReturn(const Address *address,

@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRVector
   VectorOps.cpp
+  VectorTransferOpTransforms.cpp
   VectorTransforms.cpp
   VectorUtils.cpp
   EDSC/Builders.cpp

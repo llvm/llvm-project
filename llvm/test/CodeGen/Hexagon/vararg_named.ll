@@ -31,7 +31,7 @@
 @.str = private unnamed_addr constant [13 x i8] c"result = %d\0A\00", align 1
 
 ; Function Attrs: nounwind
-define i32 @foo(i32 %xx, i32 %z, i32 %m, %struct.AAA* byval align 4 %bbb, %struct.AAA* byval align 4 %GGG, ...) #0 {
+define i32 @foo(i32 %xx, i32 %z, i32 %m, %struct.AAA* byval(%struct.AAA) align 4 %bbb, %struct.AAA* byval(%struct.AAA) align 4 %GGG, ...) #0 {
 entry:
   %xx.addr = alloca i32, align 4
   %z.addr = alloca i32, align 4
@@ -194,7 +194,7 @@ entry:
   %retval = alloca i32, align 4
   %x = alloca i32, align 4
   store i32 0, i32* %retval
-  %call = call i32 (i32, i32, i32, %struct.AAA*, %struct.AAA*, ...) @foo(i32 1, i32 3, i32 5, %struct.AAA* byval align 4 @aaa, %struct.AAA* byval align 4 @fff, i32 2, %struct.AAA* byval align 4 @xxx, %struct.AAA* byval align 4 @yyy, %struct.AAA* byval align 4 @ccc, i32 4)
+  %call = call i32 (i32, i32, i32, %struct.AAA*, %struct.AAA*, ...) @foo(i32 1, i32 3, i32 5, %struct.AAA* byval(%struct.AAA) align 4 @aaa, %struct.AAA* byval(%struct.AAA) align 4 @fff, i32 2, %struct.AAA* byval(%struct.AAA) align 4 @xxx, %struct.AAA* byval(%struct.AAA) align 4 @yyy, %struct.AAA* byval(%struct.AAA) align 4 @ccc, i32 4)
   store i32 %call, i32* %x, align 4
   %0 = load i32, i32* %x, align 4
   %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), i32 %0)

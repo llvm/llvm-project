@@ -32,7 +32,7 @@ class CrashLogPatcher:
     def patch_addresses(self):
         if not self.offsets:
             return
-        output = subprocess.check_output(['nm', self.binary])
+        output = subprocess.check_output(['nm', self.binary]).decode("utf-8")
         for line in output.splitlines():
             m = self.SYMBOL_REGEX.match(line)
             if m:

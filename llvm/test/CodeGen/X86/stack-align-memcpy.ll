@@ -3,7 +3,7 @@
 
 %struct.foo = type { [88 x i8] }
 
-declare void @bar(i8* nocapture, %struct.foo* align 4 byval) nounwind
+declare void @bar(i8* nocapture, %struct.foo* align 4 byval(%struct.foo)) nounwind
 declare void @baz(i8*) nounwind
 
 ; PR15249
@@ -99,7 +99,7 @@ define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
   %dynalloc = alloca i8, i32 %y, align 1
-  call void @bar(i8* %dynalloc, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %dynalloc, %struct.foo* align 4 byval(%struct.foo) %x)
   ret void
 }
 
@@ -199,7 +199,7 @@ define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
   %dynalloc = alloca i8, i32 %y, align 1
   call void @baz(i8* %dynalloc)
   ret void
@@ -230,7 +230,7 @@ define void @test3(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
   %statalloc = alloca i8, i32 8, align 1
   call void @baz(i8* %statalloc)
   ret void

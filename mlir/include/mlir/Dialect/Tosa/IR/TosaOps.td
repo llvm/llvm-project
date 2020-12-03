@@ -1512,12 +1512,13 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, NoSideEffect,
   }];
 
   let arguments = (ins
-    AnyAttr:$value
+    ElementsAttr:$value
   );
 
   let results = (outs
     Tosa_TensorUpto4D:$output
   );
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

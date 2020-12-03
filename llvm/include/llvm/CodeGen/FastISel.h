@@ -246,7 +246,7 @@ public:
   /// be appended.
   void startNewBlock();
 
-  /// Flush the local value map and sink local values if possible.
+  /// Flush the local value map.
   void finishBasicBlock();
 
   /// Return current debug location information.
@@ -313,10 +313,7 @@ public:
   void removeDeadCode(MachineBasicBlock::iterator I,
                       MachineBasicBlock::iterator E);
 
-  struct SavePoint {
-    MachineBasicBlock::iterator InsertPt;
-    DebugLoc DL;
-  };
+  using SavePoint = MachineBasicBlock::iterator;
 
   /// Prepare InsertPt to begin inserting instructions into the local
   /// value area and return the old insert position.
@@ -559,20 +556,6 @@ private:
 
   /// Removes dead local value instructions after SavedLastLocalvalue.
   void removeDeadLocalValueCode(MachineInstr *SavedLastLocalValue);
-
-  struct InstOrderMap {
-    DenseMap<MachineInstr *, unsigned> Orders;
-    MachineInstr *FirstTerminator = nullptr;
-    unsigned FirstTerminatorOrder = std::numeric_limits<unsigned>::max();
-
-    void initialize(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator LastFlushPoint);
-  };
-
-  /// Sinks the local value materialization instruction LocalMI to its first use
-  /// in the basic block, or deletes it if it is not used.
-  void sinkLocalValueMaterialization(MachineInstr &LocalMI, Register DefReg,
-                                     InstOrderMap &OrderMap);
 
   /// Insertion point before trying to select the current instruction.
   MachineBasicBlock::iterator SavedInsertPt;

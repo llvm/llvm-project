@@ -44,7 +44,7 @@ entry:
         %tmp9 = bitcast { double, double }* %tmp to { i64, i64 }*               ; <{ i64, i64 }*> [#uses=1]
         %tmp10 = getelementptr { i64, i64 }, { i64, i64 }* %tmp9, i64 0, i32 1                ; <i64*> [#uses=1]
         %tmp11 = load i64, i64* %tmp10               ; <i64> [#uses=1]
-        call void @cexp( { double, double }* sret  %tmp2, i64 %tmp.upgrd.5, i64 %tmp11 )
+        call void @cexp( { double, double }* sret({ double, double })  %tmp2, i64 %tmp.upgrd.5, i64 %tmp11 )
         %tmp12 = getelementptr { double, double }, { double, double }* %z, i64 0, i32 0             ; <double*> [#uses=1]
         %tmp13 = getelementptr { double, double }, { double, double }* %tmp2, i64 0, i32 0          ; <double*> [#uses=1]
         %tmp14 = load double, double* %tmp13            ; <double> [#uses=1]
@@ -65,7 +65,7 @@ finish:
         ret i32 %retval.upgrd.8
 }
 
-declare void @cexp({ double, double }* sret , i64, i64)
+declare void @cexp({ double, double }* sret({ double, double }), i64, i64)
 
 declare i32 @printf(i8*, ...)
 

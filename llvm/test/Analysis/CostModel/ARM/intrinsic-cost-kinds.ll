@@ -19,6 +19,12 @@ declare <16 x float> @llvm.fmuladd.v16f32(<16 x float>, <16 x float>, <16 x floa
 declare float @llvm.log2.f32(float)
 declare <16 x float> @llvm.log2.v16f32(<16 x float>)
 
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float>, <16 x float>, metadata, metadata)
+
+declare float @llvm.maximum.f32(float, float)
+declare <16 x float> @llvm.maximum.v16f32(<16 x float>, <16 x float>)
+
 declare i32 @llvm.cttz.i32(i32, i1)
 declare <16 x i32> @llvm.cttz.v16i32(<16 x i32>, i1)
 
@@ -109,6 +115,58 @@ define void @log2(float %a, <16 x float> %va) {
 ;
   %s = call float @llvm.log2.f32(float %a)
   %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+  ret void
+}
+
+define void @constrained_fadd(float %a, <16 x float> %va) {
+; THRU-LABEL: 'constrained_fadd'
+; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; THRU-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; LATE-LABEL: 'constrained_fadd'
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE-LABEL: 'constrained_fadd'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE_LATE-LABEL: 'constrained_fadd'
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret void
+}
+
+define void @fmaximum(float %a, float %b, <16 x float> %va, <16 x float> %vb) {
+; THRU-LABEL: 'fmaximum'
+; THRU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 928 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; LATE-LABEL: 'fmaximum'
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE-LABEL: 'fmaximum'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 784 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE_LATE-LABEL: 'fmaximum'
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 928 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %s = call float @llvm.maximum.f32(float %a, float %b)
+  %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
   ret void
 }
 

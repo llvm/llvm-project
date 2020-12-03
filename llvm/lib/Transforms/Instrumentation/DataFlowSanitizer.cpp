@@ -362,10 +362,6 @@ class DataFlowSanitizer {
   ConstantInt *ShadowPtrMul;
   Constant *ArgTLS;
   Constant *RetvalTLS;
-  FunctionType *GetArgTLSTy;
-  FunctionType *GetRetvalTLSTy;
-  Constant *GetArgTLS;
-  Constant *GetRetvalTLS;
   Constant *ExternalShadowMask;
   FunctionType *DFSanUnionFnTy;
   FunctionType *DFSanUnionLoadFnTy;
@@ -424,8 +420,6 @@ struct DFSanFunction {
   DominatorTree DT;
   DataFlowSanitizer::InstrumentedABI IA;
   bool IsNativeABI;
-  Value *ArgTLSPtr = nullptr;
-  Value *RetvalTLSPtr = nullptr;
   AllocaInst *LabelReturnAlloca = nullptr;
   DenseMap<Value *, Value *> ValShadowMap;
   DenseMap<AllocaInst *, AllocaInst *> AllocaShadowMap;
@@ -450,9 +444,7 @@ struct DFSanFunction {
     AvoidNewBlocks = F->size() > 1000;
   }
 
-  Value *getArgTLSPtr();
   Value *getArgTLS(unsigned Index, Instruction *Pos);
-  Value *getRetvalTLS();
   Value *getShadow(Value *V);
   void setShadow(Instruction *I, Value *Shadow);
   Value *combineShadows(Value *V1, Value *V2, Instruction *Pos);
@@ -1057,31 +1049,10 @@ bool DataFlowSanitizer::runImpl(Module &M) {
          M.global_size() != InitialGlobalSize || M.size() != InitialModuleSize;
 }
 
-Value *DFSanFunction::getArgTLSPtr() {
-  if (ArgTLSPtr)
-    return ArgTLSPtr;
-  if (DFS.ArgTLS)
-    return ArgTLSPtr = DFS.ArgTLS;
-
-  IRBuilder<> IRB(&F->getEntryBlock().front());
-  return ArgTLSPtr = IRB.CreateCall(DFS.GetArgTLSTy, DFS.GetArgTLS, {});
-}
-
-Value *DFSanFunction::getRetvalTLS() {
-  if (RetvalTLSPtr)
-    return RetvalTLSPtr;
-  if (DFS.RetvalTLS)
-    return RetvalTLSPtr = DFS.RetvalTLS;
-
-  IRBuilder<> IRB(&F->getEntryBlock().front());
-  return RetvalTLSPtr =
-             IRB.CreateCall(DFS.GetRetvalTLSTy, DFS.GetRetvalTLS, {});
-}
-
 Value *DFSanFunction::getArgTLS(unsigned Idx, Instruction *Pos) {
   IRBuilder<> IRB(Pos);
-  return IRB.CreateConstGEP2_64(ArrayType::get(DFS.ShadowTy, 64),
-                                getArgTLSPtr(), 0, Idx);
+  return IRB.CreateConstGEP2_64(ArrayType::get(DFS.ShadowTy, 64), DFS.ArgTLS, 0,
+                                Idx);
 }
 
 Value *DFSanFunction::getShadow(Value *V) {
@@ -1094,7 +1065,7 @@ Value *DFSanFunction::getShadow(Value *V) {
         return DFS.ZeroShadow;
       switch (IA) {
       case DataFlowSanitizer::IA_TLS: {
-        Value *ArgTLSPtr = getArgTLSPtr();
+        Value *ArgTLSPtr = DFS.ArgTLS;
         Instruction *ArgTLSPos =
             DFS.ArgTLS ? &*F->getEntryBlock().begin()
                        : cast<Instruction>(ArgTLSPtr)->getNextNode();
@@ -1615,7 +1586,7 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
     case DataFlowSanitizer::IA_TLS: {
       Value *S = DFSF.getShadow(RI.getReturnValue());
       IRBuilder<> IRB(&RI);
-      IRB.CreateStore(S, DFSF.getRetvalTLS());
+      IRB.CreateStore(S, DFSF.DFS.RetvalTLS);
       break;
     }
     case DataFlowSanitizer::IA_Args: {
@@ -1794,7 +1765,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
 
     if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
       IRBuilder<> NextIRB(Next);
-      LoadInst *LI = NextIRB.CreateLoad(DFSF.DFS.ShadowTy, DFSF.getRetvalTLS());
+      LoadInst *LI = NextIRB.CreateLoad(DFSF.DFS.ShadowTy, DFSF.DFS.RetvalTLS);
       DFSF.SkipInsts.insert(LI);
       DFSF.setShadow(&CB, LI);
       DFSF.NonZeroChecks.push_back(LI);

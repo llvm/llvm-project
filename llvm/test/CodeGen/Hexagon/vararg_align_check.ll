@@ -29,7 +29,7 @@
 @.str = private unnamed_addr constant [13 x i8] c"result = %d\0A\00", align 1
 
 ; Function Attrs: nounwind
-define i32 @foo(i32 %xx, %struct.BBB* byval align 8 %eee, ...) #0 {
+define i32 @foo(i32 %xx, %struct.BBB* byval(%struct.BBB) align 8 %eee, ...) #0 {
 entry:
   %xx.addr = alloca i32, align 4
   %ap = alloca [1 x %struct.__va_list_tag], align 8
@@ -169,7 +169,7 @@ entry:
   store i32 0, i32* %retval
   store i64 1000000, i64* %m, align 8
   %0 = load i64, i64* %m, align 8
-  %call = call i32 (i32, %struct.BBB*, ...) @foo(i32 1, %struct.BBB* byval align 8 bitcast ({ i8, i64, i32, [4 x i8] }* @ddd to %struct.BBB*), i64 %0, %struct.AAA* byval align 4 @aaa, i32 4)
+  %call = call i32 (i32, %struct.BBB*, ...) @foo(i32 1, %struct.BBB* byval(%struct.BBB) align 8 bitcast ({ i8, i64, i32, [4 x i8] }* @ddd to %struct.BBB*), i64 %0, %struct.AAA* byval(%struct.AAA) align 4 @aaa, i32 4)
   store i32 %call, i32* %x, align 4
   %1 = load i32, i32* %x, align 4
   %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), i32 %1)

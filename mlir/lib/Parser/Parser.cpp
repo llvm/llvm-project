@@ -12,7 +12,7 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"

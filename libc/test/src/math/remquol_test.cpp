@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "src/math/remquol.h"
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 using UIntType = FPBits::UIntType;

@@ -15,7 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Transforms/BufferUtils.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;

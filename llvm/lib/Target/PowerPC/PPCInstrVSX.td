@@ -629,7 +629,8 @@ let hasSideEffects = 0 in {
                          "xstdivdp $crD, $XA, $XB", IIC_FPCompare, []>;
   def XSTSQRTDP : XX2Form_1<60, 106,
                           (outs crrc:$crD), (ins vsfrc:$XB),
-                          "xstsqrtdp $crD, $XB", IIC_FPCompare, []>;
+                          "xstsqrtdp $crD, $XB", IIC_FPCompare,
+                          [(set i32:$crD, (PPCftsqrt f64:$XB))]>;
   def XVTDIVDP : XX3Form_1<60, 125,
                          (outs crrc:$crD), (ins vsrc:$XA, vsrc:$XB),
                          "xvtdivdp $crD, $XA, $XB", IIC_FPCompare, []>;
@@ -2461,6 +2462,8 @@ def : Pat<(fneg (PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C)),
           (XVMSUBASP $C, $A, $B)>;
 def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, (fneg v4f32:$C)),
           (XVNMADDASP $C, $A, $B)>;
+
+def : Pat<(PPCfsqrt f64:$frA), (XSSQRTDP $frA)>;
 
 def : Pat<(v2f64 (bitconvert v4f32:$A)),
           (COPY_TO_REGCLASS $A, VSRC)>;

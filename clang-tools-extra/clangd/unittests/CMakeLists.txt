@@ -36,6 +36,7 @@ add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   ASTTests.cpp
   BackgroundIndexTests.cpp
+  CallHierarchyTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
   ClangdLSPServerTests.cpp
@@ -51,6 +52,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DexTests.cpp
   DiagnosticsTests.cpp
   DraftStoreTests.cpp
+  DumpASTTests.cpp
   ExpectedTypeTest.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
@@ -73,6 +75,7 @@ add_unittest(ClangdUnitTests ClangdTests
   PathMappingTests.cpp
   PreambleTests.cpp
   PrintASTTests.cpp
+  ProjectAwareIndexTests.cpp
   QualityTests.cpp
   RenameTests.cpp
   RIFFTests.cpp
@@ -143,7 +146,8 @@ target_link_libraries(ClangdTests
 if (CLANGD_ENABLE_REMOTE)
   target_link_libraries(ClangdTests
     PRIVATE
-    clangdRemoteMarshalling)
+    clangdRemoteMarshalling
+    RemoteIndexProto)
 endif()
 
 if (CLANGD_BUILD_XPC)

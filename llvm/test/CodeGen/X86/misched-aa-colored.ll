@@ -137,7 +137,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str100 = external hidden unnamed_addr constant [50 x i8], align 1
 @__PRETTY_FUNCTION__._ZNK4llvm6SDNode10getOperandEj = external hidden unnamed_addr constant [66 x i8], align 1
 
-declare { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm12SelectionDAG7getNodeEjNS_5SDLocENS_3EVTENS_7SDValueES3_(%"class.llvm::SelectionDAG.104.704.1064.2024.2144.2384.4184"*, i32, i8*, i32, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval align 8, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval align 8)
+declare { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm12SelectionDAG7getNodeEjNS_5SDLocENS_3EVTENS_7SDValueES3_(%"class.llvm::SelectionDAG.104.704.1064.2024.2144.2384.4184"*, i32, i8*, i32, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval(%"class.llvm::SDValue.3.603.963.1923.2043.2283.4083") align 8, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval(%"class.llvm::SDValue.3.603.963.1923.2043.2283.4083") align 8)
 
 ; Function Attrs: noreturn nounwind
 declare void @__assert_fail(i8*, i8*, i32, i8*) #0
@@ -172,7 +172,7 @@ entry:
 ; CHECK: movl	$-1, %ecx
 ; CHECK: callq	_ZN4llvm12SelectionDAG7getNodeEjNS_5SDLocENS_3EVTENS_7SDValueES3_
 
-  %call18 = call { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm12SelectionDAG7getNodeEjNS_5SDLocENS_3EVTENS_7SDValueES3_(%"class.llvm::SelectionDAG.104.704.1064.2024.2144.2384.4184"* undef, i32 undef, i8* undef, i32 -1, i32 %retval.sroa.0.0.copyload.i37, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"* undef, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval align 8 undef, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval align 8 undef) #1
+  %call18 = call { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm12SelectionDAG7getNodeEjNS_5SDLocENS_3EVTENS_7SDValueES3_(%"class.llvm::SelectionDAG.104.704.1064.2024.2144.2384.4184"* undef, i32 undef, i8* undef, i32 -1, i32 %retval.sroa.0.0.copyload.i37, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"* undef, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval(%"class.llvm::SDValue.3.603.963.1923.2043.2283.4083") align 8 undef, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* byval(%"class.llvm::SDValue.3.603.963.1923.2043.2283.4083") align 8 undef) #1
   ret { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } %call18
 }
 
@@ -182,7 +182,7 @@ declare hidden %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* @_ZN4llvm12
 declare hidden void @_ZN4llvm16DAGTypeLegalizer10RemapValueERNS_7SDValueE(%"class.llvm::DAGTypeLegalizer.117.717.1077.2037.2157.2397.4197"*, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"*)
 
 ; Function Attrs: nounwind uwtable
-declare hidden void @_ZNK4llvm18TargetLoweringBase17getTypeConversionERNS_11LLVMContextENS_3EVTE(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* noalias sret, %"class.llvm::TargetLoweringBase.50.650.1010.1970.2090.2330.4130"* readonly, %"class.llvm::LLVMContext.6.606.966.1926.2046.2286.4086"*, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*) #2 align 2
+declare hidden void @_ZNK4llvm18TargetLoweringBase17getTypeConversionERNS_11LLVMContextENS_3EVTE(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* noalias sret(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"), %"class.llvm::TargetLoweringBase.50.650.1010.1970.2090.2330.4130"* readonly, %"class.llvm::LLVMContext.6.606.966.1926.2046.2286.4086"*, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*) #2 align 2
 
 attributes #0 = { noreturn nounwind }
 attributes #1 = { nounwind }

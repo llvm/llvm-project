@@ -2,7 +2,7 @@
 
 %0 = type { double, double }
 
-define void @maybe_an_fma(%0* sret %agg.result, %0* byval %a, %0* byval %b, %0* byval %c) nounwind {
+define void @maybe_an_fma(%0* sret(%0) %agg.result, %0* byval(%0) %a, %0* byval(%0) %b, %0* byval(%0) %c) nounwind {
 entry:
   %a.realp = getelementptr inbounds %0, %0* %a, i32 0, i32 0
   %a.real = load double, double* %a.realp

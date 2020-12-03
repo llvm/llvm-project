@@ -252,6 +252,7 @@ bool DataInitializationCompiler::InitElement(
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
   bool isProcPointer{lastSymbol && IsProcedurePointer(*lastSymbol)};
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
+  auto restorer{context.messages().SetLocation(values_.LocateSource())};
 
   const auto DescribeElement{[&]() {
     if (auto badDesignator{
@@ -302,39 +303,37 @@ bool DataInitializationCompiler::InitElement(
     } else if (evaluate::IsNullPointer(*expr)) {
       // nothing to do; rely on zero initialization
       return true;
-    } else if (evaluate::IsProcedure(*expr)) {
-      if (isProcPointer) {
+    } else if (isProcPointer) {
+      if (evaluate::IsProcedure(*expr)) {
         if (CheckPointerAssignment(context, designator, *expr)) {
           GetImage().AddPointer(offsetSymbol.offset(), *expr);
           return true;
         }
       } else {
-        exprAnalyzer_.Say(values_.LocateSource(),
-            "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
+        exprAnalyzer_.Say(
+            "Data object '%s' may not be used to initialize '%s', which is a procedure pointer"_err_en_US,
             expr->AsFortran(), DescribeElement());
       }
-    } else if (isProcPointer) {
-      exprAnalyzer_.Say(values_.LocateSource(),
-          "Data object '%s' may not be used to initialize '%s', which is a procedure pointer"_err_en_US,
+    } else if (evaluate::IsProcedure(*expr)) {
+      exprAnalyzer_.Say(
+          "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
     } else if (CheckInitialTarget(context, designator, *expr)) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
   } else if (evaluate::IsNullPointer(*expr)) {
-    exprAnalyzer_.Say(values_.LocateSource(),
-        "Initializer for '%s' must not be a pointer"_err_en_US,
+    exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
   } else if (evaluate::IsProcedure(*expr)) {
-    exprAnalyzer_.Say(values_.LocateSource(),
-        "Initializer for '%s' must not be a procedure"_err_en_US,
+    exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
     if (auto converted{ConvertElement(*expr, *designatorType)}) {
       // value non-pointer initialization
       if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
-        exprAnalyzer_.Say(values_.LocateSource(),
+        exprAnalyzer_.Say(
             "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_en_US,
             DescribeElement(), designatorType->AsFortran());
       } else if (converted->second) {
@@ -348,7 +347,7 @@ bool DataInitializationCompiler::InitElement(
       case evaluate::InitialImage::Ok:
         return true;
       case evaluate::InitialImage::NotAConstant:
-        exprAnalyzer_.Say(values_.LocateSource(),
+        exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' is not a constant"_err_en_US,
             folded.AsFortran(), DescribeElement());
         break;

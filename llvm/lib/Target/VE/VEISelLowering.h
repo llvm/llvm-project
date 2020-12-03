@@ -34,9 +34,15 @@ enum NodeType : unsigned {
 
   MEMBARRIER, // Compiler barrier only; generate a no-op.
 
+  VEC_BROADCAST,    // 0: scalar value, 1: VL
+
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.
   GLOBAL_BASE_REG, // Global base reg for PIC.
+
+  // VVP_* nodes.
+#define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
+#include "VVPNodes.def"
 };
 }
 
@@ -114,7 +120,13 @@ public:
   SDValue lowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
+
+  /// VVP Lowering {
+  SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;
+  /// } VVPLowering
 
   /// Custom DAGCombine {
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
@@ -146,6 +158,9 @@ public:
   /// } Inline Assembly
 
   /// Target Optimization {
+
+  // Return lower limit for number of blocks in a jump table.
+  unsigned getMinimumJumpTableEntries() const override;
 
   // SX-Aurora VE's s/udiv is 5-9 times slower than multiply.
   bool isIntDivCheap(EVT, AttributeList) const override { return false; }

@@ -1,5 +1,20 @@
 // RUN: mlir-opt %s -split-input-file -convert-async-to-llvm | FileCheck %s
 
+// CHECK-LABEL: reference_counting
+func @reference_counting(%arg0: !async.token) {
+  // CHECK: %[[C2:.*]] = constant 2 : i32
+  // CHECK: call @mlirAsyncRuntimeAddRef(%arg0, %[[C2]])
+  async.add_ref %arg0 {count = 2 : i32} : !async.token
+
+  // CHECK: %[[C1:.*]] = constant 1 : i32
+  // CHECK: call @mlirAsyncRuntimeDropRef(%arg0, %[[C1]])
+  async.drop_ref %arg0 {count = 1 : i32} : !async.token
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: execute_no_async_args
 func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn(%arg0, %arg1)

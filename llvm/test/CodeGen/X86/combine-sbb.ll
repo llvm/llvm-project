@@ -4,7 +4,7 @@
 
 %WideUInt32 = type { i32, i32 }
 
-define void @PR25858_i32(%WideUInt32* sret, %WideUInt32*, %WideUInt32*) nounwind {
+define void @PR25858_i32(%WideUInt32* sret(%WideUInt32), %WideUInt32*, %WideUInt32*) nounwind {
 ; X86-LABEL: PR25858_i32:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %esi
@@ -55,7 +55,7 @@ declare  { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 
 %WideUInt64 = type { i64, i64 }
 
-define void @PR25858_i64(%WideUInt64* sret, %WideUInt64*, %WideUInt64*) nounwind {
+define void @PR25858_i64(%WideUInt64* sret(%WideUInt64), %WideUInt64*, %WideUInt64*) nounwind {
 ; X86-LABEL: PR25858_i64:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %ebp

@@ -78,7 +78,7 @@ int main()
 // actual target invocation
 // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
 // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper({{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([3 x i{{.+}}], [3 x i{{.+}}]* [[SIZES]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[TYPES]], i{{.+}} 0, i{{.+}} 0), i8** null, {{.+}}, {{.+}})
+// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([3 x i{{.+}}], [3 x i{{.+}}]* [[SIZES]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[TYPES]], i{{.+}} 0, i{{.+}} 0), i8** null, i8** null, {{.+}}, {{.+}})
 
 
   omp_loop(0,100,body);
@@ -120,6 +120,6 @@ int main()
 // actual target invocation
 // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [5 x {{.+}}*], [5 x {{.+}}*]* [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
 // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [5 x {{.+}}*], [5 x {{.+}}*]* [[PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper({{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([5 x i{{.+}}], [5 x i{{.+}}]* [[SIZES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[TYPES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i8** null, {{.+}}, {{.+}})
+// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([5 x i{{.+}}], [5 x i{{.+}}]* [[SIZES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[TYPES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i8** null, i8** null, {{.+}}, {{.+}})
 
 #endif

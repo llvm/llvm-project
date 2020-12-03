@@ -3778,8 +3778,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 
     if (Ty == Context.DoubleTy) {
       if (getLangOpts().SinglePrecisionConstants) {
-        const BuiltinType *BTy = Ty->getAs<BuiltinType>();
-        if (BTy->getKind() != BuiltinType::Float) {
+        if (Ty->castAs<BuiltinType>()->getKind() != BuiltinType::Float) {
           Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
         }
       } else if (getLangOpts().OpenCL &&
@@ -4751,6 +4750,9 @@ void Sema::CheckAddressOfNoDeref(const Expr *E) {
 }
 
 void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
+  if (isUnevaluatedContext())
+    return;
+
   QualType ResultTy = E->getType();
   ExpressionEvaluationContextRecord &LastRecord = ExprEvalContexts.back();
 
@@ -7195,6 +7197,28 @@ static bool breakDownVectorType(QualType type, uint64_t &len,
   len = 1;
   eltType = type;
   return true;
+}
+
+/// Are the two types SVE-bitcast-compatible types? I.e. is bitcasting from the
+/// first SVE type (e.g. an SVE VLAT) to the second type (e.g. an SVE VLST)
+/// allowed?
+///
+/// This will also return false if the two given types do not make sense from
+/// the perspective of SVE bitcasts.
+bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
+  assert(srcTy->isVectorType() || destTy->isVectorType());
+
+  auto ValidScalableConversion = [](QualType FirstType, QualType SecondType) {
+    if (!FirstType->isSizelessBuiltinType())
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    return VecTy &&
+           VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector;
+  };
+
+  return ValidScalableConversion(srcTy, destTy) ||
+         ValidScalableConversion(destTy, srcTy);
 }
 
 /// Are the two types lax-compatible vector types?  That is, given
@@ -14644,7 +14668,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                             OpLoc, CanOverflow, CurFPFeatureOverrides());
 
   if (Opc == UO_Deref && UO->getType()->hasAttr(attr::NoDeref) &&
-      !isa<ArrayType>(UO->getType().getDesugaredType(Context)))
+      !isa<ArrayType>(UO->getType().getDesugaredType(Context)) &&
+      !isUnevaluatedContext())
     ExprEvalContexts.back().PossibleDerefs.insert(UO);
 
   // Convert the result back to a half vector.
@@ -15140,10 +15165,10 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
   CurBlock->TheDecl->setSignatureAsWritten(Sig);
   CurBlock->FunctionType = T;
 
-  const FunctionType *Fn = T->getAs<FunctionType>();
+  const auto *Fn = T->castAs<FunctionType>();
   QualType RetTy = Fn->getReturnType();
   bool isVariadic =
-    (isa<FunctionProtoType>(Fn) && cast<FunctionProtoType>(Fn)->isVariadic());
+      (isa<FunctionProtoType>(Fn) && cast<FunctionProtoType>(Fn)->isVariadic());
 
   CurBlock->TheDecl->setIsVariadic(isVariadic);
 
@@ -17446,7 +17471,11 @@ bool Sema::tryCaptureVariable(
           if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {
             Nested = !IsTargetCap;
+            bool HasConst = DeclRefType.isConstQualified();
             DeclRefType = DeclRefType.getUnqualifiedType();
+            // Don't lose diagnostics about assignments to const.
+            if (HasConst)
+              DeclRefType.addConst();
             CaptureType = Context.getLValueReferenceType(DeclRefType);
             break;
           }

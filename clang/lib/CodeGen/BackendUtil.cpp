@@ -453,10 +453,14 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
                               const clang::TargetOptions &TargetOpts,
                               const LangOptions &LangOpts,
                               const HeaderSearchOptions &HSOpts) {
-  Options.ThreadModel =
-      llvm::StringSwitch<llvm::ThreadModel::Model>(CodeGenOpts.ThreadModel)
-          .Case("posix", llvm::ThreadModel::POSIX)
-          .Case("single", llvm::ThreadModel::Single);
+  switch (LangOpts.getThreadModel()) {
+  case LangOptions::ThreadModelKind::POSIX:
+    Options.ThreadModel = llvm::ThreadModel::POSIX;
+    break;
+  case LangOptions::ThreadModelKind::Single:
+    Options.ThreadModel = llvm::ThreadModel::Single;
+    break;
+  }
 
   // Set float ABI type.
   assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
@@ -477,6 +481,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPM_On:
+  case LangOptions::FPM_FastHonorPragmas:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPM_Fast:
@@ -549,6 +554,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
+  Options.EnableAIXExtendedAltivecABI = CodeGenOpts.EnableAIXExtendedAltivecABI;
   Options.ValueTrackingVariableLocations =
       CodeGenOpts.ValueTrackingVariableLocations;
   Options.XRayOmitFunctionIndex = CodeGenOpts.XRayOmitFunctionIndex;
@@ -1047,22 +1053,6 @@ static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   }
 }
 
-static void addCoroutinePassesAtO0(ModulePassManager &MPM,
-                                   const LangOptions &LangOpts,
-                                   const CodeGenOptions &CodeGenOpts) {
-  if (!LangOpts.Coroutines)
-    return;
-
-  MPM.addPass(createModuleToFunctionPassAdaptor(CoroEarlyPass()));
-
-  CGSCCPassManager CGPM(CodeGenOpts.DebugPassManager);
-  CGPM.addPass(CoroSplitPass());
-  CGPM.addPass(createCGSCCToFunctionPassAdaptor(CoroElidePass()));
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-
-  MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
-}
-
 /// A clean version of `EmitAssembly` that uses the new pass manager.
 ///
 /// Not all features are currently supported in this system, but where
@@ -1319,50 +1309,13 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
           });
 
     if (CodeGenOpts.OptimizationLevel == 0) {
-      // Build a minimal pipeline based on the semantics required by Clang,
-      // which is just that always inlining occurs. Further, disable generating
-      // lifetime intrinsics to avoid enabling further optimizations during
-      // code generation.
-      // However, we need to insert lifetime intrinsics to avoid invalid access
-      // caused by multithreaded coroutines.
-      PB.registerPipelineStartEPCallback(
-          [this](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-            MPM.addPass(AlwaysInlinerPass(
-                /*InsertLifetimeIntrinsics=*/LangOpts.Coroutines));
-          });
-
-      // At -O0, we can still do PGO. Add all the requested passes for
-      // instrumentation PGO, if requested.
-      if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
-                     PGOOpt->Action == PGOOptions::IRUse))
-        PB.addPGOInstrPassesForO0(
-            MPM,
-            /* RunProfileGen */ (PGOOpt->Action == PGOOptions::IRInstr),
-            /* IsCS */ false, PGOOpt->ProfileFile,
-            PGOOpt->ProfileRemappingFile);
-
-      PB.runRegisteredEPCallbacks(MPM, Level, CodeGenOpts.DebugPassManager);
-
-      // FIXME: the backends do not handle matrix intrinsics currently. Make
-      // sure they are also lowered in O0. A lightweight version of the pass
-      // should run in the backend pipeline on demand.
-      if (LangOpts.MatrixTypes)
-        MPM.addPass(
-            createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass()));
-
-      addCoroutinePassesAtO0(MPM, LangOpts, CodeGenOpts);
+      MPM = PB.buildO0DefaultPipeline(Level, IsLTO || IsThinLTO);
     } else if (IsThinLTO) {
       MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
     } else if (IsLTO) {
       MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
     } else {
       MPM = PB.buildPerModuleDefaultPipeline(Level);
-    }
-
-    // Lastly, add semantically necessary passes for LTO.
-    if (IsLTO || IsThinLTO) {
-      MPM.addPass(CanonicalizeAliasesPass());
-      MPM.addPass(NameAnonGlobalPass());
     }
 
     // Add UniqueInternalLinkageNames Pass which renames internal linkage

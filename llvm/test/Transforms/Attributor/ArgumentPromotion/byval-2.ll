@@ -6,10 +6,10 @@
 
 %struct.ss = type { i32, i64 }
 
-define internal void @f(%struct.ss* byval  %b, i32* byval %X) nounwind  {
+define internal void @f(%struct.ss* byval(%struct.ss)  %b, i32* byval(i32) %X) nounwind  {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull writeonly byval align 4 dereferenceable(4) [[X:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull writeonly byval(i32) align 4 dereferenceable(4) [[X:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
@@ -87,6 +87,6 @@ entry:
   store i32 1, i32* %tmp1, align 8
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
-  call void @f( %struct.ss* byval %S, i32* byval %X)
+  call void @f(%struct.ss* byval(%struct.ss) %S, i32* byval(i32) %X)
   ret i32 0
 }

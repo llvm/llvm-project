@@ -25,7 +25,8 @@ public:
   // Static functions.
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
-                                        const FileSpec *);
+                                        const FileSpec *,
+                                        bool can_connect);
 
   static void Initialize();
 

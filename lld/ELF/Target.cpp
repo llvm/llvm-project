@@ -150,9 +150,13 @@ bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
 }
 
-RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,
-                                    RelExpr expr) const {
+RelExpr TargetInfo::adjustTlsExpr(RelType type, RelExpr expr) const {
   return expr;
+}
+
+RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
+                                    const uint8_t *data) const {
+  return R_GOT_PC;
 }
 
 void TargetInfo::relaxGot(uint8_t *loc, const Relocation &rel,

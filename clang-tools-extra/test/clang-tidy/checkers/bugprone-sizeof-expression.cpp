@@ -187,6 +187,7 @@ int Test4(const char A[10]) {
 
 int Test5() {
   typedef int Array10[10];
+  typedef C ArrayC[10];
 
   struct MyStruct {
     Array10 arr;
@@ -203,6 +204,8 @@ int Test5() {
   PMyStruct PS;
   PMyStruct2 PS2;
   Array10 A10;
+  C *PtrArray[10];
+  C *PC;
 
   int sum = 0;
   sum += sizeof(&S.arr);
@@ -239,6 +242,17 @@ int Test5() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&A10);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PtrArray) / sizeof(PtrArray[1]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(A10) / sizeof(PtrArray[0]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(PC) / sizeof(PtrArray[0]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
+  // CHECK-MESSAGES: :[[@LINE-3]]:23: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
+  sum += sizeof(ArrayC) / sizeof(PtrArray[0]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
 
   return sum;
 }
@@ -276,6 +290,10 @@ int ValidExpressions() {
   int A[] = {1, 2, 3, 4};
   static const char str[] = "hello";
   static const char* ptr[] { "aaa", "bbb", "ccc" };
+  typedef C *CA10[10];
+  C *PtrArray[10];
+  CA10 PtrArray1;
+
   int sum = 0;
   if (sizeof(A) < 10)
     sum += sizeof(A);
@@ -293,5 +311,10 @@ int ValidExpressions() {
   sum += sizeof(str) / sizeof(str[0]);
   sum += sizeof(ptr) / sizeof(ptr[0]);
   sum += sizeof(ptr) / sizeof(*(ptr));
+  sum += sizeof(PtrArray) / sizeof(PtrArray[0]);
+  // Canonical type of PtrArray1 is same as PtrArray.
+  sum = sizeof(PtrArray) / sizeof(PtrArray1[0]);
+  // There is no warning for 'sizeof(T*)/sizeof(Q)' case.
+  sum += sizeof(PtrArray) / sizeof(A[0]);
   return sum;
 }

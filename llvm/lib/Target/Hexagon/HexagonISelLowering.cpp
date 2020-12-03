@@ -1517,8 +1517,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setMinimumJumpTableEntries(std::numeric_limits<unsigned>::max());
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
-  setOperationAction(ISD::ABS, MVT::i32, Legal);
-  setOperationAction(ISD::ABS, MVT::i64, Legal);
+  for (unsigned LegalIntOp :
+       {ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}) {
+    setOperationAction(LegalIntOp, MVT::i32, Legal);
+    setOperationAction(LegalIntOp, MVT::i64, Legal);
+  }
 
   // Hexagon has A4_addp_c and A4_subp_c that take and generate a carry bit,
   // but they only operate on i64.
@@ -1681,6 +1684,13 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
     if (NativeVT.getVectorElementType() != MVT::i1)
       setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
+  }
+
+  for (MVT VT : {MVT::v8i8, MVT::v4i16, MVT::v2i32}) {
+    setOperationAction(ISD::SMIN, VT, Legal);
+    setOperationAction(ISD::SMAX, VT, Legal);
+    setOperationAction(ISD::UMIN, VT, Legal);
+    setOperationAction(ISD::UMAX, VT, Legal);
   }
 
   // Custom lower unaligned loads.

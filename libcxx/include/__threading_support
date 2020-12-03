@@ -497,13 +497,13 @@ bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 
 // Thread
 bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
-  return *__t == 0;
+  return *__t == __libcpp_thread_t();
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
-  return pthread_create(__t, 0, __func, __arg);
+  return pthread_create(__t, nullptr, __func, __arg);
 }
 
 __libcpp_thread_id __libcpp_thread_get_current_id()
@@ -518,7 +518,7 @@ __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t *__t)
 
 int __libcpp_thread_join(__libcpp_thread_t *__t)
 {
-  return pthread_join(*__t, 0);
+  return pthread_join(*__t, nullptr);
 }
 
 int __libcpp_thread_detach(__libcpp_thread_t *__t)

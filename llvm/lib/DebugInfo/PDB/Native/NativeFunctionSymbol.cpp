@@ -121,7 +121,6 @@ NativeFunctionSymbol::findInlineFramesByVA(uint64_t VA) const {
       InlineSiteSym IS =
           cantFail(SymbolDeserializer::deserializeAs<InlineSiteSym>(*Start));
       if (inlineSiteContainsAddress(IS, CodeOffset)) {
-        fprintf(stderr, "inline: %d\n", Start.offset());
         // Insert frames in reverse order.
         SymIndexId Id = Session.getSymbolCache().getOrCreateInlineSymbol(
             IS, getVirtualAddress(), Modi, Start.offset());

@@ -129,4 +129,7 @@ entry:
 ; CHECK-NEXT:         Name:            call_alias_ptr
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Name:            call_direct_ptr
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...

@@ -13,9 +13,9 @@
 
 declare void @llvm.va_start(i8*)
 declare dso_local i32 @g(i32*, i32, i32, i32, i32, i32) local_unnamed_addr
-declare dso_local i32 @f(i32*, i32, i32, i32, %struct.S* byval align 4) local_unnamed_addr
+declare dso_local i32 @f(i32*, i32, i32, i32, %struct.S* byval(%struct.S) align 4) local_unnamed_addr
 declare dso_local i32 @h(i32*, i32*, i32*) local_unnamed_addr
-declare dso_local i32 @u(i32*, i32*, i32*, %struct.S* byval align 4, %struct.S* byval align 4) local_unnamed_addr
+declare dso_local i32 @u(i32*, i32*, i32*, %struct.S* byval(%struct.S) align 4, %struct.S* byval(%struct.S) align 4) local_unnamed_addr
 
 ;
 ; Test access to arguments, passed on stack (including varargs)
@@ -187,7 +187,7 @@ entry:
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
   %add = add nsw i32 %c, %b
   %add1 = add nsw i32 %add, %d
-  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 %add1, i32 %e, %struct.S* byval nonnull align 4 @s)
+  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 %add1, i32 %e, %struct.S* byval(%struct.S) nonnull align 4 @s)
   %add.ptr = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 1
   %add.ptr5 = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 2
   %call6 = call i32 @h(i32* nonnull %arraydecay, i32* nonnull %add.ptr, i32* nonnull %add.ptr5)
@@ -226,7 +226,7 @@ entry:
   %1 = bitcast %struct.__va_list* %ap to i8*
   call void @llvm.va_start(i8* nonnull %1)
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 0, i32 0, %struct.S* byval nonnull align 4 @s)
+  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 0, i32 0, %struct.S* byval(%struct.S) nonnull align 4 @s)
   %add.ptr = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 1
   %add.ptr5 = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 2
   %call6 = call i32 @h(i32* nonnull %arraydecay, i32* nonnull %add.ptr, i32* nonnull %add.ptr5)
@@ -389,8 +389,8 @@ entry:
   %2 = bitcast i32* %y to i8*
   %3 = bitcast i32* %z to i8*
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %x, i32* nonnull %y, %struct.S* byval nonnull align 4 @s, %struct.S* byval nonnull align 4 @s)
-  %call2 = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %y, i32* nonnull %z, %struct.S* byval nonnull align 4 @s, %struct.S* byval nonnull align 4 @s)
+  %call = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %x, i32* nonnull %y, %struct.S* byval(%struct.S) nonnull align 4 @s, %struct.S* byval(%struct.S) nonnull align 4 @s)
+  %call2 = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %y, i32* nonnull %z, %struct.S* byval(%struct.S) nonnull align 4 @s, %struct.S* byval(%struct.S) nonnull align 4 @s)
   %add = add nsw i32 %call2, %call
   ret i32 %add
 }

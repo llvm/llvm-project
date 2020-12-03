@@ -1345,6 +1345,8 @@ public:
         MatrixLayout != MatrixLayoutTy::ColumnMajor || !DT)
       return;
 
+    assert(AA && LI && "Analyses should be available");
+
     auto *LoadOp0 = dyn_cast<LoadInst>(MatMul->getOperand(0));
     auto *LoadOp1 = dyn_cast<LoadInst>(MatMul->getOperand(1));
     auto *Store = dyn_cast<StoreInst>(*MatMul->user_begin());
@@ -1937,16 +1939,25 @@ public:
 PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto &AA = AM.getResult<AAManager>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &LI = AM.getResult<LoopAnalysis>(F);
+  OptimizationRemarkEmitter *ORE = nullptr;
+  AAResults *AA = nullptr;
+  DominatorTree *DT = nullptr;
+  LoopInfo *LI = nullptr;
 
-  LowerMatrixIntrinsics LMT(F, TTI, &AA, &DT, &LI, &ORE);
+  if (!Minimal) {
+    ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    AA = &AM.getResult<AAManager>(F);
+    DT = &AM.getResult<DominatorTreeAnalysis>(F);
+    LI = &AM.getResult<LoopAnalysis>(F);
+  }
+
+  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<DominatorTreeAnalysis>();
+    if (!Minimal) {
+      PA.preserve<LoopAnalysis>();
+      PA.preserve<DominatorTreeAnalysis>();
+    }
     return PA;
   }
   return PreservedAnalyses::all();

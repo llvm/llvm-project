@@ -154,6 +154,7 @@ set(files
   support/ibm/xlocale.h
   support/musl/xlocale.h
   support/newlib/xlocale.h
+  support/nuttx/xlocale.h
   support/solaris/floatingpoint.h
   support/solaris/wchar.h
   support/solaris/xlocale.h

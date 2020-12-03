@@ -313,14 +313,6 @@ protected:
   uint64_t getSectionOffset(DataRefImpl Sec) const override;
   StringRef getRelocationTypeName(uint32_t Type) const;
 
-  /// Get the relocation section that contains \a Rel.
-  const Elf_Shdr *getRelSection(DataRefImpl Rel) const {
-    auto RelSecOrErr = EF.getSection(Rel.d.a);
-    if (!RelSecOrErr)
-      report_fatal_error(errorToErrorCode(RelSecOrErr.takeError()).message());
-    return *RelSecOrErr;
-  }
-
   DataRefImpl toDRI(const Elf_Shdr *SymTable, unsigned SymbolNum) const {
     DataRefImpl DRI;
     if (!SymTable) {
@@ -417,6 +409,14 @@ public:
     if (!Ret)
       report_fatal_error(errorToErrorCode(Ret.takeError()).message());
     return *Ret;
+  }
+
+  /// Get the relocation section that contains \a Rel.
+  const Elf_Shdr *getRelSection(DataRefImpl Rel) const {
+    auto RelSecOrErr = EF.getSection(Rel.d.a);
+    if (!RelSecOrErr)
+      report_fatal_error(errorToErrorCode(RelSecOrErr.takeError()).message());
+    return *RelSecOrErr;
   }
 
   const Elf_Shdr *getSection(DataRefImpl Sec) const {

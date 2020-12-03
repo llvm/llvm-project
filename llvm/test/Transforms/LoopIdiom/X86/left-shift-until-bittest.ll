@@ -14,8 +14,8 @@ declare void @external_side_effect()
 ; We should transform it into it's countable form.
 
 ; Most basic example.
-define i32 @p0_32(i32 %x, i32 %bit) {
-; ALL-LABEL: @p0_32(
+define i32 @p0_i32(i32 %x, i32 %bit) {
+; ALL-LABEL: @p0_i32(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG16:!dbg !.*]]
 ; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META9:metadata !.*]], metadata !DIExpression()), [[DBG16]]
@@ -51,8 +51,8 @@ end:
 }
 
 ; Same, but in some other bit width.
-define i16 @p0_16(i16 %x, i16 %bit) {
-; ALL-LABEL: @p0_16(
+define i16 @p1_i16(i16 %x, i16 %bit) {
+; ALL-LABEL: @p1_i16(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[BITMASK:%.*]] = shl i16 1, [[BIT:%.*]], [[DBG32:!dbg !.*]]
 ; ALL-NEXT:    call void @llvm.dbg.value(metadata i16 [[BITMASK]], [[META26:metadata !.*]], metadata !DIExpression()), [[DBG32]]
@@ -87,27 +87,156 @@ end:
   ret i16 %x.curr
 }
 
-; Check that loop backedge's cmp-br order is correctly handled
-define i32 @p1(i32 %x, i32 %bit) {
-; ALL-LABEL: @p1(
+define i32 @p2_constant_mask_24thbit(i32 %x) {
+; ALL-LABEL: @p2_constant_mask_24thbit(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG47:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META42:metadata !.*]], metadata !DIExpression()), [[DBG47]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG48:!dbg !.*]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG46:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG49:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META43:metadata !.*]], metadata !DIExpression()), [[DBG49]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG50:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META44:metadata !.*]], metadata !DIExpression()), [[DBG50]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], 0, [[DBG51:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META45:metadata !.*]], metadata !DIExpression()), [[DBG51]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG52:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META46:metadata !.*]], metadata !DIExpression()), [[DBG52]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG53:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG47:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META42:metadata !.*]], metadata !DIExpression()), [[DBG47]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], 16777216, [[DBG48:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META43:metadata !.*]], metadata !DIExpression()), [[DBG48]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG49:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META44:metadata !.*]], metadata !DIExpression()), [[DBG49]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG50:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META45:metadata !.*]], metadata !DIExpression()), [[DBG50]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG51:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG49]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META43]], metadata !DIExpression()), [[DBG49]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG54:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG47]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META42]], metadata !DIExpression()), [[DBG47]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG52:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 16777216
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+define i32 @p3_constant_mask_15thbit(i32 %x) {
+; ALL-LABEL: @p3_constant_mask_15thbit(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG59:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG60:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META55:metadata !.*]], metadata !DIExpression()), [[DBG60]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], 32768, [[DBG61:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META56:metadata !.*]], metadata !DIExpression()), [[DBG61]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG62:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META57:metadata !.*]], metadata !DIExpression()), [[DBG62]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG63:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META58:metadata !.*]], metadata !DIExpression()), [[DBG63]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG64:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG60]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META55]], metadata !DIExpression()), [[DBG60]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG65:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 32768
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+define i32 @p4_constant_mask_signbit_noncanonical(i32 %x) {
+; ALL-LABEL: @p4_constant_mask_signbit_noncanonical(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG72:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG73:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META68:metadata !.*]], metadata !DIExpression()), [[DBG73]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], -2147483648, [[DBG74:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META69:metadata !.*]], metadata !DIExpression()), [[DBG74]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG75:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META70:metadata !.*]], metadata !DIExpression()), [[DBG75]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG76:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META71:metadata !.*]], metadata !DIExpression()), [[DBG76]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG77:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG73]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META68]], metadata !DIExpression()), [[DBG73]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG78:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 2147483648
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+define i32 @p5_constant_mask_signbit_canonical(i32 %x) {
+; ALL-LABEL: @p5_constant_mask_signbit_canonical(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG84:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG85:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META81:metadata !.*]], metadata !DIExpression()), [[DBG85]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp sgt i32 [[X_CURR]], -1, [[DBG86:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META82:metadata !.*]], metadata !DIExpression()), [[DBG86]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG87:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META83:metadata !.*]], metadata !DIExpression()), [[DBG87]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG88:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG85]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META81]], metadata !DIExpression()), [[DBG85]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG89:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.isbitunset = icmp sgt i32 %x.curr, -1
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+; Check that loop backedge's cmp-br order is correctly handled
+define i32 @p6(i32 %x, i32 %bit) {
+; ALL-LABEL: @p6(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG97:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META92:metadata !.*]], metadata !DIExpression()), [[DBG97]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG98:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG99:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META93:metadata !.*]], metadata !DIExpression()), [[DBG99]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG100:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META94:metadata !.*]], metadata !DIExpression()), [[DBG100]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], 0, [[DBG101:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META95:metadata !.*]], metadata !DIExpression()), [[DBG101]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG102:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META96:metadata !.*]], metadata !DIExpression()), [[DBG102]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG103:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG99]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META93]], metadata !DIExpression()), [[DBG99]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG104:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -125,26 +254,26 @@ end:
 }
 
 ; `and` is commutative, so ensure that order is irrelevant
-define i32 @p2(i32 %x, i32 %bit) {
-; ALL-LABEL: @p2(
+define i32 @p7(i32 %x, i32 %bit) {
+; ALL-LABEL: @p7(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG62:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META57:metadata !.*]], metadata !DIExpression()), [[DBG62]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG63:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG112:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META107:metadata !.*]], metadata !DIExpression()), [[DBG112]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG113:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG64:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META58:metadata !.*]], metadata !DIExpression()), [[DBG64]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[BITMASK]], [[X_CURR]], [[DBG65:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META59:metadata !.*]], metadata !DIExpression()), [[DBG65]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG66:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META60:metadata !.*]], metadata !DIExpression()), [[DBG66]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG67:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META61:metadata !.*]], metadata !DIExpression()), [[DBG67]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG68:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG114:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META108:metadata !.*]], metadata !DIExpression()), [[DBG114]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[BITMASK]], [[X_CURR]], [[DBG115:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META109:metadata !.*]], metadata !DIExpression()), [[DBG115]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG116:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META110:metadata !.*]], metadata !DIExpression()), [[DBG116]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG117:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META111:metadata !.*]], metadata !DIExpression()), [[DBG117]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG118:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG64]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META58]], metadata !DIExpression()), [[DBG64]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG69:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG114]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META108]], metadata !DIExpression()), [[DBG114]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG119:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -163,26 +292,26 @@ end:
 
 ; PHI node does not have any particular order for it's incomings,
 ; but check that the other order still works.
-define i32 @p3(i32 %x, i32 %bit) {
-; ALL-LABEL: @p3(
+define i32 @p8(i32 %x, i32 %bit) {
+; ALL-LABEL: @p8(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG77:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META72:metadata !.*]], metadata !DIExpression()), [[DBG77]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG78:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG127:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META122:metadata !.*]], metadata !DIExpression()), [[DBG127]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG128:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X_NEXT:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ], [[DBG79:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META73:metadata !.*]], metadata !DIExpression()), [[DBG79]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG80:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META74:metadata !.*]], metadata !DIExpression()), [[DBG80]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG81:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META75:metadata !.*]], metadata !DIExpression()), [[DBG81]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG82:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META76:metadata !.*]], metadata !DIExpression()), [[DBG82]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG83:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X_NEXT:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ], [[DBG129:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META123:metadata !.*]], metadata !DIExpression()), [[DBG129]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG130:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META124:metadata !.*]], metadata !DIExpression()), [[DBG130]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG131:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META125:metadata !.*]], metadata !DIExpression()), [[DBG131]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG132:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META126:metadata !.*]], metadata !DIExpression()), [[DBG132]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG133:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG79]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META73]], metadata !DIExpression()), [[DBG79]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG84:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG129]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META123]], metadata !DIExpression()), [[DBG129]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG134:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -199,30 +328,61 @@ end:
   ret i32 %x.curr
 }
 
+; ICmp-Br are commutative
+define i32 @p9(i32 %x) {
+; ALL-LABEL: @p9(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG140:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG141:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META137:metadata !.*]], metadata !DIExpression()), [[DBG141]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp slt i32 [[X_CURR]], 0, [[DBG142:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META138:metadata !.*]], metadata !DIExpression()), [[DBG142]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG143:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META139:metadata !.*]], metadata !DIExpression()), [[DBG143]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG144:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG141]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META137]], metadata !DIExpression()), [[DBG141]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG145:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.isbitunset = icmp slt i32 %x.curr, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %end, label %loop
+
+end:
+  ret i32 %x.curr
+}
+
 ;-------------------------------------------------------------------------------
 ; Negative tests
 
 ; The %bitmask must be outside of the loop.
-define i32 @n4(i32 %x, i32 %bit) {
-; ALL-LABEL: @n4(
+define i32 @n10(i32 %x, i32 %bit) {
+; ALL-LABEL: @n10(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG92:!dbg !.*]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG153:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG93:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META87:metadata !.*]], metadata !DIExpression()), [[DBG93]]
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG94:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META88:metadata !.*]], metadata !DIExpression()), [[DBG94]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG95:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META89:metadata !.*]], metadata !DIExpression()), [[DBG95]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG96:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META90:metadata !.*]], metadata !DIExpression()), [[DBG96]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG97:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META91:metadata !.*]], metadata !DIExpression()), [[DBG97]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG98:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG154:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META148:metadata !.*]], metadata !DIExpression()), [[DBG154]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG155:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META149:metadata !.*]], metadata !DIExpression()), [[DBG155]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG156:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META150:metadata !.*]], metadata !DIExpression()), [[DBG156]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG157:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META151:metadata !.*]], metadata !DIExpression()), [[DBG157]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG158:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META152:metadata !.*]], metadata !DIExpression()), [[DBG158]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG159:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG93]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META87]], metadata !DIExpression()), [[DBG93]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG99:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG154]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META148]], metadata !DIExpression()), [[DBG154]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG160:!dbg !.*]]
 ;
 entry:
   br label %loop
@@ -240,26 +400,26 @@ end:
 }
 
 ; The %bitmask must be loop-invariant
-define i32 @n5(i32 %x, i32 %bit) {
-; ALL-LABEL: @n5(
+define i32 @n11(i32 %x, i32 %bit) {
+; ALL-LABEL: @n11(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG107:!dbg !.*]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG168:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG108:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META102:metadata !.*]], metadata !DIExpression()), [[DBG108]]
-; ALL-NEXT:    [[BITMASK:%.*]] = call i32 @gen32(), [[DBG109:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META103:metadata !.*]], metadata !DIExpression()), [[DBG109]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG110:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META104:metadata !.*]], metadata !DIExpression()), [[DBG110]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG111:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META105:metadata !.*]], metadata !DIExpression()), [[DBG111]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG112:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META106:metadata !.*]], metadata !DIExpression()), [[DBG112]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG113:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG169:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META163:metadata !.*]], metadata !DIExpression()), [[DBG169]]
+; ALL-NEXT:    [[BITMASK:%.*]] = call i32 @gen32(), [[DBG170:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META164:metadata !.*]], metadata !DIExpression()), [[DBG170]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG171:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META165:metadata !.*]], metadata !DIExpression()), [[DBG171]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG172:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META166:metadata !.*]], metadata !DIExpression()), [[DBG172]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG173:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META167:metadata !.*]], metadata !DIExpression()), [[DBG173]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG174:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG108]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META102]], metadata !DIExpression()), [[DBG108]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG114:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG169]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META163]], metadata !DIExpression()), [[DBG169]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG175:!dbg !.*]]
 ;
 entry:
   br label %loop
@@ -277,26 +437,26 @@ end:
 }
 
 ; The %bitmask must be a left-shift of a single bit.
-define i32 @n6(i32 %x, i32 %bit) {
-; ALL-LABEL: @n6(
+define i32 @n12(i32 %x, i32 %bit) {
+; ALL-LABEL: @n12(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 2, [[BIT:%.*]], [[DBG122:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META117:metadata !.*]], metadata !DIExpression()), [[DBG122]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG123:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 2, [[BIT:%.*]], [[DBG183:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META178:metadata !.*]], metadata !DIExpression()), [[DBG183]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG184:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG124:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META118:metadata !.*]], metadata !DIExpression()), [[DBG124]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG125:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META119:metadata !.*]], metadata !DIExpression()), [[DBG125]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG126:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META120:metadata !.*]], metadata !DIExpression()), [[DBG126]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG127:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META121:metadata !.*]], metadata !DIExpression()), [[DBG127]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG128:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG185:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META179:metadata !.*]], metadata !DIExpression()), [[DBG185]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG186:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META180:metadata !.*]], metadata !DIExpression()), [[DBG186]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG187:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META181:metadata !.*]], metadata !DIExpression()), [[DBG187]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG188:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META182:metadata !.*]], metadata !DIExpression()), [[DBG188]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG189:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG124]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META118]], metadata !DIExpression()), [[DBG124]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG129:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG185]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META179]], metadata !DIExpression()), [[DBG185]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG190:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 2, %bit ; not what we are looking for.
@@ -314,26 +474,26 @@ end:
 }
 
 ; Bad recurrence - should be a left-shift by 1.
-define i32 @n7(i32 %x, i32 %bit) {
-; ALL-LABEL: @n7(
+define i32 @n13(i32 %x, i32 %bit) {
+; ALL-LABEL: @n13(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG137:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META132:metadata !.*]], metadata !DIExpression()), [[DBG137]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG138:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG198:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META193:metadata !.*]], metadata !DIExpression()), [[DBG198]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG199:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG139:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META133:metadata !.*]], metadata !DIExpression()), [[DBG139]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG140:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META134:metadata !.*]], metadata !DIExpression()), [[DBG140]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG141:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META135:metadata !.*]], metadata !DIExpression()), [[DBG141]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 2, [[DBG142:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META136:metadata !.*]], metadata !DIExpression()), [[DBG142]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG143:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG200:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META194:metadata !.*]], metadata !DIExpression()), [[DBG200]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG201:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META195:metadata !.*]], metadata !DIExpression()), [[DBG201]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG202:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META196:metadata !.*]], metadata !DIExpression()), [[DBG202]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 2, [[DBG203:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META197:metadata !.*]], metadata !DIExpression()), [[DBG203]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG204:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG139]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META133]], metadata !DIExpression()), [[DBG139]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG144:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG200]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META194]], metadata !DIExpression()), [[DBG200]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG205:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -351,26 +511,26 @@ end:
 }
 
 ; The comparison is not what we are looking for.
-define i32 @n8(i32 %x, i32 %bit) {
-; ALL-LABEL: @n8(
+define i32 @n14(i32 %x, i32 %bit) {
+; ALL-LABEL: @n14(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG152:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META147:metadata !.*]], metadata !DIExpression()), [[DBG152]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG153:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG213:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META208:metadata !.*]], metadata !DIExpression()), [[DBG213]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG214:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG154:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META148:metadata !.*]], metadata !DIExpression()), [[DBG154]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG155:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META149:metadata !.*]], metadata !DIExpression()), [[DBG155]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], [[BITMASK]], [[DBG156:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META150:metadata !.*]], metadata !DIExpression()), [[DBG156]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG157:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META151:metadata !.*]], metadata !DIExpression()), [[DBG157]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG158:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG215:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META209:metadata !.*]], metadata !DIExpression()), [[DBG215]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG216:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META210:metadata !.*]], metadata !DIExpression()), [[DBG216]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], [[BITMASK]], [[DBG217:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META211:metadata !.*]], metadata !DIExpression()), [[DBG217]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG218:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META212:metadata !.*]], metadata !DIExpression()), [[DBG218]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG219:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG154]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META148]], metadata !DIExpression()), [[DBG154]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG159:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG215]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META209]], metadata !DIExpression()), [[DBG215]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG220:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -388,26 +548,26 @@ end:
 }
 
 ; We should loop while %x.curr.bitmasked is 0, not exit when it is 0.
-define i32 @n9(i32 %x, i32 %bit) {
-; ALL-LABEL: @n9(
+define i32 @n15(i32 %x, i32 %bit) {
+; ALL-LABEL: @n15(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG167:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META162:metadata !.*]], metadata !DIExpression()), [[DBG167]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG168:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG228:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META223:metadata !.*]], metadata !DIExpression()), [[DBG228]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG229:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG169:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META163:metadata !.*]], metadata !DIExpression()), [[DBG169]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG170:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META164:metadata !.*]], metadata !DIExpression()), [[DBG170]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG171:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META165:metadata !.*]], metadata !DIExpression()), [[DBG171]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG172:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META166:metadata !.*]], metadata !DIExpression()), [[DBG172]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG173:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG230:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META224:metadata !.*]], metadata !DIExpression()), [[DBG230]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG231:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META225:metadata !.*]], metadata !DIExpression()), [[DBG231]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG232:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META226:metadata !.*]], metadata !DIExpression()), [[DBG232]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG233:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META227:metadata !.*]], metadata !DIExpression()), [[DBG233]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG234:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG169]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META163]], metadata !DIExpression()), [[DBG169]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG174:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG230]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META224]], metadata !DIExpression()), [[DBG230]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG235:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -425,26 +585,26 @@ end:
 }
 
 ; We should loop while %x.curr.bitmasked is 0, not while it is not 0.
-define i32 @n10(i32 %x, i32 %bit) {
-; ALL-LABEL: @n10(
+define i32 @n16(i32 %x, i32 %bit) {
+; ALL-LABEL: @n16(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG182:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META177:metadata !.*]], metadata !DIExpression()), [[DBG182]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG183:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG243:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META238:metadata !.*]], metadata !DIExpression()), [[DBG243]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG244:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG184:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META178:metadata !.*]], metadata !DIExpression()), [[DBG184]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG185:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META179:metadata !.*]], metadata !DIExpression()), [[DBG185]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], 0, [[DBG186:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META180:metadata !.*]], metadata !DIExpression()), [[DBG186]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG187:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META181:metadata !.*]], metadata !DIExpression()), [[DBG187]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG188:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG245:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META239:metadata !.*]], metadata !DIExpression()), [[DBG245]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG246:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META240:metadata !.*]], metadata !DIExpression()), [[DBG246]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp ne i32 [[X_CURR_BITMASKED]], 0, [[DBG247:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META241:metadata !.*]], metadata !DIExpression()), [[DBG247]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG248:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META242:metadata !.*]], metadata !DIExpression()), [[DBG248]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG249:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG184]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META178]], metadata !DIExpression()), [[DBG184]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG189:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG245]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META239]], metadata !DIExpression()), [[DBG245]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG250:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -462,23 +622,23 @@ end:
 }
 
 ; PHI node is not a recurrence
-define i32 @n11(i32 %x, i32 %bit) {
-; ALL-LABEL: @n11(
+define i32 @n17(i32 %x, i32 %bit) {
+; ALL-LABEL: @n17(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG197:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META192:metadata !.*]], metadata !DIExpression()), [[DBG197]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG198:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG258:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META253:metadata !.*]], metadata !DIExpression()), [[DBG258]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG259:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X:%.*]], [[META193:metadata !.*]], metadata !DIExpression()), [[DBG199:!dbg !.*]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X]], [[BITMASK]], [[DBG200:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META194:metadata !.*]], metadata !DIExpression()), [[DBG200]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG201:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META195:metadata !.*]], metadata !DIExpression()), [[DBG201]]
-; ALL-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X]], 1, [[DBG202:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META196:metadata !.*]], metadata !DIExpression()), [[DBG202]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG203:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X:%.*]], [[META254:metadata !.*]], metadata !DIExpression()), [[DBG260:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X]], [[BITMASK]], [[DBG261:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META255:metadata !.*]], metadata !DIExpression()), [[DBG261]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG262:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META256:metadata !.*]], metadata !DIExpression()), [[DBG262]]
+; ALL-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X]], 1, [[DBG263:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META257:metadata !.*]], metadata !DIExpression()), [[DBG263]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG264:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    ret i32 [[X]], [[DBG204:!dbg !.*]]
+; ALL-NEXT:    ret i32 [[X]], [[DBG265:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -496,26 +656,26 @@ end:
 }
 
 ; Masking wrong value
-define i32 @n12(i32 %x, i32 %bit) {
-; ALL-LABEL: @n12(
+define i32 @n18(i32 %x, i32 %bit) {
+; ALL-LABEL: @n18(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG212:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META207:metadata !.*]], metadata !DIExpression()), [[DBG212]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG213:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG273:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META268:metadata !.*]], metadata !DIExpression()), [[DBG273]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG274:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG214:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META208:metadata !.*]], metadata !DIExpression()), [[DBG214]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X]], [[BITMASK]], [[DBG215:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META209:metadata !.*]], metadata !DIExpression()), [[DBG215]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG216:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META210:metadata !.*]], metadata !DIExpression()), [[DBG216]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG217:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META211:metadata !.*]], metadata !DIExpression()), [[DBG217]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG218:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG275:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META269:metadata !.*]], metadata !DIExpression()), [[DBG275]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X]], [[BITMASK]], [[DBG276:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META270:metadata !.*]], metadata !DIExpression()), [[DBG276]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG277:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META271:metadata !.*]], metadata !DIExpression()), [[DBG277]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG278:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META272:metadata !.*]], metadata !DIExpression()), [[DBG278]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG279:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG214]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META208]], metadata !DIExpression()), [[DBG214]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG219:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG275]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META269]], metadata !DIExpression()), [[DBG275]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG280:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -533,26 +693,26 @@ end:
 }
 
 ; Checking wrong value
-define i32 @n13(i32 %x, i32 %bit) {
-; ALL-LABEL: @n13(
+define i32 @n19(i32 %x, i32 %bit) {
+; ALL-LABEL: @n19(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG227:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META222:metadata !.*]], metadata !DIExpression()), [[DBG227]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG228:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG288:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META283:metadata !.*]], metadata !DIExpression()), [[DBG288]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG289:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG229:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META223:metadata !.*]], metadata !DIExpression()), [[DBG229]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG230:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META224:metadata !.*]], metadata !DIExpression()), [[DBG230]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR]], 0, [[DBG231:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META225:metadata !.*]], metadata !DIExpression()), [[DBG231]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG232:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META226:metadata !.*]], metadata !DIExpression()), [[DBG232]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG233:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG290:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META284:metadata !.*]], metadata !DIExpression()), [[DBG290]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG291:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META285:metadata !.*]], metadata !DIExpression()), [[DBG291]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR]], 0, [[DBG292:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META286:metadata !.*]], metadata !DIExpression()), [[DBG292]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG293:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META287:metadata !.*]], metadata !DIExpression()), [[DBG293]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG294:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG229]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META223]], metadata !DIExpression()), [[DBG229]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG234:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG290]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META284]], metadata !DIExpression()), [[DBG290]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG295:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -569,26 +729,27 @@ end:
   ret i32 %x.curr
 }
 
-define i32 @n14(i32 %x, i32 %bit) {
-; ALL-LABEL: @n14(
+; Shifting wrong value
+define i32 @n20(i32 %x, i32 %bit) {
+; ALL-LABEL: @n20(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG242:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META237:metadata !.*]], metadata !DIExpression()), [[DBG242]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG243:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG303:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META298:metadata !.*]], metadata !DIExpression()), [[DBG303]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG304:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG244:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META238:metadata !.*]], metadata !DIExpression()), [[DBG244]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG245:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META239:metadata !.*]], metadata !DIExpression()), [[DBG245]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG246:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META240:metadata !.*]], metadata !DIExpression()), [[DBG246]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X]], 1, [[DBG247:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META241:metadata !.*]], metadata !DIExpression()), [[DBG247]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG248:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG305:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META299:metadata !.*]], metadata !DIExpression()), [[DBG305]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG306:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META300:metadata !.*]], metadata !DIExpression()), [[DBG306]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG307:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META301:metadata !.*]], metadata !DIExpression()), [[DBG307]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X]], 1, [[DBG308:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META302:metadata !.*]], metadata !DIExpression()), [[DBG308]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG309:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG244]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META238]], metadata !DIExpression()), [[DBG244]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG249:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG305]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META299]], metadata !DIExpression()), [[DBG305]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG310:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -605,31 +766,133 @@ end:
   ret i32 %x.curr
 }
 
+; Bit mask is not a power of 2
+define i32 @n21(i32 %x) {
+; ALL-LABEL: @n21(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG317:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG318:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META313:metadata !.*]], metadata !DIExpression()), [[DBG318]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], 16777215, [[DBG319:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META314:metadata !.*]], metadata !DIExpression()), [[DBG319]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG320:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META315:metadata !.*]], metadata !DIExpression()), [[DBG320]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG321:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META316:metadata !.*]], metadata !DIExpression()), [[DBG321]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG322:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG318]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META313]], metadata !DIExpression()), [[DBG318]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG323:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 16777215 ; not a power of 2
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+; Bit mask is not a power of 2
+define i32 @n22(i32 %x) {
+; ALL-LABEL: @n22(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG330:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG331:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META326:metadata !.*]], metadata !DIExpression()), [[DBG331]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], 384, [[DBG332:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META327:metadata !.*]], metadata !DIExpression()), [[DBG332]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG333:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META328:metadata !.*]], metadata !DIExpression()), [[DBG333]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG334:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META329:metadata !.*]], metadata !DIExpression()), [[DBG334]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG335:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG331]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META326]], metadata !DIExpression()), [[DBG331]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG336:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 384 ; not a power of 2
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+; Bit mask is not a power of 2
+define i32 @n23(i32 %x) {
+; ALL-LABEL: @n23(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG343:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG344:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META339:metadata !.*]], metadata !DIExpression()), [[DBG344]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], 32896, [[DBG345:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META340:metadata !.*]], metadata !DIExpression()), [[DBG345]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG346:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META341:metadata !.*]], metadata !DIExpression()), [[DBG346]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG347:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META342:metadata !.*]], metadata !DIExpression()), [[DBG347]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG348:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG344]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META339]], metadata !DIExpression()), [[DBG344]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG349:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %x.curr.bitmasked = and i32 %x.curr, 32896 ; not a power of 2
+  %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
 ;-------------------------------------------------------------------------------
 ; Tests with extra cruft.
 
 ; If loop body has any extra instructions we don't want to deal with it.
-define i32 @n15(i32 %x, i32 %bit) {
-; ALL-LABEL: @n15(
+define i32 @n24(i32 %x, i32 %bit) {
+; ALL-LABEL: @n24(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG257:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META252:metadata !.*]], metadata !DIExpression()), [[DBG257]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG258:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG357:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META352:metadata !.*]], metadata !DIExpression()), [[DBG357]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG358:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG259:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META253:metadata !.*]], metadata !DIExpression()), [[DBG259]]
-; ALL-NEXT:    call void @external_side_effect(), [[DBG260:!dbg !.*]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG261:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META254:metadata !.*]], metadata !DIExpression()), [[DBG261]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG262:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META255:metadata !.*]], metadata !DIExpression()), [[DBG262]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG263:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META256:metadata !.*]], metadata !DIExpression()), [[DBG263]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG264:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG359:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META353:metadata !.*]], metadata !DIExpression()), [[DBG359]]
+; ALL-NEXT:    call void @external_side_effect(), [[DBG360:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG361:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META354:metadata !.*]], metadata !DIExpression()), [[DBG361]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG362:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META355:metadata !.*]], metadata !DIExpression()), [[DBG362]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG363:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META356:metadata !.*]], metadata !DIExpression()), [[DBG363]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG364:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG259]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META253]], metadata !DIExpression()), [[DBG259]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG265:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG359]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META353]], metadata !DIExpression()), [[DBG359]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG365:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -647,29 +910,61 @@ end:
   ret i32 %x.curr
 }
 
-; In-loop instructions should not have uses outside of the loop.
-define i32 @n16(i32 %x, i32 %bit) {
-; ALL-LABEL: @n16(
+define i32 @n25(i32 %x) {
+; ALL-LABEL: @n25(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG273:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META268:metadata !.*]], metadata !DIExpression()), [[DBG273]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG274:!dbg !.*]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG371:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG275:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META269:metadata !.*]], metadata !DIExpression()), [[DBG275]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG276:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META270:metadata !.*]], metadata !DIExpression()), [[DBG276]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG277:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META271:metadata !.*]], metadata !DIExpression()), [[DBG277]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG278:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META272:metadata !.*]], metadata !DIExpression()), [[DBG278]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG279:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG372:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META368:metadata !.*]], metadata !DIExpression()), [[DBG372]]
+; ALL-NEXT:    call void @external_side_effect(), [[DBG373:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp sgt i32 [[X_CURR]], -1, [[DBG374:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META369:metadata !.*]], metadata !DIExpression()), [[DBG374]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG375:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META370:metadata !.*]], metadata !DIExpression()), [[DBG375]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG376:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG275]]
-; ALL-NEXT:    [[X_CURR_BITMASKED_LCSSA:%.*]] = phi i32 [ [[X_CURR_BITMASKED]], [[LOOP]] ], [[DBG276]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META269]], metadata !DIExpression()), [[DBG275]]
-; ALL-NEXT:    call void @use32(i32 [[X_CURR_BITMASKED_LCSSA]]), [[DBG280:!dbg !.*]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG281:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG372]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META368]], metadata !DIExpression()), [[DBG372]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG377:!dbg !.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  call void @external_side_effect() ; not part of idiom.
+  %x.curr.isbitunset = icmp sgt i32 %x.curr, -1
+  %x.next = shl i32 %x.curr, 1
+  br i1 %x.curr.isbitunset, label %loop, label %end
+
+end:
+  ret i32 %x.curr
+}
+
+; In-loop instructions should not have uses outside of the loop.
+define i32 @n26(i32 %x, i32 %bit) {
+; ALL-LABEL: @n26(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG385:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META380:metadata !.*]], metadata !DIExpression()), [[DBG385]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG386:!dbg !.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG387:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META381:metadata !.*]], metadata !DIExpression()), [[DBG387]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG388:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META382:metadata !.*]], metadata !DIExpression()), [[DBG388]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG389:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META383:metadata !.*]], metadata !DIExpression()), [[DBG389]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG390:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META384:metadata !.*]], metadata !DIExpression()), [[DBG390]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG391:!dbg !.*]]
+; ALL:       end:
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG387]]
+; ALL-NEXT:    [[X_CURR_BITMASKED_LCSSA:%.*]] = phi i32 [ [[X_CURR_BITMASKED]], [[LOOP]] ], [[DBG388]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META381]], metadata !DIExpression()), [[DBG387]]
+; ALL-NEXT:    call void @use32(i32 [[X_CURR_BITMASKED_LCSSA]]), [[DBG392:!dbg !.*]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG393:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -686,28 +981,28 @@ end:
   call void @use32(i32 %x.curr.bitmasked)
   ret i32 %x.curr
 }
-define i32 @n17(i32 %x, i32 %bit) {
-; ALL-LABEL: @n17(
+define i32 @n27(i32 %x, i32 %bit) {
+; ALL-LABEL: @n27(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG289:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META284:metadata !.*]], metadata !DIExpression()), [[DBG289]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG290:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG401:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META396:metadata !.*]], metadata !DIExpression()), [[DBG401]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG402:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG291:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META285:metadata !.*]], metadata !DIExpression()), [[DBG291]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG292:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META286:metadata !.*]], metadata !DIExpression()), [[DBG292]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG293:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META287:metadata !.*]], metadata !DIExpression()), [[DBG293]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG294:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META288:metadata !.*]], metadata !DIExpression()), [[DBG294]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG295:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG403:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META397:metadata !.*]], metadata !DIExpression()), [[DBG403]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG404:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META398:metadata !.*]], metadata !DIExpression()), [[DBG404]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG405:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META399:metadata !.*]], metadata !DIExpression()), [[DBG405]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG406:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META400:metadata !.*]], metadata !DIExpression()), [[DBG406]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG407:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG291]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET_LCSSA:%.*]] = phi i1 [ [[X_CURR_ISBITUNSET]], [[LOOP]] ], [[DBG293]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META285]], metadata !DIExpression()), [[DBG291]]
-; ALL-NEXT:    call void @use1(i1 [[X_CURR_ISBITUNSET_LCSSA]]), [[DBG296:!dbg !.*]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG297:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG403]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET_LCSSA:%.*]] = phi i1 [ [[X_CURR_ISBITUNSET]], [[LOOP]] ], [[DBG405]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META397]], metadata !DIExpression()), [[DBG403]]
+; ALL-NEXT:    call void @use1(i1 [[X_CURR_ISBITUNSET_LCSSA]]), [[DBG408:!dbg !.*]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG409:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit
@@ -724,28 +1019,28 @@ end:
   call void @use1(i1 %x.curr.isbitunset)
   ret i32 %x.curr
 }
-define i32 @n18(i32 %x, i32 %bit) {
-; ALL-LABEL: @n18(
+define i32 @n28(i32 %x, i32 %bit) {
+; ALL-LABEL: @n28(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG305:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META300:metadata !.*]], metadata !DIExpression()), [[DBG305]]
-; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG306:!dbg !.*]]
+; ALL-NEXT:    [[BITMASK:%.*]] = shl i32 1, [[BIT:%.*]], [[DBG417:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], [[META412:metadata !.*]], metadata !DIExpression()), [[DBG417]]
+; ALL-NEXT:    br label [[LOOP:%.*]], [[DBG418:!dbg !.*]]
 ; ALL:       loop:
-; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG307:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META301:metadata !.*]], metadata !DIExpression()), [[DBG307]]
-; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG308:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META302:metadata !.*]], metadata !DIExpression()), [[DBG308]]
-; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG309:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META303:metadata !.*]], metadata !DIExpression()), [[DBG309]]
-; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG310:!dbg !.*]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META304:metadata !.*]], metadata !DIExpression()), [[DBG310]]
-; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG311:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP]] ], [[DBG419:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR]], [[META413:metadata !.*]], metadata !DIExpression()), [[DBG419]]
+; ALL-NEXT:    [[X_CURR_BITMASKED:%.*]] = and i32 [[X_CURR]], [[BITMASK]], [[DBG420:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_BITMASKED]], [[META414:metadata !.*]], metadata !DIExpression()), [[DBG420]]
+; ALL-NEXT:    [[X_CURR_ISBITUNSET:%.*]] = icmp eq i32 [[X_CURR_BITMASKED]], 0, [[DBG421:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i1 [[X_CURR_ISBITUNSET]], [[META415:metadata !.*]], metadata !DIExpression()), [[DBG421]]
+; ALL-NEXT:    [[X_NEXT]] = shl i32 [[X_CURR]], 1, [[DBG422:!dbg !.*]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_NEXT]], [[META416:metadata !.*]], metadata !DIExpression()), [[DBG422]]
+; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG423:!dbg !.*]]
 ; ALL:       end:
-; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG307]]
-; ALL-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi i32 [ [[X_NEXT]], [[LOOP]] ], [[DBG310]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META301]], metadata !DIExpression()), [[DBG307]]
-; ALL-NEXT:    call void @use32(i32 [[X_NEXT_LCSSA]]), [[DBG312:!dbg !.*]]
-; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG313:!dbg !.*]]
+; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG419]]
+; ALL-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi i32 [ [[X_NEXT]], [[LOOP]] ], [[DBG422]]
+; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META413]], metadata !DIExpression()), [[DBG419]]
+; ALL-NEXT:    call void @use32(i32 [[X_NEXT_LCSSA]]), [[DBG424:!dbg !.*]]
+; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG425:!dbg !.*]]
 ;
 entry:
   %bitmask = shl i32 1, %bit

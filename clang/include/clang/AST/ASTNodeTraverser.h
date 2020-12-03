@@ -126,9 +126,6 @@ public:
         switch (Traversal) {
         case TK_AsIs:
           break;
-        case TK_IgnoreImplicitCastsAndParentheses:
-          S = E->IgnoreParenImpCasts();
-          break;
         case TK_IgnoreUnlessSpelledInSource:
           S = E->IgnoreUnlessSpelledInSource();
           break;

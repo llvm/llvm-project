@@ -79,12 +79,11 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
   // written type.
   auto Matches =
       match(expr(hasDescendant(typeLoc().bind("t"))), *E, *Result.Context);
-  const auto *TL = selectFirst<TypeLoc>("t", Matches);
-  assert(TL);
-  D << FixItHint::CreateInsertion(
-      Lexer::getLocForEndOfToken(TL->getEndLoc(), 0, *Result.SourceManager,
-                                 getLangOpts()),
-      Replacement);
+  if (const auto *TL = selectFirst<TypeLoc>("t", Matches))
+    D << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(TL->getEndLoc(), 0, *Result.SourceManager,
+                                   getLangOpts()),
+        Replacement);
 }
 
 } // namespace bugprone

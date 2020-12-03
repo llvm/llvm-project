@@ -635,3 +635,48 @@ func @mul_ss(%arga: tensor<32xf32>, %argb: tensor<32xf32>) -> tensor<32xf32> {
   } -> tensor<32xf32>
   return %0 : tensor<32xf32>
 }
+
+#trait_sum_reduction = {
+  indexing_maps = [
+    affine_map<(i) -> (i)>,  // a
+    affine_map<(i) -> ()>    // x (scalar out)
+  ],
+  sparse = [
+    [ "S" ],  // a
+    [  ]      // x
+  ],
+  iterator_types = ["reduction"],
+  doc = "x = SUM_i a(i)"
+}
+
+// CHECK-LABEL:   func @sum_reduction(
+// CHECK-SAME:                        %[[VAL_0:.*]]: tensor<?xf32>,
+// CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[VAL_2:.*]] = constant 999 : index
+// CHECK:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = alloca(%[[VAL_2]]) : memref<?xf32>
+// CHECK:           %[[VAL_8:.*]] = alloca() : memref<f32>
+// CHECK:           %[[VAL_9:.*]] = load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_10]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_12:.*]] = load %[[VAL_8]][] : memref<f32>
+// CHECK:             %[[VAL_13:.*]] = load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
+// CHECK:             %[[VAL_14:.*]] = addf %[[VAL_12]], %[[VAL_13]] : f32
+// CHECK:             store %[[VAL_14]], %[[VAL_8]][] : memref<f32>
+// CHECK:           }
+// CHECK:           %[[VAL_15:.*]] = tensor_load %[[VAL_8]] : memref<f32>
+// CHECK:           return %[[VAL_15]] : tensor<f32>
+// CHECK:         }
+func @sum_reduction(%arga: tensor<?xf32>, %argx: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic #trait_sum_reduction
+    ins(%arga : tensor<?xf32>)
+    init(%argx : tensor<f32>) {
+      ^bb(%a : f32, %x : f32):
+        %0 = addf %x, %a  : f32
+        linalg.yield %0: f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}

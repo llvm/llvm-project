@@ -967,6 +967,28 @@ public:
   }
 };
 
+class PseudoProbeInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::pseudoprobe;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  ConstantInt *getFuncGuid() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(0)));
+  }
+
+  ConstantInt *getAttributes() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  }
+
+  ConstantInt *getIndex() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H

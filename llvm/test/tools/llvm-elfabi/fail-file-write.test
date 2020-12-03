@@ -1,0 +1,18 @@
+## Test failing to write output file on non-windows platforms.
+
+# UNSUPPORTED: system-windows
+# RUN: rm -rf %t.TestDir
+# RUN: mkdir %t.TestDir
+# RUN: touch %t.TestDir/Output.TestFile
+# RUN: chmod 400 %t.TestDir
+# RUN: not llvm-elfabi %s --output-target=elf64-little %t.TestDir/Output.TestFile 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: chmod 777 %t.TestDir
+# RUN: rm -rf %t.TestDir
+
+--- !tapi-tbe
+TbeVersion: 1.0
+Arch: AArch64
+Symbols: {}
+...
+
+# ERR: Permission denied when trying to open `{{.*}}.TestDir/Output.TestFile` for writing

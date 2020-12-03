@@ -1748,7 +1748,7 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
     return failure();
 
   // There is nothing to do for the merge block in the selection, which just
-  // contains a spv._merge op, itself. But we need to have an OpLabel
+  // contains a spv.mlir.merge op, itself. But we need to have an OpLabel
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   return encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
@@ -1808,7 +1808,7 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
     return failure();
 
   // There is nothing to do for the merge block in the loop, which just contains
-  // a spv._merge op, itself. But we need to have an OpLabel instruction to
+  // a spv.mlir.merge op, itself. But we need to have an OpLabel instruction to
   // start a new SPIR-V block for ops following this LoopOp. The block should
   // use the <id> for the merge block.
   return encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});

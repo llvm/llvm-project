@@ -459,7 +459,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GCN: buffer_load_dword [[VAL1:v[0-9]+]]
 ; GCN: buffer_store_byte [[VAL0]], v0, s[0:3], 0 offen{{$}}
 ; GCN: buffer_store_dword [[VAL1]], v0, s[0:3], 0 offen offset:4{{$}}
-define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) #0 {
+define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }) %arg0) #0 {
   %val0 = load volatile i8, i8 addrspace(1)* undef
   %val1 = load volatile i32, i32 addrspace(1)* undef
   %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %arg0, i32 0, i32 0
@@ -645,7 +645,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
 ; GCN: v_mov_b32_e32 [[HIGH_BITS:v[0-9]+]], 0
 ; GCN: ds_write_b32 {{v[0-9]+}}, [[HIGH_BITS]]
 ; GCN-NEXT: ds_write_b32 {{v[0-9]+}}, [[HIGH_BITS]]
-define void @void_func_sret_max_known_zero_bits(i8 addrspace(5)* sret %arg0) #0 {
+define void @void_func_sret_max_known_zero_bits(i8 addrspace(5)* sret(i8) %arg0) #0 {
   %arg0.int = ptrtoint i8 addrspace(5)* %arg0 to i32
 
   %lshr0 = lshr i32 %arg0.int, 16

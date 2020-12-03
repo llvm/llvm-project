@@ -63,7 +63,8 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   bool NeedsTempPath(const InputInfoList &Inputs) const;
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
-                   const InputInfoList &Inputs, unsigned Version[5]) const;
+                   const InputInfoList &Inputs, unsigned Version[5],
+                   bool LinkerIsLLD, bool LinkerIsLLDDarwinNew) const;
 
 public:
   Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}

@@ -4380,11 +4380,17 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 }
 
 std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
-  StringRef AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
+  Triple T(TT);
+  // For AMDGPU we uprgrade older DataLayouts to include the default globals
+  // address space of 1.
+  if (T.isAMDGPU() && !DL.contains("-G") && !DL.startswith("G")) {
+    return DL.empty() ? std::string("G1") : (DL + "-G1").str();
+  }
 
+  std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
   // If X86, and the datalayout matches the expected format, add pointer size
   // address spaces to the datalayout.
-  if (!Triple(TT).isX86() || DL.contains(AddrSpaces))
+  if (!T.isX86() || DL.contains(AddrSpaces))
     return std::string(DL);
 
   SmallVector<StringRef, 4> Groups;

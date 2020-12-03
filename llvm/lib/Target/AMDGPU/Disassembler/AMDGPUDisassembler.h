@@ -172,6 +172,7 @@ public:
   bool isGFX10() const;
   bool isGFX10Plus() const;
   bool isGFX11() const;
+  bool isGFX11Plus() const;
 };
 
 //===----------------------------------------------------------------------===//

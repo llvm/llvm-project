@@ -33,13 +33,13 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB2_ADDR:[0-9]+]], %got(ub2)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    lbu     $[[UB2:[0-9]+]], 0($[[UB2_ADDR]])
 ; CHECK-DAG:    and     $[[RES1:[0-9]+]], $[[UB2]], $[[UB1]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
   ret void
 }
@@ -56,11 +56,11 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    and     $[[RES1:[0-9]+]], $[[UB1]], $zero
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    andUb0
   ret void
@@ -79,12 +79,12 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    addiu   $[[CONST:[0-9]+]], $zero, 1
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    and     $[[RES1:[0-9]+]], $[[UB1]], $[[CONST]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    andUb1
   ret void
@@ -104,13 +104,13 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB2_ADDR:[0-9]+]], %got(ub2)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    lbu     $[[UB2:[0-9]+]], 0($[[UB2_ADDR]])
 ; CHECK-DAG:    or      $[[RES1:[0-9]+]], $[[UB2]], $[[UB1]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
   ret void
 }
@@ -127,10 +127,10 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[UB1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    orUb0
   ret void
@@ -148,12 +148,12 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    addiu   $[[CONST:[0-9]+]], $zero, 1
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    or      $[[RES1:[0-9]+]], $[[UB1]], $[[CONST]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    orUb1
   ret void
@@ -173,13 +173,13 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB2_ADDR:[0-9]+]], %got(ub2)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    lbu     $[[UB2:[0-9]+]], 0($[[UB2_ADDR]])
 ; CHECK-DAG:    xor     $[[RES1:[0-9]+]], $[[UB2]], $[[UB1]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
   ret void
 }
@@ -196,11 +196,11 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    xor     $[[RES1:[0-9]+]], $[[UB1]], $zero
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    xorUb0
   ret void
@@ -218,12 +218,12 @@ entry:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
 ; CHECK:        addu    $[[REG_GP:[0-9]+]], $[[REG_GPb]], $25
-; CHECK-DAG:    lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK-DAG:    addiu   $[[CONST:[0-9]+]], $zero, 1
 ; CHECK-DAG:    lw      $[[UB1_ADDR:[0-9]+]], %got(ub1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UB1:[0-9]+]], 0($[[UB1_ADDR]])
 ; CHECK-DAG:    xor     $[[RES1:[0-9]+]], $[[UB1]], $[[CONST]]
 ; CHECK:        andi    $[[RES:[0-9]+]], $[[RES1]], 1
+; CHECK:        lw      $[[UB_ADDR:[0-9]+]], %got(ub)($[[REG_GP]])
 ; CHECK:        sb      $[[RES]], 0($[[UB_ADDR]])
 ; CHECK:        .end    xorUb1
   ret void

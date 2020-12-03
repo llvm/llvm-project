@@ -2370,6 +2370,14 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+``G<address space>``
+    Specifies the address space to be used by default when creating global
+    variables. If omitted, the globals address space defaults to the default
+    address space 0.
+    Note: variable declarations without an address space are always created in
+    address space 0, this property only affects the default value to be used
+    when creating globals without additional contextual information (e.g. in
+    LLVM passes).
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
@@ -3649,13 +3657,13 @@ input IR as well.
 Poison Values
 -------------
 
+A poison value is a result of an erroneous operation.
 In order to facilitate speculative execution, many instructions do not
 invoke immediate undefined behavior when provided with illegal operands,
 and return a poison value instead.
-
-There is currently no way of representing a poison value in the IR; they
-only exist when produced by operations such as :ref:`add <i_add>` with
-the ``nsw`` flag.
+The string '``poison``' can be used anywhere a constant is expected, and
+operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
+a poison value.
 
 Poison value behavior is defined in terms of value *dependence*:
 
@@ -3724,13 +3732,14 @@ Here are some examples:
 
     entry:
       %poison = sub nuw i32 0, 1           ; Results in a poison value.
+      %poison2 = sub i32 poison, 1         ; Also results in a poison value.
       %still_poison = and i32 %poison, 0   ; 0, but also poison.
       %poison_yet_again = getelementptr i32, i32* @h, i32 %still_poison
       store i32 0, i32* %poison_yet_again  ; Undefined behavior due to
                                            ; store to poison.
 
       store i32 %poison, i32* @g           ; Poison value stored to memory.
-      %poison2 = load i32, i32* @g         ; Poison value loaded back from memory.
+      %poison3 = load i32, i32* @g         ; Poison value loaded back from memory.
 
       %narrowaddr = bitcast i32* @g to i16*
       %wideaddr = bitcast i32* @g to i64*
@@ -3782,6 +3791,43 @@ long as the original value is reconstituted before the ``indirectbr`` or
 
 Finally, some targets may provide defined semantics when using the value
 as the operand to an inline assembly, but that is target specific.
+
+.. _dso_local_equivalent:
+
+DSO Local Equivalent
+--------------------
+
+``dso_local_equivalent @func``
+
+A '``dso_local_equivalent``' constant represents a function which is
+functionally equivalent to a given function, but is always defined in the
+current linkage unit. The resulting pointer has the same type as the underlying
+function. The resulting pointer is permitted, but not required, to be different
+from a pointer to the function, and it may have different values in different
+translation units.
+
+The target function may not have ``extern_weak`` linkage.
+
+``dso_local_equivalent`` can be implemented as such:
+
+- If the function has local linkage, hidden visibility, or is
+  ``dso_local``, ``dso_local_equivalent`` can be implemented as simply a pointer
+  to the function.
+- ``dso_local_equivalent`` can be implemented with a stub that tail-calls the
+  function. Many targets support relocations that resolve at link time to either
+  a function or a stub for it, depending on if the function is defined within the
+  linkage unit; LLVM will use this when available. (This is commonly called a
+  "PLT stub".) On other targets, the stub may need to be emitted explicitly.
+
+This can be used wherever a ``dso_local`` instance of a function is needed without
+needing to explicitly make the original function ``dso_local``. An instance where
+this can be used is for static offset calculations between a function and some other
+``dso_local`` symbol. This is especially useful for the Relative VTables C++ ABI,
+where dynamic relocations for function pointers in VTables can be replaced with
+static relocations for offsets between the VTable and virtual functions which
+may not be ``dso_local``.
+
+This is currently only supported for ELF binary formats.
 
 .. _constantexprs:
 

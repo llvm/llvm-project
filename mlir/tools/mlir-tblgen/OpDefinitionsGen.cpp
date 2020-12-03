@@ -1627,12 +1627,12 @@ void OpEmitter::genOpInterfaceMethods() {
 }
 
 void OpEmitter::genSideEffectInterfaceMethods() {
-  enum EffectKind { Operand, Result, Static };
+  enum EffectKind { Operand, Result, Symbol, Static };
   struct EffectLocation {
     /// The effect applied.
     SideEffect effect;
 
-    /// The index if the kind is either operand or result.
+    /// The index if the kind is not static.
     unsigned index : 30;
 
     /// The kind of the location.
@@ -1661,16 +1661,28 @@ void OpEmitter::genSideEffectInterfaceMethods() {
       effects.push_back(EffectLocation{cast<SideEffect>(decorator),
                                        /*index=*/0, EffectKind::Static});
   }
-  /// Operands.
+  /// Attributes and Operands.
   for (unsigned i = 0, operandIt = 0, e = op.getNumArgs(); i != e; ++i) {
-    if (op.getArg(i).is<NamedTypeConstraint *>()) {
+    Argument arg = op.getArg(i);
+    if (arg.is<NamedTypeConstraint *>()) {
       resolveDecorators(op.getArgDecorators(i), operandIt, EffectKind::Operand);
       ++operandIt;
+      continue;
     }
+    const NamedAttribute *attr = arg.get<NamedAttribute *>();
+    if (attr->attr.getBaseAttr().isSymbolRefAttr())
+      resolveDecorators(op.getArgDecorators(i), i, EffectKind::Symbol);
   }
   /// Results.
   for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
     resolveDecorators(op.getResultDecorators(i), i, EffectKind::Result);
+
+  // The code used to add an effect instance.
+  // {0}: The effect class.
+  // {1}: Optional value or symbol reference.
+  // {1}: The resource class.
+  const char *addEffectCode =
+      "  effects.emplace_back({0}::get(), {1}{2}::get());\n";
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
@@ -1684,19 +1696,30 @@ void OpEmitter::genSideEffectInterfaceMethods() {
 
     // Add effect instances for each of the locations marked on the operation.
     for (auto &location : it.second) {
-      if (location.kind != EffectKind::Static) {
+      StringRef effect = location.effect.getName();
+      StringRef resource = location.effect.getResource();
+      if (location.kind == EffectKind::Static) {
+        // A static instance has no attached value.
+        body << llvm::formatv(addEffectCode, effect, "", resource).str();
+      } else if (location.kind == EffectKind::Symbol) {
+        // A symbol reference requires adding the proper attribute.
+        const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
+        if (attr->attr.isOptional()) {
+          body << "  if (auto symbolRef = " << attr->name << "Attr())\n  "
+               << llvm::formatv(addEffectCode, effect, "symbolRef, ", resource)
+                      .str();
+        } else {
+          body << llvm::formatv(addEffectCode, effect, attr->name + "(), ",
+                                resource)
+                      .str();
+        }
+      } else {
+        // Otherwise this is an operand/result, so we need to attach the Value.
         body << "  for (::mlir::Value value : getODS"
              << (location.kind == EffectKind::Operand ? "Operands" : "Results")
-             << "(" << location.index << "))\n  ";
+             << "(" << location.index << "))\n  "
+             << llvm::formatv(addEffectCode, effect, "value, ", resource).str();
       }
-
-      body << "  effects.emplace_back(" << location.effect.getName()
-           << "::get()";
-
-      // If the effect isn't static, it has a specific value attached to it.
-      if (location.kind != EffectKind::Static)
-        body << ", value";
-      body << ", " << location.effect.getResource() << "::get());\n";
     }
   }
 }

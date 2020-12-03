@@ -89,6 +89,12 @@ namespace llvm {
     FRE,
     FRSQRTE,
 
+    /// Test instruction for software square root.
+    FTSQRT,
+
+    /// Square root instruction.
+    FSQRT,
+
     /// VPERM - The PPC VPERM Instruction.
     ///
     VPERM,
@@ -788,12 +794,6 @@ namespace llvm {
     ///
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-    /// LowerOperationWrapper - Place custom new result values for node in
-    /// Results.
-    void LowerOperationWrapper(SDNode *N,
-                               SmallVectorImpl<SDValue> &Results,
-                               SelectionDAG &DAG) const override;
-
     /// ReplaceNodeResults - Replace the results of node with an illegal result
     /// type with new values built out of custom code.
     ///
@@ -1160,7 +1160,6 @@ namespace llvm {
     SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
 
@@ -1289,6 +1288,10 @@ namespace llvm {
                             bool Reciprocal) const override;
     SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
+    SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
+                             const DenormalMode &Mode) const override;
+    SDValue getSqrtResultForDenormInput(SDValue Operand,
+                                        SelectionDAG &DAG) const override;
     unsigned combineRepeatedFPDivisors() const override;
 
     SDValue

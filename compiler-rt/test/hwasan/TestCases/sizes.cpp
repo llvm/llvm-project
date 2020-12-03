@@ -49,8 +49,6 @@ int main(int argc, char **argv) {
   if (!untag_strcmp(argv[1], "malloc")) {
     void *p = malloc(MallocSize);
     assert(!p);
-    p = malloc(kMaxAllowedMallocSize - kChunkHeaderSize);
-    assert(!p);
   } else if (!untag_strcmp(argv[1], "calloc")) {
     // Trigger an overflow in calloc.
     size_t size = std::numeric_limits<size_t>::max();

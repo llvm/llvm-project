@@ -388,7 +388,8 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
 
       process_sp =
           target->CreateProcess(attach_info.GetListenerForProcess(debugger),
-                                attach_info.GetProcessPluginName(), nullptr);
+                                attach_info.GetProcessPluginName(), nullptr,
+                                false);
 
       if (process_sp) {
         ListenerSP listener_sp = attach_info.GetHijackListener();
@@ -468,7 +469,8 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
   // Now create the gdb-remote process.
   LLDB_LOG(log, "having target create process with gdb-remote plugin");
   process_sp =
-      target->CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr);
+      target->CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr,
+                            true);
 
   if (!process_sp) {
     error.SetErrorString("CreateProcess() failed for gdb-remote process");

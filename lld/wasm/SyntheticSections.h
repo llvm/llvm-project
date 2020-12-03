@@ -119,13 +119,13 @@ public:
   }
 
   std::vector<const Symbol *> importedSymbols;
+  std::vector<const Symbol *> gotSymbols;
 
 protected:
   bool isSealed = false;
   unsigned numImportedGlobals = 0;
   unsigned numImportedFunctions = 0;
   unsigned numImportedEvents = 0;
-  std::vector<const Symbol *> gotSymbols;
 };
 
 class FunctionSection : public SyntheticSection {
@@ -221,11 +221,11 @@ public:
   void generateRelocationCode(raw_ostream &os) const;
 
   std::vector<const DefinedData *> dataAddressGlobals;
+  std::vector<InputGlobal *> inputGlobals;
+  std::vector<Symbol *> internalGotSymbols;
 
 protected:
   bool isSealed = false;
-  std::vector<InputGlobal *> inputGlobals;
-  std::vector<Symbol *> internalGotSymbols;
 };
 
 class ExportSection : public SyntheticSection {
@@ -302,7 +302,9 @@ public:
     return !config->stripDebug && !config->stripAll && numNames() > 0;
   }
   void writeBody() override;
-  unsigned numNames() const;
+  unsigned numNames() const { return numNamedGlobals() + numNamedFunctions(); }
+  unsigned numNamedGlobals() const;
+  unsigned numNamedFunctions() const;
 };
 
 class ProducersSection : public SyntheticSection {

@@ -1101,7 +1101,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   // integer is large enough to represent the pointer.
   unsigned IntegerSize = I.getType()->getScalarSizeInBits();
   unsigned AS = I.getOperand(0)->getType()->getPointerAddressSpace();
-  if (IntegerSize >= DL.getPointerSizeInBits(AS)) {
+  if (IntegerSize == DL.getPointerSizeInBits(AS)) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
@@ -1911,6 +1911,10 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (isa<DbgInfoIntrinsic>(I))
       continue;
 
+    // Skip pseudo-probes.
+    if (isa<PseudoProbeInst>(I))
+      continue;
+
     // Skip ephemeral values.
     if (EphValues.count(&*I))
       continue;
@@ -2574,7 +2578,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   // We can add a flag which determines InlineParams for this run. Right now,
   // the default InlineParams are used.
   const InlineParams Params = llvm::getInlineParams();
-    for (BasicBlock &BB : F) {
+  for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         Function *CalledFunction = CI->getCalledFunction();

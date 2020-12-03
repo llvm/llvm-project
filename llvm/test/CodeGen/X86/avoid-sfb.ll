@@ -724,7 +724,7 @@ if.end:                                           ; preds = %if.then, %entry
 %struct.S6 = type { [4 x i32], i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_stack(%struct.S6* noalias nocapture sret %agg.result, %struct.S6* byval nocapture readnone align 8 %s1, %struct.S6* byval nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
+define void @test_stack(%struct.S6* noalias nocapture sret(%struct.S6) %agg.result, %struct.S6* byval(%struct.S6) nocapture readnone align 8 %s1, %struct.S6* byval(%struct.S6) nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_stack:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax

@@ -270,6 +270,19 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
     SubSection.done();
   }
+  if (Section.GlobalNames.size()) {
+    writeUint8(OS, wasm::WASM_NAMES_GLOBAL);
+
+    SubSectionWriter SubSection(OS);
+
+    encodeULEB128(Section.GlobalNames.size(), SubSection.getStream());
+    for (const WasmYAML::NameEntry &NameEntry : Section.GlobalNames) {
+      encodeULEB128(NameEntry.Index, SubSection.getStream());
+      writeStringRef(NameEntry.Name, SubSection.getStream());
+    }
+
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,

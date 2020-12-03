@@ -108,6 +108,16 @@ extern "C" void mgpuEventRecord(hipEvent_t event, hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipEventRecord(event, stream));
 }
 
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, hipStream_t /*stream*/) {
+  void *ptr;
+  HIP_REPORT_IF_ERROR(hipMemAlloc(&ptr, sizeBytes));
+  return ptr;
+}
+
+extern "C" void mgpuMemFree(void *ptr, hipStream_t /*stream*/) {
+  HIP_REPORT_IF_ERROR(hipMemFree(ptr));
+}
+
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have

@@ -885,14 +885,6 @@ def ARMv6j   : Architecture<"armv6j",      "ARMv7a",   [ARMv6]>;
 def ARMv7k   : Architecture<"armv7k",      "ARMv7a",   [ARMv7a]>;
 def ARMv7s   : Architecture<"armv7s",      "ARMv7a",   [ARMv7a]>;
 
-
-//===----------------------------------------------------------------------===//
-// ARM schedules.
-//===----------------------------------------------------------------------===//
-//
-include "ARMPredicates.td"
-include "ARMSchedule.td"
-
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//
@@ -900,6 +892,13 @@ include "ARMSchedule.td"
 include "ARMRegisterInfo.td"
 include "ARMRegisterBanks.td"
 include "ARMCallingConv.td"
+
+//===----------------------------------------------------------------------===//
+// ARM schedules.
+//===----------------------------------------------------------------------===//
+//
+include "ARMPredicates.td"
+include "ARMSchedule.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions
@@ -1299,6 +1298,11 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCrypto,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
+
+def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+                                                         FeatureBF16,
+                                                         FeatureMatMulInt8,
+                                                         FeaturePerfMon]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasRetAddrStack,

@@ -34,7 +34,10 @@ void ProcessTrace::Terminate() {
 
 ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        ListenerSP listener_sp,
-                                       const FileSpec *crash_file) {
+                                       const FileSpec *crash_file,
+                                       bool can_connect) {
+  if (can_connect)
+    return nullptr;
   return std::make_shared<ProcessTrace>(target_sp, listener_sp);
 }
 
@@ -43,7 +46,7 @@ bool ProcessTrace::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
 }
 
 ProcessTrace::ProcessTrace(TargetSP target_sp, ListenerSP listener_sp)
-    : Process(target_sp, listener_sp) {}
+    : PostMortemProcess(target_sp, listener_sp) {}
 
 ProcessTrace::~ProcessTrace() {
   Clear();

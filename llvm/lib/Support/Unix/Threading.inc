@@ -28,6 +28,7 @@
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <errno.h>
+#include <sys/cpuset.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <unistd.h>
@@ -282,7 +283,13 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 #include <thread>
 
 int computeHostNumHardwareThreads() {
-#ifdef __linux__
+#if defined(__FreeBSD__)
+  cpuset_t mask;
+  CPU_ZERO(&mask);
+  if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(mask),
+                         &mask) == 0)
+    return CPU_COUNT(&mask);
+#elif defined(__linux__)
   cpu_set_t Set;
   if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);

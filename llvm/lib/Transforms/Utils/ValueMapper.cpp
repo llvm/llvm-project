@@ -172,7 +172,6 @@ private:
                             bool IsOldCtorDtor,
                             ArrayRef<Constant *> NewMembers);
   void mapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS, Constant &Target);
-  void remapFunction(Function &F, ValueToValueMapTy &VM);
 
   ValueToValueMapTy &getVM() { return *MCs[CurrentMCID].VM; }
   ValueMaterializer *getMaterializer() { return MCs[CurrentMCID].Materializer; }

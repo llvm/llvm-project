@@ -110,7 +110,7 @@ entry:
   ret i32 %tmp
 }
 
-define void @sret_arg(i32* sret %agg.result, i8* nocapture readnone %format, ...) {
+define void @sret_arg(i32* sret(i32) %agg.result, i8* nocapture readnone %format, ...) {
 entry:
   %ap = alloca i8*
   %ap_i8 = bitcast i8** %ap to i8*

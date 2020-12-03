@@ -14,6 +14,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
@@ -304,7 +305,9 @@ TEST(SerializationTest, CmdlTest) {
   }
 }
 
-#if LLVM_ON_UNIX // rlimit is part of POSIX
+// rlimit is part of POSIX.
+// ASan uses a lot of address space, so we can't apply strict limits.
+#if LLVM_ON_UNIX && !LLVM_ADDRESS_SANITIZER_BUILD
 class ScopedMemoryLimit {
   struct rlimit OriginalLimit;
   bool Succeeded = false;
@@ -381,6 +384,46 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
   ASSERT_TRUE(!CorruptParsed);
   EXPECT_EQ(llvm::toString(CorruptParsed.takeError()),
             "malformed or truncated include uri");
+}
+
+// Check we detect invalid string table size size without allocating it first.
+// If this detection fails, the test should allocate a huge array and crash.
+TEST(SerializationTest, NoCrashOnBadStringTableSize) {
+  if (!llvm::zlib::isAvailable()) {
+    log("skipping test, no zlib");
+    return;
+  }
+
+  // First, create a valid serialized file.
+  auto In = readIndexFile(YAML);
+  ASSERT_FALSE(!In) << In.takeError();
+  IndexFileOut Out(*In);
+  Out.Format = IndexFileFormat::RIFF;
+  std::string Serialized = llvm::to_string(Out);
+
+  // Low-level parse it again, we're going to replace the `stri` chunk.
+  auto Parsed = riff::readFile(Serialized);
+  ASSERT_FALSE(!Parsed) << Parsed.takeError();
+  auto Stri = llvm::find_if(Parsed->Chunks, [](riff::Chunk C) {
+    return C.ID == riff::fourCC("stri");
+  });
+  ASSERT_NE(Stri, Parsed->Chunks.end());
+
+  // stri consists of an 8 byte uncompressed-size, and then compressed data.
+  // We'll claim our small amount of data expands to 4GB
+  std::string CorruptStri =
+      (llvm::fromHex("ffffffff") + Stri->Data.drop_front(4)).str();
+  Stri->Data = CorruptStri;
+  std::string FileDigest = llvm::fromHex("EED8F5EAF25C453C");
+
+  // Try to crash rather than hang on large allocation.
+  ScopedMemoryLimit MemLimit(1000 * 1024 * 1024); // 1GB
+
+  std::string CorruptFile = llvm::to_string(*Parsed);
+  auto CorruptParsed = readIndexFile(CorruptFile);
+  ASSERT_TRUE(!CorruptParsed);
+  EXPECT_THAT(llvm::toString(CorruptParsed.takeError()),
+              testing::HasSubstr("bytes is implausible"));
 }
 
 } // namespace

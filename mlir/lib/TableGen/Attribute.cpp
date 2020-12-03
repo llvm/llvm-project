@@ -55,6 +55,13 @@ bool Attribute::isDerivedAttr() const { return isSubClassOf("DerivedAttr"); }
 
 bool Attribute::isTypeAttr() const { return isSubClassOf("TypeAttrBase"); }
 
+bool Attribute::isSymbolRefAttr() const {
+  StringRef defName = def->getName();
+  if (defName == "SymbolRefAttr" || defName == "FlatSymbolRefAttr")
+    return true;
+  return isSubClassOf("SymbolRefAttr") || isSubClassOf("FlatSymbolRefAttr");
+}
+
 bool Attribute::isEnumAttr() const { return isSubClassOf("EnumAttrInfo"); }
 
 StringRef Attribute::getStorageType() const {

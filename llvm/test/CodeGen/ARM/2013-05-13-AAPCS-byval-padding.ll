@@ -5,7 +5,7 @@
 
 define void @check227(
                       i32 %b,
-                      %struct.S227* byval nocapture %arg0,
+                      %struct.S227* byval(%struct.S227) nocapture %arg0,
                       %struct.S227* %arg1) {
 ; b --> R0
 ; arg0 --> [R1, R2, R3, SP+0 .. SP+188)

@@ -22,6 +22,10 @@ add_llvm_component_library(LLVMExecutionEngine
   Target
   )
 
+if(BUILD_SHARED_LIBS)
+  target_link_libraries(LLVMExecutionEngine PUBLIC LLVMRuntimeDyld)
+endif()
+
 add_subdirectory(Interpreter)
 add_subdirectory(JITLink)
 add_subdirectory(MCJIT)

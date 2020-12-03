@@ -4514,7 +4514,7 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getDirect();
 
   if (RetTy->isVectorType())
-    llvm::report_fatal_error("vector type is not supported on AIX yet");
+    return ABIArgInfo::getDirect();
 
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -4533,7 +4533,7 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     return ABIArgInfo::getDirect();
 
   if (Ty->isVectorType())
-    llvm::report_fatal_error("vector type is not supported on AIX yet");
+    return ABIArgInfo::getDirect();
 
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
@@ -4558,7 +4558,7 @@ CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
     Ty = CTy->getElementType();
 
   if (Ty->isVectorType())
-    llvm::report_fatal_error("vector type is not supported on AIX yet");
+    return CharUnits::fromQuantity(16);
 
   // If the structure contains a vector type, the alignment is 16.
   if (isRecordWithSIMDVectorType(getContext(), Ty))
@@ -4573,7 +4573,8 @@ Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     llvm::report_fatal_error("complex type is not supported on AIX yet");
 
   if (Ty->isVectorType())
-    llvm::report_fatal_error("vector type is not supported on AIX yet");
+    llvm::report_fatal_error(
+        "vector types are not yet supported for variadic functions on AIX");
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
@@ -5051,6 +5052,11 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
     return CharUnits::fromQuantity(16);
   } else if (Ty->isVectorType()) {
     return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16 : 8);
+  } else if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128) {
+    // IEEE 128-bit floating numbers are also stored in vector registers.
+    // And both IEEE quad-precision and IBM extended double (ppc_fp128) should
+    // be quad-word aligned.
+    return CharUnits::fromQuantity(16);
   }
 
   // For single-element float/vector structs, we consider the whole type
@@ -10389,7 +10395,7 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!IsRetIndirect && RetTy->isScalarType() &&
       getContext().getTypeSize(RetTy) > (2 * XLen)) {
     if (RetTy->isComplexType() && FLen) {
-      QualType EltTy = RetTy->getAs<ComplexType>()->getElementType();
+      QualType EltTy = RetTy->castAs<ComplexType>()->getElementType();
       IsRetIndirect = getContext().getTypeSize(EltTy) > FLen;
     } else {
       // This is a normal scalar > 2*XLen, such as fp128 on RV32.

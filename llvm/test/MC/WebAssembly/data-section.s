@@ -45,14 +45,6 @@ test0:
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
 # BIN-NEXT:           Initial:         0x1
-# BIN-NEXT:       - Module:          env
-# BIN-NEXT:         Field:           __indirect_function_table
-# BIN-NEXT:         Kind:            TABLE
-# BIN-NEXT:         Table:
-# BIN-NEXT:           Index:           0
-# BIN-NEXT:           ElemType:        FUNCREF
-# BIN-NEXT:           Limits:
-# BIN-NEXT:             Initial:         0x0
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            DATACOUNT

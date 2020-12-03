@@ -1223,3 +1223,61 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+#trait_sum_reduction = {
+  indexing_maps = [
+    affine_map<(i,j,k) -> (i,j,k)>,  // a
+    affine_map<(i,j,k) -> ()>        // x (scalar out)
+  ],
+  sparse = [
+    [ "S", "S", "S" ],  // a
+    [ ]                 // x
+  ],
+  iterator_types = ["reduction", "reduction", "reduction"],
+  doc = "x = SUM_ijk a(i,j,k)"
+}
+
+// CHECK-LABEL:   func @sum_reduction(
+// CHECK-SAME:                        %[[VAL_0:.*]]: tensor<10x20x30xf32>,
+// CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[VAL_2:.*]] = constant 999 : index
+// CHECK:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = alloca(%[[VAL_2]]) : memref<?xf32>
+// CHECK:           %[[VAL_12:.*]] = alloca() : memref<f32>
+// CHECK:           %[[VAL_13:.*]] = load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_14]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_16:.*]] = load %[[VAL_7]]{{\[}}%[[VAL_15]]] : memref<?xindex>
+// CHECK:             %[[VAL_17:.*]] = addi %[[VAL_15]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_18:.*]] = load %[[VAL_7]]{{\[}}%[[VAL_17]]] : memref<?xindex>
+// CHECK:             scf.for %[[VAL_19:.*]] = %[[VAL_16]] to %[[VAL_18]] step %[[VAL_4]] {
+// CHECK:               %[[VAL_20:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_19]]] : memref<?xindex>
+// CHECK:               %[[VAL_21:.*]] = addi %[[VAL_19]], %[[VAL_4]] : index
+// CHECK:               %[[VAL_22:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_21]]] : memref<?xindex>
+// CHECK:               scf.for %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_22]] step %[[VAL_4]] {
+// CHECK:                 %[[VAL_24:.*]] = load %[[VAL_12]][] : memref<f32>
+// CHECK:                 %[[VAL_25:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_23]]] : memref<?xf32>
+// CHECK:                 %[[VAL_26:.*]] = addf %[[VAL_24]], %[[VAL_25]] : f32
+// CHECK:                 store %[[VAL_26]], %[[VAL_12]][] : memref<f32>
+// CHECK:               }
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[VAL_27:.*]] = tensor_load %[[VAL_12]] : memref<f32>
+// CHECK:           return %[[VAL_27]] : tensor<f32>
+// CHECK:         }
+func @sum_reduction(%arga: tensor<10x20x30xf32>, %argx: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic #trait_sum_reduction
+    ins(%arga : tensor<10x20x30xf32>)
+    init(%argx : tensor<f32>) {
+      ^bb(%a : f32, %x : f32):
+        %0 = addf %x, %a  : f32
+        linalg.yield %0: f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}

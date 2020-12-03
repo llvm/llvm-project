@@ -205,7 +205,8 @@ void ProcessGDBRemote::Terminate() {
 lldb::ProcessSP
 ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
-                                 const FileSpec *crash_file_path) {
+                                 const FileSpec *crash_file_path,
+                                 bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file_path == nullptr)
     process_sp = std::make_shared<ProcessGDBRemote>(target_sp, listener_sp);

@@ -14,7 +14,7 @@ target triple = "x86_64--"
 ; CHECK-NOT: pushq
 ; CHECK: movl $42, %eax
 ; CHECK: retq
-define i32 @f0(%struct.s* byval align 8 %input) !dbg !8 {
+define i32 @f0(%struct.s* byval(%struct.s) align 8 %input) !dbg !8 {
   call void @llvm.dbg.declare(metadata %struct.s* %input, metadata !4, metadata !17), !dbg !18
   ret i32 42, !dbg !18
 }
@@ -36,7 +36,7 @@ define i32 @f0(%struct.s* byval align 8 %input) !dbg !8 {
 ; CHECK: movl $42, %eax
 ; CHECK: popq %rbp
 ; CHECK: retq
-define i32 @f1(%struct.s* byval align 8 %input) !dbg !19 {
+define i32 @f1(%struct.s* byval(%struct.s) align 8 %input) !dbg !19 {
   %val = load i64, i64* @glob
   ; this alloca should force FP usage.
   %stackspace = alloca i32, i64 %val, align 1
@@ -61,7 +61,7 @@ define i32 @f1(%struct.s* byval align 8 %input) !dbg !19 {
 ; CHECK: andq $-64, %rsp
 ; CHECK: subq $64, %rsp
 ; CHECK: movq %rsp, %rbx
-define i32 @f2(%struct.s* byval align 8 %input) !dbg !22 {
+define i32 @f2(%struct.s* byval(%struct.s) align 8 %input) !dbg !22 {
   %val = load i64, i64* @glob
   %stackspace = alloca i32, i64 %val, align 64
   store i32* %stackspace, i32** @ptr

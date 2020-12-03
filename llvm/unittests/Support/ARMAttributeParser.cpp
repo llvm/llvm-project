@@ -127,6 +127,10 @@ TEST(ThumbISABuildAttr, testBuildAttr) {
                                ARMBuildAttrs::Not_Allowed));
   EXPECT_TRUE(testBuildAttr(9, 1, ARMBuildAttrs::THUMB_ISA_use,
                                ARMBuildAttrs::Allowed));
+  EXPECT_TRUE(testBuildAttr(9, 2, ARMBuildAttrs::THUMB_ISA_use,
+                               ARMBuildAttrs::AllowThumb32));
+  EXPECT_TRUE(testBuildAttr(9, 3, ARMBuildAttrs::THUMB_ISA_use,
+                               ARMBuildAttrs::AllowThumbDerived));
 }
 
 TEST(FPArchBuildAttr, testBuildAttr) {

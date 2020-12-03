@@ -307,6 +307,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
         TM.getTargetTriple().str(), TM.getTargetCPU(),
         TM.getTargetFeatureString()));
+    assert(STI && "Unable to create subtarget info");
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->AddBlankLine();
     emitInlineAsm(M.getModuleInlineAsm() + "\n",
@@ -2341,6 +2342,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
     return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
 
+  if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
+    return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
+
   const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
   if (!CE) {
     llvm_unreachable("Unknown constant value to lower!");
@@ -2437,18 +2441,25 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   case Instruction::Sub: {
     GlobalValue *LHSGV;
     APInt LHSOffset;
+    DSOLocalEquivalent *DSOEquiv;
     if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHSGV, LHSOffset,
-                                   getDataLayout())) {
+                                   getDataLayout(), &DSOEquiv)) {
       GlobalValue *RHSGV;
       APInt RHSOffset;
       if (IsConstantOffsetFromGlobal(CE->getOperand(1), RHSGV, RHSOffset,
                                      getDataLayout())) {
         const MCExpr *RelocExpr =
             getObjFileLowering().lowerRelativeReference(LHSGV, RHSGV, TM);
-        if (!RelocExpr)
+        if (!RelocExpr) {
+          const MCExpr *LHSExpr =
+              MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx);
+          if (DSOEquiv &&
+              getObjFileLowering().supportDSOLocalEquivalentLowering())
+            LHSExpr =
+                getObjFileLowering().lowerDSOLocalEquivalent(DSOEquiv, TM);
           RelocExpr = MCBinaryExpr::createSub(
-              MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx),
-              MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx), Ctx);
+              LHSExpr, MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx), Ctx);
+        }
         int64_t Addend = (LHSOffset - RHSOffset).getSExtValue();
         if (Addend != 0)
           RelocExpr = MCBinaryExpr::createAdd(

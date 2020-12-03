@@ -1248,7 +1248,8 @@ private:
       // catch loop carried dependences.
       if (Location.Ptr &&
           !IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
-        CurrentPair.second = Location.getWithNewSize(LocationSize::unknown());
+        CurrentPair.second =
+            Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
@@ -1262,8 +1263,8 @@ private:
 
           if (TransAddr &&
               !IsGuaranteedLoopInvariant(const_cast<Value *>(TransAddr)))
-            CurrentPair.second =
-                CurrentPair.second.getWithNewSize(LocationSize::unknown());
+            CurrentPair.second = CurrentPair.second.getWithNewSize(
+                LocationSize::beforeOrAfterPointer());
 
           if (PerformedPhiTranslation)
             *PerformedPhiTranslation = true;

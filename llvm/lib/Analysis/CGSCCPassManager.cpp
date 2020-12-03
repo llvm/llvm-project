@@ -20,6 +20,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerImpl.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -476,9 +477,9 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   // First walk the function and handle all called functions. We do this first
   // because if there is a single call edge, whether there are ref edges is
   // irrelevant.
-  for (Instruction &I : instructions(F))
-    if (auto *CB = dyn_cast<CallBase>(&I))
-      if (Function *Callee = CB->getCalledFunction())
+  for (Instruction &I : instructions(F)) {
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (Function *Callee = CB->getCalledFunction()) {
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
           Node *CalleeN = G.lookup(*Callee);
           if (!CalleeN) {
@@ -498,6 +499,17 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
           else if (!E->isCall())
             PromotedRefTargets.insert(CalleeN);
         }
+      } else {
+        // We can miss devirtualization if an indirect call is created then
+        // promoted before updateCGAndAnalysisManagerForPass runs.
+        auto *Entry = UR.IndirectVHs.find(CB);
+        if (Entry == UR.IndirectVHs.end())
+          UR.IndirectVHs.insert({CB, WeakTrackingVH(CB)});
+        else if (!Entry->second)
+          Entry->second = WeakTrackingVH(CB);
+      }
+    }
+  }
 
   // Now walk all references.
   for (Instruction &I : instructions(F))

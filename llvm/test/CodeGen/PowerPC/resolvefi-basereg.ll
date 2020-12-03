@@ -332,15 +332,15 @@ if.end:                                           ; preds = %if.then, %entry
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %62, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %63 = bitcast %struct.S1998* %agg.tmp112 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %63, i8* align 16 bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
-  call void @check1998(%struct.S1998* sret %agg.tmp, %struct.S1998* byval align 16 %agg.tmp111, %struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 1), %struct.S1998* byval align 16 %agg.tmp112)
-  call void @checkx1998(%struct.S1998* byval align 16 %agg.tmp)
+  call void @check1998(%struct.S1998* sret(%struct.S1998) %agg.tmp, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp111, %struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 1), %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp112)
+  call void @checkx1998(%struct.S1998* byval(%struct.S1998) align 16 %agg.tmp)
   %64 = bitcast %struct.S1998* %agg.tmp113 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %64, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %65 = bitcast %struct.S1998* %agg.tmp114 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %65, i8* align 16 bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   %66 = bitcast %struct.S1998* %agg.tmp115 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %66, i8* align 16 bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
-  call void (i32, ...) @check1998va(i32 signext 1, double 1.000000e+00, %struct.S1998* byval align 16 %agg.tmp113, i64 2, %struct.S1998* byval align 16 %agg.tmp114, %struct.S1998* byval align 16 %agg.tmp115)
+  call void (i32, ...) @check1998va(i32 signext 1, double 1.000000e+00, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp113, i64 2, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp114, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp115)
   %67 = bitcast %struct.S1998* %agg.tmp116 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %67, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %68 = bitcast %struct.S1998* %agg.tmp117 to i8*
@@ -349,14 +349,14 @@ if.end:                                           ; preds = %if.then, %entry
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %69, i8* align 16 bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
   %70 = bitcast %struct.S1998* %agg.tmp119 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %70, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
-  call void (i32, ...) @check1998va(i32 signext 2, %struct.S1998* byval align 16 %agg.tmp116, %struct.S1998* byval align 16 %agg.tmp117, ppc_fp128 0xM40000000000000000000000000000000, %struct.S1998* byval align 16 %agg.tmp118, %struct.S1998* byval align 16 %agg.tmp119)
+  call void (i32, ...) @check1998va(i32 signext 2, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp116, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp117, ppc_fp128 0xM40000000000000000000000000000000, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp118, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp119)
   ret void
 }
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 
-declare void @check1998(%struct.S1998* sret, %struct.S1998* byval align 16, %struct.S1998*, %struct.S1998* byval align 16)
+declare void @check1998(%struct.S1998* sret(%struct.S1998), %struct.S1998* byval(%struct.S1998) align 16, %struct.S1998*, %struct.S1998* byval(%struct.S1998) align 16)
 declare void @check1998va(i32 signext, ...)
-declare void @checkx1998(%struct.S1998* byval align 16 %arg)
+declare void @checkx1998(%struct.S1998* byval(%struct.S1998) align 16 %arg)
 

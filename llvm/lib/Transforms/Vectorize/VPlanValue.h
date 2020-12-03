@@ -87,11 +87,14 @@ public:
   /// type identification.
   enum {
     VPValueSC,
-    VPInstructionSC,
-    VPMemoryInstructionSC,
+    VPVInstructionSC,
+    VPVMemoryInstructionSC,
+    VPVReductionSC,
+    VPVReplicateSC,
+    VPVWidenSC,
     VPVWidenCallSC,
+    VPVWidenGEPSC,
     VPVWidenSelectSC,
-    VPVWidenGEPSC
   };
 
   VPValue(Value *UV = nullptr, VPDef *Def = nullptr)

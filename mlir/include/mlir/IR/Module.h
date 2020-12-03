@@ -14,6 +14,6 @@
 #define MLIR_IR_MODULE_H
 
 // TODO: This is a temporary forward until Module.h is removed.
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 
 #endif // MLIR_IR_MODULE_H

@@ -44,7 +44,7 @@ STATISTIC(NumIndirectGlobalVars, "Number of indirect global objects");
 // An option to enable unsafe alias results from the GlobalsModRef analysis.
 // When enabled, GlobalsModRef will provide no-alias results which in extremely
 // rare cases may not be conservatively correct. In particular, in the face of
-// transforms which cause assymetry between how effective getUnderlyingObject
+// transforms which cause asymmetry between how effective getUnderlyingObject
 // is for two pointers, it may produce incorrect results.
 //
 // These unsafe results have been returned by GMR for many years without
@@ -921,8 +921,9 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
     if (!all_of(Objects, isIdentifiedObject) &&
         // Try ::alias to see if all objects are known not to alias GV.
         !all_of(Objects, [&](const Value *V) {
-          return this->alias(MemoryLocation(V), MemoryLocation(GV), AAQI) ==
-                 NoAlias;
+          return this->alias(MemoryLocation::getBeforeOrAfter(V),
+                             MemoryLocation::getBeforeOrAfter(GV),
+                             AAQI) == NoAlias;
         }))
       return ConservativeResult;
 

@@ -153,7 +153,8 @@ public:
     void resize(size_type n, value_type c);
     void resize(size_type n);
 
-    void reserve(size_type res_arg = 0);
+    void reserve(size_type res_arg);
+    void reserve(); // deprecated in C++20
     void shrink_to_fit();
     void clear() noexcept;
     bool empty() const noexcept;
@@ -448,15 +449,15 @@ typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 
-int                stoi  (const string& str, size_t* idx = 0, int base = 10);
-long               stol  (const string& str, size_t* idx = 0, int base = 10);
-unsigned long      stoul (const string& str, size_t* idx = 0, int base = 10);
-long long          stoll (const string& str, size_t* idx = 0, int base = 10);
-unsigned long long stoull(const string& str, size_t* idx = 0, int base = 10);
+int                stoi  (const string& str, size_t* idx = nullptr, int base = 10);
+long               stol  (const string& str, size_t* idx = nullptr, int base = 10);
+unsigned long      stoul (const string& str, size_t* idx = nullptr, int base = 10);
+long long          stoll (const string& str, size_t* idx = nullptr, int base = 10);
+unsigned long long stoull(const string& str, size_t* idx = nullptr, int base = 10);
 
-float       stof (const string& str, size_t* idx = 0);
-double      stod (const string& str, size_t* idx = 0);
-long double stold(const string& str, size_t* idx = 0);
+float       stof (const string& str, size_t* idx = nullptr);
+double      stod (const string& str, size_t* idx = nullptr);
+long double stold(const string& str, size_t* idx = nullptr);
 
 string to_string(int val);
 string to_string(unsigned val);
@@ -468,15 +469,15 @@ string to_string(float val);
 string to_string(double val);
 string to_string(long double val);
 
-int                stoi  (const wstring& str, size_t* idx = 0, int base = 10);
-long               stol  (const wstring& str, size_t* idx = 0, int base = 10);
-unsigned long      stoul (const wstring& str, size_t* idx = 0, int base = 10);
-long long          stoll (const wstring& str, size_t* idx = 0, int base = 10);
-unsigned long long stoull(const wstring& str, size_t* idx = 0, int base = 10);
+int                stoi  (const wstring& str, size_t* idx = nullptr, int base = 10);
+long               stol  (const wstring& str, size_t* idx = nullptr, int base = 10);
+unsigned long      stoul (const wstring& str, size_t* idx = nullptr, int base = 10);
+long long          stoll (const wstring& str, size_t* idx = nullptr, int base = 10);
+unsigned long long stoull(const wstring& str, size_t* idx = nullptr, int base = 10);
 
-float       stof (const wstring& str, size_t* idx = 0);
-double      stod (const wstring& str, size_t* idx = 0);
-long double stold(const wstring& str, size_t* idx = 0);
+float       stof (const wstring& str, size_t* idx = nullptr);
+double      stod (const wstring& str, size_t* idx = nullptr);
+long double stold(const wstring& str, size_t* idx = nullptr);
 
 wstring to_wstring(int val);
 wstring to_wstring(unsigned val);
@@ -954,13 +955,13 @@ public:
     void resize(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
-    void reserve(size_type __res_arg);
+    void reserve(size_type __requested_capacity);
     _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
 
+    _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
+    void reserve() _NOEXCEPT {shrink_to_fit();}
     _LIBCPP_INLINE_VISIBILITY
-    void reserve() _NOEXCEPT {reserve(0);}
-    _LIBCPP_INLINE_VISIBILITY
-    void shrink_to_fit() _NOEXCEPT {reserve();}
+    void shrink_to_fit() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT;
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
@@ -1417,6 +1418,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
     _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink() _NOEXCEPT;
+
+    _LIBCPP_INLINE_VISIBILITY void __shrink_or_extend(size_type __target_capacity);
 
     _LIBCPP_INLINE_VISIBILITY
     bool __is_long() const _NOEXCEPT
@@ -3262,65 +3265,88 @@ basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
 
 template <class _CharT, class _Traits, class _Allocator>
 void
-basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __res_arg)
+basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __requested_capacity)
 {
-    if (__res_arg > max_size())
+    if (__requested_capacity > max_size())
         this->__throw_length_error();
+
+#if _LIBCPP_STD_VER > 17
+    // Reserve never shrinks as of C++20.
+    if (__requested_capacity <= capacity()) return;
+#endif
+
+    size_type __target_capacity = _VSTD::max(__requested_capacity, size());
+    __target_capacity = __recommend(__target_capacity);
+    if (__target_capacity == capacity()) return;
+
+    __shrink_or_extend(__target_capacity);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void
+basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT
+{
+    size_type __target_capacity = __recommend(size());
+    if (__target_capacity == capacity()) return;
+
+    __shrink_or_extend(__target_capacity);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void
+basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity)
+{
     size_type __cap = capacity();
     size_type __sz = size();
-    __res_arg = _VSTD::max(__res_arg, __sz);
-    __res_arg = __recommend(__res_arg);
-    if (__res_arg != __cap)
+
+    pointer __new_data, __p;
+    bool __was_long, __now_long;
+    if (__target_capacity == __min_cap - 1)
     {
-        pointer __new_data, __p;
-        bool __was_long, __now_long;
-        if (__res_arg == __min_cap - 1)
-        {
-            __was_long = true;
-            __now_long = false;
-            __new_data = __get_short_pointer();
-            __p = __get_long_pointer();
-        }
-        else
-        {
-            if (__res_arg > __cap)
-                __new_data = __alloc_traits::allocate(__alloc(), __res_arg+1);
-            else
-            {
-            #ifndef _LIBCPP_NO_EXCEPTIONS
-                try
-                {
-            #endif  // _LIBCPP_NO_EXCEPTIONS
-                    __new_data = __alloc_traits::allocate(__alloc(), __res_arg+1);
-            #ifndef _LIBCPP_NO_EXCEPTIONS
-                }
-                catch (...)
-                {
-                    return;
-                }
-            #else  // _LIBCPP_NO_EXCEPTIONS
-                if (__new_data == nullptr)
-                    return;
-            #endif  // _LIBCPP_NO_EXCEPTIONS
-            }
-            __now_long = true;
-            __was_long = __is_long();
-            __p = __get_pointer();
-        }
-        traits_type::copy(_VSTD::__to_address(__new_data),
-                          _VSTD::__to_address(__p), size()+1);
-        if (__was_long)
-            __alloc_traits::deallocate(__alloc(), __p, __cap+1);
-        if (__now_long)
-        {
-            __set_long_cap(__res_arg+1);
-            __set_long_size(__sz);
-            __set_long_pointer(__new_data);
-        }
-        else
-            __set_short_size(__sz);
-        __invalidate_all_iterators();
+        __was_long = true;
+        __now_long = false;
+        __new_data = __get_short_pointer();
+        __p = __get_long_pointer();
     }
+    else
+    {
+        if (__target_capacity > __cap)
+            __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+        else
+        {
+        #ifndef _LIBCPP_NO_EXCEPTIONS
+            try
+            {
+        #endif  // _LIBCPP_NO_EXCEPTIONS
+                __new_data = __alloc_traits::allocate(__alloc(), __target_capacity+1);
+        #ifndef _LIBCPP_NO_EXCEPTIONS
+            }
+            catch (...)
+            {
+                return;
+            }
+        #else  // _LIBCPP_NO_EXCEPTIONS
+            if (__new_data == nullptr)
+                return;
+        #endif  // _LIBCPP_NO_EXCEPTIONS
+        }
+        __now_long = true;
+        __was_long = __is_long();
+        __p = __get_pointer();
+    }
+    traits_type::copy(_VSTD::__to_address(__new_data),
+                        _VSTD::__to_address(__p), size()+1);
+    if (__was_long)
+        __alloc_traits::deallocate(__alloc(), __p, __cap+1);
+    if (__now_long)
+    {
+        __set_long_cap(__target_capacity+1);
+        __set_long_size(__sz);
+        __set_long_pointer(__new_data);
+    }
+    else
+        __set_short_size(__sz);
+    __invalidate_all_iterators();
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3438,7 +3464,7 @@ basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
         __alloc_traits::is_always_equal::value ||
         __alloc() == __str.__alloc(), "swapping non-equal allocators");
     _VSTD::swap(__r_.first(), __str.__r_.first());
-    __swap_allocator(__alloc(), __str.__alloc());
+    _VSTD::__swap_allocator(__alloc(), __str.__alloc());
 }
 
 // find
@@ -3939,7 +3965,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
         return false;
     if (capacity() < __min_cap - 1)
         return false;
-    if (data() == 0)
+    if (data() == nullptr)
         return false;
     if (data()[size()] != value_type())
         return false;
@@ -4310,15 +4336,15 @@ typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 
-_LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long               stol  (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long      stoul (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long long          stoll (const string& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long long stoull(const string& __str, size_t* __idx = 0, int __base = 10);
+_LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long               stol  (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long      stoul (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long long          stoll (const string& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long long stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_FUNC_VIS float       stof (const string& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS double      stod (const string& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS long double stold(const string& __str, size_t* __idx = 0);
+_LIBCPP_FUNC_VIS float       stof (const string& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS double      stod (const string& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS long double stold(const string& __str, size_t* __idx = nullptr);
 
 _LIBCPP_FUNC_VIS string to_string(int __val);
 _LIBCPP_FUNC_VIS string to_string(unsigned __val);
@@ -4330,15 +4356,15 @@ _LIBCPP_FUNC_VIS string to_string(float __val);
 _LIBCPP_FUNC_VIS string to_string(double __val);
 _LIBCPP_FUNC_VIS string to_string(long double __val);
 
-_LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS long long          stoll (const wstring& __str, size_t* __idx = 0, int __base = 10);
-_LIBCPP_FUNC_VIS unsigned long long stoull(const wstring& __str, size_t* __idx = 0, int __base = 10);
+_LIBCPP_FUNC_VIS int                stoi  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long               stol  (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long      stoul (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS long long          stoll (const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+_LIBCPP_FUNC_VIS unsigned long long stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_FUNC_VIS float       stof (const wstring& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS double      stod (const wstring& __str, size_t* __idx = 0);
-_LIBCPP_FUNC_VIS long double stold(const wstring& __str, size_t* __idx = 0);
+_LIBCPP_FUNC_VIS float       stof (const wstring& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS double      stod (const wstring& __str, size_t* __idx = nullptr);
+_LIBCPP_FUNC_VIS long double stold(const wstring& __str, size_t* __idx = nullptr);
 
 _LIBCPP_FUNC_VIS wstring to_wstring(int __val);
 _LIBCPP_FUNC_VIS wstring to_wstring(unsigned __val);

@@ -63,6 +63,10 @@ hidden_func:
 # CHECK-NEXT:         Memory:
 # CHECK-NEXT:           Initial:         0x1
 # CHECK-NEXT:       - Module:          env
+# CHECK-NEXT:         Field:           default_func
+# CHECK-NEXT:         Kind:            FUNCTION
+# CHECK-NEXT:         SigIndex:        0
+# CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           __indirect_function_table
 # CHECK-NEXT:         Kind:            TABLE
 # CHECK-NEXT:         Table:
@@ -70,10 +74,6 @@ hidden_func:
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
 # CHECK-NEXT:             Initial:         0x1
-# CHECK-NEXT:       - Module:          env
-# CHECK-NEXT:         Field:           default_func
-# CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         SigIndex:        0
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           default_data
 # CHECK-NEXT:         Kind:            GLOBAL

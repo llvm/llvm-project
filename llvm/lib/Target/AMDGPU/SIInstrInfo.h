@@ -582,6 +582,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DPP;
   }
 
+  static bool isTRANS(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TRANS;
+  }
+
+  bool isTRANS(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TRANS;
+  }
+
   static bool isVOP3P(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VOP3P;
   }
@@ -612,6 +620,14 @@ public:
 
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
+  }
+
+  static bool isLDSDIR(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
+  }
+
+  bool isLDSDIR(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::LDSDIR;
   }
 
   static bool isScalarUnit(const MachineInstr &MI) {

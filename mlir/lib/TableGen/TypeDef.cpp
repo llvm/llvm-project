@@ -112,6 +112,8 @@ llvm::Optional<StringRef> TypeParameter::getAllocator() const {
 
   if (auto *typeParameter = dyn_cast<llvm::DefInit>(parameterType)) {
     llvm::RecordVal *code = typeParameter->getDef()->getValue("allocator");
+    if (!code)
+      return llvm::Optional<StringRef>();
     if (llvm::CodeInit *ci = dyn_cast<llvm::CodeInit>(code->getValue()))
       return ci->getValue();
     if (isa<llvm::UnsetInit>(code->getValue()))

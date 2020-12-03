@@ -25,13 +25,14 @@
 #include <semaphore>
 #include <thread>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
 {
   std::counting_semaphore<> s(2);
 
-  std::thread t([&](){
+  std::thread t = support::make_test_thread([&](){
     s.acquire();
   });
   t.join();

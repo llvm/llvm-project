@@ -108,7 +108,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
       : InterfaceGenerator(records.getAllDerivedDefinitions("AttrInterface"),
                            os) {
     valueType = "::mlir::Attribute";
-    interfaceBaseType = "AttrInterface";
+    interfaceBaseType = "AttributeInterface";
     valueTemplate = "ConcreteAttr";
     StringRef castCode = "(tablegen_opaque_val.cast<ConcreteAttr>())";
     nonStaticMethodFmt.addSubst("_attr", castCode).withSelf(castCode);

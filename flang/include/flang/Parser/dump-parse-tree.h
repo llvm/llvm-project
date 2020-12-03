@@ -548,7 +548,7 @@ public:
   NODE(parser, OpenMPDeclareReductionConstruct)
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)
-  NODE(parser, OmpFlushMemoryClause)
+  NODE(parser, OmpMemoryOrderClause)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPSimpleStandaloneConstruct)

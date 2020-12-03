@@ -57,7 +57,7 @@ public:
   ///     other instruction is available, issue it first.
   ///  * NoopHazard: issuing this instruction would break the program.  If
   ///     some other instruction can be issued, do so, otherwise issue a noop.
-  virtual HazardType getHazardType(SUnit *m, int Stalls = 0) {
+  virtual HazardType getHazardType(SUnit *, int Stalls = 0) {
     return NoHazard;
   }
 

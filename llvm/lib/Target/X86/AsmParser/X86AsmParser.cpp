@@ -3064,7 +3064,26 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       }
       continue;
     }
+    // Parse MASM style pseudo prefixes.
+    if (isParsingMSInlineAsm()) {
+      if (Name.equals_lower("vex"))
+        ForcedVEXEncoding = VEXEncoding_VEX;
+      else if (Name.equals_lower("vex2"))
+        ForcedVEXEncoding = VEXEncoding_VEX2;
+      else if (Name.equals_lower("vex3"))
+        ForcedVEXEncoding = VEXEncoding_VEX3;
+      else if (Name.equals_lower("evex"))
+        ForcedVEXEncoding = VEXEncoding_EVEX;
 
+      if (ForcedVEXEncoding != VEXEncoding_Default) {
+        if (getLexer().isNot(AsmToken::Identifier))
+          return Error(Parser.getTok().getLoc(), "Expected identifier");
+        // FIXME: The mnemonic won't match correctly if its not in lower case.
+        Name = Parser.getTok().getString();
+        NameLoc = Parser.getTok().getLoc();
+        Parser.Lex();
+      }
+    }
     break;
   }
 
@@ -4370,10 +4389,16 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   MCInst Inst;
 
-  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
-  // encoder.
-  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+  // If VEX/EVEX encoding is forced, we need to pass the USE_* flag to the
+  // encoder and printer.
+  if (ForcedVEXEncoding == VEXEncoding_VEX)
+    Prefixes |= X86::IP_USE_VEX;
+  else if (ForcedVEXEncoding == VEXEncoding_VEX2)
+    Prefixes |= X86::IP_USE_VEX2;
+  else if (ForcedVEXEncoding == VEXEncoding_VEX3)
     Prefixes |= X86::IP_USE_VEX3;
+  else if (ForcedVEXEncoding == VEXEncoding_EVEX)
+    Prefixes |= X86::IP_USE_EVEX;
 
   // Set encoded flags for {disp8} and {disp32}.
   if (ForcedDispEncoding == DispEncoding_Disp8)

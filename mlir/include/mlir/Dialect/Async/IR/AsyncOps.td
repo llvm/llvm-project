@@ -227,4 +227,62 @@ def Async_AwaitAllOp : Async_Op<"await_all", []> {
   let assemblyFormat = "$operand attr-dict";
 }
 
+//===----------------------------------------------------------------------===//
+// Async Dialect Automatic Reference Counting Operations.
+//===----------------------------------------------------------------------===//
+
+// All async values (values, tokens, groups) are reference counted at runtime
+// and automatically destructed when reference count drops to 0.
+//
+// All values are semantically created with a reference count of +1 and it is
+// the responsibility of the last async value user to drop reference count.
+//
+// Async values created when:
+//   1. Operation returns async result (e.g. the result of an `async.execute`).
+//   2. Async value passed in as a block argument.
+//
+// It is the responsiblity of the async value user to extend the lifetime by
+// adding a +1 reference, if the reference counted value captured by the
+// asynchronously executed region (`async.execute` operation), and drop it after
+// the last nested use.
+//
+// Reference counting operations can be added to the IR using automatic
+// reference count pass, that relies on liveness analysis to find the last uses
+// of all reference counted values and automatically inserts
+// `drop_ref` operations.
+//
+// See `AsyncRefCountingPass` documentation for the implementation details.
+
+def Async_AddRefOp : Async_Op<"add_ref"> {
+  let summary = "adds a reference to async value";
+  let description = [{
+    The `async.add_ref` operation adds a reference(s) to async value (token,
+    value or group).
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand,
+                       Confined<I32Attr, [IntPositive]>:$count);
+  let results = (outs );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand)
+  }];
+}
+
+def Async_DropRefOp : Async_Op<"drop_ref"> {
+  let summary = "drops a reference to async value";
+  let description = [{
+    The `async.drop_ref` operation drops a reference(s) to async value (token,
+    value or group).
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand,
+                       Confined<I32Attr, [IntPositive]>:$count);
+  let results = (outs );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand)
+  }];
+}
+
 #endif // ASYNC_OPS

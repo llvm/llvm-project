@@ -71,7 +71,7 @@ define amdgpu_kernel void @id_i32() #0 {
 define amdgpu_kernel void @id_arg_i32(i32 %row) #0 {
 ; CHECK-LABEL: id_arg_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dword s0, s[0:1], 0x9
+; CHECK-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    exp pos0 v0, off, off, off done row_en

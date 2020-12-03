@@ -124,14 +124,17 @@ static inline T ldexp(T x, int exp) {
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
-  // that adding |exp| to it does not lead to integer rollover. But, we |exp|
+  // that adding |exp| to it does not lead to integer rollover. But, if |exp|
   // value is larger the exponent range for type T, then we can return infinity
-  // early.
-  if (exp > FPBits<T>::maxExponent)
+  // early. Because the result of the ldexp operation can be a subnormal number,
+  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // calculating the limit.
+  int expLimit = FPBits<T>::maxExponent + MantissaWidth<T>::value + 1;
+  if (exp > expLimit)
     return bits.sign ? FPBits<T>::negInf() : FPBits<T>::inf();
 
-  // Similarly on the negative side.
-  if (exp < -FPBits<T>::maxExponent)
+  // Similarly on the negative side we return zero early if |exp| is too small.
+  if (exp < -expLimit)
     return bits.sign ? FPBits<T>::negZero() : FPBits<T>::zero();
 
   // For all other values, NormalFloat to T conversion handles it the right way.

@@ -9,7 +9,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -308,9 +308,9 @@ static void printDimAndSymbolList(Operation::operand_iterator begin,
 }
 
 /// Parses dimension and symbol list and returns true if parsing failed.
-static ParseResult parseDimAndSymbolList(OpAsmParser &parser,
-                                         SmallVectorImpl<Value> &operands,
-                                         unsigned &numDims) {
+ParseResult mlir::parseDimAndSymbolList(OpAsmParser &parser,
+                                        SmallVectorImpl<Value> &operands,
+                                        unsigned &numDims) {
   SmallVector<OpAsmParser::OperandType, 8> opInfos;
   if (parser.parseOperandList(opInfos, OpAsmParser::Delimiter::Paren))
     return failure();
@@ -2088,7 +2088,7 @@ void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
 void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
                          Value memref, ValueRange indices) {
   auto memrefType = memref.getType().cast<MemRefType>();
-  auto rank = memrefType.getRank();
+  int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
@@ -2202,7 +2202,7 @@ void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
                           Value valueToStore, Value memref,
                           ValueRange indices) {
   auto memrefType = memref.getType().cast<MemRefType>();
-  auto rank = memrefType.getRank();
+  int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
@@ -2902,6 +2902,38 @@ static LogicalResult verify(AffineYieldOp op) {
 // AffineVectorLoadOp
 //===----------------------------------------------------------------------===//
 
+void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
+                               VectorType resultType, AffineMap map,
+                               ValueRange operands) {
+  assert(operands.size() == 1 + map.getNumInputs() && "inconsistent operands");
+  result.addOperands(operands);
+  if (map)
+    result.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
+  result.types.push_back(resultType);
+}
+
+void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
+                               VectorType resultType, Value memref,
+                               AffineMap map, ValueRange mapOperands) {
+  assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
+  result.addOperands(memref);
+  result.addOperands(mapOperands);
+  result.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
+  result.types.push_back(resultType);
+}
+
+void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
+                               VectorType resultType, Value memref,
+                               ValueRange indices) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  int64_t rank = memrefType.getRank();
+  // Create identity map for memrefs with at least one dimension or () -> ()
+  // for zero-dimensional memrefs.
+  auto map =
+      rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
+  build(builder, result, resultType, memref, map, indices);
+}
+
 static ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
                                            OperationState &result) {
   auto &builder = parser.getBuilder();
@@ -2964,6 +2996,29 @@ static LogicalResult verify(AffineVectorLoadOp op) {
 //===----------------------------------------------------------------------===//
 // AffineVectorStoreOp
 //===----------------------------------------------------------------------===//
+
+void AffineVectorStoreOp::build(OpBuilder &builder, OperationState &result,
+                                Value valueToStore, Value memref, AffineMap map,
+                                ValueRange mapOperands) {
+  assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
+  result.addOperands(valueToStore);
+  result.addOperands(memref);
+  result.addOperands(mapOperands);
+  result.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
+}
+
+// Use identity map.
+void AffineVectorStoreOp::build(OpBuilder &builder, OperationState &result,
+                                Value valueToStore, Value memref,
+                                ValueRange indices) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  int64_t rank = memrefType.getRank();
+  // Create identity map for memrefs with at least one dimension or () -> ()
+  // for zero-dimensional memrefs.
+  auto map =
+      rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
+  build(builder, result, valueToStore, memref, map, indices);
+}
 
 static ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
                                             OperationState &result) {

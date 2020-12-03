@@ -469,8 +469,11 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCStreamer> Str;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
+  assert(MCII && "Unable to create instruction info!");
+
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+  assert(STI && "Unable to create subtarget info!");
 
   MCInstPrinter *IP = nullptr;
   if (FileType == OFT_AssemblyFile) {

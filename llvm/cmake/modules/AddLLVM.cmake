@@ -228,14 +228,6 @@ function(add_link_opts target_name)
                    LINK_FLAGS " -Wl,-O3")
     endif()
 
-    if(LLVM_LINKER_IS_GOLD)
-      # With gold gc-sections is always safe.
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                   LINK_FLAGS " -Wl,--gc-sections")
-      # Note that there is a bug with -Wl,--icf=safe so it is not safe
-      # to enable. See https://sourceware.org/bugzilla/show_bug.cgi?id=17704.
-    endif()
-
     if(NOT LLVM_NO_DEAD_STRIP)
       if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
@@ -250,12 +242,7 @@ function(add_link_opts target_name)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
         endif()
-      elseif(NOT WIN32 AND NOT LLVM_LINKER_IS_GOLD AND
-             NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD|AIX|OS390")
-        # Object files are compiled with -ffunction-data-sections.
-        # Versions of bfd ld < 2.23.1 have a bug in --gc-sections that breaks
-        # tools that use plugins. Always pass --gc-sections once we require
-        # a newer linker.
+      elseif(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD|AIX|OS390")
         # TODO Revisit this later on z/OS.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")

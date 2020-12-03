@@ -794,7 +794,7 @@ define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %
 
 %struct.U192 = type { [3 x i64] }
 
-define void @PR39464(%struct.U192* noalias nocapture sret %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) {
+define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) {
 ; CHECK-LABEL: PR39464:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -873,7 +873,7 @@ define zeroext i1 @uaddo_U128_without_i128_or(i64 %0, i64 %1, i64 %2, i64 %3, %u
 
 %uint192 = type { i64, i64, i64 }
 
-define void @add_U192_without_i128_or(%uint192* sret %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6) nounwind {
+define void @add_U192_without_i128_or(%uint192* sret(%uint192) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6) nounwind {
 ; CHECK-LABEL: add_U192_without_i128_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -909,7 +909,7 @@ define void @add_U192_without_i128_or(%uint192* sret %0, i64 %1, i64 %2, i64 %3,
 
 ; Classic unrolled 256-bit addition implementation using i64 as the word type.
 ; It starts by adding least significant words and propagates carry to additions of the higher words.
-define void @add_U256_without_i128_or_by_i64_words(%uint256* sret %0, %uint256* %1, %uint256* %2) nounwind {
+define void @add_U256_without_i128_or_by_i64_words(%uint256* sret(%uint256) %0, %uint256* %1, %uint256* %2) nounwind {
 ; CHECK-LABEL: add_U256_without_i128_or_by_i64_words:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -972,7 +972,7 @@ define void @add_U256_without_i128_or_by_i64_words(%uint256* sret %0, %uint256* 
 
 ; The 256-bit addition implementation using two inlined uaddo procedures for U128 type { i64, i64 }.
 ; This is similar to how LLVM legalize types in CodeGen.
-define void @add_U256_without_i128_or_recursive(%uint256* sret %0, %uint256* %1, %uint256* %2) nounwind {
+define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %uint256* %1, %uint256* %2) nounwind {
 ; CHECK-LABEL: add_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax

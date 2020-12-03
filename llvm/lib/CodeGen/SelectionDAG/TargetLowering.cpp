@@ -3476,8 +3476,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   if (!isConstOrConstSplat(N0) && !isConstOrConstSplat(N1) &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())) &&
-      DAG.getNodeIfExists(ISD::SUB, DAG.getVTList(OpVT), { N1, N0 } ) &&
-      !DAG.getNodeIfExists(ISD::SUB, DAG.getVTList(OpVT), { N0, N1 } ))
+      DAG.doesNodeExist(ISD::SUB, DAG.getVTList(OpVT), {N1, N0}) &&
+      !DAG.doesNodeExist(ISD::SUB, DAG.getVTList(OpVT), {N0, N1}))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
 
   if (auto *N1C = isConstOrConstSplat(N1)) {
@@ -6822,6 +6822,22 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = N->getOperand(0);
 
+  // abs(x) -> smax(x,sub(0,x))
+  if (isOperationLegal(ISD::SUB, VT) && isOperationLegal(ISD::SMAX, VT)) {
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    Result = DAG.getNode(ISD::SMAX, dl, VT, Op,
+                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
+    return true;
+  }
+
+  // abs(x) -> umin(x,sub(0,x))
+  if (isOperationLegal(ISD::SUB, VT) && isOperationLegal(ISD::UMIN, VT)) {
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    Result = DAG.getNode(ISD::UMIN, dl, VT, Op,
+                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
+    return true;
+  }
+
   // Only expand vector types if we have the appropriate vector operations.
   if (VT.isVector() && (!isOperationLegalOrCustom(ISD::SRA, VT) ||
                         !isOperationLegalOrCustom(ISD::ADD, VT) ||
@@ -7456,6 +7472,46 @@ TargetLowering::getCanonicalIndexType(ISD::MemIndexType IndexType, EVT MemVT,
   }
 
   return IndexType;
+}
+
+SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
+  SDValue Op0 = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  EVT VT = Op0.getValueType();
+  unsigned Opcode = Node->getOpcode();
+  SDLoc DL(Node);
+
+  // umin(x,y) -> sub(x,usubsat(x,y))
+  if (Opcode == ISD::UMIN && isOperationLegal(ISD::SUB, VT) &&
+      isOperationLegal(ISD::USUBSAT, VT)) {
+    return DAG.getNode(ISD::SUB, DL, VT, Op0,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, Op0, Op1));
+  }
+
+  // umax(x,y) -> add(x,usubsat(y,x))
+  if (Opcode == ISD::UMAX && isOperationLegal(ISD::ADD, VT) &&
+      isOperationLegal(ISD::USUBSAT, VT)) {
+    return DAG.getNode(ISD::ADD, DL, VT, Op0,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, Op1, Op0));
+  }
+
+  // Expand Y = MAX(A, B) -> Y = (A > B) ? A : B
+  ISD::CondCode CC;
+  switch (Opcode) {
+  default: llvm_unreachable("How did we get here?");
+  case ISD::SMAX: CC = ISD::SETGT; break;
+  case ISD::SMIN: CC = ISD::SETLT; break;
+  case ISD::UMAX: CC = ISD::SETUGT; break;
+  case ISD::UMIN: CC = ISD::SETULT; break;
+  }
+
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(Node);
+
+  SDValue Cond = DAG.getSetCC(DL, VT, Op0, Op1, CC);
+  return DAG.getSelect(DL, VT, Cond, Op0, Op1);
 }
 
 SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {

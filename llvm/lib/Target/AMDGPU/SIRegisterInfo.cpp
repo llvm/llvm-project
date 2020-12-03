@@ -2158,6 +2158,12 @@ SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
 }
 
 ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllSGPR64(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::SGPR_64RegClass.begin(),
+                      ST.getMaxNumSGPRs(MF) / 2);
+}
+
+ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
   return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
 }

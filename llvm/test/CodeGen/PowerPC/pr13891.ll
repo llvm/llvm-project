@@ -4,7 +4,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.foo = type { i8, i8 }
 
-define void @_Z5check3foos(%struct.foo* nocapture byval %f, i16 signext %i) noinline {
+define void @_Z5check3foos(%struct.foo* nocapture byval(%struct.foo) %f, i16 signext %i) noinline {
 ; CHECK-LABEL: _Z5check3foos:
 ; CHECK: sth 3, {{[0-9]+}}(1)
 ; CHECK: lha {{[0-9]+}}, {{[0-9]+}}(1)

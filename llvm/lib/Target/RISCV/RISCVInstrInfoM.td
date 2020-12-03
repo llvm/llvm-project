@@ -81,9 +81,11 @@ def : PatGprGpr<riscv_remuw, REMUW>;
 // Handle the specific cases where using DIVU/REMU would be correct and result
 // in fewer instructions than emitting DIVUW/REMUW then zero-extending the
 // result.
-def : Pat<(zexti32 (riscv_divuw (zexti32 GPR:$rs1), (zexti32 GPR:$rs2))),
+def : Pat<(and (riscv_divuw (assertzexti32 GPR:$rs1),
+                            (assertzexti32 GPR:$rs2)), 0xffffffff),
           (DIVU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(zexti32 (riscv_remuw (zexti32 GPR:$rs1), (zexti32 GPR:$rs2))),
+def : Pat<(and (riscv_remuw (assertzexti32 GPR:$rs1),
+                            (assertzexti32 GPR:$rs2)), 0xffffffff),
           (REMU GPR:$rs1, GPR:$rs2)>;
 
 // Although the sexti32 operands may not have originated from an i32 srem,

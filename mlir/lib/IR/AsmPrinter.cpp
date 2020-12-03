@@ -15,7 +15,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IntegerSet.h"
@@ -158,7 +158,8 @@ OpPrintingFlags &OpPrintingFlags::useLocalScope() {
 /// Return if the given ElementsAttr should be elided.
 bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
   return elementsAttrElementLimit.hasValue() &&
-         *elementsAttrElementLimit < int64_t(attr.getNumElements());
+         *elementsAttrElementLimit < int64_t(attr.getNumElements()) &&
+         !attr.isa<SplatElementsAttr>();
 }
 
 /// Return the size limit for printing large ElementsAttr.

@@ -1920,7 +1920,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     break;
   }
   case tgtok::CodeFragment:
-    R = CodeInit::get(Lex.getCurStrVal(), Lex.getLoc());
+    R = CodeInit::get(Lex.getCurStrVal());
     Lex.Lex();
     break;
   case tgtok::question:

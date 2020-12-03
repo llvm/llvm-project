@@ -24,7 +24,7 @@
 ; V9:         st %o0, [%[[R]]+{{.+}}]
 
 ; Function Attrs: nounwind
-define i32 @foo(%struct.jmpbuf_env* byval %inbuf) #0 {
+define i32 @foo(%struct.jmpbuf_env* byval(%struct.jmpbuf_env) %inbuf) #0 {
 entry:
   %0 = getelementptr inbounds %struct.jmpbuf_env, %struct.jmpbuf_env* %inbuf, i32 0, i32 0
   store i32 0, i32* %0, align 4, !tbaa !4

@@ -90,10 +90,10 @@ The SPIR-V dialect adopts the following conventions for IR:
     ops are mostly for defining the SPIR-V structure. For example, `spv.module`
     and `spv.constant`. They may correspond to one or more instructions during
     (de)serialization.
-*   Ops with `_snake_case` names are those that have no corresponding
+*   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
-    satisfy MLIR structural requirements. For example, `spv._module_end` and
-    `spv._merge`. They map to no instructions during (de)serialization.
+    satisfy MLIR structural requirements. For example, `spv.mlir.endmodule` and
+    `spv.mlir.merge`. They map to no instructions during (de)serialization.
 
 (TODO: consider merging the last two cases and adopting `spv.mlir.` prefix for
 them.)
@@ -182,7 +182,7 @@ instructions are represented in the SPIR-V dialect:
     needed to turn the symbol into an SSA value.
 *   Specialization constants are defined with the `spv.specConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
-    reference, too. `spv._reference_of` is needed to turn the symbol into an SSA
+    reference, too. `spv.mlir.referenceof` is needed to turn the symbol into an SSA
     value for use in a function block.
 
 The above choices enables functions in the SPIR-V dialect to be isolated and
@@ -510,7 +510,7 @@ MLIR system.
 
 We introduce a `spv.selection` and `spv.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
-their regions, a special terminator, `spv._merge` is introduced for branching to
+their regions, a special terminator, `spv.mlir.merge` is introduced for branching to
 the merge target.
 
 ### Selection
@@ -522,7 +522,7 @@ merge block.
 *   The selection header block should be the first block. It should contain the
     `spv.BranchConditional` or `spv.Switch` op.
 *   The merge block should be the last block. The merge block should only
-    contain a `spv._merge` op. Any block can branch to the merge block for early
+    contain a `spv.mlir.merge` op. Any block can branch to the merge block for early
     exit.
 
 ```
@@ -581,7 +581,7 @@ func @selection(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
 
   // ...
@@ -598,7 +598,7 @@ continue block, one merge block.
 *   The entry block should be the first block and it should jump to the loop
     header block, which is the second block.
 *   The merge block should be the last block. The merge block should only
-    contain a `spv._merge` op. Any block except the entry block can branch to
+    contain a `spv.mlir.merge` op. Any block except the entry block can branch to
     the merge block for early exit.
 *   The continue block should be the second to last block and it should have a
     branch to the loop header block.
@@ -675,7 +675,7 @@ func @loop(%count : i32) -> () {
     spv.Branch ^header
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   return
 }
@@ -731,7 +731,7 @@ func @foo() -> () {
     spv.Return
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -971,7 +971,7 @@ Similarly, a few transformations are performed during deserialization:
     `spv.mlir.addressof` op to turn the symbol of the corresponding
     `spv.globalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
-    `spv._reference_of` op to turn the symbol of the corresponding
+    `spv.mlir.referenceof` op to turn the symbol of the corresponding
     `spv.specConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
 *   Structured control flow are placed inside `spv.selection` and `spv.loop`.

@@ -203,3 +203,13 @@ func @get_gv3_memref() {
   return
 }
 
+// This should not trigger an assertion by creating an LLVM::CallOp with a
+// nullptr result type.
+
+// CHECK-LABEL: @call_zero_result_func
+func @call_zero_result_func() {
+  // CHECK: call @zero_result_func
+  call @zero_result_func() : () -> ()
+  return
+}
+func private @zero_result_func()

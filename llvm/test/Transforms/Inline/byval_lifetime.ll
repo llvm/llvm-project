@@ -8,7 +8,7 @@
 
 @gFoo = global %struct.foo zeroinitializer, align 8
 
-define i32 @foo(%struct.foo* byval align 8 %f, i32 %a) {
+define i32 @foo(%struct.foo* byval(%struct.foo) align 8 %f, i32 %a) {
 entry:
   %a1 = getelementptr inbounds %struct.foo, %struct.foo* %f, i32 0, i32 1
   %arrayidx = getelementptr inbounds [16 x i32], [16 x i32]* %a1, i32 0, i32 %a
@@ -21,6 +21,6 @@ define i32 @main(i32 %argc, i8** %argv) {
 ; CHECK: llvm.lifetime.start
 ; CHECK: memcpy
 entry:
-  %call = call i32 @foo(%struct.foo* byval align 8 @gFoo, i32 %argc)
+  %call = call i32 @foo(%struct.foo* byval(%struct.foo) align 8 @gFoo, i32 %argc)
   ret i32 %call
 }

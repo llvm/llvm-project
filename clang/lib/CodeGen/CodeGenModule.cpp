@@ -420,6 +420,13 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
     if (GV.hasAppendingLinkage() || GV.hasLocalLinkage())
       continue;
 
+    // Reset DSO locality before setting the visibility. This removes
+    // any effects that visibility options and annotations may have
+    // had on the DSO locality. Setting the visibility will implicitly set
+    // appropriate globals to DSO Local; however, this will be pessimistic
+    // w.r.t. to the normal compiler IRGen.
+    GV.setDSOLocal(false);
+
     if (GV.isDeclarationForLinker()) {
       GV.setVisibility(GV.getDLLStorageClass() ==
                                llvm::GlobalValue::DLLImportStorageClass
@@ -1278,11 +1285,10 @@ void CodeGenModule::AddGlobalCtor(llvm::Function *Ctor, int Priority,
 
 /// AddGlobalDtor - Add a function to the list that will be called
 /// when the module is unloaded.
-void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority) {
-  if (CodeGenOpts.RegisterGlobalDtorsWithAtExit) {
-    if (getCXXABI().useSinitAndSterm())
-      llvm::report_fatal_error(
-          "register global dtors with atexit() is not supported yet");
+void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority,
+                                  bool IsDtorAttrFunc) {
+  if (CodeGenOpts.RegisterGlobalDtorsWithAtExit &&
+      (!getContext().getTargetInfo().getTriple().isOSAIX() || IsDtorAttrFunc)) {
     DtorsUsingAtExit[Priority].push_back(Dtor);
     return;
   }
@@ -4716,7 +4722,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
     AddGlobalCtor(Fn, CA->getPriority());
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
-    AddGlobalDtor(Fn, DA->getPriority());
+    AddGlobalDtor(Fn, DA->getPriority(), true);
   if (D->hasAttr<AnnotateAttr>())
     AddGlobalAnnotations(D, Fn);
 }

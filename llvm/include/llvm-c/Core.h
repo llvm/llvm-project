@@ -269,6 +269,7 @@ typedef enum {
   LLVMConstantVectorValueKind,
 
   LLVMUndefValueValueKind,
+  LLVMPoisonValueValueKind,
   LLVMConstantAggregateZeroValueKind,
   LLVMConstantDataArrayValueKind,
   LLVMConstantDataVectorValueKind,
@@ -1562,6 +1563,7 @@ LLVMTypeRef LLVMX86MMXType(void);
           macro(Function)                   \
           macro(GlobalVariable)             \
       macro(UndefValue)                     \
+      macro(PoisonValue)                    \
     macro(Instruction)                      \
       macro(UnaryOperator)                  \
       macro(BinaryOperator)                 \
@@ -1694,6 +1696,11 @@ LLVMBool LLVMIsConstant(LLVMValueRef Val);
  * Determine whether a value instance is undefined.
  */
 LLVMBool LLVMIsUndef(LLVMValueRef Val);
+
+/**
+ * Determine whether a value instance is poisonous.
+ */
+LLVMBool LLVMIsPoison(LLVMValueRef Val);
 
 /**
  * Convert value instances between types.
@@ -1852,6 +1859,13 @@ LLVMValueRef LLVMConstAllOnes(LLVMTypeRef Ty);
  * @see llvm::UndefValue::get()
  */
 LLVMValueRef LLVMGetUndef(LLVMTypeRef Ty);
+
+/**
+ * Obtain a constant value referring to a poison value of a type.
+ *
+ * @see llvm::PoisonValue::get()
+ */
+LLVMValueRef LLVMGetPoison(LLVMTypeRef Ty);
 
 /**
  * Determine whether a value instance is null.

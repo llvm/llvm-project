@@ -267,7 +267,7 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
     FileSpec filespec(core_file);
     FileSystem::Instance().Resolve(filespec);
     ProcessSP process_sp(target_sp->CreateProcess(
-        target_sp->GetDebugger().GetListener(), "", &filespec));
+        target_sp->GetDebugger().GetListener(), "", &filespec, false));
     if (process_sp) {
       error.SetError(process_sp->LoadCore());
       if (error.Success())
@@ -567,10 +567,11 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     if (listener.IsValid())
       process_sp =
-          target_sp->CreateProcess(listener.m_opaque_sp, plugin_name, nullptr);
+          target_sp->CreateProcess(listener.m_opaque_sp, plugin_name, nullptr,
+                                   true);
     else
       process_sp = target_sp->CreateProcess(
-          target_sp->GetDebugger().GetListener(), plugin_name, nullptr);
+          target_sp->GetDebugger().GetListener(), plugin_name, nullptr, true);
 
     if (process_sp) {
       sb_process.SetSP(process_sp);

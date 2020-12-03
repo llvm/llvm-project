@@ -64,10 +64,11 @@ class VAArgInst;
 // None.
 class LocationSize {
   enum : uint64_t {
-    Unknown = ~uint64_t(0),
+    BeforeOrAfterPointer = ~uint64_t(0),
+    AfterPointer = BeforeOrAfterPointer - 1,
+    MapEmpty = BeforeOrAfterPointer - 2,
+    MapTombstone = BeforeOrAfterPointer - 3,
     ImpreciseBit = uint64_t(1) << 63,
-    MapEmpty = Unknown - 1,
-    MapTombstone = Unknown - 2,
 
     // The maximum value we can represent without falling back to 'unknown'.
     MaxValue = (MapTombstone - 1) & ~ImpreciseBit,
@@ -81,7 +82,11 @@ class LocationSize {
 
   constexpr LocationSize(uint64_t Raw, DirectConstruction): Value(Raw) {}
 
-  static_assert(Unknown & ImpreciseBit, "Unknown is imprecise by definition.");
+  static_assert(AfterPointer & ImpreciseBit,
+                "AfterPointer is imprecise by definition.");
+  static_assert(BeforeOrAfterPointer & ImpreciseBit,
+                "BeforeOrAfterPointer is imprecise by definition.");
+
 public:
   // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
   // to make it more obvious at the callsite the kind of size that they're
@@ -90,12 +95,12 @@ public:
   // Since the overwhelming majority of users of this provide precise values,
   // this assumes the provided value is precise.
   constexpr LocationSize(uint64_t Raw)
-      : Value(Raw > MaxValue ? Unknown : Raw) {}
+      : Value(Raw > MaxValue ? AfterPointer : Raw) {}
 
   static LocationSize precise(uint64_t Value) { return LocationSize(Value); }
   static LocationSize precise(TypeSize Value) {
     if (Value.isScalable())
-      return unknown();
+      return afterPointer();
     return precise(Value.getFixedSize());
   }
 
@@ -104,17 +109,25 @@ public:
     if (LLVM_UNLIKELY(Value == 0))
       return precise(0);
     if (LLVM_UNLIKELY(Value > MaxValue))
-      return unknown();
+      return afterPointer();
     return LocationSize(Value | ImpreciseBit, Direct);
   }
   static LocationSize upperBound(TypeSize Value) {
     if (Value.isScalable())
-      return unknown();
+      return afterPointer();
     return upperBound(Value.getFixedSize());
   }
 
-  constexpr static LocationSize unknown() {
-    return LocationSize(Unknown, Direct);
+  /// Any location after the base pointer (but still within the underlying
+  /// object).
+  constexpr static LocationSize afterPointer() {
+    return LocationSize(AfterPointer, Direct);
+  }
+
+  /// Any location before or after the base pointer (but still within the
+  /// underlying object).
+  constexpr static LocationSize beforeOrAfterPointer() {
+    return LocationSize(BeforeOrAfterPointer, Direct);
   }
 
   // Sentinel values, generally used for maps.
@@ -131,26 +144,33 @@ public:
     if (Other == *this)
       return *this;
 
-    if (!hasValue() || !Other.hasValue())
-      return unknown();
+    if (Value == BeforeOrAfterPointer || Other.Value == BeforeOrAfterPointer)
+      return beforeOrAfterPointer();
+    if (Value == AfterPointer || Other.Value == AfterPointer)
+      return afterPointer();
 
     return upperBound(std::max(getValue(), Other.getValue()));
   }
 
-  bool hasValue() const { return Value != Unknown; }
+  bool hasValue() const {
+    return Value != AfterPointer && Value != BeforeOrAfterPointer;
+  }
   uint64_t getValue() const {
     assert(hasValue() && "Getting value from an unknown LocationSize!");
     return Value & ~ImpreciseBit;
   }
 
   // Returns whether or not this value is precise. Note that if a value is
-  // precise, it's guaranteed to not be `unknown()`.
+  // precise, it's guaranteed to not be unknown.
   bool isPrecise() const {
     return (Value & ImpreciseBit) == 0;
   }
 
   // Convenience method to check if this LocationSize's value is 0.
   bool isZero() const { return hasValue() && getValue() == 0; }
+
+  /// Whether accesses before the base pointer are possible.
+  bool mayBeBeforePointer() const { return Value == BeforeOrAfterPointer; }
 
   bool operator==(const LocationSize &Other) const {
     return Value == Other.Value;
@@ -242,14 +262,30 @@ public:
     return getForArgument(Call, ArgIdx, &TLI);
   }
 
+  /// Return a location that may access any location after Ptr, while remaining
+  /// within the underlying object.
+  static MemoryLocation getAfter(const Value *Ptr,
+                                 const AAMDNodes &AATags = AAMDNodes()) {
+    return MemoryLocation(Ptr, LocationSize::afterPointer(), AATags);
+  }
+
+  /// Return a location that may access any location before or after Ptr, while
+  /// remaining within the underlying object.
+  static MemoryLocation
+  getBeforeOrAfter(const Value *Ptr, const AAMDNodes &AATags = AAMDNodes()) {
+    return MemoryLocation(Ptr, LocationSize::beforeOrAfterPointer(), AATags);
+  }
+
   // Return the exact size if the exact size is known at compiletime,
   // otherwise return MemoryLocation::UnknownSize.
   static uint64_t getSizeOrUnknown(const TypeSize &T) {
     return T.isScalable() ? UnknownSize : T.getFixedSize();
   }
 
-  explicit MemoryLocation(const Value *Ptr = nullptr,
-                          LocationSize Size = LocationSize::unknown(),
+  MemoryLocation()
+      : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()), AATags() {}
+
+  explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())
       : Ptr(Ptr), Size(Size), AATags(AATags) {}
 

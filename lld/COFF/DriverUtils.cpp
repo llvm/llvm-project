@@ -852,7 +852,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
 
-  for (auto *arg : args.filtered(OPT_UNKNOWN)) {
+  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (optTable.findNearest(arg->getAsString(args), nearest) > 1)
       warn("ignoring unknown argument '" + arg->getAsString(args) + "'");

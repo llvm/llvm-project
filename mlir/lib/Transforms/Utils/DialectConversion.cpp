@@ -10,7 +10,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SetVector.h"
@@ -364,11 +364,6 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
       // If the argument is still used, replace it with the generated cast.
       if (!origArg.use_empty())
         origArg.replaceAllUsesWith(mapping.lookupOrDefault(castValue));
-
-      // If all users of the cast were removed, we can drop it. Otherwise, keep
-      // the operation alive and let the user handle any remaining usages.
-      if (castValue.use_empty() && castValue.getDefiningOp())
-        castValue.getDefiningOp()->erase();
     }
   }
 }
@@ -988,7 +983,7 @@ void ConversionPatternRewriterImpl::undoBlockActions(
       Block *insertAfterBlock = action.originalPosition.insertAfterBlock;
       blockList.insert((insertAfterBlock
                             ? std::next(Region::iterator(insertAfterBlock))
-                            : blockList.end()),
+                            : blockList.begin()),
                        action.block);
       break;
     }

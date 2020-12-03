@@ -46,6 +46,7 @@ using namespace llvm::object;
 LTOModule::LTOModule(std::unique_ptr<Module> M, MemoryBufferRef MBRef,
                      llvm::TargetMachine *TM)
     : Mod(std::move(M)), MBRef(MBRef), _target(TM) {
+  assert(_target && "target machine is null");
   SymTab.addModule(Mod.get());
 }
 

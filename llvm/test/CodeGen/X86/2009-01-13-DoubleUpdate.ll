@@ -2,7 +2,7 @@
 
 declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
 
-define void @__mindd16(<16 x double>* sret %vec.result, <16 x double> %x, double %y) nounwind {
+define void @__mindd16(<16 x double>* sret(<16 x double>) %vec.result, <16 x double> %x, double %y) nounwind {
 entry:
 	%tmp3.i = shufflevector <16 x double> zeroinitializer, <16 x double> undef, <8 x i32> < i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7 >		; <<8 x double>> [#uses=1]
 	%tmp10.i.i = shufflevector <8 x double> %tmp3.i, <8 x double> undef, <4 x i32> < i32 4, i32 5, i32 6, i32 7 >		; <<4 x double>> [#uses=1]

@@ -12,10 +12,10 @@ target triple = "x86_64-pc-linux-gnu"
 %struct.face = type { [7 x i32] }
 
 ; Function Attrs: noinline nounwind uwtable
-declare void @bar(%struct.face* byval nocapture readonly align 8);
+declare void @bar(%struct.face* byval(%struct.face) nocapture readonly align 8);
 
 ; Function Attrs: noinline nounwind uwtable
-define void @foo(%struct.face* byval nocapture align 8) local_unnamed_addr {
+define void @foo(%struct.face* byval(%struct.face) nocapture align 8) local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
@@ -35,6 +35,6 @@ define void @foo(%struct.face* byval nocapture align 8) local_unnamed_addr {
   store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %2, align 8
   %3 = getelementptr inbounds %struct.face, %struct.face* %0, i64 0, i32 0, i64 4
   store i32 1, i32* %3, align 8
-  call void @bar(%struct.face* byval nonnull align 8 %0)
+  call void @bar(%struct.face* byval(%struct.face) nonnull align 8 %0)
   ret void
 }

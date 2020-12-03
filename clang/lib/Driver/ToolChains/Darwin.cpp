@@ -204,14 +204,18 @@ static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs,
-                                 unsigned Version[5]) const {
+                                 unsigned Version[5], bool LinkerIsLLD,
+                                 bool LinkerIsLLDDarwinNew) const {
   const Driver &D = getToolChain().getDriver();
   const toolchains::MachO &MachOTC = getMachOToolChain();
 
   // Newer linkers support -demangle. Pass it if supported and not disabled by
   // the user.
-  if (Version[0] >= 100 && !Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+  if ((Version[0] >= 100 || LinkerIsLLD) &&
+      !Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("-demangle");
+
+  // FIXME: Pass most of the flags below that check Version if LinkerIsLLD too.
 
   if (Args.hasArg(options::OPT_rdynamic) && Version[0] >= 137)
     CmdArgs.push_back("-export_dynamic");
@@ -249,7 +253,9 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   // Since this is passed unconditionally, ld64 will never look for libLTO.dylib
   // next to it. That's ok since ld64 using a libLTO.dylib not matching the
   // clang version won't work anyways.
-  if (Version[0] >= 133) {
+  // lld is built at the same revision as clang and statically links in
+  // LLVM libraries, so it doesn't need libLTO.dylib.
+  if (Version[0] >= 133 && !LinkerIsLLD) {
     // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
     StringRef P = llvm::sys::path::parent_path(D.Dir);
     SmallString<128> LibLTOPath(P);
@@ -332,7 +338,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_init);
 
   // Add the deployment target.
-  if (Version[0] >= 520)
+  if (Version[0] >= 520 || LinkerIsLLDDarwinNew)
     MachOTC.addPlatformVersionArgs(Args, CmdArgs);
   else
     MachOTC.addMinVersionArgs(Args, CmdArgs);
@@ -533,9 +539,14 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getAsString(Args);
   }
 
+  bool LinkerIsLLD, LinkerIsLLDDarwinNew;
+  const char *Exec = Args.MakeArgString(
+      getToolChain().GetLinkerPath(&LinkerIsLLD, &LinkerIsLLDDarwinNew));
+
   // I'm not sure why this particular decomposition exists in gcc, but
   // we follow suite for ease of comparison.
-  AddLinkArgs(C, Args, CmdArgs, Inputs, Version);
+  AddLinkArgs(C, Args, CmdArgs, Inputs, Version, LinkerIsLLD,
+              LinkerIsLLDDarwinNew);
 
   if (willEmitRemarks(Args) &&
       checkRemarksOptions(getToolChain().getDriver(), Args,
@@ -693,7 +704,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                        "-filelist"};
   }
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
   std::unique_ptr<Command> Cmd = std::make_unique<Command>(
       JA, *this, ResponseSupport, Exec, CmdArgs, Inputs, Output);
   Cmd->setInputFileList(std::move(InputFileList));

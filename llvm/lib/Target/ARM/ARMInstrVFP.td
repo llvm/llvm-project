@@ -2264,16 +2264,6 @@ def : Pat<(f32 (fma (fneg SPR:$Sn), SPR:$Sm, SPR:$Sdin)),
 def : Pat<(f16 (fma (fneg (f16 HPR:$Sn)), (f16 HPR:$Sm), (f16 HPR:$Sdin))),
           (VFMSH (f16 HPR:$Sdin), (f16 HPR:$Sn), (f16 HPR:$Sm))>,
       Requires<[HasFullFP16]>;
-// (fma x, (fneg y), z) -> (vfms z, x, y)
-def : Pat<(f64 (fma DPR:$Dn, (fneg DPR:$Dm), DPR:$Ddin)),
-          (VFMSD DPR:$Ddin, DPR:$Dn, DPR:$Dm)>,
-      Requires<[HasVFP4,HasDPVFP]>;
-def : Pat<(f32 (fma SPR:$Sn, (fneg SPR:$Sm), SPR:$Sdin)),
-          (VFMSS SPR:$Sdin, SPR:$Sn, SPR:$Sm)>,
-      Requires<[HasVFP4]>;
-def : Pat<(f16 (fma (f16 HPR:$Sn), (fneg (f16 HPR:$Sm)), (f16 HPR:$Sdin))),
-          (VFMSH (f16 HPR:$Sdin), (f16 HPR:$Sn), (f16 HPR:$Sm))>,
-      Requires<[HasFullFP16]>;
 
 def VFNMAD : ADbI<0b11101, 0b01, 1, 0,
                   (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),
@@ -2389,16 +2379,6 @@ def : Pat<(fneg (f32 (fma (fneg SPR:$Sn), SPR:$Sm, SPR:$Sdin))),
           (VFNMSS SPR:$Sdin, SPR:$Sn, SPR:$Sm)>,
       Requires<[HasVFP4]>;
 def : Pat<(fneg (f16 (fma (fneg (f16 HPR:$Sn)), (f16 HPR:$Sm), (f16 HPR:$Sdin)))),
-          (VFNMSH (f16 HPR:$Sdin), (f16 HPR:$Sn), (f16 HPR:$Sm))>,
-      Requires<[HasFullFP16]>;
-// (fneg (fma x, (fneg y), z) -> (vfnms z, x, y)
-def : Pat<(fneg (f64 (fma DPR:$Dn, (fneg DPR:$Dm), DPR:$Ddin))),
-          (VFNMSD DPR:$Ddin, DPR:$Dn, DPR:$Dm)>,
-      Requires<[HasVFP4,HasDPVFP]>;
-def : Pat<(fneg (f32 (fma SPR:$Sn, (fneg SPR:$Sm), SPR:$Sdin))),
-          (VFNMSS SPR:$Sdin, SPR:$Sn, SPR:$Sm)>,
-      Requires<[HasVFP4]>;
-def : Pat<(fneg (f16 (fma (f16 HPR:$Sn), (fneg (f16 HPR:$Sm)), (f16 HPR:$Sdin)))),
           (VFNMSH (f16 HPR:$Sdin), (f16 HPR:$Sn), (f16 HPR:$Sm))>,
       Requires<[HasFullFP16]>;
 

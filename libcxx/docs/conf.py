@@ -40,7 +40,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'libc++'
-copyright = u'2011-2018, LLVM Project'
+copyright = u'2011-2020, LLVM Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -63,7 +63,7 @@ today_fmt = '%Y-%m-%d'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', 'Helpers']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

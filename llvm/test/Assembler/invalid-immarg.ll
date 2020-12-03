@@ -1,7 +1,7 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
-declare void @llvm.immarg.byval(i32* byval immarg)
+declare void @llvm.immarg.byval(i32* byval(i32) immarg)
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
 declare void @llvm.immarg.inalloca(i32* inalloca immarg)
@@ -13,7 +13,7 @@ declare void @llvm.immarg.inreg(i32 inreg immarg)
 declare void @llvm.immarg.nest(i32* nest immarg)
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
-declare void @llvm.immarg.sret(i32* sret immarg)
+declare void @llvm.immarg.sret(i32* sret(i32) immarg)
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
 declare void @llvm.immarg.zeroext(i32 zeroext immarg)

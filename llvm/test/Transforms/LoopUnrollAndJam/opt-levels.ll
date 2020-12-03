@@ -1,7 +1,7 @@
-; RUN: opt < %s -S -passes="default<O2>" -unroll-runtime=true -enable-npm-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=O2
-; RUN: opt < %s -S -passes="default<O3>" -unroll-runtime=true -enable-npm-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=O3
-; RUN: opt < %s -S -passes="default<Os>" -unroll-runtime=true -enable-npm-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=Os
-; RUN: opt < %s -S -passes="default<Oz>" -unroll-runtime=true -enable-npm-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=Oz
+; RUN: opt < %s -S -passes="default<O2>" -unroll-runtime=true -enable-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=O2
+; RUN: opt < %s -S -passes="default<O3>" -unroll-runtime=true -enable-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=O3
+; RUN: opt < %s -S -passes="default<Os>" -unroll-runtime=true -enable-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=Os
+; RUN: opt < %s -S -passes="default<Oz>" -unroll-runtime=true -enable-unroll-and-jam -unroll-threshold-default=0 -unroll-threshold-aggressive=300 | FileCheck %s -check-prefix=Oz
 
 ; Check that Os and Oz are optimized like O2, not like O3. To easily highlight
 ; the behavior, we artificially disable unrolling for anything but O3 by setting

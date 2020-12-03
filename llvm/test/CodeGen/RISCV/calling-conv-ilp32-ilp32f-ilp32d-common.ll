@@ -521,7 +521,7 @@ define i32 @caller_small_coerced_struct() nounwind {
 
 %struct.large = type { i32, i32, i32, i32 }
 
-define i32 @callee_large_struct(%struct.large* byval align 4 %a) nounwind {
+define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) nounwind {
 ; RV32I-FPELIM-LABEL: callee_large_struct:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lw a1, 0(a0)
@@ -607,7 +607,7 @@ define i32 @caller_large_struct() nounwind {
   store i32 3, i32* %c
   %d = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 3
   store i32 4, i32* %d
-  %2 = call i32 @callee_large_struct(%struct.large* byval align 4 %ls)
+  %2 = call i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %ls)
   ret i32 %2
 }
 
@@ -939,7 +939,7 @@ define void @caller_large_scalar_ret() nounwind {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret %agg.result) nounwind {
+define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) nounwind {
 ; RV32I-FPELIM-LABEL: callee_large_struct_ret:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi a1, zero, 1
@@ -1011,7 +1011,7 @@ define i32 @caller_large_struct_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret %1)
+  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
   %2 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 0
   %3 = load i32, i32* %2
   %4 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 3

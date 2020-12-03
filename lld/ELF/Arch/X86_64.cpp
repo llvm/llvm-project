@@ -40,8 +40,8 @@ public:
   void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                          unsigned size) const override;
 
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustGotPcExpr(RelType type, int64_t addend,
+                          const uint8_t *loc) const override;
   void relaxGot(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
@@ -728,12 +728,12 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-RelExpr X86_64::adjustRelaxExpr(RelType type, const uint8_t *data,
-                                RelExpr relExpr) const {
+RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
+                                const uint8_t *loc) const {
   if (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX)
-    return relExpr;
-  const uint8_t op = data[-2];
-  const uint8_t modRm = data[-1];
+    return R_GOT_PC;
+  const uint8_t op = loc[-2];
+  const uint8_t modRm = loc[-1];
 
   // FIXME: When PIC is disabled and foo is defined locally in the
   // lower 32 bit address space, memory operand in mov can be converted into
@@ -748,11 +748,11 @@ RelExpr X86_64::adjustRelaxExpr(RelType type, const uint8_t *data,
 
   // We don't support test/binop instructions without a REX prefix.
   if (type == R_X86_64_GOTPCRELX)
-    return relExpr;
+    return R_GOT_PC;
 
   // Relaxation of test, adc, add, and, cmp, or, sbb, sub, xor.
   // If PIC then no relaxation is available.
-  return config->isPic ? relExpr : R_RELAX_GOT_PC_NOPIC;
+  return config->isPic ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
 }
 
 // A subset of relaxations can only be applied for no-PIC. This method

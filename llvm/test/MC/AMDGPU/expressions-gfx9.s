@@ -23,7 +23,7 @@ s_sub_u32 s0, u, u1
 // NOGFX9: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, v3, u
-// NOGFX9: error: invalid literal operand
+// NOGFX9: error: literal operands are not supported
 
 //===----------------------------------------------------------------------===//
 // Constant expressions may be used with 'sext' modifier

@@ -295,9 +295,22 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 /// If this constant is a constant offset from a global, return the global and
 /// the constant. Because of constantexprs, this function is recursive.
 bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
-                                      APInt &Offset, const DataLayout &DL) {
+                                      APInt &Offset, const DataLayout &DL,
+                                      DSOLocalEquivalent **DSOEquiv) {
+  if (DSOEquiv)
+    *DSOEquiv = nullptr;
+
   // Trivial case, constant is the global.
   if ((GV = dyn_cast<GlobalValue>(C))) {
+    unsigned BitWidth = DL.getIndexTypeSizeInBits(GV->getType());
+    Offset = APInt(BitWidth, 0);
+    return true;
+  }
+
+  if (auto *FoundDSOEquiv = dyn_cast<DSOLocalEquivalent>(C)) {
+    if (DSOEquiv)
+      *DSOEquiv = FoundDSOEquiv;
+    GV = FoundDSOEquiv->getGlobalValue();
     unsigned BitWidth = DL.getIndexTypeSizeInBits(GV->getType());
     Offset = APInt(BitWidth, 0);
     return true;
@@ -310,7 +323,8 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
   // Look through ptr->int and ptr->ptr casts.
   if (CE->getOpcode() == Instruction::PtrToInt ||
       CE->getOpcode() == Instruction::BitCast)
-    return IsConstantOffsetFromGlobal(CE->getOperand(0), GV, Offset, DL);
+    return IsConstantOffsetFromGlobal(CE->getOperand(0), GV, Offset, DL,
+                                      DSOEquiv);
 
   // i32* getelementptr ([5 x i32]* @a, i32 0, i32 5)
   auto *GEP = dyn_cast<GEPOperator>(CE);
@@ -321,7 +335,8 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
   APInt TmpOffset(BitWidth, 0);
 
   // If the base isn't a global+constant, we aren't either.
-  if (!IsConstantOffsetFromGlobal(CE->getOperand(0), GV, TmpOffset, DL))
+  if (!IsConstantOffsetFromGlobal(CE->getOperand(0), GV, TmpOffset, DL,
+                                  DSOEquiv))
     return false;
 
   // Otherwise, add any offset that our operands provide.

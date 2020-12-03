@@ -1294,8 +1294,16 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   return !HasLTOVisibilityPublicStd(RD);
 }
 
-llvm::GlobalObject::VCallVisibility
-CodeGenModule::GetVCallVisibilityLevel(const CXXRecordDecl *RD) {
+llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
+    const CXXRecordDecl *RD, llvm::DenseSet<const CXXRecordDecl *> &Visited) {
+  // If we have already visited this RD (which means this is a recursive call
+  // since the initial call should have an empty Visited set), return the max
+  // visibility. The recursive calls below compute the min between the result
+  // of the recursive call and the current TypeVis, so returning the max here
+  // ensures that it will have no effect on the current TypeVis.
+  if (!Visited.insert(RD).second)
+    return llvm::GlobalObject::VCallVisibilityTranslationUnit;
+
   LinkageInfo LV = RD->getLinkageAndVisibility();
   llvm::GlobalObject::VCallVisibility TypeVis;
   if (!isExternallyVisible(LV.getLinkage()))
@@ -1307,13 +1315,15 @@ CodeGenModule::GetVCallVisibilityLevel(const CXXRecordDecl *RD) {
 
   for (auto B : RD->bases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
-      TypeVis = std::min(TypeVis,
-                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+      TypeVis = std::min(
+          TypeVis,
+          GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
   for (auto B : RD->vbases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
-      TypeVis = std::min(TypeVis,
-                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+      TypeVis = std::min(
+          TypeVis,
+          GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
   return TypeVis;
 }
@@ -1382,7 +1392,9 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
   if (getCodeGenOpts().VirtualFunctionElimination ||
       getCodeGenOpts().WholeProgramVTables) {
-    llvm::GlobalObject::VCallVisibility TypeVis = GetVCallVisibilityLevel(RD);
+    llvm::DenseSet<const CXXRecordDecl *> Visited;
+    llvm::GlobalObject::VCallVisibility TypeVis =
+        GetVCallVisibilityLevel(RD, Visited);
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
       VTable->setVCallVisibilityMetadata(TypeVis);
   }

@@ -1,5 +1,6 @@
 // Regression test for https://github.com/google/sanitizers/issues/1259
 // RUN: %clang_tsan -O1 %s -o %t && %run %t
+// REQUIRES: glibc-2.30 || android-30
 
 #define _GNU_SOURCE
 #include <pthread.h>

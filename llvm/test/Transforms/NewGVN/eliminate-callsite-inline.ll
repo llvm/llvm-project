@@ -2,7 +2,6 @@
 
 ; CHECK-LABEL: @f2()
 ; CHECK-NEXT:    ret void
-; CHECK-NOT: @f1
 
 define void @f2() {
   call void @f1()

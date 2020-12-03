@@ -276,13 +276,9 @@ def : Pat<(fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
           (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
-def : Pat<(fma FPR64:$rs1, (fneg FPR64:$rs2), FPR64:$rs3),
-          (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
-          (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
-def : Pat<(fma FPR64:$rs1, (fneg FPR64:$rs2), (fneg FPR64:$rs3)),
           (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
@@ -372,7 +368,7 @@ def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
 // because fpto[u|s]i produce poison if the value can't fit into the target.
 // We match the single case below because fcvt.wu.d sign-extends its result so
 // is cheaper than fcvt.lu.d+sext.w.
-def : Pat<(sext_inreg (zexti32 (fp_to_uint FPR64:$rs1)), i32),
+def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR64:$rs1)), i32),
           (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp

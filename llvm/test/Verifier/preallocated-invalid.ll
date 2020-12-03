@@ -144,3 +144,7 @@ define void @teardown_token_not_from_setup() {
     call void @llvm.call.preallocated.teardown(token %cs)
     ret void
 }
+
+; CHECK: Wrong types for attribute:
+; CHECK-NEXT: void (i32)* @not_pointer
+declare void @not_pointer(i32 preallocated(i32))

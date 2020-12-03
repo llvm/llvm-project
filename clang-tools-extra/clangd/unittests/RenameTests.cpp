@@ -17,9 +17,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -540,6 +540,94 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Fields in classes & partial and full specialiations.
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          T [[Vari^able]] = 42;
+        };
+
+        void foo() {
+          Foo<int> f;
+          f.[[Varia^ble]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T Variable;
+          void bar() { ++Variable; }
+        };
+
+        template<>
+        struct Foo<unsigned, bool> {
+          unsigned [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      // Static fields.
+      R"cpp(
+        struct Foo {
+          static int [[Var^iable]];
+        };
+
+        int Foo::[[Var^iable]] = 42;
+
+        void foo() {
+          int LocalInt = Foo::[[Var^iable]];
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          static T [[Var^iable]];
+        };
+
+        template <>
+        int Foo<int>::[[Var^iable]] = 42;
+
+        template <>
+        bool Foo<bool>::[[Var^iable]] = true;
+
+        void foo() {
+          int LocalInt = Foo<int>::[[Var^iable]];
+          bool LocalBool = Foo<bool>::[[Var^iable]];
+        }
+      )cpp",
+
       // Template parameters.
       R"cpp(
         template <typename [[^T]]>
@@ -1016,6 +1104,7 @@ TEST(RenameTest, PrepareRename) {
   auto ServerOpts = ClangdServer::optsForTest();
   ServerOpts.BuildDynamicSymbolIndex = true;
 
+  trace::TestTracer Tracer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ServerOpts);
   runAddDocument(Server, FooHPath, FooH.code());
@@ -1038,6 +1127,8 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("keyword"));
+  EXPECT_THAT(Tracer.takeMetric("rename_name_invalid", "Keywords"),
+              ElementsAre(1));
 
   // Single-file rename on global symbols, we should report an error.
   Results = runPrepareRename(Server, FooCCPath, FooCC.point(),

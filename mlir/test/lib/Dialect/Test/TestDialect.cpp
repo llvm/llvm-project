@@ -9,7 +9,7 @@
 #include "TestDialect.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -744,17 +744,18 @@ void SideEffectOp::getEffects(
             .Case("read", MemoryEffects::Read::get())
             .Case("write", MemoryEffects::Write::get());
 
-    // Check for a result to affect.
-    Value value;
-    if (effectElement.get("on_result"))
-      value = getResult();
-
     // Check for a non-default resource to use.
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
 
-    effects.emplace_back(effect, value, resource);
+    // Check for a result to affect.
+    if (effectElement.get("on_result"))
+      effects.emplace_back(effect, getResult(), resource);
+    else if (Attribute ref = effectElement.get("on_reference"))
+      effects.emplace_back(effect, ref.cast<SymbolRefAttr>(), resource);
+    else
+      effects.emplace_back(effect, resource);
   }
 }
 

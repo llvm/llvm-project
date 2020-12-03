@@ -31,11 +31,11 @@ define void @test() #1 {
   %1 = alloca %struct.S, align 2
 ; CHECK:      mov	r1, r12
 ; CHECK-NEXT: call	#sret
-  call void @sret(%struct.S* nonnull sret %1) #3
+  call void @sret(%struct.S* nonnull sret(%struct.S) %1) #3
   ret void
 }
 
-define void @sret(%struct.S* noalias nocapture sret) #0 {
+define void @sret(%struct.S* noalias nocapture sret(%struct.S)) #0 {
 ; CHECK-LABEL: sret:
 ; CHECK: mov	&a, 0(r12)
 ; CHECK: mov	&b, 2(r12)

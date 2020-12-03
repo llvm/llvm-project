@@ -375,6 +375,7 @@ enum ConstantsCodes {
                                  //                 asmdialect,asmstr,conststr]
   CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
   CST_CODE_CE_UNOP = 25,         // CE_UNOP:      [opcode, opval]
+  CST_CODE_POISON = 26,          // POISON
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which

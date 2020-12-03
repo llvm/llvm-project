@@ -188,8 +188,10 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
-                      /*Opts=*/{});
+  BackgroundIndex::Options Opts;
+  Opts.CollectMainFileRefs = true;
+  BackgroundIndex Idx(
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -201,7 +203,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   EXPECT_THAT(runFuzzyFind(Idx, ""),
               UnorderedElementsAre(AllOf(Named("common"), NumReferences(1U)),
                                    AllOf(Named("A_CC"), NumReferences(0U)),
-                                   AllOf(Named("g"), NumReferences(0U)),
+                                   AllOf(Named("g"), NumReferences(1U)),
                                    AllOf(Named("f_b"), Declared(),
                                          Not(Defined()), NumReferences(0U))));
 
@@ -214,7 +216,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   EXPECT_THAT(runFuzzyFind(Idx, ""),
               UnorderedElementsAre(AllOf(Named("common"), NumReferences(5U)),
                                    AllOf(Named("A_CC"), NumReferences(0U)),
-                                   AllOf(Named("g"), NumReferences(0U)),
+                                   AllOf(Named("g"), NumReferences(1U)),
                                    AllOf(Named("f_b"), Declared(), Defined(),
                                          NumReferences(1U))));
 
@@ -238,7 +240,8 @@ TEST_F(BackgroundIndexTest, MainFileRefs) {
   FS.Files[testPath("root/A.cc")] =
       "#include \"A.h\"\nstatic void main_sym() { (void)header_sym; }";
 
-  // Check the behaviour with CollectMainFileRefs = false (the default).
+  // Check the behaviour with CollectMainFileRefs = false (the default
+  // at the SymbolCollector level).
   {
     llvm::StringMap<std::string> Storage;
     size_t CacheHits = 0;

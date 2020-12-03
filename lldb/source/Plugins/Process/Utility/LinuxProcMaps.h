@@ -11,16 +11,16 @@
 
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include <functional>
-
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
-typedef std::function<bool(const lldb_private::MemoryRegionInfo &,
-                           const lldb_private::Status &)> LinuxMapCallback;
+typedef std::function<bool(llvm::Expected<MemoryRegionInfo>)> LinuxMapCallback;
 
 void ParseLinuxMapRegions(llvm::StringRef linux_map,
                           LinuxMapCallback const &callback);
+void ParseLinuxSMapRegions(llvm::StringRef linux_smap,
+                           LinuxMapCallback const &callback);
 
 } // namespace lldb_private
 

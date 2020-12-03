@@ -286,6 +286,7 @@ HANDLE_LIBCALL(FPEXT_F64_PPCF128, "__gcc_dtoq")
 HANDLE_LIBCALL(FPEXT_F80_F128, "__extendxftf2")
 HANDLE_LIBCALL(FPEXT_F64_F128, "__extenddftf2")
 HANDLE_LIBCALL(FPEXT_F32_F128, "__extendsftf2")
+HANDLE_LIBCALL(FPEXT_F16_F128, "__extendhftf2")
 HANDLE_LIBCALL(FPEXT_F32_F64, "__extendsfdf2")
 HANDLE_LIBCALL(FPEXT_F16_F32, "__gnu_h2f_ieee")
 HANDLE_LIBCALL(FPROUND_F32_F16, "__gnu_f2h_ieee")
@@ -543,6 +544,23 @@ HANDLE_LIBCALL(ATOMIC_FETCH_NAND_2, "__atomic_fetch_nand_2")
 HANDLE_LIBCALL(ATOMIC_FETCH_NAND_4, "__atomic_fetch_nand_4")
 HANDLE_LIBCALL(ATOMIC_FETCH_NAND_8, "__atomic_fetch_nand_8")
 HANDLE_LIBCALL(ATOMIC_FETCH_NAND_16, "__atomic_fetch_nand_16")
+
+// Out-of-line atomics libcalls
+#define HLCALLS(A, N)                                                          \
+  HANDLE_LIBCALL(A##N##_RELAX, nullptr)                                        \
+  HANDLE_LIBCALL(A##N##_ACQ, nullptr)                                          \
+  HANDLE_LIBCALL(A##N##_REL, nullptr)                                          \
+  HANDLE_LIBCALL(A##N##_ACQ_REL, nullptr)
+#define HLCALL5(A)                                                             \
+  HLCALLS(A, 1) HLCALLS(A, 2) HLCALLS(A, 4) HLCALLS(A, 8) HLCALLS(A, 16)
+HLCALL5(OUTLINE_ATOMIC_CAS)
+HLCALL5(OUTLINE_ATOMIC_SWP)
+HLCALL5(OUTLINE_ATOMIC_LDADD)
+HLCALL5(OUTLINE_ATOMIC_LDSET)
+HLCALL5(OUTLINE_ATOMIC_LDCLR)
+HLCALL5(OUTLINE_ATOMIC_LDEOR)
+#undef HLCALLS
+#undef HLCALL5
 
 // Stack Protector Fail
 HANDLE_LIBCALL(STACKPROTECTOR_CHECK_FAIL, "__stack_chk_fail")

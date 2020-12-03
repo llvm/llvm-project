@@ -55,7 +55,7 @@ typedef struct StructWithPtrTag : public Base {
   int *ptr1;
 } StructWithPtr;
 
-// CK30-DAG: call i32 @__tgt_target_mapper(i64 -1, i8* @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id, i32 6, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MTYPE00]], i32 0, i32 0), i8** null)
+// CK30-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id, i32 6, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MTYPE00]], i32 0, i32 0), i8** null, i8** null)
 // CK30-DAG: [[GEPS]] = getelementptr inbounds [6 x i{{64|32}}], [6 x i64]* [[SIZES:%.+]], i32 0, i32 0
 // CK30-DAG: [[GEPP]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[PTRS:%.+]], i32 0, i32 0
 // CK30-DAG: [[GEPBP]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BASES:%.+]], i32 0, i32 0

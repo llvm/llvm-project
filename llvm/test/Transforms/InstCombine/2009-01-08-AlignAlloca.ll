@@ -18,7 +18,7 @@ define i32 @bar(i64 %key_token2) nounwind {
 ; CHECK-NEXT:    store i32 0, i32* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %struct.Key* [[IOSPEC]] to i64*
 ; CHECK-NEXT:    store i64 [[KEY_TOKEN2:%.*]], i64* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (...) @foo(%struct.Key* nonnull byval align 4 [[IOSPEC]], i32* nonnull [[RET]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (...) @foo(%struct.Key* nonnull byval(%struct.Key) align 4 [[IOSPEC]], i32* nonnull [[RET]]) [[ATTR0:#.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[RET]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
@@ -34,7 +34,7 @@ entry:
   %3 = getelementptr %struct.Key, %struct.Key* %iospec, i32 0, i32 0		; <{ i32, i32 }*> [#uses=1]
   %4 = bitcast { i32, i32 }* %3 to i64*		; <i64*> [#uses=1]
   store i64 %key_token2, i64* %4, align 4
-  %5 = call i32 (...) @foo(%struct.Key* byval align 4 %iospec, i32* %ret) nounwind		; <i32> [#uses=0]
+  %5 = call i32 (...) @foo(%struct.Key* byval(%struct.Key) align 4 %iospec, i32* %ret) nounwind		; <i32> [#uses=0]
   %6 = load i32, i32* %ret, align 4		; <i32> [#uses=1]
   ret i32 %6
 }

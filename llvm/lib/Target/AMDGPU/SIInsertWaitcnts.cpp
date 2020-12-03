@@ -138,6 +138,7 @@ enum WaitEventType {
   EXP_POS_ACCESS,   // write to export position
   EXP_PARAM_ACCESS, // write to export parameter
   VMW_GPR_LOCK,     // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,   // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
@@ -146,7 +147,8 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
   (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
       (1 << SQ_MESSAGE),
   (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS),
+      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) |
+      (1 << EXP_LDS_ACCESS),
   (1 << VMEM_WRITE_ACCESS)
 };
 
@@ -614,6 +616,12 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
             CurrScore);
       }
+    } else if (TII->isLDSDIR(Inst)) {
+      // LDSDIR instructions attach the score to the destination.
+      setExpScore(
+          &Inst, TII, TRI, MRI,
+          AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdst),
+          CurrScore);
     } else {
       if (TII->isEXP(Inst)) {
         // For export the destination registers are really temps that
@@ -1043,7 +1051,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                   VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
               ScoreBrackets.clearVgprVmemTypes(RegNo);
             }
-            if (Op.isDef()) {
+            if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
               ScoreBrackets.determineWait(
                   EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
             }
@@ -1323,6 +1331,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
+  } else if (SIInstrInfo::isLDSDIR(Inst)) {
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
   } else if (SIInstrInfo::isEXP(Inst)) {
     int Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
@@ -1428,15 +1438,19 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ScoreBrackets.dump();
   });
 
+  // Track the correctness of vccz through this basic block. There are two
+  // reasons why it might be incorrect; see ST->hasReadVCCZBug() and
+  // ST->partialVCCWritesUpdateVCCZ().
   bool VCCZCorrect = true;
-  if (ST->hasReadVCCZBug())
+  if (ST->hasReadVCCZBug()) {
     // vccz could be incorrect at a basic block boundary if a predecessor wrote
     // to vcc and then issued an smem load.
     VCCZCorrect = false;
-  else if (!ST->partialVCCWritesUpdateVCCZ())
+  } else if (!ST->partialVCCWritesUpdateVCCZ()) {
     // vccz could be incorrect at a basic block boundary if a predecessor wrote
     // to vcc_lo or vcc_hi.
     VCCZCorrect = false;
+  }
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
@@ -1457,15 +1471,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    // We might need to restore vccz to its correct value for either of two
-    // different reasons; see ST->hasReadVCCZBug() and
-    // ST->partialVCCWritesUpdateVCCZ().
-    bool RestoreVCCZ = false;
-    if (readsVCCZ(Inst)) {
-      if (!VCCZCorrect) {
-        // Restore vccz if it's not known to be correct already.
-        RestoreVCCZ = true;
-      } else if (ST->hasReadVCCZBug()) {
+    // Generate an s_waitcnt instruction to be placed before Inst, if needed.
+    Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr);
+    OldWaitcntInstr = nullptr;
+
+    // Restore vccz if it's not known to be correct already.
+    bool RestoreVCCZ = !VCCZCorrect && readsVCCZ(Inst);
+
+    // Don't examine operands unless we need to track vccz correctness.
+    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
+          Inst.definesRegister(AMDGPU::VCC_HI)) {
+        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+        if (!ST->partialVCCWritesUpdateVCCZ())
+          VCCZCorrect = false;
+      } else if (Inst.definesRegister(AMDGPU::VCC)) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:
@@ -1473,12 +1493,16 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         //    operations to complete.
         // 2. Restore the correct value of vccz by writing the current value
         //    of vcc back to vcc.
-        if (ScoreBrackets.getScoreLB(LGKM_CNT) <
-            ScoreBrackets.getScoreUB(LGKM_CNT) &&
+        if (ST->hasReadVCCZBug() &&
+            ScoreBrackets.getScoreLB(LGKM_CNT) <
+                ScoreBrackets.getScoreUB(LGKM_CNT) &&
             ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-          // Restore vccz if there's an outstanding smem read, which could
-          // complete and clobber vccz at any time.
-          RestoreVCCZ = true;
+          // Writes to vcc while there's an outstanding smem read may get
+          // clobbered as soon as any read completes.
+          VCCZCorrect = false;
+        } else {
+          // Writes to vcc will fix any incorrect value in vccz.
+          VCCZCorrect = true;
         }
       }
     }
@@ -1488,23 +1512,11 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         const Value *Ptr = Memop->getValue();
         SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
       }
-    }
-
-    if (!ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
-          Inst.definesRegister(AMDGPU::VCC_HI)) {
-        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+      if (ST->hasReadVCCZBug()) {
+        // This smem read could complete and clobber vccz at any time.
         VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC)) {
-        // Writes to vcc will fix any incorrect value in vccz.
-        VCCZCorrect = true;
       }
     }
-
-    // Generate an s_waitcnt instruction to be placed before
-    // cur_Inst, if needed.
-    Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr);
-    OldWaitcntInstr = nullptr;
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 

@@ -17,7 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
@@ -946,6 +946,9 @@ std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
   if (auto dataLayoutAttr =
           m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()))
     llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
+  if (auto targetTripleAttr =
+          m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
+    llvmModule->setTargetTriple(targetTripleAttr.cast<StringAttr>().getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in
   // memref allocation/deallocation coming from standard ops lowering.

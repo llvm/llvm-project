@@ -915,8 +915,8 @@ bool VEInstrInfo::expandGetStackTopPseudo(MachineInstr &MI) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const VEFrameLowering &TFL = *STI.getFrameLowering();
 
-  // The VE ABI requires a reserved 176 bytes area at the top
-  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  // The VE ABI requires a reserved area at the top of stack as described
+  // in VEFrameLowering.cpp.  So, we adjust it here.
   unsigned NumBytes = STI.getAdjustedFrameSize(0);
 
   // Also adds the size of parameter area.

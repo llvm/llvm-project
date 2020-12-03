@@ -8,28 +8,27 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq.w .LBB0_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
-; CHECK-NEXT:    add.w r5, r2, r3, lsl #2
-; CHECK-NEXT:    cmp r4, r2
-; CHECK-NEXT:    mov.w r12, #1
+; CHECK-NEXT:    add.w r5, r0, r3, lsl #2
+; CHECK-NEXT:    add.w r4, r2, r3, lsl #2
+; CHECK-NEXT:    cmp r5, r2
+; CHECK-NEXT:    cset r12, hi
+; CHECK-NEXT:    cmp r4, r0
 ; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r5, r0
-; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    cmp r4, r1
+; CHECK-NEXT:    cmp r5, r1
 ; CHECK-NEXT:    add.w r5, r1, r3, lsl #2
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    cmp r5, r0
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
+; CHECK-NEXT:    ands r4, r5
+; CHECK-NEXT:    lsls r4, r4, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r6, r6, lr
-; CHECK-NEXT:    lslseq.w r6, r6, #31
+; CHECK-NEXT:    andeq.w r5, lr, r12
+; CHECK-NEXT:    lslseq.w r5, r5, #31
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r6, r3, #1
+; CHECK-NEXT:    subs r5, r3, #1
 ; CHECK-NEXT:    and r7, r3, #3
-; CHECK-NEXT:    cmp r6, #3
+; CHECK-NEXT:    cmp r5, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
@@ -48,11 +47,12 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    b .LBB0_11
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader.new
 ; CHECK-NEXT:    bic r3, r3, #3
+; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    add.w lr, r5, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, r1, r3
@@ -224,11 +224,11 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    cbz r2, .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #3
-; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    mov.w r12, #1
 ; CHECK-NEXT:    bic r3, r3, #3
-; CHECK-NEXT:    sub.w r12, r3, #4
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    subs r3, #4
+; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body

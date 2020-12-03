@@ -105,6 +105,11 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
+TargetLoweringObjectFileELF::TargetLoweringObjectFileELF()
+    : TargetLoweringObjectFile() {
+  SupportDSOLocalEquivalentLowering = true;
+}
+
 void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
@@ -1005,6 +1010,20 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
       MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
                               getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
+}
+
+const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
+    const DSOLocalEquivalent *Equiv, const TargetMachine &TM) const {
+  assert(supportDSOLocalEquivalentLowering());
+
+  const auto *GV = Equiv->getGlobalValue();
+
+  // A PLT entry is not needed for dso_local globals.
+  if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
+    return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
+
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
+                                 getContext());
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {

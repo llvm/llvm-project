@@ -19,7 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -151,9 +151,9 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
   using ConvertOpToLLVMPattern<gpu::LaunchFuncOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::LaunchFuncOp launchOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    gpu::LaunchFuncOp launchOp = cast<gpu::LaunchFuncOp>(op);
+    auto *op = launchOp.getOperation();
     MLIRContext *context = rewriter.getContext();
     auto module = launchOp.getParentOfType<ModuleOp>();
 

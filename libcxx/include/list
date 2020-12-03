@@ -783,7 +783,7 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
                    "list::swap: Either propagate_on_container_swap must be true"
                    " or the allocators must compare equal");
     using _VSTD::swap;
-    __swap_allocator(__node_alloc(), __c.__node_alloc());
+    _VSTD::__swap_allocator(__node_alloc(), __c.__node_alloc());
     swap(__sz(), __c.__sz());
     swap(__end_, __c.__end_);
     if (__sz() == 0)

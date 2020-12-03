@@ -415,9 +415,10 @@ struct OffloadArray {
     return true;
   }
 
-  static const unsigned BasePtrsArgNum = 2;
-  static const unsigned PtrsArgNum = 3;
-  static const unsigned SizesArgNum = 4;
+  static const unsigned DeviceIDArgNum = 1;
+  static const unsigned BasePtrsArgNum = 3;
+  static const unsigned PtrsArgNum = 4;
+  static const unsigned SizesArgNum = 5;
 
 private:
   /// Traverses the BasicBlock where \p Array is, collecting the stores made to
@@ -1116,7 +1117,7 @@ private:
         M, OMPRTL___tgt_target_data_begin_mapper_issue);
 
     // Change RuntimeCall call site for its asynchronous version.
-    SmallVector<Value *, 8> Args;
+    SmallVector<Value *, 16> Args;
     for (auto &Arg : RuntimeCall.args())
       Args.push_back(Arg.get());
     Args.push_back(Handle);
@@ -1130,11 +1131,10 @@ private:
     FunctionCallee WaitDecl = IRBuilder.getOrCreateRuntimeFunction(
         M, OMPRTL___tgt_target_data_begin_mapper_wait);
 
-    // Add call site to WaitDecl.
-    const unsigned DeviceIDArgNum = 0;
     Value *WaitParams[2] = {
-        IssueCallsite->getArgOperand(DeviceIDArgNum), // device_id.
-        Handle                                        // handle to wait on.
+        IssueCallsite->getArgOperand(
+            OffloadArray::DeviceIDArgNum), // device_id.
+        Handle                             // handle to wait on.
     };
     CallInst::Create(WaitDecl, WaitParams, /*NameStr=*/"", &WaitMovementPoint);
 

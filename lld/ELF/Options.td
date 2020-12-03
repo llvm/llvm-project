@@ -340,7 +340,9 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
-defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+defm reproduce:
+  Eq<"reproduce",
+     "Write tar file containing inputs and command to reproduce link">;
 
 defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
@@ -539,8 +541,9 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
-def lto_whole_program_visibility: FF<"lto-whole-program-visibility">,
-  HelpText<"Asserts that the LTO link has whole program visibility">;
+defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
+  "Asserts that the LTO link has whole program visibility",
+  "Asserts that the LTO link does not have whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,

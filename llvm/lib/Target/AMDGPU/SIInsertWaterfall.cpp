@@ -574,7 +574,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     // Insert the waterfall loop code around the identified region of
     // instructions
-    // Loop starts at the SI_WATERFALL_BEGIN
+    // Loop starts at the last SI_WATERFALL_BEGIN
     // SI_WATERFALL_READFIRSTLANE is replaced with appropriate readfirstlane
     // instructions OR is removed
     // if the readfirstlane is using the same index as the SI_WATERFALL_BEGIN
@@ -609,7 +609,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
           dbgs() << "Uniform loop detected - waterfall loop is redundant\n");
     });
 
-    MachineBasicBlock::iterator I(Item.BeginList[0]);
+    MachineBasicBlock::iterator I(Item.BeginList.back());
     const DebugLoc &DL = Item.BeginList[0]->getDebugLoc();
 
     // Initialize the register we accumulate the result into, which is the

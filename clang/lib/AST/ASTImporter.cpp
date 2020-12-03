@@ -5158,8 +5158,6 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   // context. This context will be fixed when the actual template declaration
   // is created.
 
-  // FIXME: Import default argument  and constraint expression.
-
   ExpectedSLoc BeginLocOrErr = import(D->getBeginLoc());
   if (!BeginLocOrErr)
     return BeginLocOrErr.takeError();
@@ -5206,6 +5204,14 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
         ToIDC);
   }
 
+  if (D->hasDefaultArgument()) {
+    Expected<TypeSourceInfo *> ToDefaultArgOrErr =
+        import(D->getDefaultArgumentInfo());
+    if (!ToDefaultArgOrErr)
+      return ToDefaultArgOrErr.takeError();
+    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+  }
+
   return ToD;
 }
 
@@ -5221,15 +5227,22 @@ ASTNodeImporter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   if (Err)
     return std::move(Err);
 
-  // FIXME: Import default argument.
-
   NonTypeTemplateParmDecl *ToD = nullptr;
-  (void)GetImportedOrCreateDecl(
-      ToD, D, Importer.getToContext(),
-      Importer.getToContext().getTranslationUnitDecl(),
-      ToInnerLocStart, ToLocation, D->getDepth(),
-      D->getPosition(), ToDeclName.getAsIdentifierInfo(), ToType,
-      D->isParameterPack(), ToTypeSourceInfo);
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(),
+                              Importer.getToContext().getTranslationUnitDecl(),
+                              ToInnerLocStart, ToLocation, D->getDepth(),
+                              D->getPosition(),
+                              ToDeclName.getAsIdentifierInfo(), ToType,
+                              D->isParameterPack(), ToTypeSourceInfo))
+    return ToD;
+
+  if (D->hasDefaultArgument()) {
+    ExpectedExpr ToDefaultArgOrErr = import(D->getDefaultArgument());
+    if (!ToDefaultArgOrErr)
+      return ToDefaultArgOrErr.takeError();
+    ToD->setDefaultArgument(*ToDefaultArgOrErr);
+  }
+
   return ToD;
 }
 
@@ -5250,15 +5263,22 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   if (!TemplateParamsOrErr)
     return TemplateParamsOrErr.takeError();
 
-  // FIXME: Import default argument.
-
   TemplateTemplateParmDecl *ToD = nullptr;
-  (void)GetImportedOrCreateDecl(
-      ToD, D, Importer.getToContext(),
-      Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
-      D->getDepth(), D->getPosition(), D->isParameterPack(),
-      (*NameOrErr).getAsIdentifierInfo(),
-      *TemplateParamsOrErr);
+  if (GetImportedOrCreateDecl(
+          ToD, D, Importer.getToContext(),
+          Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
+          D->getDepth(), D->getPosition(), D->isParameterPack(),
+          (*NameOrErr).getAsIdentifierInfo(), *TemplateParamsOrErr))
+    return ToD;
+
+  if (D->hasDefaultArgument()) {
+    Expected<TemplateArgumentLoc> ToDefaultArgOrErr =
+        import(D->getDefaultArgument());
+    if (!ToDefaultArgOrErr)
+      return ToDefaultArgOrErr.takeError();
+    ToD->setDefaultArgument(Importer.getToContext(), *ToDefaultArgOrErr);
+  }
+
   return ToD;
 }
 
@@ -5423,8 +5443,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
   if (PrevDecl) {
     if (IsStructuralMatch(D, PrevDecl)) {
-      if (D->isThisDeclarationADefinition() && PrevDecl->getDefinition()) {
-        Importer.MapImported(D, PrevDecl->getDefinition());
+      CXXRecordDecl *PrevDefinition = PrevDecl->getDefinition();
+      if (D->isThisDeclarationADefinition() && PrevDefinition) {
+        Importer.MapImported(D, PrevDefinition);
         // Import those default field initializers which have been
         // instantiated in the "From" context, but not in the "To" context.
         for (auto *FromField : D->fields()) {
@@ -5446,7 +5467,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
         //
         // Generally, ASTCommon.h/DeclUpdateKind enum gives a very good hint
         // what else could be fused during an AST merge.
-        return PrevDecl;
+        return PrevDefinition;
       }
     } else { // ODR violation.
       // FIXME HandleNameConflict

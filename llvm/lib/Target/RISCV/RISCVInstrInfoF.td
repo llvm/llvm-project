@@ -332,13 +332,9 @@ def : Pat<(fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
           (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), FPR32:$rs3),
-          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
-          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
@@ -404,7 +400,7 @@ def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
 let Predicates = [HasStdExtF, IsRV64] in {
 def : Pat<(riscv_fmv_w_x_rv64 GPR:$src), (FMV_W_X GPR:$src)>;
 def : Pat<(riscv_fmv_x_anyextw_rv64 FPR32:$src), (FMV_X_W FPR32:$src)>;
-def : Pat<(sexti32 (riscv_fmv_x_anyextw_rv64 FPR32:$src)),
+def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
           (FMV_X_W FPR32:$src)>;
 
 // FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe

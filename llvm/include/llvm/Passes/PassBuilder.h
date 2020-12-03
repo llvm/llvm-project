@@ -433,6 +433,12 @@ public:
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
                                             ModuleSummaryIndex *ExportSummary);
 
+  /// Build an O0 pipeline with the minimal semantically required passes.
+  ///
+  /// This should only be used for non-LTO and LTO pre-link pipelines.
+  ModulePassManager buildO0DefaultPipeline(OptimizationLevel Level,
+                                           bool LTOPreLink = false);
+
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
   AAManager buildDefaultAAPipeline();
@@ -591,6 +597,15 @@ public:
     PipelineStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point.
+  ///
+  /// This extension point allows adding optimization right after passes that do
+  /// basic simplification of the input IR.
+  void registerPipelineEarlySimplificationEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    PipelineEarlySimplificationEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for a default optimizer pipeline extension point
   ///
   /// This extension point allows adding optimizations at the very end of the
@@ -599,14 +614,6 @@ public:
       const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
     OptimizerLastEPCallbacks.push_back(C);
   }
-
-  /// Run all registered extension point callbacks
-  ///
-  /// This runs the registered callbacks in the order they would be run in a
-  /// typical build*Pipeline(). This allows for reusing register*EPCallback()
-  /// between O0 and O[123] pipelines.
-  void runRegisteredEPCallbacks(ModulePassManager &MPM, OptimizationLevel Level,
-                                bool DebugLogging);
 
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
@@ -688,6 +695,8 @@ private:
   buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                         ThinLTOPhase Phase);
 
+  void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
+
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
@@ -729,6 +738,9 @@ private:
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      PipelineEarlySimplificationEPCallbacks;
+
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>
       ModuleAnalysisRegistrationCallbacks;
   SmallVector<std::function<bool(StringRef, ModulePassManager &,

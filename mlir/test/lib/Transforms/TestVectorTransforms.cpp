@@ -312,6 +312,11 @@ struct TestVectorTransferFullPartialSplitPatterns
   }
 };
 
+struct TestVectorTransferOpt
+    : public PassWrapper<TestVectorTransferOpt, FunctionPass> {
+  void runOnFunction() override { transferOpflowOpt(getFunction()); }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -348,6 +353,9 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorToLoopPatterns> vectorToForLoop(
       "test-vector-to-forloop",
       "Test conversion patterns to break up a vector op into a for loop");
+  PassRegistration<TestVectorTransferOpt> transferOpOpt(
+      "test-vector-transferop-opt",
+      "Test optimization transformations for transfer ops");
 }
 } // namespace test
 } // namespace mlir

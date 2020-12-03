@@ -14,7 +14,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test_unknown_size':
 ; CHECK: Alias Set Tracker: 1 alias sets for 1 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, unknown)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, unknown after)
 define void @test_unknown_size(i8* noalias %d, i64 %len) {
 entry:
   call void @llvm.memset.p0i8.i64(i8* align 1 %d, i8 0, i64 %len, i1 false)
@@ -33,7 +33,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test_atomic_unknown_size':
 ; CHECK: Alias Set Tracker: 1 alias sets for 1 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, unknown)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, unknown after)
 define void @test_atomic_unknown_size(i8* noalias %d, i64 %len) {
 entry:
   call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 1 %d, i8 0, i64 %len, i32 1)

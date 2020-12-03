@@ -15,8 +15,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
-#include "../clang-tidy/ClangTidyOptions.h"
 #include "GlobalCompilationDatabase.h"
+#include "TidyProvider.h"
 #include "index/Index.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -37,7 +37,6 @@ public:
 
 // Options to run clang e.g. when parsing AST.
 struct ParseOptions {
-  tidy::ClangTidyOptions ClangTidyOpts;
   bool SuggestMissingIncludes = false;
   bool BuildRecoveryAST = false;
   bool PreserveRecoveryASTType = false;
@@ -56,6 +55,7 @@ struct ParseInputs {
   // Used to recover from diagnostics (e.g. find missing includes for symbol).
   const SymbolIndex *Index = nullptr;
   ParseOptions Opts = ParseOptions();
+  TidyProviderRef ClangTidyProvider = {};
 };
 
 /// Builds compiler invocation that could be used to build AST or preamble.

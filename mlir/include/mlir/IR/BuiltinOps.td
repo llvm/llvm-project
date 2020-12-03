@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the set of builtin MLIR operations.
+// Defines the set of builtin MLIR operations, or the set of operations
+// necessary for the validity of and defining the IR.
 //
 //===----------------------------------------------------------------------===//
 
@@ -196,7 +197,7 @@ def ModuleOp : Builtin_Op<"module", [
     /// Return the name of this module if present.
     Optional<StringRef> getName() { return sym_name(); }
 
-    /// Print the this module in the custom top-level form.
+    /// Print this module in the custom top-level form.
     void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
     void print(raw_ostream &os, AsmState &state,
                OpPrintingFlags flags = llvm::None);

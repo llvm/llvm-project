@@ -93,6 +93,7 @@ group("test") {
     "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/obj2yaml",
     "//llvm/tools/opt",
     "//llvm/tools/split-file",

@@ -121,6 +121,9 @@ entry:
 ; CHECK-NEXT:         Name:            call_alias_ptr
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Name:            call_direct_ptr
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
 
 ; RUN: wasm-ld --relocatable %t.o %t2.o -o %t.reloc.o
@@ -288,4 +291,7 @@ entry:
 ; RELOC-NEXT:         Name:            call_alias_ptr
 ; RELOC-NEXT:       - Index:           5
 ; RELOC-NEXT:         Name:            call_direct_ptr
+; RELOC-NEXT:     GlobalNames:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Name:            __stack_pointer
 ; RELOC-NEXT: ...

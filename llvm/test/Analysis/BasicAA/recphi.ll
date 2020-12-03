@@ -141,10 +141,10 @@ if.end: ; preds = %f.exit
 ; CHECK:         NoAlias:      [3 x i16]* %int_arr.10, i16** %argv.6.par
 ; CHECK:         NoAlias:      i16* %_tmp1, i16** %argv.6.par
 ; CHECK:         PartialAlias: [3 x i16]* %int_arr.10, i16* %_tmp1
-; CHECK:         MayAlias:     i16* %ls1.9.0, i16** %argv.6.par
+; CHECK:         NoAlias:      i16* %ls1.9.0, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %ls1.9.0
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %ls1.9.0
-; CHECK:         MayAlias:     i16* %_tmp7, i16** %argv.6.par
+; CHECK:         NoAlias:      i16* %_tmp7, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %_tmp7
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %_tmp7
 ; CHECK:         NoAlias:      i16* %_tmp7, i16* %ls1.9.0
@@ -187,5 +187,50 @@ bb4:                                              ; preds = %bb3
 bb5:                                              ; preds = %bb3, %bb4
   ret i16 0
 }
+
+; CHECK-LABEL: Function: dynamic_offset
+; CHECK: NoAlias:  i8* %a, i8* %p.base
+; CHECK: MayAlias: i8* %p, i8* %p.base
+; CHECK: NoAlias:  i8* %a, i8* %p
+; CHECK: MayAlias: i8* %p.base, i8* %p.next
+; CHECK: NoAlias:  i8* %a, i8* %p.next
+; CHECK: MayAlias: i8* %p, i8* %p.next
+define void @dynamic_offset(i1 %c, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %loop
+
+loop:
+  %p = phi i8* [ %p.base, %entry ], [ %p.next, %loop ]
+  %offset = call i16 @call(i32 0)
+  %p.next = getelementptr inbounds i8, i8* %p, i16 %offset
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; TODO: Currently yields an asymmetric result.
+; CHECK-LABEL: Function: symmetry
+; CHECK: MayAlias:  i32* %p, i32* %p.base
+; CHECK: MayAlias:  i32* %p.base, i32* %p.next
+; CHECK: NoAlias:   i32* %p, i32* %p.next
+; CHECK: MayAlias:  i32* %p.base, i32* %result
+; CHECK: NoAlias:   i32* %p, i32* %result
+; CHECK: MustAlias: i32* %p.next, i32* %result
+define i32* @symmetry(i32* %p.base, i1 %c) {
+entry:
+  br label %loop
+
+loop:
+  %p = phi i32* [ %p.base, %entry ], [ %p.next, %loop ]
+  %p.next = getelementptr inbounds i32, i32* %p, i32 1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  %result = phi i32* [ %p.next, %loop ]
+  ret i32* %result
+}
+
 
 declare i16 @call(i32)

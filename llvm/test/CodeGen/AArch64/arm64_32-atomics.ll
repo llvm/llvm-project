@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64_32-apple-ios7.0 -mattr=+outline-atomics -o - %s | FileCheck %s -check-prefix=OUTLINE-ATOMICS
 
 define i8 @test_load_8(i8* %addr) {
 ; CHECK-LABAL: test_load_8:
@@ -239,6 +240,7 @@ define i32 @test_stlxr_64(i64* %addr, i64 %val) {
 }
 
 define {i8*, i1} @test_cmpxchg_ptr(i8** %addr, i8* %cmp, i8* %new) {
+; OUTLINE-ATOMICS: bl ___aarch64_cas4_acq_rel
 ; CHECK-LABEL: test_cmpxchg_ptr:
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldaxr [[OLD:w[0-9]+]], [x0]

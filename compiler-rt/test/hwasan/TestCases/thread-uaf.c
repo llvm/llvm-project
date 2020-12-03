@@ -34,8 +34,8 @@ void *Use(void *arg) {
   // CHECK: in Deallocate
   // CHECK: previously allocated here:
   // CHECK: in Allocate
-  // CHECK: Thread: T2 0x
-  // CHECK: Thread: T3 0x
+  // CHECK-DAG: Thread: T2 0x
+  // CHECK-DAG: Thread: T3 0x
   // CHECK-DAG: Thread: T0 0x
   // CHECK-DAG: Thread: T1 0x
   __sync_fetch_and_add(&state, 1);

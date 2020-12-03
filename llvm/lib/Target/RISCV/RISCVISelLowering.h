@@ -42,6 +42,14 @@ enum NodeType : unsigned {
   DIVW,
   DIVUW,
   REMUW,
+  // RV64IB rotates, directly matching the semantics of the named RISC-V
+  // instructions.
+  ROLW,
+  RORW,
+  // RV64IB funnel shifts, with the semantics of the named RISC-V instructions,
+  // but the same operand order as fshl/fshr intrinsics.
+  FSRW,
+  FSLW,
   // FPR32<->GPR transfer operations for RV64. Needed as an i32<->f32 bitcast
   // is not legal on RV64. FMV_W_X_RV64 matches the semantics of the FMV.W.X.
   // FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
@@ -51,9 +59,19 @@ enum NodeType : unsigned {
   FMV_X_ANYEXTW_RV64,
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
-  READ_CYCLE_WIDE
+  READ_CYCLE_WIDE,
+  // Generalized Reverse and Generalized Or-Combine - directly matching the
+  // semantics of the named RISC-V instructions. Lowered as custom nodes as
+  // TableGen chokes when faced with commutative permutations in deeply-nested
+  // DAGs. Each node takes an input operand and a TargetConstant immediate
+  // shift amount, and outputs a bit-manipulated version of input. All operands
+  // are of type XLenVT.
+  GREVI,
+  GREVIW,
+  GORCI,
+  GORCIW,
 };
-}
+} // namespace RISCVISD
 
 class RISCVTargetLowering : public TargetLowering {
   const RISCVSubtarget &Subtarget;
@@ -127,6 +145,9 @@ public:
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
+
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::SIGN_EXTEND;

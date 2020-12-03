@@ -880,6 +880,25 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
                  has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclNoDefaultArg) {
+  Decl *FromTU = getTuDecl("template<typename T> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T")));
+  TemplateTypeParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_FALSE(To->hasDefaultArgument());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclDefaultArg) {
+  Decl *FromTU =
+      getTuDecl("template<typename T = int> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<TemplateTypeParmDecl>().match(
+      FromTU, templateTypeParmDecl(hasName("T")));
+  TemplateTypeParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_TRUE(To->hasDefaultArgument());
+  QualType ToArg = To->getDefaultArgument();
+  ASSERT_EQ(ToArg, QualType(To->getASTContext().IntTy));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportBeginLocOfDeclRefExpr) {
   Decl *FromTU =
       getTuDecl("class A { public: static int X; }; void f() { (void)A::X; }",
@@ -899,6 +918,60 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportBeginLocOfDeclRefExpr) {
           ->getSubExpr()
           ->getBeginLoc()
           .isValid());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       TemplateTemplateParmDeclNoDefaultArg) {
+  Decl *FromTU = getTuDecl(R"(
+                           template<template<typename> typename TT> struct Y {};
+                           )",
+                           Lang_CXX17);
+  auto From = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("TT")));
+  TemplateTemplateParmDecl *To = Import(From, Lang_CXX17);
+  ASSERT_FALSE(To->hasDefaultArgument());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, TemplateTemplateParmDeclDefaultArg) {
+  Decl *FromTU = getTuDecl(R"(
+                           template<typename T> struct X {};
+                           template<template<typename> typename TT = X> struct Y {};
+                           )",
+                           Lang_CXX17);
+  auto From = FirstDeclMatcher<TemplateTemplateParmDecl>().match(
+      FromTU, templateTemplateParmDecl(hasName("TT")));
+  TemplateTemplateParmDecl *To = Import(From, Lang_CXX17);
+  ASSERT_TRUE(To->hasDefaultArgument());
+  const TemplateArgument &ToDefaultArg = To->getDefaultArgument().getArgument();
+  ASSERT_TRUE(To->isTemplateDecl());
+  TemplateDecl *ToTemplate = ToDefaultArg.getAsTemplate().getAsTemplateDecl();
+
+  // Find the default argument template 'X' in the AST and compare it against
+  // the default argument we got.
+  auto ToExpectedDecl = FirstDeclMatcher<ClassTemplateDecl>().match(
+      To->getTranslationUnitDecl(), classTemplateDecl(hasName("X")));
+  ASSERT_EQ(ToTemplate, ToExpectedDecl);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, NonTypeTemplateParmDeclNoDefaultArg) {
+  Decl *FromTU = getTuDecl("template<int N> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<NonTypeTemplateParmDecl>().match(
+      FromTU, nonTypeTemplateParmDecl(hasName("N")));
+  NonTypeTemplateParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_FALSE(To->hasDefaultArgument());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, NonTypeTemplateParmDeclDefaultArg) {
+  Decl *FromTU = getTuDecl("template<int S = 1> struct X {};", Lang_CXX03);
+  auto From = FirstDeclMatcher<NonTypeTemplateParmDecl>().match(
+      FromTU, nonTypeTemplateParmDecl(hasName("S")));
+  NonTypeTemplateParmDecl *To = Import(From, Lang_CXX03);
+  ASSERT_TRUE(To->hasDefaultArgument());
+  Stmt *ToArg = To->getDefaultArgument();
+  ASSERT_TRUE(isa<ConstantExpr>(ToArg));
+  ToArg = *ToArg->child_begin();
+  ASSERT_TRUE(isa<IntegerLiteral>(ToArg));
+  ASSERT_EQ(cast<IntegerLiteral>(ToArg)->getValue().getLimitedValue(), 1U);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
@@ -3102,6 +3175,25 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       ToTU, classTemplateSpecializationDecl(hasName("X")));
   EXPECT_EQ(ImportedSpec, ToSpec);
   EXPECT_TRUE(ToFun->hasBody());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, MergeTemplateSpecWithForwardDecl) {
+  std::string ClassTemplate =
+      R"(
+      template<typename T>
+      struct X { int m; };
+      template<>
+      struct X<int> { int m; };
+      )";
+  // Append a forward decl for our template specialization.
+  getToTuDecl(ClassTemplate + "template<> struct X<int>;", Lang_CXX11);
+  Decl *FromTU = getTuDecl(ClassTemplate, Lang_CXX11);
+  auto *FromSpec = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      FromTU, classTemplateSpecializationDecl(hasName("X"), isDefinition()));
+  auto *ImportedSpec = Import(FromSpec, Lang_CXX11);
+  // Check that our definition got merged with the existing definition.
+  EXPECT_TRUE(FromSpec->isThisDeclarationADefinition());
+  EXPECT_TRUE(ImportedSpec->isThisDeclarationADefinition());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

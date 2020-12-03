@@ -890,6 +890,33 @@ def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
                    LLVM_Type:$isVolatile);
 }
 
+// Intrinsics with multiple returns.
+
+def LLVM_SAddWithOverflowOp
+    : LLVM_IntrOp<"sadd.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_UAddWithOverflowOp
+    : LLVM_IntrOp<"uadd.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_SSubWithOverflowOp
+    : LLVM_IntrOp<"ssub.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_USubWithOverflowOp
+    : LLVM_IntrOp<"usub.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_SMulWithOverflowOp
+    : LLVM_IntrOp<"smul.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_UMulWithOverflowOp
+    : LLVM_IntrOp<"umul.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+
 //
 // Vector Reductions.
 //

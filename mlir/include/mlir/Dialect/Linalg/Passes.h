@@ -55,6 +55,10 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgBufferizePass();
 void populateElementwiseToLinalgConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx);
 
+/// Create a pass to conver named Linalg operations to Linalg generic
+/// operations.
+std::unique_ptr<OperationPass<FuncOp>> createLinalgGeneralizationPass();
+
 /// Patterns to fold an expanding (collapsing) tensor_reshape operation with its
 /// producer (consumer) generic operation by expanding the dimensionality of the
 /// loop in the generic op.

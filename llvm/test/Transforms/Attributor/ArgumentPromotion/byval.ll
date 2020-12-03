@@ -8,10 +8,10 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 %struct.ss = type { i32, i64 }
 
-define internal i32 @f(%struct.ss* byval  %b) nounwind  {
+define internal i32 @f(%struct.ss* byval(%struct.ss)  %b) nounwind  {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f
-; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(12) [[B:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 8 dereferenceable(12) [[B:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
@@ -36,7 +36,7 @@ define internal i32 @f(%struct.ss* byval  %b) nounwind  {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
@@ -68,10 +68,10 @@ entry:
 }
 
 
-define internal i32 @g(%struct.ss* byval align 32 %b) nounwind {
+define internal i32 @g(%struct.ss* byval(%struct.ss) align 32 %b) nounwind {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@g
-; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0]] {
+; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
@@ -96,7 +96,7 @@ define internal i32 @g(%struct.ss* byval align 32 %b) nounwind {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0]] {
+; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 32 dereferenceable(12) [[B:%.*]]) [[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
@@ -138,8 +138,8 @@ define i32 @main() nounwind  {
 ; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__TUNIT_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__TUNIT_OPM-NEXT:    [[C0:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval align 8 dereferenceable(12) [[S]]) [[ATTR0]]
-; IS__TUNIT_OPM-NEXT:    [[C1:%.*]] = call i32 @g(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval align 32 dereferenceable(12) [[S]]) [[ATTR0]]
+; IS__TUNIT_OPM-NEXT:    [[C0:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval(%struct.ss) align 8 dereferenceable(12) [[S]]) [[ATTR0]]
+; IS__TUNIT_OPM-NEXT:    [[C1:%.*]] = call i32 @g(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval(%struct.ss) align 32 dereferenceable(12) [[S]]) [[ATTR0]]
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[A]]
 ;
@@ -174,8 +174,8 @@ define i32 @main() nounwind  {
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__CGSCC_OPM-NEXT:    [[C0:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval align 32 dereferenceable(12) [[S]]) [[ATTR1:#.*]]
-; IS__CGSCC_OPM-NEXT:    [[C1:%.*]] = call i32 @g(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval align 32 dereferenceable(12) [[S]]) [[ATTR1]]
+; IS__CGSCC_OPM-NEXT:    [[C0:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval(%struct.ss) align 32 dereferenceable(12) [[S]]) [[ATTR1:#.*]]
+; IS__CGSCC_OPM-NEXT:    [[C1:%.*]] = call i32 @g(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval(%struct.ss) align 32 dereferenceable(12) [[S]]) [[ATTR1]]
 ; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[A]]
 ;
@@ -207,8 +207,8 @@ entry:
   store i32 1, i32* %tmp1, align 8
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
-  %c0 = call i32 @f(%struct.ss* byval %S) nounwind
-  %c1 = call i32 @g(%struct.ss* byval %S) nounwind
+  %c0 = call i32 @f(%struct.ss* byval(%struct.ss) %S) nounwind
+  %c1 = call i32 @g(%struct.ss* byval(%struct.ss) %S) nounwind
   %a = add i32 %c0, %c1
   ret i32 %a
 }

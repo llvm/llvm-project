@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "include/errno.h"
-#include "include/math.h"
 #include "src/errno/llvmlibc_errno.h"
 #include "src/math/cosf.h"
 #include "test/src/math/sdcomp26094.h"
@@ -18,6 +17,7 @@
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 #include <stdint.h>
 

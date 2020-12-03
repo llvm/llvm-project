@@ -32,6 +32,7 @@ public:
 private:
   const bool WarnOnLargeLength;
   const unsigned int LargeLengthThreshold;
+  std::vector<std::string> StringNames;
 };
 
 } // namespace bugprone

@@ -15082,24 +15082,14 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     DeclContext::lookup_result Lookup =
         ClassPattern->lookup(Field->getDeclName());
 
-    // Lookup can return at most two results: the pattern for the field, or the
-    // injected class name of the parent record. No other member can have the
-    // same name as the field.
-    // In modules mode, lookup can return multiple results (coming from
-    // different modules).
-    assert((getLangOpts().Modules || (!Lookup.empty() && Lookup.size() <= 2)) &&
-           "more than two lookup results for field name");
-    FieldDecl *Pattern = dyn_cast<FieldDecl>(Lookup[0]);
-    if (!Pattern) {
-      assert(isa<CXXRecordDecl>(Lookup[0]) &&
-             "cannot have other non-field member with same name");
-      for (auto L : Lookup)
-        if (isa<FieldDecl>(L)) {
-          Pattern = cast<FieldDecl>(L);
-          break;
-        }
-      assert(Pattern && "We must have set the Pattern!");
+    FieldDecl *Pattern = nullptr;
+    for (auto L : Lookup) {
+      if (isa<FieldDecl>(L)) {
+        Pattern = cast<FieldDecl>(L);
+        break;
+      }
     }
+    assert(Pattern && "We must have set the Pattern!");
 
     if (!Pattern->hasInClassInitializer() ||
         InstantiateInClassInitializer(Loc, Field, Pattern,

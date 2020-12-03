@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -attributor-cgscc -print-callgraph -disable-output -verify 2>&1 | FileCheck %s
+; RUN: opt < %s -instcombine -attributor-cgscc -print-callgraph -disable-output -verify 2>&1 -enable-new-pm=0 | FileCheck %s
 
 ; CHECK: Call graph node <<null function>><<{{.*}}>>  #uses=0
 ; CHECK:   CS<None> calls function 'dead_fork_call'

@@ -3010,7 +3010,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_interp_p2:
     case Intrinsic::amdgcn_interp_mov:
     case Intrinsic::amdgcn_interp_p1_f16:
-    case Intrinsic::amdgcn_interp_p2_f16: {
+    case Intrinsic::amdgcn_interp_p2_f16:
+    case Intrinsic::amdgcn_lds_param_load: {
       applyDefaultMapping(OpdMapper);
 
       // Readlane for m0 value, which is always the last operand.
@@ -3094,6 +3095,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
     case Intrinsic::amdgcn_s_setreg: {
       constrainOpWithReadfirstlane(MI, MRI, 2);
+      return;
+    }
+    case Intrinsic::amdgcn_lds_direct_load: {
+      applyDefaultMapping(OpdMapper);
+      // Readlane for m0 value, which is always the last operand.
+      constrainOpWithReadfirstlane(MI, MRI, MI.getNumOperands() - 1); // Index
       return;
     }
     default: {
@@ -4209,7 +4216,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_interp_p2:
     case Intrinsic::amdgcn_interp_mov:
     case Intrinsic::amdgcn_interp_p1_f16:
-    case Intrinsic::amdgcn_interp_p2_f16: {
+    case Intrinsic::amdgcn_interp_p2_f16:
+    case Intrinsic::amdgcn_lds_param_load: {
       const int M0Idx = MI.getNumOperands() - 1;
       Register M0Reg = MI.getOperand(M0Idx).getReg();
       unsigned M0Bank = getRegBankID(M0Reg, MRI, AMDGPU::SGPRRegBankID);
@@ -4429,6 +4437,21 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_lds_direct_load: {
+      const int M0Idx = MI.getNumOperands() - 1;
+      Register M0Reg = MI.getOperand(M0Idx).getReg();
+      unsigned M0Bank = getRegBankID(M0Reg, MRI, AMDGPU::SGPRRegBankID);
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
+      for (int I = 2; I != M0Idx && MI.getOperand(I).isReg(); ++I)
+        OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+
+      // Must be SGPR, but we must take whatever the original bank is and fix it
+      // later.
+      OpdsMapping[M0Idx] = AMDGPU::getValueMapping(M0Bank, 32);
       break;
     }
     default:

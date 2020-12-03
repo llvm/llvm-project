@@ -22,6 +22,8 @@
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <cstring>
 # include <support/win32/locale_win32.h>
+#elif defined(__NuttX__)
+# include <support/nuttx/xlocale.h>
 #elif defined(_AIX) || defined(__MVS__)
 # include <support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
@@ -626,7 +628,7 @@ class _LIBCPP_TYPE_VIS ctype<char>
 public:
     typedef char char_type;
 
-    explicit ctype(const mask* __tab = 0, bool __del = false, size_t __refs = 0);
+    explicit ctype(const mask* __tab = nullptr, bool __del = false, size_t __refs = 0);
 
     _LIBCPP_INLINE_VISIBILITY
     bool is(mask __m, char_type __c) const

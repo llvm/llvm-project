@@ -134,4 +134,23 @@ local_symbol_test PROC
 ; CHECK-NEXT: jmp "??0001"
 local_symbol_test ENDP
 
+PURGE ambiguous_substitution_macro, local_symbol_macro,
+      optional_parameter_macro
+
+; Redefinition
+local_symbol_macro MACRO
+  LOCAL b
+b: xor eax, eax
+   jmp b
+ENDM
+
+purge_test PROC
+; CHECK-LABEL: purge_test:
+
+  local_symbol_macro
+; CHECK: "??0002":
+; CHECK-NEXT: xor eax, eax
+; CHECK-NEXT: jmp "??0002"
+purge_test ENDP
+
 END

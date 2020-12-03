@@ -563,6 +563,16 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
         if (VT.getSizeInBits() <= 64)
           return std::make_pair(0U, &WebAssembly::I64RegClass);
       }
+      if (VT.isFloatingPoint() && !VT.isVector()) {
+        switch (VT.getSizeInBits()) {
+        case 32:
+          return std::make_pair(0U, &WebAssembly::F32RegClass);
+        case 64:
+          return std::make_pair(0U, &WebAssembly::F64RegClass);
+        default:
+          break;
+        }
+      }
       break;
     default:
       break;

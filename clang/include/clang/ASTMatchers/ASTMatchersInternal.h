@@ -679,8 +679,7 @@ public:
 
   template <typename T>
   bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
-                      BoundNodesTreeBuilder *Builder, TraversalKind Traverse,
-                      BindKind Bind) {
+                      BoundNodesTreeBuilder *Builder, BindKind Bind) {
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
                       std::is_base_of<NestedNameSpecifier, T>::value ||
@@ -689,7 +688,7 @@ public:
                       std::is_base_of<QualType, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
-                          Builder, Traverse, Bind);
+                          Builder, Bind);
   }
 
   template <typename T>
@@ -730,7 +729,7 @@ protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                               const DynTypedMatcher &Matcher,
                               BoundNodesTreeBuilder *Builder,
-                              TraversalKind Traverse, BindKind Bind) = 0;
+                              BindKind Bind) = 0;
 
   virtual bool matchesDescendantOf(const DynTypedNode &Node, ASTContext &Ctx,
                                    const DynTypedMatcher &Matcher,
@@ -1367,7 +1366,6 @@ public:
   bool matches(const T &Node, ASTMatchFinder *Finder,
                BoundNodesTreeBuilder *Builder) const override {
     return Finder->matchesChildOf(Node, this->InnerMatcher, Builder,
-                                  TraversalKind::TK_AsIs,
                                   ASTMatchFinder::BK_First);
   }
 };
@@ -1392,7 +1390,6 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     return Finder->matchesChildOf(
         Node, this->InnerMatcher, Builder,
-        TraversalKind::TK_IgnoreImplicitCastsAndParentheses,
         ASTMatchFinder::BK_All);
   }
 };

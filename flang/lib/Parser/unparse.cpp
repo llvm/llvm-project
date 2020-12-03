@@ -2419,25 +2419,11 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpFlushMemoryClause &x) {
-    switch (x.v) {
-    case llvm::omp::Clause::OMPC_acq_rel:
-      Word("ACQ_REL ");
-      break;
-    case llvm::omp::Clause::OMPC_release:
-      Word("RELEASE ");
-      break;
-    case llvm::omp::Clause::OMPC_acquire:
-      Word("ACQUIRE ");
-      break;
-    default:
-      break;
-    }
-  }
+  void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<OmpFlushMemoryClause>>(x.t));
+    Walk(std::get<std::optional<OmpMemoryOrderClause>>(x.t));
     Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
     Put("\n");
     EndOpenMP();

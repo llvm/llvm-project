@@ -75,6 +75,8 @@ bool getDontPlaceZerosInBSS();
 
 bool getEnableGuaranteedTailCallOpt();
 
+bool getEnableAIXExtendedAltivecABI();
+
 bool getDisableTailCalls();
 
 bool getStackSymbolOrdering();

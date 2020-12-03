@@ -149,27 +149,23 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   // symbolic stride replaced by one.
   ValueToValueMap::const_iterator SI =
       PtrToStride.find(OrigPtr ? OrigPtr : Ptr);
-  if (SI != PtrToStride.end()) {
-    Value *StrideVal = SI->second;
+  if (SI == PtrToStride.end())
+    // For a non-symbolic stride, just return the original expression.
+    return OrigSCEV;
 
-    // Strip casts.
-    StrideVal = stripIntegerCast(StrideVal);
+  Value *StrideVal = stripIntegerCast(SI->second);
 
-    ScalarEvolution *SE = PSE.getSE();
-    const auto *U = cast<SCEVUnknown>(SE->getSCEV(StrideVal));
-    const auto *CT =
-        static_cast<const SCEVConstant *>(SE->getOne(StrideVal->getType()));
+  ScalarEvolution *SE = PSE.getSE();
+  const auto *U = cast<SCEVUnknown>(SE->getSCEV(StrideVal));
+  const auto *CT =
+    static_cast<const SCEVConstant *>(SE->getOne(StrideVal->getType()));
 
-    PSE.addPredicate(*SE->getEqualPredicate(U, CT));
-    auto *Expr = PSE.getSCEV(Ptr);
+  PSE.addPredicate(*SE->getEqualPredicate(U, CT));
+  auto *Expr = PSE.getSCEV(Ptr);
 
-    LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
-                      << " by: " << *Expr << "\n");
-    return Expr;
-  }
-
-  // Otherwise, just return the SCEV of the original pointer.
-  return OrigSCEV;
+  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
+	     << " by: " << *Expr << "\n");
+  return Expr;
 }
 
 RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
@@ -228,9 +224,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
     }
     // Add the size of the pointed element to ScEnd.
     auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-    unsigned EltSize =
-        DL.getTypeStoreSizeInBits(Ptr->getType()->getPointerElementType()) / 8;
-    const SCEV *EltSizeSCEV = SE->getConstant(ScEnd->getType(), EltSize);
+    Type *IdxTy = DL.getIndexType(Ptr->getType());
+    const SCEV *EltSizeSCEV =
+        SE->getStoreSizeOfExpr(IdxTy, Ptr->getType()->getPointerElementType());
     ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
   }
 
@@ -518,7 +514,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
+    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, false));
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -527,7 +523,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
+    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, true));
   }
 
@@ -1658,7 +1654,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   LLVM_DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
                     << " with max VF = " << MaxVF << '\n');
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-  MaxSafeRegisterWidth = std::min(MaxSafeRegisterWidth, MaxVFInBits);
+  MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
   return Dependence::BackwardVectorizable;
 }
 
@@ -1807,7 +1803,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
 
   // ScalarEvolution needs to be able to find the exit count.
   const SCEV *ExitCount = PSE->getBackedgeTakenCount();
-  if (ExitCount == PSE->getSE()->getCouldNotCompute()) {
+  if (isa<SCEVCouldNotCompute>(ExitCount)) {
     recordAnalysis("CantComputeNumberOfIterations")
         << "could not determine number of loop iterations";
     LLVM_DEBUG(dbgs() << "LAA: SCEV could not compute the loop exit count.\n");
@@ -2150,12 +2146,8 @@ bool LoopAccessInfo::isUniform(Value *V) const {
 }
 
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
-  Value *Ptr = nullptr;
-  if (LoadInst *LI = dyn_cast<LoadInst>(MemAccess))
-    Ptr = LI->getPointerOperand();
-  else if (StoreInst *SI = dyn_cast<StoreInst>(MemAccess))
-    Ptr = SI->getPointerOperand();
-  else
+  Value *Ptr = getLoadStorePointerOperand(MemAccess);
+  if (!Ptr)
     return;
 
   Value *Stride = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);

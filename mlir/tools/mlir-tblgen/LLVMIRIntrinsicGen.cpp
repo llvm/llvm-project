@@ -210,7 +210,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   printBracketedRange(intr.getOverloadableOperandsIdxs().set_bits(), os);
   os << ", ";
   printBracketedRange(traits, os);
-  os << ", " << (intr.getNumResults() == 0 ? 0 : 1) << ">, Arguments<(ins"
+  os << ", " << intr.getNumResults() << ">, Arguments<(ins"
      << (operands.empty() ? "" : " ");
   llvm::interleaveComma(operands, os);
   os << ")>;\n\n";

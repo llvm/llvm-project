@@ -4120,10 +4120,7 @@ public:
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
 
-private:
   enum class MSVCIntrin;
-
-public:
   llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version);
@@ -4304,7 +4301,7 @@ public:
   void registerGlobalDtorWithAtExit(llvm::Constant *dtorStub);
 
   /// Call unatexit() with function dtorStub.
-  llvm::Value *unregisterGlobalDtorWithUnAtExit(llvm::Function *dtorStub);
+  llvm::Value *unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub);
 
   /// Emit code in this function to perform a guarded variable
   /// initialization.  Guarded initializations are used when it's not

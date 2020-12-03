@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -filetype=obj -code-model=large -o %t.o < %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefixes=RELOC %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS %s

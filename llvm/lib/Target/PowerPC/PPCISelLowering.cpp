@@ -121,6 +121,11 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
 cl::desc("use absolute jump tables on ppc"), cl::Hidden);
 
+// TODO - Remove this option if soft fp128 has been fully supported .
+static cl::opt<bool>
+    EnableSoftFP128("enable-soft-fp128",
+                    cl::desc("temp option to enable soft fp128"), cl::Hidden);
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM, "Number of shuffles lowered to a VPERM");
@@ -801,9 +806,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::UMIN, MVT::v2i64, Expand);
     }
 
-    for (auto VT : {MVT::v2i64, MVT::v4i32, MVT::v8i16, MVT::v16i8})
-      setOperationAction(ISD::ABS, VT, Custom);
-
     // We can custom expand all VECTOR_SHUFFLEs to VPERM, others we can handle
     // with merges, splats, etc.
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16i8, Custom);
@@ -835,11 +837,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
     setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
-
-    // Without hasP8Altivec set, v2i64 SMAX isn't available.
-    // But ABS custom lowering requires SMAX support.
-    if (!Subtarget.hasP8Altivec())
-      setOperationAction(ISD::ABS, MVT::v2i64, Expand);
 
     // Custom lowering ROTL v1i128 to VECTOR_SHUFFLE v16i8.
     setOperationAction(ISD::ROTL, MVT::v1i128, Custom);
@@ -1161,6 +1158,32 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::v4i32, Legal);
       setOperationAction(ISD::BSWAP, MVT::v2i64, Legal);
       setOperationAction(ISD::BSWAP, MVT::v1i128, Legal);
+    } else if (Subtarget.hasAltivec() && EnableSoftFP128) {
+      addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
+
+      for (MVT FPT : MVT::fp_valuetypes())
+        setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
+
+      setOperationAction(ISD::LOAD, MVT::f128, Promote);
+      setOperationAction(ISD::STORE, MVT::f128, Promote);
+
+      AddPromotedToType(ISD::LOAD, MVT::f128, MVT::v4i32);
+      AddPromotedToType(ISD::STORE, MVT::f128, MVT::v4i32);
+
+      setOperationAction(ISD::FADD, MVT::f128, Expand);
+      setOperationAction(ISD::FSUB, MVT::f128, Expand);
+      setOperationAction(ISD::FMUL, MVT::f128, Expand);
+      setOperationAction(ISD::FDIV, MVT::f128, Expand);
+      setOperationAction(ISD::FNEG, MVT::f128, Expand);
+      setOperationAction(ISD::FABS, MVT::f128, Expand);
+      setOperationAction(ISD::FSIN, MVT::f128, Expand);
+      setOperationAction(ISD::FCOS, MVT::f128, Expand);
+      setOperationAction(ISD::FPOW, MVT::f128, Expand);
+      setOperationAction(ISD::FPOWI, MVT::f128, Expand);
+      setOperationAction(ISD::FREM, MVT::f128, Expand);
+      setOperationAction(ISD::FSQRT, MVT::f128, Expand);
+      setOperationAction(ISD::FMA, MVT::f128, Expand);
+      setOperationAction(ISD::FCOPYSIGN, MVT::f128, Expand);
     }
 
     if (Subtarget.hasP9Altivec()) {
@@ -1416,6 +1439,10 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
                                 return "PPCISD::FP_TO_SINT_IN_VSR";
   case PPCISD::FRE:             return "PPCISD::FRE";
   case PPCISD::FRSQRTE:         return "PPCISD::FRSQRTE";
+  case PPCISD::FTSQRT:
+    return "PPCISD::FTSQRT";
+  case PPCISD::FSQRT:
+    return "PPCISD::FSQRT";
   case PPCISD::STFIWX:          return "PPCISD::STFIWX";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
@@ -6968,9 +6995,10 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
   const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
 
-  assert((!ValVT.isInteger() ||
-          (ValVT.getFixedSizeInBits() <= RegVT.getFixedSizeInBits())) &&
-         "Integer argument exceeds register size: should have been legalized");
+  if (ValVT.isVector() && !State.getMachineFunction()
+                               .getTarget()
+                               .Options.EnableAIXExtendedAltivecABI)
+    report_fatal_error("the default Altivec AIX ABI is not yet supported");
 
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
@@ -6978,15 +7006,17 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (ArgFlags.isNest())
     report_fatal_error("Nest arguments are unimplemented.");
 
-  if (ValVT.isVector() || LocVT.isVector())
-    report_fatal_error("Vector arguments are unimplemented on AIX.");
-
   static const MCPhysReg GPR_32[] = {// 32-bit registers.
                                      PPC::R3, PPC::R4, PPC::R5, PPC::R6,
                                      PPC::R7, PPC::R8, PPC::R9, PPC::R10};
   static const MCPhysReg GPR_64[] = {// 64-bit registers.
                                      PPC::X3, PPC::X4, PPC::X5, PPC::X6,
                                      PPC::X7, PPC::X8, PPC::X9, PPC::X10};
+
+  static const MCPhysReg VR[] = {// Vector registers.
+                                 PPC::V2,  PPC::V3,  PPC::V4,  PPC::V5,
+                                 PPC::V6,  PPC::V7,  PPC::V8,  PPC::V9,
+                                 PPC::V10, PPC::V11, PPC::V12, PPC::V13};
 
   if (ArgFlags.isByVal()) {
     if (ArgFlags.getNonZeroByValAlign() > PtrAlign)
@@ -7083,6 +7113,25 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     return false;
   }
+  case MVT::v4f32:
+  case MVT::v4i32:
+  case MVT::v8i16:
+  case MVT::v16i8:
+  case MVT::v2i64:
+  case MVT::v2f64:
+  case MVT::v1i128: {
+    if (State.isVarArg())
+      report_fatal_error(
+          "variadic arguments for vector types are unimplemented for AIX");
+
+    if (unsigned VReg = State.AllocateReg(VR))
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
+    else {
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
+    }
+    return false;
+  }
   }
   return true;
 }
@@ -7103,6 +7152,14 @@ static const TargetRegisterClass *getRegClassForSVT(MVT::SimpleValueType SVT,
     return &PPC::F4RCRegClass;
   case MVT::f64:
     return &PPC::F8RCRegClass;
+  case MVT::v4f32:
+  case MVT::v4i32:
+  case MVT::v8i16:
+  case MVT::v16i8:
+  case MVT::v2i64:
+  case MVT::v2f64:
+  case MVT::v1i128:
+    return &PPC::VRRCRegClass;
   }
 }
 
@@ -7219,6 +7276,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+    if (VA.isMemLoc() && VA.getValVT().isVector())
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
 
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
@@ -7416,8 +7476,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   const PPCSubtarget& Subtarget =
       static_cast<const PPCSubtarget&>(DAG.getSubtarget());
-  if (Subtarget.hasAltivec())
-    report_fatal_error("Altivec support is unimplemented on AIX.");
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -7563,6 +7621,10 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     const MVT LocVT = VA.getLocVT();
     const MVT ValVT = VA.getValVT();
 
+    if (VA.isMemLoc() && VA.getValVT().isVector())
+      report_fatal_error(
+          "passing vector parameters to the stack is unimplemented for AIX");
+
     switch (VA.getLocInfo()) {
     default:
       report_fatal_error("Unexpected argument extension type.");
@@ -7706,10 +7768,6 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     SDValue Arg = OutVals[RealResIdx];
-
-    if (Subtarget.isAIXABI() &&
-        (VA.getLocVT().isVector() || VA.getValVT().isVector()))
-      report_fatal_error("Returning vector types not yet supported on AIX.");
 
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
@@ -8411,6 +8469,13 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
       LD->isNonTemporal())
     return false;
   if (LD->getMemoryVT() != MemVT)
+    return false;
+
+  // If the result of the load is an illegal type, then we can't build a
+  // valid chain for reuse since the legalised loads and token factor node that
+  // ties the legalised loads together uses a different output chain then the
+  // illegal load.
+  if (!isTypeLegal(LD->getValueType(0)))
     return false;
 
   RLI.Ptr = LD->getBasePtr();
@@ -10836,44 +10901,6 @@ SDValue PPCTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
-SDValue PPCTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
-
-  assert(Op.getOpcode() == ISD::ABS && "Should only be called for ISD::ABS");
-
-  EVT VT = Op.getValueType();
-  assert(VT.isVector() &&
-         "Only set vector abs as custom, scalar abs shouldn't reach here!");
-  assert((VT == MVT::v2i64 || VT == MVT::v4i32 || VT == MVT::v8i16 ||
-          VT == MVT::v16i8) &&
-         "Unexpected vector element type!");
-  assert((VT != MVT::v2i64 || Subtarget.hasP8Altivec()) &&
-         "Current subtarget doesn't support smax v2i64!");
-
-  // For vector abs, it can be lowered to:
-  // abs x
-  // ==>
-  // y = -x
-  // smax(x, y)
-
-  SDLoc dl(Op);
-  SDValue X = Op.getOperand(0);
-  SDValue Zero = DAG.getConstant(0, dl, VT);
-  SDValue Y = DAG.getNode(ISD::SUB, dl, VT, Zero, X);
-
-  // SMAX patch https://reviews.llvm.org/D47332
-  // hasn't landed yet, so use intrinsic first here.
-  // TODO: Should use SMAX directly once SMAX patch landed
-  Intrinsic::ID BifID = Intrinsic::ppc_altivec_vmaxsw;
-  if (VT == MVT::v2i64)
-    BifID = Intrinsic::ppc_altivec_vmaxsd;
-  else if (VT == MVT::v8i16)
-    BifID = Intrinsic::ppc_altivec_vmaxsh;
-  else if (VT == MVT::v16i8)
-    BifID = Intrinsic::ppc_altivec_vmaxsb;
-
-  return BuildIntrinsicOp(BifID, X, Y, DAG, dl, VT);
-}
-
 // Custom lowering for fpext vf32 to v2f64
 SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
@@ -11009,7 +11036,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SCALAR_TO_VECTOR:   return LowerSCALAR_TO_VECTOR(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:  return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::MUL:                return LowerMUL(Op, DAG);
-  case ISD::ABS:                return LowerABS(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
@@ -11029,28 +11055,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_CMP_SWAP:
     return LowerATOMIC_CMP_SWAP(Op, DAG);
   }
-}
-
-void PPCTargetLowering::LowerOperationWrapper(SDNode *N,
-                                              SmallVectorImpl<SDValue> &Results,
-                                              SelectionDAG &DAG) const {
-  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
-
-  if (!Res.getNode())
-    return;
-
-  // Take the return value as-is if original node has only one result.
-  if (N->getNumValues() == 1) {
-    Results.push_back(Res);
-    return;
-  }
-
-  // New node should have the same number of results.
-  assert((N->getNumValues() == Res->getNumValues()) &&
-      "Lowering returned the wrong number of results!");
-
-  for (unsigned i = 0; i < N->getNumValues(); ++i)
-    Results.push_back(Res.getValue(i));
 }
 
 void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
@@ -12730,6 +12734,44 @@ static int getEstimateRefinementSteps(EVT VT, const PPCSubtarget &Subtarget) {
   if (VT.getScalarType() == MVT::f64)
     RefinementSteps++;
   return RefinementSteps;
+}
+
+SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
+                                            const DenormalMode &Mode) const {
+  // TODO - add support for v2f64/v4f32
+  EVT VT = Op.getValueType();
+  if (VT != MVT::f64)
+    return SDValue();
+
+  SDLoc DL(Op);
+  // The output register of FTSQRT is CR field.
+  SDValue FTSQRT = DAG.getNode(PPCISD::FTSQRT, DL, MVT::i32, Op);
+  // ftsqrt BF,FRB
+  // Let e_b be the unbiased exponent of the double-precision
+  // floating-point operand in register FRB.
+  // fe_flag is set to 1 if either of the following conditions occurs.
+  //   - The double-precision floating-point operand in register FRB is a zero,
+  //     a NaN, or an infinity, or a negative value.
+  //   - e_b is less than or equal to -970.
+  // Otherwise fe_flag is set to 0.
+  // Both VSX and non-VSX versions would set EQ bit in the CR if the number is
+  // not eligible for iteration. (zero/negative/infinity/nan or unbiased
+  // exponent is less than -970)
+  SDValue SRIdxVal = DAG.getTargetConstant(PPC::sub_eq, DL, MVT::i32);
+  return SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::i1,
+                                    FTSQRT, SRIdxVal),
+                 0);
+}
+
+SDValue
+PPCTargetLowering::getSqrtResultForDenormInput(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // TODO - add support for v2f64/v4f32
+  EVT VT = Op.getValueType();
+  if (VT != MVT::f64)
+    return TargetLowering::getSqrtResultForDenormInput(Op, DAG);
+
+  return DAG.getNode(PPCISD::FSQRT, SDLoc(Op), VT, Op);
 }
 
 SDValue PPCTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,

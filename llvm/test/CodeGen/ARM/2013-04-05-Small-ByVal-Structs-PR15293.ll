@@ -49,12 +49,12 @@
 
 declare void @fooUseParam(%artz* )
 
-define void @foo(%artz* byval %s) {
+define void @foo(%artz* byval(%artz) %s) {
   call void @fooUseParam(%artz* %s)
   ret void
 }
 
-define void @foo2(%artz* byval %s, i32 %p, %artz* byval %s2) {
+define void @foo2(%artz* byval(%artz) %s, i32 %p, %artz* byval(%artz) %s2) {
   call void @fooUseParam(%artz* %s)
   call void @fooUseParam(%artz* %s2)
   ret void
@@ -62,12 +62,12 @@ define void @foo2(%artz* byval %s, i32 %p, %artz* byval %s2) {
 
 
 define void @doFoo() {
-  call void @foo(%artz* byval @static_val)
+  call void @foo(%artz* byval(%artz) @static_val)
   ret void
 }
 
 define void @doFoo2() {
-  call void @foo2(%artz* byval @static_val, i32 0, %artz* byval @static_val)
+  call void @foo2(%artz* byval(%artz) @static_val, i32 0, %artz* byval(%artz) @static_val)
   ret void
 }
 

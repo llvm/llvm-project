@@ -32,7 +32,7 @@ define void @add_floats(float %val1, float %val2) {
 
 ; byval pointers should be allocated to the stack and copied as if
 ; with memcpy.
-define void @take_struct(%myStruct* byval %structval) {
+define void @take_struct(%myStruct* byval(%myStruct) %structval) {
 ; CHECK-LABEL: take_struct:
     %addr0 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 2
     %addr1 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 0
@@ -52,7 +52,7 @@ define void @take_struct(%myStruct* byval %structval) {
 }
 
 ; %structval should be at sp + 16
-define void @check_byval_align(i32* byval %ignore, %myStruct* byval align 16 %structval) {
+define void @check_byval_align(i32* byval(i32) %ignore, %myStruct* byval(%myStruct) align 16 %structval) {
 ; CHECK-LABEL: check_byval_align:
 
     %addr0 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 2
@@ -106,7 +106,7 @@ define [2 x i64] @return_struct() {
 ; to preserve value semantics) in x8. Strictly this only applies to
 ; structs larger than 16 bytes, but C semantics can still be provided
 ; if LLVM does it to %myStruct too. So this is the simplest check
-define void @return_large_struct(%myStruct* sret %retval) {
+define void @return_large_struct(%myStruct* sret(%myStruct) %retval) {
 ; CHECK-LABEL: return_large_struct:
     %addr0 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 0
     %addr1 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 1
@@ -126,7 +126,7 @@ define void @return_large_struct(%myStruct* sret %retval) {
 ; available, but it needs two). Also make sure that %stacked doesn't
 ; sneak into x7 behind.
 define i32 @struct_on_stack(i8 %var0, i16 %var1, i32 %var2, i64 %var3, i128 %var45,
-                          i32* %var6, %myStruct* byval %struct, i32* byval %stacked,
+                          i32* %var6, %myStruct* byval(%myStruct) %struct, i32* byval(i32) %stacked,
                           double %notstacked) {
 ; CHECK-LABEL: struct_on_stack:
     %addr = getelementptr %myStruct, %myStruct* %struct, i64 0, i32 0

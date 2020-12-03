@@ -63,33 +63,6 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
 
 // -----
 
-func @generic_symbol_in_map(%arg0: memref<i32>) {
-  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match rank of operand `symbol_source`}}
-  linalg.generic {
-    indexing_maps =  [ affine_map<()[N] -> (0)> ],
-    iterator_types = ["parallel"]}
-      outs(%arg0 : memref<i32>) {
-    ^bb(%i : i32):
-    linalg.yield %i : i32
-  }
-}
-
-// -----
-
-func @generic_symbol_source_out_of_range(%arg0: memref<i32>) {
-  // expected-error @+1 {{symbol_source index out of range}}
-  linalg.generic {
-    indexing_maps =  [ affine_map<()[N] -> (0)> ],
-    iterator_types = ["parallel"],
-    symbol_source = 1}
-      outs(%arg0 : memref<i32>) {
-    ^bb(%i : i32):
-    linalg.yield %i : i32
-  }
-}
-
-// -----
-
 func @generic_wrong_dim_in_map(%arg0: memref<1xi32>) {
   // expected-error @+1 {{op expected indexing_map #0 to have 1 dim(s) to match the number of loops}}
   linalg.generic {
@@ -131,7 +104,7 @@ func @generic_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(o
 // -----
 
 func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>, %arg1: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{op expected the concatenation of maps in indexing_map to be invertible}}
+  // expected-error @+1 {{expected the shape-to-loops map to be non-null}}
   linalg.generic {
     indexing_maps =  [
       affine_map<(i, j) -> (i + j)>,

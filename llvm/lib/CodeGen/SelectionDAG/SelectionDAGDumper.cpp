@@ -396,6 +396,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::DEBUGTRAP:                  return "debugtrap";
   case ISD::LIFETIME_START:             return "lifetime.start";
   case ISD::LIFETIME_END:               return "lifetime.end";
+  case ISD::PSEUDO_PROBE:
+    return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
   case ISD::GC_TRANSITION_END:          return "gc_transition.end";
   case ISD::GET_DYNAMIC_AREA_OFFSET:    return "get.dynamic.area.offset";

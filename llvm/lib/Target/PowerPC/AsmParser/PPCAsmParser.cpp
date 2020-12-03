@@ -1201,38 +1201,41 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 }
 
 bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
-  if (getParser().getTok().is(AsmToken::Identifier)) {
-    StringRef Name = getParser().getTok().getString();
-    if (Name.equals_lower("lr")) {
-      RegNo = isPPC64()? PPC::LR8 : PPC::LR;
-      IntVal = 8;
-    } else if (Name.equals_lower("ctr")) {
-      RegNo = isPPC64()? PPC::CTR8 : PPC::CTR;
-      IntVal = 9;
-    } else if (Name.equals_lower("vrsave")) {
-      RegNo = PPC::VRSAVE;
-      IntVal = 256;
-    } else if (Name.startswith_lower("r") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = isPPC64()? XRegs[IntVal] : RRegs[IntVal];
-    } else if (Name.startswith_lower("f") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = FRegs[IntVal];
-    } else if (Name.startswith_lower("vs") &&
-               !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
-      RegNo = VSRegs[IntVal];
-    } else if (Name.startswith_lower("v") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = VRegs[IntVal];
-    } else if (Name.startswith_lower("cr") &&
-               !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
-      RegNo = CRRegs[IntVal];
-    } else
-      return true;
-    getParser().Lex();
-    return false;
-  }
-  return true;
+  if (getParser().getTok().is(AsmToken::Percent))
+    getParser().Lex(); // Eat the '%'.
+
+  if (!getParser().getTok().is(AsmToken::Identifier))
+    return true;
+
+  StringRef Name = getParser().getTok().getString();
+  if (Name.equals_lower("lr")) {
+    RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
+    IntVal = 8;
+  } else if (Name.equals_lower("ctr")) {
+    RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
+    IntVal = 9;
+  } else if (Name.equals_lower("vrsave")) {
+    RegNo = PPC::VRSAVE;
+    IntVal = 256;
+  } else if (Name.startswith_lower("r") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
+  } else if (Name.startswith_lower("f") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = FRegs[IntVal];
+  } else if (Name.startswith_lower("vs") &&
+             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
+    RegNo = VSRegs[IntVal];
+  } else if (Name.startswith_lower("v") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = VRegs[IntVal];
+  } else if (Name.startswith_lower("cr") &&
+             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = CRRegs[IntVal];
+  } else
+    return true;
+  getParser().Lex();
+  return false;
 }
 
 bool PPCAsmParser::
@@ -1480,8 +1483,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   switch (getLexer().getKind()) {
   // Special handling for register names.  These are interpreted
   // as immediates corresponding to the register number.
-  case AsmToken::Percent:
-    Parser.Lex(); // Eat the '%'.
+  case AsmToken::Percent: {
     unsigned RegNo;
     int64_t IntVal;
     if (MatchRegisterName(RegNo, IntVal))
@@ -1489,7 +1491,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
 
     Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
     return false;
-
+  }
   case AsmToken::Identifier:
   case AsmToken::LParen:
   case AsmToken::Plus:
@@ -1551,13 +1553,12 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
 
     int64_t IntVal;
     switch (getLexer().getKind()) {
-    case AsmToken::Percent:
-      Parser.Lex(); // Eat the '%'.
+    case AsmToken::Percent: {
       unsigned RegNo;
       if (MatchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
       break;
-
+    }
     case AsmToken::Integer:
       if (isDarwin())
         return Error(S, "unexpected integer value");

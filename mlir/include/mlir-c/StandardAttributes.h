@@ -47,7 +47,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsAArray(MlirAttribute attr);
  * context. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGet(MlirContext ctx,
                                                   intptr_t numElements,
-                                                  MlirAttribute *elements);
+                                                  MlirAttribute const *elements);
 
 /// Returns the number of elements stored in the given array attribute.
 MLIR_CAPI_EXPORTED intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr);
@@ -66,7 +66,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsADictionary(MlirAttribute attr);
 /** Creates a dictionary attribute containing the given list of elements in the
  * provided context. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirDictionaryAttrGet(
-    MlirContext ctx, intptr_t numElements, MlirNamedAttribute *elements);
+    MlirContext ctx, intptr_t numElements, MlirNamedAttribute const *elements);
 
 /// Returns the number of attributes contained in a dictionary attribute.
 MLIR_CAPI_EXPORTED intptr_t
@@ -207,7 +207,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsASymbolRef(MlirAttribute attr);
  * null-terminated and its length must be specified. */
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length, const char *symbol,
-                     intptr_t numReferences, MlirAttribute *references);
+                     intptr_t numReferences, MlirAttribute const *references);
 
 /** Returns the string reference to the root referenced symbol. The data remains
  * live as long as the context in which the attribute lives. */
@@ -309,7 +309,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsADenseFPElements(MlirAttribute attr);
 /** Creates a dense elements attribute with the given Shaped type and elements
  * in the same context as the type. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrGet(
-    MlirType shapedType, intptr_t numElements, MlirAttribute *elements);
+    MlirType shapedType, intptr_t numElements, MlirAttribute const *elements);
 
 /** Creates a dense elements attribute with the given Shaped type containing a
  * single replicated element (splat). */
@@ -353,7 +353,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrDoubleGet(
  * provided as a separate argument co-indexed with the strs argument. */
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrStringGet(MlirType shapedType, intptr_t numElements,
-                               intptr_t *strLengths, const char **strs);
+                               intptr_t const *strLengths, const char **strs);
 /** Creates a dense elements attribute that has the same data as the given dense
  * elements attribute and a different shaped type. The new type must have the
  * same total number of elements. */

@@ -36,8 +36,9 @@ func @remap_call_1_to_1(%arg0: i64) {
 
 // CHECK-LABEL: func @remap_input_1_to_N({{.*}}f16, {{.*}}f16)
 func @remap_input_1_to_N(%arg0: f32) -> f32 {
- // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
- "test.return"(%arg0) : (f32) -> ()
+  // CHECK-NEXT: [[CAST:%.*]] = "test.cast"(%arg0, %arg1) : (f16, f16) -> f32
+  // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
+  "test.return"(%arg0) : (f32) -> ()
 }
 
 // CHECK-LABEL: func @remap_input_1_to_N_remaining_use(%arg0: f16, %arg1: f16)

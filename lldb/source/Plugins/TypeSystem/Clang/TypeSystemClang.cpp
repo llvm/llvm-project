@@ -6541,8 +6541,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           if (cxx_record_decl->lookupInBases(
                   [decl_name](const clang::CXXBaseSpecifier *specifier,
                               clang::CXXBasePath &path) {
-                    return clang::CXXRecordDecl::FindOrdinaryMember(
-                        specifier, path, decl_name);
+                    path.Decls =
+                        specifier->getType()->getAsCXXRecordDecl()->lookup(
+                            decl_name);
+                    return !path.Decls.empty();
                   },
                   paths)) {
             clang::CXXBasePaths::const_paths_iterator path,

@@ -578,6 +578,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
     return InstDesc(Kind == RK_IntegerOr, I);
   case Instruction::Xor:
     return InstDesc(Kind == RK_IntegerXor, I);
+  case Instruction::FDiv:
   case Instruction::FMul:
     return InstDesc(Kind == RK_FloatMult, I, UAI);
   case Instruction::FSub:

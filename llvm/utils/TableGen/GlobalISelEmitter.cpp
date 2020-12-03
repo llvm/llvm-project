@@ -5086,9 +5086,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   if (Dst->isLeaf()) {
     Record *RCDef = getInitValueAsRegClass(Dst->getLeafValue());
-
-    const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
     if (RCDef) {
+      const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
+
       // We need to replace the def and all its uses with the specified
       // operand. However, we must also insert COPY's wherever needed.
       // For now, emit a copy and let the register allocator clean up.

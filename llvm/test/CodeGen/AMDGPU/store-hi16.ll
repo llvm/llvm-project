@@ -495,7 +495,7 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2i16_max_offset(i16 addrspace(5)* byval %out, i32 %arg) #0 {
+define void @store_private_hi_v2i16_max_offset(i16 addrspace(5)* byval(i16) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1

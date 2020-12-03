@@ -29,6 +29,9 @@ target triple = "wasm32-unknown-unknown"
 ; MERGE-NEXT:    FunctionNames:
 ; MERGE-NEXT:      - Index:           0
 ; MERGE-NEXT:        Name:            __wasm_call_ctors
+; MERGE-NEXT:    GlobalNames:
+; MERGE-NEXT:      - Index:           0
+; MERGE-NEXT:        Name:            __stack_pointer
 ; MERGE-NOT:       - Index:
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.o
@@ -66,6 +69,9 @@ target triple = "wasm32-unknown-unknown"
 ; SEPARATE-NEXT:    FunctionNames:
 ; SEPARATE-NEXT:      - Index:           0
 ; SEPARATE-NEXT:        Name:            __wasm_call_ctors
+; SEPARATE-NEXT:    GlobalNames:
+; SEPARATE-NEXT:      - Index:           0
+; SEPARATE-NEXT:        Name:            __stack_pointer
 ; SEPARATE-NOT:       - Index:
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive.wasm %t.passive.o

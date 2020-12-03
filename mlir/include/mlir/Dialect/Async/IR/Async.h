@@ -53,6 +53,16 @@ public:
   using Base::Base;
 };
 
+// -------------------------------------------------------------------------- //
+// Helper functions of Async dialect transformations.
+// -------------------------------------------------------------------------- //
+
+/// Returns true if the type is reference counted. All async dialect types are
+/// reference counted at runtime.
+inline bool isRefCounted(Type type) {
+  return type.isa<TokenType, ValueType, GroupType>();
+}
+
 } // namespace async
 } // namespace mlir
 

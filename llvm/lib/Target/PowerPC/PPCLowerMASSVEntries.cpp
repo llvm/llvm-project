@@ -105,7 +105,7 @@ bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
     return false;
 
   if (Constant *Exp = dyn_cast<Constant>(CI->getArgOperand(1)))
-    if (ConstantFP *CFP = dyn_cast<ConstantFP>(Exp->getSplatValue())) {
+    if (ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(Exp->getSplatValue())) {
       // If the argument is 0.75 or 0.25 it is cheaper to turn it into pow
       // intrinsic so that it could be optimzed as sequence of sqrt's.
       if (!CI->hasNoInfs() || !CI->hasApproxFunc())

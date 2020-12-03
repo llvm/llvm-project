@@ -16,9 +16,9 @@ define void @foo(double %vfp0,     ; --> D0,     NSAA=SP
 		 double %vfp6,     ; --> D6,     NSAA=SP
 		 double %vfp7,     ; --> D7,     NSAA=SP
 		 double %vfp8,     ; --> SP,     NSAA=SP+8 (!)
-                 i32 %p0,          ; --> R0,     NSAA=SP+8 
-		 %st_t* byval %p1, ; --> R1, R2, NSAA=SP+8
-		 i32 %p2,          ; --> R3,     NSAA=SP+8 
+                 i32 %p0,          ; --> R0,     NSAA=SP+8
+		 %st_t* byval(%st_t) %p1, ; --> R1, R2, NSAA=SP+8
+		 i32 %p2,          ; --> R3,     NSAA=SP+8
                  i32 %p3) #0 {     ; --> SP+4,   NSAA=SP+12
 entry:
   ;CHECK: sub sp, #12
@@ -42,7 +42,7 @@ entry:
                  double 23.6,
                  double 23.7,
                  double 23.8,
-                 i32 0, %st_t* byval @static_val, i32 1, i32 2)
+                 i32 0, %st_t* byval(%st_t) @static_val, i32 1, i32 2)
   ret void
 }
 

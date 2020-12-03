@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 declare i8* @foo(%pair*)
 
-define internal void @bar(%pair* byval %Data) {
+define internal void @bar(%pair* byval(%pair) %Data) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i32 [[DATA_0:%.*]], i32 [[DATA_1:%.*]])
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [[PAIR:%.*]], align 8
@@ -24,9 +24,9 @@ define internal void @bar(%pair* byval %Data) {
   ret void
 }
 
-define void @zed(%pair* byval %Data) {
+define void @zed(%pair* byval(%pair) %Data) {
 ; CHECK-LABEL: define {{[^@]+}}@zed
-; CHECK-SAME: (%pair* byval [[DATA:%.*]])
+; CHECK-SAME: (%pair* byval(%pair) [[DATA:%.*]])
 ; CHECK-NEXT:    [[DATA_0:%.*]] = getelementptr [[PAIR:%.*]], %pair* [[DATA]], i32 0, i32 0
 ; CHECK-NEXT:    [[DATA_0_VAL:%.*]] = load i32, i32* [[DATA_0]], align 4
 ; CHECK-NEXT:    [[DATA_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
@@ -34,6 +34,6 @@ define void @zed(%pair* byval %Data) {
 ; CHECK-NEXT:    call void @bar(i32 [[DATA_0_VAL]], i32 [[DATA_1_VAL]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @bar(%pair* byval %Data)
+  call void @bar(%pair* byval(%pair) %Data)
   ret void
 }

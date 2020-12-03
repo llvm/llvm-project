@@ -114,19 +114,18 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   // TODO: Aborting when the offsets are static. There might be a way to fold
   // the subview op with load even if the offsets have been canonicalized
   // away.
-  SmallVector<Value, 4> opOffsets = subViewOp.getOrCreateOffsets(rewriter, loc);
-  SmallVector<Value, 4> opStrides = subViewOp.getOrCreateStrides(rewriter, loc);
-  assert(opOffsets.size() == indices.size() &&
-         "expected as many indices as rank of subview op result type");
-  assert(opStrides.size() == indices.size() &&
+  SmallVector<Range, 4> opRanges = subViewOp.getOrCreateRanges(rewriter, loc);
+  auto opOffsets = llvm::map_range(opRanges, [](Range r) { return r.offset; });
+  auto opStrides = llvm::map_range(opRanges, [](Range r) { return r.stride; });
+  assert(opRanges.size() == indices.size() &&
          "expected as many indices as rank of subview op result type");
 
   // New indices for the load are the current indices * subview_stride +
   // subview_offset.
   sourceIndices.resize(indices.size());
   for (auto index : llvm::enumerate(indices)) {
-    auto offset = opOffsets[index.index()];
-    auto stride = opStrides[index.index()];
+    auto offset = *(opOffsets.begin() + index.index());
+    auto stride = *(opStrides.begin() + index.index());
     auto mul = rewriter.create<MulIOp>(loc, index.value(), stride);
     sourceIndices[index.index()] =
         rewriter.create<AddIOp>(loc, offset, mul).getResult();

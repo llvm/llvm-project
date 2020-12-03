@@ -199,12 +199,13 @@ void Target::DeleteCurrentProcess() {
 
 const lldb::ProcessSP &Target::CreateProcess(ListenerSP listener_sp,
                                              llvm::StringRef plugin_name,
-                                             const FileSpec *crash_file) {
+                                             const FileSpec *crash_file,
+                                             bool can_connect) {
   if (!listener_sp)
     listener_sp = GetDebugger().GetListener();
   DeleteCurrentProcess();
   m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name,
-                                     listener_sp, crash_file);
+                                     listener_sp, crash_file, can_connect);
   return m_process_sp;
 }
 
@@ -2975,7 +2976,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     } else {
       // Use a Process plugin to construct the process.
       const char *plugin_name = launch_info.GetProcessPluginName();
-      CreateProcess(launch_info.GetListener(), plugin_name, nullptr);
+      CreateProcess(launch_info.GetListener(), plugin_name, nullptr, false);
     }
 
     // Since we didn't have a platform launch the process, launch it here.
@@ -3103,7 +3104,7 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
       const char *plugin_name = attach_info.GetProcessPluginName();
       process_sp =
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
-                        plugin_name, nullptr);
+                        plugin_name, nullptr, false);
       if (process_sp == nullptr) {
         error.SetErrorStringWithFormat(
             "failed to create process using plugin %s",

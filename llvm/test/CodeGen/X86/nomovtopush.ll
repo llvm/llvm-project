@@ -45,13 +45,13 @@ entry:
   %2 = load i32, i32* @g_b, align 4, !tbaa !3
   %3 = load i32, i32* @g_a, align 4, !tbaa !3
   %call = tail call i32 @bar(i32 %3, i32 %2, i32 %1, i32 %0) #2
-  tail call void @foo(%struct._param_str* byval nonnull align 4 @g_param) #2
+  tail call void @foo(%struct._param_str* byval(%struct._param_str) nonnull align 4 @g_param) #2
   ret i32 0
 }
 
 declare dso_local i32 @bar(i32, i32, i32, i32) local_unnamed_addr
 
-declare dso_local void @foo(%struct._param_str* byval align 4) local_unnamed_addr
+declare dso_local void @foo(%struct._param_str* byval(%struct._param_str) align 4) local_unnamed_addr
 
 !3 = !{!4, !4, i64 0}
 !4 = !{!"int", !5, i64 0}

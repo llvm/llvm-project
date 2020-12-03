@@ -290,6 +290,22 @@ def Inliner : Pass<"inline"> {
   ];
 }
 
+def FinalizingBufferize : FunctionPass<"finalizing-bufferize"> {
+  let summary = "Finalize a partial bufferization";
+  let description = [{
+    A bufferize pass that finalizes a partial bufferization by removing
+    remaining `tensor_load` and `tensor_to_memref` operations.
+
+    The removal of those operations is only possible if the operations only
+    exist in pairs, i.e., all uses of `tensor_load` operations are
+    `tensor_to_memref` operations.
+
+    This pass will fail if not all operations can be removed or if any operation
+    with tensor typed operands remains.
+  }];
+  let constructor = "mlir::createFinalizingBufferizePass()";
+}
+
 def LocationSnapshot : Pass<"snapshot-op-locations"> {
   let summary = "Generate new locations from the current IR";
   let description = [{

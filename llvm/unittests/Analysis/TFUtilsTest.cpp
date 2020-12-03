@@ -144,7 +144,7 @@ TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
 }
 
 TEST(TFUtilsTest, Logger) {
-  std::vector<Logger::LoggedFeatureSpec> Features;
+  std::vector<LoggedFeatureSpec> Features;
   Features.push_back(
       {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
   Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
@@ -191,7 +191,7 @@ TEST(TFUtilsTest, Logger) {
 }
 
 TEST(TFUtilsTest, LoggerNoReward) {
-  std::vector<Logger::LoggedFeatureSpec> Features;
+  std::vector<LoggedFeatureSpec> Features;
   Features.push_back(
       {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
   Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
@@ -230,7 +230,7 @@ TEST(TFUtilsTest, LoggerNoReward) {
 }
 
 TEST(TFUtilsTest, LoggerFinalReward) {
-  std::vector<Logger::LoggedFeatureSpec> Features;
+  std::vector<LoggedFeatureSpec> Features;
   Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
   Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
 

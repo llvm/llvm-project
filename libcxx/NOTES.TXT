@@ -14,7 +14,6 @@ an LLVM release.
 1. Update _LIBCPP_VERSION in `__config`
 2. Update the __libcpp_version file.
 3. Update the version number in `docs/conf.py`
-4. Create ABI lists for the previous release under `lib/abi`
 
 //===---------------------------------------------------------------------===//
 // Adding a new header TODO

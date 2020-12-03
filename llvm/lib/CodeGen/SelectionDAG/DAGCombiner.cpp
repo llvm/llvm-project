@@ -3209,6 +3209,19 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // 0 - X --> X if X is 0 or the minimum signed value.
       return N1;
     }
+
+    // Convert 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y)).
+    if (N1->getOpcode() == ISD::ABS &&
+        !TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+      SDValue X = N1->getOperand(0);
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, DL, VT, X,
+                      DAG.getConstant(BitWidth - 1, DL, getShiftAmountTy(VT)));
+      SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, Shift);
+      AddToWorklist(Shift.getNode());
+      AddToWorklist(Xor.getNode());
+      return DAG.getNode(ISD::SUB, DL, VT, Shift, Xor);
+    }
   }
 
   // Canonicalize (sub -1, x) -> ~x, i.e. (xor x, -1)
@@ -22039,30 +22052,36 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
             : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
 
       if (!Reciprocal) {
-        // The estimate is now completely wrong if the input was exactly 0.0 or
-        // possibly a denormal. Force the answer to 0.0 for those cases.
         SDLoc DL(Op);
         EVT CCVT = getSetCCResultType(VT);
-        ISD::NodeType SelOpcode = VT.isVector() ? ISD::VSELECT : ISD::SELECT;
+        SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
         DenormalMode DenormMode = DAG.getDenormalMode(VT);
-        if (DenormMode.Input == DenormalMode::IEEE) {
-          // This is specifically a check for the handling of denormal inputs,
-          // not the result.
+        // Try the target specific test first.
+        SDValue Test = TLI.getSqrtInputTest(Op, DAG, DenormMode);
+        if (!Test) {
+          // If no test provided by target, testing it with denormal inputs to
+          // avoid wrong estimate.
+          if (DenormMode.Input == DenormalMode::IEEE) {
+            // This is specifically a check for the handling of denormal inputs,
+            // not the result.
 
-          // fabs(X) < SmallestNormal ? 0.0 : Est
-          const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
-          APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
-          SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
-          SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-          SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
-          SDValue IsDenorm = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
-          Est = DAG.getNode(SelOpcode, DL, VT, IsDenorm, FPZero, Est);
-        } else {
-          // X == 0.0 ? 0.0 : Est
-          SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-          SDValue IsZero = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
-          Est = DAG.getNode(SelOpcode, DL, VT, IsZero, FPZero, Est);
+            // Test = fabs(X) < SmallestNormal
+            const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+            APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
+            SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
+            SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
+            Test = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
+          } else
+            // Test = X == 0.0
+            Test = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
         }
+
+        // The estimate is now completely wrong if the input was exactly 0.0 or
+        // possibly a denormal. Force the answer to 0.0 or value provided by
+        // target for those cases.
+        Est = DAG.getNode(
+            Test.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
+            Test, TLI.getSqrtResultForDenormInput(Op, DAG), Est);
       }
     }
     return Est;
