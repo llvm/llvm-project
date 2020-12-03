@@ -12,6 +12,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"

@@ -442,6 +442,16 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   return SMS.hasNewSchedule();
 }
 
+void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<LiveIntervals>();
+  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
   if (II_setByPragma > 0)
     MII = II_setByPragma;

@@ -16,6 +16,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
