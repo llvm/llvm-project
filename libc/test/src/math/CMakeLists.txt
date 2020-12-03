@@ -736,3 +736,16 @@ add_fp_unittest(
     libc.src.math.hypotf
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  hypot_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    hypot_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.hypot
+    libc.utils.FPUtil.fputil
+)
