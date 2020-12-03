@@ -1529,7 +1529,7 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   // global variable as compile time constant, since the host variable is not
   // accessible on device. The DRE of the captured reference variable has to be
   // loaded from captures.
-  if (CGM.getLangOpts().CUDAIsDevice &&
+  if (CGM.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
       refExpr->refersToEnclosingVariableOrCapture()) {
     auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
     if (MD && MD->getParent()->isLambda() &&
