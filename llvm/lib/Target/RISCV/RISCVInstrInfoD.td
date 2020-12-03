@@ -361,6 +361,7 @@ let Predicates = [HasStdExtD, IsRV64] in {
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FMV_D_X X0)>;
 
+// Moves (no conversion)
 def : Pat<(bitconvert GPR:$rs1), (FMV_D_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
 

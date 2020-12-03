@@ -512,14 +512,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getValueType() == MVT::f16 && Subtarget.hasStdExtZfh()) {
       if (Op0.getValueType() != MVT::i16)
         return SDValue();
-      unsigned Opcode = RISCVISD::FMV_H_X_RV32;
-      EVT ExtType = MVT::i32;
-      if (Subtarget.is64Bit()) {
-        Opcode = RISCVISD::FMV_H_X_RV64;
-        ExtType = MVT::i64;
-      }
-      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, ExtType, Op0);
-      SDValue FPConv = DAG.getNode(Opcode, DL, MVT::f16, NewOp0);
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Op0);
+      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
       return FPConv;
     } else if (Op.getValueType() == MVT::f32 && Subtarget.is64Bit() &&
                Subtarget.hasStdExtF()) {
@@ -1119,13 +1114,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     if (N->getValueType(0) == MVT::i16 && Subtarget.hasStdExtZfh()) {
       if (Op0.getValueType() != MVT::f16)
         return;
-      unsigned Opcode = RISCVISD::FMV_X_ANYEXTH_RV32;
-      EVT ExtType = MVT::i32;
-      if (Subtarget.is64Bit()) {
-        Opcode = RISCVISD::FMV_X_ANYEXTH_RV64;
-        ExtType = MVT::i64;
-      }
-      SDValue FPConv = DAG.getNode(Opcode, DL, ExtType, Op0);
+      SDValue FPConv =
+          DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, Subtarget.getXLenVT(), Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
                Subtarget.hasStdExtF()) {
@@ -2204,10 +2194,8 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
   case CCValAssign::Full:
     break;
   case CCValAssign::BCvt:
-    if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f16)
-      Val = DAG.getNode(RISCVISD::FMV_H_X_RV32, DL, MVT::f16, Val);
-    else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f16)
-      Val = DAG.getNode(RISCVISD::FMV_H_X_RV64, DL, MVT::f16, Val);
+    if (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)
+      Val = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, Val);
     else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
       Val = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
     else
@@ -2265,10 +2253,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
   case CCValAssign::Full:
     break;
   case CCValAssign::BCvt:
-    if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f16)
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTH_RV32, DL, MVT::i32, Val);
-    else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f16)
-      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTH_RV64, DL, MVT::i64, Val);
+    if (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)
+      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, VA.getLocVT(), Val);
     else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
       Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
     else
@@ -3123,10 +3109,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RORW)
   NODE_NAME_CASE(FSLW)
   NODE_NAME_CASE(FSRW)
-  NODE_NAME_CASE(FMV_H_X_RV32)
-  NODE_NAME_CASE(FMV_H_X_RV64)
-  NODE_NAME_CASE(FMV_X_ANYEXTH_RV32)
-  NODE_NAME_CASE(FMV_X_ANYEXTH_RV64)
+  NODE_NAME_CASE(FMV_H_X)
+  NODE_NAME_CASE(FMV_X_ANYEXTH)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
