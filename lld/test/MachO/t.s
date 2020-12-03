@@ -18,7 +18,7 @@
 # CHECK-DAG: [[PATH]]/main.o
 # CHECK-DAG: [[PATH]]/baz.o
 # CHECK-DAG: [[PATH]]/libfoo.dylib
-# CHECK-DAG: {{.*}}/usr/lib/libSystem.tbd
+# CHECK-DAG: {{.*}}/usr/lib{{[/\\]}}libSystem.tbd
 
 #--- foo.s
 .globl __Z3foo
