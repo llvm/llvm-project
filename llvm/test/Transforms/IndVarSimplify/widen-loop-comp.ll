@@ -795,36 +795,37 @@ failure:
   unreachable
 }
 
+; TODO: We can widen here despite the icmp user of %foo in guarded block.
 define i32 @test16_unsigned_pos1(i32 %start, i32* %p, i32* %q, i32 %x) {
 ; CHECK-LABEL: @test16_unsigned_pos1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[TMP2]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[GUARDED:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[ICMP_USER_WIDE4:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[ICMP_USER_WIDE4]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[ICMP_USER3:%.*]] = icmp ult i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[ICMP_USER3]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[FOO]] to i64
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
-; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[LOAD_ADDR:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 -1 to i32
-; CHECK-NEXT:    call void @use(i32 [[TMP4]])
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    call void @use(i32 -1)
+; CHECK-NEXT:    ret i32 -1
 ; CHECK:       failure:
-; CHECK-NEXT:    [[FOO_LCSSA2_WIDE:%.*]] = phi i64 [ [[TMP3]], [[BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[FOO_LCSSA2_WIDE]] to i32
-; CHECK-NEXT:    call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    [[FOO_LCSSA2:%.*]] = phi i32 [ [[FOO]], [[BACKEDGE]] ]
+; CHECK-NEXT:    call void @use(i32 [[FOO_LCSSA2]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       side_exit:
 ; CHECK-NEXT:    ret i32 0
