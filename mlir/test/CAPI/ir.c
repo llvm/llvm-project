@@ -1280,19 +1280,19 @@ int registerOnlyStd() {
 
 // Wraps a diagnostic into additional text we can match against.
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
-  fprintf(stderr, "processing diagnostic (userData: %d) <<\n", (int)userData);
+  fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   mlirLocationPrint(loc, printToStderr, NULL);
   assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
-  fprintf(stderr, ">> end of diagnostic (userData: %d)\n", (int)userData);
+  fprintf(stderr, ">> end of diagnostic (userData: %ld)\n", (long)userData);
   return mlirLogicalResultSuccess();
 }
 
 // Logs when the delete user data callback is called
 static void deleteUserData(void *userData) {
-  fprintf(stderr, "deleting user data (userData: %d)\n", (int)userData);
+  fprintf(stderr, "deleting user data (userData: %ld)\n", (long)userData);
 }
 
 void testDiagnostics() {
