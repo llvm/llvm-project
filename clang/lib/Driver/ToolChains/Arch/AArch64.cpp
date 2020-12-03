@@ -41,14 +41,13 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   if (CPU == "native")
     return std::string(llvm::sys::getHostCPUName());
 
-  // arm64e requires v8.3a and only runs on vortex and later CPUs.
-  if (Triple.getArchName() == "arm64e") {
-    // Honor -mcpu as long it doesn't specify an older CPU than "vortex".
+  // arm64e requires v8.3a and only runs on apple-a12 and later CPUs.
+  if (Triple.isArm64e()) {
+    // Honor -mcpu as long it doesn't specify an older CPU than a12.
     if (CPU.size() && (CPU != "cyclone"))
       return CPU;
 
-    // Otherwise default to "vortex".
-    return "vortex";
+    return "apple-a12";
   }
 
   if (CPU.size())

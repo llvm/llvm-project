@@ -231,8 +231,8 @@ static std::string computeDataLayout(const Triple &TT,
 }
 
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
-  if (CPU.empty() && TT.getArchName() == "arm64e")
-    return "vortex";
+  if (CPU.empty() && TT.isArm64e())
+    return "apple-a12";
   return CPU;
 }
 
