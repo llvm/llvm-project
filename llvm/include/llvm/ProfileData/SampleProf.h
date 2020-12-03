@@ -165,7 +165,10 @@ enum class SecCommonFlags : uint32_t {
 // a new check in verifySecFlag.
 enum class SecNameTableFlags : uint32_t {
   SecFlagInValid = 0,
-  SecFlagMD5Name = (1 << 0)
+  SecFlagMD5Name = (1 << 0),
+  // Store MD5 in fixed length instead of ULEB128 so NameTable can be
+  // accessed like an array.
+  SecFlagFixedLengthMD5 = (1 << 1)
 };
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,

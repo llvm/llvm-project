@@ -174,11 +174,13 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   std::set<StringRef> V;
   stablizeNameTable(V);
 
-  // Write out the name table.
+  // Write out the MD5 name table. We wrote unencoded MD5 so reader can
+  // retrieve the name using the name index without having to read the
+  // whole name table.
   encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    encodeULEB128(MD5Hash(N), OS);
-  }
+  support::endian::Writer Writer(OS, support::little);
+  for (auto N : V)
+    Writer.write(MD5Hash(N));
   return sampleprof_error::success;
 }
 
