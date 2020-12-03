@@ -1214,11 +1214,12 @@ void Writer::run() {
   calculateInitFunctions();
 
   if (!config->relocatable) {
-    // Create linker synthesized functions
-    if (config->isPic)
+    if (WasmSym::applyRelocs)
       createApplyRelocationsFunction();
-    else if (config->sharedMemory)
+    if (WasmSym::initMemory)
       createInitMemoryFunction();
+
+    // Create linker synthesized functions
     createCallCtorsFunction();
 
     // Create export wrappers for commands if needed.

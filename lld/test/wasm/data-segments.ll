@@ -13,6 +13,10 @@
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.wasm
 ; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE
 
+; Also test in combination with PIC/pie
+; RUN: llc -filetype=obj -relocation-model=pic %s -o %t.atomics.bulk-mem.pic.o -mattr=+atomics,+bulk-memory,+mutable-globals
+; RUN: wasm-ld --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
+
 target triple = "wasm32-unknown-unknown"
 
 @a = hidden global [6 x i8] c"hello\00", align 1

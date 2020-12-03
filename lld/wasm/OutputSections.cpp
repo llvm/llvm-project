@@ -90,6 +90,8 @@ void CodeSection::finalizeContents() {
     func->outputSec = this;
     func->outputOffset = bodySize;
     func->calculateSize();
+    // All functions should have a non-empty body at this point
+    assert(func->getSize());
     bodySize += func->getSize();
   }
 
