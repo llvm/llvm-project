@@ -366,8 +366,6 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
     StorageSize += Slab->bytes();
   for (const auto &RefSlab : RefSlabs)
     StorageSize += RefSlab->bytes();
-  for (const auto &RelationSlab : RelationSlabs)
-    StorageSize += RelationSlab->bytes();
 
   // Index must keep the slabs and contiguous ranges alive.
   switch (Type) {
