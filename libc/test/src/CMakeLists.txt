@@ -1,6 +1,7 @@
 add_subdirectory(assert)
 add_subdirectory(ctype)
 add_subdirectory(errno)
+add_subdirectory(fenv)
 add_subdirectory(math)
 add_subdirectory(signal)
 add_subdirectory(stdio)
