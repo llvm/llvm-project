@@ -781,6 +781,8 @@ StringRef Intrinsic::getName(ID id) {
 
 std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
+  assert((Tys.empty() || Intrinsic::isOverloaded(id)) &&
+         "This version of getName is for overloaded intrinsics only");
   std::string Result(IntrinsicNameTable[id]);
   for (Type *Ty : Tys) {
     Result += "." + getMangledTypeStr(Ty);
@@ -1243,7 +1245,7 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
   return cast<Function>(
-      M->getOrInsertFunction(getName(id, Tys),
+      M->getOrInsertFunction(Tys.empty() ? getName(id) : getName(id, Tys),
                              getType(M->getContext(), id, Tys))
           .getCallee());
 }
