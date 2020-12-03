@@ -8,17 +8,21 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lld;
 using namespace lld::macho;
 using namespace llvm;
+using namespace llvm::sys;
 
 static lto::Config createConfig() {
   lto::Config c;
@@ -73,12 +77,26 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.o");
   }
 
-  // TODO: set modTime properly
+  if (!config->ltoObjPath.empty())
+    fs::create_directories(config->ltoObjPath);
+
   std::vector<ObjFile *> ret;
-  for (unsigned i = 0; i != maxTasks; ++i)
-    if (!buf[i].empty())
-      ret.push_back(
-          make<ObjFile>(MemoryBufferRef(buf[i], "lto.tmp"), /*modTime=*/0, ""));
+  for (unsigned i = 0; i != maxTasks; ++i) {
+    if (buf[i].empty()) {
+      continue;
+    }
+    SmallString<261> filePath("/tmp/lto.tmp");
+    uint32_t modTime = 0;
+    if (!config->ltoObjPath.empty()) {
+      filePath = config->ltoObjPath;
+      path::append(filePath, Twine(i) + "." +
+                                 getArchitectureName(config->arch) + ".lto.o");
+      saveBuffer(buf[i], filePath);
+      modTime = getModTime(filePath);
+    }
+    ret.push_back(make<ObjFile>(
+        MemoryBufferRef(buf[i], saver.save(filePath.str())), modTime, ""));
+  }
 
   return ret;
 }

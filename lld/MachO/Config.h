@@ -45,6 +45,7 @@ struct Configuration {
   uint32_t headerPad;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
+  llvm::StringRef ltoObjPath;
   bool demangle = false;
   llvm::MachO::Architecture arch;
   PlatformInfo platform;

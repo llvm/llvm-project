@@ -840,7 +840,6 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
 def object_path_lto : Separate<["-"], "object_path_lto">,
      MetaVarName<"<path>">,
      HelpText<"Retain any temporary mach-o file in <path> that would otherwise be deleted during LTO">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def lto_library : Separate<["-"], "lto_library">,
      MetaVarName<"<path>">,
