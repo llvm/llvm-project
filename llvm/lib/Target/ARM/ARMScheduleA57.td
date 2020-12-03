@@ -183,6 +183,11 @@ class A57BranchForm<SchedWriteRes non_br> :
 // TODO: according to the doc, conditional uses I0/I1, unconditional uses M
 // Why more complex instruction uses more simple pipeline?
 // May be an error in doc.
+def A57WriteALUsi : SchedWriteVariant<[
+  // lsl #2, lsl #1, or lsr #1.
+  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>,
+  SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
+]>;
 def A57WriteALUsr : SchedWriteVariant<[
   SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1I>>]>,
   SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
@@ -195,7 +200,7 @@ def A57ReadALUsr : SchedReadVariant<[
   SchedVar<IsPredicatedPred, [ReadDefault]>,
   SchedVar<NoSchedPred,      [ReadDefault]>
 ]>;
-def : SchedAlias<WriteALUsi,  CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>>;
+def : SchedAlias<WriteALUsi,  A57WriteALUsi>;
 def : SchedAlias<WriteALUsr,  A57WriteALUsr>;
 def : SchedAlias<WriteALUSsr, A57WriteALUSsr>;
 def : SchedAlias<ReadALUsr,   A57ReadALUsr>;
