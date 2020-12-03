@@ -292,6 +292,9 @@ def warn_drv_unsupported_opt_for_target : Warning<
 def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
+def warn_drv_dwarf_version_limited_by_target : Warning<
+  "debug information option '%0' is not supported. It needs DWARF-%2 but target '%1' only provides DWARF-%3.">,
+  InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
 def warn_ignoring_fdiscard_for_bitcode : Warning<
