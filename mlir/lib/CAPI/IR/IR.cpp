@@ -17,6 +17,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 
 using namespace mlir;
@@ -338,6 +339,10 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
+
+bool mlirOperationVerify(MlirOperation op) {
+  return succeeded(verify(unwrap(op)));
+}
 
 //===----------------------------------------------------------------------===//
 // Region API.

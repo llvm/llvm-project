@@ -809,6 +809,12 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   operation.checkValid();
   if (fileObject.is_none())
     fileObject = py::module::import("sys").attr("stdout");
+
+  if (!printGenericOpForm && !mlirOperationVerify(operation)) {
+    fileObject.attr("write")("// Verification failed, printing generic form\n");
+    printGenericOpForm = true;
+  }
+
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   if (largeElementsLimit)
     mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);

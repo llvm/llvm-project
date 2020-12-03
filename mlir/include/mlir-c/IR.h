@@ -386,6 +386,9 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
 /// Prints an operation to stderr.
 MLIR_CAPI_EXPORTED void mlirOperationDump(MlirOperation op);
 
+/// Verify the operation and return true if it passes, false if it fails.
+MLIR_CAPI_EXPORTED bool mlirOperationVerify(MlirOperation op);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
