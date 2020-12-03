@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
-; RUN: llc %t -pseudo-probe-for-profiling -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc -mtriple=x86_64-- %t -stop-after=instruction-select -o - | FileCheck %s --check-prefix=CHECK-MIR
 ;
 ;; Check the generation of pseudoprobe intrinsic call.
 
@@ -29,7 +29,7 @@ bb3:
   ret void, !dbg !12
 }
 
-declare void @bar(i32 %x) 
+declare void @bar(i32 %x)
 
 define internal void @foo2(void (i32)* %f) !dbg !4 {
 entry:
