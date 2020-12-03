@@ -883,10 +883,10 @@ CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
   if (!LangOpts.CPlusPlus) return nullptr;
 
   switch (T.getCXXABI().getKind()) {
+  case TargetCXXABI::AppleARM64:
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::GenericARM: // Same as Itanium at this level
   case TargetCXXABI::iOS:
-  case TargetCXXABI::iOS64:
   case TargetCXXABI::WatchOS:
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericMIPS:
@@ -10871,13 +10871,13 @@ MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
   if (!T)
     T = Target;
   switch (T->getCXXABI().getKind()) {
+  case TargetCXXABI::AppleARM64:
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericARM:
   case TargetCXXABI::GenericMIPS:
   case TargetCXXABI::iOS:
-  case TargetCXXABI::iOS64:
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::WatchOS:
   case TargetCXXABI::XL:
