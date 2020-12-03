@@ -593,3 +593,155 @@ loop:
 loop_exit:
   ret i32 %accum.next
 }
+
+;; Same as uniform_load, but show that the uniformity analysis can handle
+;; pointer operands which are not local to the function.
+@GAddr = external global i32 align 4
+define i32 @uniform_load_global() {
+; CHECK-LABEL: @uniform_load_global(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @GAddr, align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* @GAddr, align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* @GAddr, align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* @GAddr, align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8]] = add <4 x i32> [[VEC_PHI]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9]] = add <4 x i32> [[VEC_PHI1]], [[BROADCAST_SPLAT5]]
+; CHECK-NEXT:    [[TMP10]] = add <4 x i32> [[VEC_PHI2]], [[BROADCAST_SPLAT7]]
+; CHECK-NEXT:    [[TMP11]] = add <4 x i32> [[VEC_PHI3]], [[BROADCAST_SPLAT9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP21:!llvm.loop !.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP10]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP11]], [[BIN_RDX10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4097, 4096
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[ACCUM_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* @GAddr, align 4
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[LOAD]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 4096
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT]], label [[FOR_BODY]], [[LOOP22:!llvm.loop !.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i32 [ [[ACCUM_NEXT]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[ACCUM_NEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %accum = phi i32 [%accum.next, %for.body], [0, %entry]
+  %load = load i32, i32* @GAddr
+  %accum.next = add i32 %accum, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 4096
+  br i1 %exitcond, label %loopexit, label %for.body
+
+loopexit:
+  ret i32 %accum.next
+}
+
+;; Same as the global case, but using a constexpr
+define i32 @uniform_load_constexpr() {
+; CHECK-LABEL: @uniform_load_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8]] = add <4 x i32> [[VEC_PHI]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9]] = add <4 x i32> [[VEC_PHI1]], [[BROADCAST_SPLAT5]]
+; CHECK-NEXT:    [[TMP10]] = add <4 x i32> [[VEC_PHI2]], [[BROADCAST_SPLAT7]]
+; CHECK-NEXT:    [[TMP11]] = add <4 x i32> [[VEC_PHI3]], [[BROADCAST_SPLAT9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP23:!llvm.loop !.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP10]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP11]], [[BIN_RDX10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4097, 4096
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[ACCUM_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[LOAD]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 4096
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT]], label [[FOR_BODY]], [[LOOP24:!llvm.loop !.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i32 [ [[ACCUM_NEXT]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[ACCUM_NEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %accum = phi i32 [ %accum.next, %for.body ], [ 0, %entry ]
+  %load = load i32, i32* getelementptr (i32, i32* @GAddr, i64 5), align 4
+  %accum.next = add i32 %accum, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 4096
+  br i1 %exitcond, label %loopexit, label %for.body
+
+loopexit:                                         ; preds = %for.body
+  ret i32 %accum.next
+}
