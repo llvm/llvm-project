@@ -18,6 +18,7 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
@@ -39,7 +40,6 @@ class OperandRange;
 class OpFoldResult;
 class ParseResult;
 class Pattern;
-class Region;
 class ResultRange;
 class RewritePattern;
 class Type;
