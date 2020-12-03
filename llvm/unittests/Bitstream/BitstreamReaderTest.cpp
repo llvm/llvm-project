@@ -161,7 +161,7 @@ TEST(BitstreamReaderTest, shortRead) {
   }
 }
 
-static_assert(is_trivially_copyable<BitCodeAbbrevOp>::value,
+static_assert(std::is_trivially_copyable<BitCodeAbbrevOp>::value,
               "trivially copyable");
 
 } // end anonymous namespace

@@ -1530,7 +1530,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 #. std::vector is exception-safe, and some implementations have pessimizations
    that copy elements when SmallVector would move them.
 
-#. SmallVector understands ``llvm::is_trivially_copyable<Type>`` and uses realloc aggressively.
+#. SmallVector understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
 #. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
    below).
