@@ -95,16 +95,16 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   if (ObjFile.getBinary()->isELF()) {
     uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
       if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF32BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF64LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF64BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else
         return static_cast<uint32_t>(0);
     }(ObjFile.getBinary());

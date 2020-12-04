@@ -192,13 +192,13 @@ findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
 static Expected<ArrayRef<uint8_t>>
 findBuildID(const CopyConfig &Config, const object::ELFObjectFileBase &In) {
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
-    return findBuildID(Config, *O->getELFFile());
+    return findBuildID(Config, O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
-    return findBuildID(Config, *O->getELFFile());
+    return findBuildID(Config, O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
-    return findBuildID(Config, *O->getELFFile());
+    return findBuildID(Config, O->getELFFile());
   else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
-    return findBuildID(Config, *O->getELFFile());
+    return findBuildID(Config, O->getELFFile());
 
   llvm_unreachable("Bad file format");
 }
