@@ -732,6 +732,13 @@ void callbackSetFixedLengthString(const char *data, intptr_t len,
   strncpy(userData, data, len);
 }
 
+bool stringIsEqual(const char *lhs, MlirStringRef rhs) {
+  if (strlen(lhs) != rhs.length) {
+    return false;
+  }
+  return !strncmp(lhs, rhs.data, rhs.length);
+}
+
 int printStandardAttributes(MlirContext ctx) {
   MlirAttribute floating =
       mlirFloatAttrDoubleGet(ctx, mlirF64TypeGet(ctx), 2.0);
@@ -763,9 +770,10 @@ int printStandardAttributes(MlirContext ctx) {
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
-      mlirOpaqueAttrGet(ctx, "std", 3, data, mlirNoneTypeGet(ctx));
+      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("std"), 3, data,
+                        mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
-      strcmp("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
+      !stringIsEqual("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
 
   MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
@@ -775,7 +783,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(opaque);
   // CHECK: #std.abc
 
-  MlirAttribute string = mlirStringAttrGet(ctx, 2, data + 3);
+  MlirAttribute string =
+      mlirStringAttrGet(ctx, mlirStringRefCreate(data + 3, 2));
   if (!mlirAttributeIsAString(string))
     return 6;
 
@@ -786,7 +795,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(string);
   // CHECK: "de"
 
-  MlirAttribute flatSymbolRef = mlirFlatSymbolRefAttrGet(ctx, 3, data + 5);
+  MlirAttribute flatSymbolRef =
+      mlirFlatSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 5, 3));
   if (!mlirAttributeIsAFlatSymbolRef(flatSymbolRef))
     return 8;
 
@@ -799,7 +809,8 @@ int printStandardAttributes(MlirContext ctx) {
   // CHECK: @fgh
 
   MlirAttribute symbols[] = {flatSymbolRef, flatSymbolRef};
-  MlirAttribute symbolRef = mlirSymbolRefAttrGet(ctx, 2, data + 8, 2, symbols);
+  MlirAttribute symbolRef =
+      mlirSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 8, 2), 2, symbols);
   if (!mlirAttributeIsASymbolRef(symbolRef) ||
       mlirSymbolRefAttrGetNumNestedReferences(symbolRef) != 2 ||
       !mlirAttributeEqual(mlirSymbolRefAttrGetNestedReference(symbolRef, 0),
