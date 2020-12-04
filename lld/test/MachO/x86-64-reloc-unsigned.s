@@ -3,11 +3,11 @@
 # RUN: %lld -o %t %t.o
 # RUN: llvm-objdump --macho --rebase --full-contents %t | FileCheck %s
 
-# RUN: %lld -fatal_warnings -pie -o %t-pie %t.o
+# RUN: %lld -pie -o %t-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
-# RUN: %lld -fatal_warnings -pie -no_pie -o %t-no-pie %t.o
+# RUN: %lld -pie -no_pie -o %t-no-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
-# RUN: %lld -fatal_warnings -no_pie -pie -o %t-no-pie %t.o
+# RUN: %lld -no_pie -pie -o %t-no-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
 
 # RUN: %lld -platform_version macos 10.6.0 11.0 -o %t-pie %t.o
