@@ -103,8 +103,11 @@ namespace {
 /// operations.
 class OperationParser : public Parser {
 public:
-  OperationParser(ParserState &state, ModuleOp moduleOp)
-      : Parser(state), opBuilder(moduleOp.getBodyRegion()), moduleOp(moduleOp) {
+  OperationParser(ParserState &state, Operation *topLevelOp)
+      : Parser(state), opBuilder(topLevelOp->getRegion(0)),
+        topLevelOp(topLevelOp) {
+    // The top level operation starts a new name scope.
+    pushSSANameScope(/*isIsolated=*/true);
   }
 
   ~OperationParser();
@@ -310,8 +313,8 @@ private:
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
 
-  /// The top level module operation.
-  ModuleOp moduleOp;
+  /// The top level operation that holds all of the parsed operations.
+  Operation *topLevelOp;
 };
 } // end anonymous namespace
 
@@ -359,7 +362,8 @@ ParseResult OperationParser::finalize() {
     it.first->setLoc(locAttr);
   }
 
-  return success();
+  // Pop the top level name scope.
+  return popSSANameScope();
 }
 
 //===----------------------------------------------------------------------===//
@@ -386,7 +390,7 @@ ParseResult OperationParser::popSSANameScope() {
     for (auto entry : forwardRefInCurrentScope) {
       errors.push_back({entry.second.getPointer(), entry.first});
       // Add this block to the top-level region to allow for automatic cleanup.
-      moduleOp->getRegion(0).push_back(entry.first);
+      topLevelOp->getRegion(0).push_back(entry.first);
     }
     llvm::array_pod_sort(errors.begin(), errors.end());
 
@@ -800,7 +804,7 @@ Operation *OperationParser::parseGenericOperation() {
   if (consumeIf(Token::l_paren)) {
     do {
       // Create temporary regions with the top level region as parent.
-      result.regions.emplace_back(new Region(moduleOp));
+      result.regions.emplace_back(new Region(topLevelOp));
       if (parseRegion(*result.regions.back(), /*entryArguments=*/{}))
         return nullptr;
     } while (consumeIf(Token::comma));
@@ -1920,11 +1924,12 @@ ParseResult OperationParser::parseOptionalBlockArgList(
 namespace {
 /// This parser handles entities that are only valid at the top level of the
 /// file.
-class ModuleParser : public Parser {
+class TopLevelOperationParser : public Parser {
 public:
-  explicit ModuleParser(ParserState &state) : Parser(state) {}
+  explicit TopLevelOperationParser(ParserState &state) : Parser(state) {}
 
-  ParseResult parseModule(ModuleOp module);
+  /// Parse a set of operations into the end of the given Block.
+  ParseResult parse(Block *topLevelBlock, Location parserLoc);
 
 private:
   /// Parse an attribute alias declaration.
@@ -1939,7 +1944,7 @@ private:
 ///
 ///   attribute-alias-def ::= '#' alias-name `=` attribute-value
 ///
-ParseResult ModuleParser::parseAttributeAliasDef() {
+ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   assert(getToken().is(Token::hash_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
 
@@ -1971,7 +1976,7 @@ ParseResult ModuleParser::parseAttributeAliasDef() {
 ///
 ///   type-alias-def ::= '!' alias-name `=` 'type' type
 ///
-ParseResult ModuleParser::parseTypeAliasDef() {
+ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   assert(getToken().is(Token::exclamation_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
 
@@ -2001,13 +2006,11 @@ ParseResult ModuleParser::parseTypeAliasDef() {
   return success();
 }
 
-/// This is the top-level module parser.
-ParseResult ModuleParser::parseModule(ModuleOp module) {
-  OperationParser opParser(getState(), module);
-
-  // Module itself is a name scope.
-  opParser.pushSSANameScope(/*isIsolated=*/true);
-
+ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
+                                           Location parserLoc) {
+  // Create a top-level operation to contain the parsed state.
+  OwningOpRef<Operation *> topLevelOp(ModuleOp::create(parserLoc));
+  OperationParser opParser(getState(), topLevelOp.get());
   while (true) {
     switch (getToken().getKind()) {
     default:
@@ -2021,25 +2024,17 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
       if (opParser.finalize())
         return failure();
 
-      // Handle the case where the top level module was explicitly defined.
-      auto &bodyBlocks = module.getBodyRegion().getBlocks();
-      auto &operations = bodyBlocks.front().getOperations();
-      assert(!operations.empty() && "expected a valid module terminator");
+      // Verify that the parsed operations are valid.
+      if (failed(verify(topLevelOp.get())))
+        return failure();
 
-      // Check that the first operation is a module, and it is the only
-      // non-terminator operation.
-      ModuleOp nested = dyn_cast<ModuleOp>(operations.front());
-      if (nested && std::next(operations.begin(), 2) == operations.end()) {
-        // Merge the data of the nested module operation into 'module'.
-        module.setLoc(nested.getLoc());
-        module.setAttrs(nested->getMutableAttrDict());
-        bodyBlocks.splice(bodyBlocks.end(), nested.getBodyRegion().getBlocks());
-
-        // Erase the original module body.
-        bodyBlocks.pop_front();
-      }
-
-      return opParser.popSSANameScope();
+      // Splice the blocks of the parsed operation over to the provided
+      // top-level block.
+      auto &parsedOps = (*topLevelOp)->getRegion(0).front().getOperations();
+      auto &destOps = topLevelBlock->getOperations();
+      destOps.splice(destOps.empty() ? destOps.end() : std::prev(destOps.end()),
+                     parsedOps, parsedOps.begin(), std::prev(parsedOps.end()));
+      return success();
     }
 
     // If we got an error token, then the lexer already emitted an error, just
@@ -2065,73 +2060,55 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
 
 //===----------------------------------------------------------------------===//
 
-/// This parses the file specified by the indicated SourceMgr and returns an
-/// MLIR module if it was valid.  If not, it emits diagnostics and returns
-/// null.
-OwningModuleRef mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                      MLIRContext *context) {
-  auto sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
+LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
+                                    Block *block, MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
+  const auto *sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
-  // This is the result module we are parsing into.
-  OwningModuleRef module(ModuleOp::create(FileLineColLoc::get(
-      sourceBuf->getBufferIdentifier(), /*line=*/0, /*column=*/0, context)));
+  Location parserLoc = FileLineColLoc::get(sourceBuf->getBufferIdentifier(),
+                                           /*line=*/0, /*column=*/0, context);
+  if (sourceFileLoc)
+    *sourceFileLoc = parserLoc;
 
   SymbolState aliasState;
   ParserState state(sourceMgr, context, aliasState);
-  if (ModuleParser(state).parseModule(*module))
-    return nullptr;
-
-  // Make sure the parse module has no other structural problems detected by
-  // the verifier.
-  if (failed(verify(*module)))
-    return nullptr;
-
-  return module;
+  return TopLevelOperationParser(state).parse(block, parserLoc);
 }
 
-/// This parses the file specified by the indicated filename and returns an
-/// MLIR module if it was valid.  If not, the error message is emitted through
-/// the error handler registered in the context, and a null pointer is returned.
-OwningModuleRef mlir::parseSourceFile(StringRef filename,
-                                      MLIRContext *context) {
+LogicalResult mlir::parseSourceFile(llvm::StringRef filename, Block *block,
+                                    MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
   llvm::SourceMgr sourceMgr;
-  return parseSourceFile(filename, sourceMgr, context);
+  return parseSourceFile(filename, sourceMgr, block, context, sourceFileLoc);
 }
 
-/// This parses the file specified by the indicated filename using the provided
-/// SourceMgr and returns an MLIR module if it was valid.  If not, the error
-/// message is emitted through the error handler registered in the context, and
-/// a null pointer is returned.
-OwningModuleRef mlir::parseSourceFile(StringRef filename,
-                                      llvm::SourceMgr &sourceMgr,
-                                      MLIRContext *context) {
+LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
+                                    llvm::SourceMgr &sourceMgr, Block *block,
+                                    MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
   if (sourceMgr.getNumBuffers() != 0) {
     // TODO: Extend to support multiple buffers.
-    emitError(mlir::UnknownLoc::get(context),
-              "only main buffer parsed at the moment");
-    return nullptr;
+    return emitError(mlir::UnknownLoc::get(context),
+                     "only main buffer parsed at the moment");
   }
   auto file_or_err = llvm::MemoryBuffer::getFileOrSTDIN(filename);
-  if (std::error_code error = file_or_err.getError()) {
-    emitError(mlir::UnknownLoc::get(context),
-              "could not open input file " + filename);
-    return nullptr;
-  }
+  if (std::error_code error = file_or_err.getError())
+    return emitError(mlir::UnknownLoc::get(context),
+                     "could not open input file " + filename);
 
-  // Load the MLIR module.
+  // Load the MLIR source file.
   sourceMgr.AddNewSourceBuffer(std::move(*file_or_err), llvm::SMLoc());
-  return parseSourceFile(sourceMgr, context);
+  return parseSourceFile(sourceMgr, block, context, sourceFileLoc);
 }
 
-/// This parses the program string to a MLIR module if it was valid. If not,
-/// it emits diagnostics and returns null.
-OwningModuleRef mlir::parseSourceString(StringRef moduleStr,
-                                        MLIRContext *context) {
-  auto memBuffer = MemoryBuffer::getMemBuffer(moduleStr);
+LogicalResult mlir::parseSourceString(llvm::StringRef sourceStr, Block *block,
+                                      MLIRContext *context,
+                                      LocationAttr *sourceFileLoc) {
+  auto memBuffer = MemoryBuffer::getMemBuffer(sourceStr);
   if (!memBuffer)
-    return nullptr;
+    return failure();
 
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  return parseSourceFile(sourceMgr, context);
+  return parseSourceFile(sourceMgr, block, context, sourceFileLoc);
 }

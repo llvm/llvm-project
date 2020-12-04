@@ -1,4 +1,4 @@
-//===- OwningOpRefBase.h - MLIR OwningOpRefBase -----------------*- C++ -*-===//
+//===- OwningOpRef.h - MLIR OwningOpRef -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_OWNINGOPREFBASE_H
-#define MLIR_IR_OWNINGOPREFBASE_H
+#ifndef MLIR_IR_OWNINGOPREF_H
+#define MLIR_IR_OWNINGOPREF_H
 
 #include <utility>
 
@@ -24,20 +24,23 @@ namespace mlir {
 /// instead, and this should only be used in situations where existing solutions
 /// are not viable.
 template <typename OpTy>
-class OwningOpRefBase {
+class OwningOpRef {
 public:
-  OwningOpRefBase(std::nullptr_t = nullptr) {}
-  OwningOpRefBase(OpTy op) : op(op) {}
-  OwningOpRefBase(OwningOpRefBase &&other) : op(other.release()) {}
-  ~OwningOpRefBase() {
+  /// The underlying operation type stored in this reference.
+  using OperationT = OpTy;
+
+  OwningOpRef(std::nullptr_t = nullptr) {}
+  OwningOpRef(OpTy op) : op(op) {}
+  OwningOpRef(OwningOpRef &&other) : op(other.release()) {}
+  ~OwningOpRef() {
     if (op)
-      op.erase();
+      op->erase();
   }
 
-  // Assign from another op reference.
-  OwningOpRefBase &operator=(OwningOpRefBase &&other) {
+  /// Assign from another op reference.
+  OwningOpRef &operator=(OwningOpRef &&other) {
     if (op)
-      op.erase();
+      op->erase();
     op = other.release();
     return *this;
   }
@@ -61,4 +64,4 @@ private:
 
 } // end namespace mlir
 
-#endif // MLIR_IR_OWNINGOPREFBASE_H
+#endif // MLIR_IR_OWNINGOPREF_H
