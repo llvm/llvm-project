@@ -32,7 +32,7 @@ entry:
   ret i1 %3
 }
 
-@fpi = external global float, align 4
+@fpi = external dso_local global float, align 4
 
 define zeroext i1 @_Z8test_cosv() {
 ; CHECK-LABEL: _Z8test_cosv:

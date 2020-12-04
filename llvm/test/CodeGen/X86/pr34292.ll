@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+adx | FileCheck %s
 
 ; PR34292
-@_ZL1c = external global i8
+@_ZL1c = external dso_local global i8
 define void @sum_unroll(i64* nocapture readonly, i64* nocapture) {
 ; CHECK-LABEL: sum_unroll:
 ; CHECK:       # %bb.0:

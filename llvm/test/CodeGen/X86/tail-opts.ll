@@ -428,7 +428,7 @@ declare void @func()
 
 ; one - One instruction may be tail-duplicated even with optsize.
 
-@XYZ = external global i32
+@XYZ = external dso_local global i32
 
 declare void @tail_call_me()
 

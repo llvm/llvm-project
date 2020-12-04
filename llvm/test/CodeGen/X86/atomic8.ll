@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
 ; RUN: llc < %s -O0 -mtriple=i686-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X32
 
-@sc8 = external global i8
+@sc8 = external dso_local global i8
 
 define void @atomic_fetch_add8() nounwind {
 ; X64-LABEL:   atomic_fetch_add8:

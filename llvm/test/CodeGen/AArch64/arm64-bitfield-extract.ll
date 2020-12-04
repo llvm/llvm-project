@@ -793,7 +793,7 @@ define i64 @fct18(i32 %xor72) nounwind ssp {
 }
 
 ; Using the access to the global array to keep the instruction and control flow.
-@first_ones = external global [65536 x i8]
+@first_ones = external dso_local global [65536 x i8]
 
 ; Function Attrs: nounwind readonly ssp
 define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
@@ -965,7 +965,7 @@ end:
 }
 
 ; Check if we can still catch UBFX when "AND" is used by SHL.
-@arr = external global [8 x [64 x i64]]
+@arr = external dso_local global [8 x [64 x i64]]
 define i64 @fct21(i64 %x) {
 ; LLC-LABEL: fct21:
 ; LLC:       // %bb.0: // %entry

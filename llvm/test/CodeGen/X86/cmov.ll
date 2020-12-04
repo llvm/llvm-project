@@ -70,10 +70,10 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; PR4814
 
 
-@g_3 = external global i8
-@g_96 = external global i8
-@g_100 = external global i8
-@_2E_str = external constant [15 x i8], align 1
+@g_3 = external dso_local global i8
+@g_96 = external dso_local global i8
+@g_100 = external dso_local global i8
+@_2E_str = external dso_local constant [15 x i8], align 1
 
 define i1 @test4() nounwind {
 ; CHECK-LABEL: test4:

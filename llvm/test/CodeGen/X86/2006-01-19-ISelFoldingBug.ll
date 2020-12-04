@@ -6,7 +6,7 @@
 
 target triple = "i686-unknown-unknown"
 
-@A = external global i32
+@A = external dso_local global i32
 
 define i32 @test5(i32 %B, i8 %C) {
 ; CHECK-LABEL: test5:

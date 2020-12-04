@@ -2368,7 +2368,7 @@ define i64 @nofold_stfence(i64* %p) {
 
 ;; Next, test how well we can fold invariant loads.
 
-@Constant = external constant i64
+@Constant = external dso_local constant i64
 
 define i64 @fold_constant(i64 %arg) {
 ; CHECK-O0-LABEL: fold_constant:

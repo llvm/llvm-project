@@ -5,7 +5,7 @@
 
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
-@GLOBAL = external global i32
+@GLOBAL = external dso_local global i32
 
 define i32 @test(i32* %P1, i32* %P2, i32* %P3) nounwind {
 ; CHECK-LABEL: test:

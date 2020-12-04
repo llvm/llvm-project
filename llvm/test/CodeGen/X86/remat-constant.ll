@@ -3,7 +3,7 @@
 
 declare void @bar() nounwind
 
-@a = external constant float
+@a = external dso_local constant float
 
 declare void @qux(float %f) nounwind
 

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=xcore | FileCheck %s
 
-@a = external constant [0 x i32], section ".cp.rodata"
-@b = external global [0 x i32]
+@a = external dso_local constant [0 x i32], section ".cp.rodata"
+@b = external dso_local global [0 x i32]
 
 define i32 *@f1() nounwind {
 entry:
