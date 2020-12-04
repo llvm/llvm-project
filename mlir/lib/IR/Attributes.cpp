@@ -9,7 +9,6 @@
 #include "mlir/IR/Attributes.h"
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
