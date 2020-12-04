@@ -277,7 +277,6 @@ public:
                           uptr Alignment = MinAlignment,
                           bool ZeroContents = false) {
     initThreadMaybe();
-    Options Options = Primary.Options.load();
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.shouldSample())) {
@@ -286,6 +285,7 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
+    const Options Options = Primary.Options.load();
     const FillContentsMode FillContents = ZeroContents ? ZeroFill
                                           : TSDRegistry.getDisableMemInit()
                                               ? NoFill
@@ -296,7 +296,7 @@ public:
         return nullptr;
       reportAlignmentTooBig(Alignment, MaxAlignment);
     }
-    if (UNLIKELY(Alignment < MinAlignment))
+    if (Alignment < MinAlignment)
       Alignment = MinAlignment;
 
     // If the requested size happens to be 0 (more common than you might think),
@@ -331,12 +331,9 @@ public:
       // larger class until it fits. If it fails to fit in the largest class,
       // fallback to the Secondary.
       if (UNLIKELY(!Block)) {
-        while (ClassId < SizeClassMap::LargestClassId) {
+        while (ClassId < SizeClassMap::LargestClassId && !Block)
           Block = TSD->Cache.allocate(++ClassId);
-          if (LIKELY(Block))
-            break;
-        }
-        if (UNLIKELY(!Block))
+        if (!Block)
           ClassId = 0;
       }
       if (UnlockRequired)
@@ -467,7 +464,7 @@ public:
         Chunk::SizeOrUnusedBytesMask;
     Chunk::storeHeader(Cookie, Ptr, &Header);
 
-    if (&__scudo_allocate_hook)
+    if (UNLIKELY(&__scudo_allocate_hook))
       __scudo_allocate_hook(TaggedPtr, Size);
 
     return TaggedPtr;
@@ -482,7 +479,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-    Options Options = Primary.Options.load();
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
@@ -491,7 +487,7 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
-    if (&__scudo_deallocate_hook)
+    if (UNLIKELY(&__scudo_deallocate_hook))
       __scudo_deallocate_hook(Ptr);
 
     if (UNLIKELY(!Ptr))
@@ -506,11 +502,13 @@ public:
 
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
+
+    const Options Options = Primary.Options.load();
     if (Options.get(OptionBit::DeallocTypeMismatch)) {
-      if (Header.OriginOrWasZeroed != Origin) {
+      if (UNLIKELY(Header.OriginOrWasZeroed != Origin)) {
         // With the exception of memalign'd chunks, that can be still be free'd.
-        if (UNLIKELY(Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
-                     Origin != Chunk::Origin::Malloc))
+        if (Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
+            Origin != Chunk::Origin::Malloc)
           reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
                                     Header.OriginOrWasZeroed, Origin);
       }
@@ -527,8 +525,8 @@ public:
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
     initThreadMaybe();
-    Options Options = Primary.Options.load();
 
+    const Options Options = Primary.Options.load();
     if (UNLIKELY(NewSize >= MaxAllowedMallocSize)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
@@ -611,8 +609,7 @@ public:
     // allow for potential further in-place realloc. The gains of such a trick
     // are currently unclear.
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
-    if (NewPtr) {
-      const uptr OldSize = getSize(OldPtr, &OldHeader);
+    if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
       quarantineOrDeallocateChunk(Options, OldPtr, &OldHeader, OldSize);
     }
@@ -1057,10 +1054,9 @@ private:
     }
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
-    // Logical Or can be short-circuited, which introduces unnecessary
-    // conditional jumps, so use bitwise Or and let the compiler be clever.
+    // This purposefully underflows for Size == 0.
     const bool BypassQuarantine =
-        !Quarantine.getCacheSize() | !Size | (Size > QuarantineMaxChunkSize);
+        !Quarantine.getCacheSize() || ((Size - 1) >= QuarantineMaxChunkSize);
     if (BypassQuarantine) {
       NewHeader.State = Chunk::State::Available;
       Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
