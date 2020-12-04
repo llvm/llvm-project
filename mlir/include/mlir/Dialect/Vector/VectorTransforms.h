@@ -91,7 +91,7 @@ struct UnrollVectorOptions {
   /// Callback function that indicates whether vector unrolling should be
   /// attempted on the operation.
   FilterConstraintFnType filterConstraint = nullptr;
-  UnrollVectorOptions &setFilterContraint(FilterConstraintFnType constraint) {
+  UnrollVectorOptions &setFilterConstraint(FilterConstraintFnType constraint) {
     filterConstraint = constraint;
     return *this;
   }
@@ -117,21 +117,19 @@ struct UnrollVectorOptions {
 };
 /// Pattern to apply `unrollSingleResultVectorOp` to a `targetShape`
 /// declaratively.
-template <typename OpTy>
-struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
-  using FilterConstraintType = std::function<LogicalResult(OpTy op)>;
+struct UnrollVectorPattern : public RewritePattern {
+  using FilterConstraintType = std::function<LogicalResult(Operation *op)>;
   UnrollVectorPattern(MLIRContext *context, UnrollVectorOptions options)
-      : OpRewritePattern<OpTy>(context), options(options) {}
-  LogicalResult matchAndRewrite(OpTy op,
+      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()), options(options) {}
+  LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (options.filterConstraint && failed(options.filterConstraint(op)))
       return failure();
     if (!options.nativeShape) {
-      return op.emitError("vector unrolling expects the native shape or native"
-                          "shape call back function to be set");
+      return op->emitError("vector unrolling expects the native shape or native"
+                           "shape call back function to be set");
     }
-    auto unrollableVectorOp =
-        dyn_cast<VectorUnrollOpInterface>(op.getOperation());
+    auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
     if (!unrollableVectorOp)
       return failure();
     auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
@@ -139,12 +137,12 @@ struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
       return failure();
     Optional<SmallVector<int64_t, 4>> targetShape = options.nativeShape(op);
     if (!targetShape)
-      return op.emitError("failed to get target shape for vector unroll");
+      return op->emitError("failed to get target shape for vector unroll");
     auto maybeShapeRatio = shapeRatio(*maybeUnrollShape, *targetShape);
     if (!maybeShapeRatio ||
         llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
       return failure();
-    if (std::is_same<OpTy, TransferWriteOp>::value) {
+    if (isa<TransferWriteOp>(op)) {
       if (failed(unrollTransferWriteOp(rewriter, op, *targetShape)))
         return failure();
       rewriter.eraseOp(op);
