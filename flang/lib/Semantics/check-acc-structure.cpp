@@ -201,8 +201,6 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
     CheckRequireAtLeastOneOf();
     break;
   case llvm::acc::Directive::ACCD_update:
-    // Restriction - line 2636
-    CheckRequireAtLeastOneOf();
     // Restriction - 2301
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
