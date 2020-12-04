@@ -30,6 +30,7 @@ namespace edsc {
 /// setting and restoring of insertion points.
 class ScopedContext {
 public:
+  ScopedContext(OpBuilder &b);
   ScopedContext(OpBuilder &b, Location location);
 
   /// Sets the insertion point of the builder to 'newInsertPt' for the duration
