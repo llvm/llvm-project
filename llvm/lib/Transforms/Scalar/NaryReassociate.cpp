@@ -231,36 +231,32 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   // Process the basic blocks in a depth first traversal of the dominator
   // tree. This order ensures that all bases of a candidate are in Candidates
   // when we process it.
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
     for (auto I = BB->begin(); I != BB->end(); ++I) {
-      if (SE->isSCEVable(I->getType()) && isPotentiallyNaryReassociable(&*I)) {
-        const SCEV *OldSCEV = SE->getSCEV(&*I);
-        if (Instruction *NewI = tryReassociate(&*I)) {
-          Changed = true;
-          SE->forgetValue(&*I);
-          I->replaceAllUsesWith(NewI);
-          WeakVH NewIExist = NewI;
-          // If SeenExprs/NewIExist contains I's WeakTrackingVH/WeakVH, that
-          // entry will be replaced with nullptr if deleted.
-          RecursivelyDeleteTriviallyDeadInstructions(&*I, TLI);
-          if (!NewIExist) {
-            // Rare occation where the new instruction (NewI) have been removed,
-            // probably due to parts of the input code was dead from the
-            // beginning, reset the iterator and start over from the beginning
-            I = BB->begin();
-            continue;
-          }
-          I = NewI->getIterator();
-        }
-        // Add the rewritten instruction to SeenExprs; the original instruction
-        // is deleted.
-        const SCEV *NewSCEV = SE->getSCEV(&*I);
-        SeenExprs[NewSCEV].push_back(WeakTrackingVH(&*I));
+      Instruction *OrigI = &*I;
+
+      if (!SE->isSCEVable(OrigI->getType()) ||
+          !isPotentiallyNaryReassociable(OrigI))
+        continue;
+
+      const SCEV *OrigSCEV = SE->getSCEV(OrigI);
+      if (Instruction *NewI = tryReassociate(OrigI)) {
+        Changed = true;
+        OrigI->replaceAllUsesWith(NewI);
+
+        // Add 'OrigI' to the list of dead instructions.
+        DeadInsts.push_back(WeakTrackingVH(OrigI));
+        // Add the rewritten instruction to SeenExprs; the original
+        // instruction is deleted.
+        const SCEV *NewSCEV = SE->getSCEV(NewI);
+        SeenExprs[NewSCEV].push_back(WeakTrackingVH(NewI));
+
         // Ideally, NewSCEV should equal OldSCEV because tryReassociate(I)
         // is equivalent to I. However, ScalarEvolution::getSCEV may
-        // weaken nsw causing NewSCEV not to equal OldSCEV. For example, suppose
-        // we reassociate
+        // weaken nsw causing NewSCEV not to equal OldSCEV. For example,
+        // suppose we reassociate
         //   I = &a[sext(i +nsw j)] // assuming sizeof(a[0]) = 4
         // to
         //   NewI = &a[sext(i)] + sext(j).
@@ -274,12 +270,19 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         // equivalence, we add I to SeenExprs[OldSCEV] as well so that we can
         // map both SCEV before and after tryReassociate(I) to I.
         //
-        // This improvement is exercised in @reassociate_gep_nsw in nary-gep.ll.
-        if (NewSCEV != OldSCEV)
-          SeenExprs[OldSCEV].push_back(WeakTrackingVH(&*I));
-      }
+        // This improvement is exercised in @reassociate_gep_nsw in
+        // nary-gep.ll.
+        if (NewSCEV != OrigSCEV)
+          SeenExprs[OrigSCEV].push_back(WeakTrackingVH(NewI));
+      } else
+        SeenExprs[OrigSCEV].push_back(WeakTrackingVH(OrigI));
     }
   }
+  // Delete all dead instructions from 'DeadInsts'.
+  // Please note ScalarEvolution is updated along the way.
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+      DeadInsts, TLI, nullptr, [this](Value *V) { SE->forgetValue(V); });
+
   return Changed;
 }
 
