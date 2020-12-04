@@ -36,7 +36,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       which an Operation would be created (e.g., as used in Operation::create)
       and the regions of the op.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypes",
       /*args=*/(ins "::mlir::MLIRContext *":$context,
                     "::llvm::Optional<::mlir::Location>":$location,
