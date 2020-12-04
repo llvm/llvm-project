@@ -50,7 +50,7 @@ struct PassManagerOptions {
   llvm::cl::opt<bool> printModuleScope{
       "print-ir-module-scope",
       llvm::cl::desc("When printing IR for print-ir-[before|after]{-all} "
-                     "always print the top-level module operation"),
+                     "always print the top-level operation"),
       llvm::cl::init(false)};
 
   /// Add an IR printing instrumentation if enabled by any 'print-ir' flags.

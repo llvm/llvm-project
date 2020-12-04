@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -97,14 +96,10 @@ private:
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
-  // Check to see if we are printing the top-level module.
-  auto module = dyn_cast<ModuleOp>(op);
-  if (module && !op->getBlock())
-    return module.print(out << "\n", flags);
-
   // Otherwise, check to see if we are not printing at module scope.
   if (!printModuleScope)
-    return op->print(out << "\n", flags.useLocalScope());
+    return op->print(out << "\n",
+                     op->getBlock() ? flags.useLocalScope() : flags);
 
   // Otherwise, we are printing at module scope.
   out << " ('" << op->getName() << "' operation";
@@ -113,17 +108,11 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
     out << ": @" << symbolName.getValue();
   out << ")\n";
 
-  // Find the top-level module operation.
+  // Find the top-level operation.
   auto *topLevelOp = op;
   while (auto *parentOp = topLevelOp->getParentOp())
     topLevelOp = parentOp;
-
-  // Check to see if the top-level operation is actually a module in the case of
-  // invalid-ir.
-  if (auto module = dyn_cast<ModuleOp>(topLevelOp))
-    module.print(out, flags);
-  else
-    topLevelOp->print(out, flags);
+  topLevelOp->print(out, flags);
 }
 
 /// Instrumentation hooks.

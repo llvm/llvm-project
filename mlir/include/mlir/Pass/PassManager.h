@@ -28,7 +28,6 @@ namespace mlir {
 class AnalysisManager;
 class Identifier;
 class MLIRContext;
-class ModuleOp;
 class Operation;
 class Pass;
 class PassInstrumentation;
@@ -158,12 +157,20 @@ enum class PassDisplayMode {
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
 public:
-  PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit);
+  /// Create a new pass manager under the given context with a specific nesting
+  /// style. The created pass manager can schedule operations that match
+  /// `operationName`.
+  PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit,
+              StringRef operationName = "module");
+  PassManager(MLIRContext *ctx, StringRef operationName)
+      : PassManager(ctx, Nesting::Explicit, operationName) {}
   ~PassManager();
 
-  /// Run the passes within this manager on the provided module.
+  /// Run the passes within this manager on the provided operation. The
+  /// specified operation must have the same name as the one provided the pass
+  /// manager on construction.
   LLVM_NODISCARD
-  LogicalResult run(ModuleOp module);
+  LogicalResult run(Operation *op);
 
   /// Return an instance of the context.
   MLIRContext *getContext() const { return context; }
@@ -318,11 +325,11 @@ private:
   void dumpStatistics();
 
   /// Run the pass manager with crash recover enabled.
-  LogicalResult runWithCrashRecovery(ModuleOp module, AnalysisManager am);
+  LogicalResult runWithCrashRecovery(Operation *op, AnalysisManager am);
   /// Run the given passes with crash recover enabled.
   LogicalResult
   runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
-                       ModuleOp module, AnalysisManager am);
+                       Operation *op, AnalysisManager am);
 
   /// Context this PassManager was initialized with.
   MLIRContext *context;
