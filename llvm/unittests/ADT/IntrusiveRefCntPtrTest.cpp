@@ -12,28 +12,34 @@
 namespace llvm {
 
 namespace {
-struct SimpleRefCounted : public RefCountedBase<SimpleRefCounted> {
+int NumInstances = 0;
+template <template <typename> class Base>
+struct SimpleRefCounted : Base<SimpleRefCounted<Base>> {
   SimpleRefCounted() { ++NumInstances; }
-  SimpleRefCounted(const SimpleRefCounted &) : RefCountedBase() {
+  SimpleRefCounted(const SimpleRefCounted &RHS) : Base<SimpleRefCounted>(RHS) {
     ++NumInstances;
   }
   ~SimpleRefCounted() { --NumInstances; }
-
-  static int NumInstances;
 };
-int SimpleRefCounted::NumInstances = 0;
 } // anonymous namespace
 
-TEST(IntrusiveRefCntPtr, RefCountedBaseCopyDoesNotLeak) {
-  EXPECT_EQ(0, SimpleRefCounted::NumInstances);
+template <typename T> struct IntrusiveRefCntPtrTest : testing::Test {};
+
+typedef ::testing::Types<SimpleRefCounted<RefCountedBase>,
+                         SimpleRefCounted<ThreadSafeRefCountedBase>>
+    IntrusiveRefCntTypes;
+TYPED_TEST_CASE(IntrusiveRefCntPtrTest, IntrusiveRefCntTypes);
+
+TYPED_TEST(IntrusiveRefCntPtrTest, RefCountedBaseCopyDoesNotLeak) {
+  EXPECT_EQ(0, NumInstances);
   {
-    SimpleRefCounted *S1 = new SimpleRefCounted;
-    IntrusiveRefCntPtr<SimpleRefCounted> R1 = S1;
-    SimpleRefCounted *S2 = new SimpleRefCounted(*S1);
-    IntrusiveRefCntPtr<SimpleRefCounted> R2 = S2;
-    EXPECT_EQ(2, SimpleRefCounted::NumInstances);
+    TypeParam *S1 = new TypeParam;
+    IntrusiveRefCntPtr<TypeParam> R1 = S1;
+    TypeParam *S2 = new TypeParam(*S1);
+    IntrusiveRefCntPtr<TypeParam> R2 = S2;
+    EXPECT_EQ(2, NumInstances);
   }
-  EXPECT_EQ(0, SimpleRefCounted::NumInstances);
+  EXPECT_EQ(0, NumInstances);
 }
 
 struct InterceptRefCounted : public RefCountedBase<InterceptRefCounted> {
