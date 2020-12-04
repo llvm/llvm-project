@@ -554,6 +554,12 @@ public:
 OwningRewritePatternList
 mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
   OwningRewritePatternList patterns;
+  populateLinalgTilingCanonicalizationPatterns(patterns, ctx);
+  return patterns;
+}
+
+void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx) {
   AffineApplyOp::getCanonicalizationPatterns(patterns, ctx);
   AffineForOp::getCanonicalizationPatterns(patterns, ctx);
   AffineMinOp::getCanonicalizationPatterns(patterns, ctx);
@@ -569,7 +575,6 @@ mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >::insert(patterns, ctx);
-  return patterns;
 }
 
 /// Populate the given list with patterns that apply Linalg tiling.
