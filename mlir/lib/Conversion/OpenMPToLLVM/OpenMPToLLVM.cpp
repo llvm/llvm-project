@@ -35,7 +35,7 @@ struct RegionOpConversion : public ConvertToLLVMPattern {
                                          curOp.getAttrs());
     rewriter.inlineRegionBefore(curOp.region(), newOp.region(),
                                 newOp.region().end());
-    if (failed(rewriter.convertRegionTypes(&newOp.region(), typeConverter)))
+    if (failed(rewriter.convertRegionTypes(&newOp.region(), *typeConverter)))
       return failure();
 
     rewriter.eraseOp(op);
