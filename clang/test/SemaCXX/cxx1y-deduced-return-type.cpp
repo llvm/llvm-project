@@ -421,6 +421,7 @@ namespace DecltypeAutoShouldNotBeADecltypeSpecifier {
   namespace Dtor {
     struct A {};
     void f(A a) { a.~decltype(auto)(); } // expected-error {{'decltype(auto)' not allowed here}}
+    void g(int i) { i.~decltype(auto)(); } // expected-error {{'decltype(auto)' not allowed here}}
   }
 
   namespace BaseClass {
