@@ -159,7 +159,7 @@ instructions are represented in the SPIR-V dialect:
 
 #### Model types with MLIR custom types
 
-*   Types are represented using MLIR standard types and SPIR-V dialect specific
+*   Types are represented using MLIR builtin types and SPIR-V dialect specific
     types. There are no type declaration ops in the SPIR-V dialect. More
     discussions can be found in the [Types](#types) section later.
 
@@ -247,9 +247,9 @@ encode them directly in the dialect-specific type.
 Theoretically we can define all SPIR-V types using MLIR extensible type system,
 but other than representational purity, it does not buy us more. Instead, we
 need to maintain the code and invest in pretty printing them. So we prefer to
-use builtin/standard types if possible.
+use builtin types if possible.
 
-The SPIR-V dialect reuses standard integer, float, and vector types:
+The SPIR-V dialect reuses builtin integer, float, and vector types:
 
 Specification                        | Dialect
 :----------------------------------: | :-------------------------------:
@@ -1005,10 +1005,10 @@ register other legality constraints into the returned `SPIRVConversionTarget`.
 ### `SPIRVTypeConverter`
 
 The `mlir::SPIRVTypeConverter` derives from `mlir::TypeConverter` and provides
-type conversion for standard types to SPIR-V types conforming to the [target
-environment](#target-environment) it is constructed with. If the required
-extension/capability for the resultant type is not available in the given
-target environment, `convertType()` will return a null type.
+type conversion for builtin types to SPIR-V types conforming to the
+[target environment](#target-environment) it is constructed with. If the
+required extension/capability for the resultant type is not available in the
+given target environment, `convertType()` will return a null type.
 
 Standard scalar types are converted to their corresponding SPIR-V scalar types.
 

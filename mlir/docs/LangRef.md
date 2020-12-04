@@ -702,7 +702,7 @@ defines the relation between the region results and the operation results.
 
 Each value in MLIR has a type defined by the type system below. There are a
 number of primitive types (like integers) and also aggregate types for tensors
-and memory buffers. MLIR [standard types](#standard-types) do not include
+and memory buffers. MLIR [builtin types](#builtin-types) do not include
 structures, arrays, or dictionaries.
 
 MLIR has an open type system (i.e. there is no fixed list of types), and types
@@ -710,7 +710,7 @@ may have application-specific semantics. For example, MLIR supports a set of
 [dialect types](#dialect-types).
 
 ```
-type ::= type-alias | dialect-type | standard-type
+type ::= type-alias | dialect-type | builtin-type
 
 type-list-no-parens ::=  type (`,` type)*
 type-list-parens ::= `(` `)`
@@ -807,13 +807,13 @@ characters.
 
 See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
-### Standard Types
+### Builtin Types
 
-Standard types are a core set of [dialect types](#dialect-types) that are
-defined in a builtin dialect and thus available to all users of MLIR.
+Builtin types are a core set of [dialect types](#dialect-types) that are defined
+in a builtin dialect and thus available to all users of MLIR.
 
 ```
-standard-type ::=     complex-type
+builtin-type ::=      complex-type
                     | float-type
                     | function-type
                     | index-type

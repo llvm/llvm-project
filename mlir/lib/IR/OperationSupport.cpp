@@ -13,9 +13,9 @@
 
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/StandardTypes.h"
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//

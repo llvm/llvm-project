@@ -414,7 +414,7 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr)
   // All other cases failed. Then we cannot convert this type.
   addConversion([](Type type) { return llvm::None; });
 
-  // Allow all SPIR-V dialect specific types. This assumes all standard types
+  // Allow all SPIR-V dialect specific types. This assumes all builtin types
   // adopted in the SPIR-V dialect (i.e., IntegerType, FloatType, VectorType)
   // were tried before.
   //

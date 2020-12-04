@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_MANGLER_H
 #define FORTRAN_LOWER_MANGLER_H
 
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
