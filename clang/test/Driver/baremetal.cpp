@@ -93,6 +93,10 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
+// RUN: %clang -### -target arm-none-eabi -v %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SYSROOT-INC
+// CHECK-SYSROOT-INC-NOT: "-internal-isystem" "include"
+
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target riscv64-unknown-elf \
 // RUN:     -L some/directory/user/asked/for \
