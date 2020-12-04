@@ -1111,6 +1111,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
                       << '\n');
     ++NumFolds;
     ConstantFoldTerminator(BB, true, nullptr, DTU);
+    if (HasProfileData)
+      BPI->eraseBlock(BB);
     return true;
   }
 
@@ -1166,6 +1168,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
         }
         DTU->applyUpdatesPermissive(
             {{DominatorTree::Delete, BB, ToRemoveSucc}});
+        if (HasProfileData)
+          BPI->eraseBlock(BB);
         return true;
       }
 
@@ -1263,6 +1267,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       UncondBI->setDebugLoc(BI->getDebugLoc());
       BI->eraseFromParent();
       DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, RemoveSucc}});
+      if (HasProfileData)
+        BPI->eraseBlock(BB);
       return true;
     }
     CurrentBB = CurrentPred;
