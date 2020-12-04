@@ -419,6 +419,17 @@ class DataFlowSanitizer {
 
   bool init(Module &M);
 
+  /// Returns a zero constant with the shadow type of V's type. Until we support
+  /// field/index level shadow values, the following methods always return
+  /// primitive types, values or zero constants.
+  Constant *getZeroShadow(Value *V);
+  /// Checks if V is a zero shadow.
+  bool isZeroShadow(Value *V);
+  /// Returns the shadow type of OrigTy.
+  Type *getShadowTy(Type *OrigTy);
+  /// Returns the shadow type of of V's type.
+  Type *getShadowTy(Value *V);
+
 public:
   DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
 
@@ -458,10 +469,10 @@ struct DFSanFunction {
   /// Computes the shadow address for a given function argument.
   ///
   /// Shadow = ArgTLS+ArgOffset.
-  Value *getArgTLS(unsigned ArgOffset, IRBuilder<> &IRB);
+  Value *getArgTLS(Type *T, unsigned ArgOffset, IRBuilder<> &IRB);
 
   /// Computes the shadow address for a retval.
-  Value *getRetvalTLS(IRBuilder<> &IRB);
+  Value *getRetvalTLS(Type *T, IRBuilder<> &IRB);
 
   Value *getShadow(Value *V);
   void setShadow(Instruction *I, Value *Shadow);
@@ -578,6 +589,20 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   return TransformedFunction(
       T, FunctionType::get(T->getReturnType(), ArgTypes, T->isVarArg()),
       ArgumentIndexMapping);
+}
+
+bool DataFlowSanitizer::isZeroShadow(Value *V) {
+  return ZeroPrimitiveShadow == V;
+}
+
+Constant *DataFlowSanitizer::getZeroShadow(Value *V) {
+  return ZeroPrimitiveShadow;
+}
+
+Type *DataFlowSanitizer::getShadowTy(Type *OrigTy) { return PrimitiveShadowTy; }
+
+Type *DataFlowSanitizer::getShadowTy(Value *V) {
+  return getShadowTy(V->getType());
 }
 
 bool DataFlowSanitizer::init(Module &M) {
@@ -1075,17 +1100,17 @@ bool DataFlowSanitizer::runImpl(Module &M) {
          M.global_size() != InitialGlobalSize || M.size() != InitialModuleSize;
 }
 
-Value *DFSanFunction::getArgTLS(unsigned ArgOffset, IRBuilder<> &IRB) {
+Value *DFSanFunction::getArgTLS(Type *T, unsigned ArgOffset, IRBuilder<> &IRB) {
   Value *Base = IRB.CreatePointerCast(DFS.ArgTLS, DFS.IntptrTy);
   if (ArgOffset)
     Base = IRB.CreateAdd(Base, ConstantInt::get(DFS.IntptrTy, ArgOffset));
-  return IRB.CreateIntToPtr(Base, PointerType::get(DFS.PrimitiveShadowTy, 0),
+  return IRB.CreateIntToPtr(Base, PointerType::get(DFS.getShadowTy(T), 0),
                             "_dfsarg");
 }
 
-Value *DFSanFunction::getRetvalTLS(IRBuilder<> &IRB) {
+Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
   return IRB.CreatePointerCast(
-      DFS.RetvalTLS, PointerType::get(DFS.PrimitiveShadowTy, 0), "_dfsret");
+      DFS.RetvalTLS, PointerType::get(DFS.getShadowTy(T), 0), "_dfsret");
 }
 
 Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
@@ -1098,7 +1123,7 @@ Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
       continue;
     }
 
-    unsigned Size = DL.getTypeAllocSize(DFS.PrimitiveShadowTy);
+    unsigned Size = DL.getTypeAllocSize(DFS.getShadowTy(&FArg));
     if (A != &FArg) {
       ArgOffset += alignTo(Size, kShadowTLSAlignment);
       if (ArgOffset > kArgTLSSize)
@@ -1111,22 +1136,22 @@ Value *DFSanFunction::getShadowForTLSArgument(Argument *A) {
 
     Instruction *ArgTLSPos = &*F->getEntryBlock().begin();
     IRBuilder<> IRB(ArgTLSPos);
-    Value *ArgShadowPtr = getArgTLS(ArgOffset, IRB);
-    return IRB.CreateAlignedLoad(DFS.PrimitiveShadowTy, ArgShadowPtr,
+    Value *ArgShadowPtr = getArgTLS(FArg.getType(), ArgOffset, IRB);
+    return IRB.CreateAlignedLoad(DFS.getShadowTy(&FArg), ArgShadowPtr,
                                  kShadowTLSAlignment);
   }
 
-  return DFS.ZeroPrimitiveShadow;
+  return DFS.getZeroShadow(A);
 }
 
 Value *DFSanFunction::getShadow(Value *V) {
   if (!isa<Argument>(V) && !isa<Instruction>(V))
-    return DFS.ZeroPrimitiveShadow;
+    return DFS.getZeroShadow(V);
   Value *&Shadow = ValShadowMap[V];
   if (!Shadow) {
     if (Argument *A = dyn_cast<Argument>(V)) {
       if (IsNativeABI)
-        return DFS.ZeroPrimitiveShadow;
+        return DFS.getZeroShadow(V);
       switch (IA) {
       case DataFlowSanitizer::IA_TLS: {
         Shadow = getShadowForTLSArgument(A);
@@ -1144,7 +1169,7 @@ Value *DFSanFunction::getShadow(Value *V) {
       }
       NonZeroChecks.push_back(Shadow);
     } else {
-      Shadow = DFS.ZeroPrimitiveShadow;
+      Shadow = DFS.getZeroShadow(V);
     }
   }
   return Shadow;
@@ -1175,9 +1200,9 @@ Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
 // Generates IR to compute the union of the two given shadows, inserting it
 // before Pos.  Returns the computed union Value.
 Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
-  if (V1 == DFS.ZeroPrimitiveShadow)
+  if (DFS.isZeroShadow(V1))
     return V2;
-  if (V2 == DFS.ZeroPrimitiveShadow)
+  if (DFS.isZeroShadow(V2))
     return V1;
   if (V1 == V2)
     return V1;
@@ -1261,7 +1286,7 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
 // the computed union Value.
 Value *DFSanFunction::combineOperandShadows(Instruction *Inst) {
   if (Inst->getNumOperands() == 0)
-    return DFS.ZeroPrimitiveShadow;
+    return DFS.getZeroShadow(Inst);
 
   Value *Shadow = getShadow(Inst->getOperand(0));
   for (unsigned i = 1, n = Inst->getNumOperands(); i != n; ++i) {
@@ -1426,7 +1451,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   auto &DL = LI.getModule()->getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(LI.getType());
   if (Size == 0) {
-    DFSF.setShadow(&LI, DFSF.DFS.ZeroPrimitiveShadow);
+    DFSF.setShadow(&LI, DFSF.DFS.getZeroShadow(&LI));
     return;
   }
 
@@ -1437,7 +1462,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &LI);
   }
-  if (Shadow != DFSF.DFS.ZeroPrimitiveShadow)
+  if (!DFSF.DFS.isZeroShadow(Shadow))
     DFSF.NonZeroChecks.push_back(Shadow);
 
   DFSF.setShadow(&LI, Shadow);
@@ -1462,7 +1487,7 @@ void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, Align Alignment,
   const Align ShadowAlign(Alignment.value() * DFS.ShadowWidthBytes);
   IRBuilder<> IRB(Pos);
   Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
-  if (Shadow == DFS.ZeroPrimitiveShadow) {
+  if (DFS.isZeroShadow(Shadow)) {
     IntegerType *ShadowTy =
         IntegerType::get(*DFS.Ctx, Size * DFS.ShadowWidthBits);
     Value *ExtZeroShadow = ConstantInt::get(ShadowTy, 0);
@@ -1648,12 +1673,14 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
     case DataFlowSanitizer::IA_TLS: {
       Value *S = DFSF.getShadow(RI.getReturnValue());
       IRBuilder<> IRB(&RI);
+      Type *RT = DFSF.F->getFunctionType()->getReturnType();
       unsigned Size =
-          getDataLayout().getTypeAllocSize(DFSF.DFS.PrimitiveShadowTy);
+          getDataLayout().getTypeAllocSize(DFSF.DFS.getShadowTy(RT));
       if (Size <= kRetvalTLSSize) {
         // If the size overflows, stores nothing. At callsite, oversized return
         // shadows are set to zero.
-        IRB.CreateAlignedStore(S, DFSF.getRetvalTLS(IRB), kShadowTLSAlignment);
+        IRB.CreateAlignedStore(S, DFSF.getRetvalTLS(RT, IRB),
+                               kShadowTLSAlignment);
       }
       break;
     }
@@ -1694,11 +1721,11 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
       CB.setCalledFunction(F);
       IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
                      IRB.CreateGlobalStringPtr(F->getName()));
-      DFSF.setShadow(&CB, DFSF.DFS.ZeroPrimitiveShadow);
+      DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
       return;
     case DataFlowSanitizer::WK_Discard:
       CB.setCalledFunction(F);
-      DFSF.setShadow(&CB, DFSF.DFS.ZeroPrimitiveShadow);
+      DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
       return;
     case DataFlowSanitizer::WK_Functional:
       CB.setCalledFunction(F);
@@ -1787,7 +1814,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
 
         // Update the parameter attributes of the custom call instruction to
         // zero extend the shadow parameters. This is required for targets
-        // which consider ShadowTy an illegal type.
+        // which consider PrimitiveShadowTy an illegal type.
         for (unsigned n = 0; n < FT->getNumParams(); n++) {
           const unsigned ArgNo = ShadowArgStart + n;
           if (CustomCI->getArgOperand(ArgNo)->getType() ==
@@ -1814,14 +1841,16 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     unsigned ArgOffset = 0;
     const DataLayout &DL = getDataLayout();
     for (unsigned I = 0, N = FT->getNumParams(); I != N; ++I) {
-      unsigned Size = DL.getTypeAllocSize(DFSF.DFS.PrimitiveShadowTy);
+      unsigned Size =
+          DL.getTypeAllocSize(DFSF.DFS.getShadowTy(FT->getParamType(I)));
       // Stop storing if arguments' size overflows. Inside a function, arguments
       // after overflow have zero shadow values.
       if (ArgOffset + Size > kArgTLSSize)
         break;
-      IRB.CreateAlignedStore(DFSF.getShadow(CB.getArgOperand(I)),
-                             DFSF.getArgTLS(ArgOffset, IRB),
-                             kShadowTLSAlignment);
+      IRB.CreateAlignedStore(
+          DFSF.getShadow(CB.getArgOperand(I)),
+          DFSF.getArgTLS(FT->getParamType(I), ArgOffset, IRB),
+          kShadowTLSAlignment);
       ArgOffset += alignTo(Size, kShadowTLSAlignment);
     }
   }
@@ -1844,13 +1873,13 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
       IRBuilder<> NextIRB(Next);
       const DataLayout &DL = getDataLayout();
-      unsigned Size = DL.getTypeAllocSize(DFSF.DFS.PrimitiveShadowTy);
+      unsigned Size = DL.getTypeAllocSize(DFSF.DFS.getShadowTy(&CB));
       if (Size > kRetvalTLSSize) {
         // Set overflowed return shadow to be zero.
-        DFSF.setShadow(&CB, DFSF.DFS.ZeroPrimitiveShadow);
+        DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
       } else {
         LoadInst *LI = NextIRB.CreateAlignedLoad(
-            DFSF.DFS.PrimitiveShadowTy, DFSF.getRetvalTLS(NextIRB),
+            DFSF.DFS.getShadowTy(&CB), DFSF.getRetvalTLS(CB.getType(), NextIRB),
             kShadowTLSAlignment, "_dfsret");
         DFSF.SkipInsts.insert(LI);
         DFSF.setShadow(&CB, LI);
@@ -1919,11 +1948,12 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
 }
 
 void DFSanVisitor::visitPHINode(PHINode &PN) {
-  PHINode *ShadowPN = PHINode::Create(DFSF.DFS.PrimitiveShadowTy,
-                                      PN.getNumIncomingValues(), "", &PN);
+  Type *ShadowTy = DFSF.DFS.getShadowTy(&PN);
+  PHINode *ShadowPN =
+      PHINode::Create(ShadowTy, PN.getNumIncomingValues(), "", &PN);
 
   // Give the shadow phi node valid predecessors to fool SplitEdge into working.
-  Value *UndefShadow = UndefValue::get(DFSF.DFS.PrimitiveShadowTy);
+  Value *UndefShadow = UndefValue::get(ShadowTy);
   for (PHINode::block_iterator i = PN.block_begin(), e = PN.block_end(); i != e;
        ++i) {
     ShadowPN->addIncoming(UndefShadow, *i);
