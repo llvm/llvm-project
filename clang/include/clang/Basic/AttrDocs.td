@@ -3628,6 +3628,27 @@ Swift.
   }];
 }
 
+def SwiftAsyncNameDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_async_name";
+  let Content = [{
+The ``swift_async_name`` attribute provides the name of the ``async`` overload for
+the given declaration in Swift. If this attribute is absent, the name is
+transformed according to the algorithm built into the Swift compiler.
+
+The argument is a string literal that contains the Swift name of the function or
+method. The name may be a compound Swift name. The function or method with such
+an attribute must have more than zero parameters, as its last parameter is
+assumed to be a callback that's eliminated in the Swift ``async`` name.
+
+  .. code-block:: objc
+
+    @interface URL
+    + (void) loadContentsFrom:(URL *)url callback:(void (^)(NSData *))data __attribute__((__swift_async_name__("URL.loadContentsFrom(_:)")))
+    @end
+  }];
+}
+
 def SwiftAttrDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_attr";

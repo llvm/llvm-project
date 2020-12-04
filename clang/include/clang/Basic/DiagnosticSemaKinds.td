@@ -4028,7 +4028,12 @@ def warn_attr_swift_name_subscript_getter_newValue
   : Warning<"%0 attribute for 'subscript' getter cannot have a 'newValue:' parameter">,
     InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_num_params
-  : Warning<"too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
+  : Warning<"too %select{few|many}0 parameters in the signature specified by "
+            "the %1 attribute (expected %2; got %3)">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_decl_missing_params
+  : Warning<"%0 attribute cannot be applied to a %select{function|method}1 "
+            "with no parameters">,
     InGroup<SwiftNameAttribute>;
 
 def err_attr_swift_error_no_error_parameter : Error<
