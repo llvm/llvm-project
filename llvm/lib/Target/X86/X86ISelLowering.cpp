@@ -8793,8 +8793,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
               MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
               Alignment);
-          SDValue Brdcst = DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
-          return DAG.getBitcast(VT, Brdcst);
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
         }
       }
     }
