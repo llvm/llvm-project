@@ -270,6 +270,69 @@ def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
   (sequence "F%u_D", 8, 9)
 )>;
 
+// Vector type mapping to LLVM types.
+//
+// Though the V extension allows that VLEN be as small as 8,
+// this approach assumes that VLEN>=64.
+// Additionally, the only supported ELEN values are 32 and 64,
+// thus `vscale` can be defined as VLEN/64,
+// allowing the same types with either ELEN value.
+//
+//         MF8    MF4     MF2     M1      M2      M4       M8
+// i64*    N/A    N/A     N/A     nxv1i64 nxv2i64 nxv4i64  nxv8i64
+// i32     N/A    N/A     nxv1i32 nxv2i32 nxv4i32 nxv8i32  nxv16i32
+// i16     N/A    nxv1i16 nxv2i16 nxv4i16 nxv8i16 nxv16i16 nxv32i16
+// i8      nxv1i8 nxv2i8  nxv4i8  nxv8i8  nxv16i8 nxv32i8  nxv64i8
+// double* N/A    N/A     N/A     nxv1f64 nxv2f64 nxv4f64  nxv8f64
+// float   N/A    N/A     nxv1f32 nxv2f32 nxv4f32 nxv8f32  nxv16f32
+// half    N/A    nxv1f16 nxv2f16 nxv4f16 nxv8f16 nxv16f16 nxv32f16
+// * ELEN=64
+
+defvar vint8mf8_t = nxv1i8;
+defvar vint8mf4_t = nxv2i8;
+defvar vint8mf2_t = nxv4i8;
+defvar vint8m1_t = nxv8i8;
+defvar vint8m2_t = nxv16i8;
+defvar vint8m4_t = nxv32i8;
+defvar vint8m8_t = nxv64i8;
+
+defvar vint16mf4_t = nxv1i16;
+defvar vint16mf2_t = nxv2i16;
+defvar vint16m1_t  = nxv4i16;
+defvar vint16m2_t  = nxv8i16;
+defvar vint16m4_t  = nxv16i16;
+defvar vint16m8_t  = nxv32i16;
+
+defvar vint32mf2_t = nxv1i32;
+defvar vint32m1_t  = nxv2i32;
+defvar vint32m2_t  = nxv4i32;
+defvar vint32m4_t  = nxv8i32;
+defvar vint32m8_t  = nxv16i32;
+
+defvar vint64m1_t = nxv1i64;
+defvar vint64m2_t = nxv2i64;
+defvar vint64m4_t = nxv4i64;
+defvar vint64m8_t = nxv8i64;
+
+defvar vfloat32mf2_t = nxv1f32;
+defvar vfloat32m1_t  = nxv2f32;
+defvar vfloat32m2_t  = nxv4f32;
+defvar vfloat32m4_t  = nxv8f32;
+defvar vfloat32m8_t  = nxv16f32;
+
+defvar vfloat64m1_t = nxv1f64;
+defvar vfloat64m2_t = nxv2f64;
+defvar vfloat64m4_t = nxv4f64;
+defvar vfloat64m8_t = nxv8f64;
+
+defvar vbool1_t  = nxv64i1;
+defvar vbool2_t  = nxv32i1;
+defvar vbool4_t  = nxv16i1;
+defvar vbool8_t  = nxv8i1;
+defvar vbool16_t = nxv4i1;
+defvar vbool32_t = nxv2i1;
+defvar vbool64_t = nxv1i1;
+
 // Vector registers
 let RegAltNameIndices = [ABIRegAltName] in {
   foreach Index = 0-31 in {
@@ -315,44 +378,52 @@ class RegisterTypes<list<ValueType> reg_types> {
   list<ValueType> types = reg_types;
 }
 
-// The order of registers represents the preferred allocation sequence,
-// meaning caller-save regs are listed before callee-save.
-def VR : RegisterClass<"RISCV", [nxv8i8, nxv4i16, nxv2i32, nxv1i64],
-                       64, (add
-    (sequence "V%u", 25, 31),
-    (sequence "V%u", 8, 24),
-    (sequence "V%u", 0, 7)
-  )> {
-  let Size = 64;
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+  : RegisterClass<"RISCV",
+                  regTypes,
+                  // FIXME: Spill alignment set to 16 bytes.
+                  128,
+                  regList> {
+  int VLMul = Vlmul;
+  int Size = !mul(Vlmul, 64); // FIXME: assuming ELEN=64
 }
 
-def VRNoV0 : RegisterClass<"RISCV", [nxv8i8, nxv4i16, nxv2i32, nxv1i64],
-                           64, (add
-    (sequence "V%u", 25, 31),
-    (sequence "V%u", 8, 24),
-    (sequence "V%u", 1, 7)
-  )> {
-  let Size = 64;
-}
+def VR : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
+               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+               vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
+               vfloat32mf2_t, vfloat32m1_t, vfloat64m1_t,
+               vbool64_t, vbool32_t, vbool16_t, vbool8_t, vbool4_t,
+               vbool2_t, vbool1_t],
+           (add (sequence "V%u", 25, 31),
+                (sequence "V%u", 8, 24),
+                (sequence "V%u", 0, 7)), 1>;
 
-def VRM2 : RegisterClass<"RISCV", [nxv16i8, nxv8i16, nxv4i32, nxv2i64], 64,
-                         (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
-                              V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2)> {
-  let Size = 128;
-}
+def VRNoV0 : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
+                   vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                   vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
+                   vfloat32mf2_t, vfloat32m1_t, vfloat64m1_t,
+                   vbool64_t, vbool32_t, vbool16_t, vbool8_t, vbool4_t,
+                   vbool2_t, vbool1_t],
+               (add (sequence "V%u", 25, 31),
+                    (sequence "V%u", 8, 24),
+                    (sequence "V%u", 1, 7)), 1>;
 
-def VRM4 : RegisterClass<"RISCV", [nxv32i8, nxv16i16, nxv8i32, nxv4i64], 64,
-                         (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4)> {
-  let Size = 256;
-}
+def VRM2 : VReg<[vint8m2_t, vint16m2_t, vint32m2_t, vint64m2_t,
+                 vfloat32m2_t, vfloat64m2_t],
+             (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
+                  V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2), 2>;
 
-def VRM8 : RegisterClass<"RISCV", [nxv32i16, nxv16i32, nxv8i64], 64,
-                         (add V8M8, V16M8, V24M8, V0M8)> {
-  let Size = 512;
-}
+def VRM4 : VReg<[vint8m4_t, vint16m4_t, vint32m4_t, vint64m4_t,
+                 vfloat32m4_t, vfloat64m4_t],
+             (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4), 4>;
 
-def VMaskVT : RegisterTypes<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, nxv32i1]>;
+def VRM8 : VReg<[vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
+                 vfloat32m8_t, vfloat64m8_t],
+             (add V8M8, V16M8, V24M8, V0M8), 8>;
 
-def VMV0 : RegisterClass<"RISCV", VMaskVT.types, 64, (add V0)> {
+defvar VMaskVTs = [vbool64_t, vbool32_t, vbool16_t, vbool8_t,
+                   vbool4_t, vbool2_t, vbool1_t];
+
+def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
   let Size = 64;
 }
