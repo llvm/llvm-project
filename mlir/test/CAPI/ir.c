@@ -686,7 +686,7 @@ static int printBuiltinTypes(MlirContext ctx) {
   MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, 4);
   if (!mlirTypeIsAUnrankedMemRef(unrankedMemRef) ||
       mlirTypeIsAMemRef(unrankedMemRef) ||
-      mlirUnrankedMemrefGetMemorySpace(unrankedMemRef) != 4)
+      mlirUnrankedMemRefGetMemorySpace(unrankedMemRef) != 4)
     return 19;
   mlirTypeDump(unrankedMemRef);
   fprintf(stderr, "\n");

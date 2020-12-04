@@ -276,7 +276,7 @@ MlirType mlirUnrankedMemRefTypeGetChecked(MlirType elementType,
                                              unwrap(loc)));
 }
 
-unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type) {
+unsigned mlirUnrankedMemRefGetMemorySpace(MlirType type) {
   return unwrap(type).cast<UnrankedMemRefType>().getMemorySpace();
 }
 

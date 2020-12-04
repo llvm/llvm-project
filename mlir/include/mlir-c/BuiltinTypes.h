@@ -225,7 +225,7 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAUnrankedMemRef(MlirType type);
  * same context as element type. The type is owned by the context. */
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(
     MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
-    MlirAttribute const *affineMaps, unsigned memorySpace);
+    MlirAffineMap const *affineMaps, unsigned memorySpace);
 
 /** Creates a MemRef type with the given rank, shape, memory space and element
  * type in the same context as the element type. The type has no affine maps,
@@ -263,7 +263,7 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type,
 MLIR_CAPI_EXPORTED unsigned mlirMemRefTypeGetMemorySpace(MlirType type);
 
 /// Returns the memory spcae of the given Unranked MemRef type.
-MLIR_CAPI_EXPORTED unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type);
+MLIR_CAPI_EXPORTED unsigned mlirUnrankedMemRefGetMemorySpace(MlirType type);
 
 //===----------------------------------------------------------------------===//
 // Tuple type.
