@@ -372,7 +372,7 @@ void ExportSection::writeBody() {
 }
 
 bool StartSection::isNeeded() const {
-  return !config->relocatable && hasInitializedSegments && config->sharedMemory;
+  return WasmSym::initMemory != nullptr;
 }
 
 void StartSection::writeBody() {
