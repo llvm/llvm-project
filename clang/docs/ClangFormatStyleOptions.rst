@@ -1382,6 +1382,18 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**BreakBeforeConceptDeclarations** (``bool``)
+  If ``true``, concept will be placed on a new line.
+
+  .. code-block:: c++
+
+    true:
+     template<typename T>
+     concept ...
+
+    false:
+     template<typename T> concept ...
+
 **BreakBeforeTernaryOperators** (``bool``)
   If ``true``, ternary operators will be placed after line breaks.
 
@@ -1900,6 +1912,25 @@ the configuration (without a prefix: ``Auto``).
        #endif
 
 
+
+**IndentRequires** (``bool``)
+  Indent the requires clause in a template
+
+  .. code-block:: c++
+
+     true:
+     template <typename It>
+       requires Iterator<It>
+     void sort(It begin, It end) {
+       //....
+     }
+
+     false:
+     template <typename It>
+     requires Iterator<It>
+     void sort(It begin, It end) {
+       //....
+     }
 
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
