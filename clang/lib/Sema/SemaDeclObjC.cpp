@@ -3912,6 +3912,55 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
   }
 }
 
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCProtocolDecl *PDecl, ObjCCategoryDecl *CDecl);
+
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCCategoryDecl *CDecl,
+    const llvm::iterator_range<ObjCProtocolList::iterator> &Protocols) {
+  for (auto *PI : Protocols)
+    DiagnoseCategoryDirectMembersProtocolConformance(S, PI, CDecl);
+}
+
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCProtocolDecl *PDecl, ObjCCategoryDecl *CDecl) {
+  if (!PDecl->isThisDeclarationADefinition() && PDecl->getDefinition())
+    PDecl = PDecl->getDefinition();
+
+  llvm::SmallVector<const Decl *, 4> DirectMembers;
+  const auto *IDecl = CDecl->getClassInterface();
+  for (auto *MD : PDecl->methods()) {
+    if (!MD->isPropertyAccessor()) {
+      if (const auto *CMD =
+              IDecl->getMethod(MD->getSelector(), MD->isInstanceMethod())) {
+        if (CMD->isDirectMethod())
+          DirectMembers.push_back(CMD);
+      }
+    }
+  }
+  for (auto *PD : PDecl->properties()) {
+    if (const auto *CPD = IDecl->FindPropertyVisibleInPrimaryClass(
+            PD->getIdentifier(),
+            PD->isClassProperty()
+                ? ObjCPropertyQueryKind::OBJC_PR_query_class
+                : ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
+      if (CPD->isDirectProperty())
+        DirectMembers.push_back(CPD);
+    }
+  }
+  if (!DirectMembers.empty()) {
+    S.Diag(CDecl->getLocation(), diag::err_objc_direct_protocol_conformance)
+        << CDecl->IsClassExtension() << CDecl << PDecl << IDecl;
+    for (const auto *MD : DirectMembers)
+      S.Diag(MD->getLocation(), diag::note_direct_member_here);
+    return;
+  }
+
+  // Check on this protocols's referenced protocols, recursively.
+  DiagnoseCategoryDirectMembersProtocolConformance(S, CDecl,
+                                                   PDecl->protocols());
+}
+
 // Note: For class/category implementations, allMethods is always null.
 Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
                        ArrayRef<DeclGroupPtrTy> allTUVars) {
@@ -4012,6 +4061,8 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       ObjCInterfaceDecl *CCPrimary = C->getClassInterface();
       DiagnoseClassExtensionDupMethods(C, CCPrimary);
     }
+
+    DiagnoseCategoryDirectMembersProtocolConformance(*this, C, C->protocols());
   }
   if (ObjCContainerDecl *CDecl = dyn_cast<ObjCContainerDecl>(ClassDecl)) {
     if (CDecl->getIdentifier())

@@ -1062,6 +1062,10 @@ def warn_objc_direct_property_ignored : Warning<
   InGroup<IgnoredAttributes>;
 def err_objc_direct_dynamic_property : Error<
   "direct property cannot be @dynamic">;
+def err_objc_direct_protocol_conformance : Error<
+  "%select{category %1|class extension}0 cannot conform to protocol %2 because "
+  "of direct members declared in interface %3">;
+def note_direct_member_here : Note<"direct member declared here">;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "
