@@ -213,18 +213,6 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   return Changed;
 }
 
-// Explicitly list the instruction types NaryReassociate handles for now.
-static bool isPotentiallyNaryReassociable(Instruction *I) {
-  switch (I->getOpcode()) {
-  case Instruction::Add:
-  case Instruction::GetElementPtr:
-  case Instruction::Mul:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool NaryReassociatePass::doOneIteration(Function &F) {
   bool Changed = false;
   SeenExprs.clear();
@@ -236,13 +224,8 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
     BasicBlock *BB = Node->getBlock();
     for (auto I = BB->begin(); I != BB->end(); ++I) {
       Instruction *OrigI = &*I;
-
-      if (!SE->isSCEVable(OrigI->getType()) ||
-          !isPotentiallyNaryReassociable(OrigI))
-        continue;
-
-      const SCEV *OrigSCEV = SE->getSCEV(OrigI);
-      if (Instruction *NewI = tryReassociate(OrigI)) {
+      const SCEV *OrigSCEV = nullptr;
+      if (Instruction *NewI = tryReassociate(OrigI, OrigSCEV)) {
         Changed = true;
         OrigI->replaceAllUsesWith(NewI);
 
@@ -274,7 +257,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         // nary-gep.ll.
         if (NewSCEV != OrigSCEV)
           SeenExprs[OrigSCEV].push_back(WeakTrackingVH(NewI));
-      } else
+      } else if (OrigSCEV)
         SeenExprs[OrigSCEV].push_back(WeakTrackingVH(OrigI));
     }
   }
@@ -286,16 +269,26 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   return Changed;
 }
 
-Instruction *NaryReassociatePass::tryReassociate(Instruction *I) {
+Instruction *NaryReassociatePass::tryReassociate(Instruction * I,
+                                                 const SCEV *&OrigSCEV) {
+
+  if (!SE->isSCEVable(I->getType()))
+    return nullptr;
+
   switch (I->getOpcode()) {
   case Instruction::Add:
   case Instruction::Mul:
+    OrigSCEV = SE->getSCEV(I);
     return tryReassociateBinaryOp(cast<BinaryOperator>(I));
   case Instruction::GetElementPtr:
+    OrigSCEV = SE->getSCEV(I);
     return tryReassociateGEP(cast<GetElementPtrInst>(I));
   default:
-    llvm_unreachable("should be filtered out by isPotentiallyNaryReassociable");
+    return nullptr;
   }
+
+  llvm_unreachable("should not be reached");
+  return nullptr;
 }
 
 static bool isGEPFoldable(GetElementPtrInst *GEP,
