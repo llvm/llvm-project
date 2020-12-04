@@ -5,10 +5,10 @@
 ; P should be sunk into the loop and folded into the address mode. There
 ; shouldn't be any lea instructions inside the loop.
 
-@B = external global [1000 x i8], align 32
-@A = external global [1000 x i8], align 32
-@P = external global [1000 x i8], align 32
-@Q = external global [1000 x i8], align 32
+@B = external dso_local global [1000 x i8], align 32
+@A = external dso_local global [1000 x i8], align 32
+@P = external dso_local global [1000 x i8], align 32
+@Q = external dso_local global [1000 x i8], align 32
 
 define void @foo(i32 %m, i32 %p) nounwind {
 entry:

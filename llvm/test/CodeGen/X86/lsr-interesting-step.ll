@@ -9,7 +9,7 @@
 ; CHECK-NEXT:   cmpq    $8192, %rcx
 ; CHECK-NEXT:   jl
 
-@flags = external global [8192 x i8], align 16 ; <[8192 x i8]*> [#uses=1]
+@flags = external dso_local global [8192 x i8], align 16 ; <[8192 x i8]*> [#uses=1]
 
 define void @foo() nounwind {
 entry:

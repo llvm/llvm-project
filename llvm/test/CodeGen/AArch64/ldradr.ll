@@ -3,12 +3,12 @@
 
 %struct.T = type <{ i32, i64, i8, i32 }>
 
-@ptr = external local_unnamed_addr global i32*, align 8
-@ch = external local_unnamed_addr global i32, align 4
-@ch8 = external local_unnamed_addr global i8, align 4
-@t = external local_unnamed_addr global %struct.T, align 4
-@t2 = external local_unnamed_addr global %struct.T, align 2
-@f = external local_unnamed_addr global float, align 4
+@ptr = external dso_local local_unnamed_addr global i32*, align 8
+@ch = external dso_local local_unnamed_addr global i32, align 4
+@ch8 = external dso_local local_unnamed_addr global i8, align 4
+@t = external dso_local local_unnamed_addr global %struct.T, align 4
+@t2 = external dso_local local_unnamed_addr global %struct.T, align 2
+@f = external dso_local local_unnamed_addr global float, align 4
 
 define i32 @barp() {
 ; CHECK-LABEL: barp:

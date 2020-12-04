@@ -3,9 +3,9 @@
 
 ; This tests for a cyclic dependencies in the generated DAG. 
 
-@c = external local_unnamed_addr global i32, align 4
-@a = external local_unnamed_addr global i32, align 4
-@b = external local_unnamed_addr global i32, align 4
+@c = external dso_local local_unnamed_addr global i32, align 4
+@a = external dso_local local_unnamed_addr global i32, align 4
+@b = external dso_local local_unnamed_addr global i32, align 4
 
 define void @foo() {
 ; CHECK-LABEL: foo:

@@ -12,7 +12,7 @@ entry:
 ; CHECK: bar
 ; CHECK: ret{{[^4]*$}}
 
-@dst = external global i32
+@dst = external dso_local global i32
 
 define void @foo() nounwind {
 	%memtmp = alloca %struct.foo, align 4

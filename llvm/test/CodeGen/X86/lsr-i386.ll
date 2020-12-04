@@ -13,7 +13,7 @@ target triple = "i386-pc-linux-gnu"
 
 %struct.anon = type { [72 x i32], i32 }
 
-@mp2grad_ = external global %struct.anon
+@mp2grad_ = external dso_local global %struct.anon
 
 define void @chomp2g_setup_(i32 %n, i32 %m) nounwind {
 entry:

@@ -207,4 +207,4 @@ define i64 @pr25754(i8 %a, i8 %c) {
   ret i64 %ret
 }
 
-@z = external global i8
+@z = external dso_local global i8
