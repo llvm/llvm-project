@@ -456,12 +456,12 @@ private:
   friend class Object;
 
   template <typename T, typename... U> void create(U &&... V) {
-    new (reinterpret_cast<T *>(Union.buffer)) T(std::forward<U>(V)...);
+    new (reinterpret_cast<T *>(&Union)) T(std::forward<U>(V)...);
   }
   template <typename T> T &as() const {
     // Using this two-step static_cast via void * instead of reinterpret_cast
     // silences a -Wstrict-aliasing false positive from GCC6 and earlier.
-    void *Storage = static_cast<void *>(Union.buffer);
+    void *Storage = static_cast<void *>(&Union);
     return *static_cast<T *>(Storage);
   }
 

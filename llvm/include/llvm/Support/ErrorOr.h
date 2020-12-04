@@ -235,17 +235,17 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type*>(TStorage.buffer);
+    return reinterpret_cast<storage_type *>(&TStorage);
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type*>(TStorage.buffer);
+    return reinterpret_cast<const storage_type *>(&TStorage);
   }
 
   std::error_code *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<std::error_code *>(ErrorStorage.buffer);
+    return reinterpret_cast<std::error_code *>(&ErrorStorage);
   }
 
   const std::error_code *getErrorStorage() const {

@@ -9000,26 +9000,23 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     Result.MakeVector();
     MutableArrayRef<APValue> Elts =
         Result.setVectorUninit(FromValue.getVectorLength());
-    ImportLoop(
-        ((const APValue::Vec *)(const char *)FromValue.Data.buffer)->Elts,
-        Elts.data(), FromValue.getVectorLength());
+    ImportLoop(((const APValue::Vec *)(const char *)&FromValue.Data)->Elts,
+               Elts.data(), FromValue.getVectorLength());
     break;
   }
   case APValue::Array:
     Result.MakeArray(FromValue.getArrayInitializedElts(),
                      FromValue.getArraySize());
-    ImportLoop(
-        ((const APValue::Arr *)(const char *)FromValue.Data.buffer)->Elts,
-        ((const APValue::Arr *)(const char *)Result.Data.buffer)->Elts,
-        FromValue.getArrayInitializedElts());
+    ImportLoop(((const APValue::Arr *)(const char *)&FromValue.Data)->Elts,
+               ((const APValue::Arr *)(const char *)&Result.Data)->Elts,
+               FromValue.getArrayInitializedElts());
     break;
   case APValue::Struct:
     Result.MakeStruct(FromValue.getStructNumBases(),
                       FromValue.getStructNumFields());
     ImportLoop(
-        ((const APValue::StructData *)(const char *)FromValue.Data.buffer)
-            ->Elts,
-        ((const APValue::StructData *)(const char *)Result.Data.buffer)->Elts,
+        ((const APValue::StructData *)(const char *)&FromValue.Data)->Elts,
+        ((const APValue::StructData *)(const char *)&Result.Data)->Elts,
         FromValue.getStructNumBases() + FromValue.getStructNumFields());
     break;
   case APValue::Union: {
