@@ -29,4 +29,4 @@ loop:
     sub a0, a0, a3                # Decrement count
 # CHECK-INST: 33 05 d5 40    sub     a0, a0, a3
     bnez a0, loop                 # Any more?
-# CHECK-INST: e3 1a 05 fc    bnez    a0, -44
+# CHECK-INST: e3 1a 05 fc    bnez    a0, 0x0

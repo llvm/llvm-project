@@ -4,10 +4,10 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ32,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ64,CHECK-ASM-AND-OBJ %s
 
 .equ CONST, 30
 
@@ -68,10 +68,12 @@ auipc a0, %pcrel_hi(foo)
 # CHECK-ASM: encoding: [0x17,0xe5,0x01,0x00]
 auipc a0, CONST
 
-# CHECK-ASM-AND-OBJ: jal a2, 1048574
+# CHECK-OBJ: jal a2, 0x100042
+# CHECK-ASM: jal a2, 1048574
 # CHECK-ASM: encoding: [0x6f,0xf6,0xff,0x7f]
 jal a2, 1048574
-# CHECK-ASM-AND-OBJ: jal a3, 256
+# CHECK-OBJ: jal a3, 0x148
+# CHECK-ASM: jal a3, 256
 # CHECK-ASM: encoding: [0xef,0x06,0x00,0x10]
 jal a3, 256
 # CHECK-ASM: jal a0, foo
@@ -84,13 +86,15 @@ jal a0, foo
 # CHECK-OBJ: jal a0, 0
 # CHECK-OBJ: R_RISCV_JAL a0
 jal a0, a0
-# CHECK-ASM-AND-OBJ: jal a0, 30
+# CHECK-OBJ: jal a0, 0x72
+# CHECK-ASM: jal a0, 30
 # CHECK-ASM: encoding: [0x6f,0x05,0xe0,0x01]
 jal a0, CONST
 # CHECK-ASM-AND-OBJ: jal s0, 0
 # CHECK-ASM: encoding: [0x6f,0x04,0x00,0x00]
 jal s0, (0)
-# CHECK-ASM-AND-OBJ: jal s0, 156
+# CHECK-OBJ: jal s0, 0xf8
+# CHECK-ASM: jal s0, 156
 # CHECK-ASM: encoding: [0x6f,0x04,0xc0,0x09]
 jal s0, (0xff-99)
 # CHECK-ASM: encoding: [0x6f,0bAAAA0000,A,A]
@@ -113,25 +117,33 @@ jalr sp, zero, 256
 # CHECK-ASM: encoding: [0xe7,0x05,0xe6,0x01]
 jalr a1, CONST(a2)
 
-# CHECK-ASM-AND-OBJ: beq s1, s1, 102
+# CHECK-OBJ: beq s1, s1, 0xde
+# CHECK-ASM: beq s1, s1, 102
 # CHECK-ASM: encoding: [0x63,0x83,0x94,0x06]
 beq s1, s1, 102
-# CHECK-ASM-AND-OBJ: bne a4, a5, -4096
+# CHECK-OBJ32: bne a4, a5, 0xfffff07c
+# CHECK-OBJ64: bne a4, a5, 0xfffffffffffff07c
+# CHECK-ASM: bne a4, a5, -4096
 # CHECK-ASM: encoding: [0x63,0x10,0xf7,0x80]
 bne a4, a5, -4096
-# CHECK-ASM-AND-OBJ: blt sp, gp, 4094
+# CHECK-OBJ: blt sp, gp, 0x107e
+# CHECK-ASM: blt sp, gp, 4094
 # CHECK-ASM: encoding: [0xe3,0x4f,0x31,0x7e]
 blt sp, gp, 4094
-# CHECK-ASM-AND-OBJ: bge s2, ra, -224
+# CHECK-OBJ32: bge s2, ra, 0xffffffa4
+# CHECK-OBJ64: bge s2, ra, 0xffffffffffffffa4
+# CHECK-ASM: bge s2, ra, -224
 # CHECK-ASM: encoding: [0xe3,0x50,0x19,0xf2]
 bge s2, ra, -224
 # CHECK-ASM-AND-OBJ: bltu zero, zero, 0
 # CHECK-ASM: encoding: [0x63,0x60,0x00,0x00]
 bltu zero, zero, 0
-# CHECK-ASM-AND-OBJ: bgeu s8, sp, 512
+# CHECK-OBJ: bgeu s8, sp, 0x28c
+# CHECK-ASM: bgeu s8, sp, 512
 # CHECK-ASM: encoding: [0x63,0x70,0x2c,0x20]
 bgeu s8, sp, 512
-# CHECK-ASM-AND-OBJ: bgeu t0, t1, 30
+# CHECK-OBJ: bgeu t0, t1, 0xae
+# CHECK-ASM: bgeu t0, t1, 30
 # CHECK-ASM: encoding: [0x63,0xff,0x62,0x00]
 bgeu t0, t1, CONST
 
