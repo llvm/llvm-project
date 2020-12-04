@@ -4162,7 +4162,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 sort(_Tp** __first, _Tp** __last)
 {
-    _VSTD::sort((size_t*)__first, (size_t*)__last, __less<size_t>());
+    _VSTD::sort((uintptr_t*)__first, (uintptr_t*)__last, __less<uintptr_t>());
 }
 
 template <class _Tp>
