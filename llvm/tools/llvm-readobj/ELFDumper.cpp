@@ -751,7 +751,7 @@ public:
   TYPEDEF_ELF_TYPES(ELFT)
 
   DumpStyle(const ELFDumper<ELFT> &Dumper)
-      : Obj(*Dumper.getElfObject().getELFFile()), ElfObj(Dumper.getElfObject()),
+      : Obj(Dumper.getElfObject().getELFFile()), ElfObj(Dumper.getElfObject()),
         Dumper(Dumper) {
     FileName = ElfObj.getFileName();
   }
@@ -2012,7 +2012,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
 template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
-    : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(*O.getELFFile()),
+    : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(O.getELFFile()),
       DynRelRegion(O, *this), DynRelaRegion(O, *this), DynRelrRegion(O, *this),
       DynPLTRelRegion(O, *this), DynamicTable(O, *this) {
   if (opts::Output == opts::GNU)
@@ -2695,7 +2695,7 @@ template <class ELFT>
 static Error checkHashTable(const ELFDumper<ELFT> &Dumper,
                             const typename ELFT::Hash *H,
                             bool *IsHeaderValid = nullptr) {
-  const ELFFile<ELFT> &Obj = *Dumper.getElfObject().getELFFile();
+  const ELFFile<ELFT> &Obj = Dumper.getElfObject().getELFFile();
   const uint64_t SecOffset = (const uint8_t *)H - Obj.base();
   if (Dumper.getHashTableEntSize() == 8) {
     auto It = llvm::find_if(ElfMachineType, [&](const EnumEntry<unsigned> &E) {
@@ -2986,7 +2986,7 @@ private:
 
 template <class ELFT>
 MipsGOTParser<ELFT>::MipsGOTParser(const ELFDumper<ELFT> &D)
-    : IsStatic(D.dynamic_table().empty()), Obj(*D.getElfObject().getELFFile()),
+    : IsStatic(D.dynamic_table().empty()), Obj(D.getElfObject().getELFFile()),
       Dumper(D), GotSec(nullptr), LocalNum(0), GlobalNum(0), PltSec(nullptr),
       PltRelSec(nullptr), PltSymTable(nullptr),
       FileName(D.getElfObject().getFileName()) {}
@@ -4578,7 +4578,7 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFDumper<ELFT> &Dumper,
         "index is greater than or equal to the number of dynamic symbols (" +
             Twine(Symbols.size()) + ")");
 
-  const ELFFile<ELFT> &Obj = *Dumper.getElfObject().getELFFile();
+  const ELFFile<ELFT> &Obj = Dumper.getElfObject().getELFFile();
   const uint64_t FileSize = Obj.getBufSize();
   const uint64_t SymOffset = ((const uint8_t *)FirstSym - Obj.base()) +
                              (uint64_t)Reloc.Symbol * sizeof(Elf_Sym);
@@ -5523,7 +5523,7 @@ static void printNotesHelper(
         StartNotesFn,
     llvm::function_ref<void(const typename ELFT::Note &)> ProcessNoteFn,
     llvm::function_ref<void()> FinishNotesFn) {
-  const ELFFile<ELFT> &Obj = *Dumper.getElfObject().getELFFile();
+  const ELFFile<ELFT> &Obj = Dumper.getElfObject().getELFFile();
 
   ArrayRef<typename ELFT::Shdr> Sections = cantFail(Obj.sections());
   if (Obj.getHeader().e_type != ELF::ET_CORE && !Sections.empty()) {
@@ -6205,7 +6205,7 @@ getMipsAbiFlagsSection(const ELFDumper<ELFT> &Dumper) {
 
   constexpr StringRef ErrPrefix = "unable to read the .MIPS.abiflags section: ";
   Expected<ArrayRef<uint8_t>> DataOrErr =
-      Dumper.getElfObject().getELFFile()->getSectionContents(*Sec);
+      Dumper.getElfObject().getELFFile().getSectionContents(*Sec);
   if (!DataOrErr)
     return createError(ErrPrefix + toString(DataOrErr.takeError()));
 
