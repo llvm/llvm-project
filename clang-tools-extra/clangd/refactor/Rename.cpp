@@ -637,7 +637,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
   const auto &RenameDecl = **DeclsUnderCursor.begin();
-  if (RenameDecl.getName() == RInputs.NewName)
+  const auto *ID = RenameDecl.getIdentifier();
+  if (!ID)
+    return makeError(ReasonToReject::UnsupportedSymbol);
+  if (ID->getName() == RInputs.NewName)
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)
