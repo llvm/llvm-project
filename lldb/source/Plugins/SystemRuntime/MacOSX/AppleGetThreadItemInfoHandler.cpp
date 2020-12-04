@@ -170,8 +170,8 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
 
       // Also make the FunctionCaller for this UtilityFunction:
 
-      TypeSystemClang *clang_ast_context =
-          TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
+      TypeSystemClang *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+          thread.GetProcess()->GetTarget());
       CompilerType get_thread_item_info_return_type =
           clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
 
@@ -222,7 +222,8 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  TypeSystemClang *clang_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetThreadItemInfoReturnInfo return_value;
