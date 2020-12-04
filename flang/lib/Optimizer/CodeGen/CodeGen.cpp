@@ -901,13 +901,6 @@ template <typename OP>
 struct EmboxCommonConversion : public FIROpConversion<OP> {
   using FIROpConversion<OP>::FIROpConversion;
 
-  /// Type of lambda helper to abstract whether the embox is lowered as StoreOps
-  /// or InsertOps.
-  using StoreOrInserter = std::function<mlir::Value(
-      mlir::ConversionPatternRewriter &, mlir::Value, llvm::ArrayRef<unsigned>,
-      mlir::Value,
-      const std::function<mlir::Value(mlir::LLVM::LLVMType, mlir::Value)> &)>;
-
   /// Generate an alloca of size `size` and cast it to type `toTy`
   mlir::LLVM::AllocaOp
   genAllocaWithType(mlir::Location loc, mlir::LLVM::LLVMType toTy,
@@ -1046,97 +1039,68 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   }
 
   /// Basic pattern to write a field in the descriptor
-  template <typename BOX>
-  std::tuple<mlir::Value, StoreOrInserter>
-  getStoreOrInsertField(BOX box, OperandTy operands,
-                        mlir::ConversionPatternRewriter &rewriter,
-                        unsigned rank) const {
-    auto loc = box.getLoc();
-    auto firBoxTy = box.getType().template dyn_cast<fir::BoxType>();
-    assert(firBoxTy && "embox must have box type");
-    auto boxPtrTy =
-        this->unwrap(this->lowerTy().convertBoxType(firBoxTy, rank));
-
-    auto *thisBlock = rewriter.getInsertionBlock();
-    if (thisBlock &&
-        mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp())) {
-      auto boxTy = boxPtrTy.getPointerElementTy();
-      auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, boxTy);
-      auto *ctx = box.getContext();
-      auto insertField =
-          [=](mlir::ConversionPatternRewriter &rewriter, mlir::Value dest,
-              llvm::ArrayRef<unsigned> fldIndexes, mlir::Value value,
-              const std::function<mlir::Value(mlir::LLVM::LLVMType,
-                                              mlir::Value)> &applyCast)
-          -> mlir::Value {
-        auto fldTy = this->getBoxEleTy(boxTy, fldIndexes);
-        auto fld = applyCast(fldTy, value);
-        llvm::SmallVector<mlir::Attribute, 2> attrs;
-        for (auto i : fldIndexes)
-          attrs.push_back(rewriter.getI32IntegerAttr(i));
-        auto indexesAttr = mlir::ArrayAttr::get(attrs, ctx);
-        return rewriter.create<mlir::LLVM::InsertValueOp>(loc, boxTy, dest, fld,
-                                                          indexesAttr);
-      };
-      return {un, insertField};
-    }
-    // Create new descriptor in memory and store into its fields.
-    mlir::Value c0 = this->genConstantOffset(loc, rewriter, 0);
-    auto alloca = genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
-    auto storeField =
-        [=](mlir::ConversionPatternRewriter &rewriter, mlir::Value dest,
-            llvm::ArrayRef<unsigned> fldIndexes, mlir::Value value,
-            const std::function<mlir::Value(mlir::LLVM::LLVMType, mlir::Value)>
-                &applyCast) -> mlir::Value {
-      auto fldTy = getBoxEleTy(boxPtrTy, fldIndexes);
-      auto fld = applyCast(fldTy, value);
-      llvm::SmallVector<mlir::Value, 3> indexValues = {c0};
-      for (auto i : fldIndexes)
-        indexValues.push_back(this->genConstantOffset(loc, rewriter, i));
-      auto fldPtr = rewriter.create<mlir::LLVM::GEPOp>(
-          loc, fldTy.getPointerTo(), dest, indexValues);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, fld, fldPtr);
-      return dest;
-    };
-    return {alloca, storeField};
+  mlir::Value insertField(mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Location loc, mlir::Value dest,
+                          llvm::ArrayRef<unsigned> fldIndexes,
+                          mlir::Value value, bool bitcast = false) const {
+    auto boxTy = this->unwrap(dest.getType());
+    auto fldTy = this->getBoxEleTy(boxTy, fldIndexes);
+    if (bitcast)
+      value = rewriter.create<mlir::LLVM::BitcastOp>(loc, fldTy, value);
+    else
+      value = integerCast(loc, rewriter, fldTy, value);
+    llvm::SmallVector<mlir::Attribute, 2> attrs;
+    for (auto i : fldIndexes)
+      attrs.push_back(rewriter.getI32IntegerAttr(i));
+    auto indexesAttr = mlir::ArrayAttr::get(attrs, rewriter.getContext());
+    return rewriter.create<mlir::LLVM::InsertValueOp>(loc, boxTy, dest, value,
+                                                      indexesAttr);
   }
 
   template <typename BOX>
-  std::tuple<fir::BoxType, mlir::Value, mlir::Value, StoreOrInserter>
+  std::tuple<fir::BoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, OperandTy operands,
                        mlir::ConversionPatternRewriter &rewriter, unsigned rank,
                        unsigned dropFront) const {
-    auto [dest, storeField] =
-        getStoreOrInsertField(box, operands, rewriter, rank);
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BoxType>();
-    auto bitCast = [&](mlir::LLVM::LLVMType ty,
-                       mlir::Value val) -> mlir::Value {
-      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val);
-    };
-    auto intCast = [&](mlir::LLVM::LLVMType ty,
-                       mlir::Value val) -> mlir::Value {
-      return integerCast(loc, rewriter, ty, val);
-    };
+    auto llvmBoxPtrTy =
+        this->unwrap(this->lowerTy().convertBoxType(boxTy, rank));
+    auto llvmBoxTy = llvmBoxPtrTy.getPointerElementTy();
+    mlir::Value dest = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmBoxTy);
 
     // Write each of the fields with the appropriate values
-    dest = storeField(rewriter, dest, {0}, operands[0], bitCast);
+    dest =
+        insertField(rewriter, loc, dest, {0}, operands[0], /* bitCast */ true);
     auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(),
                                                operands.drop_front(dropFront));
-    dest = storeField(rewriter, dest, {1}, eleSize, intCast);
-    dest = storeField(rewriter, dest, {2},
-                      this->genConstantOffset(loc, rewriter, CFI_VERSION),
-                      intCast);
-    dest = storeField(rewriter, dest, {3},
-                      this->genConstantOffset(loc, rewriter, rank), intCast);
-    dest = storeField(rewriter, dest, {4}, cfiTy, intCast);
-    dest = storeField(rewriter, dest, {5},
-                      this->genConstantOffset(loc, rewriter, getCFIAttr(boxTy)),
-                      intCast);
-    dest = storeField(
-        rewriter, dest, {6},
-        this->genConstantOffset(loc, rewriter, isDerivedType(boxTy)), intCast);
-    return {boxTy, dest, eleSize, storeField};
+    dest = insertField(rewriter, loc, dest, {1}, eleSize);
+    dest = insertField(rewriter, loc, dest, {2},
+                       this->genConstantOffset(loc, rewriter, CFI_VERSION));
+    dest = insertField(rewriter, loc, dest, {3},
+                       this->genConstantOffset(loc, rewriter, rank));
+    dest = insertField(rewriter, loc, dest, {4}, cfiTy);
+    dest =
+        insertField(rewriter, loc, dest, {5},
+                    this->genConstantOffset(loc, rewriter, getCFIAttr(boxTy)));
+    dest = insertField(
+        rewriter, loc, dest, {6},
+        this->genConstantOffset(loc, rewriter, isDerivedType(boxTy)));
+    return {boxTy, dest, eleSize};
+  }
+
+  /// If the embox is not in a globalOp body, allocate storage for the box and
+  /// store the value inside. Return the input value otherwise.
+  mlir::Value
+  placeInMemoryIfNotGlobalInit(mlir::ConversionPatternRewriter &rewriter,
+                               mlir::Location loc, mlir::Value boxValue) const {
+    auto *thisBlock = rewriter.getInsertionBlock();
+    if (thisBlock && mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp()))
+      return boxValue;
+    auto boxPtrTy = this->unwrap(boxValue.getType()).getPointerTo();
+    auto alloca = genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
+    rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
+    return alloca;
   }
 };
 
@@ -1150,12 +1114,12 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // There should be no dims on this embox op
     assert(!embox.getShape());
-    auto [boxTy, dest, eleSize, storeOrInsert] = consDescriptorPrefix(
+    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         embox, operands, rewriter, /* rank */ 0, /* dropFront */ 1);
     if (isDerivedType(boxTy))
       TODO("derived type");
-
-    rewriter.replaceOp(embox, dest);
+    auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
+    rewriter.replaceOp(embox, result);
     return success();
   }
 };
@@ -1168,7 +1132,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
   matchAndRewrite(fir::XEmboxOp xbox, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto rank = xbox.getRank();
-    auto [boxTy, dest, eleSize, storeOrInsert] = consDescriptorPrefix(
+    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         xbox, operands, rewriter, rank, xbox.lenParamOffset() + 1);
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(xbox.getContext());
@@ -1179,10 +1143,6 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
     bool hasSlice = xbox.sliceOperands().size();
     unsigned sliceOff = shiftOff + xbox.shiftOperands().size();
     auto loc = xbox.getLoc();
-    auto intCast = [&](mlir::LLVM::LLVMType ty,
-                       mlir::Value val) -> mlir::Value {
-      return integerCast(loc, rewriter, ty, val);
-    };
     mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
     mlir::Value one = genConstantIndex(loc, i64Ty, rewriter, 1);
     mlir::Value prevDim = integerCast(loc, rewriter, i64Ty, eleSize);
@@ -1199,7 +1159,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
           lb = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, lb,
                                                   operands[sliceOff]);
       }
-      dest = storeOrInsert(rewriter, dest, {7, d, 0}, lb, intCast);
+      dest = insertField(rewriter, loc, dest, {7, d, 0}, lb);
 
       // store extent
       mlir::Value extent = operands[shapeOff];
@@ -1212,14 +1172,14 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
         extent = rewriter.create<mlir::LLVM::SDivOp>(loc, i64Ty, extent,
                                                      operands[sliceOff + 2]);
       }
-      dest = storeOrInsert(rewriter, dest, {7, d, 1}, extent, intCast);
+      dest = insertField(rewriter, loc, dest, {7, d, 1}, extent);
 
       // store step (scaled by shaped extent)
       mlir::Value step = prevDim;
       if (hasSlice)
         step = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step,
                                                   operands[sliceOff + 2]);
-      dest = storeOrInsert(rewriter, dest, {7, d, 2}, step, intCast);
+      dest = insertField(rewriter, loc, dest, {7, d, 2}, step);
       // compute the stride for the next natural dimension
       prevDim =
           rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, prevDim, outerExtent);
@@ -1234,7 +1194,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
     if (isDerivedType(boxTy))
       TODO("derived type");
 
-    rewriter.replaceOp(xbox, dest);
+    auto result = placeInMemoryIfNotGlobalInit(rewriter, xbox.getLoc(), dest);
+    rewriter.replaceOp(xbox, result);
     return success();
   }
 };
