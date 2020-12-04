@@ -2192,7 +2192,22 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   };
 
-  // Inform the current actions module that we just parsed this declarator.
+  enum class InitKind { Uninitialized, Equal, CXXDirect, CXXBraced };
+  InitKind TheInitKind;
+  // If a '==' or '+=' is found, suggest a fixit to '='.
+  if (isTokenEqualOrEqualTypo())
+    TheInitKind = InitKind::Equal;
+  else if (Tok.is(tok::l_paren))
+    TheInitKind = InitKind::CXXDirect;
+  else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
+           (!CurParsedObjCImpl || !D.isFunctionDeclarator()))
+    TheInitKind = InitKind::CXXBraced;
+  else
+    TheInitKind = InitKind::Uninitialized;
+  if (TheInitKind != InitKind::Uninitialized)
+    D.setHasInitializer();
+
+  // Inform Sema that we just parsed this declarator.
   Decl *ThisDecl = nullptr;
   Decl *OuterDecl = nullptr;
   switch (TemplateInfo.Kind) {
@@ -2254,9 +2269,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
+  switch (TheInitKind) {
   // Parse declarator '=' initializer.
-  // If a '==' or '+=' is found, suggest a fixit to '='.
-  if (isTokenEqualOrEqualTypo()) {
+  case InitKind::Equal: {
     SourceLocation EqualLoc = ConsumeToken();
 
     if (Tok.is(tok::kw_delete)) {
@@ -2311,7 +2326,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         Actions.AddInitializerToDecl(ThisDecl, Init.get(),
                                      /*DirectInit=*/false);
     }
-  } else if (Tok.is(tok::l_paren)) {
+    break;
+  }
+  case InitKind::CXXDirect: {
     // Parse C++ direct initializer: '(' expression-list ')'
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
@@ -2365,8 +2382,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       Actions.AddInitializerToDecl(ThisDecl, Initializer.get(),
                                    /*DirectInit=*/true);
     }
-  } else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
-             (!CurParsedObjCImpl || !D.isFunctionDeclarator())) {
+    break;
+  }
+  case InitKind::CXXBraced: {
     // Parse C++0x braced-init-list.
     Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
 
@@ -2381,9 +2399,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       Actions.ActOnInitializerError(ThisDecl);
     } else
       Actions.AddInitializerToDecl(ThisDecl, Init.get(), /*DirectInit=*/true);
-
-  } else {
+    break;
+  }
+  case InitKind::Uninitialized: {
     Actions.ActOnUninitializedDecl(ThisDecl);
+    break;
+  }
   }
 
   Actions.FinalizeDeclaration(ThisDecl);
