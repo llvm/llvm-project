@@ -18,8 +18,7 @@ def remove_prefix(i, d=0):
             s = re.sub(',' + p + '([, \n])', '\\1', s)
             s = re.sub('\s+-?-check-prefix=' + p + '([ \n])', '\\1', s)
         else:
-            s = re.sub('-?-check-prefixes=([^, ]+\n)', '--check-prefix=\\1', s)
-            s = re.sub('-?-check-prefixes=([^, ]+) ', '--check-prefix=\\1', s)
+            s = re.sub('-?-check-prefixes=([\w-]+)(\Z|[ \t\n])', '--check-prefix=\\1\\2', s)
             t = re.search('-?-check-(?:prefix|prefixes)=([^ ]+)\s+-?-check-(?:prefix|prefixes)=([^ ]+)', s)
             while t:
                 s = re.sub(t.group(), '--check-prefixes=' + t.group(1) + ',' + t.group(2), s)
