@@ -692,7 +692,7 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
 
   // std::wstring::size() is measured in 'characters', not bytes
   TypeSystemClang *ast_context =
-      TypeSystemClang::GetScratch(*valobj.GetTargetSP());
+      ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
   if (!ast_context)
     return false;
 

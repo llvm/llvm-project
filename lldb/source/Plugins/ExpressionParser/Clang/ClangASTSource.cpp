@@ -75,7 +75,7 @@ ClangASTSource::~ClangASTSource() {
   // demand by passing false to
   // Target::GetScratchTypeSystemClang(create_on_demand).
   TypeSystemClang *scratch_clang_ast_context =
-      TypeSystemClang::GetScratch(*m_target, false);
+      ScratchTypeSystemClang::GetForTarget(*m_target, false);
 
   if (!scratch_clang_ast_context)
     return;
