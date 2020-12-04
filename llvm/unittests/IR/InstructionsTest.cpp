@@ -1073,6 +1073,17 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id12->isIdentityWithExtract());
   EXPECT_FALSE(Id12->isConcat());
   delete Id12;
+
+  // Not possible to express shuffle mask for scalable vector for extract
+  // subvector.
+  Type *VScaleV4Int32Ty = ScalableVectorType::get(Int32Ty, 4);
+  ShuffleVectorInst *Id13 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV4Int32Ty),
+                            UndefValue::get(VScaleV4Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  int Index = 0;
+  EXPECT_FALSE(Id13->isExtractSubvectorMask(Index));
+  delete Id13;
 }
 
 TEST(InstructionsTest, GetSplat) {
