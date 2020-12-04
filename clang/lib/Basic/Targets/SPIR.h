@@ -104,6 +104,8 @@ public:
   }
 
   bool hasExtIntType() const override { return true; }
+
+  bool hasInt128Type() const override { return false; }
 };
 class LLVM_LIBRARY_VISIBILITY SPIR32TargetInfo : public SPIRTargetInfo {
 public:
