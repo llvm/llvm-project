@@ -35,7 +35,7 @@ class BreakpointLocationsTestCase(TestBase):
         self.assertTrue(breakpoint.IsHardware())
 
     @skipIfWindows
-    @expectedFailure(supports_hw_breakpoints)
+    @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
         self.build()
@@ -57,7 +57,7 @@ class BreakpointLocationsTestCase(TestBase):
                         in error.GetCString())
 
     @skipIfWindows
-    @expectedFailure(supports_hw_breakpoints)
+    @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_out(self):
         """Test stepping out when hardware breakpoints are required."""
         self.build()
@@ -78,7 +78,7 @@ class BreakpointLocationsTestCase(TestBase):
                         in error.GetCString())
 
     @skipIfWindows
-    @expectedFailure(supports_hw_breakpoints)
+    @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_over(self):
         """Test stepping over when hardware breakpoints are required."""
         self.build()
@@ -97,7 +97,7 @@ class BreakpointLocationsTestCase(TestBase):
             ])
 
     @skipIfWindows
-    @expectedFailure(supports_hw_breakpoints)
+    @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""
         self.build()
