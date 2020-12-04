@@ -1122,11 +1122,11 @@ private:
 
 /// The TypeSystemClang instance used for the scratch ASTContext in a
 /// lldb::Target.
-class TypeSystemClangForExpressions : public TypeSystemClang {
+class ScratchTypeSystemClang : public TypeSystemClang {
 public:
-  TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
+  ScratchTypeSystemClang(Target &target, llvm::Triple triple);
 
-  ~TypeSystemClangForExpressions() override = default;
+  ~ScratchTypeSystemClang() override = default;
 
   void Finalize() override;
 
@@ -1148,9 +1148,11 @@ public:
   PersistentExpressionState *GetPersistentExpressionState() override;
 private:
   lldb::TargetWP m_target_wp;
-  std::unique_ptr<ClangPersistentVariables>
-      m_persistent_variables; // These are the persistent variables associated
-                              // with this process for the expression parser
+  /// The persistent variables associated with this process for the expression
+  /// parser.
+  std::unique_ptr<ClangPersistentVariables> m_persistent_variables;
+  /// The ExternalASTSource that performs lookups and completes minimally
+  /// imported types.
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
 };
 
