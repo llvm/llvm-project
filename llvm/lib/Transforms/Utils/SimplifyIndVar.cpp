@@ -1595,6 +1595,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
     const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
+    // TODO: Support case for NarrowDef = NarrowUse->getOperand(1).
+    if (NarrowUse->getOperand(0) != NarrowDef)
+      return false;
     if (!SE->isKnownNegative(RHS))
       return false;
     bool ProvedSubNUW = SE->isKnownPredicateAt(
