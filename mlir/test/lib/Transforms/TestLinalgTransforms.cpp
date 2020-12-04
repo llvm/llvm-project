@@ -415,8 +415,8 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-    cyclicNprocsEqNiters.distributionMethod.resize(
-        2, DistributionMethod::CyclicNumProcsEqNumIters);
+    cyclicNprocsEqNiters.distributionMethod.resize(2,
+                                                   DistributionMethod::Cyclic);
     cyclicNprocsEqNiters.procInfo =
         getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
     patterns.insert<LinalgTilingPattern<MatmulOp>>(
