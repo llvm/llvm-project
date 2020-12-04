@@ -647,8 +647,8 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     }
 
     // Unfortunately, we cannot use dialect-specific types for element
-    // attributes; element attributes only works with standard types. So we need
-    // to prepare another converted standard types for the destination elements
+    // attributes; element attributes only works with builtin types. So we need
+    // to prepare another converted builtin types for the destination elements
     // attribute.
     if (dstAttrType.isa<RankedTensorType>())
       dstAttrType = RankedTensorType::get(dstAttrType.getShape(), dstElemType);

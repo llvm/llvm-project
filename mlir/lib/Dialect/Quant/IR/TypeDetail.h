@@ -9,7 +9,7 @@
 #ifndef TYPE_DETAIL_H_
 #define TYPE_DETAIL_H_
 
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/DenseMap.h"

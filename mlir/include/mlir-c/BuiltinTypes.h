@@ -1,4 +1,4 @@
-//===-- mlir-c/StandardTypes.h - C API for MLIR Standard types ----*- C -*-===//
+//===-- mlir-c/BuiltinTypes.h - C API for MLIR Builtin types ------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_STANDARDTYPES_H
-#define MLIR_C_STANDARDTYPES_H
+#ifndef MLIR_C_BUILTINTYPES_H
+#define MLIR_C_BUILTINTYPES_H
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
@@ -316,4 +316,4 @@ MLIR_CAPI_EXPORTED MlirType mlirFunctionTypeGetResult(MlirType type,
 }
 #endif
 
-#endif // MLIR_C_STANDARDTYPES_H
+#endif // MLIR_C_BUILTINTYPES_H

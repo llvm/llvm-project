@@ -109,7 +109,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
     this->options.indexBitwidth = options.dataLayout.getPointerSizeInBits();
 
-  // Register conversions for the standard types.
+  // Register conversions for the builtin types.
   addConversion([&](ComplexType type) { return convertComplexType(type); });
   addConversion([&](FloatType type) { return convertFloatType(type); });
   addConversion([&](FunctionType type) { return convertFunctionType(type); });
@@ -430,7 +430,7 @@ Type LLVMTypeConverter::convertCallingConventionType(Type type) {
 
 /// Promote the bare pointers in 'values' that resulted from memrefs to
 /// descriptors. 'stdTypes' holds they types of 'values' before the conversion
-/// to the LLVM-IR dialect (i.e., MemRefType, or any other Standard type).
+/// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
 void LLVMTypeConverter::promoteBarePtrsToDescriptors(
     ConversionPatternRewriter &rewriter, Location loc, ArrayRef<Type> stdTypes,
     SmallVectorImpl<Value> &values) {

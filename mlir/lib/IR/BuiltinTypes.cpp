@@ -1,4 +1,4 @@
-//===- StandardTypes.cpp - MLIR Standard Type Classes ---------------------===//
+//===- BuiltinTypes.cpp - MLIR Builtin Type Classes -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,96 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Twine.h"
 
 using namespace mlir;
 using namespace mlir::detail;
-
-//===----------------------------------------------------------------------===//
-// Type
-//===----------------------------------------------------------------------===//
-
-bool Type::isBF16() const { return isa<BFloat16Type>(); }
-bool Type::isF16() const { return isa<Float16Type>(); }
-bool Type::isF32() const { return isa<Float32Type>(); }
-bool Type::isF64() const { return isa<Float64Type>(); }
-
-bool Type::isIndex() const { return isa<IndexType>(); }
-
-/// Return true if this is an integer type with the specified width.
-bool Type::isInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.getWidth() == width;
-  return false;
-}
-
-bool Type::isSignlessInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isSignless();
-  return false;
-}
-
-bool Type::isSignlessInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isSignless() && intTy.getWidth() == width;
-  return false;
-}
-
-bool Type::isSignedInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isSigned();
-  return false;
-}
-
-bool Type::isSignedInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isSigned() && intTy.getWidth() == width;
-  return false;
-}
-
-bool Type::isUnsignedInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isUnsigned();
-  return false;
-}
-
-bool Type::isUnsignedInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
-    return intTy.isUnsigned() && intTy.getWidth() == width;
-  return false;
-}
-
-bool Type::isSignlessIntOrIndex() const {
-  return isSignlessInteger() || isa<IndexType>();
-}
-
-bool Type::isSignlessIntOrIndexOrFloat() const {
-  return isSignlessInteger() || isa<IndexType, FloatType>();
-}
-
-bool Type::isSignlessIntOrFloat() const {
-  return isSignlessInteger() || isa<FloatType>();
-}
-
-bool Type::isIntOrIndex() const { return isa<IntegerType>() || isIndex(); }
-
-bool Type::isIntOrFloat() const { return isa<IntegerType, FloatType>(); }
-
-bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
-
-unsigned Type::getIntOrFloatBitWidth() const {
-  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
-  if (auto intType = dyn_cast<IntegerType>())
-    return intType.getWidth();
-  return cast<FloatType>().getWidth();
-}
 
 //===----------------------------------------------------------------------===//
 /// ComplexType
@@ -168,6 +90,100 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
   if (isa<Float64Type>())
     return APFloat::IEEEdouble();
   llvm_unreachable("non-floating point type used");
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionType
+//===----------------------------------------------------------------------===//
+
+FunctionType FunctionType::get(TypeRange inputs, TypeRange results,
+                               MLIRContext *context) {
+  return Base::get(context, inputs, results);
+}
+
+unsigned FunctionType::getNumInputs() const { return getImpl()->numInputs; }
+
+ArrayRef<Type> FunctionType::getInputs() const {
+  return getImpl()->getInputs();
+}
+
+unsigned FunctionType::getNumResults() const { return getImpl()->numResults; }
+
+ArrayRef<Type> FunctionType::getResults() const {
+  return getImpl()->getResults();
+}
+
+/// Helper to call a callback once on each index in the range
+/// [0, `totalIndices`), *except* for the indices given in `indices`.
+/// `indices` is allowed to have duplicates and can be in any order.
+inline void iterateIndicesExcept(unsigned totalIndices,
+                                 ArrayRef<unsigned> indices,
+                                 function_ref<void(unsigned)> callback) {
+  llvm::BitVector skipIndices(totalIndices);
+  for (unsigned i : indices)
+    skipIndices.set(i);
+
+  for (unsigned i = 0; i < totalIndices; ++i)
+    if (!skipIndices.test(i))
+      callback(i);
+}
+
+/// Returns a new function type without the specified arguments and results.
+FunctionType
+FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
+                                       ArrayRef<unsigned> resultIndices) {
+  ArrayRef<Type> newInputTypes = getInputs();
+  SmallVector<Type, 4> newInputTypesBuffer;
+  if (!argIndices.empty()) {
+    unsigned originalNumArgs = getNumInputs();
+    iterateIndicesExcept(originalNumArgs, argIndices, [&](unsigned i) {
+      newInputTypesBuffer.emplace_back(getInput(i));
+    });
+    newInputTypes = newInputTypesBuffer;
+  }
+
+  ArrayRef<Type> newResultTypes = getResults();
+  SmallVector<Type, 4> newResultTypesBuffer;
+  if (!resultIndices.empty()) {
+    unsigned originalNumResults = getNumResults();
+    iterateIndicesExcept(originalNumResults, resultIndices, [&](unsigned i) {
+      newResultTypesBuffer.emplace_back(getResult(i));
+    });
+    newResultTypes = newResultTypesBuffer;
+  }
+
+  return get(newInputTypes, newResultTypes, getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// OpaqueType
+//===----------------------------------------------------------------------===//
+
+OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
+                           MLIRContext *context) {
+  return Base::get(context, dialect, typeData);
+}
+
+OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
+                                  MLIRContext *context, Location location) {
+  return Base::getChecked(location, dialect, typeData);
+}
+
+/// Returns the dialect namespace of the opaque type.
+Identifier OpaqueType::getDialectNamespace() const {
+  return getImpl()->dialectNamespace;
+}
+
+/// Returns the raw type data of the opaque type.
+StringRef OpaqueType::getTypeData() const { return getImpl()->typeData; }
+
+/// Verify the construction of an opaque type.
+LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
+                                                       Identifier dialect,
+                                                       StringRef typeData) {
+  if (!Dialect::isValidNamespace(dialect.strref()))
+    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

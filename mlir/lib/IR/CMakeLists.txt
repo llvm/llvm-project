@@ -6,6 +6,7 @@ add_mlir_library(MLIRIR
   Block.cpp
   Builders.cpp
   BuiltinDialect.cpp
+  BuiltinTypes.cpp
   Diagnostics.cpp
   Dialect.cpp
   Dominance.cpp
@@ -19,7 +20,6 @@ add_mlir_library(MLIRIR
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp
-  StandardTypes.cpp
   SymbolTable.cpp
   Types.cpp
   TypeRange.cpp
