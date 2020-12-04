@@ -1268,7 +1268,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
               << A.getAttrName()->getName();
   };
 
-  // FIXME: Consider allowing this as an extension for GCC compatibiblity.
   MultiParseScope TemplateParamScope(*this);
   if (Tok.is(tok::less)) {
     Diag(Tok, getLangOpts().CPlusPlus20
@@ -1288,8 +1287,17 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       Diag(RAngleLoc,
            diag::err_lambda_template_parameter_list_empty);
     } else {
+      ExprResult RequiresClause;
+      if (TryConsumeToken(tok::kw_requires)) {
+        RequiresClause =
+            Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+                /*IsTrailingRequiresClause=*/false));
+        if (RequiresClause.isInvalid())
+          SkipUntil({tok::l_brace, tok::l_paren}, StopAtSemi | StopBeforeMatch);
+      }
+
       Actions.ActOnLambdaExplicitTemplateParameterList(
-          LAngleLoc, TemplateParams, RAngleLoc);
+          LAngleLoc, TemplateParams, RAngleLoc, RequiresClause);
       ++CurTemplateDepthTracker;
     }
   }
