@@ -14,8 +14,8 @@
 #define MLIR_INTERFACES_VIEWLIKEINTERFACE_H_
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 
 namespace mlir {
 /// Auxiliary range data structure to unpack the offset, size and stride

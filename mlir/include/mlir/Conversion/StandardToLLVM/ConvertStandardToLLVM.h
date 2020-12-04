@@ -89,7 +89,7 @@ public:
 
   /// Promote the bare pointers in 'values' that resulted from memrefs to
   /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
-  /// to the LLVM-IR dialect (i.e., MemRefType, or any other Standard type).
+  /// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
   void promoteBarePtrsToDescriptors(ConversionPatternRewriter &rewriter,
                                     Location loc, ArrayRef<Type> stdTypes,
                                     SmallVectorImpl<Value> &values);

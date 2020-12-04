@@ -15,19 +15,6 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
-class FloatType;
-class Identifier;
-class IndexType;
-class IntegerType;
-class MLIRContext;
-class TypeStorage;
-class TypeRange;
-
-namespace detail {
-struct FunctionTypeStorage;
-struct OpaqueTypeStorage;
-} // namespace detail
-
 /// Instances of the Type class are uniqued, have an immutable identifier and an
 /// optional mutable component.  They wrap a pointer to the storage object owned
 /// by MLIRContext.  Therefore, instances of Type are passed around by value.
@@ -226,66 +213,8 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// FunctionType
+// Type Utils
 //===----------------------------------------------------------------------===//
-
-/// Function types map from a list of inputs to a list of results.
-class FunctionType
-    : public Type::TypeBase<FunctionType, Type, detail::FunctionTypeStorage> {
-public:
-  using Base::Base;
-
-  static FunctionType get(TypeRange inputs, TypeRange results,
-                          MLIRContext *context);
-
-  /// Input types.
-  unsigned getNumInputs() const;
-  Type getInput(unsigned i) const { return getInputs()[i]; }
-  ArrayRef<Type> getInputs() const;
-
-  /// Result types.
-  unsigned getNumResults() const;
-  Type getResult(unsigned i) const { return getResults()[i]; }
-  ArrayRef<Type> getResults() const;
-
-  /// Returns a new function type without the specified arguments and results.
-  FunctionType getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
-                                        ArrayRef<unsigned> resultIndices);
-};
-
-//===----------------------------------------------------------------------===//
-// OpaqueType
-//===----------------------------------------------------------------------===//
-
-/// Opaque types represent types of non-registered dialects. These are types
-/// represented in their raw string form, and can only usefully be tested for
-/// type equality.
-class OpaqueType
-    : public Type::TypeBase<OpaqueType, Type, detail::OpaqueTypeStorage> {
-public:
-  using Base::Base;
-
-  /// Get or create a new OpaqueType with the provided dialect and string data.
-  static OpaqueType get(Identifier dialect, StringRef typeData,
-                        MLIRContext *context);
-
-  /// Get or create a new OpaqueType with the provided dialect and string data.
-  /// If the given identifier is not a valid namespace for a dialect, then a
-  /// null type is returned.
-  static OpaqueType getChecked(Identifier dialect, StringRef typeData,
-                               MLIRContext *context, Location location);
-
-  /// Returns the dialect namespace of the opaque type.
-  Identifier getDialectNamespace() const;
-
-  /// Returns the raw type data of the opaque type.
-  StringRef getTypeData() const;
-
-  /// Verify the construction of an opaque type.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    Identifier dialect,
-                                                    StringRef typeData);
-};
 
 // Make Type hashable.
 inline ::llvm::hash_code hash_value(Type arg) {

@@ -12,9 +12,9 @@
 #include "PybindUtils.h"
 
 #include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
-#include "mlir-c/StandardTypes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
@@ -1923,7 +1923,7 @@ public:
 } // namespace
 
 //------------------------------------------------------------------------------
-// Standard type subclasses.
+// Builtin type subclasses.
 //------------------------------------------------------------------------------
 
 namespace {
@@ -3105,7 +3105,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
         return printAccum.join();
       });
 
-  // Standard type bindings.
+  // Builtin type bindings.
   PyIntegerType::bind(m);
   PyIndexType::bind(m);
   PyBF16Type::bind(m);

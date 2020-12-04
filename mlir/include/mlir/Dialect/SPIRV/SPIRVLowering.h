@@ -21,7 +21,7 @@
 
 namespace mlir {
 
-/// Type conversion from standard types to SPIR-V types for shader interface.
+/// Type conversion from builtin types to SPIR-V types for shader interface.
 ///
 /// Non-32-bit scalar types require special hardware support that may not exist
 /// on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar types

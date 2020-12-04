@@ -9,7 +9,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/SmallSet.h"
