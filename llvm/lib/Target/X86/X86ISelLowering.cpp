@@ -28217,6 +28217,12 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return Op;
   }
 
+  // AVX512 VBMI2 vXi16 - lower to funnel shifts.
+  if (Subtarget.hasVBMI2() && 16 == EltSizeInBits) {
+    unsigned FunnelOpc = (Opcode == ISD::ROTL ? ISD::FSHL : ISD::FSHR);
+    return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
+  }
+
   assert((Opcode == ISD::ROTL) && "Only ROTL supported");
 
   // XOP has 128-bit vector variable + immediate rotates.
