@@ -2149,6 +2149,12 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftAttr : InheritableAttr {
+  let Spellings = [GNU<"swift_attr">];
+  let Args = [StringArgument<"Attribute">];
+  let Documentation = [SwiftAttrDocs];
+}
+
 def SwiftBridge : InheritableAttr {
   let Spellings = [GNU<"swift_bridge">];
   let Args = [StringArgument<"SwiftType">];

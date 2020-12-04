@@ -3628,6 +3628,19 @@ Swift.
   }];
 }
 
+def SwiftAttrDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_attr";
+  let Content = [{
+The ``swift_attr`` provides a Swift-specific annotation for the declaration
+to which the attribute appertains to. It can be used on any declaration
+in Clang. This kind of annotation is ignored by Clang as it doesn't have any
+semantic meaning in languages supported by Clang. The Swift compiler can
+interpret these annotations according to its own rules when importing C or
+Objective-C declarations.
+}];
+}
+
 def SwiftBridgeDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_bridge";
