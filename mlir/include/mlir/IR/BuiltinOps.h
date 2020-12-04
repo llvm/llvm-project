@@ -37,6 +37,7 @@ namespace mlir {
 class OwningModuleRef : public OwningOpRef<ModuleOp> {
 public:
   using OwningOpRef<ModuleOp>::OwningOpRef;
+  OwningModuleRef() = default;
   OwningModuleRef(OwningOpRef<ModuleOp> &&other)
       : OwningOpRef<ModuleOp>(std::move(other)) {}
 };
