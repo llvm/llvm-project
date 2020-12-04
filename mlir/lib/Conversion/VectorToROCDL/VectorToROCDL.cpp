@@ -79,7 +79,7 @@ public:
     if (!xferOp.isMaskedDim(0))
       return failure();
 
-    auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
+    auto toLLVMTy = [&](Type t) { return typeConverter->convertType(t); };
     LLVM::LLVMType vecTy =
         toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
     unsigned vecWidth = vecTy.getVectorNumElements();
@@ -142,9 +142,9 @@ public:
     Value int32Zero = rewriter.create<LLVM::ConstantOp>(
         loc, toLLVMTy(i32Ty),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32), 0));
-    return replaceTransferOpWithMubuf(rewriter, operands, typeConverter, loc,
-                                      xferOp, vecTy, dwordConfig, int32Zero,
-                                      int32Zero, int1False, int1False);
+    return replaceTransferOpWithMubuf(
+        rewriter, operands, *getTypeConverter(), loc, xferOp, vecTy,
+        dwordConfig, int32Zero, int32Zero, int1False, int1False);
   }
 };
 } // end anonymous namespace

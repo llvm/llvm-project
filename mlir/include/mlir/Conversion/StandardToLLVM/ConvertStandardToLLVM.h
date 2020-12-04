@@ -71,7 +71,7 @@ public:
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
-  LLVM::LLVMType convertFunctionSignature(FunctionType type, bool isVariadic,
+  LLVM::LLVMType convertFunctionSignature(FunctionType funcTy, bool isVariadic,
                                           SignatureConversion &result);
 
   /// Convert a non-empty list of types to be returned from a function into a
@@ -485,6 +485,8 @@ protected:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
+  LLVMTypeConverter *getTypeConverter() const;
+
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
   LLVM::LLVMType getIndexType() const;
@@ -556,10 +558,6 @@ protected:
                          Value allocatedPtr, Value alignedPtr,
                          ArrayRef<Value> sizes, ArrayRef<Value> strides,
                          ConversionPatternRewriter &rewriter) const;
-
-protected:
-  /// Reference to the type converter, with potential extensions.
-  LLVMTypeConverter &typeConverter;
 };
 
 /// Utility class for operation conversions targeting the LLVM dialect that
@@ -644,7 +642,7 @@ public:
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
-                                         operands, this->typeConverter,
+                                         operands, *this->getTypeConverter(),
                                          rewriter);
   }
 };
@@ -666,9 +664,9 @@ public:
     static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
                                   SourceOp>::value,
                   "expected same operands and result type");
-    return LLVM::detail::vectorOneToOneRewrite(op, TargetOp::getOperationName(),
-                                               operands, this->typeConverter,
-                                               rewriter);
+    return LLVM::detail::vectorOneToOneRewrite(
+        op, TargetOp::getOperationName(), operands, *this->getTypeConverter(),
+        rewriter);
   }
 };
 

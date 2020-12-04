@@ -224,7 +224,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       spirv::GlobalVariableOp spirvGlobal = globalVariableMap[operand.index()];
       auto pointeeType =
           spirvGlobal.type().cast<spirv::PointerType>().getPointeeType();
-      auto dstGlobalType = typeConverter.convertType(pointeeType);
+      auto dstGlobalType = typeConverter->convertType(pointeeType);
       if (!dstGlobalType)
         return failure();
       std::string name =
