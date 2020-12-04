@@ -12,9 +12,9 @@
 #include "PybindUtils.h"
 
 #include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Registration.h"
-#include "mlir-c/StandardAttributes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
@@ -1396,7 +1396,7 @@ private:
 } // end namespace
 
 //------------------------------------------------------------------------------
-// Standard attribute subclasses.
+// Builtin attribute subclasses.
 //------------------------------------------------------------------------------
 
 namespace {
@@ -3045,7 +3045,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           py::keep_alive<0, 1>(),
           "The underlying generic attribute of the NamedAttribute binding");
 
-  // Standard attribute bindings.
+  // Builtin attribute bindings.
   PyFloatAttribute::bind(m);
   PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);

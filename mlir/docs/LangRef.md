@@ -1337,7 +1337,7 @@ dialect and not the function argument.
 Attribute values are represented by the following forms:
 
 ```
-attribute-value ::= attribute-alias | dialect-attribute | standard-attribute
+attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 ```
 
 ### Attribute Value Aliases
@@ -1404,14 +1404,14 @@ characters that are not allowed in the lighter syntax, as well as unbalanced
 See [here](Tutorials/DefiningAttributesAndTypes.md) on how to define dialect
 attribute values.
 
-### Standard Attribute Values
+### Builtin Attribute Values
 
-Standard attributes are a core set of
+Builtin attributes are a core set of
 [dialect attributes](#dialect-attribute-values) that are defined in a builtin
 dialect and thus available to all users of MLIR.
 
 ```
-standard-attribute ::=   affine-map-attribute
+builtin-attribute ::=    affine-map-attribute
                        | array-attribute
                        | bool-attribute
                        | dictionary-attribute

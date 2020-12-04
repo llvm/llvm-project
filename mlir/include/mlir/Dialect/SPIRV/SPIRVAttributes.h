@@ -14,7 +14,7 @@
 #define MLIR_DIALECT_SPIRV_SPIRVATTRIBUTES_H
 
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 // Pull in SPIR-V attribute definitions for target and ABI.
