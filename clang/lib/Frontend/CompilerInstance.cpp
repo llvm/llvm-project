@@ -891,8 +891,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
     }
     std::unique_ptr<llvm::MemoryBuffer> SB = std::move(SBOrErr.get());
 
-    const FileEntry *File = FileMgr.getVirtualFile(SB->getBufferIdentifier(),
-                                                   SB->getBufferSize(), 0);
+    FileEntryRef File = FileMgr.getVirtualFileRef(SB->getBufferIdentifier(),
+                                                  SB->getBufferSize(), 0);
     SourceMgr.setMainFileID(
         SourceMgr.createFileID(File, SourceLocation(), Kind));
     SourceMgr.overrideFileContents(File, std::move(SB));
