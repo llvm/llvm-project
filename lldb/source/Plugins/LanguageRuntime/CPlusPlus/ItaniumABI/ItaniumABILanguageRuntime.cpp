@@ -536,7 +536,7 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
     return {};
 
   TypeSystemClang *clang_ast_context =
-      TypeSystemClang::GetScratch(m_process->GetTarget());
+      ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
   if (!clang_ast_context)
     return {};
 
