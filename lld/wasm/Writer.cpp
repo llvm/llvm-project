@@ -308,20 +308,19 @@ void Writer::layoutMemory() {
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
-  if (config->isPic) {
+  if (config->isPic)
     out.dylinkSec->memSize = staticDataSize;
-    return;
-  }
 
   if (!config->stackFirst)
     placeStack();
 
-  // Set `__heap_base` to directly follow the end of the stack or global data.
-  // The fact that this comes last means that a malloc/brk implementation
-  // can grow the heap at runtime.
-  log("mem: heap base   = " + Twine(memoryPtr));
-  if (WasmSym::heapBase)
+  if (WasmSym::heapBase) {
+    // Set `__heap_base` to directly follow the end of the stack or global data.
+    // The fact that this comes last means that a malloc/brk implementation
+    // can grow the heap at runtime.
+    log("mem: heap base   = " + Twine(memoryPtr));
     WasmSym::heapBase->setVirtualAddress(memoryPtr);
+  }
 
   uint64_t maxMemorySetting = 1ULL
                               << (config->is64.getValueOr(false) ? 48 : 32);
@@ -340,8 +339,7 @@ void Writer::layoutMemory() {
       alignTo(memoryPtr, WasmPageSize) / WasmPageSize;
   log("mem: total pages = " + Twine(out.memorySec->numMemoryPages));
 
-  // Check max if explicitly supplied or required by shared memory
-  if (config->maxMemory != 0 || config->sharedMemory) {
+  if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (memoryPtr > config->maxMemory)
@@ -349,7 +347,20 @@ void Writer::layoutMemory() {
     if (config->maxMemory > maxMemorySetting)
       error("maximum memory too large, cannot be greater than " +
             Twine(maxMemorySetting));
-    out.memorySec->maxMemoryPages = config->maxMemory / WasmPageSize;
+  }
+
+  // Check max if explicitly supplied or required by shared memory
+  if (config->maxMemory != 0 || config->sharedMemory) {
+    uint64_t max = config->maxMemory;
+    if (max == 0) {
+      // If no maxMemory config was supplied but we are building with
+      // shared memory, we need to pick a sensible upper limit.
+      if (config->isPic)
+        max = maxMemorySetting;
+      else
+        max = alignTo(memoryPtr, WasmPageSize);
+    }
+    out.memorySec->maxMemoryPages = max / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }
