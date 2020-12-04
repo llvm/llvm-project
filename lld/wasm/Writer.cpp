@@ -857,7 +857,7 @@ bool Writer::hasPassiveInitializedSegments() {
 void Writer::createInitMemoryFunction() {
   LLVM_DEBUG(dbgs() << "createInitMemoryFunction\n");
   assert(WasmSym::initMemoryFlag);
-  uint32_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
@@ -906,8 +906,10 @@ void Writer::createInitMemoryFunction() {
       //  ( ... drop data segments ... )
       // )
 
+      bool is64 = config->is64.getValueOr(false);
+
       // Atomically check whether this is the main thread.
-      writeI32Const(os, flagAddress, "flag address");
+      writePtrConst(os, flagAddress, is64, "flag address");
       writeI32Const(os, 0, "expected flag value");
       writeI32Const(os, 1, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
@@ -917,9 +919,10 @@ void Writer::createInitMemoryFunction() {
       writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
       // Did not increment 0, so wait for main thread to initialize memory
-      writeI32Const(os, flagAddress, "flag address");
+      writePtrConst(os, flagAddress, is64, "flag address");
       writeI32Const(os, 1, "expected flag value");
       writeI64Const(os, -1, "timeout");
+
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
       writeMemArg(os, 2, 0);
@@ -931,12 +934,7 @@ void Writer::createInitMemoryFunction() {
       for (const OutputSegment *s : segments) {
         if (needsPassiveInitialization(s)) {
           // destination address
-          if (config->is64.getValueOr(false)) {
-            writeI64Const(os, s->startVA, "destination address");
-          } else {
-            writeI32Const(os, static_cast<int32_t>(s->startVA),
-                          "destination address");
-          }
+          writePtrConst(os, s->startVA, is64, "destination address");
           // source segment offset
           writeI32Const(os, 0, "segment offset");
           // memory region size
@@ -950,14 +948,14 @@ void Writer::createInitMemoryFunction() {
       }
 
       // Set flag to 2 to mark end of initialization
-      writeI32Const(os, flagAddress, "flag address");
+      writePtrConst(os, flagAddress, is64, "flag address");
       writeI32Const(os, 2, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_I32_ATOMIC_STORE, "i32.atomic.store");
       writeMemArg(os, 2, 0);
 
       // Notify any waiters that memory initialization is complete
-      writeI32Const(os, flagAddress, "flag address");
+      writePtrConst(os, flagAddress, is64, "flag address");
       writeI32Const(os, -1, "number of waiters");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_ATOMIC_NOTIFY, "atomic.notify");

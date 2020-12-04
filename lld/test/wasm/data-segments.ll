@@ -1,6 +1,7 @@
-; RUN: llc -filetype=obj %s -o %t.atomics.o -mattr=+atomics
-; RUN: llc -filetype=obj %s -o %t.bulk-mem.o -mattr=+bulk-memory
-; RUN: llc -filetype=obj %s -o %t.atomics.bulk-mem.o -mattr=+atomics,+bulk-memory
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.o -mattr=+atomics
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.bulk-mem.o -mattr=+bulk-memory
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.bulk-mem.o -mattr=+atomics,+bulk-memory
+; RUN: llc --mtriple=wasm64-unknown-unknown -filetype=obj %s -o %t.atomics.bulk-mem64.o -mattr=+atomics,+bulk-memory
 
 ; atomics, shared memory => error
 ; RUN: not wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.o -o %t.atomics.wasm 2>&1 | FileCheck %s --check-prefix ERROR
@@ -11,13 +12,15 @@
 
 ; atomics, bulk memory, shared memory => passive segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.wasm
-; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE
+; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE32
+
+; Also test with wasm64
+; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem64.o -o %t.atomics.bulk-mem64.wasm
+; RUN: obj2yaml %t.atomics.bulk-mem64.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE64
 
 ; Also test in combination with PIC/pie
-; RUN: llc -filetype=obj -relocation-model=pic %s -o %t.atomics.bulk-mem.pic.o -mattr=+atomics,+bulk-memory,+mutable-globals
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj -relocation-model=pic %s -o %t.atomics.bulk-mem.pic.o -mattr=+atomics,+bulk-memory,+mutable-globals
 ; RUN: wasm-ld --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
-
-target triple = "wasm32-unknown-unknown"
 
 @a = hidden global [6 x i8] c"hello\00", align 1
 @b = hidden global [8 x i8] c"goodbye\00", align 1
@@ -65,7 +68,8 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:        Body:            0B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A054180084100410DFC08000041900841004114FC08010041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC09010B
+; PASSIVE32-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A054180084100410DFC08000041900841004114FC08010041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC09010B
+; PASSIVE64-NEXT:        Body:            42B4D60041004101FE480200044042B4D6004101427FFE0102001A054280084100410DFC08000042900841004114FC08010042B4D6004102FE17020042B4D600417FFE0002001A0BFC0900FC09010B
 
 ; PASSIVE-NEXT:  - Index:           2
 ; PASSIVE-NEXT:    Locals:          []
