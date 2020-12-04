@@ -111,6 +111,11 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       options(options) {}
 
+mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
+    LinalgTilingOptions options, LinalgMarker marker, PatternBenefit benefit)
+    : RewritePattern(benefit, MatchAnyOpTypeTag()), marker(marker),
+      options(options) {}
+
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     Operation *op, PatternRewriter &rewriter,
     SmallVectorImpl<Value> &tensorResults) const {
