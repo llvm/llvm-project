@@ -107,8 +107,10 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
     SmallString<128> Dir(getDriver().SysRoot);
-    llvm::sys::path::append(Dir, "include");
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    if (!Dir.empty()) {
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    }
   }
 }
 
