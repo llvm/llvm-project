@@ -86,8 +86,8 @@ MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
 }
 
 MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
-                                                 const char *name) {
-  return wrap(unwrap(attr).cast<DictionaryAttr>().get(name));
+                                                 MlirStringRef name) {
+  return wrap(unwrap(attr).cast<DictionaryAttr>().get(unwrap(name)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -160,16 +160,16 @@ bool mlirAttributeIsAOpaque(MlirAttribute attr) {
   return unwrap(attr).isa<OpaqueAttr>();
 }
 
-MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, const char *dialectNamespace,
+MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
                                 intptr_t dataLength, const char *data,
                                 MlirType type) {
-  return wrap(OpaqueAttr::get(Identifier::get(dialectNamespace, unwrap(ctx)),
-                              StringRef(data, dataLength), unwrap(type),
-                              unwrap(ctx)));
+  return wrap(
+      OpaqueAttr::get(Identifier::get(unwrap(dialectNamespace), unwrap(ctx)),
+                      StringRef(data, dataLength), unwrap(type), unwrap(ctx)));
 }
 
-const char *mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr) {
-  return unwrap(attr).cast<OpaqueAttr>().getDialectNamespace().c_str();
+MlirStringRef mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<OpaqueAttr>().getDialectNamespace().strref());
 }
 
 MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr) {
@@ -184,14 +184,12 @@ bool mlirAttributeIsAString(MlirAttribute attr) {
   return unwrap(attr).isa<StringAttr>();
 }
 
-MlirAttribute mlirStringAttrGet(MlirContext ctx, intptr_t length,
-                                const char *data) {
-  return wrap(StringAttr::get(StringRef(data, length), unwrap(ctx)));
+MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str) {
+  return wrap(StringAttr::get(unwrap(str), unwrap(ctx)));
 }
 
-MlirAttribute mlirStringAttrTypedGet(MlirType type, intptr_t length,
-                                     const char *data) {
-  return wrap(StringAttr::get(StringRef(data, length), unwrap(type)));
+MlirAttribute mlirStringAttrTypedGet(MlirType type, MlirStringRef str) {
+  return wrap(StringAttr::get(unwrap(str), unwrap(type)));
 }
 
 MlirStringRef mlirStringAttrGetValue(MlirAttribute attr) {
@@ -206,14 +204,14 @@ bool mlirAttributeIsASymbolRef(MlirAttribute attr) {
   return unwrap(attr).isa<SymbolRefAttr>();
 }
 
-MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length,
-                                   const char *symbol, intptr_t numReferences,
+MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
+                                   intptr_t numReferences,
                                    MlirAttribute const *references) {
   SmallVector<FlatSymbolRefAttr, 4> refs;
   refs.reserve(numReferences);
   for (intptr_t i = 0; i < numReferences; ++i)
     refs.push_back(unwrap(references[i]).cast<FlatSymbolRefAttr>());
-  return wrap(SymbolRefAttr::get(StringRef(symbol, length), refs, unwrap(ctx)));
+  return wrap(SymbolRefAttr::get(unwrap(symbol), refs, unwrap(ctx)));
 }
 
 MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr) {
@@ -242,9 +240,8 @@ bool mlirAttributeIsAFlatSymbolRef(MlirAttribute attr) {
   return unwrap(attr).isa<FlatSymbolRefAttr>();
 }
 
-MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, intptr_t length,
-                                       const char *symbol) {
-  return wrap(FlatSymbolRefAttr::get(StringRef(symbol, length), unwrap(ctx)));
+MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol) {
+  return wrap(FlatSymbolRefAttr::get(unwrap(symbol), unwrap(ctx)));
 }
 
 MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
@@ -424,12 +421,11 @@ MlirAttribute mlirDenseElementsAttrDoubleGet(MlirType shapedType,
 
 MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
                                              intptr_t numElements,
-                                             intptr_t const *strLengths,
-                                             const char **strs) {
+                                             MlirStringRef *strs) {
   SmallVector<StringRef, 8> values;
   values.reserve(numElements);
   for (intptr_t i = 0; i < numElements; ++i)
-    values.push_back(StringRef(strs[i], strLengths[i]));
+    values.push_back(unwrap(strs[i]));
 
   return wrap(
       DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(), values));

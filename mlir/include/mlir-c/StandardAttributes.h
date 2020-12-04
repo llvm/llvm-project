@@ -79,7 +79,7 @@ mlirDictionaryAttrGetElement(MlirAttribute attr, intptr_t pos);
 /** Returns the dictionary attribute element with the given name or NULL if the
  * given name does not exist in the dictionary. */
 MLIR_CAPI_EXPORTED MlirAttribute
-mlirDictionaryAttrGetElementByName(MlirAttribute attr, const char *name);
+mlirDictionaryAttrGetElementByName(MlirAttribute attr, MlirStringRef name);
 
 //===----------------------------------------------------------------------===//
 // Floating point attribute.
@@ -155,15 +155,13 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAOpaque(MlirAttribute attr);
 /** Creates an opaque attribute in the given context associated with the dialect
  * identified by its namespace. The attribute contains opaque byte data of the
  * specified length (data need not be null-terminated). */
-MLIR_CAPI_EXPORTED MlirAttribute mlirOpaqueAttrGet(MlirContext ctx,
-                                                   const char *dialectNamespace,
-                                                   intptr_t dataLength,
-                                                   const char *data,
-                                                   MlirType type);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
+                  intptr_t dataLength, const char *data, MlirType type);
 
 /** Returns the namespace of the dialect with which the given opaque attribute
  * is associated. The namespace string is owned by the context. */
-MLIR_CAPI_EXPORTED const char *
+MLIR_CAPI_EXPORTED MlirStringRef
 mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr);
 
 /** Returns the raw data as a string reference. The data remains live as long as
@@ -178,17 +176,14 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAString(MlirAttribute attr);
 
 /** Creates a string attribute in the given context containing the given string.
- * The string need not be null-terminated and its length must be specified. */
+ */
 MLIR_CAPI_EXPORTED MlirAttribute mlirStringAttrGet(MlirContext ctx,
-                                                   intptr_t length,
-                                                   const char *data);
+                                                   MlirStringRef str);
 
 /** Creates a string attribute in the given context containing the given string.
- * The string need not be null-terminated and its length must be specified.
  * Additionally, the attribute has the given type. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirStringAttrTypedGet(MlirType type,
-                                                        intptr_t length,
-                                                        const char *data);
+                                                        MlirStringRef str);
 
 /** Returns the attribute values as a string reference. The data remains live as
  * long as the context in which the attribute lives. */
@@ -203,10 +198,9 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsASymbolRef(MlirAttribute attr);
 
 /** Creates a symbol reference attribute in the given context referencing a
  * symbol identified by the given string inside a list of nested references.
- * Each of the references in the list must not be nested. The string need not be
- * null-terminated and its length must be specified. */
+ * Each of the references in the list must not be nested. */
 MLIR_CAPI_EXPORTED MlirAttribute
-mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length, const char *symbol,
+mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
                      intptr_t numReferences, MlirAttribute const *references);
 
 /** Returns the string reference to the root referenced symbol. The data remains
@@ -236,11 +230,9 @@ mlirSymbolRefAttrGetNestedReference(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAFlatSymbolRef(MlirAttribute attr);
 
 /** Creates a flat symbol reference attribute in the given context referencing a
- * symbol identified by the given string. The string need not be null-terminated
- * and its length must be specified. */
+ * symbol identified by the given string. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx,
-                                                          intptr_t length,
-                                                          const char *symbol);
+                                                          MlirStringRef symbol);
 
 /** Returns the referenced symbol as a string reference. The data remains live
  * as long as the context in which the attribute lives. */
@@ -349,11 +341,10 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrDoubleGet(
     MlirType shapedType, intptr_t numElements, const double *elements);
 
 /** Creates a dense elements attribute with the given shaped type from string
- * elements. The strings need not be null-terminated and their lengths are
- * provided as a separate argument co-indexed with the strs argument. */
-MLIR_CAPI_EXPORTED MlirAttribute
-mlirDenseElementsAttrStringGet(MlirType shapedType, intptr_t numElements,
-                               intptr_t const *strLengths, const char **strs);
+ * elements. */
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrStringGet(
+    MlirType shapedType, intptr_t numElements, MlirStringRef *strs);
+
 /** Creates a dense elements attribute that has the same data as the given dense
  * elements attribute and a different shaped type. The new type must have the
  * same total number of elements. */
