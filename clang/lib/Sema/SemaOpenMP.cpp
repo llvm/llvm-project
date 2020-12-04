@@ -3339,12 +3339,15 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
 
   void VisitSubCaptures(OMPExecutableDirective *S) {
     // Check implicitly captured variables.
-    if (!S->hasAssociatedStmt() || !S->getAssociatedStmt() ||
-        S->getDirectiveKind() == OMPD_atomic ||
+    if (!S->hasAssociatedStmt() || !S->getAssociatedStmt())
+      return;
+    if (S->getDirectiveKind() == OMPD_atomic ||
         S->getDirectiveKind() == OMPD_critical ||
         S->getDirectiveKind() == OMPD_section ||
-        S->getDirectiveKind() == OMPD_master)
+        S->getDirectiveKind() == OMPD_master) {
+      Visit(S->getAssociatedStmt());
       return;
+    }
     visitSubCaptures(S->getInnermostCapturedStmt());
     // Try to capture inner this->member references to generate correct mappings
     // and diagnostics.
