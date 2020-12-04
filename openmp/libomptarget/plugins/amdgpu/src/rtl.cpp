@@ -42,8 +42,8 @@ extern "C" hsa_status_t hostrpc_init();
 extern "C" hsa_status_t hostrpc_terminate();
 
 #include "internal.h"
-
 #include "Debug.h"
+#include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
 
 #include "trace.h"
@@ -78,7 +78,6 @@ uint32_t TgtStackItemSize = 0;
 #endif
 
 #include "../../common/elf_common.c"
-#include "../impl/elf_amd.h"
 
 
 /// Keep entries table per device
@@ -619,6 +618,40 @@ void finiAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
   assert(async_info_ptr->Queue);
   async_info_ptr->Queue = 0;
 }
+
+bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
+  const uint16_t amdgcnMachineID = EM_AMDGPU;
+  int32_t r = elf_check_machine(image, amdgcnMachineID);
+  if (!r) {
+    DP("Supported machine ID not found\n");
+  }
+  return r;
+}
+
+uint32_t elf_e_flags(__tgt_device_image *image) {
+  char *img_begin = (char *)image->ImageStart;
+  size_t img_size = (char *)image->ImageEnd - img_begin;
+
+  Elf *e = elf_memory(img_begin, img_size);
+  if (!e) {
+    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+    return 0;
+  }
+
+  Elf64_Ehdr *eh64 = elf64_getehdr(e);
+
+  if (!eh64) {
+    DP("Unable to get machine ID from ELF file!\n");
+    elf_end(e);
+    return 0;
+  }
+
+  uint32_t Flags = eh64->e_flags;
+
+  elf_end(e);
+  DP("ELF Flags: 0x%x\n", Flags);
+  return Flags;
+}
 } // namespace
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
@@ -1089,7 +1122,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
               "Possible gpu arch mismatch: device:%s, image:%s please check"
               " compiler flag: -march=<gpu>\n",
               DeviceInfo.GPUName[device_id].c_str(),
-	      get_elf_mach_gfx_name(image));
+	      get_elf_mach_gfx_name(elf_e_flags(image)));
       return NULL;
     }
 

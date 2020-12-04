@@ -20,10 +20,9 @@
 
 #include <elf.h>
 #include <libelf.h>
-#include "elf_common.h"
 
 // Check whether an image is valid for execution on target_id
-int32_t elf_check_machine(__tgt_device_image *image,
+static inline int32_t elf_check_machine(__tgt_device_image *image,
     uint16_t target_id) {
 
   // Is the library version incompatible with the header file?
@@ -109,42 +108,4 @@ static inline int32_t elf_is_dynamic(__tgt_device_image *image) {
   elf_end(e);
   DP("ELF Type: %d\n", Type);
   return Type == ET_DYN;
-}
-
-uint32_t elf_e_flags(__tgt_device_image *image) {
-
-  char *img_begin = (char *)image->ImageStart;
-  char *img_end = (char *)image->ImageEnd;
-  size_t img_size = img_end - img_begin;
-
-  // Obtain elf handler
-  Elf *e = elf_memory(img_begin, img_size);
-  if (!e) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
-    return 0;
-  }
-
-  Elf64_Ehdr *eh64 = elf64_getehdr(e);
-  Elf32_Ehdr *eh32 = elf32_getehdr(e);
-
-  if (!eh64 && !eh32) {
-    DP("Unable to get machine ID from ELF file!\n");
-    elf_end(e);
-    return 0;
-  }
-
-  uint32_t Flags;
-  if (eh64 && !eh32)
-    Flags = eh64->e_flags;
-  else if (eh32 && !eh64)
-    Flags = eh32->e_flags;
-  else {
-    DP("Ambiguous ELF header!\n");
-    elf_end(e);
-    return 0;
-  }
-
-  elf_end(e);
-  DP("ELF Flags: 0x%x\n", Flags);
-  return Flags;
 }

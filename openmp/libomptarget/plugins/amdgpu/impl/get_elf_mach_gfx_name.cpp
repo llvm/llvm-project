@@ -1,36 +1,14 @@
-/*===--------------------------------------------------------------------------
- *              ATMI (Asynchronous Task and Memory Interface)
- *
- * This file is distributed under the MIT License. See LICENSE.txt for details.
- *===------------------------------------------------------------------------*/
+#include "get_elf_mach_gfx_name.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-
+// This header conflicts with the system elf.h (macros vs enums of the same
+// identifier) and contains more up to date values for the enum checked here.
+// rtl.cpp uses the system elf.h.
 #include "llvm/BinaryFormat/ELF.h"
-#include "omptarget.h"
-#include "Debug.h"
-#include "elf_common.h"
 
-#ifndef TARGET_NAME
-#define TARGET_NAME AMDHSA
-#endif
-#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
-
-using namespace llvm;
-using namespace ELF;
-
-int get_elf_mach_gfx(__tgt_device_image *image) {
-  uint32_t EFlags = elf_e_flags(image);
+const char *get_elf_mach_gfx_name(uint32_t EFlags) {
+  using namespace llvm::ELF;
   uint32_t Gfx = (EFlags & EF_AMDGPU_MACH);
-  return Gfx;
-}
-
-char* get_elf_mach_gfx_name(__tgt_device_image *image) {
-  uint32_t Gfx = get_elf_mach_gfx(image);
-  switch  (Gfx) {
+  switch (Gfx) {
   case EF_AMDGPU_MACH_AMDGCN_GFX801 :  return "gfx801" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX802 :  return "gfx802" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX803 :  return "gfx803" ;
@@ -50,16 +28,7 @@ char* get_elf_mach_gfx_name(__tgt_device_image *image) {
   case EF_AMDGPU_MACH_AMDGCN_GFX1031 :  return "gfx1031" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX1032 :  return "gfx1032" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX1033 :  return "gfx1033" ;
-  default: return "--unknown gfx";
+  default:
+    return "--unknown gfx";
   }
 }
-
-bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
-  const uint16_t amdgcnMachineID = EM_AMDGPU;
-  int32_t r = elf_check_machine(image, amdgcnMachineID);
-  if (!r) {
-    DP("Supported machine ID not found\n");
-  }
-  return r;
-}
-
