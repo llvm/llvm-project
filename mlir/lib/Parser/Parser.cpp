@@ -1433,12 +1433,12 @@ public:
   }
 
   /// Parses a region if present.
-  ParseResult parseOptionalRegion(Region &region,
-                                  ArrayRef<OperandType> arguments,
-                                  ArrayRef<Type> argTypes,
-                                  bool enableNameShadowing) override {
+  OptionalParseResult parseOptionalRegion(Region &region,
+                                          ArrayRef<OperandType> arguments,
+                                          ArrayRef<Type> argTypes,
+                                          bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
-      return success();
+      return llvm::None;
     return parseRegion(region, arguments, argTypes, enableNameShadowing);
   }
 

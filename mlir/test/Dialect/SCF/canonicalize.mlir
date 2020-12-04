@@ -86,7 +86,7 @@ func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
 
 // -----
 
-func private @side_effect() {}
+func private @side_effect()
 func @all_unused(%cond: i1) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
