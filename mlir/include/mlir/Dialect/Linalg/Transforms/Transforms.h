@@ -389,6 +389,11 @@ OwningRewritePatternList
 getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 
 struct LinalgBaseTilingPattern : public RewritePattern {
+  // Entry point to match any LinalgOp OpInterface.
+  LinalgBaseTilingPattern(LinalgTilingOptions options,
+                          LinalgMarker marker = LinalgMarker(),
+                          PatternBenefit benefit = 1);
+  // Entry point to match a specific Linalg op.
   LinalgBaseTilingPattern(StringRef opName, MLIRContext *context,
                           LinalgTilingOptions options,
                           LinalgMarker marker = LinalgMarker(),
