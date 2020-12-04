@@ -160,6 +160,7 @@ def simm12_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
 // A 13-bit signed immediate where the least significant bit is zero.
 def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
   let MCOperandPredicate = [{
@@ -168,8 +169,7 @@ def simm13_lsb0 : Operand<OtherVT> {
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
-  let OperandType = "OPERAND_SIMM13_LSB0";
-  let OperandNamespace = "RISCVOp";
+  let OperandType = "OPERAND_PCREL";
 }
 
 class UImm20Operand : Operand<XLenVT> {
@@ -199,6 +199,7 @@ def Simm21Lsb0JALAsmOperand : SImmAsmOperand<21, "Lsb0JAL"> {
 // A 21-bit signed immediate where the least significant bit is zero.
 def simm21_lsb0_jal : Operand<OtherVT> {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
   let MCOperandPredicate = [{
@@ -207,8 +208,7 @@ def simm21_lsb0_jal : Operand<OtherVT> {
       return isShiftedInt<20, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
-  let OperandType = "OPERAND_SIMM21_LSB0";
-  let OperandNamespace = "RISCVOp";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def BareSymbol : AsmOperandClass {
