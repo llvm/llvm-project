@@ -387,6 +387,8 @@ struct LinalgTilingOptions {
 /// when tiling is called programmatically.
 OwningRewritePatternList
 getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
+void populateLinalgTilingCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
 
 struct LinalgBaseTilingPattern : public RewritePattern {
   // Entry point to match any LinalgOp OpInterface.
