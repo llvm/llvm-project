@@ -33,14 +33,6 @@
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
 
-
-// hostrpc interface, FIXME: consider moving to its own include
-extern "C" unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
-                                               hsa_queue_t *this_Q,
-                                               uint32_t device_id);
-extern "C" hsa_status_t hostrpc_init();
-extern "C" hsa_status_t hostrpc_terminate();
-
 #include "internal.h"
 #include "Debug.h"
 #include "get_elf_mach_gfx_name.h"
@@ -54,6 +46,29 @@ extern "C" hsa_status_t hostrpc_terminate();
 #define TARGET_NAME AMDHSA
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+
+// hostrpc interface, FIXME: consider moving to its own include these are
+// statically linked into amdgpu/plugin if present from hostrpc_services.a,
+// linked as --whole-archive to override the weak symbols that are used to
+// implement a fallback for toolchains that do not yet have a hostrpc library.
+extern "C" {
+unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
+                                    uint32_t device_id);
+hsa_status_t hostrpc_init();
+hsa_status_t hostrpc_terminate();
+
+__attribute__((weak)) hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
+__attribute__((weak)) hsa_status_t hostrpc_terminate() {
+  return HSA_STATUS_SUCCESS;
+}
+__attribute__((weak)) unsigned long
+hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
+  DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
+     "missing\n",
+     device_id);
+  return 0;
+}
+}
 
 int print_kernel_trace;
 
@@ -1802,6 +1817,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
         impl_args->hostcall_ptr = hostrpc_assign_buffer(
             DeviceInfo.HSAAgents[device_id], queue, device_id);
         pthread_mutex_unlock(&hostcall_init_lock);
+        if (!impl_args->hostcall_ptr) {
+          DP("hostrpc_assign_buffer failed, gpu would dereference null and "
+             "error\n");
+          return OFFLOAD_FAIL;
+        }
       }
 
       packet->kernarg_address = kernarg;
