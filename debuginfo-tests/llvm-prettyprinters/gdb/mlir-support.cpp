@@ -1,3 +1,4 @@
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/Location.h"
