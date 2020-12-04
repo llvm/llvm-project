@@ -7,9 +7,9 @@ declare i64 @llvm.abs.i64(i64, i1 immarg)
 define i64@neg_abs(i64 %x) {
 ; CHECK-LABEL: neg_abs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr x8, x0, #63
-; CHECK-NEXT:    eor x9, x0, x8
-; CHECK-NEXT:    sub x0, x8, x9
+; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cneg x8, x0, mi
+; CHECK-NEXT:    neg x0, x8
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   %neg = sub nsw i64 0, %abs
