@@ -89,6 +89,53 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtD())
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
 
+  if (Subtarget.hasStdExtV()) {
+    addRegisterClass(RISCVVMVTs::vbool64_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool32_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool16_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool8_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool4_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool2_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vbool1_t, &RISCV::VRRegClass);
+
+    addRegisterClass(RISCVVMVTs::vint8mf8_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint8mf4_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint8mf2_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint8m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint8m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vint8m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vint8m8_t, &RISCV::VRM8RegClass);
+
+    addRegisterClass(RISCVVMVTs::vint16mf4_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint16mf2_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint16m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint16m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vint16m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vint16m8_t, &RISCV::VRM8RegClass);
+
+    addRegisterClass(RISCVVMVTs::vint32mf2_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint32m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint32m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vint32m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vint32m8_t, &RISCV::VRM8RegClass);
+
+    addRegisterClass(RISCVVMVTs::vint64m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vint64m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vint64m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vint64m8_t, &RISCV::VRM8RegClass);
+
+    addRegisterClass(RISCVVMVTs::vfloat32mf2_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vfloat32m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vfloat32m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vfloat32m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vfloat32m8_t, &RISCV::VRM8RegClass);
+
+    addRegisterClass(RISCVVMVTs::vfloat64m1_t, &RISCV::VRRegClass);
+    addRegisterClass(RISCVVMVTs::vfloat64m2_t, &RISCV::VRM2RegClass);
+    addRegisterClass(RISCVVMVTs::vfloat64m4_t, &RISCV::VRM4RegClass);
+    addRegisterClass(RISCVVMVTs::vfloat64m8_t, &RISCV::VRM8RegClass);
+  }
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
 
@@ -283,6 +330,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  if (Subtarget.hasStdExtV())
+    setBooleanVectorContents(ZeroOrOneBooleanContent);
 
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
@@ -1856,9 +1906,95 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
+static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
+                                    int VLIndex, unsigned SEWIndex,
+                                    unsigned VLMul) {
+  MachineFunction &MF = *BB->getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  unsigned SEW = MI.getOperand(SEWIndex).getImm();
+  RISCVVLengthMultiplier::LengthMultiplier Multiplier;
+
+  switch (VLMul) {
+  default:
+    llvm_unreachable("Unexpected LMUL for instruction");
+  case 0:
+  case 1:
+  case 2:
+  case 3:
+  case 5:
+  case 6:
+  case 7:
+    Multiplier = static_cast<RISCVVLengthMultiplier::LengthMultiplier>(VLMul);
+    break;
+  }
+
+  RISCVVStandardElementWidth::StandardElementWidth ElementWidth;
+  switch (SEW) {
+  default:
+    llvm_unreachable("Unexpected SEW for instruction");
+  case 8:
+    ElementWidth = RISCVVStandardElementWidth::ElementWidth8;
+    break;
+  case 16:
+    ElementWidth = RISCVVStandardElementWidth::ElementWidth16;
+    break;
+  case 32:
+    ElementWidth = RISCVVStandardElementWidth::ElementWidth32;
+    break;
+  case 64:
+    ElementWidth = RISCVVStandardElementWidth::ElementWidth64;
+    break;
+  }
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // VL and VTYPE are alive here.
+  MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII.get(RISCV::PseudoVSETVLI));
+
+  if (VLIndex >= 0) {
+    // Set VL (rs1 != X0).
+    unsigned DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MIB.addReg(DestReg, RegState::Define | RegState::Dead)
+       .addReg(MI.getOperand(VLIndex).getReg());
+  } else
+    // With no VL operator in the pseudo, do not modify VL (rd = X0, rs1 = X0).
+    MIB.addReg(RISCV::X0, RegState::Dead)
+       .addReg(RISCV::X0, RegState::Kill);
+
+  // For simplicity we reuse the vtype representation here.
+  // Bits | Name       | Description
+  // -----+------------+------------------------------------------------
+  // 5    | vlmul[2]   | Fractional lmul?
+  // 4:2  | vsew[2:0]  | Standard element width (SEW) setting
+  // 1:0  | vlmul[1:0] | Vector register group multiplier (LMUL) setting
+  MIB.addImm(((Multiplier & 0x4) << 3) | ((ElementWidth & 0x3) << 2) |
+             (Multiplier & 0x3));
+
+  // Remove (now) redundant operands from pseudo
+  MI.getOperand(SEWIndex).setImm(-1);
+  if (VLIndex >= 0) {
+    MI.getOperand(VLIndex).setReg(RISCV::NoRegister);
+    MI.getOperand(VLIndex).setIsKill(false);
+  }
+
+  return BB;
+}
+
 MachineBasicBlock *
 RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
+
+  if (const RISCVVPseudosTable::PseudoInfo *RVV =
+          RISCVVPseudosTable::getPseudoInfo(MI.getOpcode())) {
+    int VLIndex = RVV->getVLIndex();
+    int SEWIndex = RVV->getSEWIndex();
+
+    assert(SEWIndex >= 0 && "SEWIndex must be >= 0");
+    return addVSetVL(MI, BB, VLIndex, SEWIndex, RVV->VLMul);
+  }
+
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");

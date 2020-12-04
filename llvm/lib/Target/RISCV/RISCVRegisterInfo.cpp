@@ -94,6 +94,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
+
+  // V registers for code generation. We handle them manually.
+  markSuperRegs(Reserved, RISCV::VL);
+  markSuperRegs(Reserved, RISCV::VTYPE);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
