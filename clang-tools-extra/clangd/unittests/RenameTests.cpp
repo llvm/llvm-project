@@ -946,6 +946,13 @@ TEST(RenameTest, Renameable) {
        )cpp",
        "not a supported kind", !HeaderFile, Index},
 
+      {R"cpp(// disallow rename on non-normal identifiers.
+         @interface Foo {}
+         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         @end
+       )cpp",
+       "not a supported kind", HeaderFile, Index},
+
       {R"cpp(
          void foo(int);
          void foo(char);
