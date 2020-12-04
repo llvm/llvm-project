@@ -70,10 +70,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/SafepointIRVerifier.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -415,6 +417,16 @@ AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;
 AnalysisKey NoOpLoopAnalysis::Key;
 
+/// Whether or not we should populate a PassInstrumentationCallbacks's class to
+/// pass name map.
+///
+/// This is for optimization purposes so we don't populate it if we never use
+/// it. This should be updated if new pass instrumentation wants to use the map.
+/// We currently only use this for --print-before/after.
+bool shouldPopulateClassToPassNames() {
+  return !printBeforePasses().empty() || !printAfterPasses().empty();
+}
+
 } // namespace
 
 PassBuilder::PassBuilder(bool DebugLogging, TargetMachine *TM,
@@ -423,6 +435,33 @@ PassBuilder::PassBuilder(bool DebugLogging, TargetMachine *TM,
     : DebugLogging(DebugLogging), TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this, DebugLogging);
+  if (PIC && shouldPopulateClassToPassNames()) {
+#define MODULE_PASS(NAME, CREATE_PASS)                                         \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define LOOP_PASS(NAME, CREATE_PASS)                                           \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define CGSCC_PASS(NAME, CREATE_PASS)                                          \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#include "PassRegistry.def"
+    for (const auto &P : printBeforePasses()) {
+      if (!PIC->hasPassName(P))
+        report_fatal_error("unrecognized pass name: " + P);
+    }
+    for (const auto &P : printAfterPasses()) {
+      if (!PIC->hasPassName(P))
+        report_fatal_error("unrecognized pass name: " + P);
+    }
+  }
 }
 
 void PassBuilder::invokePeepholeEPCallbacks(
