@@ -328,3 +328,72 @@ Sections:
 
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
 }
+
+// Test that we are able to create an ELFObjectFile even when loadable segments
+// are unsorted by virtual address.
+// Test that ELFFile<ELFT>::toMappedAddr works properly in this case.
+
+TEST(ELFObjectFileTest, InvalidLoadSegmentsOrderTest) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ExpectedFile = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Address:      0x1000
+    Offset:       0x3000
+    ContentArray: [ 0x11 ]
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Address:      0x2000
+    Offset:       0x4000
+    ContentArray: [ 0x99 ]
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x2000
+    FirstSec: .bar
+    LastSec:  .bar
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .foo
+    LastSec:  .foo
+)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+
+  std::string WarnString;
+  auto ToMappedAddr = [&](uint64_t Addr) -> const uint8_t * {
+    Expected<const uint8_t *> DataOrErr =
+        ExpectedFile->getELFFile().toMappedAddr(Addr, [&](const Twine &Msg) {
+          EXPECT_TRUE(WarnString.empty());
+          WarnString = Msg.str();
+          return Error::success();
+        });
+
+    if (!DataOrErr) {
+      ADD_FAILURE() << toString(DataOrErr.takeError());
+      return nullptr;
+    }
+
+    EXPECT_TRUE(WarnString ==
+                "loadable segments are unsorted by virtual address");
+    WarnString = "";
+    return *DataOrErr;
+  };
+
+  const uint8_t *Data = ToMappedAddr(0x1000);
+  ASSERT_TRUE(Data);
+  MemoryBufferRef Buf = ExpectedFile->getMemoryBufferRef();
+  EXPECT_EQ((const char *)Data - Buf.getBufferStart(), 0x3000);
+  EXPECT_EQ(Data[0], 0x11);
+
+  Data = ToMappedAddr(0x2000);
+  ASSERT_TRUE(Data);
+  Buf = ExpectedFile->getMemoryBufferRef();
+  EXPECT_EQ((const char *)Data - Buf.getBufferStart(), 0x4000);
+  EXPECT_EQ(Data[0], 0x99);
+}

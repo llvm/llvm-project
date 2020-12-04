@@ -183,7 +183,9 @@ public:
 
   Expected<Elf_Dyn_Range> dynamicEntries() const;
 
-  Expected<const uint8_t *> toMappedAddr(uint64_t VAddr) const;
+  Expected<const uint8_t *>
+  toMappedAddr(uint64_t VAddr,
+               WarningHandler WarnHandler = &defaultWarningHandler) const;
 
   Expected<Elf_Sym_Range> symbols(const Elf_Shdr *Sec) const {
     if (!Sec)
