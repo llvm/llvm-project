@@ -46,6 +46,8 @@ struct Params {
 /// Used to report problems in parsing or interpreting a config.
 /// Errors reflect structurally invalid config that should be user-visible.
 /// Warnings reflect e.g. unknown properties that are recoverable.
+/// Notes are used to report files and fragments.
+/// (This can be used to track when previous warnings/errors have been "fixed").
 using DiagnosticCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
 
 /// A chunk of configuration that has been fully analyzed and is ready to apply.

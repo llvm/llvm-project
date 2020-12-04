@@ -377,6 +377,32 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
   return Action;
 }
 
+Diag toDiag(const llvm::SMDiagnostic &D, Diag::DiagSource Source) {
+  Diag Result;
+  Result.Message = D.getMessage().str();
+  switch (D.getKind()) {
+  case llvm::SourceMgr::DK_Error:
+    Result.Severity = DiagnosticsEngine::Error;
+    break;
+  case llvm::SourceMgr::DK_Warning:
+    Result.Severity = DiagnosticsEngine::Warning;
+    break;
+  default:
+    break;
+  }
+  Result.Source = Source;
+  Result.AbsFile = D.getFilename().str();
+  Result.InsideMainFile = D.getSourceMgr()->FindBufferContainingLoc(
+                              D.getLoc()) == D.getSourceMgr()->getMainFileID();
+  if (D.getRanges().empty())
+    Result.Range = {{D.getLineNo() - 1, D.getColumnNo()},
+                    {D.getLineNo() - 1, D.getColumnNo()}};
+  else
+    Result.Range = {{D.getLineNo() - 1, (int)D.getRanges().front().first},
+                    {D.getLineNo() - 1, (int)D.getRanges().front().second}};
+  return Result;
+}
+
 void toLSPDiags(
     const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
     llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn) {
@@ -403,6 +429,9 @@ void toLSPDiags(
     break;
   case Diag::ClangTidy:
     Main.source = "clang-tidy";
+    break;
+  case Diag::ClangdConfig:
+    Main.source = "clangd-config";
     break;
   case Diag::Unknown:
     break;
