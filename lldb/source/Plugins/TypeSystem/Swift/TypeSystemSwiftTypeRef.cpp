@@ -1577,12 +1577,6 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
   return GetTypeFromMangledTypename(mangled_element);
 }
 
-CompilerType TypeSystemSwiftTypeRef::RemangleAsSwiftifiedType(
-    swift::Demangle::Demangler &Dem, swift::Demangle::NodePointer node) {
-  // DELETE THIS
-  return RemangleAsType(Dem, GetNodeForPrintingImpl(Dem, node, true));
-}
-
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
     swift::Demangle::Demangler &dem, opaque_compiler_type_t opaque_type) {
   using namespace swift::Demangle;
