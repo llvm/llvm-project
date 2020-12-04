@@ -332,6 +332,59 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
   return newFile;
 }
 
+static void addLibrary(StringRef name, bool isWeak) {
+  if (Optional<std::string> path = findLibrary(name)) {
+    auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
+    if (isWeak && dylibFile)
+      dylibFile->forceWeakImport = true;
+    return;
+  }
+  error("library not found for -l" + name);
+}
+
+static void addFramework(StringRef name, bool isWeak) {
+  if (Optional<std::string> path = findFramework(name)) {
+    auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
+    if (isWeak && dylibFile)
+      dylibFile->forceWeakImport = true;
+    return;
+  }
+  error("framework not found for -framework " + name);
+}
+
+// Parses LC_LINKER_OPTION contents, which can add additional command line flags.
+void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
+  SmallVector<const char *, 4> argv;
+  size_t offset = 0;
+  for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
+    argv.push_back(data.data() + offset);
+    offset += strlen(data.data() + offset) + 1;
+  }
+  if (argv.size() != argc || offset > data.size())
+    fatal(toString(f) + ": invalid LC_LINKER_OPTION");
+
+  MachOOptTable table;
+  unsigned missingIndex, missingCount;
+  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
+  if (missingCount)
+    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
+  for (auto *arg : args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + arg->getAsString(args));
+
+  for (auto *arg : args) {
+    switch (arg->getOption().getID()) {
+    case OPT_l:
+      addLibrary(arg->getValue(), false);
+      break;
+    case OPT_framework:
+      addFramework(arg->getValue(), false);
+      break;
+    default:
+      error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
+    }
+  }
+}
+
 static void addFileList(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
@@ -707,29 +760,13 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       addFile(arg->getValue(), true);
       break;
     case OPT_l:
-    case OPT_weak_l: {
-      StringRef name = arg->getValue();
-      if (Optional<std::string> path = findLibrary(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
-        if (opt.getID() == OPT_weak_l && dylibFile)
-          dylibFile->forceWeakImport = true;
-        break;
-      }
-      error("library not found for -l" + name);
+    case OPT_weak_l:
+      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
       break;
-    }
     case OPT_framework:
-    case OPT_weak_framework: {
-      StringRef name = arg->getValue();
-      if (Optional<std::string> path = findFramework(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
-        if (opt.getID() == OPT_weak_framework && dylibFile)
-          dylibFile->forceWeakImport = true;
-        break;
-      }
-      error("framework not found for -framework " + name);
+    case OPT_weak_framework:
+      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
       break;
-    }
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
