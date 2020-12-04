@@ -100,10 +100,6 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
         def wrapper(*args, **kwargs):
             xfail_reason = expected_fn(*args, **kwargs)
             if xfail_reason is not None:
-                if configuration.results_formatter_object is not None:
-                    # Mark this test as expected to fail.
-                    configuration.results_formatter_object.handle_event(
-                        EventBuilder.event_for_mark_test_expected_failure(self))
                 xfail_func = unittest2.expectedFailure(func)
                 xfail_func(*args, **kwargs)
             else:
