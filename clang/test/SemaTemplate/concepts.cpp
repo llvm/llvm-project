@@ -23,3 +23,31 @@ namespace PR47025 {
   static_assert(!AllAddable3<int, void>);
   static_assert(!AllAddable6<int, void>);
 }
+
+namespace PR45699 {
+  template<class> concept C = true; // expected-note 2{{here}}
+  template<class ...Ts> void f1a() requires C<Ts>; // expected-error {{requires clause contains unexpanded parameter pack 'Ts'}}
+  template<class ...Ts> requires C<Ts> void f1b(); // expected-error {{requires clause contains unexpanded parameter pack 'Ts'}}
+  template<class ...Ts> void f2a() requires (C<Ts> && ...);
+  template<class ...Ts> requires (C<Ts> && ...) void f2b();
+  template<class ...Ts> void f3a() requires C<Ts...>; // expected-error {{pack expansion used as argument for non-pack parameter of concept}}
+  template<class ...Ts> requires C<Ts...> void f3b(); // expected-error {{pack expansion used as argument for non-pack parameter of concept}}
+  template<class ...Ts> void f4() {
+    ([] () requires C<Ts> {} ()); // expected-error {{expression contains unexpanded parameter pack 'Ts'}}
+    ([]<int = 0> requires C<Ts> () {} ()); // FIXME: expected-error {{lambda requires '()' before 'requires' clause}} expected-error 0+{{}}
+  }
+  template<class ...Ts> void f5() {
+    ([] () requires C<Ts> {} (), ...);
+    ([]<int = 0> requires C<Ts> () {} (), ...); // FIXME: expected-error {{lambda requires '()' before 'requires' clause}} expected-error 0+{{}}
+  }
+  void g() {
+    f1a();
+    f1b(); // FIXME: Bad error recovery. expected-error {{undeclared identifier}}
+    f2a();
+    f2b();
+    f3a();
+    f3b(); // FIXME: Bad error recovery. expected-error {{undeclared identifier}}
+    f4();
+    f5();
+  }
+}

@@ -2687,6 +2687,7 @@ public:
                                 SkipBodyInfo *SkipBody = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
+  ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
   bool isObjCMethodDecl(Decl *D) {
     return D && isa<ObjCMethodDecl>(D);
@@ -7969,6 +7970,9 @@ public:
 
     // A requirement in a requires-expression.
     UPPC_Requirement,
+
+    // A requires-clause.
+    UPPC_RequiresClause,
   };
 
   /// Diagnose unexpanded parameter packs.
