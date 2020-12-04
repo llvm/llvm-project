@@ -12762,8 +12762,9 @@ SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
                                             const DenormalMode &Mode) const {
   // We only have VSX Vector Test for software Square Root.
   EVT VT = Op.getValueType();
-  if (VT != MVT::f64 &&
-      ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX()))
+  if (!isTypeLegal(MVT::i1) ||
+      (VT != MVT::f64 &&
+       ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX())))
     return SDValue();
 
   SDLoc DL(Op);
