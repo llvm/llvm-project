@@ -554,10 +554,9 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
             continue;
           }
 
-          const FileEntry *FE = &File->getFileEntry();
-          FileID FID = SM.translateFile(FE);
+          FileID FID = SM.translateFile(*File);
           if (FID.isInvalid())
-            FID = SM.createFileID(FE, Pos, SrcMgr::C_User);
+            FID = SM.createFileID(*File, Pos, SrcMgr::C_User);
 
           if (PH.Next(Line) && Line > 0)
             ExpectedLoc = SM.translateLineCol(FID, Line, 1);
