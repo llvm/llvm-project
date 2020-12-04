@@ -4196,6 +4196,7 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   if (!WithInit)
     CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C));
   S.CurContext->addHiddenDecl(CED);
+  Sema::TentativeAnalysisScope Trap(S);
   S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false);
   return CED;
 }
@@ -7580,6 +7581,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
+  Sema::TentativeAnalysisScope Trap(SemaRef);
   Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue=*/false);
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
