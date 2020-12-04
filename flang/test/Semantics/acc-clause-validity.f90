@@ -131,7 +131,42 @@ program openacc_clause_validity
   !$acc data
   !$acc end data
 
-  !$acc data copyin(i)
+  !$acc data copy(aa) if(.true.)
+  !$acc end data
+
+  !$acc data copy(aa) if(ifCondition)
+  !$acc end data
+
+  !$acc data copy(aa, bb, cc)
+  !$acc end data
+
+  !$acc data copyin(aa) copyin(readonly: bb) copyout(cc)
+  !$acc end data
+
+  !$acc data copyin(readonly: aa, bb) copyout(zero: cc)
+  !$acc end data
+
+  !$acc data create(aa, bb(:,:)) create(zero: cc(:,:))
+  !$acc end data
+
+  !$acc data no_create(aa) present(bb, cc)
+  !$acc end data
+
+  !$acc data deviceptr(aa) attach(bb, cc)
+  !$acc end data
+
+  !$acc data copy(aa, bb) default(none)
+  !$acc end data
+
+  !$acc data copy(aa, bb) default(present)
+  !$acc end data
+
+  !ERROR: At most one DEFAULT clause can appear on the DATA directive
+  !$acc data copy(aa, bb) default(none) default(present)
+  !$acc end data
+
+  !ERROR: At most one IF clause can appear on the DATA directive
+  !$acc data copy(aa) if(.true.) if(ifCondition)
   !$acc end data
 
   !$acc data copyin(i)
