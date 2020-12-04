@@ -5,6 +5,7 @@ add_mlir_library(MLIRIR
   Attributes.cpp
   Block.cpp
   Builders.cpp
+  BuiltinAttributes.cpp
   BuiltinDialect.cpp
   BuiltinTypes.cpp
   Diagnostics.cpp

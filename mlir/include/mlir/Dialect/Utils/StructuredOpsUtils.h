@@ -18,7 +18,7 @@
 #define MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 

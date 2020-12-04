@@ -1,4 +1,4 @@
-//===-- mlir-c/StandardAttributes.h - C API for Std Attributes-----*- C -*-===//
+//===-- mlir-c/BuiltinAttributes.h - C API for Builtin Attributes -*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header declares the C interface to MLIR Standard attributes.
+// This header declares the C interface to MLIR Builtin attributes.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_STANDARDATTRIBUTES_H
-#define MLIR_C_STANDARDATTRIBUTES_H
+#ifndef MLIR_C_BUILTINATTRIBUTES_H
+#define MLIR_C_BUILTINATTRIBUTES_H
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
@@ -45,9 +45,8 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAArray(MlirAttribute attr);
 
 /** Creates an array element containing the given list of elements in the given
  * context. */
-MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGet(MlirContext ctx,
-                                                  intptr_t numElements,
-                                                  MlirAttribute const *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGet(
+    MlirContext ctx, intptr_t numElements, MlirAttribute const *elements);
 
 /// Returns the number of elements stored in the given array attribute.
 MLIR_CAPI_EXPORTED intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr);
@@ -437,4 +436,4 @@ mlirSparseElementsAttrGetValues(MlirAttribute attr);
 }
 #endif
 
-#endif // MLIR_C_STANDARDATTRIBUTES_H
+#endif // MLIR_C_BUILTINATTRIBUTES_H

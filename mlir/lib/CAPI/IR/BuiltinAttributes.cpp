@@ -1,4 +1,4 @@
-//===- StandardAttributes.cpp - C Interface to MLIR Standard Attributes ---===//
+//===- BuiltinAttributes.cpp - C Interface to MLIR Builtin Attributes -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/StandardAttributes.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
