@@ -297,12 +297,6 @@ public:
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
 
-  /// Create a CompilerType after applying Swiftification. This is
-  /// meant to be used for a demenagle tree generated from a \p
-  /// swift::reflection::TypeRef.
-  CompilerType RemangleAsSwiftifiedType(swift::Demangle::Demangler &Dem,
-                                        swift::Demangle::NodePointer node);
-
 private:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type);
