@@ -20,13 +20,11 @@ namespace llvm {
 /// A suitably aligned and sized character array member which can hold elements
 /// of any type.
 ///
-/// These types may be arrays, structs, or any other types. This exposes a
-/// `buffer` member which can be used as suitable storage for a placement new of
-/// any of these types.
-template <typename T, typename... Ts> struct AlignedCharArrayUnion {
-  using AlignedUnion = std::aligned_union_t<1, T, Ts...>;
-  alignas(alignof(AlignedUnion)) char buffer[sizeof(AlignedUnion)];
-};
+/// These types may be arrays, structs, or any other types. Underneath is a
+/// char buffer member which can be used as suitable storage for a placement
+/// new of any of these types.
+template <typename T, typename... Ts>
+using AlignedCharArrayUnion = std::aligned_union_t<1, T, Ts...>;
 
 } // end namespace llvm
 
