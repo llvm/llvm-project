@@ -34,11 +34,11 @@ namespace PR45699 {
   template<class ...Ts> requires C<Ts...> void f3b(); // expected-error {{pack expansion used as argument for non-pack parameter of concept}}
   template<class ...Ts> void f4() {
     ([] () requires C<Ts> {} ()); // expected-error {{expression contains unexpanded parameter pack 'Ts'}}
-    ([]<int = 0> requires C<Ts> () {} ()); // FIXME: expected-error {{lambda requires '()' before 'requires' clause}} expected-error 0+{{}}
+    ([]<int = 0> requires C<Ts> () {} ()); // expected-error {{expression contains unexpanded parameter pack 'Ts'}}
   }
   template<class ...Ts> void f5() {
     ([] () requires C<Ts> {} (), ...);
-    ([]<int = 0> requires C<Ts> () {} (), ...); // FIXME: expected-error {{lambda requires '()' before 'requires' clause}} expected-error 0+{{}}
+    ([]<int = 0> requires C<Ts> () {} (), ...);
   }
   void g() {
     f1a();
@@ -50,4 +50,18 @@ namespace PR45699 {
     f4();
     f5();
   }
+}
+
+namespace P0857R0 {
+  void f() {
+    auto x = []<bool B> requires B {}; // expected-note {{constraints not satisfied}} expected-note {{false}}
+    x.operator()<true>();
+    x.operator()<false>(); // expected-error {{no matching member function}}
+  }
+
+  // FIXME: This is valid under P0857R0.
+  template<typename T> concept C = true;
+  template<template<typename T> requires C<T> typename U> struct X {}; // expected-error {{requires 'class'}} expected-error 0+{{}}
+  template<typename T> requires C<T> struct Y {};
+  X<Y> xy; // expected-error {{no template named 'X'}}
 }
