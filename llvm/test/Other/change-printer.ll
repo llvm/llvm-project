@@ -66,7 +66,7 @@ entry:
 ; CHECK-SIMPLE: *** IR Dump After InstSimplifyPass *** (function: f)
 ; CHECK-SIMPLE-NEXT: define i32 @f()
 ; CHECK-SIMPLE: *** IR Pass PassManager{{.*}} (function: f) ignored ***
-; CHECK-SIMPLE: *** IR Pass ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}> (module) ignored ***
+; CHECK-SIMPLE: *** IR Pass ModuleToFunctionPassAdaptor (module) ignored ***
 ; CHECK-SIMPLE: *** IR Dump After VerifierPass (module) omitted because no change ***
 ; CHECK-SIMPLE: *** IR Dump After PrintModulePass (module) omitted because no change ***
 ; CHECK-SIMPLE-NOT: *** IR
@@ -150,7 +150,7 @@ entry:
 ; CHECK-SIMPLE-BEFORE: *** IR Dump After InstSimplifyPass *** (function: f)
 ; CHECK-SIMPLE-BEFORE-NEXT: define i32 @f()
 ; CHECK-SIMPLE-BEFORE: *** IR Pass PassManager{{.*}} (function: f) ignored ***
-; CHECK-SIMPLE-BEFORE: *** IR Pass ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}> (module) ignored ***
+; CHECK-SIMPLE-BEFORE: *** IR Pass ModuleToFunctionPassAdaptor (module) ignored ***
 ; CHECK-SIMPLE-BEFORE: *** IR Dump After VerifierPass (module) omitted because no change ***
 ; CHECK-SIMPLE-BEFORE: *** IR Dump After PrintModulePass (module) omitted because no change ***
 ; CHECK-SIMPLE-BEFORE-NOT: *** IR
