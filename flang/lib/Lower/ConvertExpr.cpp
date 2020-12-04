@@ -29,6 +29,7 @@
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -57,6 +58,54 @@ static llvm::cl::opt<bool> generateArrayCoordinate(
     "gen-array-coor",
     llvm::cl::desc("in lowering create ArrayCoorOp instead of CoordinateOp"),
     llvm::cl::init(false));
+
+/// Convert parser's INTEGER relational operators to MLIR.  TODO: using
+/// unordered, but we may want to cons ordered in certain situation.
+static mlir::CmpIPredicate
+translateRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::CmpIPredicate::slt;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::CmpIPredicate::sle;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::CmpIPredicate::sgt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+static mlir::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::CmpFPredicate::OLT;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::CmpFPredicate::OLE;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::CmpFPredicate::OEQ;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::CmpFPredicate::UNE;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::CmpFPredicate::OGT;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}
 
 namespace {
 
@@ -91,55 +140,7 @@ public:
     auto e = genval(expr);
     if (auto *r = e.getUnboxed())
       return *r;
-    return {};
-  }
-
-  /// Convert parser's INTEGER relational operators to MLIR.  TODO: using
-  /// unordered, but we may want to cons ordered in certain situation.
-  static mlir::CmpIPredicate
-  translateRelational(Fortran::common::RelationalOperator rop) {
-    switch (rop) {
-    case Fortran::common::RelationalOperator::LT:
-      return mlir::CmpIPredicate::slt;
-    case Fortran::common::RelationalOperator::LE:
-      return mlir::CmpIPredicate::sle;
-    case Fortran::common::RelationalOperator::EQ:
-      return mlir::CmpIPredicate::eq;
-    case Fortran::common::RelationalOperator::NE:
-      return mlir::CmpIPredicate::ne;
-    case Fortran::common::RelationalOperator::GT:
-      return mlir::CmpIPredicate::sgt;
-    case Fortran::common::RelationalOperator::GE:
-      return mlir::CmpIPredicate::sge;
-    }
-    llvm_unreachable("unhandled INTEGER relational operator");
-  }
-
-  /// Convert parser's REAL relational operators to MLIR.
-  /// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
-  /// requirements in the IEEE context (table 17.1 of F2018). This choice is
-  /// also applied in other contexts because it is easier and in line with
-  /// other Fortran compilers.
-  /// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
-  /// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
-  /// whether the comparison will signal or not in case of quiet NaN argument.
-  static mlir::CmpFPredicate
-  translateFloatRelational(Fortran::common::RelationalOperator rop) {
-    switch (rop) {
-    case Fortran::common::RelationalOperator::LT:
-      return mlir::CmpFPredicate::OLT;
-    case Fortran::common::RelationalOperator::LE:
-      return mlir::CmpFPredicate::OLE;
-    case Fortran::common::RelationalOperator::EQ:
-      return mlir::CmpFPredicate::OEQ;
-    case Fortran::common::RelationalOperator::NE:
-      return mlir::CmpFPredicate::UNE;
-    case Fortran::common::RelationalOperator::GT:
-      return mlir::CmpFPredicate::OGT;
-    case Fortran::common::RelationalOperator::GE:
-      return mlir::CmpFPredicate::OGE;
-    }
-    llvm_unreachable("unhandled REAL relational operator");
+    fir::emitFatalError(getLoc(), "unboxed expression expected");
   }
 
   /// Generate an integral constant of `value`
@@ -151,7 +152,7 @@ public:
   }
 
   /// Generate a logical/boolean constant of `value`
-  mlir::Value genBoolConstant(mlir::MLIRContext *context, bool value) {
+  mlir::Value genBoolConstant(bool value) {
     return builder.createBool(getLoc(), value);
   }
 
@@ -169,26 +170,6 @@ public:
     if (auto func = builder.getNamedFunction(name))
       return func;
     return builder.createFunction(getLoc(), name, funTy);
-  }
-
-  template <Fortran::common::TypeCategory TC, int KIND>
-  mlir::FunctionType createFunctionType() {
-    if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-      auto output =
-          converter.genType(Fortran::common::TypeCategory::Integer, KIND);
-      llvm::SmallVector<mlir::Type, 2> inputs;
-      inputs.push_back(output);
-      inputs.push_back(output);
-      return mlir::FunctionType::get(inputs, output, builder.getContext());
-    } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
-      auto output = Fortran::lower::convertReal(builder.getContext(), KIND);
-      llvm::SmallVector<mlir::Type, 2> inputs;
-      inputs.push_back(output);
-      inputs.push_back(output);
-      return mlir::FunctionType::get(inputs, output, builder.getContext());
-    } else {
-      llvm_unreachable("this category is not implemented");
-    }
   }
 
   template <typename OpTy>
@@ -318,7 +299,7 @@ public:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::BOZLiteralConstant &) {
-    TODO("");
+    TODO("BOZ");
   }
   /// Return indirection to function designated in ProcedureDesignator.
   /// The type of the function indirection is not guaranteed to match the one
@@ -357,10 +338,10 @@ public:
     return builder.createNullConstant(getLoc());
   }
   fir::ExtendedValue genval(const Fortran::evaluate::StructureConstructor &) {
-    TODO("");
+    TODO("struct ctor");
   }
   fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
-    TODO("");
+    TODO("implied do index");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
@@ -372,7 +353,7 @@ public:
     default:
       TODO("descriptor inquiry other than length");
     }
-    llvm_unreachable("bad descriptor inquiry");
+    llvm_unreachable("unknown descriptor inquiry");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry &) {
@@ -387,28 +368,29 @@ public:
   template <int KIND>
   fir::ExtendedValue
   genval(const Fortran::evaluate::ComplexComponent<KIND> &part) {
-    auto lhs = genunbox(part.left());
-    assert(lhs && "unexpected array expression complex component");
-    return extractComplexPart(lhs, part.isImaginaryPart);
+    return extractComplexPart(genunbox(part.left()), part.isImaginaryPart);
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
-  fir::ExtendedValue genval(
-      const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC, KIND>> &op) {
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Integer, KIND>> &op) {
     auto input = genunbox(op.left());
-    if (!input)
-      TODO("Array expression negation");
-    if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-      // Currently no Standard/FIR op for integer negation.
-      auto zero = genIntegerConstant<KIND>(builder.getContext(), 0);
-      return builder.create<mlir::SubIOp>(getLoc(), zero, input);
-    } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
-      return builder.create<fir::NegfOp>(getLoc(), input);
-    } else {
-      static_assert(TC == Fortran::common::TypeCategory::Complex,
-                    "Expected numeric type");
-      return builder.create<fir::NegcOp>(getLoc(), input);
-    }
+    // Like LLVM, integer negation is the binary op "0 - value"
+    auto zero = genIntegerConstant<KIND>(builder.getContext(), 0);
+    return builder.create<mlir::SubIOp>(getLoc(), zero, input);
+  }
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Real, KIND>> &op) {
+    return builder.create<fir::NegfOp>(getLoc(), genunbox(op.left()));
+  }
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Complex, KIND>> &op) {
+    return builder.create<fir::NegcOp>(getLoc(), genunbox(op.left()));
   }
 
   template <typename OpTy>
@@ -453,8 +435,6 @@ public:
     auto ty = converter.genType(TC, KIND);
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    if (!lhs || !rhs)
-      TODO("Array expression power");
     return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
@@ -465,25 +445,14 @@ public:
     auto ty = converter.genType(TC, KIND);
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    if (!lhs || !rhs)
-      TODO("Array expression power");
     return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
-  }
-
-  mlir::Value createComplex(fir::KindTy kind, mlir::Value real,
-                            mlir::Value imag) {
-    return Fortran::lower::ComplexExprHelper{builder, getLoc()}.createComplex(
-        kind, real, imag);
   }
 
   template <int KIND>
   fir::ExtendedValue
   genval(const Fortran::evaluate::ComplexConstructor<KIND> &op) {
-    auto lhs = genunbox(op.left());
-    auto rhs = genunbox(op.right());
-    if (!lhs || !rhs)
-      TODO("Array expression complex ctor");
-    return createComplex(KIND, lhs, rhs);
+    return Fortran::lower::ComplexExprHelper{builder, getLoc()}.createComplex(
+        KIND, genunbox(op.left()), genunbox(op.right()));
   }
 
   template <int KIND>
@@ -495,7 +464,7 @@ public:
     if (lhsChar && rhsChar)
       return Fortran::lower::CharacterExprHelper{builder, getLoc()}
           .createConcatenate(*lhsChar, *rhsChar);
-    llvm::report_fatal_error("TODO: character array concatenate");
+    fir::emitFatalError(getLoc(), "TODO: character array concatenate");
   }
 
   /// MIN and MAX operations
@@ -505,12 +474,17 @@ public:
              &op) {
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    if (!lhs || !rhs)
-      TODO("Array expression extremum");
-    llvm::SmallVector<mlir::Value, 2> operands{lhs, rhs};
-    if (op.ordering == Fortran::evaluate::Ordering::Greater)
-      return Fortran::lower::genMax(builder, getLoc(), operands);
-    return Fortran::lower::genMin(builder, getLoc(), operands);
+    switch (op.ordering) {
+    case Fortran::evaluate::Ordering::Greater:
+      return Fortran::lower::genMax(builder, getLoc(),
+                                    llvm::ArrayRef<mlir::Value>{lhs, rhs});
+    case Fortran::evaluate::Ordering::Less:
+      return Fortran::lower::genMin(builder, getLoc(),
+                                    llvm::ArrayRef<mlir::Value>{lhs, rhs});
+    case Fortran::evaluate::Ordering::Equal:
+      TODO("");
+    }
+    llvm_unreachable("unknown ordering");
   }
 
   template <int KIND>
@@ -518,20 +492,29 @@ public:
     TODO("");
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <int KIND>
   fir::ExtendedValue
-  genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC, KIND>>
-             &op) {
-    if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-      return createCompareOp<mlir::CmpIOp>(op, translateRelational(op.opr));
-    } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
-      return createFltCmpOp<fir::CmpfOp>(op, translateFloatRelational(op.opr));
-    } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
-      return createFltCmpOp<fir::CmpcOp>(op, translateFloatRelational(op.opr));
-    } else {
-      static_assert(TC == Fortran::common::TypeCategory::Character);
-      return createCharCompare(op, translateRelational(op.opr));
-    }
+  genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Integer, KIND>> &op) {
+    return createCompareOp<mlir::CmpIOp>(op, translateRelational(op.opr));
+  }
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Real, KIND>> &op) {
+    return createFltCmpOp<fir::CmpfOp>(op, translateFloatRelational(op.opr));
+  }
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Complex, KIND>> &op) {
+    return createFltCmpOp<fir::CmpcOp>(op, translateFloatRelational(op.opr));
+  }
+  template <int KIND>
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+             Fortran::common::TypeCategory::Character, KIND>> &op) {
+    return createCharCompare(op, translateRelational(op.opr));
   }
 
   fir::ExtendedValue
@@ -546,8 +529,6 @@ public:
                                           TC2> &convert) {
     auto ty = converter.genType(TC1, KIND);
     auto operand = genunbox(convert.left());
-    if (!operand)
-      TODO("Array expression conversion");
     return builder.convertWithSemantics(getLoc(), ty, operand);
   }
 
@@ -562,11 +543,8 @@ public:
 
   template <int KIND>
   fir::ExtendedValue genval(const Fortran::evaluate::Not<KIND> &op) {
-    auto *context = builder.getContext();
     auto logical = genunbox(op.left());
-    if (!logical)
-      TODO("Array expression negation");
-    auto one = genBoolConstant(context, true);
+    auto one = genBoolConstant(true);
     auto val = builder.createConvert(getLoc(), builder.getI1Type(), logical);
     return builder.create<mlir::XOrOp>(getLoc(), val, one);
   }
@@ -577,8 +555,6 @@ public:
     auto i1Type = builder.getI1Type();
     auto slhs = genunbox(op.left());
     auto srhs = genunbox(op.right());
-    if (!slhs || !srhs)
-      TODO("Array expression logical operation");
     auto lhs = builder.createConvert(getLoc(), i1Type, slhs);
     auto rhs = builder.createConvert(getLoc(), i1Type, srhs);
     switch (op.logicalOperator) {
@@ -605,7 +581,7 @@ public:
     if constexpr (TC == Fortran::common::TypeCategory::Integer) {
       return genIntegerConstant<KIND>(builder.getContext(), value.ToInt64());
     } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-      return genBoolConstant(builder.getContext(), value.IsTrue());
+      return genBoolConstant(value.IsTrue());
     } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
       std::string str = value.DumpHexadecimal();
       if constexpr (KIND == 2) {
@@ -636,9 +612,7 @@ public:
               Fortran::evaluate::Constant<TR>{value.REAL()}},
           Fortran::evaluate::Expr<TR>{
               Fortran::evaluate::Constant<TR>{value.AIMAG()}});
-      auto cplx = genunbox(ctor);
-      assert(cplx && "boxed value not handled");
-      return cplx;
+      return genunbox(ctor);
     } else /*constexpr*/ {
       llvm_unreachable("unhandled constant");
     }
@@ -704,18 +678,6 @@ public:
                                               global.getSymbol());
     return fir::CharBoxValue{addr, lenp};
   }
-  /// Helper to call the correct scalar conversion based on category.
-  template <Fortran::common::TypeCategory TC, int KIND>
-  fir::ExtendedValue genScalarLit(
-      const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value,
-      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
-          &con) {
-    if constexpr (TC == Fortran::common::TypeCategory::Character) {
-      return genScalarLit<KIND>(value, con.LEN());
-    } else /*constexpr*/ {
-      return genScalarLit<TC, KIND>(value);
-    }
-  }
 
   template <Fortran::common::TypeCategory TC, int KIND>
   fir::ExtendedValue genArrayLit(
@@ -736,9 +698,8 @@ public:
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
       do {
-        auto charVal = fir::getBase(
-            genScalarLit<Fortran::common::TypeCategory::Character, KIND>(
-                con.At(subscripts), con));
+        auto charVal =
+            fir::getBase(genScalarLit<KIND>(con.At(subscripts), con.LEN()));
         llvm::SmallVector<mlir::Value, 8> idx;
         for (auto [dim, lb] : llvm::zip(subscripts, con.lbounds()))
           idx.push_back(
@@ -764,7 +725,7 @@ public:
 
       do {
         auto constant =
-            fir::getBase(genScalarLit<TC, KIND>(con.At(subscripts), con));
+            fir::getBase(genScalarLit<TC, KIND>(con.At(subscripts)));
         auto createIndexes = [&](Fortran::evaluate::ConstantSubscripts subs) {
           llvm::SmallVector<mlir::Value, 8> idx;
           for (auto [dim, lb] : llvm::zip(subs, con.lbounds()))
@@ -835,17 +796,16 @@ public:
   fir::ExtendedValue
   genval(const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
              &con) {
-    // TODO:
-    // - derived type constant
-    //   ?? derived type cannot match the above template, can it? looks like it
-    //   would have to be Constant<SomeType<TC::Derived>> instead
     if (con.Rank() > 0)
       return genArrayLit(con);
     auto opt = con.GetScalarValue();
     assert(opt.has_value() && "constant has no value");
-    return genScalarLit<TC, KIND>(opt.value(), con);
+    if constexpr (TC == Fortran::common::TypeCategory::Character) {
+      return genScalarLit<KIND>(opt.value(), con.LEN());
+    } else {
+      return genScalarLit<TC, KIND>(opt.value());
+    }
   }
-
   template <Fortran::common::TypeCategory TC>
   fir::ExtendedValue genval(
       const Fortran::evaluate::Constant<Fortran::evaluate::SomeKind<TC>> &con) {
@@ -856,20 +816,32 @@ public:
       auto res = builder.create<mlir::ConstantOp>(getLoc(), type, attr);
       return res.getResult();
     } else {
-      llvm_unreachable("unhandled constant of unknown kind");
+      fir::emitFatalError(getLoc(), "unhandled constant of unknown kind");
     }
   }
 
   template <typename A>
   fir::ExtendedValue genval(const Fortran::evaluate::ArrayConstructor<A> &) {
-    TODO("");
+    fir::emitFatalError(getLoc(), "array constructor has no rank");
   }
 
-  fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &) {
-    TODO("complex part");
+  fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &x) {
+    auto loc = getLoc();
+    auto idxTy = builder.getIndexType();
+    auto exv = gen(x.complex());
+    auto base = fir::getBase(exv);
+    Fortran::lower::ComplexExprHelper helper{builder, loc};
+    auto eleTy =
+        helper.getComplexPartType(fir::dyn_cast_ptrEleTy(base.getType()));
+    auto offset = builder.createIntegerConstant(
+        loc, idxTy,
+        x.part() == Fortran::evaluate::ComplexPart::Part::RE ? 0 : 1);
+    mlir::Value result = builder.create<fir::CoordinateOp>(
+        loc, builder.getRefType(eleTy), base, mlir::ValueRange{offset});
+    return {result};
   }
-  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &) {
-    TODO("complex part");
+  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &x) {
+    return genLoad(gen(x));
   }
 
   /// Reference to a substring.
@@ -884,11 +856,9 @@ public:
         s.parent());
     llvm::SmallVector<mlir::Value, 2> bounds;
     auto lower = genunbox(s.lower());
-    assert(lower && "boxed value not handled");
     bounds.push_back(lower);
     if (auto upperBound = s.upper()) {
       auto upper = genunbox(*upperBound);
-      assert(upper && "boxed value not handled");
       bounds.push_back(upper);
     }
     Fortran::lower::CharacterExprHelper charHelper{builder, getLoc()};
@@ -901,7 +871,7 @@ public:
           TODO("array substring lowering");
         },
         [&](const auto &) -> fir::ExtendedValue {
-          llvm::report_fatal_error("substring base is not a CharBox");
+          fir::emitFatalError(getLoc(), "substring base is not a CharBox");
         });
   }
 
@@ -919,8 +889,6 @@ public:
     mlir::Value upper;
     if (auto up = trip.upper())
       upper = genunbox(*up);
-    if (!upper || !lower)
-      llvm::report_fatal_error("triplet not lowered to unboxed values");
     return {lower, upper, genunbox(trip.stride())};
   }
 
@@ -971,7 +939,6 @@ public:
     auto *base = reverseComponents(cmpt, list);
     llvm::SmallVector<mlir::Value, 2> coorArgs;
     auto obj = genunbox(*base);
-    assert(obj && "boxed value not handled");
     auto *sym = &cmpt.GetFirstSymbol();
     auto ty = converter.genType(*sym);
     for (auto *field : list) {
@@ -987,10 +954,7 @@ public:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::Component &cmpt) {
-    auto c = gen(cmpt);
-    if (auto *val = c.getUnboxed())
-      return genLoad(*val);
-    TODO("");
+    return genLoad(gen(cmpt));
   }
 
   // Determine the result type after removing `dims` dimensions from the array
@@ -1026,11 +990,8 @@ public:
   genArrayRefComponent(const Fortran::evaluate::ArrayRef &aref) {
     auto base = fir::getBase(gen(aref.base().GetComponent()));
     llvm::SmallVector<mlir::Value, 8> args;
-    for (auto &subsc : aref.subscript()) {
-      auto sv = genunbox(subsc);
-      assert(sv && "boxed value not handled");
-      args.push_back(sv);
-    }
+    for (auto &subsc : aref.subscript())
+      args.push_back(genunbox(subsc));
     auto ty = genSubType(base.getType(), args.size());
     ty = builder.getRefType(ty);
     return builder.create<fir::CoordinateOp>(getLoc(), ty, base, args);
@@ -1054,8 +1015,8 @@ public:
     auto refTy = builder.getRefType(eleTy);
     auto base = builder.createConvert(loc, seqTy, addr);
     auto idxTy = builder.getIndexType();
-    auto one = builder.createIntegerConstant(getLoc(), idxTy, 1);
-    auto zero = builder.createIntegerConstant(getLoc(), idxTy, 0);
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
     auto getLB = [&](const auto &arr, unsigned dim) -> mlir::Value {
       return arr.getLBounds().empty() ? one : arr.getLBounds()[dim];
     };
@@ -1092,7 +1053,8 @@ public:
             -> fir::ExtendedValue {
           // FIXME: this check can be removed when slicing is implemented
           if (isSlice(aref))
-            llvm::report_fatal_error(
+            fir::emitFatalError(
+                getLoc(),
                 "slice should be handled in array expression context");
           return genFullDim(arr, one);
         },
@@ -1793,7 +1755,8 @@ public:
   template <typename A, typename = std::enable_if_t<Fortran::common::HasMember<
                             A, Fortran::evaluate::TypelessExpression>>>
   CC genarr(const A &x) {
-    // FIXME: replace this with a report_fatal_error if no longer called
+    // Ev::ProcedureDesignator and Ev::ProcedureRef may yield a non-zero rank,
+    // but treat them as scalar values.
     auto result = asScalar(x);
     return [=](IterSpace) { return result; };
   }
@@ -1809,61 +1772,67 @@ public:
   CC genarr(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>,
                                              TC2> &x) {
     assert(isArray(x));
-    auto f = genarr(x.left());
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
-      auto val = f(iters);
+      auto val = fir::getBase(lf(iters));
       auto ty = converter.genType(TC1, KIND);
-      return builder.createConvert(getLoc(), ty, fir::getBase(val));
+      return builder.createConvert(loc, ty, val);
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::ComplexComponent<KIND> &x) {
-    auto f = genarr(x.left());
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
+    auto isImagPart = x.isImaginaryPart;
     return [=](IterSpace iters) -> ExtValue {
-      auto val = f(iters);
-      return mlir::Value{}; /* FIXME */
+      auto lhs = fir::getBase(lf(iters));
+      return Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
+          lhs, isImagPart);
     };
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
       const Fortran::evaluate::Parentheses<Fortran::evaluate::Type<TC, KIND>>
           &x) {
+    auto loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
       auto val = f(iters);
       auto base = fir::getBase(val);
       auto newBase =
-          builder.create<fir::NoReassocOp>(getLoc(), base.getType(), base);
+          builder.create<fir::NoReassocOp>(loc, base.getType(), base);
       return fir::substBase(val, newBase);
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Integer, KIND>> &x) {
+    auto loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
       auto val = fir::getBase(f(iters));
       auto ty = converter.genType(Fortran::common::TypeCategory::Integer, KIND);
-      auto zero = builder.createIntegerConstant(getLoc(), ty, 0);
-      return builder.create<mlir::SubIOp>(getLoc(), zero, val);
+      auto zero = builder.createIntegerConstant(loc, ty, 0);
+      return builder.create<mlir::SubIOp>(loc, zero, val);
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Real, KIND>> &x) {
+    auto loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
-      auto val = fir::getBase(f(iters));
-      return builder.create<fir::NegfOp>(getLoc(), val);
+      return builder.create<fir::NegfOp>(loc, fir::getBase(f(iters)));
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Complex, KIND>> &x) {
+    auto loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
-      auto val = fir::getBase(f(iters));
-      return builder.create<fir::NegcOp>(getLoc(), val);
+      return builder.create<fir::NegcOp>(loc, fir::getBase(f(iters)));
     };
   }
 
@@ -1873,12 +1842,13 @@ public:
 
   template <typename OP, typename A>
   CC createBinaryOp(const A &evEx) {
+    auto loc = getLoc();
     auto lf = genarr(evEx.left());
     auto rf = genarr(evEx.right());
     return [=](IterSpace iters) -> ExtValue {
       auto left = fir::getBase(lf(iters));
       auto right = fir::getBase(rf(iters));
-      return builder.create<OP>(getLoc(), left, right);
+      return builder.create<OP>(loc, left, right);
     };
   }
 
@@ -1906,29 +1876,66 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
       const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+    auto loc = getLoc();
+    auto ty = converter.genType(TC, KIND);
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = fir::getBase(lf(iters));
+      auto rhs = fir::getBase(rf(iters));
+      return Fortran::lower::genPow(builder, loc, ty, lhs, rhs);
     };
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
       const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
-    };
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    switch (x.ordering) {
+    case Fortran::evaluate::Ordering::Greater:
+      return [=](IterSpace iters) -> ExtValue {
+        auto lhs = fir::getBase(lf(iters));
+        auto rhs = fir::getBase(rf(iters));
+        return Fortran::lower::genMax(builder, loc,
+                                      llvm::ArrayRef<mlir::Value>{lhs, rhs});
+      };
+    case Fortran::evaluate::Ordering::Less:
+      return [=](IterSpace iters) -> ExtValue {
+        auto lhs = fir::getBase(lf(iters));
+        auto rhs = fir::getBase(rf(iters));
+        return Fortran::lower::genMin(builder, loc,
+                                      llvm::ArrayRef<mlir::Value>{lhs, rhs});
+      };
+    case Fortran::evaluate::Ordering::Equal:
+      TODO("");
+    }
+    llvm_unreachable("unknown ordering");
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
       const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
           &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+    auto loc = getLoc();
+    auto ty = converter.genType(TC, KIND);
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) {
+      auto lhs = fir::getBase(lf(iters));
+      auto rhs = fir::getBase(rf(iters));
+      return Fortran::lower::genPow(builder, loc, ty, lhs, rhs);
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::ComplexConstructor<KIND> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = fir::getBase(lf(iters));
+      auto rhs = fir::getBase(rf(iters));
+      return Fortran::lower::ComplexExprHelper{builder, loc}.createComplex(
+          KIND, lhs, rhs);
     };
   }
   template <int KIND>
@@ -1944,20 +1951,21 @@ public:
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
     return [](IterSpace iters) -> ExtValue {
+      TODO("constant");
       return mlir::Value{}; /* FIXME */
     };
   }
   CC genarr(const Fortran::evaluate::ArrayRef &arr) {
     return [](IterSpace iters) -> ExtValue {
       TODO("array ref");
-      return mlir::Value{};
+      return mlir::Value{}; /* FIXME */
     };
   }
   CC genarr(const Fortran::semantics::SymbolRef &sym) {
+    auto loc = getLoc();
     auto extMemref = asScalarRef(sym);
     auto memref = fir::getBase(extMemref);
     auto arrTy = fir::dyn_cast_ptrEleTy(memref.getType());
-    auto loc = getLoc();
     assert(arrTy.isa<fir::SequenceType>());
     auto shape = builder.createShape(loc, extMemref);
     mlir::Value slice; // not sliced
@@ -1971,10 +1979,19 @@ public:
                                                iters.iterVec());
     };
   }
-  CC genarr(const Fortran::evaluate::Component &) { TODO("component"); }
+  CC genarr(const Fortran::evaluate::Component &) {
+    // Generate an array slice. Each step of the slice is 1 derived type
+    // size. An initial offset corresponding to the component is required. Each
+    // element of the slice array has component type.
+    TODO("component");
+  }
   CC genarr(const Fortran::evaluate::CoarrayRef &) { TODO("coarray ref"); }
   CC genarr(const Fortran::evaluate::Substring &) { TODO("substring"); }
-  CC genarr(const Fortran::evaluate::ComplexPart &) { TODO("complex part"); }
+  CC genarr(const Fortran::evaluate::ComplexPart &) {
+    // Generate an array slice. Treat the array of complex as an array of real
+    // and return every other element. Need an initial offset.
+    TODO("complex part");
+  }
   template <typename A>
   CC genarr(const Fortran::evaluate::Designator<A> &des) {
     return std::visit([&](const auto &x) { return genarr(x); }, des.u);
@@ -1982,12 +1999,14 @@ public:
   template <typename A>
   CC genarr(const Fortran::evaluate::FunctionRef<A> &x) {
     return [](IterSpace iters) -> ExtValue {
+      TODO("function ref");
       return mlir::Value{}; /* FIXME */
     };
   }
   template <typename A>
   CC genarr(const Fortran::evaluate::ArrayConstructor<A> &x) {
     return [](IterSpace iters) -> ExtValue {
+      TODO("array ctor");
       return mlir::Value{}; /* FIXME */
     };
   }
@@ -2007,23 +2026,117 @@ public:
     TODO("structure constructor");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
+
+  //===--------------------------------------------------------------------===//
+  // LOCICAL operators (.NOT., .AND., .EQV., etc.)
+  //===--------------------------------------------------------------------===//
+
   template <int KIND>
   CC genarr(const Fortran::evaluate::Not<KIND> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+    auto loc = getLoc();
+    auto i1Ty = builder.getI1Type();
+    auto lf = genarr(x.left());
+    auto truth = builder.createBool(loc, true);
+    return [=](IterSpace iters) -> ExtValue {
+      auto logical = fir::getBase(lf(iters));
+      auto val = builder.createConvert(loc, i1Ty, logical);
+      return builder.create<mlir::XOrOp>(loc, val, truth);
+    };
+  }
+  template <typename OP, typename A>
+  CC createBinaryBoolOp(const A &x) {
+    auto loc = getLoc();
+    auto i1Ty = builder.getI1Type();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto left = fir::getBase(lf(iters));
+      auto right = fir::getBase(rf(iters));
+      auto lhs = builder.createConvert(loc, i1Ty, left);
+      auto rhs = builder.createConvert(loc, i1Ty, right);
+      return builder.create<OP>(loc, lhs, rhs);
+    };
+  }
+  template <typename OP, typename A>
+  CC createCompareBoolOp(mlir::CmpIPredicate pred, const A &x) {
+    auto loc = getLoc();
+    auto i1Ty = builder.getI1Type();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto left = fir::getBase(lf(iters));
+      auto right = fir::getBase(rf(iters));
+      auto lhs = builder.createConvert(loc, i1Ty, left);
+      auto rhs = builder.createConvert(loc, i1Ty, right);
+      return builder.create<OP>(loc, pred, lhs, rhs);
     };
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::LogicalOperation<KIND> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+    switch (x.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return createBinaryBoolOp<mlir::AndOp>(x);
+    case Fortran::evaluate::LogicalOperator::Or:
+      return createBinaryBoolOp<mlir::OrOp>(x);
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return createCompareBoolOp<mlir::CmpIOp>(mlir::CmpIPredicate::eq, x);
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return createCompareBoolOp<mlir::CmpIOp>(mlir::CmpIPredicate::ne, x);
+    case Fortran::evaluate::LogicalOperator::Not:
+      llvm_unreachable(".NOT. handled elsewhere");
+    }
+    llvm_unreachable("unhandled case");
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Relational operators (<, <=, ==, etc.)
+  //===--------------------------------------------------------------------===//
+
+  template <typename OP, typename PRED, typename A>
+  CC createCompareOp(PRED pred, const A &x) {
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = fir::getBase(lf(iters));
+      auto rhs = fir::getBase(rf(iters));
+      return builder.create<OP>(loc, pred, lhs, rhs);
     };
   }
-  CC genarr(
-      const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x) {
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
+  template <typename A>
+  CC createCompareCharOp(mlir::CmpIPredicate pred, const A &x) {
+    auto loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = fir::getBase(lf(iters));
+      auto rhs = fir::getBase(rf(iters));
+      return Fortran::lower::genCharCompare(converter, loc, pred, lhs, rhs);
     };
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Integer, KIND>> &x) {
+    return createCompareOp<mlir::CmpIOp>(translateRelational(x.opr), x);
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Character, KIND>> &x) {
+    return createCompareCharOp(translateRelational(x.opr), x);
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Real, KIND>> &x) {
+    return createCompareOp<fir::CmpfOp>(translateFloatRelational(x.opr), x);
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Complex, KIND>> &x) {
+    return createCompareOp<fir::CmpcOp>(translateFloatRelational(x.opr), x);
+  }
+  CC genarr(
+      const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &r) {
+    return std::visit([&](const auto &x) { return genarr(x); }, r.u);
   }
 
 private:
