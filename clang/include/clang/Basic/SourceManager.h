@@ -1033,6 +1033,13 @@ public:
     return nullptr;
   }
 
+  /// Returns the FileEntryRef for the provided FileID.
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+    if (auto *Entry = getFileEntryForID(FID))
+      return Entry->getLastRef();
+    return None;
+  }
+
   /// Returns the filename for the provided FileID, unless it's a built-in
   /// buffer that's not represented by a filename.
   ///
