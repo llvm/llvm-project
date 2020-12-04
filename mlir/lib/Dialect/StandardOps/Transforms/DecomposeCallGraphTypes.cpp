@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/StandardOps/Transforms/DecomposeCallGraphTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 
 using namespace mlir;
 
