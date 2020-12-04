@@ -675,7 +675,7 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; Volatile tests.
 ;
 
-@l = external global <32 x i8>, align 32
+@l = external dso_local global <32 x i8>, align 32
 
 define <2 x i8> @PR42846(<2 x i8>* %j, <2 x i8> %k) {
 ; AVX-LABEL: PR42846:

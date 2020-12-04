@@ -36,7 +36,7 @@ entry:
 ; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
-@global_fp = external global void (i32)*
+@global_fp = external dso_local global void (i32)*
 
 ; Test an indirect call through a global variable.
 define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {

@@ -5,7 +5,7 @@
 ; The register-pressure scheduler should be able to schedule this in a
 ; way that does not require spills.
 
-@X = external global i64		; <i64*> [#uses=25]
+@X = external dso_local global i64		; <i64*> [#uses=25]
 
 define fastcc i64 @foo() nounwind {
 ; CHECK-LABEL: foo:

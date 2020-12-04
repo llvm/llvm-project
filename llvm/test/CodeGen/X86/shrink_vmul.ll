@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefixes=X64-AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X64-AVX,X64-AVX2
 
-@c = external global i32*, align 8
+@c = external dso_local global i32*, align 8
 
 ; %val1 = load <2 x i8>
 ; %op1 = zext<2 x i32> %val1

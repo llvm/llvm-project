@@ -543,7 +543,7 @@ entry:
 
 ; Tests to make sure we can select an appropriate addressing mode for a global.
 
-@foo = external global [64 x i8]
+@foo = external dso_local global [64 x i8]
 
 define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, <2 x i64>* %out) {
 ; X64-LABEL: test_mm_aesenc256kl_u8_global:

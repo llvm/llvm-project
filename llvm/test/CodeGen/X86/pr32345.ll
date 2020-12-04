@@ -4,8 +4,8 @@
 ; RUN: llc -fast-isel-sink-local-values     -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s -check-prefix=X64
 ; RUN: llc -fast-isel-sink-local-values     -mtriple=i686-unknown             -o - %s | FileCheck %s -check-prefix=686
 
-@var_22 = external global i16, align 2
-@var_27 = external global i16, align 2
+@var_22 = external dso_local global i16, align 2
+@var_27 = external dso_local global i16, align 2
 
 define void @foo() {
 ; X640-LABEL: foo:
