@@ -313,30 +313,6 @@ private:
 /// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  /// Hook for derived classes to implement rewriting. `op` is the (first)
-  /// operation matched by the pattern, `operands` is a list of the rewritten
-  /// operand values that are passed to `op`, `rewriter` can be used to emit the
-  /// new operations. This function should not fail. If some specific cases of
-  /// the operation are not supported, these cases should not be matched.
-  virtual void rewrite(Operation *op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("unimplemented rewrite");
-  }
-
-  /// Hook for derived classes to implement combined matching and rewriting.
-  virtual LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, operands, rewriter);
-    return success();
-  }
-
-  /// Attempt to match and rewrite the IR root at the specified operation.
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const final;
-
   /// Return the type converter held by this pattern, or nullptr if the pattern
   /// does not require type conversion.
   TypeConverter *getTypeConverter() const { return typeConverter; }
@@ -360,19 +336,46 @@ protected:
                     MatchAnyOpTypeTag tag)
       : RewritePattern(benefit, tag), typeConverter(&typeConverter) {}
 
+private:
+  /// Hook for derived classes to implement rewriting. `op` is the (first)
+  /// operation matched by the pattern, `operands` is a list of the rewritten
+  /// operand values that are passed to `op`, `rewriter` can be used to emit the
+  /// new operations. This function should not fail. If some specific cases of
+  /// the operation are not supported, these cases should not be matched.
+  virtual void rewrite(Operation *op, ArrayRef<Value> operands,
+                       ConversionPatternRewriter &rewriter) const {
+    llvm_unreachable("unimplemented rewrite");
+  }
+
+  void rewrite(Operation *op, PatternRewriter &rewriter) const final {
+    llvm_unreachable("never called");
+  }
+
+  /// Hook for derived classes to implement combined matching and rewriting.
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    if (failed(match(op)))
+      return failure();
+    rewrite(op, operands, rewriter);
+    return success();
+  }
+
+  /// Attempt to match and rewrite the IR root at the specified operation.
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const final;
+
 protected:
   /// An optional type converter for use by this pattern.
   TypeConverter *typeConverter = nullptr;
-
-private:
-  using RewritePattern::rewrite;
 };
 
 /// OpConversionPattern is a wrapper around ConversionPattern that allows for
 /// matching and rewriting against an instance of a derived operation class as
 /// opposed to a raw Operation.
 template <typename SourceOp>
-struct OpConversionPattern : public ConversionPattern {
+class OpConversionPattern : public ConversionPattern {
+public:
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
   OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
@@ -380,6 +383,7 @@ struct OpConversionPattern : public ConversionPattern {
       : ConversionPattern(SourceOp::getOperationName(), benefit, typeConverter,
                           context) {}
 
+private:
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
   void rewrite(Operation *op, ArrayRef<Value> operands,
@@ -409,9 +413,6 @@ struct OpConversionPattern : public ConversionPattern {
     rewrite(op, operands, rewriter);
     return success();
   }
-
-private:
-  using ConversionPattern::matchAndRewrite;
 };
 
 /// Add a pattern to the given pattern list to convert the signature of a FuncOp

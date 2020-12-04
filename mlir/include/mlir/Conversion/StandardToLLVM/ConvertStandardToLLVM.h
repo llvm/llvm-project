@@ -571,11 +571,9 @@ public:
                              &typeConverter.getContext(), typeConverter,
                              benefit) {}
 
-  /// Wrappers around the RewritePattern methods that pass the derived op type.
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), operands, rewriter);
-  }
+private:
+  /// Wrappers around the ConversionPattern methods that pass the derived op
+  /// type.
   LogicalResult match(Operation *op) const final {
     return match(cast<SourceOp>(op));
   }
@@ -583,6 +581,10 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+  void rewrite(Operation *op, ArrayRef<Value> operands,
+               ConversionPatternRewriter &rewriter) const final {
+    rewrite(cast<SourceOp>(op), operands, rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
@@ -603,10 +605,6 @@ public:
     }
     return failure();
   }
-
-private:
-  using ConvertToLLVMPattern::match;
-  using ConvertToLLVMPattern::matchAndRewrite;
 };
 
 namespace LLVM {
@@ -636,6 +634,7 @@ public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
   using Super = OneToOneConvertToLLVMPattern<SourceOp, TargetOp>;
 
+private:
   /// Converts the type of the result to an LLVM type, pass operands as is,
   /// preserve attributes.
   LogicalResult
@@ -655,6 +654,7 @@ public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
 
+private:
   LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
