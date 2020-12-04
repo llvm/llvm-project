@@ -43,12 +43,12 @@ static const Target *getTarget(const ObjectFile *Obj) {
 }
 
 template <class ELFT>
-static uint64_t getELFImageLMAForSec(const ELFFile<ELFT> *Obj,
+static uint64_t getELFImageLMAForSec(const ELFFile<ELFT> &Obj,
                                      const object::ELFSectionRef &Sec,
                                      StringRef FileName) {
   // Search for a PT_LOAD segment containing the requested section. Return this
   // segment's p_addr as the image load address for the section.
-  const auto &PhdrRange = unwrapOrError(Obj->program_headers(), FileName);
+  const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
   for (const typename ELFT::Phdr &Phdr : PhdrRange)
     if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_vaddr <= Sec.getAddress()) &&
         (Phdr.p_vaddr + Phdr.p_memsz > Sec.getAddress()))
