@@ -113,6 +113,8 @@ public:
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
+  bool GetEnableInstrumentationRuntimes() const;
+  void SetEnableInstrumentationRuntimes(bool enable);
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties

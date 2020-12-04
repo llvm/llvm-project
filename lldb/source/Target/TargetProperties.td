@@ -302,6 +302,10 @@ let Definition = "process" in {
   def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
     DefaultTrue,
     Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
+  def EnableInstrumentationRuntimes: Property<"enable-instrumentation-runtimes", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"If true, lldb will provide access to the report information on errors caught by the instrumentation (e.g.: ASan).">;
 }
 
 let Definition = "platform" in {

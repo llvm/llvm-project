@@ -321,6 +321,17 @@ bool ProcessProperties::GetStopOnExec() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+bool ProcessProperties::GetEnableInstrumentationRuntimes() const {
+  const uint32_t idx = ePropertyEnableInstrumentationRuntimes;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+void ProcessProperties::SetEnableInstrumentationRuntimes(bool enable) {
+  const uint32_t idx = ePropertyEnableInstrumentationRuntimes;
+  SetPropertyAtIndex(idx, enable);
+}
+
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = GetPropertyAtIndexAs<uint64_t>(
@@ -6047,10 +6058,12 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
 
   // Give the instrumentation runtimes a chance to be created before informing
   // them of the modified modules.
-  InstrumentationRuntime::ModulesDidLoad(module_list, this,
-                                         m_instrumentation_runtimes);
-  for (auto &runtime : m_instrumentation_runtimes)
-    runtime.second->ModulesDidLoad(module_list);
+  if (GetEnableInstrumentationRuntimes()) {
+    InstrumentationRuntime::ModulesDidLoad(module_list, this,
+                                           m_instrumentation_runtimes);
+    for (auto &runtime : m_instrumentation_runtimes)
+      runtime.second->ModulesDidLoad(module_list);
+  }
 
   // Give the language runtimes a chance to be created before informing them of
   // the modified modules.
