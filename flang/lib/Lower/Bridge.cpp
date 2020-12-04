@@ -1910,9 +1910,10 @@ private:
     auto store = storeMap.find(aliasOffset)->second;
     auto i8Ty = builder->getIntegerType(8);
     auto i8Ptr = builder->getRefType(i8Ty);
-    llvm::SmallVector<mlir::Value, 1> offs{
-        builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset)};
-    auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, store, offs);
+    auto offset =
+        builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset);
+    auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, store,
+                                                  mlir::ValueRange{offset});
     auto preAlloc =
         builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
     Fortran::lower::StatementContext stmtCtx;
@@ -2650,9 +2651,10 @@ private:
     auto i8Ptr = builder->getRefType(i8Ty);
     auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
     auto base = builder->createConvert(loc, seqTy, commonAddr);
-    llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
-        loc, builder->getIndexType(), byteOffset)};
-    auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+    auto offs = builder->createIntegerConstant(loc, builder->getIndexType(),
+                                               byteOffset);
+    auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base,
+                                                      mlir::ValueRange{offs});
     auto localTy = builder->getRefType(genType(var.getSymbol()));
     mlir::Value local = builder->createConvert(loc, localTy, varAddr);
     Fortran::lower::StatementContext stmtCtx;
