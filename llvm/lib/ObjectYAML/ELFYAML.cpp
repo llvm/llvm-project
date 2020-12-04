@@ -1086,7 +1086,7 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Name", Symbol.Name, StringRef());
   IO.mapOptional("StName", Symbol.StName);
   IO.mapOptional("Type", Symbol.Type, ELFYAML::ELF_STT(0));
-  IO.mapOptional("Section", Symbol.Section, StringRef());
+  IO.mapOptional("Section", Symbol.Section);
   IO.mapOptional("Index", Symbol.Index);
   IO.mapOptional("Binding", Symbol.Binding, ELFYAML::ELF_STB(0));
   IO.mapOptional("Value", Symbol.Value, Hex64(0));
@@ -1104,7 +1104,7 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
 
 std::string MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
                                                      ELFYAML::Symbol &Symbol) {
-  if (Symbol.Index && Symbol.Section.data())
+  if (Symbol.Index && Symbol.Section)
     return "Index and Section cannot both be specified for Symbol";
   return "";
 }
