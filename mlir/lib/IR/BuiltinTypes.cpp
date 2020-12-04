@@ -14,6 +14,7 @@
 #include "mlir/IR/Dialect.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Twine.h"
 
 using namespace mlir;

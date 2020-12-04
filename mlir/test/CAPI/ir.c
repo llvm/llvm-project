@@ -13,10 +13,10 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Registration.h"
-#include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardDialect.h"
 
 #include <assert.h>
@@ -739,7 +739,7 @@ bool stringIsEqual(const char *lhs, MlirStringRef rhs) {
   return !strncmp(lhs, rhs.data, rhs.length);
 }
 
-int printStandardAttributes(MlirContext ctx) {
+int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute floating =
       mlirFloatAttrDoubleGet(ctx, mlirF64TypeGet(ctx), 2.0);
   if (!mlirAttributeIsAFloat(floating) ||
@@ -1334,7 +1334,7 @@ int main() {
 
   if (printBuiltinTypes(ctx))
     return 2;
-  if (printStandardAttributes(ctx))
+  if (printBuiltinAttributes(ctx))
     return 3;
   if (printAffineMap(ctx))
     return 4;
