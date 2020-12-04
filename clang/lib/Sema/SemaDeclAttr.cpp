@@ -5724,7 +5724,7 @@ validateSwiftFunctionName(StringRef Name,
 /// \returns true if the name is a valid swift name for \p D, false otherwise.
 bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
                              SourceLocation ArgLoc,
-                             const IdentifierInfo *AttrName) {
+                             const IdentifierInfo *AttrName, bool IsAsync) {
   if (isa<ObjCMethodDecl>(D) || isa<FunctionDecl>(D)) {
     ArrayRef<ParmVarDecl*> Params;
     unsigned ParamCount;
@@ -5742,6 +5742,16 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
           << AttrName;
         return false;
       }
+    }
+
+    // The async name drops the last callback parameter.
+    if (IsAsync) {
+      if (ParamCount == 0) {
+        Diag(Loc, diag::warn_attr_swift_name_decl_missing_params)
+            << AL << isa<ObjCMethodDecl>(D);
+        return false;
+      }
+      ParamCount -= 1;
     }
 
     unsigned SwiftParamCount;
@@ -5779,10 +5789,10 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
       return false;
     }
 
-  } else if (isa<EnumConstantDecl>(D) || isa<ObjCProtocolDecl>(D) ||
+  } else if ((isa<EnumConstantDecl>(D) || isa<ObjCProtocolDecl>(D) ||
              isa<ObjCInterfaceDecl>(D) || isa<ObjCPropertyDecl>(D) ||
              isa<VarDecl>(D) || isa<TypedefNameDecl>(D) || isa<TagDecl>(D) ||
-             isa<IndirectFieldDecl>(D) || isa<FieldDecl>(D)) {
+             isa<IndirectFieldDecl>(D) || isa<FieldDecl>(D)) && !IsAsync) {
     StringRef ContextName, BaseName;
     std::tie(ContextName, BaseName) = Name.split('.');
     if (BaseName.empty()) {
@@ -5813,10 +5823,23 @@ static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
     return;
 
-  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getAttrName()))
+  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getAttrName(),
+                           /*IsAsync=*/false))
     return;
 
   D->addAttr(::new (S.Context) SwiftNameAttr(S.Context, Attr, Name));
+}
+
+static void handleSwiftAsyncName(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Name;
+  SourceLocation Loc;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Name, &Loc))
+    return;
+
+  if (!S.DiagnoseSwiftName(D, Name, Loc, AL, /*IsAsync=*/true))
+    return;
+
+  D->addAttr(::new (S.Context) SwiftAsyncNameAttr(S.Context, AL, Name));
 }
 
 static bool isErrorParameter(Sema &S, QualType paramType) {
@@ -7887,6 +7910,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   // Swift attributes.
+  case ParsedAttr::AT_SwiftAsyncName:
+    handleSwiftAsyncName(S, D, AL);
+    break;
   case ParsedAttr::AT_SwiftAttr:
     handleSwiftAttrAttr(S, D, AL);
     break;
