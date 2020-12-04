@@ -108,7 +108,7 @@ TEST_FUNC(builder_dynamic_for_func_args) {
   // CHECK-DAG:    [[ri4:%[0-9]+]] = muli {{.*}}, {{.*}} : i32
   //     CHECK:    {{.*}} = subi [[ri3]], [[ri4]] : i32
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -130,7 +130,7 @@ TEST_FUNC(builder_dynamic_for) {
   // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
   // CHECK-NEXT:   affine.for %{{.*}} = affine_map<(d0) -> (d0)>([[r0]]) to affine_map<(d0) -> (d0)>([[r1]]) step 2 {
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -152,7 +152,7 @@ TEST_FUNC(builder_loop_for) {
   // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
   // CHECK-NEXT:   scf.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} {
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -173,7 +173,7 @@ TEST_FUNC(builder_max_min_for) {
   // CHECK:  affine.for %{{.*}} = max affine_map<(d0, d1) -> (d0, d1)>(%{{.*}}, %{{.*}}) to min affine_map<(d0, d1) -> (d0, d1)>(%{{.*}}, %{{.*}}) {
   // CHECK:  return
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -205,7 +205,7 @@ TEST_FUNC(builder_affine_for_iter_args) {
   // CHECK-NEXT:      affine.yield %[[iarg_2]], %[[sum]] : i32, i32
   // CHECK-NEXT:    }
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -232,7 +232,7 @@ TEST_FUNC(builder_block_append) {
   // CHECK-NEXT:   return
   // CHECK-NEXT: }
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -271,7 +271,7 @@ TEST_FUNC(builder_blocks) {
   // CHECK-NEXT:   br ^bb1(%{{.*}}, %{{.*}} : i32, i32)
   // CHECK-NEXT: }
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -305,7 +305,7 @@ TEST_FUNC(builder_cond_branch) {
   // CHECK-NEXT: ^bb2(%{{.*}}: i64, %{{.*}}: i32):  // pred: ^bb0
   // CHECK-NEXT:   return
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -363,7 +363,7 @@ TEST_FUNC(builder_helpers) {
   //  CHECK-DAG:         [[e:%.*]] = addf [[d]], [[c]] : f32
   // CHECK-NEXT:         affine.store [[e]], %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -384,7 +384,7 @@ TEST_FUNC(insertion_in_block) {
   // CHECK: ^bb1:   // no predecessors
   // CHECK: {{.*}} = constant 1 : i32
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -409,7 +409,7 @@ TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
   //      CHECK:     %[[SRC2:.*]] = affine.load
   //      CHECK:     sexti %[[SRC2]] : i1 to i8
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -430,7 +430,7 @@ TEST_FUNC(operator_or) {
   //       CHECK: [[ARG0:%.*]]: i1, [[ARG1:%.*]]: i1
   //       CHECK: or [[ARG0]], [[ARG1]]
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -454,7 +454,7 @@ TEST_FUNC(operator_and) {
   //       CHECK: [[TRUE:%.*]] = constant true
   //       CHECK: subi [[TRUE]], [[AND]] : i1
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -473,7 +473,7 @@ TEST_FUNC(divis_op_i32) {
   //   CHECK-DAG:     {{.*}} = constant 2
   //  CHECK-NEXT:     {{.*}} = divi_signed
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -492,7 +492,7 @@ TEST_FUNC(diviu_op_i32) {
   //   CHECK-DAG:     {{.*}} = constant 2
   //  CHECK-NEXT:     {{.*}} = divi_unsigned
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -511,7 +511,7 @@ TEST_FUNC(fpext_f32_f64) {
   //       CHECK: {{.*}} = constant 1.0
   //  CHECK-NEXT: {{.*}} = fpext
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -530,7 +530,7 @@ TEST_FUNC(fptrunc_f32_bf16) {
   //       CHECK: {{.*}} = constant 1.0
   //  CHECK-NEXT: {{.*}} = fptrunc
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -606,7 +606,7 @@ TEST_FUNC(select_op_i32) {
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -712,7 +712,7 @@ TEST_FUNC(select_op_f32) {
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -787,7 +787,7 @@ TEST_FUNC(tile_2d) {
   //  CHECK-NEXT:             {{.*}}= addf {{.*}}, {{.*}} : f32
   //  CHECK-NEXT:             affine.store {{.*}}, {{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -821,7 +821,7 @@ TEST_FUNC(indirect_access) {
   // CHECK:  load %{{.*}}{{\[}}[[B]]{{\]}}
   // CHECK:  store %{{.*}}, %{{.*}}{{\[}}[[D]]{{\]}}
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -850,7 +850,7 @@ TEST_FUNC(empty_map_load_store) {
   // CHECK:  [[A:%.*]] = affine.load %{{.*}}[]
   // CHECK:  affine.store [[A]], %{{.*}}[]
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -886,7 +886,7 @@ TEST_FUNC(affine_if_op) {
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/false);
   intrinsics::affine_if(intSet, affineIfArgs, /*withElseRegion=*/true);
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -932,7 +932,7 @@ TEST_FUNC(linalg_generic_pointwise_test) {
   linalg_generic_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
   linalg_generic_pointwise_tanh(SA({i, j}), SC({i, j}));
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -963,7 +963,7 @@ TEST_FUNC(linalg_generic_matmul_test) {
   ScopedContext scope(builder, f.getLoc());
   linalg_generic_matmul(f.getArguments());
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -999,7 +999,7 @@ TEST_FUNC(linalg_generic_conv_nhwc) {
   linalg_generic_conv_nhwc(f.getArguments(),
                            /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1036,7 +1036,7 @@ TEST_FUNC(linalg_generic_dilated_conv_nhwc) {
                                    /*depth_multiplier=*/7,
                                    /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1062,7 +1062,7 @@ TEST_FUNC(linalg_metadata_ops) {
   auto reshaped = linalg_reshape(v, maps);
   linalg_reshape(memrefType, reshaped, maps);
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1134,7 +1134,7 @@ TEST_FUNC(linalg_tensors_test) {
   Value o1 = linalg_generic_matmul(A, B, tanhed, tensorType)->getResult(0);
   linalg_generic_matmul(A, B, o1, tensorType);
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1156,7 +1156,7 @@ TEST_FUNC(vector_extractelement_op_i32) {
   //   CHECK-DAG:     {{.*}} = constant 0
   //  CHECK-NEXT:     {{.*}} = vector.extractelement
   // clang-format on
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1202,7 +1202,7 @@ TEST_FUNC(memref_vector_matmul_test) {
   };
   linalg_generic_matmul(A, B, C, contractionBuilder);
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
@@ -1238,7 +1238,7 @@ TEST_FUNC(builder_loop_for_yield) {
   // CHECK:     addf [[res]]#0, [[res]]#1 : f32
   // clang-format on
 
-  f.print(llvm::outs());
+  f.print(llvm::outs(), OpPrintingFlags().useLocalScope());
   f.erase();
 }
 
