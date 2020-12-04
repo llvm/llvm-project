@@ -15,6 +15,9 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
+mlir::edsc::ScopedContext::ScopedContext(OpBuilder &b)
+    : ScopedContext(b, b.getInsertionPoint()->getLoc()) {}
+
 mlir::edsc::ScopedContext::ScopedContext(OpBuilder &b, Location location)
     : builder(b), guard(builder), location(location),
       enclosingScopedContext(ScopedContext::getCurrentScopedContext()) {
