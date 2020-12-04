@@ -104,13 +104,18 @@ SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp) {
     auto shape = v.getType().cast<ShapedType>().getShape();
     res.append(shape.begin(), shape.end());
   }
+  if (linalgOp.getNumInitTensors())
+    return res;
+  for (Value v : linalgOp.getOperation()->getResults()) {
+    auto shape = v.getType().cast<ShapedType>().getShape();
+    res.append(shape.begin(), shape.end());
+  }
   return res;
 }
 
 Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
   SmallVector<int64_t, 8> viewSizes = getStaticShape(linalgOp);
-  AffineMap invertedMap =
-      inversePermutation(concatAffineMaps(linalgOp.getIndexingMaps()));
+  AffineMap invertedMap = linalgOp.getShapesToLoopsMap();
   if (!invertedMap)
     return {};
   return invertedMap.compose(viewSizes);

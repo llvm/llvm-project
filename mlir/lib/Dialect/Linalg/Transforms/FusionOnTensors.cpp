@@ -411,21 +411,19 @@ static bool isFusableWithReshapeByDimExpansion(LinalgOp linalgOp,
                                                unsigned fusedTensorIndex) {
   // Is fusable only if:
   // - The linalgOp is a generic op, or an indexed_generic.
-  // - All the indexing maps for operands in linalgOp are projected
+  // - All the indexing maps for operands and results in linalgOp are projected
   //   permutations.
-  // - The indexing map at the position representing the fused tensor is a
-  //   permutation.
+  // - The fused tensor is not a scalar.
   // - All the loops in linalgOp are parallel loops.
   return isa<GenericOp, IndexedGenericOp>(linalgOp.getOperation()) &&
          linalgOp.hasTensorSemantics() &&
-         llvm::all_of(linalgOp.indexing_maps().getValue().take_front(
-                          linalgOp.getNumInputs()),
+         llvm::all_of(linalgOp.indexing_maps().getValue(),
                       [](Attribute attr) {
                         return attr.cast<AffineMapAttr>()
                             .getValue()
                             .isProjectedPermutation();
                       }) &&
-         linalgOp.getIndexingMap(fusedTensorIndex).isPermutation() &&
+         linalgOp.getIndexingMap(fusedTensorIndex).getNumResults() > 0 &&
          llvm::all_of(linalgOp.iterator_types(), [](Attribute attr) {
            return attr.cast<StringAttr>().getValue() ==
                   getParallelIteratorTypeName();
@@ -446,8 +444,6 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
       reshapeOp.getSrcType().getRank() < reshapeOp.getResultType().getRank();
   RankedTensorType expandedType =
       isExpanding ? reshapeOp.getResultType() : reshapeOp.getSrcType();
-  RankedTensorType foldedType =
-      isExpanding ? reshapeOp.getSrcType() : reshapeOp.getResultType();
   AffineMap fusedIndexMap = linalgOp.getIndexingMap(fusedTensorIndex);
 
   // The reshape is folding/expanding consecutive dimensions. Given the indexing
@@ -455,9 +451,15 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
   // the original op is expanded into. Also record the shape of the expanded
   // dimensions.
   ArrayRef<int64_t> expandedShape = expandedType.getShape();
-  SmallVector<unsigned, 4> numFoldedDims(foldedType.getRank(), 0);
+  Optional<SmallVector<int64_t, 4>> origOpLoopRange =
+      getStaticLoopRanges(linalgOp);
+  if (!origOpLoopRange) {
+    linalgOp.emitError("unable to find loop range for operation");
+    return llvm::None;
+  }
+  SmallVector<unsigned, 4> numFoldedDims(fusedIndexMap.getNumDims(), 1);
   SmallVector<SmallVector<int64_t, 4>, 4> expandedDimsShape(
-      foldedType.getRank());
+      fusedIndexMap.getNumDims());
   auto reassociationMaps = reshapeOp.getReassociationMaps();
   for (auto resultExpr : llvm::enumerate(fusedIndexMap.getResults())) {
     unsigned pos = resultExpr.value().cast<AffineDimExpr>().getPosition();
@@ -467,6 +469,10 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
         expandedShape.slice(foldedDims.getDimPosition(0), numFoldedDims[pos]);
     expandedDimsShape[pos].assign(shape.begin(), shape.end());
   }
+  // The remaining dimensions remain the same.
+  for (unsigned i : llvm::seq<unsigned>(0, fusedIndexMap.getNumDims()))
+    if (expandedDimsShape[i].empty())
+      expandedDimsShape[i] = {(*origOpLoopRange)[i]};
 
   if (isa<IndexedGenericOp>(linalgOp.getOperation())) {
     // For indexed generic op, the region contains arguments that represent the
@@ -476,6 +482,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
     // front) are statically know. For dynamic case, we would need shape
     // information on these dimensions to get these.
     for (auto &expandedShape : expandedDimsShape) {
+      if (expandedShape.size() == 1)
+        continue;
       for (int64_t expandedDimShape : llvm::make_range(
                std::next(expandedShape.begin()), expandedShape.end())) {
         if (ShapedType::isDynamic(expandedDimShape)) {

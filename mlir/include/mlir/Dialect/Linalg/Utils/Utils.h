@@ -118,11 +118,12 @@ Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
 /// dimension is statically known, or -1 otherwise.
 SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp);
 
-/// Returns the statically-known loop ranges of the `linalgOp`. Applies the
-/// inverse of the concatenated indexing maps to the result of `getStaticShape`.
-/// Returns None if inverting the concatenated indexing map fails. Returns -1
+/// Returns the statically-known loop ranges of the `linalgOp`. Composes
+/// `linalgOp.getShapesToLoopsMap()` with the result of `getStaticShape`.
+/// Returns None if `linalgOp.getShapesToLoopsMap()` fails. Returns -1
 /// for non-statically-known loop ranges.
 Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp);
+
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
 /// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
