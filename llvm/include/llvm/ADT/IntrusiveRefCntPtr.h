@@ -86,10 +86,10 @@ public:
 
 /// A thread-safe version of \c RefCountedBase.
 template <class Derived> class ThreadSafeRefCountedBase {
-  mutable std::atomic<int> RefCount;
+  mutable std::atomic<int> RefCount{0};
 
 protected:
-  ThreadSafeRefCountedBase() : RefCount(0) {}
+  ThreadSafeRefCountedBase() = default;
   ThreadSafeRefCountedBase(const ThreadSafeRefCountedBase &) {}
   ThreadSafeRefCountedBase &
   operator=(const ThreadSafeRefCountedBase &) = delete;
