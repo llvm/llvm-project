@@ -155,7 +155,7 @@ define half @sitofp_aext_i32_to_f16(i32 %a) nounwind {
 define half @sitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 ; RV64IZFH-LABEL: sitofp_sext_i32_to_f16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fcvt.h.l fa0, a0
+; RV64IZFH-NEXT:    fcvt.h.w fa0, a0
 ; RV64IZFH-NEXT:    ret
   %1 = sitofp i32 %a to half
   ret half %1
