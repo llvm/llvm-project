@@ -4,7 +4,7 @@
 "","","","","",""
 "`P0020R6 <https://wg21.link/P0020R6>`__","LWG","Floating Point Atomic","Albuquerque","",""
 "`P0053R7 <https://wg21.link/P0053R7>`__","LWG","C++ Synchronized Buffered Ostream","Albuquerque","",""
-"`P0202R3 <https://wg21.link/P0202R3>`__","LWG","Add constexpr modifiers to functions in <algorithm> and <utility> Headers","Albuquerque","|In Progress| [#note-P0202]_","7.0"
+"`P0202R3 <https://wg21.link/P0202R3>`__","LWG","Add constexpr modifiers to functions in <algorithm> and <utility> Headers","Albuquerque","|Complete|","12.0"
 "`P0415R1 <https://wg21.link/P0415R1>`__","LWG","Constexpr for ``std::complex``\ ","Albuquerque","|In Progress|","7.0"
 "`P0439R0 <https://wg21.link/P0439R0>`__","LWG","Make ``std::memory_order``\  a scoped enumeration","Albuquerque","|Complete|",""
 "`P0457R2 <https://wg21.link/P0457R2>`__","LWG","String Prefix and Suffix Checking","Albuquerque","|Complete|","6.0"
