@@ -3,7 +3,7 @@
 
 ; Ensure that we don't duplicate a block with an "INLINEASM_BR" instruction
 ; during code gen.
-declare void @foo()
+declare dso_local void @foo()
 
 define i8* @test1(i8** %arg1, i8* %arg2) {
   ; CHECK-LABEL: name: test1

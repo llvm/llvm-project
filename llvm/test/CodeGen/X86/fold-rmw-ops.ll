@@ -8,8 +8,8 @@ target triple = "x86_64-unknown-unknown"
 @g16 = external dso_local global i16, align 2
 @g8 = external dso_local global i8, align 1
 
-declare void @a()
-declare void @b()
+declare dso_local void @a()
+declare dso_local void @b()
 
 define void @add64_imm32_br() nounwind {
 ; CHECK-LABEL: add64_imm32_br:

@@ -10,15 +10,15 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-declare i1 @return_i1()
-declare void @func()
-declare void @consume(i32 addrspace(1)*)
-declare void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
-declare i32* @fake_personality_function()
-declare i32 @foo(i32, i8 addrspace(1)*, i32, i32, i32)
-declare void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local i1 @return_i1()
+declare dso_local void @func()
+declare dso_local void @consume(i32 addrspace(1)*)
+declare dso_local void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local i32* @fake_personality_function()
+declare dso_local i32 @foo(i32, i8 addrspace(1)*, i32, i32, i32)
+declare dso_local void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
@@ -387,11 +387,11 @@ entry:
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare dso_local i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+declare dso_local i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
 declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
-declare i1 @llvm.experimental.gc.result.i1(token)
-declare void @__llvm_deoptimize(i32)
+declare dso_local i1 @llvm.experimental.gc.result.i1(token)
+declare dso_local void @__llvm_deoptimize(i32)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 immarg, i32 immarg, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)

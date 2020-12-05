@@ -10,8 +10,8 @@
 
 @.str = private constant [65 x i8] c"0123456789012345678901234567890123456789012345678901234567890123\00", align 1
 
-declare i32 @memcmp(i8*, i8*, i64)
-declare i32 @bcmp(i8*, i8*, i64)
+declare dso_local i32 @memcmp(i8*, i8*, i64)
+declare dso_local i32 @bcmp(i8*, i8*, i64)
 
 define i32 @length2(i8* %X, i8* %Y) nounwind optsize {
 ; X86-LABEL: length2:
