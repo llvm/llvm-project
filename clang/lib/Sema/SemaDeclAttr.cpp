@@ -5747,8 +5747,8 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
     // The async name drops the last callback parameter.
     if (IsAsync) {
       if (ParamCount == 0) {
-        Diag(Loc, diag::warn_attr_swift_name_decl_missing_params)
-            << AL << isa<ObjCMethodDecl>(D);
+        Diag(ArgLoc, diag::warn_attr_swift_name_decl_missing_params)
+            << AttrName << isa<ObjCMethodDecl>(D);
         return false;
       }
       ParamCount -= 1;
@@ -5830,16 +5830,17 @@ static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   D->addAttr(::new (S.Context) SwiftNameAttr(S.Context, Attr, Name));
 }
 
-static void handleSwiftAsyncName(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleSwiftAsyncName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   StringRef Name;
-  SourceLocation Loc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Name, &Loc))
+  SourceLocation ArgLoc;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
     return;
 
-  if (!S.DiagnoseSwiftName(D, Name, Loc, AL, /*IsAsync=*/true))
+  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getAttrName(),
+                           /*IsAsync=*/true))
     return;
 
-  D->addAttr(::new (S.Context) SwiftAsyncNameAttr(S.Context, AL, Name));
+  D->addAttr(::new (S.Context) SwiftAsyncNameAttr(S.Context, Attr, Name));
 }
 
 static bool isErrorParameter(Sema &S, QualType paramType) {

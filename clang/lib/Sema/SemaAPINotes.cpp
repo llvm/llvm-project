@@ -316,7 +316,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
       
       if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(),
-                               &APINoteName)) {
+                               &APINoteName, /*IsAsync=*/false)) {
         return nullptr;
       }
 
