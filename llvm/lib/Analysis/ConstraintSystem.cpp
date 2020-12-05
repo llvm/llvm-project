@@ -140,6 +140,11 @@ bool ConstraintSystem::mayHaveSolution() {
 }
 
 bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) {
+  // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
+  // 0, R is always true, regardless of the system.
+  if (all_of(makeArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    return R[0] >= 0;
+
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.
   R = ConstraintSystem::negate(R);
