@@ -1,7 +1,10 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -S | FileCheck %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=1 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
+
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -23,8 +26,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
 ; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
 ; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
-; CHECK: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
-; CHECK: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; NOALIAS: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; NOALIAS: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; ALIAS: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @0 to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; ALIAS: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @3 to i64){{.*}} section "asan_globals"{{.*}}, !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.
