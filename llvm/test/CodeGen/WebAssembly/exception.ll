@@ -1,4 +1,3 @@
-; RUN: not --crash llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling
 
@@ -7,7 +6,7 @@ target triple = "wasm32-unknown-unknown"
 
 %struct.Temp = type { i8 }
 
-@_ZTIi = external constant i8*
+@_ZTIi = external dso_local constant i8*
 
 ; CHECK-LABEL: test_throw:
 ; CHECK:     throw __cpp_exception, $0
@@ -39,7 +38,7 @@ define void @test_throw(i8* %p) {
 ; CHECK:       end_block
 ; CHECK:       extract_exception $[[EXN:[0-9]+]]=
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
-; CHECK-DAG:   i32.store  __wasm_lpad_context+4
+; CHECK-DAG:   i32.store  __wasm_lpad_context{{.+}}
 ; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
