@@ -109,8 +109,9 @@ entry:
 ; ARM-LONG-MACHO: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
 ; ARM-LONG-MACHO: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
 
-; ARM-LONG-ELF: movw [[R:l?r[0-9]*]], :lower16:bar
-; ARM-LONG-ELF: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
+; ARM-LONG-ELF: movw [[R1:r[0-9]*]], :lower16:bar
+; ARM-LONG-ELF: movt [[R1]], :upper16:bar
+; ARM-LONG-ELF: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
 
 ; ARM-LONG: blx [[R]]
 ; THUMB: @t10
