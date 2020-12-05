@@ -1693,28 +1693,22 @@ namespace {
       // Construct pointer to region to begin poisoning, and calculate poison
       // size, so that only members declared in this class are poisoned.
       ASTContext &Context = CGF.getContext();
-      unsigned fieldIndex = 0;
-      int startIndex = -1;
-      // RecordDecl::field_iterator Field;
-      for (const FieldDecl *Field : Dtor->getParent()->fields()) {
-        // Poison field if it is trivial
-        if (FieldHasTrivialDestructorBody(Context, Field)) {
-          // Start sanitizing at this field
-          if (startIndex < 0)
-            startIndex = fieldIndex;
 
-          // Currently on the last field, and it must be poisoned with the
-          // current block.
-          if (fieldIndex == Layout.getFieldCount() - 1) {
-            PoisonMembers(CGF, startIndex, Layout.getFieldCount());
-          }
-        } else if (startIndex >= 0) {
-          // No longer within a block of memory to poison, so poison the block
-          PoisonMembers(CGF, startIndex, fieldIndex);
-          // Re-set the start index
-          startIndex = -1;
-        }
-        fieldIndex += 1;
+      const RecordDecl *Decl = Dtor->getParent();
+      auto Fields = Decl->fields();
+      auto IsTrivial = [&](const FieldDecl *F) {
+        return FieldHasTrivialDestructorBody(Context, F);
+      };
+
+      for (auto It = Fields.begin(); It != Fields.end();) {
+        It = std::find_if(It, Fields.end(), IsTrivial);
+        if (It == Fields.end())
+          break;
+        auto Start = It++;
+        It = std::find_if_not(It, Fields.end(), IsTrivial);
+
+        PoisonMembers(CGF, (*Start)->getFieldIndex(),
+                      It == Fields.end() ? -1 : (*It)->getFieldIndex());
       }
     }
 
