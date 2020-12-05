@@ -815,7 +815,7 @@ private:
   std::vector<AnalysisKey *> AADeps;
 
   /// Query depth used to distinguish recursive queries.
-  unsigned Depth;
+  unsigned Depth = 0;
 
   friend class BatchAAResults;
 };
