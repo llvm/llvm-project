@@ -2034,12 +2034,10 @@ MigrateSourceAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 namespace {
 struct EditEntry {
-  const FileEntry *File;
-  unsigned Offset;
-  unsigned RemoveLen;
+  const FileEntry *File = nullptr;
+  unsigned Offset = 0;
+  unsigned RemoveLen = 0;
   std::string Text;
-
-  EditEntry() : File(), Offset(), RemoveLen() {}
 };
 } // end anonymous namespace
 
