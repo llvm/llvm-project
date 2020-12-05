@@ -275,7 +275,7 @@
 "`3364 <https://wg21.link/LWG3364>`__","Initialize data members of ranges and their iterators","Prague","",""
 "`3367 <https://wg21.link/LWG3367>`__","Integer-class conversions should not throw","Prague","",""
 "`3369 <https://wg21.link/LWG3369>`__","``span``\ 's deduction-guide for built-in arrays doesn't work","Prague","",""
-"`3371 <https://wg21.link/LWG3371>`__","``visit_format_arg``\  and ``make_format_args``\  are not hidden friends","Prague","",""
+"`3371 <https://wg21.link/LWG3371>`__","``visit_format_arg``\  and ``make_format_args``\  are not hidden friends","Prague","|Complete|","14.0"
 "`3372 <https://wg21.link/LWG3372>`__","``vformat_to``\  should not try to deduce ``Out``\  twice","Prague","",""
 "`3373 <https://wg21.link/LWG3373>`__","``{to,from}_chars_result``\  and ``format_to_n_result``\  need the  ""we really mean what we say"" wording","Prague","",""
 "`3374 <https://wg21.link/LWG3374>`__","P0653 + P1006 should have made the other ``std::to_address``\  overload ``constexpr``\ ","Prague","|Complete|","12.0"
