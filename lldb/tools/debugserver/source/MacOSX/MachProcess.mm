@@ -3273,8 +3273,7 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     bool slice_preference_set = false;
 
     if (cpu_subtype != 0) {
-      if (@available(macOS 10.16, ios 10.14, watchos 7.0, tvos 14.0,
-                     bridgeos 5.0, *)) {
+      if (@available(macOS 10.16, ios 10.14, watchos 7.0, tvos 14.0, *)) {
         err.SetError(posix_spawnattr_setarchpref_np(&attr, 1, &cpu_type,
                                                     &cpu_subtype, &ocount));
         slice_preference_set = err.Success();
