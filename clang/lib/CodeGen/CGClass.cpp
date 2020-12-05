@@ -18,6 +18,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
@@ -1729,37 +1730,35 @@ namespace {
     /// \param layoutEndOffset index of the ASTRecordLayout field to
     ///     end poisoning (exclusive)
     void PoisonMembers(CodeGenFunction &CGF, unsigned layoutStartOffset,
-                     unsigned layoutEndOffset) {
+                       unsigned layoutEndOffset) {
       ASTContext &Context = CGF.getContext();
       const ASTRecordLayout &Layout =
           Context.getASTRecordLayout(Dtor->getParent());
 
-      llvm::ConstantInt *OffsetSizePtr = llvm::ConstantInt::get(
-          CGF.SizeTy,
-          Context.toCharUnitsFromBits(Layout.getFieldOffset(layoutStartOffset))
-              .getQuantity());
+      // It's a first trivia field so it should be at the begining of char,
+      // still round up start offset just in case.
+      CharUnits PoisonStart =
+          Context.toCharUnitsFromBits(Layout.getFieldOffset(layoutStartOffset) +
+                                      Context.getCharWidth() - 1);
+      llvm::ConstantInt *OffsetSizePtr =
+          llvm::ConstantInt::get(CGF.SizeTy, PoisonStart.getQuantity());
 
       llvm::Value *OffsetPtr = CGF.Builder.CreateGEP(
           CGF.Builder.CreateBitCast(CGF.LoadCXXThis(), CGF.Int8PtrTy),
           OffsetSizePtr);
 
-      CharUnits::QuantityType PoisonSize;
+      CharUnits PoisonEnd;
       if (layoutEndOffset >= Layout.getFieldCount()) {
-        PoisonSize = Layout.getNonVirtualSize().getQuantity() -
-                     Context.toCharUnitsFromBits(
-                                Layout.getFieldOffset(layoutStartOffset))
-                         .getQuantity();
+        PoisonEnd = Layout.getNonVirtualSize();
       } else {
-        PoisonSize = Context.toCharUnitsFromBits(
-                                Layout.getFieldOffset(layoutEndOffset) -
-                                Layout.getFieldOffset(layoutStartOffset))
-                         .getQuantity();
+        PoisonEnd =
+            Context.toCharUnitsFromBits(Layout.getFieldOffset(layoutEndOffset));
       }
-
-      if (PoisonSize == 0)
+      CharUnits PoisonSize = PoisonEnd - PoisonStart;
+      if (!PoisonSize.isPositive())
         return;
 
-      EmitSanitizerDtorCallback(CGF, OffsetPtr, PoisonSize);
+      EmitSanitizerDtorCallback(CGF, OffsetPtr, PoisonSize.getQuantity());
     }
   };
 
