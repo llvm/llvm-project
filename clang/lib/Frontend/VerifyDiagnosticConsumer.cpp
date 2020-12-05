@@ -555,14 +555,15 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           }
 
           const FileEntry *FE = &File->getFileEntry();
-          if (SM.translateFile(FE).isInvalid())
-            SM.createFileID(FE, Pos, SrcMgr::C_User);
+          FileID FID = SM.translateFile(FE);
+          if (FID.isInvalid())
+            FID = SM.createFileID(FE, Pos, SrcMgr::C_User);
 
           if (PH.Next(Line) && Line > 0)
-            ExpectedLoc = SM.translateFileLineCol(FE, Line, 1);
+            ExpectedLoc = SM.translateLineCol(FID, Line, 1);
           else if (PH.Next("*")) {
             MatchAnyLine = true;
-            ExpectedLoc = SM.translateFileLineCol(FE, 1, 1);
+            ExpectedLoc = SM.translateLineCol(FID, 1, 1);
           }
         }
       } else if (PH.Next("*")) {
