@@ -143,16 +143,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (TT.isOSBinFormatCOFF() || TT.isOSWindows())
     return true;
 
-  // Most PIC code sequences that assume that a symbol is local cannot
-  // produce a 0 if it turns out the symbol is undefined. While this
-  // is ABI and relocation depended, it seems worth it to handle it
-  // here.
-  if (isPositionIndependent() && GV->hasExternalWeakLinkage())
-    return false;
-
-  if (!GV->hasDefaultVisibility())
-    return true;
-
   if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;
