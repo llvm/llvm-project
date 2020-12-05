@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
 // RUN: %clang_cc1 -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
 
-// This test convers invalid behaviour which will be fixed in followup patches.
-
 struct Empty {};
 
 struct EmptyNonTrivial {
@@ -115,7 +113,7 @@ struct Struct {
 static_assert(sizeof(Struct) == 24);
 } // namespace T6
 // CHECK-LABEL: define {{.*}} @_ZN5empty2T66StructD2Ev(
-// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 21)
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 13)
 // CHECK-NEXT:    ret void
 
 namespace T7 {
@@ -130,7 +128,7 @@ static_assert(sizeof(Struct) == 24);
 } // namespace T7
 // CHECK-LABEL: define {{.*}} @_ZN5empty2T76StructD2Ev(
 // CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 8)
-// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 21)
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 5)
 // CHECK-NEXT:    ret void
 
 namespace T8 {
@@ -160,7 +158,7 @@ static_assert(sizeof(Struct) == 24);
 } // namespace T9
 // CHECK-LABEL: define {{.*}} @_ZN5empty2T96StructD2Ev(
 // CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 12)
-// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 21)
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 1)
 // CHECK-NEXT:    ret void
 
 namespace T10 {
@@ -190,7 +188,6 @@ static_assert(sizeof(Struct) == 24);
 } // namespace T11
 // CHECK-LABEL: define {{.*}} @_ZN5empty3T116StructD2Ev(
 // CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 16)
-// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 24)
 // CHECK-NEXT:    ret void
 
 namespace T12 {
@@ -317,6 +314,7 @@ struct Struct {
 static_assert(sizeof(Struct) == 24);
 } // namespace T8
 // CHECK-LABEL: define {{.*}} @_ZN17empty_non_trivial2T86StructD2Ev(
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 8)
 // CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 5)
 // CHECK-NEXT:    ret void
 
@@ -346,6 +344,7 @@ struct Struct {
 static_assert(sizeof(Struct) == 24);
 } // namespace T10
 // CHECK-LABEL: define {{.*}} @_ZN17empty_non_trivial3T106StructD2Ev(
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 12)
 // CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 1)
 // CHECK-NEXT:    ret void
 
@@ -375,4 +374,5 @@ static_assert(sizeof(Struct) == 24);
 } // namespace T12
 } // namespace empty_non_trivial
 // CHECK-LABEL: define {{.*}} @_ZN17empty_non_trivial3T126StructD2Ev(
+// CHECK:         call void @__sanitizer_dtor_callback(i8* {{.*}}, i64 16)
 // CHECK:         ret void

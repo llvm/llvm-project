@@ -1700,12 +1700,23 @@ namespace {
         return FieldHasTrivialDestructorBody(Context, F);
       };
 
+      auto IsZeroSize = [&](const FieldDecl *F) {
+        return F->isZeroSize(Context);
+      };
+
+      // Poison blocks of fields with trivial destructors making sure that block
+      // begin and end do not point to zero-sized fields. They don't have
+      // correct offsets so can't be used to calculate poisoning range.
       for (auto It = Fields.begin(); It != Fields.end();) {
-        It = std::find_if(It, Fields.end(), IsTrivial);
+        It = std::find_if(It, Fields.end(), [&](const FieldDecl *F) {
+          return IsTrivial(F) && !IsZeroSize(F);
+        });
         if (It == Fields.end())
           break;
         auto Start = It++;
-        It = std::find_if_not(It, Fields.end(), IsTrivial);
+        It = std::find_if(It, Fields.end(), [&](const FieldDecl *F) {
+          return !IsTrivial(F) && !IsZeroSize(F);
+        });
 
         PoisonMembers(CGF, (*Start)->getFieldIndex(),
                       It == Fields.end() ? -1 : (*It)->getFieldIndex());
