@@ -255,3 +255,17 @@ def testDenseFPAttr():
 
 
 run(testDenseFPAttr)
+
+
+# CHECK-LABEL: TEST: testTypeAttr
+def testTypeAttr():
+  with Context():
+    raw = Attribute.parse("vector<4xf32>")
+    # CHECK: attr: vector<4xf32>
+    print("attr:", raw)
+    type_attr = TypeAttr(raw)
+    # CHECK: f32
+    print(ShapedType(type_attr.value).element_type)
+
+
+run(testTypeAttr)
