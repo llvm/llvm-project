@@ -11,7 +11,7 @@ if(LLVM_APPEND_VC_REV)
   # A fake version file and is not expected to exist. It is being used to
   # force regeneration of VCSRevision.h for source directory with no write
   # permission available.
-  if (NOT llvm_vc)
+  if (llvm_vc STREQUAL "")
     set(fake_version_inc "${CMAKE_CURRENT_BINARY_DIR}/__FakeVCSRevision.h")
   endif()
 endif()
