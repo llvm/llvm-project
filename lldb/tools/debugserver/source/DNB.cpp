@@ -1762,19 +1762,52 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
   if (arch && arch[0]) {
     if (strcasecmp(arch, "i386") == 0)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_I386);
-    else if ((strcasecmp(arch, "x86_64") == 0) ||
-             (strcasecmp(arch, "x86_64h") == 0))
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64);
-    else if (strstr(arch, "arm64_32") == arch || 
+    else if (strcasecmp(arch, "x86_64") == 0)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64,
+                                              CPU_SUBTYPE_X86_64_ALL);
+    else if (strcasecmp(arch, "x86_64h") == 0)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64,
+                                              CPU_SUBTYPE_X86_64_H);
+    else if (strstr(arch, "arm64_32") == arch ||
              strstr(arch, "aarch64_32") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
     else if (strstr(arch, "arm64e") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
-    else if (strstr(arch, "arm64") == arch || strstr(arch, "armv8") == arch ||
-             strstr(arch, "aarch64") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64E);
+    else if (strstr(arch, "arm64") == arch || strstr(arch, "aarch64") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64_ALL);
+    else if (strstr(arch, "armv8") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64_V8);
+    else if (strstr(arch, "armv7em") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7EM);
+    else if (strstr(arch, "armv7m") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7M);
+    else if (strstr(arch, "armv7k") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7K);
+    else if (strstr(arch, "armv7s") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7S);
+    else if (strstr(arch, "armv7") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM, CPU_SUBTYPE_ARM_V7);
+    else if (strstr(arch, "armv6m") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V6M);
+    else if (strstr(arch, "armv6") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM, CPU_SUBTYPE_ARM_V6);
+    else if (strstr(arch, "armv5") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V5TEJ);
+    else if (strstr(arch, "armv4t") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V4T);
     else if (strstr(arch, "arm") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_ALL);
   }
   return false;
 }

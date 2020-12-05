@@ -3160,9 +3160,9 @@ pid_t MachProcess::LaunchForDebug(
 
   case eLaunchFlavorPosixSpawn:
     m_pid = MachProcess::PosixSpawnChildForPTraceDebugging(
-        path, DNBArchProtocol::GetArchitecture(), argv, envp, working_directory,
-        stdin_path, stdout_path, stderr_path, no_stdio, this, disable_aslr,
-        launch_err);
+        path, DNBArchProtocol::GetCPUType(), DNBArchProtocol::GetCPUSubType(),
+        argv, envp, working_directory, stdin_path, stdout_path, stderr_path,
+        no_stdio, this, disable_aslr, launch_err);
     break;
 
   default:
@@ -3222,10 +3222,10 @@ pid_t MachProcess::LaunchForDebug(
 }
 
 pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
-    const char *path, cpu_type_t cpu_type, char const *argv[],
-    char const *envp[], const char *working_directory, const char *stdin_path,
-    const char *stdout_path, const char *stderr_path, bool no_stdio,
-    MachProcess *process, int disable_aslr, DNBError &err) {
+    const char *path, cpu_type_t cpu_type, cpu_subtype_t cpu_subtype,
+    char const *argv[], char const *envp[], const char *working_directory,
+    const char *stdin_path, const char *stdout_path, const char *stderr_path,
+    bool no_stdio, MachProcess *process, int disable_aslr, DNBError &err) {
   posix_spawnattr_t attr;
   short flags;
   DNBLogThreadedIf(LOG_PROCESS,
@@ -3268,24 +3268,40 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
 
 // On SnowLeopard we should set "DYLD_NO_PIE" in the inferior environment....
 
-#if !defined(__arm__)
-
-  // We don't need to do this for ARM, and we really shouldn't now that we
-  // have multiple CPU subtypes and no posix_spawnattr call that allows us
-  // to set which CPU subtype to launch...
   if (cpu_type != 0) {
     size_t ocount = 0;
-    err.SetError(::posix_spawnattr_setbinpref_np(&attr, 1, &cpu_type, &ocount),
-                 DNBError::POSIX);
-    if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
-      err.LogThreaded("::posix_spawnattr_setbinpref_np ( &attr, 1, cpu_type = "
-                      "0x%8.8x, count => %llu )",
-                      cpu_type, (uint64_t)ocount);
+    bool slice_preference_set = false;
 
-    if (err.Fail() != 0 || ocount != 1)
-      return INVALID_NUB_PROCESS;
+    if (cpu_subtype != 0) {
+      if (@available(macOS 10.16, ios 10.14, watchos 7.0, tvos 14.0,
+                     bridgeos 5.0, *)) {
+        err.SetError(posix_spawnattr_setarchpref_np(&attr, 1, &cpu_type,
+                                                    &cpu_subtype, &ocount));
+        slice_preference_set = err.Success();
+        if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+          err.LogThreaded(
+              "::posix_spawnattr_setarchpref_np ( &attr, 1, cpu_type = "
+              "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
+              cpu_type, cpu_subtype, (uint64_t)ocount);
+        if (err.Fail() != 0 || ocount != 1)
+          return INVALID_NUB_PROCESS;
+      }
+    }
+
+    if (!slice_preference_set) {
+      err.SetError(
+          ::posix_spawnattr_setbinpref_np(&attr, 1, &cpu_type, &ocount),
+          DNBError::POSIX);
+      if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+        err.LogThreaded(
+            "::posix_spawnattr_setbinpref_np ( &attr, 1, cpu_type = "
+            "0x%8.8x, count => %llu )",
+            cpu_type, (uint64_t)ocount);
+
+      if (err.Fail() != 0 || ocount != 1)
+        return INVALID_NUB_PROCESS;
+    }
   }
-#endif
 
   PseudoTerminal pty;
 
