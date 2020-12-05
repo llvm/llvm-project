@@ -53,7 +53,7 @@ exp , v3, v2, v1, v0
 // GCN: :5: error: unknown token in expression
 
 exp
-// GCN: :1: error: too few operands for instruction
+// GCN: :4: error: too few operands for instruction
 
 exp mrt0 s0, v0, v0, v0
 // GCN: 10: error: invalid operand for instruction
