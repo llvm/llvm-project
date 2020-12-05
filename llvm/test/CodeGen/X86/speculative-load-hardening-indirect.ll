@@ -139,7 +139,8 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rbx
 ; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    movq {{.*}}(%rip), %rcx
+; X64-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
+; X64-NEXT:    movq (%rcx), %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -185,7 +186,9 @@ define i32 @test_indirect_call_global() nounwind {
 ; X64-RETPOLINE-NEXT:    movq %rsp, %rax
 ; X64-RETPOLINE-NEXT:    movq $-1, %rbx
 ; X64-RETPOLINE-NEXT:    sarq $63, %rax
-; X64-RETPOLINE-NEXT:    movq {{.*}}(%rip), %r11
+; X64-RETPOLINE-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
+; X64-RETPOLINE-NEXT:    movq (%rcx), %r11
+; X64-RETPOLINE-NEXT:    orq %rax, %r11
 ; X64-RETPOLINE-NEXT:    shlq $47, %rax
 ; X64-RETPOLINE-NEXT:    orq %rax, %rsp
 ; X64-RETPOLINE-NEXT:    callq __llvm_retpoline_r11
@@ -211,7 +214,8 @@ define i32 @test_indirect_tail_call_global() nounwind {
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %rcx
 ; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    movq {{.*}}(%rip), %rcx
+; X64-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
+; X64-NEXT:    movq (%rcx), %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
@@ -234,7 +238,9 @@ define i32 @test_indirect_tail_call_global() nounwind {
 ; X64-RETPOLINE-NEXT:    movq %rsp, %rax
 ; X64-RETPOLINE-NEXT:    movq $-1, %rcx
 ; X64-RETPOLINE-NEXT:    sarq $63, %rax
-; X64-RETPOLINE-NEXT:    movq {{.*}}(%rip), %r11
+; X64-RETPOLINE-NEXT:    movq global_fnptr@{{.*}}(%rip), %rcx
+; X64-RETPOLINE-NEXT:    movq (%rcx), %r11
+; X64-RETPOLINE-NEXT:    orq %rax, %r11
 ; X64-RETPOLINE-NEXT:    shlq $47, %rax
 ; X64-RETPOLINE-NEXT:    orq %rax, %rsp
 ; X64-RETPOLINE-NEXT:    jmp __llvm_retpoline_r11 # TAILCALL
