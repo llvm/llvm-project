@@ -47,16 +47,16 @@ template <class InputIterator, class Predicate>
     find_if(InputIterator first, InputIterator last, Predicate pred);
 
 template<class InputIterator, class Predicate>
-    InputIterator               // constexpr in C++20
+    constexpr InputIterator     // constexpr in C++20
     find_if_not(InputIterator first, InputIterator last, Predicate pred);
 
 template <class ForwardIterator1, class ForwardIterator2>
-    ForwardIterator1            // constexpr in C++20
+    constexpr ForwardIterator1  // constexpr in C++20
     find_end(ForwardIterator1 first1, ForwardIterator1 last1,
              ForwardIterator2 first2, ForwardIterator2 last2);
 
 template <class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
-    ForwardIterator1            // constexpr in C++20
+    constexpr ForwardIterator1  // constexpr in C++20
     find_end(ForwardIterator1 first1, ForwardIterator1 last1,
              ForwardIterator2 first2, ForwardIterator2 last2, BinaryPredicate pred);
 
@@ -185,11 +185,11 @@ template <class BidirectionalIterator1, class BidirectionalIterator2>
                   BidirectionalIterator2 result);
 
 template <class ForwardIterator1, class ForwardIterator2>
-    ForwardIterator2
+    constexpr ForwardIterator2    // constexpr in C++20
     swap_ranges(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2);
 
 template <class ForwardIterator1, class ForwardIterator2>
-    void
+    constexpr void                // constexpr in C++20
     iter_swap(ForwardIterator1 a, ForwardIterator2 b);
 
 template <class InputIterator, class OutputIterator, class UnaryOperation>
@@ -251,19 +251,19 @@ template <class InputIterator, class OutputIterator, class Predicate>
     remove_copy_if(InputIterator first, InputIterator last, OutputIterator result, Predicate pred);
 
 template <class ForwardIterator>
-    ForwardIterator
+    constexpr ForwardIterator    // constexpr in C++20
     unique(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class BinaryPredicate>
-    ForwardIterator
+    constexpr ForwardIterator    // constexpr in C++20
     unique(ForwardIterator first, ForwardIterator last, BinaryPredicate pred);
 
 template <class InputIterator, class OutputIterator>
-    OutputIterator
+    constexpr OutputIterator     // constexpr in C++20
     unique_copy(InputIterator first, InputIterator last, OutputIterator result);
 
 template <class InputIterator, class OutputIterator, class BinaryPredicate>
-    OutputIterator
+    constexpr OutputIterator     // constexpr in C++20
     unique_copy(InputIterator first, InputIterator last, OutputIterator result, BinaryPredicate pred);
 
 template <class BidirectionalIterator>
@@ -275,11 +275,11 @@ template <class BidirectionalIterator, class OutputIterator>
     reverse_copy(BidirectionalIterator first, BidirectionalIterator last, OutputIterator result);
 
 template <class ForwardIterator>
-    ForwardIterator
+    constexpr ForwardIterator      // constexpr in C++20
     rotate(ForwardIterator first, ForwardIterator middle, ForwardIterator last);
 
 template <class ForwardIterator, class OutputIterator>
-    OutputIterator
+    constexpr OutputIterator       // constexpr in C++20
     rotate_copy(ForwardIterator first, ForwardIterator middle, ForwardIterator last, OutputIterator result);
 
 template <class RandomAccessIterator>
@@ -329,7 +329,7 @@ template <class ForwardIterator>
     is_sorted(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-    bool
+    constexpr bool  // constexpr in C++20
     is_sorted(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template<class ForwardIterator>
@@ -529,82 +529,82 @@ template <class RandomAccessIterator, class Compare>
     is_heap_until(RandomAccessIterator first, RandomAccessiterator last, Compare comp);
 
 template <class ForwardIterator>
-    ForwardIterator
-    min_element(ForwardIterator first, ForwardIterator last);  // constexpr in C++14
+    constexpr ForwardIterator        // constexpr in C++14
+    min_element(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-    ForwardIterator
-    min_element(ForwardIterator first, ForwardIterator last, Compare comp);  // constexpr in C++14
+    constexpr ForwardIterator        // constexpr in C++14
+    min_element(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template <class T>
-    const T&
-    min(const T& a, const T& b);  // constexpr in C++14
+    constexpr const T&               // constexpr in C++14
+    min(const T& a, const T& b);
 
 template <class T, class Compare>
-    const T&
-    min(const T& a, const T& b, Compare comp);  // constexpr in C++14
+    constexpr const T&               // constexpr in C++14
+    min(const T& a, const T& b, Compare comp);
 
 template<class T>
-    T
-    min(initializer_list<T> t);  // constexpr in C++14
+    constexpr T                      // constexpr in C++14
+    min(initializer_list<T> t);
 
 template<class T, class Compare>
-    T
-    min(initializer_list<T> t, Compare comp);  // constexpr in C++14
+    constexpr T                      // constexpr in C++14
+    min(initializer_list<T> t, Compare comp);
 
 template<class T>
-    constexpr const T& clamp( const T& v, const T& lo, const T& hi );               // C++17
+    constexpr const T& clamp(const T& v, const T& lo, const T& hi);               // C++17
 
 template<class T, class Compare>
-    constexpr const T& clamp( const T& v, const T& lo, const T& hi, Compare comp ); // C++17
+    constexpr const T& clamp(const T& v, const T& lo, const T& hi, Compare comp); // C++17
 
 template <class ForwardIterator>
-    ForwardIterator
-    max_element(ForwardIterator first, ForwardIterator last);  // constexpr in C++14
+    constexpr ForwardIterator        // constexpr in C++14
+    max_element(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-    ForwardIterator
-    max_element(ForwardIterator first, ForwardIterator last, Compare comp);  // constexpr in C++14
+    constexpr ForwardIterator        // constexpr in C++14
+    max_element(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template <class T>
-    const T&
-    max(const T& a, const T& b); // constexpr in C++14
+    constexpr const T&               // constexpr in C++14
+    max(const T& a, const T& b);
 
 template <class T, class Compare>
-    const T&
-    max(const T& a, const T& b, Compare comp);  // constexpr in C++14
+    constexpr const T&               // constexpr in C++14
+    max(const T& a, const T& b, Compare comp);
 
 template<class T>
-    T
-    max(initializer_list<T> t);  // constexpr in C++14
+    constexpr T                      // constexpr in C++14
+    max(initializer_list<T> t);
 
 template<class T, class Compare>
-    T
-    max(initializer_list<T> t, Compare comp);  // constexpr in C++14
+    constexpr T                      // constexpr in C++14
+    max(initializer_list<T> t, Compare comp);
 
 template<class ForwardIterator>
-    pair<ForwardIterator, ForwardIterator>
-    minmax_element(ForwardIterator first, ForwardIterator last);   // constexpr in C++14
+    constexpr pair<ForwardIterator, ForwardIterator>  // constexpr in C++14
+    minmax_element(ForwardIterator first, ForwardIterator last);
 
 template<class ForwardIterator, class Compare>
-    pair<ForwardIterator, ForwardIterator>
-    minmax_element(ForwardIterator first, ForwardIterator last, Compare comp);   // constexpr in C++14
+    constexpr pair<ForwardIterator, ForwardIterator>  // constexpr in C++14
+    minmax_element(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template<class T>
-    pair<const T&, const T&>
-    minmax(const T& a, const T& b);  // constexpr in C++14
+    constexpr pair<const T&, const T&>  // constexpr in C++14
+    minmax(const T& a, const T& b);
 
 template<class T, class Compare>
-    pair<const T&, const T&>
-    minmax(const T& a, const T& b, Compare comp);  // constexpr in C++14
+    constexpr pair<const T&, const T&>  // constexpr in C++14
+    minmax(const T& a, const T& b, Compare comp);
 
 template<class T>
-    pair<T, T>
-    minmax(initializer_list<T> t);  // constexpr in C++14
+    constexpr pair<T, T>                // constexpr in C++14
+    minmax(initializer_list<T> t);
 
 template<class T, class Compare>
-    pair<T, T>
-    minmax(initializer_list<T> t, Compare comp);  // constexpr in C++14
+    constexpr pair<T, T>                // constexpr in C++14
+    minmax(initializer_list<T> t, Compare comp);
 
 template <class InputIterator1, class InputIterator2>
     constexpr bool     // constexpr in C++20
