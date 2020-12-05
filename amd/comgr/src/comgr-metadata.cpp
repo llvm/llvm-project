@@ -412,9 +412,9 @@ static std::string ConvertOldTargetNameToNew(const std::string &old_name, bool i
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX705;
   else if (old_name == "AMD:AMDGPU:8:0:1")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
-  else if (old_name == "AMD:AMDGPU:8:0:2")
+  else if (old_name == "AMD:AMDGPU:8:0:0" || old_name == "AMD:AMDGPU:8:0:2")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
-  else if (old_name == "AMD:AMDGPU:8:0:3")
+  else if (old_name == "AMD:AMDGPU:8:0:3" || old_name == "AMD:AMDGPU:8:0:4")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
   else if (old_name == "AMD:AMDGPU:8:0:5")
     mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX805;
@@ -750,7 +750,7 @@ const char *getIsaName(size_t Index) { return IsaInfos[Index].IsaName; }
 amd_comgr_status_t getIsaMetadata(StringRef IsaName,
                                   llvm::msgpack::Document &Doc) {
   amd_comgr_status_t Status;
-  
+
   size_t IsaIndex;
   Status = getIsaIndex(IsaName, IsaIndex);
   if (Status != AMD_COMGR_STATUS_SUCCESS)
