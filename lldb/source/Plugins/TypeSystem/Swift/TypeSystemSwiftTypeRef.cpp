@@ -2302,8 +2302,14 @@ TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
 }
 bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
     opaque_compiler_type_t type) {
-  return m_swift_ast_context->IsMeaninglessWithoutDynamicResolution(
-      ReconstructType(type));
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    return ContainsGenericTypeParameter(node);
+  };
+  VALIDATE_AND_RETURN(impl, IsMeaninglessWithoutDynamicResolution, type,
+                      (ReconstructType(type)));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
