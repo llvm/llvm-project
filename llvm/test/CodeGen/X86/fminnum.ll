@@ -55,7 +55,7 @@ define float @test_fminf(float %x, float %y) {
 define float @test_fminf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fminf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fminf # TAILCALL
+; CHECK-NEXT:    jmp fminf@PLT # TAILCALL
   %z = call float @fminf(float %x, float %y) readnone
   ret float %z
 }

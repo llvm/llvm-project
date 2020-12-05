@@ -645,7 +645,7 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 define i16 @cvt_f64_to_i16(double %a0) nounwind {
 ; ALL-LABEL: cvt_f64_to_i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    jmp __truncdfhf2 # TAILCALL
+; ALL-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
   %1 = fptrunc double %a0 to half
   %2 = bitcast half %1 to i16
   ret i16 %2
