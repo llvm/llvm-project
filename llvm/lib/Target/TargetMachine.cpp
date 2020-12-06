@@ -109,17 +109,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   // generated code.
   // FIXME: Add a module level metadata for whether intrinsics should be assumed
   // local.
-  if (!GV) {
-    if (TT.isOSBinFormatCOFF())
-      return true;
-    if (TT.isOSBinFormatELF() && TT.isX86() && RM == Reloc::Static) {
-      // For -fno-plt, we cannot assume that intrinsics are local since the
-      // linker can convert some direct access to access via plt.
-      return !M.getRtLibUseGOT();
-    }
-
-    return false;
-  }
+  if (!GV)
+    return TT.isOSBinFormatCOFF();
 
   // If the IR producer requested that this GV be treated as dso local, obey.
   if (GV->isDSOLocal())
