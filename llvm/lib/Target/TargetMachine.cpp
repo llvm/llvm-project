@@ -163,11 +163,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // If the symbol is defined, it cannot be preempted.
     if (!GV->isDeclarationForLinker())
       return true;
-    // FIXME Sanitizers do not call setDSOLocal appropriately. Fix sanitizers
-    // and delete the hack.
-    if (RM == Reloc::Static && !GV->isThreadLocal() &&
-        M.getFunction("asan.module_ctor"))
-      return true;
   } else if (TT.isOSBinFormatELF()) {
     // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
     // alias, set the flag. We cannot set dso_local for other global values,
