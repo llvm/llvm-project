@@ -524,7 +524,6 @@ protected:
   bool selectFreeze(const User *I);
   bool selectCast(const User *I, unsigned Opcode);
   bool selectExtractValue(const User *U);
-  bool selectInsertValue(const User *I);
   bool selectXRayCustomEvent(const CallInst *II);
   bool selectXRayTypedEvent(const CallInst *II);
 

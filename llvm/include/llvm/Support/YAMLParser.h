@@ -510,7 +510,6 @@ public:
       : Node(NK_Alias, D, StringRef(), StringRef()), Name(Val) {}
 
   StringRef getName() const { return Name; }
-  Node *getTarget();
 
   static bool classof(const Node *N) { return N->getType() == NK_Alias; }
 
