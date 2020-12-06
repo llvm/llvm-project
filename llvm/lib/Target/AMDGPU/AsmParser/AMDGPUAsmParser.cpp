@@ -1438,7 +1438,7 @@ private:
 
   void peekTokens(MutableArrayRef<AsmToken> Tokens);
   AsmToken::TokenKind getTokenKind() const;
-  bool parseExpr(int64_t &Imm);
+  bool parseExpr(int64_t &Imm, StringRef Expected = "");
   bool parseExpr(OperandVector &Operands);
   StringRef getTokenStr() const;
   AsmToken peekToken();
@@ -5683,8 +5683,8 @@ AMDGPUAsmParser::parseHwregBody(OperandInfoTy &HwReg,
   if (isToken(AsmToken::Identifier) &&
       (HwReg.Id = getHwregId(getTokenStr())) >= 0) {
     HwReg.IsSymbolic = true;
-    lex(); // skip message name
-  } else if (!parseExpr(HwReg.Id)) {
+    lex(); // skip register name
+  } else if (!parseExpr(HwReg.Id, "a register name")) {
     return false;
   }
 
@@ -5753,7 +5753,7 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     } else {
       return MatchOperand_ParseFail;
     }
-  } else if (parseExpr(ImmVal)) {
+  } else if (parseExpr(ImmVal, "a hwreg macro")) {
     if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
       return MatchOperand_ParseFail;
@@ -5784,7 +5784,7 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
   if (isToken(AsmToken::Identifier) && (Msg.Id = getMsgId(getTokenStr())) >= 0) {
     Msg.IsSymbolic = true;
     lex(); // skip message name
-  } else if (!parseExpr(Msg.Id)) {
+  } else if (!parseExpr(Msg.Id, "a message name")) {
     return false;
   }
 
@@ -5794,7 +5794,7 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
     if (isToken(AsmToken::Identifier) &&
         (Op.Id = getMsgOpId(Msg.Id, getTokenStr())) >= 0) {
       lex(); // skip operation name
-    } else if (!parseExpr(Op.Id)) {
+    } else if (!parseExpr(Op.Id, "an operation name")) {
       return false;
     }
 
@@ -5864,7 +5864,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
     } else {
       return MatchOperand_ParseFail;
     }
-  } else if (parseExpr(ImmVal)) {
+  } else if (parseExpr(ImmVal, "a sendmsg macro")) {
     if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
       return MatchOperand_ParseFail;
@@ -6082,8 +6082,23 @@ AMDGPUAsmParser::skipToken(const AsmToken::TokenKind Kind,
 }
 
 bool
-AMDGPUAsmParser::parseExpr(int64_t &Imm) {
-  return !getParser().parseAbsoluteExpression(Imm);
+AMDGPUAsmParser::parseExpr(int64_t &Imm, StringRef Expected) {
+  SMLoc S = getLoc();
+
+  const MCExpr *Expr;
+  if (Parser.parseExpression(Expr))
+    return false;
+
+  if (Expr->evaluateAsAbsolute(Imm))
+    return true;
+
+  if (Expected.empty()) {
+    Error(S, "expected absolute expression");
+  } else {
+    Error(S, Twine("expected ", Expected) +
+             Twine(" or an absolute expression"));
+  }
+  return false;
 }
 
 bool
@@ -6400,7 +6415,7 @@ AMDGPUAsmParser::parseSwizzleOffset(int64_t &Imm) {
 
   SMLoc OffsetLoc = Parser.getTok().getLoc();
 
-  if (!parseExpr(Imm)) {
+  if (!parseExpr(Imm, "a swizzle macro")) {
     return false;
   }
   if (!isUInt<16>(Imm)) {
