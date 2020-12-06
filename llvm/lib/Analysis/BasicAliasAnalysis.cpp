@@ -1032,11 +1032,11 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
 
 /// Provide ad-hoc rules to disambiguate accesses through two GEP operators,
 /// both having the exact same pointer operand.
-static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
-                                            LocationSize MaybeV1Size,
-                                            const GEPOperator *GEP2,
-                                            LocationSize MaybeV2Size,
-                                            const DataLayout &DL) {
+AliasResult BasicAAResult::aliasSameBasePointerGEPs(const GEPOperator *GEP1,
+                                                    LocationSize MaybeV1Size,
+                                                    const GEPOperator *GEP2,
+                                                    LocationSize MaybeV2Size,
+                                                    const DataLayout &DL) {
   assert(GEP1->getPointerOperand()->stripPointerCastsAndInvariantGroups() ==
              GEP2->getPointerOperand()->stripPointerCastsAndInvariantGroups() &&
          GEP1->getPointerOperandType() == GEP2->getPointerOperandType() &&
@@ -1126,24 +1126,12 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     if (C1 && C2)
       return NoAlias;
     {
+      // If we're not potentially reasoning about values from different
+      // iterations, see if we can prove them inequal.
       Value *GEP1LastIdx = GEP1->getOperand(GEP1->getNumOperands() - 1);
       Value *GEP2LastIdx = GEP2->getOperand(GEP2->getNumOperands() - 1);
-      if (isa<PHINode>(GEP1LastIdx) || isa<PHINode>(GEP2LastIdx)) {
-        // If one of the indices is a PHI node, be safe and only use
-        // computeKnownBits so we don't make any assumptions about the
-        // relationships between the two indices. This is important if we're
-        // asking about values from different loop iterations. See PR32314.
-        // TODO: We may be able to change the check so we only do this when
-        // we definitely looked through a PHINode.
-        if (GEP1LastIdx != GEP2LastIdx &&
-            GEP1LastIdx->getType() == GEP2LastIdx->getType()) {
-          KnownBits Known1 = computeKnownBits(GEP1LastIdx, DL);
-          KnownBits Known2 = computeKnownBits(GEP2LastIdx, DL);
-          if (Known1.Zero.intersects(Known2.One) ||
-              Known1.One.intersects(Known2.Zero))
-            return NoAlias;
-        }
-      } else if (isKnownNonEqual(GEP1LastIdx, GEP2LastIdx, DL))
+      if (VisitedPhiBBs.empty() &&
+          isKnownNonEqual(GEP1LastIdx, GEP2LastIdx, DL))
         return NoAlias;
     }
   }
