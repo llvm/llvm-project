@@ -373,7 +373,7 @@ def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR64:$rs1)), i32),
           (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
-def : Pat<(sint_to_fp (sext_inreg GPR:$rs1, i32)), (FCVT_D_W $rs1)>;
+def : Pat<(sint_to_fp (sexti32 GPR:$rs1)), (FCVT_D_W $rs1)>;
 def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_D_WU $rs1)>;
 
 def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_L_D FPR64:$rs1, 0b001)>;
