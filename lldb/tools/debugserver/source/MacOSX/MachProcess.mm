@@ -3273,9 +3273,14 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     bool slice_preference_set = false;
 
     if (cpu_subtype != 0) {
-      if (@available(macOS 10.16, ios 10.14, watchos 7.0, tvos 14.0, *)) {
-        err.SetError(posix_spawnattr_setarchpref_np(&attr, 1, &cpu_type,
-                                                    &cpu_subtype, &ocount));
+      typedef int (*posix_spawnattr_setarchpref_np_t)(
+          posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
+      posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
+          (posix_spawnattr_setarchpref_np_t)dlsym(
+              RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
+      if (posix_spawnattr_setarchpref_np_fn) {
+        err.SetError((*posix_spawnattr_setarchpref_np)(&attr, 1, &cpu_type,
+                                                       &cpu_subtype, &ocount));
         slice_preference_set = err.Success();
         if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
           err.LogThreaded(
