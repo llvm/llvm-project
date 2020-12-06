@@ -87,8 +87,7 @@ def _match_decorator_property(expected, actual):
     else:
         return expected == actual
 
-
-def expectedFailure(func, bugnumber=None):
+def expectedFailure(func):
     return unittest2.expectedFailure(func)
 
 def expectedFailureIfFn(expected_fn, bugnumber=None):
