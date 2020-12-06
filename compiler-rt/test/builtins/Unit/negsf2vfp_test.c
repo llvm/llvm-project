@@ -9,7 +9,7 @@
 
 extern COMPILER_RT_ABI float __negsf2vfp(float a);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x4)
 int test__negsf2vfp(float a)
 {
     float actual = __negsf2vfp(a);
@@ -23,7 +23,7 @@ int test__negsf2vfp(float a)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x4)
     if (test__negsf2vfp(1.0))
         return 1;
     if (test__negsf2vfp(HUGE_VALF))
