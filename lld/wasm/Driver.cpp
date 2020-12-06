@@ -645,7 +645,7 @@ static void createSyntheticSymbols() {
     WasmSym::stackPointer->markLive();
   }
 
-  if (config->sharedMemory && !config->shared) {
+  if (config->sharedMemory) {
     // Passive segments are used to avoid memory being reinitialized on each
     // thread's instantiation. These passive segments are initialized and
     // dropped in __wasm_init_memory, which is registered as the start function
