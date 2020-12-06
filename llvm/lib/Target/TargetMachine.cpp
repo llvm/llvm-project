@@ -101,10 +101,9 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   // dso_preemptable.  At this point in time, the various IR producers
   // have not been transitioned to always produce a dso_local when it
   // is possible to do so.
-  // In the case of ExternalSymbolSDNode, GV is null and there is nowhere to put
-  // dso_local. Returning false for those will produce worse code in some
-  // architectures. For example, on x86 the caller has to set ebx before calling
-  // a plt.
+  // In the case of ExternalSymbolSDNode, GV is null and we should just return
+  // false. However, COFF currently relies on this to be true
+  //
   // As a result we still have some logic in here to improve the quality of the
   // generated code.
   // FIXME: Add a module level metadata for whether intrinsics should be assumed
@@ -191,12 +190,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // drop the if block entirely and respect dso_local/dso_preemptable
     // specifiers set by the frontend.
     if (RM == Reloc::Static) {
-      // We currently respect dso_local/dso_preemptable specifiers for
-      // variables.
-      if (F)
-        return true;
       // TODO Remove the special case for x86-32.
-      if (Arch == Triple::x86 && !GV->isThreadLocal())
+      if (Arch == Triple::x86 && !F && !GV->isThreadLocal())
         return true;
     }
   } else if (TT.isOSBinFormatELF()) {

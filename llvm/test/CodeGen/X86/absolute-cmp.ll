@@ -20,8 +20,8 @@ define void @foo8(i64 %val) {
 ; NOPIC-NEXT:  # %bb.1: # %t
 ; NOPIC-NEXT:    pushq %rax # encoding: [0x50]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 16
-; NOPIC-NEXT:    callq f # encoding: [0xe8,A,A,A,A]
-; NOPIC-NEXT:    # fixup A - offset: 1, value: f-4, kind: reloc_branch_4byte_pcrel
+; NOPIC-NEXT:    callq f@PLT # encoding: [0xe8,A,A,A,A]
+; NOPIC-NEXT:    # fixup A - offset: 1, value: f@PLT-4, kind: FK_PCRel_4
 ; NOPIC-NEXT:    popq %rax # encoding: [0x58]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 8
 ; NOPIC-NEXT:  .LBB0_2: # %f
@@ -63,8 +63,8 @@ define void @foo32(i64 %val) {
 ; NOPIC-NEXT:  # %bb.1: # %t
 ; NOPIC-NEXT:    pushq %rax # encoding: [0x50]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 16
-; NOPIC-NEXT:    callq f # encoding: [0xe8,A,A,A,A]
-; NOPIC-NEXT:    # fixup A - offset: 1, value: f-4, kind: reloc_branch_4byte_pcrel
+; NOPIC-NEXT:    callq f@PLT # encoding: [0xe8,A,A,A,A]
+; NOPIC-NEXT:    # fixup A - offset: 1, value: f@PLT-4, kind: FK_PCRel_4
 ; NOPIC-NEXT:    popq %rax # encoding: [0x58]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 8
 ; NOPIC-NEXT:  .LBB1_2: # %f
