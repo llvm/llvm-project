@@ -57,6 +57,6 @@ define zeroext i1 @bar3() nounwind ssp {
   ret i1 %call
 }
 
-declare i32 @foo1(...)
+declare dso_local i32 @foo1(...)
 declare zeroext i1 @foo2()
 

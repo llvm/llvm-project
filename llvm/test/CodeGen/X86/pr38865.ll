@@ -42,6 +42,6 @@ entry:
   ret void
 }
 
-declare void @d(%struct.a* byval(%struct.a) align 8) local_unnamed_addr #1
+declare dso_local void @d(%struct.a* byval(%struct.a) align 8) local_unnamed_addr #1
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
+declare dso_local void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)

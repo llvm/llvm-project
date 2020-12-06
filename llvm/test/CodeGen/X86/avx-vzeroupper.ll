@@ -5,10 +5,10 @@
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mcpu=bdver2 | FileCheck %s --check-prefixes=ALL,BDVER2
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mcpu=btver2 | FileCheck %s --check-prefixes=ALL,BTVER2
 
-declare i32 @foo()
-declare <4 x float> @do_sse(<4 x float>)
-declare <8 x float> @do_avx(<8 x float>)
-declare <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float>, i8) nounwind readnone
+declare dso_local i32 @foo()
+declare dso_local <4 x float> @do_sse(<4 x float>)
+declare dso_local <8 x float> @do_avx(<8 x float>)
+declare dso_local <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float>, i8) nounwind readnone
 @x = common global <4 x float> zeroinitializer, align 16
 @g = common global <8 x float> zeroinitializer, align 32
 

@@ -417,7 +417,7 @@ entry:
   ret fp128 %cond
 }
 
-declare void @foo(fp128) #1
+declare dso_local void @foo(fp128) #1
 
 ; Test logical operations on fp128 values.
 define fp128 @TestFABS_LD(fp128 %x) #0 {

@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck %s --check-prefix=CHECK64
 ; RUN: llc < %s -mtriple=x86_64-win32 -show-mc-encoding | FileCheck %s --check-prefix=WIN64
 
-declare void @foo()
-declare void @bar()
+declare dso_local void @foo()
+declare dso_local void @bar()
 
 define void @f(i32 %x, i32 %y) optsize {
 ; CHECK32-LABEL: f:
@@ -141,7 +141,7 @@ bb2:
 
 }
 
-declare x86_thiscallcc zeroext i1 @baz(i8*, i32)
+declare dso_local x86_thiscallcc zeroext i1 @baz(i8*, i32)
 define x86_thiscallcc zeroext i1 @BlockPlacementTest(i8* %this, i32 %x) optsize {
 ; CHECK32-LABEL: BlockPlacementTest:
 ; CHECK32:       # %bb.0: # %entry
@@ -226,7 +226,7 @@ land.end:
 
 %"class.std::basic_string" = type { %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" }
 %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
-declare zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(i8*, i8*)
+declare dso_local zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(i8*, i8*)
 
 define zeroext i1 @pr31257(%"class.std::basic_string"* nocapture readonly dereferenceable(8) %s) minsize {
 ; CHECK32-LABEL: pr31257:
