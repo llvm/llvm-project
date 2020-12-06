@@ -419,6 +419,9 @@ public:
   /// \brief Return the profile format.
   SampleProfileFormat getFormat() const { return Format; }
 
+  /// Whether input profile is fully context-sensitie
+  bool profileIsCS() const { return ProfileIsCS; }
+
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
   };
@@ -460,6 +463,8 @@ protected:
   void computeSummary();
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
+  bool ProfileIsCS = false;
 
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
