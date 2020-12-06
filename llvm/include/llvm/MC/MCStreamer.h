@@ -1080,28 +1080,6 @@ public:
 /// timing the assembler front end.
 MCStreamer *createNullStreamer(MCContext &Ctx);
 
-/// Create a machine code streamer which will print out assembly for the native
-/// target, suitable for compiling with a native assembler.
-///
-/// \param InstPrint - If given, the instruction printer to use. If not given
-/// the MCInst representation will be printed.  This method takes ownership of
-/// InstPrint.
-///
-/// \param CE - If given, a code emitter to use to show the instruction
-/// encoding inline with the assembly. This method takes ownership of \p CE.
-///
-/// \param TAB - If given, a target asm backend to use to show the fixup
-/// information in conjunction with encoding information. This method takes
-/// ownership of \p TAB.
-///
-/// \param ShowInst - Whether to show the MCInst representation inline with
-/// the assembly.
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              bool isVerboseAsm, bool useDwarfDirectory,
-                              MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                              MCAsmBackend *TAB, bool ShowInst);
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCSTREAMER_H
