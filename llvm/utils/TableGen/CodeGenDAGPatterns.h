@@ -436,8 +436,6 @@ public:
   unsigned getScope() const { return Scope; }
   const std::string &getIdentifier() const { return Identifier; }
 
-  std::string getFullName() const;
-
   bool operator==(const ScopedName &o) const;
   bool operator!=(const ScopedName &o) const;
 };

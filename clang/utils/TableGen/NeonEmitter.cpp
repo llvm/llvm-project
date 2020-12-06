@@ -580,21 +580,18 @@ public:
     ClassMap[NoTestOpI] = ClassNoTest;
   }
 
-  // run - Emit arm_neon.h.inc
+  // Emit arm_neon.h.inc
   void run(raw_ostream &o);
 
-  // runFP16 - Emit arm_fp16.h.inc
+  // Emit arm_fp16.h.inc
   void runFP16(raw_ostream &o);
 
-  // runBF16 - Emit arm_bf16.h.inc
+  // Emit arm_bf16.h.inc
   void runBF16(raw_ostream &o);
 
-  // runHeader - Emit all the __builtin prototypes used in arm_neon.h,
-  // arm_fp16.h and arm_bf16.h
+  // Emit all the __builtin prototypes used in arm_neon.h, arm_fp16.h and
+  // arm_bf16.h
   void runHeader(raw_ostream &o);
-
-  // runTests - Emit tests for all the Neon intrinsics.
-  void runTests(raw_ostream &o);
 };
 
 } // end anonymous namespace
