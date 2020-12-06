@@ -178,22 +178,20 @@ define i1 @pmovmskb_allof_bitcast_v4f32(<4 x float> %a0) {
   ret i1 %5
 }
 
-; FIXME: MOVMSK(ICMP_SGT(X,-1)) -> NOT(MOVMSK(X)))
+; MOVMSK(ICMP_SGT(X,-1)) -> NOT(MOVMSK(X)))
 define i1 @movmskps_allof_v4i32_positive(<4 x i32> %a0) {
 ; SSE-LABEL: movmskps_allof_v4i32_positive:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    xorl $15, %eax
 ; SSE-NEXT:    cmpl $15, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: movmskps_allof_v4i32_positive:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskps %xmm0, %eax
+; AVX-NEXT:    xorl $15, %eax
 ; AVX-NEXT:    cmpl $15, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
@@ -208,19 +206,15 @@ define i1 @movmskps_allof_v4i32_positive(<4 x i32> %a0) {
 define i1 @pmovmskb_noneof_v16i8_positive(<16 x i8> %a0) {
 ; SSE-LABEL: pmovmskb_noneof_v16i8_positive:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pmovmskb_noneof_v16i8_positive:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = icmp sgt <16 x i8> %a0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
