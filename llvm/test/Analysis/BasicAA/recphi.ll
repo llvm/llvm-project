@@ -1,4 +1,5 @@
-; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO-PHI-VALUES
+; RUN: opt < %s -phi-values -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,PHI-VALUES
 
 ; CHECK-LABEL: Function: simple: 5 pointers, 0 call sites
 ; CHECK:         NoAlias:      float* %src1, float* %src2
@@ -232,5 +233,63 @@ exit:
   ret i32* %result
 }
 
+; CHECK-LABEL: Function: nested_loop
+; CHECK: NoAlias:  i8* %a, i8* %p.base
+; CHECK: NoAlias:  i8* %a, i8* %p.outer
+; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
+; NO-PHI-VALUES: MayAlias: i8* %a, i8* %p.inner
+; PHI-VALUES: NoAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
+define void @nested_loop(i1 %c, i1 %c2, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %outer_loop
+
+outer_loop:
+  %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
+  br label %inner_loop
+
+inner_loop:
+  %p.inner = phi i8* [ %p.outer, %outer_loop ], [ %p.inner.next, %inner_loop ]
+  %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  br i1 %c, label %inner_loop, label %outer_loop_latch
+
+outer_loop_latch:
+  %p.outer.next = getelementptr inbounds i8, i8* %p.inner, i64 10
+  br i1 %c2, label %outer_loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same as the previous test case, but avoiding phi of phi.
+; CHECK-LABEL: Function: nested_loop2
+; CHECK: NoAlias:  i8* %a, i8* %p.base
+; CHECK: NoAlias:  i8* %a, i8* %p.outer
+; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
+; CHECK: MayAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
+; TODO: (a, p.inner) could be NoAlias
+define void @nested_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %outer_loop
+
+outer_loop:
+  %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
+  %p.outer.next = getelementptr inbounds i8, i8* %p.outer, i64 10
+  br label %inner_loop
+
+inner_loop:
+  %p.inner = phi i8* [ %p.outer.next, %outer_loop ], [ %p.inner.next, %inner_loop ]
+  %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  br i1 %c, label %inner_loop, label %outer_loop_latch
+
+outer_loop_latch:
+  br i1 %c2, label %outer_loop, label %exit
+
+exit:
+  ret void
+}
 
 declare i16 @call(i32)
