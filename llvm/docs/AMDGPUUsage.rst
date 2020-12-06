@@ -77,7 +77,7 @@ to specify the target triple:
                     - AMD's PAL runtime using the *amdhsa* loader on Windows.
 
      ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
-                    runtime using the *amdpal* loader on Windows.
+                    runtime using the *amdpal* loader on Windows and Linux Pro.
      ``mesa3d``     Graphic shaders and compute kernels executed on Mesa 3D
                     runtime.
      ============== ============================================================
@@ -1324,6 +1324,7 @@ are deprecated and should not be used.
      ``AMD:AMDGPU:7:0:3`` ``gfx703``
      ``AMD:AMDGPU:7:0:4`` ``gfx704``
      ``AMD:AMDGPU:7:0:5`` ``gfx705``
+     ``AMD:AMDGPU:8:0:0`` ``gfx801:xnack-``
      ``AMD:AMDGPU:8:0:1`` ``gfx801:xnack+``
      ``AMD:AMDGPU:8:0:2`` ``gfx802``
      ``AMD:AMDGPU:8:0:3`` ``gfx803``
