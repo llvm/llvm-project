@@ -240,8 +240,8 @@ void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
   // In this case, we write the "null_export; s_endpgm" skip code in the
   // already-existing basic block.
   auto NextBBI = std::next(MBB.getIterator());
-  bool NoSuccessor = I == MBB.end() &&
-                     llvm::find(MBB.successors(), &*NextBBI) == MBB.succ_end();
+  bool NoSuccessor =
+      I == MBB.end() && !llvm::is_contained(MBB.successors(), &*NextBBI);
 
   if (NoSuccessor) {
     generatePsEndPgm(MBB, I, DL, TII);
