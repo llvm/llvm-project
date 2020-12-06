@@ -166,8 +166,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // FIXME Sanitizers do not call setDSOLocal appropriately. Fix sanitizers
     // and delete the hack.
     if (RM == Reloc::Static && !GV->isThreadLocal() &&
-        (M.getFunction("asan.module_ctor") ||
-         M.getFunction("memprof.module_ctor")))
+        M.getFunction("asan.module_ctor"))
       return true;
   } else if (TT.isOSBinFormatELF()) {
     // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
