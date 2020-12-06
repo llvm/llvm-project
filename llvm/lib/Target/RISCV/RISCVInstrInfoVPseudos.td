@@ -54,7 +54,7 @@ defvar EEWList = [8, 16, 32, 64];
 // Vector register and vector group type information.
 //===----------------------------------------------------------------------===//
 
-class VectorTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M>
+class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M>
 {
   ValueType Vector = Vec;
   ValueType Mask = Mas;
@@ -63,41 +63,41 @@ class VectorTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M
   LMULInfo LMul = M;
 }
 
-class GroupVectorTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas,
+class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas,
                           int Sew, VReg Reg, LMULInfo M>
-    : VectorTypeInfo<Vec, Mas, Sew, Reg, M>
+    : VTypeInfo<Vec, Mas, Sew, Reg, M>
 {
   ValueType VectorM1 = VecM1;
 }
 
-defset list<VectorTypeInfo> AllVectors = {
-  defset list<VectorTypeInfo> AllIntegerVectors = {
-    def VtypeInt8MF8  : VectorTypeInfo<vint8mf8_t,  vbool64_t,  8, VR, V_MF8>;
-    def VtypeInt8MF4  : VectorTypeInfo<vint8mf4_t,  vbool32_t,  8, VR, V_MF4>;
-    def VtypeInt8MF2  : VectorTypeInfo<vint8mf2_t,  vbool16_t,  8, VR, V_MF2>;
-    def VtypeInt8M1   : VectorTypeInfo<vint8m1_t,   vbool8_t,   8, VR, V_M1>;
-    def VtypeInt16MF4 : VectorTypeInfo<vint16mf4_t, vbool64_t, 16, VR, V_MF4>;
-    def VtypeInt16MF2 : VectorTypeInfo<vint16mf2_t, vbool32_t, 16, VR, V_MF2>;
-    def VtypeInt16M1  : VectorTypeInfo<vint16m1_t,  vbool16_t, 16, VR, V_M1>;
-    def VtypeInt32MF2 : VectorTypeInfo<vint32mf2_t, vbool64_t, 32, VR, V_MF2>;
-    def VtypeInt32M1  : VectorTypeInfo<vint32m1_t,  vbool32_t, 32, VR, V_M1>;
-    def VtypeInt64M1  : VectorTypeInfo<vint64m1_t,  vbool64_t, 64, VR, V_M1>;
+defset list<VTypeInfo> AllVectors = {
+  defset list<VTypeInfo> AllIntegerVectors = {
+    def : VTypeInfo<vint8mf8_t,  vbool64_t,  8, VR, V_MF8>;
+    def : VTypeInfo<vint8mf4_t,  vbool32_t,  8, VR, V_MF4>;
+    def : VTypeInfo<vint8mf2_t,  vbool16_t,  8, VR, V_MF2>;
+    def : VTypeInfo<vint8m1_t,   vbool8_t,   8, VR, V_M1>;
+    def : VTypeInfo<vint16mf4_t, vbool64_t, 16, VR, V_MF4>;
+    def : VTypeInfo<vint16mf2_t, vbool32_t, 16, VR, V_MF2>;
+    def : VTypeInfo<vint16m1_t,  vbool16_t, 16, VR, V_M1>;
+    def : VTypeInfo<vint32mf2_t, vbool64_t, 32, VR, V_MF2>;
+    def : VTypeInfo<vint32m1_t,  vbool32_t, 32, VR, V_M1>;
+    def : VTypeInfo<vint64m1_t,  vbool64_t, 64, VR, V_M1>;
 
-    def VtypeInt8M2  : GroupVectorTypeInfo<vint8m2_t,  vint8m1_t,  vbool4_t, 8,  VRM2, V_M2>;
-    def VtypeInt8M4  : GroupVectorTypeInfo<vint8m4_t,  vint8m1_t,  vbool2_t, 8,  VRM4, V_M4>;
-    def VtypeInt8M8  : GroupVectorTypeInfo<vint8m8_t,  vint8m1_t,  vbool1_t, 8,  VRM8, V_M8>;
+    def : GroupVTypeInfo<vint8m2_t, vint8m1_t, vbool4_t, 8, VRM2, V_M2>;
+    def : GroupVTypeInfo<vint8m4_t, vint8m1_t, vbool2_t, 8, VRM4, V_M4>;
+    def : GroupVTypeInfo<vint8m8_t, vint8m1_t, vbool1_t, 8, VRM8, V_M8>;
 
-    def VtypeInt16M2  : GroupVectorTypeInfo<vint16m2_t, vint16m1_t, vbool8_t, 16, VRM2, V_M2>;
-    def VtypeInt16M4 : GroupVectorTypeInfo<vint16m4_t, vint16m1_t, vbool4_t, 16, VRM4, V_M4>;
-    def VtypeInt16M8 : GroupVectorTypeInfo<vint16m8_t, vint16m1_t, vbool2_t, 16, VRM8, V_M8>;
+    def : GroupVTypeInfo<vint16m2_t,vint16m1_t,vbool8_t, 16,VRM2, V_M2>;
+    def : GroupVTypeInfo<vint16m4_t,vint16m1_t,vbool4_t, 16,VRM4, V_M4>;
+    def : GroupVTypeInfo<vint16m8_t,vint16m1_t,vbool2_t, 16,VRM8, V_M8>;
 
-    def VtypeInt32M2  : GroupVectorTypeInfo<vint32m2_t, vint32m1_t, vbool16_t, 32, VRM2, V_M2>;
-    def VtypeInt32M4  : GroupVectorTypeInfo<vint32m4_t, vint32m1_t, vbool8_t,  32, VRM4, V_M4>;
-    def VtypeInt32M8 : GroupVectorTypeInfo<vint32m8_t, vint32m1_t, vbool4_t,  32, VRM8, V_M8>;
+    def : GroupVTypeInfo<vint32m2_t,vint32m1_t,vbool16_t,32,VRM2, V_M2>;
+    def : GroupVTypeInfo<vint32m4_t,vint32m1_t,vbool8_t, 32,VRM4, V_M4>;
+    def : GroupVTypeInfo<vint32m8_t,vint32m1_t,vbool4_t, 32,VRM8, V_M8>;
 
-    def VtypeInt64M2  : GroupVectorTypeInfo<vint64m2_t, vint64m1_t, vbool32_t, 64, VRM2, V_M2>;
-    def VtypeInt64M4  : GroupVectorTypeInfo<vint64m4_t, vint64m1_t, vbool16_t, 64, VRM4, V_M4>;
-    def VtypeInt64M8  : GroupVectorTypeInfo<vint64m8_t, vint64m1_t, vbool8_t,  64, VRM8, V_M8>;
+    def : GroupVTypeInfo<vint64m2_t,vint64m1_t,vbool32_t,64,VRM2, V_M2>;
+    def : GroupVTypeInfo<vint64m4_t,vint64m1_t,vbool16_t,64,VRM4, V_M4>;
+    def : GroupVTypeInfo<vint64m8_t,vint64m1_t,vbool8_t, 64,VRM8, V_M8>;
   }
 }
 
@@ -184,7 +184,7 @@ multiclass pat_vop_binary<SDNode vop,
 
 multiclass pat_vop_binary_common<SDNode vop,
                                  string instruction_name,
-                                 list<VectorTypeInfo> vtilist>
+                                 list<VTypeInfo> vtilist>
 {
   foreach vti = vtilist in
   defm : pat_vop_binary<vop, instruction_name,
