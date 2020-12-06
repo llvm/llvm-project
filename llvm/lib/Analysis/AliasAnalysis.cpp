@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
@@ -54,7 +55,13 @@
 #include <functional>
 #include <iterator>
 
+#define DEBUG_TYPE "aa"
+
 using namespace llvm;
+
+STATISTIC(NumNoAlias,   "Number of NoAlias results");
+STATISTIC(NumMayAlias,  "Number of MayAlias results");
+STATISTIC(NumMustAlias, "Number of MustAlias results");
 
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
@@ -109,12 +116,25 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI) {
+  AliasResult Result = MayAlias;
+
+  Depth++;
   for (const auto &AA : AAs) {
-    auto Result = AA->alias(LocA, LocB, AAQI);
+    Result = AA->alias(LocA, LocB, AAQI);
     if (Result != MayAlias)
-      return Result;
+      break;
   }
-  return MayAlias;
+  Depth--;
+
+  if (Depth == 0) {
+    if (Result == NoAlias)
+      ++NumNoAlias;
+    else if (Result == MustAlias)
+      ++NumMustAlias;
+    else
+      ++NumMayAlias;
+  }
+  return Result;
 }
 
 bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
