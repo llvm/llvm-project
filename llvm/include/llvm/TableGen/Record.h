@@ -1608,7 +1608,6 @@ public:
     return IsAnonymous;
   }
 
-  void print(raw_ostream &OS) const;
   void dump() const;
 
   //===--------------------------------------------------------------------===//

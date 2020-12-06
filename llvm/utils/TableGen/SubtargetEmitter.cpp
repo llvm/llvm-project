@@ -114,7 +114,6 @@ class SubtargetEmitter {
                            SchedClassTables &SchedTables);
   void EmitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
   void EmitProcessorModels(raw_ostream &OS);
-  void EmitProcessorLookup(raw_ostream &OS);
   void EmitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void emitSchedModelHelpersImpl(raw_ostream &OS,
                                  bool OnlyExpandMCInstPredicates = false);
