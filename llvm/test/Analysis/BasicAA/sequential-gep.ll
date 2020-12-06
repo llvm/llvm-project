@@ -52,8 +52,7 @@ define void @t5([8 x i32]* %p, i32 %addend, i32* %q) {
 }
 
 ; CHECK-LABEL: Function: add_non_zero_simple
-; CHECK: MayAlias: i32* %gep1, i32* %gep2
-; TODO: This could be NoAlias.
+; CHECK: NoAlias: i32* %gep1, i32* %gep2
 define void @add_non_zero_simple(i32* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add i32 %addend, %knownnonzero
@@ -74,15 +73,14 @@ define void @add_non_zero_different_scales(i32* %p, i32 %addend, i32* %q) {
 }
 
 ; CHECK-LABEL: Function: add_non_zero_different_sizes
-; CHECK: MayAlias: i16* %gep1.16, i32* %gep2
-; CHECK: MayAlias: i16* %gep2.16, i32* %gep1
-; CHECK: MayAlias: i16* %gep1.16, i16* %gep2.16
+; CHECK: NoAlias: i16* %gep1.16, i32* %gep2
+; CHECK: NoAlias: i16* %gep2.16, i32* %gep1
+; CHECK: NoAlias: i16* %gep1.16, i16* %gep2.16
 ; CHECK: MayAlias: i32* %gep2, i64* %gep1.64
 ; CHECK: MayAlias: i16* %gep2.16, i64* %gep1.64
 ; CHECK: MayAlias: i32* %gep1, i64* %gep2.64
 ; CHECK: MayAlias: i16* %gep1.16, i64* %gep2.64
 ; CHECK: MayAlias: i64* %gep1.64, i64* %gep2.64
-; TODO: The first three could be NoAlias.
 define void @add_non_zero_different_sizes(i32* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add i32 %addend, %knownnonzero

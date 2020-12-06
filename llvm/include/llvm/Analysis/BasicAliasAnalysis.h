@@ -202,12 +202,6 @@ private:
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
       LocationSize ObjectAccessSize);
 
-  AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
-                                       LocationSize MaybeV1Size,
-                                       const GEPOperator *GEP2,
-                                       LocationSize MaybeV2Size,
-                                       const DataLayout &DL);
-
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
