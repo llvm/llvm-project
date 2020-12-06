@@ -3279,8 +3279,8 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
           (posix_spawnattr_setarchpref_np_t)dlsym(
               RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
       if (posix_spawnattr_setarchpref_np_fn) {
-        err.SetError((*posix_spawnattr_setarchpref_np)(&attr, 1, &cpu_type,
-                                                       &cpu_subtype, &ocount));
+        err.SetError((*posix_spawnattr_setarchpref_np_fn)(
+            &attr, 1, &cpu_type, &cpu_subtype, &ocount));
         slice_preference_set = err.Success();
         if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
           err.LogThreaded(
