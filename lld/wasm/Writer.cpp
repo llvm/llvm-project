@@ -869,10 +869,24 @@ void Writer::createInitMemoryFunction() {
   LLVM_DEBUG(dbgs() << "createInitMemoryFunction\n");
   assert(WasmSym::initMemoryFlag);
   uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  bool is64 = config->is64.getValueOr(false);
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
+    // With PIC code we cache the flag address in local 0
+    if (config->isPic) {
+      writeUleb128(os, 1, "num local decls");
+      writeUleb128(os, 1, "local count");
+      writeU8(os, is64 ? WASM_TYPE_I64 : WASM_TYPE_I32, "address type");
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+      writePtrConst(os, flagAddress, is64, "flag address");
+      writeU8(os, WASM_OPCODE_I32_ADD, "add");
+      writeU8(os, WASM_OPCODE_LOCAL_SET, "local.set");
+      writeUleb128(os, 0, "local 0");
+    } else {
+      writeUleb128(os, 0, "num locals");
+    }
 
     if (hasPassiveInitializedSegments()) {
       // Initialize memory in a thread-safe manner. The thread that successfully
@@ -916,11 +930,24 @@ void Writer::createInitMemoryFunction() {
       //  )
       //  ( ... drop data segments ... )
       // )
+      //
+      // When we are building with PIC, calculate the flag location using:
+      //
+      //    (global.get $__memory_base)
+      //    (i32.const $__init_memory_flag)
+      //    (i32.const 1)
 
-      bool is64 = config->is64.getValueOr(false);
+      auto writeGetFlagAddress = [&]() {
+        if (config->isPic) {
+          writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+          writeUleb128(os, 0, "local 0");
+        } else {
+          writePtrConst(os, flagAddress, is64, "flag address");
+        }
+      };
 
       // Atomically check whether this is the main thread.
-      writePtrConst(os, flagAddress, is64, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 0, "expected flag value");
       writeI32Const(os, 1, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
@@ -930,7 +957,7 @@ void Writer::createInitMemoryFunction() {
       writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
       // Did not increment 0, so wait for main thread to initialize memory
-      writePtrConst(os, flagAddress, is64, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 1, "expected flag value");
       writeI64Const(os, -1, "timeout");
 
@@ -946,6 +973,12 @@ void Writer::createInitMemoryFunction() {
         if (needsPassiveInitialization(s)) {
           // destination address
           writePtrConst(os, s->startVA, is64, "destination address");
+          if (config->isPic) {
+            writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+            writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                         "memory_base");
+            writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
+          }
           // source segment offset
           writeI32Const(os, 0, "segment offset");
           // memory region size
@@ -959,14 +992,14 @@ void Writer::createInitMemoryFunction() {
       }
 
       // Set flag to 2 to mark end of initialization
-      writePtrConst(os, flagAddress, is64, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 2, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_I32_ATOMIC_STORE, "i32.atomic.store");
       writeMemArg(os, 2, 0);
 
       // Notify any waiters that memory initialization is complete
-      writePtrConst(os, flagAddress, is64, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, -1, "number of waiters");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_ATOMIC_NOTIFY, "atomic.notify");
@@ -1095,9 +1128,6 @@ void Writer::createCommandExportWrapper(uint32_t functionIndex,
 }
 
 void Writer::createInitTLSFunction() {
-  if (!WasmSym::initTLS->isLive())
-    return;
-
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
@@ -1244,7 +1274,7 @@ void Writer::run() {
     }
   }
 
-  if (!config->relocatable && config->sharedMemory && !config->shared)
+  if (WasmSym::initTLS && WasmSym::initTLS->isLive())
     createInitTLSFunction();
 
   if (errorCount())
