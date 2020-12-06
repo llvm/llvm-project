@@ -112,7 +112,7 @@ define double @sitofp_aext_i32_to_f64(i32 %a) nounwind {
 define double @sitofp_sext_i32_to_f64(i32 signext %a) nounwind {
 ; RV64ID-LABEL: sitofp_sext_i32_to_f64:
 ; RV64ID:       # %bb.0:
-; RV64ID-NEXT:    fcvt.d.l ft0, a0
+; RV64ID-NEXT:    fcvt.d.w ft0, a0
 ; RV64ID-NEXT:    fmv.x.d a0, ft0
 ; RV64ID-NEXT:    ret
   %1 = sitofp i32 %a to double
