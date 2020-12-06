@@ -22,6 +22,8 @@ namespace std
   public:
     using arrival_token = see below;
 
+    static constexpr ptrdiff_t max() noexcept;
+
     constexpr explicit barrier(ptrdiff_t phase_count,
                                CompletionFunction f = CompletionFunction());
     ~barrier();

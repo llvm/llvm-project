@@ -19,6 +19,8 @@ namespace std
   class latch
   {
   public:
+    static constexpr ptrdiff_t max() noexcept;
+
     constexpr explicit latch(ptrdiff_t __expected);
     ~latch();
 
