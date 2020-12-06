@@ -27,7 +27,7 @@ define i32 @my_get_xyz() {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: my_get_xyz:
-; X64:         movl $my_emutls_v_xyz, %edi
+; X64:         movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT:    callq my_emutls_get_address
 ; X64-NEXT:    movl (%rax), %eax
 ; X64-NEXT:    popq %rcx
