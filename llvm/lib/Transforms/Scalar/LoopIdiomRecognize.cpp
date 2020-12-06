@@ -1717,11 +1717,13 @@ void LoopIdiomRecognize::transformLoopToCountable(
   // Step 1: Insert the CTLZ/CTTZ instruction at the end of the preheader block
   IRBuilder<> Builder(PreheaderBr);
   Builder.SetCurrentDebugLocation(DL);
-  Value *FFS, *Count, *CountPrev, *NewCount, *InitXNext;
 
   //   Count = BitWidth - CTLZ(InitX);
+  //   NewCount = Count;
   // If there are uses of CntPhi create:
-  //   CountPrev = BitWidth - CTLZ(InitX >> 1);
+  //   NewCount = BitWidth - CTLZ(InitX >> 1);
+  //   Count = NewCount + 1;
+  Value *InitXNext;
   if (IsCntPhiUsedOutsideLoop) {
     if (DefX->getOpcode() == Instruction::AShr)
       InitXNext =
@@ -1736,21 +1738,18 @@ void LoopIdiomRecognize::transformLoopToCountable(
       llvm_unreachable("Unexpected opcode!");
   } else
     InitXNext = InitX;
-  FFS = createFFSIntrinsic(Builder, InitXNext, DL, ZeroCheck, IntrinID);
-  Count = Builder.CreateSub(
-      ConstantInt::get(FFS->getType(),
-                       FFS->getType()->getIntegerBitWidth()),
+  Value *FFS = createFFSIntrinsic(Builder, InitXNext, DL, ZeroCheck, IntrinID);
+  Value *Count = Builder.CreateSub(
+      ConstantInt::get(FFS->getType(), FFS->getType()->getIntegerBitWidth()),
       FFS);
+  Value *NewCount = Count;
   if (IsCntPhiUsedOutsideLoop) {
-    CountPrev = Count;
-    Count = Builder.CreateAdd(
-        CountPrev,
-        ConstantInt::get(CountPrev->getType(), 1));
+    NewCount = Count;
+    Count = Builder.CreateAdd(Count, ConstantInt::get(Count->getType(), 1));
   }
 
-  NewCount = Builder.CreateZExtOrTrunc(
-                      IsCntPhiUsedOutsideLoop ? CountPrev : Count,
-                      cast<IntegerType>(CntInst->getType()));
+  NewCount = Builder.CreateZExtOrTrunc(NewCount,
+                                       cast<IntegerType>(CntInst->getType()));
 
   // If the counter's initial value is not zero, insert Add Inst.
   Value *CntInitVal = CntPhi->getIncomingValueForBlock(Preheader);
