@@ -53,8 +53,8 @@ define double @tst2(double %a, float %b, float %c) nounwind {
   ret double %tmp
 }
 
-declare float @copysignf(float, float)
-declare double @copysign(double, double)
+declare dso_local float @copysignf(float, float)
+declare dso_local double @copysign(double, double)
 
 ;
 ; LLVM Intrinsic
@@ -150,5 +150,5 @@ define double @cst2() nounwind {
   ret double %tmp
 }
 
-declare float     @llvm.copysign.f32(float  %Mag, float  %Sgn)
-declare double    @llvm.copysign.f64(double %Mag, double %Sgn)
+declare dso_local float     @llvm.copysign.f32(float  %Mag, float  %Sgn)
+declare dso_local double    @llvm.copysign.f64(double %Mag, double %Sgn)

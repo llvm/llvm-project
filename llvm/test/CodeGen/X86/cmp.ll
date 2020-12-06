@@ -138,7 +138,7 @@ bb12:
   ret i32 32
 }
 
-declare i32 @foo(...)
+declare dso_local i32 @foo(...)
 
 define i32 @test6() nounwind align 2 {
 ; CHECK-LABEL: test6:
@@ -266,7 +266,7 @@ F:
   ret i32 2
 }
 
-declare zeroext i1 @test12b()
+declare dso_local zeroext i1 @test12b()
 
 define i32 @test13(i32 %mask, i32 %base, i32 %intra) {
 ; CHECK-LABEL: test13:
@@ -518,7 +518,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32 %retval.0
 }
 
-declare i32 @g()
+declare dso_local i32 @g()
 
-declare i32 @f()
+declare dso_local i32 @f()
 

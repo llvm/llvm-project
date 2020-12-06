@@ -137,14 +137,14 @@ cleanup:                                          ; preds = %if.else, %if.then20
   ret void
 }
 
-declare i32 @c()
+declare dso_local i32 @c()
 
-declare i32 @l(i32*)
+declare dso_local i32 @l(i32*)
 
-declare i32 @m(i64)
+declare dso_local i32 @m(i64)
 
-declare i32 @i(i32)
+declare dso_local i32 @i(i32)
 
-declare i32 @k(i32, i64, i32*, i64)
+declare dso_local i32 @k(i32, i64, i32*, i64)
 
 !0 = !{!"branch_weights", i32 2000, i32 1}

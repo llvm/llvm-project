@@ -42,9 +42,9 @@ bb1:                                              ; preds = %entry
   ret i32 %6
 }
 
-declare i32 @foo(...)
+declare dso_local i32 @foo(...)
 
-declare i32 @bar(...)
+declare dso_local i32 @bar(...)
 
 define i32 @t2(i32 %x, i32 %y) nounwind ssp {
 ; X86-LABEL: t2:

@@ -94,11 +94,11 @@ ret i32 0
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-declare void @free(i8* nocapture) nounwind
+declare dso_local void @free(i8* nocapture) nounwind
 
 %struct.obj2 = type { i64, i32, i16, i8 }
 
-declare void @other(%struct.obj2* ) nounwind;
+declare dso_local void @other(%struct.obj2* ) nounwind;
 
 define void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
 ; 64 bit dec
@@ -255,7 +255,7 @@ if.end:
   ret void
 }
 
-declare void @baz()
+declare dso_local void @baz()
 
 ; Avoid creating a cycle in the DAG which would trigger an assert in the
 ; scheduler.
