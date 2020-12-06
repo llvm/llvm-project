@@ -341,12 +341,12 @@ define dso_local void ()* @lea_global_fn() #0 {
 define dso_local void ()* @lea_extern_fn() #0 {
 ; SMALL-STATIC-LABEL: lea_extern_fn:
 ; SMALL-STATIC:       # %bb.0:
-; SMALL-STATIC-NEXT:    movl $extern_fn, %eax
+; SMALL-STATIC-NEXT:    movq extern_fn@{{.*}}(%rip), %rax
 ; SMALL-STATIC-NEXT:    retq
 ;
 ; MEDIUM-STATIC-LABEL: lea_extern_fn:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movabsq $extern_fn, %rax
+; MEDIUM-STATIC-NEXT:    movq extern_fn@{{.*}}(%rip), %rax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: lea_extern_fn:
