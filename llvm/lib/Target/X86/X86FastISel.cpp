@@ -784,7 +784,7 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
           RC  = &X86::GR32RegClass;
         }
 
-        if (Subtarget->isPICStyleRIPRel())
+        if (Subtarget->isPICStyleRIPRel() || GVFlags == X86II::MO_GOTPCREL)
           StubAM.Base.Reg = X86::RIP;
 
         LoadReg = createResultReg(RC);
