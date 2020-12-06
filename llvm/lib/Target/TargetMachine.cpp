@@ -198,8 +198,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       // variables.
       if (!GV || F)
         return true;
-      // TODO Remove the special case for x86-32 and wasm.
-      if ((Arch == Triple::x86 || TT.isWasm()) && !GV->isThreadLocal())
+      // TODO Remove the special case for x86-32.
+      if (Arch == Triple::x86 && !GV->isThreadLocal())
         return true;
     }
   } else if (TT.isOSBinFormatELF()) {
