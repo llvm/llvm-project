@@ -800,7 +800,7 @@ declare fp128 @llvm.round.f128(fp128)
 define fp128 @Test128FMA(fp128 %a, fp128 %b, fp128 %c) nounwind {
 ; CHECK-LABEL: Test128FMA:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp fmal # TAILCALL
+; CHECK-NEXT:    jmp fmal@PLT # TAILCALL
 ;
 ; X86-LABEL: Test128FMA:
 ; X86:       # %bb.0: # %entry

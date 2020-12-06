@@ -75,7 +75,7 @@ define float @test_extend32(half* %addr) #0 {
 ; CHECK-LIBCALL-LABEL: test_extend32:
 ; CHECK-LIBCALL:       # %bb.0:
 ; CHECK-LIBCALL-NEXT:    movzwl (%rdi), %edi
-; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; BWON-F16C-LABEL: test_extend32:
 ; BWON-F16C:       # %bb.0:
@@ -864,7 +864,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; CHECK-LIBCALL-NEXT:    movzwl %ax, %edi
 ; CHECK-LIBCALL-NEXT:    addq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    popq %rbx
-; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; CHECK-LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; BWON-F16C-LABEL: test_sitofp_fadd_i32:
 ; BWON-F16C:       # %bb.0:

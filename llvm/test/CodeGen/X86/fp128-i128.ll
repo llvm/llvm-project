@@ -315,7 +315,7 @@ define fp128 @TestI128_4(fp128 %x) #0 {
 ; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    jmp __addtf3 # TAILCALL
+; SSE-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; AVX-LABEL: TestI128_4:
 ; AVX:       # %bb.0: # %entry
@@ -325,7 +325,7 @@ define fp128 @TestI128_4(fp128 %x) #0 {
 ; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    jmp __addtf3 # TAILCALL
+; AVX-NEXT:    jmp __addtf3@PLT # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616
@@ -370,7 +370,7 @@ define fp128 @acosl(fp128 %x) #0 {
 ; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    jmp __addtf3 # TAILCALL
+; SSE-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; AVX-LABEL: acosl:
 ; AVX:       # %bb.0: # %entry
@@ -380,7 +380,7 @@ define fp128 @acosl(fp128 %x) #0 {
 ; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    jmp __addtf3 # TAILCALL
+; AVX-NEXT:    jmp __addtf3@PLT # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616

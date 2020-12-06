@@ -18,7 +18,7 @@ define void @regular_memcpy_calls_external_function(i8* %a, i8* %b) nounwind {
 ; CHECK-LABEL: regular_memcpy_calls_external_function:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $128, %edx
-; CHECK-NEXT:    jmp memcpy # TAILCALL
+; CHECK-NEXT:    jmp memcpy@PLT # TAILCALL
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 128, i1 0 )
   ret void
 }
