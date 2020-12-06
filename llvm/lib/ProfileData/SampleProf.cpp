@@ -31,6 +31,7 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
+bool FunctionSamples::ProfileIsCS = false;
 bool FunctionSamples::UseMD5;
 } // namespace sampleprof
 } // namespace llvm
