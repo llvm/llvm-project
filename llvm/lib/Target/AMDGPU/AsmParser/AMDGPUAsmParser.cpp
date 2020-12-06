@@ -1401,7 +1401,7 @@ private:
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
-  bool validateMovrels(const MCInst &Inst);
+  bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
@@ -3337,7 +3337,8 @@ static bool IsMovrelsSDWAOpcode(const unsigned Opcode)
 // movrels* opcodes should only allow VGPRS as src0.
 // This is specified in .td description for vop1/vop3,
 // but sdwa is handled differently. See isSDWAOperand.
-bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst,
+                                      const OperandVector &Operands) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
@@ -3348,13 +3349,20 @@ bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
   const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   assert(Src0Idx != -1);
 
+  SMLoc ErrLoc;
   const MCOperand &Src0 = Inst.getOperand(Src0Idx);
-  if (!Src0.isReg())
-    return false;
+  if (Src0.isReg()) {
+    auto Reg = mc2PseudoReg(Src0.getReg());
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+    if (!isSGPR(Reg, TRI))
+      return true;
+    ErrLoc = getRegLoc(Reg, Operands);
+  } else {
+    ErrLoc = getConstLoc(Operands);
+  }
 
-  auto Reg = Src0.getReg();
-  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  return !isSGPR(mc2PseudoReg(Reg), TRI);
+  Error(ErrLoc, "source operand must be a VGPR");
+  return false;
 }
 
 bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
@@ -3899,8 +3907,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
       "invalid image_gather dmask: only one bit must be set");
     return false;
   }
-  if (!validateMovrels(Inst)) {
-    Error(IDLoc, "source operand must be a VGPR");
+  if (!validateMovrels(Inst, Operands)) {
     return false;
   }
   if (!validateFlatOffset(Inst, Operands)) {
@@ -4033,7 +4040,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size()) {
-        return Error(IDLoc, "too few operands for instruction");
+        return Error(getLoc(), "too few operands for instruction");
       }
       ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
       if (ErrorLoc == SMLoc())
