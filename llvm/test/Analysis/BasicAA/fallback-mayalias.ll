@@ -7,17 +7,16 @@
 
 define void @fallback_mayalias(float* noalias nocapture %C, i64 %i, i64 %j) local_unnamed_addr {
 entry:
-  %shl = shl i64 %i, 3
-  %mul = shl nsw i64 %j, 4
-  %addA = add nsw i64 %mul, %shl
-  %orB = or i64 %shl, 1
-  %addB = add nsw i64 %mul, %orB
+  %cmp = icmp ne i64 %i, %j
+  call void @llvm.assume(i1 %cmp)
 
-  %arrayidxA = getelementptr inbounds float, float* %C, i64 %addA
+  %arrayidxA = getelementptr inbounds float, float* %C, i64 %i
   store float undef, float* %arrayidxA, align 4
 
-  %arrayidxB = getelementptr inbounds float, float* %C, i64 %addB
+  %arrayidxB = getelementptr inbounds float, float* %C, i64 %j
   store float undef, float* %arrayidxB, align 4
 
   ret void
 }
+
+declare void @llvm.assume(i1)
