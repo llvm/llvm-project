@@ -133,7 +133,7 @@ define float @pow_f32_one_fourth_not_enough_fmf(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_fourth_not_enough_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    jmp powf # TAILCALL
+; CHECK-NEXT:    jmp powf@PLT # TAILCALL
   %r = call afn ninf float @llvm.pow.f32(float %x, float 2.5e-01)
   ret float %r
 }
@@ -142,7 +142,7 @@ define double @pow_f64_one_fourth_not_enough_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_one_fourth_not_enough_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    jmp pow # TAILCALL
+; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz ninf double @llvm.pow.f64(double %x, double 2.5e-01)
   ret double %r
 }
@@ -206,7 +206,7 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
 define float @pow_f32_one_third_fmf(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_third_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp cbrtf # TAILCALL
+; CHECK-NEXT:    jmp cbrtf@PLT # TAILCALL
   %one = uitofp i32 1 to float
   %three = uitofp i32 3 to float
   %exp = fdiv float %one, %three
@@ -217,7 +217,7 @@ define float @pow_f32_one_third_fmf(float %x) nounwind {
 define double @pow_f64_one_third_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_one_third_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp cbrt # TAILCALL
+; CHECK-NEXT:    jmp cbrt@PLT # TAILCALL
   %one = uitofp i32 1 to double
   %three = uitofp i32 3 to double
   %exp = fdiv double %one, %three
@@ -251,7 +251,7 @@ define double @pow_f64_not_exactly_one_third_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_not_exactly_one_third_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    jmp pow # TAILCALL
+; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz nnan ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555556)
   ret double %r
 }
@@ -262,7 +262,7 @@ define double @pow_f64_not_enough_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_not_enough_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    jmp pow # TAILCALL
+; CHECK-NEXT:    jmp pow@PLT # TAILCALL
   %r = call nsz ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555555)
   ret double %r
 }

@@ -203,7 +203,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
         is64Bit())
        return X86II::MO_GOTPCREL;
     // Reference ExternalSymbol directly in static relocation model.
-    if (!GV && TM.getRelocationModel() == Reloc::Static)
+    if (!is64Bit() && !GV && TM.getRelocationModel() == Reloc::Static)
       return X86II::MO_NO_FLAG;
     return X86II::MO_PLT;
   }

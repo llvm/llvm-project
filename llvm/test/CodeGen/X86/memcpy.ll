@@ -18,23 +18,23 @@ define i8* @test1(i8* %a, i8* %b, i64 %n) nounwind {
 ;
 ; LINUX-LABEL: test1:
 ; LINUX:       # %bb.0: # %entry
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKL-LABEL: test1:
 ; LINUX-SKL:       # %bb.0: # %entry
-; LINUX-SKL-NEXT:    jmp memcpy # TAILCALL
+; LINUX-SKL-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKX-LABEL: test1:
 ; LINUX-SKX:       # %bb.0: # %entry
-; LINUX-SKX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-SKX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-KNL-LABEL: test1:
 ; LINUX-KNL:       # %bb.0: # %entry
-; LINUX-KNL-NEXT:    jmp memcpy # TAILCALL
+; LINUX-KNL-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-AVX512BW-LABEL: test1:
 ; LINUX-AVX512BW:       # %bb.0: # %entry
-; LINUX-AVX512BW-NEXT:    jmp memcpy # TAILCALL
+; LINUX-AVX512BW-NEXT:    jmp memcpy@PLT # TAILCALL
 entry:
 	tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 %n, i1 0 )
 	ret i8* %a
@@ -48,23 +48,23 @@ define i8* @test2(i64* %a, i64* %b, i64 %n) nounwind {
 ;
 ; LINUX-LABEL: test2:
 ; LINUX:       # %bb.0: # %entry
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKL-LABEL: test2:
 ; LINUX-SKL:       # %bb.0: # %entry
-; LINUX-SKL-NEXT:    jmp memcpy # TAILCALL
+; LINUX-SKL-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKX-LABEL: test2:
 ; LINUX-SKX:       # %bb.0: # %entry
-; LINUX-SKX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-SKX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-KNL-LABEL: test2:
 ; LINUX-KNL:       # %bb.0: # %entry
-; LINUX-KNL-NEXT:    jmp memcpy # TAILCALL
+; LINUX-KNL-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-AVX512BW-LABEL: test2:
 ; LINUX-AVX512BW:       # %bb.0: # %entry
-; LINUX-AVX512BW-NEXT:    jmp memcpy # TAILCALL
+; LINUX-AVX512BW-NEXT:    jmp memcpy@PLT # TAILCALL
 entry:
 	%tmp14 = bitcast i64* %a to i8*
 	%tmp25 = bitcast i64* %b to i8*
@@ -102,7 +102,7 @@ define void @test3(i8* nocapture %A, i8* nocapture %B) nounwind optsize noredzon
 ; LINUX-LABEL: test3:
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    movl $64, %edx
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKL-LABEL: test3:
 ; LINUX-SKL:       # %bb.0: # %entry
@@ -143,7 +143,7 @@ define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !
 ; LINUX-LABEL: test3_pgso:
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    movl $64, %edx
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; DARWIN-LABEL: test3_pgso:
 ; DARWIN:       ## %bb.0: ## %entry
@@ -180,7 +180,7 @@ define void @test3_minsize(i8* nocapture %A, i8* nocapture %B) nounwind minsize 
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq $64
 ; LINUX-NEXT:    popq %rdx
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKL-LABEL: test3_minsize:
 ; LINUX-SKL:       # %bb.0:
@@ -227,7 +227,7 @@ define void @test3_minsize_optsize(i8* nocapture %A, i8* nocapture %B) nounwind 
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq $64
 ; LINUX-NEXT:    popq %rdx
-; LINUX-NEXT:    jmp memcpy # TAILCALL
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
 ; LINUX-SKL-LABEL: test3_minsize_optsize:
 ; LINUX-SKL:       # %bb.0:
