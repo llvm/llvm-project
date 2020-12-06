@@ -173,27 +173,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // If the symbol is defined, it cannot be preempted.
     if (!GV->isDeclarationForLinker())
       return true;
-
-    // A symbol marked nonlazybind should not be accessed with a plt. If the
-    // symbol turns out to be external, the linker will convert a direct
-    // access to an access via the plt, so don't assume it is local.
-    const Function *F = dyn_cast<Function>(GV);
-    if (F && F->hasFnAttribute(Attribute::NonLazyBind))
-      return false;
-    Triple::ArchType Arch = TT.getArch();
-
-    // PowerPC64 prefers TOC indirection to avoid copy relocations.
-    if (TT.isPPC64())
-      return false;
-
-    // dso_local is traditionally implied for Reloc::Static. Eventually we shall
-    // drop the if block entirely and respect dso_local/dso_preemptable
-    // specifiers set by the frontend.
-    if (RM == Reloc::Static) {
-      // TODO Remove the special case for x86-32.
-      if (Arch == Triple::x86 && !F && !GV->isThreadLocal())
-        return true;
-    }
   } else if (TT.isOSBinFormatELF()) {
     // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
     // alias, set the flag. We cannot set dso_local for other global values,
