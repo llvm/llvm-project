@@ -46,7 +46,7 @@ struct pointer_traits<T*>
 };
 
 template <class T> constexpr T* to_address(T* p) noexcept; // C++20
-template <class Ptr> auto to_address(const Ptr& p) noexcept; // C++20
+template <class Ptr> constexpr auto to_address(const Ptr& p) noexcept; // C++20
 
 template <class Alloc>
 struct allocator_traits
@@ -1077,7 +1077,7 @@ to_address(_Tp* __p) _NOEXCEPT
 }
 
 template <class _Pointer>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY constexpr
 auto
 to_address(const _Pointer& __p) _NOEXCEPT
 {

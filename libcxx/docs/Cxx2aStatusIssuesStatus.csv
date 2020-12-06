@@ -278,7 +278,7 @@
 "`3371 <https://wg21.link/LWG3371>`__","``visit_format_arg``\  and ``make_format_args``\  are not hidden friends","Prague","",""
 "`3372 <https://wg21.link/LWG3372>`__","``vformat_to``\  should not try to deduce ``Out``\  twice","Prague","",""
 "`3373 <https://wg21.link/LWG3373>`__","``{to,from}_chars_result``\  and ``format_to_n_result``\  need the  ""we really mean what we say"" wording","Prague","",""
-"`3374 <https://wg21.link/LWG3374>`__","P0653 + P1006 should have made the other ``std::to_address``\  overload ``constexpr``\ ","Prague","",""
+"`3374 <https://wg21.link/LWG3374>`__","P0653 + P1006 should have made the other ``std::to_address``\  overload ``constexpr``\ ","Prague","|Complete|","12.0"
 "`3375 <https://wg21.link/LWG3375>`__","``decay``\  in ``viewable_range``\  should be ``remove_cvref``\ ","Prague","",""
 "`3377 <https://wg21.link/LWG3377>`__","``elements_view::iterator``\  befriends a specialization of itself","Prague","",""
 "`3379 <https://wg21.link/LWG3379>`__","""``safe``\ "" in several library names is misleading","Prague","",""
