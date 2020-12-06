@@ -108,11 +108,7 @@ define i1 @add2(i8 %B, i8 %C) {
 
 define i1 @sub1(i8 %B, i8 %C) {
 ; CHECK-LABEL: @sub1(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[A_OP:%.*]] = sub i8 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[B_OP:%.*]] = sub i8 [[B]], [[C]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP]], [[B_OP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = add i8 %B, 1
   %A.op = sub i8 %A, %C
@@ -124,11 +120,7 @@ define i1 @sub1(i8 %B, i8 %C) {
 
 define i1 @sub2(i8 %B, i8 %C) {
 ; CHECK-LABEL: @sub2(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[A_OP:%.*]] = sub i8 [[C:%.*]], [[A]]
-; CHECK-NEXT:    [[B_OP:%.*]] = sub i8 [[C]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP]], [[B_OP]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = add i8 %B, 1
   %A.op = sub i8 %C, %A
