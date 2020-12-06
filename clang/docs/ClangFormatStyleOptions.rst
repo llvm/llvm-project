@@ -1719,6 +1719,9 @@ the configuration (without a prefix: ``Auto``).
   priority for order.``SortPriority`` is set to the value of ``Priority``
   as default if it is not assigned.
 
+  Each regular expression can be marked as case sensitive with the field
+  ``CaseSensitive``, per default it is not.
+
   To configure this in the .clang-format file, use:
 
   .. code-block:: yaml
@@ -1727,6 +1730,7 @@ the configuration (without a prefix: ``Auto``).
       - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
         Priority:        2
         SortPriority:    2
+        CaseSensitive:   true
       - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
         Priority:        3
       - Regex:           '<[[:alnum:].]+>'
