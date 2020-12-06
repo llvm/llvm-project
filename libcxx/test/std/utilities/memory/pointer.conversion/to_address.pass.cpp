@@ -11,7 +11,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T> constexpr T* to_address(T* p) noexcept;
-// template <class Ptr> auto to_address(const Ptr& p) noexcept;
+// template <class Ptr> constexpr auto to_address(const Ptr& p) noexcept;
 
 #include <memory>
 #include <cassert>
@@ -22,10 +22,10 @@ class P1
 public:
     using element_type = int;
 
-    explicit P1(int* p)
+    constexpr explicit P1(int* p)
     : p_(p) { }
 
-    int* operator->() const noexcept
+    constexpr int* operator->() const noexcept
     { return p_; }
 
 private:
@@ -37,10 +37,10 @@ class P2
 public:
     using element_type = int;
 
-    explicit P2(int* p)
+    constexpr explicit P2(int* p)
     : p_(p) { }
 
-    P1 operator->() const noexcept
+    constexpr P1 operator->() const noexcept
     { return p_; }
 
 private:
@@ -50,10 +50,10 @@ private:
 class P3
 {
 public:
-    explicit P3(int* p)
+    constexpr explicit P3(int* p)
     : p_(p) { }
 
-    int* get() const noexcept
+    constexpr int* get() const noexcept
     { return p_; }
 
 private:
@@ -65,7 +65,7 @@ namespace std
 template<>
 struct pointer_traits<::P3>
 {
-    static int* to_address(const ::P3& p) noexcept
+    static constexpr int* to_address(const ::P3& p) noexcept
     { return p.get(); }
 };
 }
@@ -73,13 +73,13 @@ struct pointer_traits<::P3>
 class P4
 {
 public:
-    explicit P4(int* p)
+    constexpr explicit P4(int* p)
     : p_(p) { }
 
-    int* operator->() const noexcept
+    constexpr int* operator->() const noexcept
     { return nullptr; }
 
-    int* get() const noexcept
+    constexpr int* get() const noexcept
     { return p_; }
 
 private:
@@ -91,7 +91,7 @@ namespace std
 template<>
 struct pointer_traits<::P4>
 {
-    static int* to_address(const ::P4& p) noexcept
+    constexpr static int* to_address(const ::P4& p) noexcept
     { return p.get(); }
 };
 }
@@ -99,23 +99,28 @@ struct pointer_traits<::P4>
 int n = 0;
 static_assert(std::to_address(&n) == &n);
 
-int main(int, char**)
-{
-    int i = 0;
-    ASSERT_NOEXCEPT(std::to_address(&i));
-    assert(std::to_address(&i) == &i);
-    P1 p1(&i);
-    ASSERT_NOEXCEPT(std::to_address(p1));
-    assert(std::to_address(p1) == &i);
-    P2 p2(&i);
-    ASSERT_NOEXCEPT(std::to_address(p2));
-    assert(std::to_address(p2) == &i);
-    P3 p3(&i);
-    ASSERT_NOEXCEPT(std::to_address(p3));
-    assert(std::to_address(p3) == &i);
-    P4 p4(&i);
-    ASSERT_NOEXCEPT(std::to_address(p4));
-    assert(std::to_address(p4) == &i);
+constexpr bool test() {
+  int i = 0;
+  ASSERT_NOEXCEPT(std::to_address(&i));
+  assert(std::to_address(&i) == &i);
+  P1 p1(&i);
+  ASSERT_NOEXCEPT(std::to_address(p1));
+  assert(std::to_address(p1) == &i);
+  P2 p2(&i);
+  ASSERT_NOEXCEPT(std::to_address(p2));
+  assert(std::to_address(p2) == &i);
+  P3 p3(&i);
+  ASSERT_NOEXCEPT(std::to_address(p3));
+  assert(std::to_address(p3) == &i);
+  P4 p4(&i);
+  ASSERT_NOEXCEPT(std::to_address(p4));
+  assert(std::to_address(p4) == &i);
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
   return 0;
 }
