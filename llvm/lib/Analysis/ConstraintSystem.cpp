@@ -133,7 +133,7 @@ void ConstraintSystem::dump() const {
 }
 
 bool ConstraintSystem::mayHaveSolution() {
-  dump();
+  LLVM_DEBUG(dump());
   bool HasSolution = mayHaveSolutionImpl();
   LLVM_DEBUG(dbgs() << (HasSolution ? "sat" : "unsat") << "\n");
   return HasSolution;
