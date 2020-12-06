@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 s_sendmsg sendmsg(MSG_INTERRUPTX)
-// GCN: error: expected absolute expression
+// GCN: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(1 -)
 // GCN: error: unknown token in expression
@@ -26,7 +26,7 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_NOP)
 // GCN: error: invalid operation id
 
 s_sendmsg sendmsg(MSG_GS, SYSMSG_OP_ECC_ERR_INTERRUPT)
-// GCN: error: expected absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 0)
 // GCN: error: invalid operation id
@@ -50,10 +50,10 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0, 0)
 // GCN: error: expected a closing parenthesis
 
 s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
-// GCN: error: expected absolute expression
+// GCN: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// GCN: error: expected absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 1 -)
 // GCN: error: unknown token in expression
