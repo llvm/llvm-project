@@ -382,14 +382,15 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
 /// Returns the parent operation of this trailing result.
 Operation *detail::TrailingOpResult::getOwner() {
-  // We need to do some arithmetic to get the operation pointer. Move the
-  // trailing owner to the start of the array.
-  TrailingOpResult *trailingIt = this - trailingResultNumber;
+  // We need to do some arithmetic to get the operation pointer. Trailing
+  // results are stored in reverse order before the inline results of the
+  // operation, so move the trailing owner up to the start of the array.
+  TrailingOpResult *trailingIt = this + (trailingResultNumber + 1);
 
   // Move the owner past the inline op results to get to the operation.
-  auto *inlineResultIt = reinterpret_cast<InLineOpResult *>(trailingIt) -
+  auto *inlineResultIt = reinterpret_cast<InLineOpResult *>(trailingIt) +
                          OpResult::getMaxInlineResults();
-  return reinterpret_cast<Operation *>(inlineResultIt) - 1;
+  return reinterpret_cast<Operation *>(inlineResultIt);
 }
 
 //===----------------------------------------------------------------------===//
