@@ -322,7 +322,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                   nullptr, SourceLocation(), nullptr, nullptr,
                                   nullptr, ParsedAttr::AS_GNU);
 
-      if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(), *SNA)) {
+      if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(), *SNA, /*IsAsync=*/false)) {
         return nullptr;
       }
 
