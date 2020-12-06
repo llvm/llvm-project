@@ -1,5 +1,4 @@
-# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
-# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
+# RUN: llc -O0 -mtriple=aarch64 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX-DEFAULT
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -14,7 +13,7 @@
   @var_local = global i8 0
   define i8* @global_local() { ret i8* undef }
 
-  @var_got = external global i8
+  @var_got = external dso_local global i8
   define i8* @global_got() { ret i8* undef }
 
   define void @icmp() { ret void }
@@ -76,8 +75,7 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
-# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_local
+# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
@@ -93,8 +91,7 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
-# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
+# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got
