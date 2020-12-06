@@ -84,6 +84,9 @@ bool ConstraintSystem::eliminateUsingFM() {
                      .getZExtValue();
       }
       NewSystem.push_back(std::move(NR));
+      // Give up if the new system gets too big.
+      if (NewSystem.size() > 500)
+        return false;
     }
   }
   Constraints = std::move(NewSystem);

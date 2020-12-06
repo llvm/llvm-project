@@ -79,6 +79,9 @@ public:
   bool isConditionImplied(SmallVector<int64_t, 8> R);
 
   void popLastConstraint() { Constraints.pop_back(); }
+
+  /// Returns the number of rows in the constraint system.
+  unsigned size() const { return Constraints.size(); }
 };
 } // namespace llvm
 
