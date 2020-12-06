@@ -73,7 +73,7 @@ set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(
   omptarget.rtl.amdgpu
   PUBLIC
-  hostrpc_services
+  -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
   PRIVATE
   hsa-runtime64::hsa-runtime64
   pthread dl elf
