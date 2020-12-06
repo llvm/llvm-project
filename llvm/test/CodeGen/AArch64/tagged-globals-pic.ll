@@ -1,5 +1,3 @@
-; RUN: llc --relocation-model=static < %s \
-; RUN:   | FileCheck %s --check-prefixes=CHECK-STATIC,CHECK-SELECTIONDAGISEL
 ; RUN: llc --relocation-model=pic < %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-PIC
 
@@ -14,8 +12,6 @@
 ; things are a problem as GlobalISel is only used by default at -O0, so we don't
 ; mind the code size and performance increase.
 
-; RUN: llc --aarch64-enable-global-isel-at-O=0 -O0 < %s \
-; RUN:   | FileCheck %s --check-prefixes=CHECK-STATIC,CHECK-GLOBALISEL
 ; RUN: llc --aarch64-enable-global-isel-at-O=0 -O0 --relocation-model=pic < %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-PIC
 
@@ -26,15 +22,6 @@ target triple = "aarch64-unknown-linux-android"
 declare void @func()
 
 define i32* @global_addr() #0 {
-  ; Static relocation model has common codegen between SelectionDAGISel and
-  ; GlobalISel when the address-taken of a global isn't folded into a load or
-  ; store instruction.
-  ; CHECK-STATIC: global_addr:
-  ; CHECK-STATIC: adrp [[REG:x[0-9]+]], :pg_hi21_nc:global
-  ; CHECK-STATIC: movk [[REG]], #:prel_g3:global+4294967296
-  ; CHECK-STATIC: add x0, [[REG]], :lo12:global
-  ; CHECK-STATIC: ret
-
   ; CHECK-PIC: global_addr:
   ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:global
   ; CHECK-PIC: ldr x0, {{\[}}[[REG]], :got_lo12:global]
@@ -90,11 +77,6 @@ define void @global_store() #0 {
 }
 
 define void ()* @func_addr() #0 {
-  ; CHECK-STATIC: func_addr:
-  ; CHECK-STATIC: adrp [[REG:x[0-9]+]], func
-  ; CHECK-STATIC: add x0, [[REG]], :lo12:func
-  ; CHECK-STATIC: ret
-
   ; CHECK-PIC: func_addr:
   ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:func
   ; CHECK-PIC: ldr  x0, {{\[}}[[REG]], :got_lo12:func]
