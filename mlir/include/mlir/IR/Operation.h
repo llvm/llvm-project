@@ -21,15 +21,14 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
-/// Operation is a basic unit of execution within a function. Operations can
-/// be nested within other operations effectively forming a tree. Child
-/// operations are organized into operation blocks represented by a 'Block'
-/// class.
-class Operation final
+/// Operation is a basic unit of execution within MLIR. Operations can
+/// be nested within `Region`s held by other operations effectively forming a
+/// tree. Child operations are organized into operation blocks represented by a
+/// 'Block' class.
+class alignas(8) Operation final
     : public llvm::ilist_node_with_parent<Operation, Block>,
-      private llvm::TrailingObjects<Operation, detail::InLineOpResult,
-                                    detail::TrailingOpResult, BlockOperand,
-                                    Region, detail::OperandStorage> {
+      private llvm::TrailingObjects<Operation, BlockOperand, Region,
+                                    detail::OperandStorage> {
 public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
@@ -654,6 +653,21 @@ private:
   // allocated with malloc.
   ~Operation();
 
+  /// Returns the additional size necessary for allocating the given objects
+  /// before an Operation in-memory.
+  static size_t prefixAllocSize(unsigned numTrailingResults,
+                                unsigned numInlineResults) {
+    return sizeof(detail::TrailingOpResult) * numTrailingResults +
+           sizeof(detail::InLineOpResult) * numInlineResults;
+  }
+  /// Returns the additional size allocated before this Operation in-memory.
+  size_t prefixAllocSize() {
+    unsigned numResults = getNumResults();
+    unsigned numTrailingResults = OpResult::getNumTrailing(numResults);
+    unsigned numInlineResults = OpResult::getNumInline(numResults);
+    return prefixAllocSize(numTrailingResults, numInlineResults);
+  }
+
   /// Returns the operand storage object.
   detail::OperandStorage &getOperandStorage() {
     assert(hasOperandStorage && "expected operation to have operand storage");
@@ -662,12 +676,18 @@ private:
 
   /// Returns a pointer to the use list for the given trailing result.
   detail::TrailingOpResult *getTrailingResult(unsigned resultNumber) {
-    return getTrailingObjects<detail::TrailingOpResult>() + resultNumber;
+    // Trailing results are stored in reverse order after(before in memory) the
+    // inline results.
+    return reinterpret_cast<detail::TrailingOpResult *>(
+               getInlineResult(OpResult::getMaxInlineResults() - 1)) -
+           ++resultNumber;
   }
 
   /// Returns a pointer to the use list for the given inline result.
   detail::InLineOpResult *getInlineResult(unsigned resultNumber) {
-    return getTrailingObjects<detail::InLineOpResult>() + resultNumber;
+    // Inline results are stored in reverse order before the operation in
+    // memory.
+    return reinterpret_cast<detail::InLineOpResult *>(this) - ++resultNumber;
   }
 
   /// Provide a 'getParent' method for ilist_node_with_parent methods.
@@ -725,17 +745,8 @@ private:
   friend class llvm::ilist_node_with_parent<Operation, Block>;
 
   // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<Operation, detail::InLineOpResult,
-                               detail::TrailingOpResult, BlockOperand, Region,
+  friend llvm::TrailingObjects<Operation, BlockOperand, Region,
                                detail::OperandStorage>;
-  size_t numTrailingObjects(OverloadToken<detail::InLineOpResult>) const {
-    return OpResult::getNumInline(
-        const_cast<Operation *>(this)->getNumResults());
-  }
-  size_t numTrailingObjects(OverloadToken<detail::TrailingOpResult>) const {
-    return OpResult::getNumTrailing(
-        const_cast<Operation *>(this)->getNumResults());
-  }
   size_t numTrailingObjects(OverloadToken<BlockOperand>) const {
     return numSuccs;
   }
