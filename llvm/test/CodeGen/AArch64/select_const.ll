@@ -68,8 +68,8 @@ define i32 @select_1_or_0_signext(i1 signext %cond) {
 define i32 @select_0_or_neg1(i1 %cond) {
 ; CHECK-LABEL: select_0_or_neg1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    sbfx w0, w8, #0, #1
+; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    sub w0, w8, #1 // =1
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -78,8 +78,7 @@ define i32 @select_0_or_neg1(i1 %cond) {
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_zeroext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    sbfx w0, w8, #0, #1
+; CHECK-NEXT:    sub w0, w0, #1 // =1
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel

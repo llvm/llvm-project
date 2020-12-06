@@ -437,20 +437,18 @@ define i32 @trunc_i64_to_i32(i64 %a) nounwind {
   ret i32 %1
 }
 
-;; TODO: fold (sext (not x)) -> (add (zext x) -1)
+;; fold (sext (not x)) -> (add (zext x) -1)
 define i32 @sext_of_not_i32(i1 %x) {
 ; RV32I-LABEL: sext_of_not_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_of_not_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
   %xor = xor i1 %x, 1
   %sext = sext i1 %xor to i32
@@ -460,24 +458,23 @@ define i32 @sext_of_not_i32(i1 %x) {
 define i64 @sext_of_not_i64(i1 %x) {
 ; RV32I-LABEL: sext_of_not_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    andi a1, a0, 1
+; RV32I-NEXT:    addi a0, a1, -1
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_of_not_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
   %xor = xor i1 %x, 1
   %sext = sext i1 %xor to i64
   ret i64 %sext
 }
 
-;; TODO: fold (sext (not (setcc a, b, cc))) -> (sext (setcc a, b, !cc))
+;; fold (sext (not (setcc a, b, cc))) -> (sext (setcc a, b, !cc))
 define i32 @sext_of_not_cmp_i32(i32 %x) {
 ; RV32I-LABEL: sext_of_not_cmp_i32:
 ; RV32I:       # %bb.0:
