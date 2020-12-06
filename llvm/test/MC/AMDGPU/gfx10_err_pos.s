@@ -938,7 +938,17 @@ s_mov_b64 s[10:11], [s2,s1]
 v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 // CHECK: error: source operand must be a VGPR
 // CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                       ^
+
+v_movrels_b32_sdwa v0, s0
+// CHECK: error: source operand must be a VGPR
+// CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, s0
+// CHECK-NEXT:{{^}}                       ^
+
+v_movrels_b32_sdwa v0, shared_base
+// CHECK: error: source operand must be a VGPR
+// CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, shared_base
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // specified hardware register is not supported on this GPU
@@ -954,12 +964,12 @@ s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
 // CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                                ^
 
 v_add_f32_e64 v0, v1
 // CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}v_add_f32_e64 v0, v1
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                    ^
 
 //==============================================================================
 // too large value for expcnt
