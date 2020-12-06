@@ -6,8 +6,10 @@
 
 define i32 @t() nounwind readonly {
 entry:
+;; movl _y, %eax can be used if @y is dso_local.
 ; X32: _t:
-; X32: movl _y, %eax
+; X32:      movl L_y$non_lazy_ptr, %eax
+; X32-NEXT: movl (%eax), %eax
 
 ; X64: _t:
 ; X64: movq _y@GOTPCREL(%rip), %rax
