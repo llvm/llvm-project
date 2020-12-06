@@ -1,16 +1,10 @@
-; RUN: llc -mtriple=arm64-linux-gnu -o - %s -mcpu=cyclone | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -o - %s -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
-; RUN: llc -mtriple=arm64-linux-gnu -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-PIC
-; RUN: llc -mtriple=arm64-linux-gnu -O0 -fast-isel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
-; RUN: llc -mtriple=aarch64-fuchsia -o - %s -mcpu=cyclone | FileCheck %s
-; RUN: llc -mtriple=aarch64-fuchsia -o - %s -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
-; RUN: llc -mtriple=aarch64-fuchsia -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-PIC
-; RUN: llc -mtriple=aarch64-fuchsia -O0 -fast-isel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
+; RUN: llc -mtriple=arm64 -o - %s -mcpu=cyclone | FileCheck %s
+; RUN: llc -mtriple=arm64 -o - %s -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
 
-@var8 = external global i8, align 1
-@var16 = external global i16, align 2
-@var32 = external global i32, align 4
-@var64 = external global i64, align 8
+@var8 = external dso_local global i8, align 1
+@var16 = external dso_local global i16, align 2
+@var32 = external dso_local global i32, align 4
+@var64 = external dso_local global i64, align 8
 
 define i8 @test_i8(i8 %new) {
   %val = load i8, i8* @var8, align 1
@@ -21,17 +15,8 @@ define i8 @test_i8(i8 %new) {
 ; CHECK: ldrb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
 ; CHECK: strb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
 
-; CHECK-PIC-LABEL: test_i8:
-; CHECK-PIC: adrp x[[HIREG:[0-9]+]], :got:var8
-; CHECK-PIC: ldr x[[VAR_ADDR:[0-9]+]], [x[[HIREG]], :got_lo12:var8]
-; CHECK-PIC: ldrb {{w[0-9]+}}, [x[[VAR_ADDR]]]
-
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var8
 ; CHECK-FAST: ldrb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
-
-; CHECK-FAST-PIC: adrp x[[HIREG:[0-9]+]], :got:var8
-; CHECK-FAST-PIC: ldr x[[VARADDR:[0-9]+]], [x[[HIREG]], :got_lo12:var8]
-; CHECK-FAST-PIC: ldr {{w[0-9]+}}, [x[[VARADDR]]]
 }
 
 define i16 @test_i16(i16 %new) {
@@ -91,13 +76,9 @@ define i32 @test_vis() {
   %rhs = load i32, i32* @protectedvar, align 4
   %ret = add i32 %lhs, %rhs
   ret i32 %ret
-; CHECK-PIC: adrp {{x[0-9]+}}, hiddenvar
-; CHECK-PIC: ldr {{w[0-9]+}}, [{{x[0-9]+}}, :lo12:hiddenvar]
-; CHECK-PIC: adrp {{x[0-9]+}}, protectedvar
-; CHECK-PIC: ldr {{w[0-9]+}}, [{{x[0-9]+}}, :lo12:protectedvar]
 }
 
-@var_default = external global [2 x i32]
+@var_default = external dso_local global [2 x i32]
 
 define i32 @test_default_align() {
   %addr = getelementptr [2 x i32], [2 x i32]* @var_default, i32 0, i32 0

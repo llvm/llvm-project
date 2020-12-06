@@ -161,9 +161,9 @@ define void @test4() {
 ; ARM-ELF: movw [[REG:r[0-9]+]], :lower16:test4g
 ; ARM-ELF: movt [[REG]], :upper16:test4g
 
-; ARM: ldr [[REG1:r[0-9]+]], {{\[}}[[REG]]]
-; ARM: add [[REG2:r[0-9]+]], [[REG1]], #1
-; ARM: str [[REG2]], {{\[}}[[REG]]]
+; ARM: ldr r0, [r1]
+; ARM: add r0, r0, #1
+; ARM: str r0, [r1]
 }
 
 ; ARM: @urem_fold
