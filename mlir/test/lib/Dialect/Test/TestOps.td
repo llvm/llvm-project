@@ -1592,6 +1592,11 @@ def FormatOptionalUnitAttrNoElide
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
+def FormatOptionalEnumAttr : TEST_Op<"format_optional_enum_attr"> {
+  let arguments = (ins OptionalAttr<SomeI64Enum>:$attr);
+  let assemblyFormat = "($attr^)? attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Custom Directives
 

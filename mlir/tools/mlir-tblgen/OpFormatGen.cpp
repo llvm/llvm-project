@@ -462,7 +462,8 @@ struct OperationFormat {
 /// Returns true if we can format the given attribute as an EnumAttr in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
-  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&attr->attr);
+  Attribute baseAttr = attr->attr.getBaseAttr();
+  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
   if (!enumAttr)
     return false;
 
@@ -1107,7 +1108,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
 
     // Check to see if we can parse this as an enum attribute.
     if (canFormatEnumAttr(var)) {
-      const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+      Attribute baseAttr = var->attr.getBaseAttr();
+      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
 
       // Generate the code for building an attribute for this enum.
       std::string attrBuilderStr;
@@ -1682,9 +1684,11 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 
     // If we are formatting as an enum, symbolize the attribute as a string.
     if (canFormatEnumAttr(var)) {
-      const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+      Attribute baseAttr = var->attr.getBaseAttr();
+      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
       body << "  p << '\"' << " << enumAttr.getSymbolToStringFnName() << "("
-           << var->name << "()) << '\"';\n";
+           << (var->attr.isOptional() ? "*" : "") << var->name
+           << "()) << '\"';\n";
       return;
     }
 
