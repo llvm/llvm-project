@@ -964,6 +964,14 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break; // 00h-0Fh: Zen1
     }
     break;
+  case 25:
+    CPU = "znver3";
+    *Type = X86::AMDFAM19H;
+    if (Model <= 0x0f) {
+      *Subtype = X86::AMDFAM19H_ZNVER3;
+      break; // 00h-0Fh: Zen3
+    }
+    break;
   default:
     break; // Unknown AMD CPU.
   }

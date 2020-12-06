@@ -128,4 +128,5 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");
+  (void)__builtin_cpu_is("znver3");
 }
