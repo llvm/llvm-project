@@ -25,18 +25,12 @@
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
-; RUN:    --export-dynamic --noinhibit-exec \
-; RUN:    --plugin-opt=save-temps %t.o -o %t-out
-; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
-
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -r \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 
 ; PIC: R_X86_64_GOTPCREL foo
-; STATIC: R_X86_64_PC32 foo
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
