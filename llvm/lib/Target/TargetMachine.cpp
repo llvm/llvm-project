@@ -186,8 +186,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return false;
     Triple::ArchType Arch = TT.getArch();
 
-    // PowerPC prefers avoiding copy relocations.
-    if (Arch == Triple::ppc || TT.isPPC64())
+    // PowerPC64 prefers TOC indirection to avoid copy relocations.
+    if (TT.isPPC64())
       return false;
 
     // dso_local is traditionally implied for Reloc::Static. Eventually we shall
