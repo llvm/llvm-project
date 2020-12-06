@@ -1,7 +1,8 @@
 ; RUN: llc < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=generic | FileCheck %s
 ; RUN: llc < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=atom | FileCheck -check-prefix=ATOM %s
+; RUN: llc < %s -fast-isel -fast-isel-abort=3 -mtriple=x86_64 | FileCheck -check-prefix=ELF64 %s
 
-@src = external global i32
+@src = external dso_preemptable global i32
 
 ; rdar://6653118
 define i32 @loadgv() nounwind {
@@ -25,6 +26,14 @@ entry:
 ; ATOM:         addl    (%ecx), %eax
 ; ATOM:         movl    %eax, (%ecx)
 ; ATOM:         ret
+
+;; dso_preemptable src is loaded via GOT indirection.
+; ELF64-LABEL: loadgv:
+; ELF64:        movq    src@GOTPCREL(%rip), %rcx
+; ELF64-NEXT:   movl    (%rcx), %eax
+; ELF64-NEXT:   addl    (%rcx), %eax
+; ELF64-NEXT:   movl    %eax, (%rcx)
+; ELF64-NEXT:   retq
 
 }
 
