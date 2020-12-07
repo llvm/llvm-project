@@ -246,6 +246,10 @@ struct LineLocation {
     return LineOffset == O.LineOffset && Discriminator == O.Discriminator;
   }
 
+  bool operator!=(const LineLocation &O) const {
+    return LineOffset != O.LineOffset || Discriminator != O.Discriminator;
+  }
+
   uint32_t LineOffset;
   uint32_t Discriminator;
 };
@@ -585,6 +589,11 @@ public:
   /// Return the sample count of the first instruction of the function.
   /// The function can be either a standalone symbol or an inlined function.
   uint64_t getEntrySamples() const {
+    if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
+      // For CS profile, if we already have more accurate head samples
+      // counted by branch sample from caller, use them as entry samples.
+      return getHeadSamples();
+    }
     uint64_t Count = 0;
     // Use either BodySamples or CallsiteSamples which ever has the smaller
     // lineno.
@@ -680,19 +689,28 @@ public:
   /// Return the function name.
   StringRef getName() const { return Name; }
 
+  /// Return function name with context.
+  StringRef getNameWithContext() const {
+    return FunctionSamples::ProfileIsCS ? Context.getNameWithContext() : Name;
+  }
+
   /// Return the original function name.
   StringRef getFuncName() const { return getFuncName(Name); }
 
   /// Return the canonical name for a function, taking into account
   /// suffix elision policy attributes.
   static StringRef getCanonicalFnName(const Function &F) {
-    static const char *knownSuffixes[] = { ".llvm.", ".part." };
     auto AttrName = "sample-profile-suffix-elision-policy";
     auto Attr = F.getFnAttribute(AttrName).getValueAsString();
+    return getCanonicalFnName(F.getName(), Attr);
+  }
+
+  static StringRef getCanonicalFnName(StringRef FnName, StringRef Attr = "") {
+    static const char *knownSuffixes[] = { ".llvm.", ".part." };
     if (Attr == "" || Attr == "all") {
-      return F.getName().split('.').first;
+      return FnName.split('.').first;
     } else if (Attr == "selected") {
-      StringRef Cand(F.getName());
+      StringRef Cand(FnName);
       for (const auto &Suf : knownSuffixes) {
         StringRef Suffix(Suf);
         auto It = Cand.rfind(Suffix);
@@ -704,11 +722,11 @@ public:
       }
       return Cand;
     } else if (Attr == "none") {
-      return F.getName();
+      return FnName;
     } else {
       assert(false && "internal error: unknown suffix elision policy");
     }
-    return F.getName();
+    return FnName;
   }
 
   /// Translate \p Name into its original name.
