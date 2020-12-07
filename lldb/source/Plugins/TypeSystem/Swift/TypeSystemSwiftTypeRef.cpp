@@ -1674,6 +1674,8 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type,
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = DemangleCanonicalType(dem, type);
+    // Note: There are a number of other candidates, and this list may need
+    // updating. Ex: `NoEscapeFunctionType`, `ThinFunctionType`, etc.
     return node && (node->getKind() == Node::Kind::FunctionType ||
                     node->getKind() == Node::Kind::ImplFunctionType);
   };
@@ -2306,8 +2308,14 @@ TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
 }
 bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
     opaque_compiler_type_t type) {
-  return m_swift_ast_context->IsMeaninglessWithoutDynamicResolution(
-      ReconstructType(type));
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    return ContainsGenericTypeParameter(node) && !IsFunctionType(type, nullptr);
+  };
+  VALIDATE_AND_RETURN(impl, IsMeaninglessWithoutDynamicResolution, type,
+                      (ReconstructType(type)));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
