@@ -10,6 +10,9 @@ This script:
 
 This is a total of four clean builds of clang (by default). This may take a
 while. :)
+
+This scripts duplicates https://llvm.org/docs/AdvancedBuilds.html#multi-stage-pgo
+Eventually, it will be updated to instead call the cmake cache mentioned there.
 """
 
 import argparse
