@@ -385,6 +385,9 @@ LogicalResult
 ModuleTranslation::convertOmpParallel(Operation &opInst,
                                       llvm::IRBuilder<> &builder) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
                        llvm::BasicBlock &continuationIP) {
@@ -402,31 +405,10 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
       blockMapping[&bb] = llvmBB;
     }
 
-    // Then, convert blocks one by one in topological order to ensure
-    // defs are converted before uses.
-    llvm::SetVector<Block *> blocks = topologicalSort(region);
-    for (auto indexedBB : llvm::enumerate(blocks)) {
-      Block *bb = indexedBB.value();
-      llvm::BasicBlock *curLLVMBB = blockMapping[bb];
-      if (bb->isEntryBlock()) {
-        assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
-               "OpenMPIRBuilder provided entry block has multiple successors");
-        assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
-               "ContinuationIP is not the successor of OpenMPIRBuilder "
-               "provided entry block");
-        codeGenIPBBTI->setSuccessor(0, curLLVMBB);
-      }
-
-      // TODO: Error not returned up the hierarchy
-      if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
-        return;
-    }
-
+    convertOmpOpRegions(region, valueMapping, blockMapping, codeGenIPBBTI,
+                        continuationIP, builder, bodyGenStatus);
     ompContinuationIPStack.pop_back();
 
-    // Finally, after all blocks have been traversed and values mapped,
-    // connect the PHI nodes to the results of preceding blocks.
-    connectPHINodes(region, valueMapping, blockMapping);
   };
 
   // TODO: Perform appropriate actions according to the data-sharing
@@ -459,9 +441,76 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // entry or the alloca insertion point as provided by the body callback
   // above.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
+  if (failed(bodyGenStatus))
+    return failure();
   builder.restoreIP(
       ompBuilder->createParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
+  return success();
+}
+
+void ModuleTranslation::convertOmpOpRegions(
+    Region &region, DenseMap<Value, llvm::Value *> &valueMapping,
+    DenseMap<Block *, llvm::BasicBlock *> &blockMapping,
+    llvm::Instruction *codeGenIPBBTI, llvm::BasicBlock &continuationIP,
+    llvm::IRBuilder<> &builder, LogicalResult &bodyGenStatus) {
+  // Convert blocks one by one in topological order to ensure
+  // defs are converted before uses.
+  llvm::SetVector<Block *> blocks = topologicalSort(region);
+  for (auto indexedBB : llvm::enumerate(blocks)) {
+    Block *bb = indexedBB.value();
+    llvm::BasicBlock *curLLVMBB = blockMapping[bb];
+    if (bb->isEntryBlock()) {
+      assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
+             "OpenMPIRBuilder provided entry block has multiple successors");
+      assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
+             "ContinuationIP is not the successor of OpenMPIRBuilder "
+             "provided entry block");
+      codeGenIPBBTI->setSuccessor(0, curLLVMBB);
+    }
+
+    if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0))) {
+      bodyGenStatus = failure();
+      return;
+    }
+  }
+  // Finally, after all blocks have been traversed and values mapped,
+  // connect the PHI nodes to the results of preceding blocks.
+  connectPHINodes(region, valueMapping, blockMapping);
+}
+
+LogicalResult ModuleTranslation::convertOmpMaster(Operation &opInst,
+                                                  llvm::IRBuilder<> &builder) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
+
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
+                       llvm::BasicBlock &continuationIP) {
+    llvm::LLVMContext &llvmContext = llvmModule->getContext();
+
+    llvm::BasicBlock *codeGenIPBB = codeGenIP.getBlock();
+    llvm::Instruction *codeGenIPBBTI = codeGenIPBB->getTerminator();
+    ompContinuationIPStack.push_back(&continuationIP);
+
+    // MasterOp has only `1` region associated with it.
+    auto &region = cast<omp::MasterOp>(opInst).getRegion();
+    for (auto &bb : region) {
+      auto *llvmBB = llvm::BasicBlock::Create(
+          llvmContext, "omp.master.region", codeGenIP.getBlock()->getParent());
+      blockMapping[&bb] = llvmBB;
+    }
+    convertOmpOpRegions(region, valueMapping, blockMapping, codeGenIPBBTI,
+                        continuationIP, builder, bodyGenStatus);
+    ompContinuationIPStack.pop_back();
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  builder.restoreIP(ompBuilder->createMaster(builder, bodyGenCB, finiCB));
   return success();
 }
 
@@ -505,6 +554,7 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
       })
       .Case(
           [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
+      .Case([&](omp::MasterOp) { return convertOmpMaster(opInst, builder); })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
