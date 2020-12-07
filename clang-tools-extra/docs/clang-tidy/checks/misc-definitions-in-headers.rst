@@ -100,5 +100,5 @@ Options
 
 .. option:: UseHeaderFileExtension
 
-   When non-zero, the check will use the file extension to distinguish header
-   files. Default is `1`.
+   When `true`, the check will use the file extension to distinguish header
+   files. Default is `true`.

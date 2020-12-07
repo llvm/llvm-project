@@ -25,9 +25,9 @@ Options
 
 .. option:: IgnoreBaseInCopyConstructors
 
-    Default is ``0``.
+    Default is `false`.
 
-    When non-zero, the check will ignore unnecessary base class initializations
+    When `true`, the check will ignore unnecessary base class initializations
     within copy constructors, since some compilers issue warnings/errors when
     base classes are not explicitly intialized in copy constructors. For example,
     ``gcc`` with ``-Wextra`` or ``-Werror=extra`` issues warning or error

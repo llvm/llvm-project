@@ -31,10 +31,10 @@ Options
 
 .. option:: CheckFirstDeclaration
 
-   If set to non-zero, the check will also diagnose if the first access
+   If set to `true`, the check will also diagnose if the first access
    specifier declaration is redundant (e.g. ``private`` inside ``class``,
    or ``public`` inside ``struct`` or ``union``).
-   Default is `0`.
+   Default is `false`.
 
 Example
 ^^^^^^^

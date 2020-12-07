@@ -32,5 +32,5 @@ Options
 
 .. option:: IgnoreMacros
 
-   If set to non-zero, the check will not give warnings inside macros. Default
-   is `1`.
+   If set to `true`, the check will not give warnings inside macros. Default
+   is `true`.
