@@ -67,6 +67,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
+  std::string computeSysRoot() const override;
 };
 
 } // namespace toolchains
