@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolMap.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
   return exv.match([](const fir::UnboxedValue &x) { return x; },

@@ -13,7 +13,7 @@
 #ifndef OPTMIZER_CODEGEN_TARGET_H
 #define OPTMIZER_CODEGEN_TARGET_H
 
-#include "mlir/IR/Types.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include <memory>
 #include <tuple>
 #include <vector>
