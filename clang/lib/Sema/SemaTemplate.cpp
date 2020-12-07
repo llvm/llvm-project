@@ -11114,14 +11114,3 @@ void Sema::checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec) {
 
   ExplicitSpecializationVisibilityChecker(*this, Loc).check(Spec);
 }
-
-/// Check whether a template partial specialization that we've discovered
-/// is hidden, and produce suitable diagnostics if so.
-void Sema::checkPartialSpecializationVisibility(SourceLocation Loc,
-                                                NamedDecl *Spec) {
-  llvm::SmallVector<Module *, 8> Modules;
-  if (!hasVisibleDeclaration(Spec, &Modules))
-    diagnoseMissingImport(Loc, Spec, Spec->getLocation(), Modules,
-                          MissingImportKind::PartialSpecialization,
-                          /*Recover*/true);
-}
