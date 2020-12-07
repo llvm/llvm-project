@@ -1354,6 +1354,7 @@ static SDValue combineORToGREV(SDValue Op, SelectionDAG &DAG,
 //     (or (or (BITMANIP_SHL x), (BITMANIP_SRL x)), x)
 // the inner pattern will first be matched as GREVI and then the outer
 // pattern will be matched to GORC via the first rule above.
+// 4.  (or (rotl/rotr x, bitwidth/2), x)
 static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
   EVT VT = Op.getValueType();
@@ -1363,15 +1364,29 @@ static SDValue combineORToGORC(SDValue Op, SelectionDAG &DAG,
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
+    auto MatchOROfReverse = [&](SDValue Reverse, SDValue X) {
+      if (Reverse.getOpcode() == RISCVISD::GREVI && Reverse.getOperand(0) == X &&
+          isPowerOf2_32(Reverse.getConstantOperandVal(1)))
+        return DAG.getNode(RISCVISD::GORCI, DL, VT, X, Reverse.getOperand(1));
+      // We can also form GORCI from ROTL/ROTR by half the bitwidth.
+      if ((Reverse.getOpcode() == ISD::ROTL ||
+           Reverse.getOpcode() == ISD::ROTR) &&
+          Reverse.getOperand(0) == X &&
+          isa<ConstantSDNode>(Reverse.getOperand(1))) {
+        uint64_t RotAmt = Reverse.getConstantOperandVal(1);
+        if (RotAmt == (VT.getSizeInBits() / 2))
+          return DAG.getNode(
+              RISCVISD::GORCI, DL, VT, X,
+              DAG.getTargetConstant(RotAmt, DL, Subtarget.getXLenVT()));
+      }
+      return SDValue();
+    };
+
     // Check for either commutable permutation of (or (GREVI x, shamt), x)
-    for (const auto &OpPair :
-         {std::make_pair(Op0, Op1), std::make_pair(Op1, Op0)}) {
-      if (OpPair.first.getOpcode() == RISCVISD::GREVI &&
-          OpPair.first.getOperand(0) == OpPair.second &&
-          isPowerOf2_32(OpPair.first.getConstantOperandVal(1)))
-        return DAG.getNode(RISCVISD::GORCI, DL, VT, OpPair.second,
-                           OpPair.first.getOperand(1));
-    }
+    if (SDValue V = MatchOROfReverse(Op0, Op1))
+      return V;
+    if (SDValue V = MatchOROfReverse(Op1, Op0))
+      return V;
 
     // OR is commutable so canonicalize its OR operand to the left
     if (Op0.getOpcode() != ISD::OR && Op1.getOpcode() == ISD::OR)

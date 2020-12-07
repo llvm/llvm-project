@@ -813,6 +813,52 @@ define i32 @gorc16_i32(i32 %a) nounwind {
   ret i32 %or2
 }
 
+define i32 @gorc16_rotl_i32(i32 %a) nounwind {
+; RV32I-LABEL: gorc16_rotl_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    slli a2, a0, 16
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: gorc16_rotl_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    orc16 a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: gorc16_rotl_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    orc16 a0, a0
+; RV32IBP-NEXT:    ret
+  %rot = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
+  %or = or i32 %rot, %a
+  ret i32 %or
+}
+
+define i32 @gorc16_rotr_i32(i32 %a) nounwind {
+; RV32I-LABEL: gorc16_rotr_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srli a2, a0, 16
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: gorc16_rotr_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    orc16 a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: gorc16_rotr_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    orc16 a0, a0
+; RV32IBP-NEXT:    ret
+  %rot = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
+  %or = or i32 %rot, %a
+  ret i32 %or
+}
+
 define i64 @gorc16_i64(i64 %a) nounwind {
 ; RV32I-LABEL: gorc16_i64:
 ; RV32I:       # %bb.0:

@@ -896,6 +896,52 @@ define signext i32 @gorc16_i32(i32 signext %a) nounwind {
   ret i32 %or2
 }
 
+define i32 @gorc16_rotl_i32(i32 %a) nounwind {
+; RV64I-LABEL: gorc16_rotl_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a1, a0, 16
+; RV64I-NEXT:    slli a2, a0, 16
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: gorc16_rotl_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    gorciw a0, a0, 16
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc16_rotl_i32:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    gorciw a0, a0, 16
+; RV64IBP-NEXT:    ret
+  %rot = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
+  %or = or i32 %rot, %a
+  ret i32 %or
+}
+
+define i32 @gorc16_rotr_i32(i32 %a) nounwind {
+; RV64I-LABEL: gorc16_rotr_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 16
+; RV64I-NEXT:    srliw a2, a0, 16
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: gorc16_rotr_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    gorciw a0, a0, 16
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc16_rotr_i32:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    gorciw a0, a0, 16
+; RV64IBP-NEXT:    ret
+  %rot = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
+  %or = or i32 %rot, %a
+  ret i32 %or
+}
+
 define i64 @gorc16_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc16_i64:
 ; RV64I:       # %bb.0:
@@ -1221,6 +1267,52 @@ define i64 @gorc3b_i64(i64 %a) nounwind {
   %or3 = or i64 %shr3, %or2b
   %or3b = or i64 %or3, %shl3
   ret i64 %or3b
+}
+
+define i64 @gorc32_rotl(i64 %a) nounwind {
+; RV64I-LABEL: gorc32_rotl:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 32
+; RV64I-NEXT:    slli a2, a0, 32
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: gorc32_rotl:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    orc32 a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc32_rotl:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    orc32 a0, a0
+; RV64IBP-NEXT:    ret
+  %rot = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 32)
+  %or = or i64 %rot, %a
+  ret i64 %or
+}
+
+define i64 @gorc32_rotr(i64 %a) nounwind {
+; RV64I-LABEL: gorc32_rotr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 32
+; RV64I-NEXT:    srli a2, a0, 32
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: gorc32_rotr:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    orc32 a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc32_rotr:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    orc32 a0, a0
+; RV64IBP-NEXT:    ret
+  %rot = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 32)
+  %or = or i64 %rot, %a
+  ret i64 %or
 }
 
 define signext i32 @grev1_i32(i32 signext %a) nounwind {
