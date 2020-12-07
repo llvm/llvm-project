@@ -367,16 +367,6 @@ namespace llvm {
     void addVRegDefDeps(SUnit *SU, unsigned OperIdx);
     void addVRegUseDeps(SUnit *SU, unsigned OperIdx);
 
-    /// Initializes register live-range state for updating kills.
-    /// PostRA helper for rewriting kill flags.
-    void startBlockForKills(MachineBasicBlock *BB);
-
-    /// Toggles a register operand kill flag.
-    ///
-    /// Other adjustments may be made to the instruction if necessary. Return
-    /// true if the operand has been deleted, false if not.
-    void toggleKillFlag(MachineInstr &MI, MachineOperand &MO);
-
     /// Returns a mask for which lanes get read/written by the given (register)
     /// machine operand.
     LaneBitmask getLaneMaskForMO(const MachineOperand &MO) const;
