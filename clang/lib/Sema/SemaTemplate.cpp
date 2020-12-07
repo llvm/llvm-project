@@ -1963,8 +1963,7 @@ public:
     TypeLocBuilder InnerTLB;
     QualType Transformed =
         TransformType(InnerTLB, OrigDecl->getTypeSourceInfo()->getTypeLoc());
-    TypeSourceInfo *TSI =
-        TransformType(InnerTLB.getTypeSourceInfo(Context, Transformed));
+    TypeSourceInfo *TSI = InnerTLB.getTypeSourceInfo(Context, Transformed);
 
     TypedefNameDecl *Decl = nullptr;
 
