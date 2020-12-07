@@ -139,7 +139,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : ConfigProvider(Opts.ConfigProvider), TFS(TFS),
+    : ConfigProvider(Opts.ConfigProvider), TFS(TFS), ServerCallbacks(Callbacks),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
                                      Opts.CollectMainFileRefs)
@@ -829,16 +829,44 @@ Context ClangdServer::createProcessingContext(PathRef File) const {
     Params.Path = PosixPath.str();
   }
 
-  auto DiagnosticHandler = [](const llvm::SMDiagnostic &Diag) {
-    if (Diag.getKind() == llvm::SourceMgr::DK_Error) {
-      elog("config error at {0}:{1}:{2}: {3}", Diag.getFilename(),
-           Diag.getLineNo(), Diag.getColumnNo(), Diag.getMessage());
-    } else {
-      log("config warning at {0}:{1}:{2}: {3}", Diag.getFilename(),
-          Diag.getLineNo(), Diag.getColumnNo(), Diag.getMessage());
+  llvm::StringMap<std::vector<Diag>> ReportableDiagnostics;
+  auto ConfigDiagnosticHandler = [&](const llvm::SMDiagnostic &D) {
+    // Ensure we create the map entry even for note diagnostics we don't report.
+    // This means that when the file is parsed with no warnings, we'll
+    // publish an empty set of diagnostics, clearing any the client has.
+    auto *Reportable = D.getFilename().empty()
+                           ? nullptr
+                           : &ReportableDiagnostics[D.getFilename()];
+    switch (D.getKind()) {
+    case llvm::SourceMgr::DK_Error:
+      elog("config error at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+           D.getColumnNo(), D.getMessage());
+      if (Reportable)
+        Reportable->push_back(toDiag(D, Diag::ClangdConfig));
+      break;
+    case llvm::SourceMgr::DK_Warning:
+      log("config warning at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+          D.getColumnNo(), D.getMessage());
+      if (Reportable)
+        Reportable->push_back(toDiag(D, Diag::ClangdConfig));
+      break;
+    case llvm::SourceMgr::DK_Note:
+    case llvm::SourceMgr::DK_Remark:
+      vlog("config note at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+           D.getColumnNo(), D.getMessage());
+      break;
     }
   };
-  Config C = ConfigProvider->getConfig(Params, DiagnosticHandler);
+  Config C = ConfigProvider->getConfig(Params, ConfigDiagnosticHandler);
+  // Blindly publish diagnostics for the (unopened) parsed config files.
+  // We must avoid reporting diagnostics for *the same file* concurrently.
+  // Source file diags are published elsewhere, but those are different files.
+  if (!ReportableDiagnostics.empty()) {
+    std::lock_guard<std::mutex> Lock(ConfigDiagnosticsMu);
+    for (auto &Entry : ReportableDiagnostics)
+      ServerCallbacks->onDiagnosticsReady(Entry.first(), /*Version=*/"",
+                                          std::move(Entry.second));
+  }
   return Context::current().derive(Config::Key, std::move(C));
 }
 
