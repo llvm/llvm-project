@@ -124,7 +124,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::ReturnType,
                       b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple)))));
     CompilerType void_void = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(void_void.IsFunctionType(nullptr));
+    ASSERT_TRUE(void_void.IsFunctionType());
     ASSERT_TRUE(void_void.IsFunctionPointerType());
     ASSERT_EQ(void_void.GetNumberOfFunctionArguments(), 0UL);
   }
@@ -133,7 +133,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
         b.Node(Node::Kind::ImplFunctionType, b.Node(Node::Kind::ImplEscaping),
                b.Node(Node::Kind::ImplConvention, "@callee_guaranteed")));
     CompilerType impl_void_void = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(impl_void_void.IsFunctionType(nullptr));
+    ASSERT_TRUE(impl_void_void.IsFunctionType());
     ASSERT_EQ(impl_void_void.GetNumberOfFunctionArguments(), 0UL);
   }
   {
@@ -146,7 +146,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::ImplConvention, "@unowned"),
                b.Node(Node::Kind::Tuple))));
     CompilerType impl_two_args = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(impl_two_args.IsFunctionType(nullptr));
+    ASSERT_TRUE(impl_two_args.IsFunctionType());
     ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2UL);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(1), void_type);
@@ -166,7 +166,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
         b.Node(Node::Kind::ReturnType,
                b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple)))));
     CompilerType two_args = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(two_args.IsFunctionType(nullptr));
+    ASSERT_TRUE(two_args.IsFunctionType());
     ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2UL);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
@@ -181,7 +181,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))),
         b.Node(Node::Kind::ReturnType, b.Node(Node::Kind::Type, b.IntType()))));
     CompilerType void_int = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(void_int.IsFunctionType(nullptr));
+    ASSERT_TRUE(void_int.IsFunctionType());
     ASSERT_EQ(void_int.GetFunctionReturnType(), int_type);
   }
   {
@@ -191,7 +191,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
         b.Node(Node::Kind::ImplResult,
                b.Node(Node::Kind::ImplConvention, "@unowned"), b.IntType())));
     CompilerType impl_void_int = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(impl_void_int.IsFunctionType(nullptr));
+    ASSERT_TRUE(impl_void_int.IsFunctionType());
     ASSERT_EQ(impl_void_int.GetFunctionReturnType(), int_type);
   }
 }
