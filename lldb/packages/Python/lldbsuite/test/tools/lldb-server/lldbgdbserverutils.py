@@ -236,7 +236,7 @@ def expect_lldb_gdbserver_replay(
                 if sequence_entry.is_output_matcher():
                     try:
                         # Grab next entry from the output queue.
-                        content = pump_queues.output_queue().get(True, timeout_seconds)
+                        content = pump.get_output(timeout_seconds)
                     except queue.Empty:
                         if logger:
                             logger.warning(
@@ -247,7 +247,7 @@ def expect_lldb_gdbserver_replay(
                                 pump.get_accumulated_output()))
                 else:
                     try:
-                        content = pump_queues.packet_queue().get(True, timeout_seconds)
+                        content = pump.get_packet(timeout_seconds)
                     except queue.Empty:
                         if logger:
                             logger.warning(

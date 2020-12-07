@@ -37,7 +37,6 @@ define amdgpu_ps void @static_exact(float %arg0, float %arg1) {
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    v_cmp_ne_u32_e64 s0, 0, 0
 ; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v0
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    s_cbranch_execz BB0_2
 ; GFX10-32-NEXT:  ; %bb.1: ; %.entry
@@ -103,7 +102,6 @@ define amdgpu_ps void @dynamic_exact(float %arg0, float %arg1) {
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
 ; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v0
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    s_cbranch_execz BB1_2
 ; GFX10-32-NEXT:  ; %bb.1: ; %.entry
@@ -194,7 +192,6 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GFX10-32-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-32-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX10-32-NEXT:    v_cmp_ne_u32_e64 s0, 0, 1
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-32-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
@@ -337,7 +334,6 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-32-LABEL: wqm_demote_1:
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 0, v1
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s13, vcc_lo
@@ -504,7 +500,6 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-32-LABEL: wqm_demote_2:
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
@@ -649,7 +644,6 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX10-32-LABEL: wqm_demote_dynamic:
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
@@ -837,7 +831,6 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-32-LABEL: wqm_deriv:
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-32-NEXT:    s_movk_i32 s1, 0x3c00
@@ -1145,7 +1138,6 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-LABEL: wqm_deriv_loop:
 ; GFX10-32:       ; %bb.0: ; %.entry
 ; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-32-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-32-NEXT:    s_movk_i32 s2, 0x3c00

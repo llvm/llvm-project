@@ -137,7 +137,7 @@ static Operation *getLastDependentOpInRange(Operation *opA, Operation *opB) {
 static Operation *getFusedLoopNestInsertionPoint(AffineForOp srcForOp,
                                                  AffineForOp dstForOp) {
   bool isSrcForOpBeforeDstForOp =
-      srcForOp.getOperation()->isBeforeInBlock(dstForOp.getOperation());
+      srcForOp->isBeforeInBlock(dstForOp.getOperation());
   auto forOpA = isSrcForOpBeforeDstForOp ? srcForOp : dstForOp;
   auto forOpB = isSrcForOpBeforeDstForOp ? dstForOp : srcForOp;
 
@@ -270,8 +270,8 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
     return FusionResult::FailPrecondition;
   }
   // Return 'failure' if 'srcForOp' and 'dstForOp' are not in the same block.
-  auto *block = srcForOp.getOperation()->getBlock();
-  if (block != dstForOp.getOperation()->getBlock()) {
+  auto *block = srcForOp->getBlock();
+  if (block != dstForOp->getBlock()) {
     LLVM_DEBUG(llvm::dbgs() << "Cannot fuse loop nests in different blocks\n");
     return FusionResult::FailPrecondition;
   }
@@ -285,7 +285,7 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
   // Check if 'srcForOp' precedes 'dstForOp' in 'block'.
   bool isSrcForOpBeforeDstForOp =
-      srcForOp.getOperation()->isBeforeInBlock(dstForOp.getOperation());
+      srcForOp->isBeforeInBlock(dstForOp.getOperation());
   // 'forOpA' executes before 'forOpB' in 'block'.
   auto forOpA = isSrcForOpBeforeDstForOp ? srcForOp : dstForOp;
   auto forOpB = isSrcForOpBeforeDstForOp ? dstForOp : srcForOp;

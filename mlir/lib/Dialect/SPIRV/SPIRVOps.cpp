@@ -19,9 +19,9 @@
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
@@ -1754,8 +1754,9 @@ static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
 
   // Parse the optional function body.
   auto *body = state.addRegion();
-  return parser.parseOptionalRegion(
+  OptionalParseResult result = parser.parseOptionalRegion(
       *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  return failure(result.hasValue() && failed(*result));
 }
 
 static void print(spirv::FuncOp fnOp, OpAsmPrinter &printer) {

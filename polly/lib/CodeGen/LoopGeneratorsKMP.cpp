@@ -23,7 +23,7 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
                                                       Value *Stride) {
   const std::string Name = "__kmpc_fork_call";
   Function *F = M->getFunction(Name);
-  Type *KMPCMicroTy = M->getTypeByName("kmpc_micro");
+  Type *KMPCMicroTy = StructType::getTypeByName(M->getContext(), "kmpc_micro");
 
   if (!KMPCMicroTy) {
     // void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid, ...)
@@ -35,7 +35,8 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy = M->getTypeByName("struct.ident_t");
+    StructType *IdentTy =
+        StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
     Type *Params[] = {IdentTy->getPointerTo(), Builder.getInt32Ty(),
@@ -314,7 +315,8 @@ Value *ParallelLoopGeneratorKMP::createCallGlobalThreadNum() {
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy = M->getTypeByName("struct.ident_t");
+    StructType *IdentTy =
+        StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
     Type *Params[] = {IdentTy->getPointerTo()};
@@ -333,7 +335,8 @@ void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy = M->getTypeByName("struct.ident_t");
+    StructType *IdentTy =
+        StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
     Type *Params[] = {IdentTy->getPointerTo(), Builder.getInt32Ty(),
@@ -356,7 +359,8 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_for_static_init_8" : "__kmpc_for_static_init_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy = M->getTypeByName("struct.ident_t");
+  StructType *IdentTy =
+      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
@@ -395,7 +399,8 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
 void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
   const std::string Name = "__kmpc_for_static_fini";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy = M->getTypeByName("struct.ident_t");
+  StructType *IdentTy =
+      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
@@ -417,7 +422,8 @@ void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_dispatch_init_8" : "__kmpc_dispatch_init_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy = M->getTypeByName("struct.ident_t");
+  StructType *IdentTy =
+      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
@@ -457,7 +463,8 @@ Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_dispatch_next_8" : "__kmpc_dispatch_next_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy = M->getTypeByName("struct.ident_t");
+  StructType *IdentTy =
+      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
@@ -488,7 +495,8 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
 
   if (SourceLocDummy == nullptr) {
     const std::string StructName = "struct.ident_t";
-    StructType *IdentTy = M->getTypeByName(StructName);
+    StructType *IdentTy =
+        StructType::getTypeByName(M->getContext(), StructName);
 
     // If the ident_t StructType is not available, declare it.
     // in LLVM-IR: ident_t = type { i32, i32, i32, i32, i8* }

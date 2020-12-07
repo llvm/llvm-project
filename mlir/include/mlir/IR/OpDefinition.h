@@ -102,6 +102,9 @@ public:
   /// This implicitly converts to Operation*.
   operator Operation *() const { return state; }
 
+  /// Shortcut of `->` to access a member of Operation.
+  Operation *operator->() const { return state; }
+
   /// Return the operation that this refers to.
   Operation *getOperation() { return state; }
 
@@ -805,6 +808,9 @@ struct SingleBlockImplicitTerminator {
     }
 
   public:
+    /// The type of the operation used as the implicit terminator type.
+    using ImplicitTerminatorOpT = TerminatorOpType;
+
     static LogicalResult verifyTrait(Operation *op) {
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
         Region &region = op->getRegion(i);

@@ -1139,6 +1139,8 @@ int ompt_initialize(
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
   ompt_finalize_tool = (ompt_finalize_tool_t)lookup("ompt_finalize_tool");
 
+  ompt_get_unique_id();
+
   ompt_get_num_procs = (ompt_get_num_procs_t) lookup("ompt_get_num_procs");
   ompt_get_num_places = (ompt_get_num_places_t) lookup("ompt_get_num_places");
   ompt_get_place_proc_ids = (ompt_get_place_proc_ids_t) lookup("ompt_get_place_proc_ids");

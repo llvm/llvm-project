@@ -76,9 +76,9 @@ static void insertOpenMPParallel(FuncOp func) {
     auto omp = builder.create<omp::ParallelOp>(parallelOp.getLoc());
     Block *block = builder.createBlock(&omp.getRegion());
     builder.create<omp::TerminatorOp>(parallelOp.getLoc());
-    block->getOperations().splice(
-        block->begin(), parallelOp.getOperation()->getBlock()->getOperations(),
-        parallelOp.getOperation());
+    block->getOperations().splice(block->begin(),
+                                  parallelOp->getBlock()->getOperations(),
+                                  parallelOp.getOperation());
   }
 }
 

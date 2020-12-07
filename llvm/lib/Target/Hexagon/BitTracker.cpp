@@ -340,8 +340,8 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
     return TRI.getRegSizeInBits(VC);
   }
   assert(RR.Reg.isPhysical());
-  Register PhysR =
-      (RR.Sub == 0) ? Register(RR.Reg) : TRI.getSubReg(RR.Reg, RR.Sub);
+  MCRegister PhysR =
+      (RR.Sub == 0) ? RR.Reg.asMCReg() : TRI.getSubReg(RR.Reg, RR.Sub);
   return getPhysRegBitWidth(PhysR);
 }
 
@@ -711,8 +711,7 @@ BT::BitMask BT::MachineEvaluator::mask(Register Reg, unsigned Sub) const {
   return BitMask(0, W-1);
 }
 
-uint16_t BT::MachineEvaluator::getPhysRegBitWidth(Register Reg) const {
-  assert(Reg.isPhysical());
+uint16_t BT::MachineEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
   const TargetRegisterClass &PC = *TRI.getMinimalPhysRegClass(Reg);
   return TRI.getRegSizeInBits(PC);
 }

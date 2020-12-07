@@ -194,7 +194,7 @@ void UnwindInfoSection::finalize() {
                    cuPtrVector.size() * sizeof(uint32_t);
 }
 
-// All inputs are relocated and output adddresses are known, so write!
+// All inputs are relocated and output addresses are known, so write!
 
 void UnwindInfoSection::writeTo(uint8_t *buf) const {
   // section header

@@ -120,16 +120,16 @@ template<E> void f() {}
 // CHECK: define weak_odr void @_Z1fIXL1EEEEvv(
 // FIXME: MSVC rejects this; check this is the mangling MSVC uses when they
 // start accepting.
-// MSABI: define {{.*}} @"??$f@$2TE@@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TE@@@@@YAXXZ"
 template void f<E{}>();
 // CHECK: define weak_odr void @_Z1fIXtl1EEEEvv(
-// MSABI: define {{.*}} @"??$f@$2TE@@H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TE@@n@0A@@@@YAXXZ"
 template void f<E(0)>();
 // CHECK: define weak_odr void @_Z1fIXtl1Edi1nLi42EEEEvv(
-// MSABI: define {{.*}} @"??$f@$2TE@@H0CK@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TE@@n@0CK@@@@YAXXZ"
 template void f<E(42)>();
 // CHECK: define weak_odr void @_Z1fIXtl1Edi1fLf00000000EEEEvv(
-// MSABI: define {{.*}} @"??$f@$2TE@@MAA@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TE@@0AA@@@@YAXXZ"
 template void f<E(0.f)>();
 
 // immintrin.h vector types.
@@ -210,24 +210,22 @@ template<H2> void f() {}
 template<H3> void f() {}
 template<H4> void f() {}
 // CHECK: define weak_odr void @_Z1fIXL2H1EEEvv
-// MSABI: define {{.*}} @"??$f@$2TH1@@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TH1@@@@@YAXXZ"
 template void f<H1{}>();
 // CHECK: define weak_odr void @_Z1fIXL2H2EEEvv
-// MSABI: define {{.*}} @"??$f@$2TH2@@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TH2@@@@@YAXXZ"
 template void f<H2{}>();
 // CHECK: define weak_odr void @_Z1fIXtl2H3EEEvv
-// MSABI: define {{.*}} @"??$f@$2TH3@@H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TH3@@a@0A@@@@YAXXZ"
 template void f<H3{.a = 0}>();
 // CHECK: define weak_odr void @_Z1fIXtl2H3di1aLi1EEEEvv
-// MSABI: define {{.*}} @"??$f@$2TH3@@H00@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$7TH3@@a@00@@@YAXXZ"
 template void f<H3{.a = 1}>();
-// FIXME: Leads to mangling collision under MS ABI; same mangling as the {.a = 0} case.
-#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl2H3di1bLi0EEEEvv
+// MSABI: define {{.*}} @"??$f@$7TH3@@b@0A@@@@YAXXZ"
 template void f<H3{.b = 0}>();
-#endif
 // CHECK: define weak_odr void @_Z1fIXtl2H4EEEvv
-// MSABI: define {{.*}} @"??$f@$2UH4@@2TH2@@@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UH4@@7TH2@@@@@@YAXXZ"
 template void f<H4{}>();
 
 // Floating-point.

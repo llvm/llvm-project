@@ -18,6 +18,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Shape op definitions
@@ -492,7 +493,7 @@ def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
 }
 
 def Shape_YieldOp : Shape_Op<"yield",
-    [HasParent<"ReduceOp">,
+    [HasParent<"ReduceOp, FunctionLibraryOp">,
      NoSideEffect,
      ReturnLike,
      Terminator]> {
@@ -778,6 +779,64 @@ def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
   let assemblyFormat = "$pred `,` $msg attr-dict";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Shape collection ops.
+//===----------------------------------------------------------------------===//
+
+def Shape_FunctionLibraryOp : Shape_Op<"function_library",
+    [AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+     SingleBlockImplicitTerminator<"ShapeFunctionLibraryTerminatorOp">]> {
+  let summary = "Represents shape functions and corresponding ops";
+  let description = [{
+    Represents a list of shape functions and the ops whose shape transfer
+    functions they represent.
+
+    Example:
+
+    ```mlir
+    shape.function_library {
+      func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+        %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+        return %0 : !shape.shape
+      }
+    } mapping {
+      std.atan = @same_result_shape
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let arguments = (ins DictionaryAttr:$mapping);
+  let regions = (region AnyRegion:$body);
+
+  let extraClassDeclaration = [{
+    /// Returns an associated shape function for an operation if defined.
+    FuncOp getShapeFunction(Operation *op);
+  }];
+
+  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let skipDefaultBuilders = 1;
+
+  let printer = [{ ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeFunctionLibraryTerminatorOp
+//===----------------------------------------------------------------------===//
+
+def ShapeFunctionLibraryTerminatorOp : Shape_Op<"fn_lib_terminator",
+    [Terminator, HasParent<"FunctionLibraryOp">]> {
+  let summary = "A pseudo op that marks the end of a shape function library";
+  let description = [{
+    `shape_fn_lib_terminator` is a special pseudo terminator operation for the
+    shape function library. It has no semantic meaning beyond keeping the body
+    well-formed.
+  }];
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // SHAPE_OPS

@@ -122,7 +122,8 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
+    TypeSystemClang *ast_context =
+        ScratchTypeSystemClang::GetForTarget(*target);
     if (!ast_context)
       return false;
 
@@ -137,7 +138,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
+  TypeSystemClang *ast_context = ScratchTypeSystemClang::GetForTarget(*target);
   if (!ast_context)
     return false;
 
@@ -525,7 +526,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     return FailExceptionParsing("Failed to get synthetic value.");
 
   TypeSystemClang *clang_ast_context =
-      TypeSystemClang::GetScratch(*exception_sp->GetTargetSP());
+      ScratchTypeSystemClang::GetForTarget(*exception_sp->GetTargetSP());
   if (!clang_ast_context)
     return FailExceptionParsing("Failed to get scratch AST.");
   CompilerType objc_id =

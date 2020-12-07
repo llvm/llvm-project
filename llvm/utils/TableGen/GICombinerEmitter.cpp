@@ -150,7 +150,7 @@ protected:
 
   /// A block of arbitrary C++ to finish testing the match.
   /// FIXME: This is a temporary measure until we have actual pattern matching
-  const CodeInit *MatchingFixupCode = nullptr;
+  const StringInit *MatchingFixupCode = nullptr;
 
   /// The MatchData defined by the match stage and required by the apply stage.
   /// This allows the plumbing of arbitrary data from C++ predicates between the
@@ -199,7 +199,7 @@ public:
   unsigned allocUID() { return UID++; }
   StringRef getName() const { return TheDef.getName(); }
   const Record &getDef() const { return TheDef; }
-  const CodeInit *getMatchingFixupCode() const { return MatchingFixupCode; }
+  const StringInit *getMatchingFixupCode() const { return MatchingFixupCode; }
   size_t getNumRoots() const { return Roots.size(); }
 
   GIMatchDag &getMatchDag() { return MatchDag; }
@@ -514,10 +514,10 @@ bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
 
 
     // Parse arbitrary C++ code we have in lieu of supporting MIR matching
-    if (const CodeInit *CodeI = dyn_cast<CodeInit>(Matchers->getArg(I))) {
+    if (const StringInit *StringI = dyn_cast<StringInit>(Matchers->getArg(I))) {
       assert(!MatchingFixupCode &&
              "Only one block of arbitrary code is currently permitted");
-      MatchingFixupCode = CodeI;
+      MatchingFixupCode = StringI;
       MatchDag.setHasPostMatchPredicate(true);
       continue;
     }
@@ -807,7 +807,7 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
     }
     OS << ") {\n" << Indent << "   ";
 
-    if (const CodeInit *Code = dyn_cast<CodeInit>(Applyer->getArg(0))) {
+    if (const StringInit *Code = dyn_cast<StringInit>(Applyer->getArg(0))) {
       OS << CodeExpander(Code->getAsUnquotedString(), Expansions,
                          RuleDef.getLoc(), ShowExpansions)
          << "\n"

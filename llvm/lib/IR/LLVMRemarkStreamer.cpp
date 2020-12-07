@@ -92,12 +92,11 @@ char LLVMRemarkSetupFormatError::ID = 0;
 Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
-    unsigned RemarksHotnessThreshold) {
+    Optional<uint64_t> RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
-  if (RemarksHotnessThreshold)
-    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+  Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 
   if (RemarksFilename.empty())
     return nullptr;
@@ -137,16 +136,14 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
   return std::move(RemarksFile);
 }
 
-Error llvm::setupLLVMOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
-                                         StringRef RemarksPasses,
-                                         StringRef RemarksFormat,
-                                         bool RemarksWithHotness,
-                                         unsigned RemarksHotnessThreshold) {
+Error llvm::setupLLVMOptimizationRemarks(
+    LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
+    StringRef RemarksFormat, bool RemarksWithHotness,
+    Optional<uint64_t> RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
-  if (RemarksHotnessThreshold)
-    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+  Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 
   Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())

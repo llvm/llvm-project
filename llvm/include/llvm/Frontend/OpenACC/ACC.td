@@ -257,7 +257,8 @@ def ACC_Atomic : Directive<"atomic"> {}
 // 2.6.5
 def ACC_Data : Directive<"data"> {
   let allowedOnceClauses = [
-    VersionedClause<ACCC_If>
+    VersionedClause<ACCC_If>,
+    VersionedClause<ACCC_Default>
   ];
   let requiredClauses = [
     VersionedClause<ACCC_Attach>,

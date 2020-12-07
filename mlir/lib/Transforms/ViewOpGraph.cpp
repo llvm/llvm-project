@@ -9,8 +9,8 @@
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "PassDetail.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace mlir;

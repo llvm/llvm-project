@@ -1265,13 +1265,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       << "    break;\n";
 
     for (unsigned i = 0; i < MCOpPredicates.size(); ++i) {
-      Init *MCOpPred = MCOpPredicates[i]->getValueInit("MCOperandPredicate");
-      if (CodeInit *SI = dyn_cast<CodeInit>(MCOpPred)) {
-        O << "  case " << i + 1 << ": {\n"
-          << SI->getValue() << "\n"
-          << "    }\n";
-      } else
-        llvm_unreachable("Unexpected MCOperandPredicate field!");
+      StringRef MCOpPred = MCOpPredicates[i]->getValueAsString("MCOperandPredicate");
+      O << "  case " << i + 1 << ": {\n"
+        << MCOpPred.data() << "\n"
+        << "    }\n";
     }
     O << "  }\n"
       << "}\n\n";

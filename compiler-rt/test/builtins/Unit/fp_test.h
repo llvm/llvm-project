@@ -3,13 +3,25 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifdef COMPILER_RT_HAS_FLOAT16
+#define TYPE_FP16 _Float16
+#else
+#define TYPE_FP16 uint16_t
+#endif
+
 enum EXPECTED_RESULT {
     LESS_0, LESS_EQUAL_0, EQUAL_0, GREATER_0, GREATER_EQUAL_0, NEQUAL_0
 };
 
-static inline uint16_t fromRep16(uint16_t x)
+static inline TYPE_FP16 fromRep16(uint16_t x)
 {
+#ifdef COMPILER_RT_HAS_FLOAT16
+    TYPE_FP16 ret;
+    memcpy(&ret, &x, sizeof(ret));
+    return ret;
+#else
     return x;
+#endif
 }
 
 static inline float fromRep32(uint32_t x)
@@ -36,9 +48,15 @@ static inline long double fromRep128(uint64_t hi, uint64_t lo)
 }
 #endif
 
-static inline uint16_t toRep16(uint16_t x)
+static inline uint16_t toRep16(TYPE_FP16 x)
 {
+#ifdef COMPILER_RT_HAS_FLOAT16
+    uint16_t ret;
+    memcpy(&ret, &x, sizeof(ret));
+    return ret;
+#else
     return x;
+#endif
 }
 
 static inline uint32_t toRep32(float x)
@@ -64,7 +82,7 @@ static inline __uint128_t toRep128(long double x)
 }
 #endif
 
-static inline int compareResultH(uint16_t result,
+static inline int compareResultH(TYPE_FP16 result,
                                  uint16_t expected)
 {
     uint16_t rep = toRep16(result);
@@ -199,7 +217,7 @@ static inline char *expectedStr(enum EXPECTED_RESULT expected)
     return "";
 }
 
-static inline uint16_t makeQNaN16(void)
+static inline TYPE_FP16 makeQNaN16(void)
 {
     return fromRep16(0x7e00U);
 }
@@ -221,7 +239,7 @@ static inline long double makeQNaN128(void)
 }
 #endif
 
-static inline uint16_t makeNaN16(uint16_t rand)
+static inline TYPE_FP16 makeNaN16(uint16_t rand)
 {
     return fromRep16(0x7c00U | (rand & 0x7fffU));
 }
@@ -243,7 +261,7 @@ static inline long double makeNaN128(uint64_t rand)
 }
 #endif
 
-static inline uint16_t makeInf16(void)
+static inline TYPE_FP16 makeInf16(void)
 {
     return fromRep16(0x7c00U);
 }

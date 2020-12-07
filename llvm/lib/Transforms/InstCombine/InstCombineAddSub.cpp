@@ -26,7 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -82,11 +81,11 @@ namespace {
   private:
     bool insaneIntVal(int V) { return V > 4 || V < -4; }
 
-    APFloat *getFpValPtr()
-      { return reinterpret_cast<APFloat *>(&FpValBuf.buffer[0]); }
+    APFloat *getFpValPtr() { return reinterpret_cast<APFloat *>(&FpValBuf); }
 
-    const APFloat *getFpValPtr() const
-      { return reinterpret_cast<const APFloat *>(&FpValBuf.buffer[0]); }
+    const APFloat *getFpValPtr() const {
+      return reinterpret_cast<const APFloat *>(&FpValBuf);
+    }
 
     const APFloat &getFpVal() const {
       assert(IsFp && BufHasFpVal && "Incorret state");
@@ -120,7 +119,7 @@ namespace {
     // is overkill of this end.
     short IntVal = 0;
 
-    AlignedCharArrayUnion<APFloat> FpValBuf;
+    std::aligned_union_t<1, APFloat> FpValBuf;
   };
 
   /// FAddend is used to represent floating-point addend. An addend is

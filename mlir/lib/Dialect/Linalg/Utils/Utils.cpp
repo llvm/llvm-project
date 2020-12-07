@@ -104,13 +104,18 @@ SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp) {
     auto shape = v.getType().cast<ShapedType>().getShape();
     res.append(shape.begin(), shape.end());
   }
+  if (linalgOp.getNumInitTensors())
+    return res;
+  for (Value v : linalgOp.getOperation()->getResults()) {
+    auto shape = v.getType().cast<ShapedType>().getShape();
+    res.append(shape.begin(), shape.end());
+  }
   return res;
 }
 
 Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
   SmallVector<int64_t, 8> viewSizes = getStaticShape(linalgOp);
-  AffineMap invertedMap =
-      inversePermutation(concatAffineMaps(linalgOp.getIndexingMaps()));
+  AffineMap invertedMap = linalgOp.getShapesToLoopsMap();
   if (!invertedMap)
     return {};
   return invertedMap.compose(viewSizes);
@@ -123,12 +128,12 @@ void GenerateLoopNest<scf::ForOp>::doit(
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
-  // Create procInfo so it dominate loops, if appropriate.
+  // Create procInfo so it dominates loops, if appropriate.
   OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
   Location loc = edsc::ScopedContext::getLocation();
   SmallVector<ProcInfo, 2> procInfo;
   if (distributionOptions.hasValue())
-    procInfo = distributionOptions->procInfo(builder, loc, ArrayRef<Range>{});
+    procInfo = distributionOptions->procInfo(builder, loc, loopRanges);
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
@@ -138,11 +143,12 @@ void GenerateLoopNest<scf::ForOp>::doit(
   if (!distributionOptions.hasValue() || loopNest.loops.empty())
     return;
 
-  // TODO: support distributionMethod, which is currently ignored.
+  // Only supports cyclic distribution for now.
   for (auto it : llvm::zip(loopNest.loops, procInfo,
                            distributionOptions->distributionMethod))
-    mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
-                          std::get<1>(it).nprocs);
+    if (std::get<2>(it) == DistributionMethod::Cyclic)
+      mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
+                            std::get<1>(it).nprocs);
 }
 
 /// Specialization to build affine "for" nest.

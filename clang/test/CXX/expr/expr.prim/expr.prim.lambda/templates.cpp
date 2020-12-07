@@ -115,7 +115,7 @@ namespace p5 {
   template void double_capture(NonConstCopy&);
 }
 
-namespace NonLocalLambdaInstantation {
+namespace NonLocalLambdaInstantiation {
   template<typename T>
   struct X {
     static int value;
@@ -139,7 +139,7 @@ namespace NonLocalLambdaInstantation {
   }
 
   template<typename T>
-  struct X2 { // expected-note{{in instantiation of default member initializer 'NonLocalLambdaInstantation::X2<int *>::x'}}
+  struct X2 { // expected-note{{in instantiation of default member initializer 'NonLocalLambdaInstantiation::X2<int *>::x'}}
     int x = []{ return T(); }(); // expected-error{{cannot initialize a member subobject of type 'int' with an rvalue of type 'int *'}}
   };
 

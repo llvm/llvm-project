@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t1.o
 
-# RUN: not wasm-ld --no-entry --shared-memory %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-MAX
+# RUN: wasm-ld --no-entry --shared-memory --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
 
 # RUN: not wasm-ld --no-entry --shared-memory --max-memory=100000 %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-UNALIGNED
 
@@ -55,8 +55,6 @@ Sections:
         Alignment:       0
         Flags:           [  ]
 ...
-
-# SHARED-NO-MAX: maximum memory too small, 66576 bytes needed{{$}}
 
 # SHARED-UNALIGNED: maximum memory must be 65536-byte aligned{{$}}
 

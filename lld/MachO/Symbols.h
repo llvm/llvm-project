@@ -235,6 +235,8 @@ T *replaceSymbol(Symbol *s, ArgT &&... arg) {
 } // namespace macho
 
 std::string toString(const macho::Symbol &);
+std::string toMachOString(const llvm::object::Archive::Symbol &);
+
 } // namespace lld
 
 #endif

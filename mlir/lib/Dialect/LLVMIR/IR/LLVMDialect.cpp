@@ -14,10 +14,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/AsmParser/Parser.h"
@@ -1187,9 +1187,12 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(parser.getNameLoc(),
                               "type can only be omitted for string globals");
     }
-  } else if (parser.parseOptionalRegion(initRegion, /*arguments=*/{},
-                                        /*argTypes=*/{})) {
-    return failure();
+  } else {
+    OptionalParseResult parseResult =
+        parser.parseOptionalRegion(initRegion, /*arguments=*/{},
+                                   /*argTypes=*/{});
+    if (parseResult.hasValue() && failed(*parseResult))
+      return failure();
   }
 
   result.addAttribute("type", TypeAttr::get(types[0]));
@@ -1398,8 +1401,9 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
                              resultAttrs);
 
   auto *body = result.addRegion();
-  return parser.parseOptionalRegion(
+  OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  return failure(parseResult.hasValue() && failed(*parseResult));
 }
 
 // Print the LLVMFuncOp. Collects argument and result types and passes them to

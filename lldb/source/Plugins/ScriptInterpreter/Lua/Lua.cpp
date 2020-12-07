@@ -9,10 +9,33 @@
 #include "Lua.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb_private;
 using namespace lldb;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
+// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
+// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
+// incompatible with C
+#if _MSC_VER
+#pragma warning (push)
+#pragma warning (disable : 4190)
+#endif
+
+extern "C" llvm::Expected<bool>
+LLDBSwigLuaBreakpointCallbackFunction(lua_State *L,
+                                      lldb::StackFrameSP stop_frame_sp,
+                                      lldb::BreakpointLocationSP bp_loc_sp);
+
+#if _MSC_VER
+#pragma warning (pop)
+#endif
+
+#pragma clang diagnostic pop
 
 static int lldb_print(lua_State *L) {
   int n = lua_gettop(L);
@@ -55,6 +78,31 @@ llvm::Error Lua::Run(llvm::StringRef buffer) {
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
+}
+
+llvm::Error Lua::RegisterBreakpointCallback(void *baton, const char *body) {
+  lua_pushlightuserdata(m_lua_state, baton);
+  const char *fmt_str = "return function(frame, bp_loc, ...) {0} end";
+  std::string func_str = llvm::formatv(fmt_str, body).str();
+  if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
+    llvm::Error e = llvm::make_error<llvm::StringError>(
+        llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
+        llvm::inconvertibleErrorCode());
+    // Pop error message from the stack.
+    lua_pop(m_lua_state, 2);
+    return e;
+  }
+  lua_settable(m_lua_state, LUA_REGISTRYINDEX);
+  return llvm::Error::success();
+}
+
+llvm::Expected<bool>
+Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
+                            lldb::BreakpointLocationSP bp_loc_sp) {
+  lua_pushlightuserdata(m_lua_state, baton);
+  lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
+  return LLDBSwigLuaBreakpointCallbackFunction(m_lua_state, stop_frame_sp,
+                                               bp_loc_sp);
 }
 
 llvm::Error Lua::LoadModule(llvm::StringRef filename) {

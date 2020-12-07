@@ -307,7 +307,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
   SmallVector<Value, 8> callOperands(call.getArgOperands());
-  SmallVector<Value, 8> callResults(call.getOperation()->getResults());
+  SmallVector<Value, 8> callResults(call->getResults());
   if (callOperands.size() != entryBlock->getNumArguments() ||
       callResults.size() != callableResultTypes.size())
     return failure();

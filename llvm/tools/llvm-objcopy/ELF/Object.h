@@ -957,7 +957,7 @@ private:
 public:
   ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
              Optional<StringRef> ExtractPartition)
-      : ElfFile(*ElfObj.getELFFile()), Obj(Obj),
+      : ElfFile(ElfObj.getELFFile()), Obj(Obj),
         ExtractPartition(ExtractPartition) {}
 
   Error build(bool EnsureSymtab);

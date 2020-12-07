@@ -197,17 +197,18 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
 }
 
 // Translate from the relocation's index into the final linked output value.
-uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
+uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) const {
   const Symbol* sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
 
     // We can end up with relocations against non-live symbols.  For example
-    // in debug sections. We return reloc.Addend because always returning zero
-    // causes the generation of spurious range-list terminators in the
-    // .debug_ranges section.
+    // in debug sections. We return a tombstone value in debug symbol sections
+    // so this will not produce a valid range conflicting with ranges of actual
+    // code. In other sections we return reloc.Addend.
+
     if ((isa<FunctionSymbol>(sym) || isa<DataSymbol>(sym)) && !sym->isLive())
-      return reloc.Addend;
+      return tombstone ? tombstone : reloc.Addend;
   }
 
   switch (reloc.Type) {

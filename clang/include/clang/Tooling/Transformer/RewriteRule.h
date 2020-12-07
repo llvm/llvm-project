@@ -446,28 +446,6 @@ findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
                  const RewriteRule &Rule);
 } // namespace detail
 } // namespace transformer
-
-namespace tooling {
-// DEPRECATED: These are temporary aliases supporting client migration to the
-// `transformer` namespace.
-/// Wraps a string as a TextGenerator.
-using TextGenerator = transformer::TextGenerator;
-
-TextGenerator text(std::string M);
-
-using transformer::addInclude;
-using transformer::applyFirst;
-using transformer::change;
-using transformer::insertAfter;
-using transformer::insertBefore;
-using transformer::makeRule;
-using transformer::remove;
-using transformer::RewriteRule;
-using transformer::IncludeFormat;
-namespace detail {
-using namespace transformer::detail;
-} // namespace detail
-} // namespace tooling
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_

@@ -3667,12 +3667,12 @@ a poison value.
 
 Poison value behavior is defined in terms of value *dependence*:
 
--  Values other than :ref:`phi <i_phi>` nodes and :ref:`select <i_select>`
-   instructions depend on their operands.
+-  Values other than :ref:`phi <i_phi>` nodes, :ref:`select <i_select>`, and
+   :ref:`freeze <i_freeze>` instructions depend on their operands.
 -  :ref:`Phi <i_phi>` nodes depend on the operand corresponding to
    their dynamic predecessor basic block.
--  Select instructions depend on their condition operand and their
-   selected operand.
+-  :ref:`Select <i_select>` instructions depend on their condition operand and
+   their selected operand.
 -  Function arguments depend on the corresponding actual argument values
    in the dynamic callers of their functions.
 -  :ref:`Call <i_call>` instructions depend on the :ref:`ret <i_ret>`
@@ -3743,8 +3743,8 @@ Here are some examples:
 
       %narrowaddr = bitcast i32* @g to i16*
       %wideaddr = bitcast i32* @g to i64*
-      %poison3 = load i16, i16* %narrowaddr ; Returns a poison value.
-      %poison4 = load i64, i64* %wideaddr   ; Returns a poison value.
+      %poison4 = load i16, i16* %narrowaddr ; Returns a poison value.
+      %poison5 = load i64, i64* %wideaddr   ; Returns a poison value.
 
       %cmp = icmp slt i32 %poison, 0       ; Returns a poison value.
       br i1 %cmp, label %end, label %end   ; undefined behavior
@@ -3763,8 +3763,7 @@ The padding of an aggregate isn't considered, since it isn't visible
 without storing it into memory and loading it with a different type.
 
 A constant of a :ref:`single value <t_single_value>`, non-vector type is well
-defined if it is a non-undef constant. Note that there is no poison constant
-in LLVM.
+defined if it is neither '``undef``' constant nor '``poison``' constant.
 The result of :ref:`freeze instruction <i_freeze>` is well defined regardless
 of its operand.
 
@@ -5956,6 +5955,21 @@ vectorization:
 
    !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+
+'``llvm.loop.vectorize.scalable.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata selectively enables or disables scalable vectorization for the
+loop, and only has any effect if vectorization for the loop is already enabled.
+The first operand is the string ``llvm.loop.vectorize.scalable.enable``
+and the second operand is a bit. If the bit operand value is 1 scalable
+vectorization is enabled, whereas a value of 0 reverts to the default fixed
+width vectorization:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
+   !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
 
 '``llvm.loop.vectorize.width``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

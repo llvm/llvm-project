@@ -10,10 +10,10 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK: N0 [label =
 ; CHECK-NEXT: "for.body:\n" +
 ; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
-; CHECK-NEXT:       "CLONE %arrayidx = getelementptr %y, %iv\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
 ; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
 ; CHECK-NEXT:       "WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)\l" +
-; CHECK-NEXT:       "CLONE %arrayidx2 = getelementptr %x, %iv\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>\l" +
 ; CHECK-NEXT:       "WIDEN store ir<%arrayidx2>, ir<%call>\l"
 ; CHECK-NEXT:   ]
 
@@ -45,7 +45,7 @@ define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalia
 ; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%arrayidx>, ir<%z>\l" +
 ; CHECK-NEXT:      "WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>\l" +
 ; CHECK-NEXT:      "WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>\l" +
-; CHECK-NEXT:      "CLONE %arrayidx2 = getelementptr %x, %iv\l" +
+; CHECK-NEXT:      "CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>\l" +
 ; CHECK-NEXT:      "WIDEN store ir<%arrayidx2>, ir<%add>\l"
 ; CHECK-NEXT:   ]
 
@@ -75,7 +75,7 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK-NEXT: "for.body:\n" +
 ; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:       "WIDEN-PHI %red = phi %red.next, 0.000000e+00\l" +
-; CHECK-NEXT:       "CLONE %arrayidx = getelementptr %y, %iv\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
 ; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
 ; CHECK-NEXT:       "REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)\l"
 ; CHECK-NEXT:   ]
@@ -95,6 +95,62 @@ for.body:                                         ; preds = %entry, %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret float %red.next
+}
+
+define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
+; CHECK:       N0 [label =
+; CHECK-NEXT:    "for.body:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %i = phi 0, %i.next\l" +
+; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%i>, ir<5>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N2 [label =
+; CHECK-NEXT:    "pred.udiv.entry:\n" +
+; CHECK-NEXT:      +
+; CHECK-NEXT:      "BRANCH-ON-MASK ir<%cmp>\l"\l
+; CHECK-NEXT:         "CondBit: ir<%cmp>"
+; CHECK-NEXT:    ]
+;
+; CHECK:       N4 [label =
+; CHECK-NEXT:    "pred.udiv.if:\n" +
+; CHECK-NEXT:      "REPLICATE ir<%tmp4> = udiv ir<%n>, ir<%i> (S->V)\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N5 [label =
+; CHECK-NEXT:    "pred.udiv.continue:\n" +
+; CHECK-NEXT:      "PHI-PREDICATED-INSTRUCTION ir<%tmp4>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N7 [label =
+; CHECK-NEXT:    "for.inc:\n" +
+; CHECK-NEXT:      "EMIT vp<%0> = not ir<%cmp>\l" +
+; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%0> ir<%tmp4>/ir<%cmp>\l" +
+; CHECK-NEXT:      "CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>\l" +
+; CHECK-NEXT:      "WIDEN store ir<%idx>, ir<%d>\l"
+; CHECK-NEXT:  ]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %entry
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %cmp = icmp ult i64 %i, 5
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %tmp4 = udiv i64 %n, %i
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.then, %for.body
+  %d = phi i64 [ 0, %for.body ], [ %tmp4, %if.then ]
+  %idx = getelementptr i64, i64* %x, i64 %i
+  store i64 %d, i64* %idx
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.inc
+  ret void
 }
 
 declare float @llvm.sqrt.f32(float) nounwind readnone

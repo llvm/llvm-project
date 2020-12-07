@@ -182,9 +182,10 @@ static void emutls_exit(void) {
   }
 }
 
-#pragma warning(push)
-#pragma warning(disable : 4100)
 static BOOL CALLBACK emutls_init(PINIT_ONCE p0, PVOID p1, PVOID *p2) {
+  (void)p0;
+  (void)p1;
+  (void)p2;
   emutls_mutex =
       (LPCRITICAL_SECTION)_aligned_malloc(sizeof(CRITICAL_SECTION), 16);
   if (!emutls_mutex) {
@@ -250,8 +251,6 @@ static __inline void __atomic_store_n(void *ptr, uintptr_t val, unsigned type) {
 }
 
 #endif // __ATOMIC_RELEASE
-
-#pragma warning(pop)
 
 #endif // _WIN32
 

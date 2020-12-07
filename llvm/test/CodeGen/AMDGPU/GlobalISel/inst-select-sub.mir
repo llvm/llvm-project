@@ -37,7 +37,6 @@ body: |
     ; GFX9: S_ENDPGM 0, implicit [[V_SUB_U32_e64_2]]
     ; GFX10-LABEL: name: sub_s32
     ; GFX10: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_vgpr4
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0

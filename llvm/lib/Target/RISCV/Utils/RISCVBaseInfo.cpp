@@ -19,7 +19,7 @@
 namespace llvm {
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
-#include "RISCVGenSystemOperands.inc"
+#include "RISCVGenSearchableTables.inc"
 } // namespace RISCVSysReg
 
 namespace RISCVABI {
@@ -93,5 +93,12 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 }
 
 } // namespace RISCVFeatures
+
+namespace RISCVVPseudosTable {
+
+#define GET_RISCVVPseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVVPseudosTable
 
 } // namespace llvm

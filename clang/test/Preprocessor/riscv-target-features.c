@@ -78,3 +78,17 @@
 // CHECK-DOUBLE: __riscv_float_abi_double 1
 // CHECK-DOUBLE-NOT: __riscv_float_abi_soft
 // CHECK-DOUBLE-NOT: __riscv_float_abi_single
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
+// RUN:   -march=rv32iv0p9 -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-V-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
+// RUN:   -march=rv64iv0p9 -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-V-EXT %s
+// CHECK-V-EXT: __riscv_vector 1
+//
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izfh0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZFH-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv64izfh0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZFH-EXT %s
+// CHECK-ZFH-EXT: __riscv_zfh 1

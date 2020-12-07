@@ -983,6 +983,22 @@ TEST(SmallVectorTest, EmplaceBack) {
   }
 }
 
+TEST(SmallVectorTest, DefaultInlinedElements) {
+  SmallVector<int> V;
+  EXPECT_TRUE(V.empty());
+  V.push_back(7);
+  EXPECT_EQ(V[0], 7);
+
+  // Check that at least a couple layers of nested SmallVector<T>'s are allowed
+  // by the default inline elements policy. This pattern happens in practice
+  // with some frequency, and it seems fairly harmless even though each layer of
+  // SmallVector's will grow the total sizeof by a vector header beyond the
+  // "preferred" maximum sizeof.
+  SmallVector<SmallVector<SmallVector<int>>> NestedV;
+  NestedV.emplace_back().emplace_back().emplace_back(42);
+  EXPECT_EQ(NestedV[0][0][0], 42);
+}
+
 TEST(SmallVectorTest, InitializerList) {
   SmallVector<int, 2> V1 = {};
   EXPECT_TRUE(V1.empty());

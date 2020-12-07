@@ -74,17 +74,6 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
 }
 
 //===----------------------------------------------------------------------===//
-// AVX512ToLLVM
-//===----------------------------------------------------------------------===//
-
-def ConvertAVX512ToLLVM : Pass<"convert-avx512-to-llvm", "ModuleOp"> {
-  let summary = "Convert the operations from the avx512 dialect into the LLVM "
-                "dialect";
-  let constructor = "mlir::createConvertAVX512ToLLVMPass()";
-  let dependentDialects = ["LLVM::LLVMDialect", "LLVM::LLVMAVX512Dialect"];
-}
-
-//===----------------------------------------------------------------------===//
 // AsyncToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -401,15 +390,30 @@ def ConvertVectorToSCF : FunctionPass<"convert-vector-to-scf"> {
 def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
+  let description = [{
+
+    Convert operations from the vector dialect into the LLVM IR dialect
+    operations. The lowering pass provides several options to control
+    the kinds of optimizations that are allowed. It also provides options
+    that enable the use of one or more architectural-specific dialects
+    (AVX512, Neon, SVE, etc.) in combination with the architectural-neutral
+    vector dialect lowering.
+
+  }];
   let constructor = "mlir::createConvertVectorToLLVMPass()";
-  let dependentDialects = ["LLVM::LLVMDialect"];
+  let dependentDialects = ["LLVM::LLVMDialect", "LLVM::LLVMAVX512Dialect"];
   let options = [
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
            "Allows llvm to reassociate floating-point reductions for speed">,
     Option<"enableIndexOptimizations", "enable-index-optimizations",
            "bool", /*default=*/"true",
-           "Allows compiler to assume indices fit in 32-bit if that yields faster code">
+           "Allows compiler to assume indices fit in 32-bit if that yields "
+	   "faster code">,
+    Option<"enableAVX512", "enable-avx512",
+           "bool", /*default=*/"false",
+           "Enables the use of AVX512 dialect while lowering the vector "
+	   "dialect.">
   ];
 }
 

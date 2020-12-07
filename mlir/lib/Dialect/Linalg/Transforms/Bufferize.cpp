@@ -48,7 +48,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
   SmallVector<Range, 4> loopRanges;
 
   // Allocate a buffer for every tensor result.
-  for (auto en : llvm::enumerate(linalgOp.getOperation()->getResultTypes())) {
+  for (auto en : llvm::enumerate(linalgOp->getResultTypes())) {
     size_t resultIndex = en.index();
     Type resultType = en.value();
 
@@ -250,8 +250,7 @@ public:
   LogicalResult
   matchAndRewrite(SubTensorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    SubTensorOpAdaptor adaptor(operands,
-                               op.getOperation()->getAttrDictionary());
+    SubTensorOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemref = adaptor.source();
     assert(sourceMemref.getType().isa<MemRefType>());
 
@@ -293,8 +292,7 @@ public:
   LogicalResult
   matchAndRewrite(SubTensorInsertOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    SubTensorInsertOpAdaptor adaptor(operands,
-                                     op.getOperation()->getAttrDictionary());
+    SubTensorInsertOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemRef = adaptor.source();
     assert(sourceMemRef.getType().isa<MemRefType>());
 

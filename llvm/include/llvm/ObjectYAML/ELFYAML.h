@@ -103,7 +103,7 @@ struct SectionHeaderTable {
 struct Symbol {
   StringRef Name;
   ELF_STT Type;
-  StringRef Section;
+  Optional<StringRef> Section;
   Optional<ELF_SHN> Index;
   ELF_STB Binding;
   llvm::yaml::Hex64 Value;

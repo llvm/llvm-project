@@ -895,7 +895,7 @@ struct RegsForValue {
   }
 
   /// Return a list of registers and their sizes.
-  SmallVector<std::pair<unsigned, unsigned>, 4> getRegsAndSizes() const;
+  SmallVector<std::pair<unsigned, TypeSize>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

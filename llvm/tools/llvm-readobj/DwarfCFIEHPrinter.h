@@ -49,7 +49,7 @@ template <class ELFT>
 static const typename ELFT::Shdr *
 findSectionByAddress(const object::ELFObjectFile<ELFT> &ObjF, uint64_t Addr) {
   Expected<typename ELFT::ShdrRange> SectionsOrErr =
-      ObjF.getELFFile()->sections();
+      ObjF.getELFFile().sections();
   if (!SectionsOrErr)
     reportError(SectionsOrErr.takeError(), ObjF.getFileName());
 
@@ -61,7 +61,7 @@ findSectionByAddress(const object::ELFObjectFile<ELFT> &ObjF, uint64_t Addr) {
 
 template <typename ELFT>
 void PrinterContext<ELFT>::printUnwindInformation() const {
-  const object::ELFFile<ELFT> &Obj = *ObjF.getELFFile();
+  const object::ELFFile<ELFT> &Obj = ObjF.getELFFile();
 
   Expected<typename ELFT::PhdrRange> PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr)
@@ -100,7 +100,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   W.startLine() << format("Offset: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_offset);
   W.startLine() << format("Size: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_memsz);
 
-  const object::ELFFile<ELFT> &Obj = *ObjF.getELFFile();
+  const object::ELFFile<ELFT> &Obj = ObjF.getELFFile();
   if (const Elf_Shdr *EHFrameHdr =
           findSectionByAddress(ObjF, EHFramePHdr->p_vaddr)) {
     Expected<StringRef> NameOrErr = Obj.getSectionName(*EHFrameHdr);
@@ -180,7 +180,7 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
   W.indent();
 
   Expected<ArrayRef<uint8_t>> DataOrErr =
-      ObjF.getELFFile()->getSectionContents(*EHFrameShdr);
+      ObjF.getELFFile().getSectionContents(*EHFrameShdr);
   if (!DataOrErr)
     reportError(DataOrErr.takeError(), ObjF.getFileName());
 

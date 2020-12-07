@@ -15,7 +15,6 @@ define float @v_fdot2(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
   ret float %r
@@ -33,7 +32,6 @@ define float @v_fdot2_clamp(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2 clamp
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 true)
   ret float %r
@@ -51,7 +49,6 @@ define float @v_fdot2_neg_a(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %r = call float @llvm.amdgcn.fdot2(<2 x half> %neg.a, <2 x half> %b, float %c, i1 false)
@@ -70,7 +67,6 @@ define float @v_fdot2_neg_b(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
   %r = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %neg.b, float %c, i1 false)
@@ -89,7 +85,6 @@ define float @v_fdot2_neg_a_neg_b(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v1, v1, v2 neg_lo:[1,1,0] neg_hi:[1,1,0]
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %b
   %neg.b = fneg <2 x half> %b
@@ -110,7 +105,6 @@ define float @v_fdot2_neg_c(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.c = fneg float %c
@@ -132,7 +126,6 @@ define float @v_fdot2_inline_literal_a(<2 x half> %b, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_movk_i32 s4, 0x4000
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, s4, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -154,7 +147,6 @@ define float @v_fdot2_inline_literal_b(<2 x half> %a, float %c) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_movk_i32 s4, 0x4000
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, s4, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -174,7 +166,6 @@ define float @v_fdot2_inline_literal_c(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, 1.0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float 1.0, i1 false)
   ret float %ret

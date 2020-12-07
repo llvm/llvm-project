@@ -108,7 +108,7 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
     ```mlir
     // Apply `myConstraint` to the entities defined by `input`, `attr`, and
     // `op`.
-    pdl_interp.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    pdl_interp.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation) -> ^matchDest, ^failureDest
     ```
   }];
 
@@ -316,7 +316,7 @@ def PDLInterp_CheckTypeOp
     Example:
 
     ```mlir
-    pdl_interp.check_type %type is 0 -> ^matchDest, ^failureDest
+    pdl_interp.check_type %type is i32 -> ^matchDest, ^failureDest
     ```
   }];
 
@@ -338,7 +338,7 @@ def PDLInterp_CreateAttributeOp
     Example:
 
     ```mlir
-    pdl_interp.create_attribute 10 : i64
+    %attr = pdl_interp.create_attribute 10 : i64
     ```
   }];
 
@@ -369,7 +369,7 @@ def PDLInterp_CreateNativeOp : PDLInterp_Op<"create_native"> {
     Example:
 
     ```mlir
-    %ret = pdl_interp.create_native "myNativeFunc"[42, "gt"](%arg0, %arg1) : !pdl.attribute
+    %ret = pdl_interp.create_native "myNativeFunc"[42, "gt"](%arg0, %arg1 : !pdl.value, !pdl.value) : !pdl.attribute
     ```
   }];
 
@@ -772,7 +772,7 @@ def PDLInterp_SwitchAttributeOp
     Example:
 
     ```mlir
-    pdl_interp.switch_attribute %attr to [10, true] -> ^10Dest, ^trueDest, ^defaultDest
+    pdl_interp.switch_attribute %attr to [10, true](^10Dest, ^trueDest) -> ^defaultDest
     ```
   }];
   let arguments = (ins PDL_Attribute:$attribute, ArrayAttr:$caseValues);
@@ -837,7 +837,7 @@ def PDLInterp_SwitchOperationNameOp
     Example:
 
     ```mlir
-    pdl_interp.switch_operation_name of %op to ["foo.op", "bar.op"] -> ^fooDest, ^barDest, ^defaultDest
+    pdl_interp.switch_operation_name of %op to ["foo.op", "bar.op"](^fooDest, ^barDest) -> ^defaultDest
     ```
   }];
 
@@ -874,7 +874,7 @@ def PDLInterp_SwitchResultCountOp
     Example:
 
     ```mlir
-    pdl_interp.switch_result_count of %op to [0, 2] -> ^0Dest, ^2Dest, ^defaultDest
+    pdl_interp.switch_result_count of %op to [0, 2](^0Dest, ^2Dest) -> ^defaultDest
     ```
   }];
 

@@ -24,7 +24,7 @@ config.clang_staticanalyzer_z3 = "@LLVM_WITH_Z3@"
 config.clang_examples = @CLANG_BUILD_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = @ENABLE_BACKTRACES@
-config.enable_experimental_new_pass_manager = @ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER@
+config.enable_experimental_new_pass_manager = @LLVM_ENABLE_NEW_PASS_MANAGER@
 config.enable_threads = @LLVM_ENABLE_THREADS@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@Python3_EXECUTABLE@"
@@ -46,9 +46,6 @@ except KeyError:
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
-
-if not "@CLANG_DEFAULT_LINKER@":
-    config.available_features.add('platform-linker')
 
 # Let the main config do the real work.
 lit_config.load_config(

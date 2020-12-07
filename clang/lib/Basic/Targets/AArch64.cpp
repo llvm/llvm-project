@@ -857,7 +857,7 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
     UseZeroLengthBitfieldAlignment = true;
     TheCXXABI.set(TargetCXXABI::WatchOS);
   } else
-    TheCXXABI.set(TargetCXXABI::iOS64);
+    TheCXXABI.set(TargetCXXABI::AppleARM64);
 }
 
 void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
@@ -873,6 +873,9 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   Builder.defineMacro("__REGISTER_PREFIX__", "");
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");
+
+  if (Triple.isArm64e())
+    Builder.defineMacro("__arm64e__", "1");
 
   getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
 }

@@ -74,15 +74,12 @@ define void @t4(void (i32)* nocapture %x) nounwind ssp {
 ;
 ; X32-LABEL: t4:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movq %rdi, %rax
 ; X32-NEXT:    xorl %edi, %edi
 ; X32-NEXT:    jmpq *%rax # TAILCALL
   tail call void %x(i32 0) nounwind
   ret void
 }
-
-; FIXME: This isn't needed since x32 psABI specifies that callers must
-;        zero-extend pointers passed in registers.
 
 define void @t5(void ()* nocapture %x) nounwind ssp {
 ; X86-LABEL: t5:
@@ -95,8 +92,7 @@ define void @t5(void ()* nocapture %x) nounwind ssp {
 ;
 ; X32-LABEL: t5:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl %edi, %eax
-; X32-NEXT:    jmpq *%rax # TAILCALL
+; X32-NEXT:    jmpq *%rdi # TAILCALL
   tail call void %x() nounwind
   ret void
 }
@@ -227,7 +223,7 @@ define signext i16 @t9(i32 (i32)* nocapture %x) nounwind ssp {
 ;
 ; X32-LABEL: t9:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movq %rdi, %rax
 ; X32-NEXT:    xorl %edi, %edi
 ; X32-NEXT:    jmpq *%rax # TAILCALL
 entry:
@@ -400,6 +396,7 @@ define %struct.ns* @t13(%struct.cp* %yy) nounwind ssp {
 ; X32-NEXT:    pushq %rcx
 ; X32-NEXT:    callq foo7
 ; X32-NEXT:    addl $32, %esp
+; X32-NEXT:    movl %eax, %eax
 ; X32-NEXT:    popq %rcx
 ; X32-NEXT:    retq
 entry:
@@ -477,7 +474,7 @@ define void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X32-LABEL: t15:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    callq f
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -651,7 +648,7 @@ define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg
 ; X32-LABEL: t21_sret_to_sret:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    callq t21_f_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -689,7 +686,7 @@ define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret(%struct.fo
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
 ; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    movl %esp, %edi
 ; X32-NEXT:    callq t21_f_sret
 ; X32-NEXT:    movl %ebx, %eax
@@ -727,7 +724,7 @@ define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret(%struct
 ; X32-LABEL: t21_sret_to_sret_more_args:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    callq f_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -762,8 +759,8 @@ define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.r
 ; X32-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %esi, %ebx
-; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    movq %rsi, %rbx
+; X32-NEXT:    movq %rsi, %rdi
 ; X32-NEXT:    callq t21_f_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -803,7 +800,7 @@ define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret(%struc
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    movl %edx, %esi
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    callq f_sret
@@ -841,8 +838,8 @@ define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret(%st
 ; X32-LABEL: t21_sret_to_sret_args_mismatch:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
-; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    movq %rsi, %rdi
 ; X32-NEXT:    callq t21_f_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -877,8 +874,8 @@ define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret(%s
 ; X32-LABEL: t21_sret_to_sret_args_mismatch2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
-; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    movq %rsi, %rdi
 ; X32-NEXT:    callq t21_f_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
@@ -915,7 +912,7 @@ define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret(%str
 ; X32-LABEL: t21_sret_to_sret_arg_mismatch:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    callq ret_struct
 ; X32-NEXT:    movl %eax, %edi
 ; X32-NEXT:    callq t21_f_sret
@@ -964,19 +961,19 @@ define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret(
 ;
 ; X32-LABEL: t21_sret_to_sret_structs_mismatch:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbp
+; X32-NEXT:    pushq %r14
 ; X32-NEXT:    pushq %rbx
 ; X32-NEXT:    pushq %rax
-; X32-NEXT:    movl %esi, %ebx
-; X32-NEXT:    movl %edi, %ebp
+; X32-NEXT:    movq %rsi, %rbx
+; X32-NEXT:    movq %rdi, %r14
 ; X32-NEXT:    callq ret_struct
-; X32-NEXT:    movl %ebx, %edi
 ; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movq %rbx, %rdi
 ; X32-NEXT:    callq t21_f_sret2
-; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl %r14d, %eax
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popq %rbx
-; X32-NEXT:    popq %rbp
+; X32-NEXT:    popq %r14
 ; X32-NEXT:    retq
   %b = call fastcc %struct.foo* @ret_struct()
   tail call fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo) %a, %struct.foo* noalias %b) nounwind
@@ -1010,7 +1007,7 @@ define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret(%struct.foo) 
 ; X32-LABEL: t21_sret_to_non_sret:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    callq t21_f_non_sret
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx

@@ -110,6 +110,12 @@ let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, XBD2 = 0 in
 def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
 def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
 
+// An alias of BRC 0, label
+def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
+
+// An alias of BRCL 0, label
+def JGNOP : InstAlias<"jgnop\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
+
 // Fused compare-and-branch instructions.
 //
 // These instructions do not use or clobber the condition codes.
@@ -2338,3 +2344,25 @@ defm : BlockLoadStore<anyextloadi32, i64, MVCSequence, NCSequence, OCSequence,
                       XCSequence, 4>;
 defm : BlockLoadStore<load, i64, MVCSequence, NCSequence, OCSequence,
                       XCSequence, 8>;
+
+//===----------------------------------------------------------------------===//
+// Mnemonic Aliases
+//===----------------------------------------------------------------------===//
+
+def JCT   : MnemonicAlias<"jct", "brct">;
+def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JAS   : MnemonicAlias<"jas", "bras">;
+def JASL  : MnemonicAlias<"jasl", "brasl">;
+def JXH   : MnemonicAlias<"jxh", "brxh">;
+def JXLE  : MnemonicAlias<"jxle", "brxle">;
+def JXHG  : MnemonicAlias<"jxhg", "brxhg">;
+def JXLEG : MnemonicAlias<"jxleg", "brxlg">;
+
+def BRU   : MnemonicAlias<"bru", "j">;
+def BRUL  : MnemonicAlias<"brul", "jg">;
+
+foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
+              "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
+  def BRUAsm#V : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
+  def BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#">;
+}

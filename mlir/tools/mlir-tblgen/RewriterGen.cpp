@@ -349,7 +349,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   if (!name.empty())
     os << formatv("{0} = {1};\n", name, castedName);
 
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs(), nextOperand = 0; i != e; ++i) {
     auto opArg = op.getArg(i);
     std::string argName = formatv("op{0}", depth + 1);
 
@@ -365,10 +365,11 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
       }
       os << "{\n";
 
+      // Attributes don't count for getODSOperands.
       os.indent() << formatv(
           "auto *{0} = "
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
-          argName, castedName, i);
+          argName, castedName, nextOperand++);
       emitMatch(argTree, argName, depth + 1);
       os << formatv("tblgen_ops[{0}] = {1};\n", ++opCounter, argName);
       os.unindent() << "}\n";
@@ -377,7 +378,9 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 
     // Next handle DAG leaf: operand or attribute
     if (opArg.is<NamedTypeConstraint *>()) {
+      // emitOperandMatch's argument indexing counts attributes.
       emitOperandMatch(tree, castedName, i, depth);
+      ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
       emitAttributeMatch(tree, opName, i, depth);
     } else {

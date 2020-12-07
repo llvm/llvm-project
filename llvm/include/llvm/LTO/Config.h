@@ -121,6 +121,21 @@ struct Config {
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
 
+  /// The minimum hotness value a diagnostic needs in order to be included in
+  /// optimization diagnostics.
+  ///
+  /// The threshold is an Optional value, which maps to one of the 3 states:
+  /// 1. 0            => threshold disabled. All emarks will be printed.
+  /// 2. positive int => manual threshold by user. Remarks with hotness exceed
+  ///                    threshold will be printed.
+  /// 3. None         => 'auto' threshold by user. The actual value is not
+  ///                    available at command line, but will be synced with
+  ///                    hotness threhold from profile summary during
+  ///                    compilation.
+  ///
+  /// If threshold option is not specified, it is disabled by default.
+  llvm::Optional<uint64_t> RemarksHotnessThreshold = 0;
+
   /// The format used for serializing remarks (default: YAML).
   std::string RemarksFormat = "";
 

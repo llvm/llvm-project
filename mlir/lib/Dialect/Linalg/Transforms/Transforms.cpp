@@ -111,6 +111,11 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       options(options) {}
 
+mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
+    LinalgTilingOptions options, LinalgMarker marker, PatternBenefit benefit)
+    : RewritePattern(benefit, MatchAnyOpTypeTag()), marker(marker),
+      options(options) {}
+
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     Operation *op, PatternRewriter &rewriter,
     SmallVectorImpl<Value> &tensorResults) const {
@@ -128,7 +133,7 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // This would not be the case with a special terminator op that generates the
   // whole tensor (instead of inserting a subtensor). But the generator-based
   // abstraction has other issues.
-  if (linalgOp.getNumInitTensors() != linalgOp.getOperation()->getNumResults())
+  if (linalgOp.getNumInitTensors() != linalgOp->getNumResults())
     return failure();
 
   Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);

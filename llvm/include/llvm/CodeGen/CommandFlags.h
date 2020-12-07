@@ -127,6 +127,8 @@ bool getEnableMachineFunctionSplitter();
 
 bool getEnableDebugEntryValues();
 
+bool getPseudoProbeForProfiling();
+
 bool getValueTrackingVariableLocations();
 
 bool getForceDwarfFrameSection();

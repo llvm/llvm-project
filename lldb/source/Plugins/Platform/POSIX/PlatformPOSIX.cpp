@@ -651,7 +651,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!ast)
     return nullptr;
 
@@ -895,7 +896,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Value return_value;
   // Fetch the clang types we will need:
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!ast) {
     error.SetErrorString("dlopen error: Unable to get TypeSystemClang");
     return LLDB_INVALID_IMAGE_TOKEN;

@@ -1,5 +1,5 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
-; RUN: wasm-ld -shared -o %t.wasm %t.o
+; RUN: wasm-ld --experimental-pic -shared -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
@@ -67,7 +67,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Field:           memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:       0x0
+; CHECK-NEXT:           Initial:       0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE

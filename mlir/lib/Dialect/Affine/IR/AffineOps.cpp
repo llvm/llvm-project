@@ -628,7 +628,7 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
       auto affineApply = t.getDefiningOp<AffineApplyOp>();
       if (affineApply) {
         // a. Compose affine.apply operations.
-        LLVM_DEBUG(affineApply.getOperation()->print(
+        LLVM_DEBUG(affineApply->print(
             dbgs() << "\nCompose AffineApplyOp recursively: "));
         AffineMap affineApplyMap = affineApply.getAffineMap();
         SmallVector<Value, 8> affineApplyOperands(

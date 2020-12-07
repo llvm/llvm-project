@@ -626,7 +626,7 @@ private:
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     std::string fileName(ELFObj->get()->getFileName());
     return ELFLinkGraphBuilder_x86_64(std::move(fileName),
-                                      *ELFObjFile.getELFFile())
+                                      ELFObjFile.getELFFile())
         .buildGraph();
   }
 

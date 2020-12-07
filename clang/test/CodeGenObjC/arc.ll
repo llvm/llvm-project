@@ -1,4 +1,4 @@
-; RUN: %clang_cc1 -Os -emit-llvm -fobjc-arc -o - %s | FileCheck %s
+; RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Os -emit-llvm -fobjc-arc -o - %s | FileCheck %s
 
 target triple = "x86_64-apple-darwin10"
 

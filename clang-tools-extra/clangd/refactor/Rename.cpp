@@ -129,7 +129,8 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
     // CXXMethodDecl::getInstantiatedFromMemberFunction for the field because
     // Clang AST does not store relevant information about the field that is
     // instantiated.
-    const auto *FieldParent = dyn_cast<CXXRecordDecl>(Field->getParent());
+    const auto *FieldParent =
+        dyn_cast_or_null<CXXRecordDecl>(Field->getParent());
     if (!FieldParent)
       return Field->getCanonicalDecl();
     FieldParent = FieldParent->getTemplateInstantiationPattern();
@@ -636,7 +637,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
   const auto &RenameDecl = **DeclsUnderCursor.begin();
-  if (RenameDecl.getName() == RInputs.NewName)
+  const auto *ID = RenameDecl.getIdentifier();
+  if (!ID)
+    return makeError(ReasonToReject::UnsupportedSymbol);
+  if (ID->getName() == RInputs.NewName)
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)

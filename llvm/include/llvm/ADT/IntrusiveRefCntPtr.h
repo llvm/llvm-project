@@ -73,6 +73,7 @@ template <class Derived> class RefCountedBase {
 public:
   RefCountedBase() = default;
   RefCountedBase(const RefCountedBase &) {}
+  RefCountedBase &operator=(const RefCountedBase &) = delete;
 
   void Retain() const { ++RefCount; }
 
@@ -85,10 +86,13 @@ public:
 
 /// A thread-safe version of \c RefCountedBase.
 template <class Derived> class ThreadSafeRefCountedBase {
-  mutable std::atomic<int> RefCount;
+  mutable std::atomic<int> RefCount{0};
 
 protected:
-  ThreadSafeRefCountedBase() : RefCount(0) {}
+  ThreadSafeRefCountedBase() = default;
+  ThreadSafeRefCountedBase(const ThreadSafeRefCountedBase &) {}
+  ThreadSafeRefCountedBase &
+  operator=(const ThreadSafeRefCountedBase &) = delete;
 
 public:
   void Retain() const { RefCount.fetch_add(1, std::memory_order_relaxed); }

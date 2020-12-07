@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file define utilities that operate on standard types and are
+// This header file define utilities that operate on builtin types and are
 // useful across multiple dialects that use structured ops abstractions. These
 // abstractions consist of define custom operations that encode and transport
 // information about their semantics (e.g. type of iterators like parallel,
@@ -18,7 +18,7 @@
 #define MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 

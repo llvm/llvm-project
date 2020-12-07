@@ -231,7 +231,7 @@ int main_platform(int argc, char *argv[]) {
         break;
       }
       if (ch == 'P')
-        gdbserver_portmap[portnum] = LLDB_INVALID_PROCESS_ID;
+        gdbserver_portmap.AllowPort(portnum);
       else if (ch == 'm')
         min_gdbserver_port = portnum;
       else
@@ -250,8 +250,8 @@ int main_platform(int argc, char *argv[]) {
 
   // Make a port map for a port range that was specified.
   if (min_gdbserver_port && min_gdbserver_port < max_gdbserver_port) {
-    for (uint16_t port = min_gdbserver_port; port < max_gdbserver_port; ++port)
-      gdbserver_portmap[port] = LLDB_INVALID_PROCESS_ID;
+    gdbserver_portmap = GDBRemoteCommunicationServerPlatform::PortMap(
+        min_gdbserver_port, max_gdbserver_port);
   } else if (min_gdbserver_port || max_gdbserver_port) {
     fprintf(stderr, "error: --min-gdbserver-port (%u) is not lower than "
                     "--max-gdbserver-port (%u)\n",
@@ -349,13 +349,13 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        uint16_t port = 0;
+        llvm::Optional<uint16_t> port = 0;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname
                                                 pid, port, socket_name);
         if (error.Success())
-          platform.SetPendingGdbServer(pid, port, socket_name);
+          platform.SetPendingGdbServer(pid, *port, socket_name);
         else
           fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
       }

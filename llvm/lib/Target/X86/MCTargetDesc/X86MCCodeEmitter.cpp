@@ -397,10 +397,14 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
     emitByte(modRMByte(0, RegOpcodeField, 5), OS);
 
     unsigned Opcode = MI.getOpcode();
-    // movq loads are handled with a special relocation form which allows the
-    // linker to eliminate some loads for GOT references which end up in the
-    // same linkage unit.
-    unsigned FixupKind = [=]() {
+    unsigned FixupKind = [&]() {
+      // Enable relaxed relocation only for a MCSymbolRefExpr.  We cannot use a
+      // relaxed relocation if an offset is present (e.g. x@GOTPCREL+4).
+      if (!(Disp.isExpr() && isa<MCSymbolRefExpr>(Disp.getExpr())))
+        return X86::reloc_riprel_4byte;
+
+      // Certain loads for GOT references can be relocated against the symbol
+      // directly if the symbol ends up in the same linkage unit.
       switch (Opcode) {
       default:
         return X86::reloc_riprel_4byte;
@@ -416,6 +420,9 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       case X86::XOR32rm:
         return X86::reloc_riprel_4byte_relax;
       case X86::MOV64rm:
+        // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
+        // special case because COFF and Mach-O don't support ELF's more
+        // flexible R_X86_64_REX_GOTPCRELX relaxation.
         assert(HasREX);
         return X86::reloc_riprel_4byte_movq_load;
       case X86::CALL64m:

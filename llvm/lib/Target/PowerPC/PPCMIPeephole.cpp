@@ -267,6 +267,113 @@ void PPCMIPeephole::UpdateTOCSaves(
   TOCSaves[MI] = Keep;
 }
 
+// This function returns a list of all PHI nodes in the tree starting from
+// the RootPHI node. We perform a BFS traversal to get an ordered list of nodes.
+// The list initially only contains the root PHI. When we visit a PHI node, we
+// add it to the list. We continue to look for other PHI node operands while
+// there are nodes to visit in the list. The function returns false if the
+// optimization cannot be applied on this tree.
+static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
+                                   MachineInstr *RootPHI,
+                                   SmallVectorImpl<MachineInstr *> &PHIs) {
+  PHIs.push_back(RootPHI);
+  unsigned VisitedIndex = 0;
+  while (VisitedIndex < PHIs.size()) {
+    MachineInstr *VisitedPHI = PHIs[VisitedIndex];
+    for (unsigned PHIOp = 1, NumOps = VisitedPHI->getNumOperands();
+         PHIOp != NumOps; PHIOp += 2) {
+      Register RegOp = VisitedPHI->getOperand(PHIOp).getReg();
+      if (!Register::isVirtualRegister(RegOp))
+        return false;
+      MachineInstr *Instr = MRI->getVRegDef(RegOp);
+      // While collecting the PHI nodes, we check if they can be converted (i.e.
+      // all the operands are either copies, implicit defs or PHI nodes).
+      unsigned Opcode = Instr->getOpcode();
+      if (Opcode == PPC::COPY) {
+        Register Reg = Instr->getOperand(1).getReg();
+        if (!Register::isVirtualRegister(Reg) ||
+            MRI->getRegClass(Reg) != &PPC::ACCRCRegClass)
+          return false;
+      } else if (Opcode != PPC::IMPLICIT_DEF && Opcode != PPC::PHI)
+        return false;
+      // If we detect a cycle in the PHI nodes, we exit. It would be
+      // possible to change cycles as well, but that would add a lot
+      // of complexity for a case that is unlikely to occur with MMA
+      // code.
+      if (Opcode != PPC::PHI)
+        continue;
+      if (std::find(PHIs.begin(), PHIs.end(), Instr) != PHIs.end())
+        return false;
+      PHIs.push_back(Instr);
+    }
+    VisitedIndex++;
+  }
+  return true;
+}
+
+// This function changes the unprimed accumulator PHI nodes in the PHIs list to
+// primed accumulator PHI nodes. The list is traversed in reverse order to
+// change all the PHI operands of a PHI node before changing the node itself.
+// We keep a map to associate each changed PHI node to its non-changed form.
+static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
+                                   MachineRegisterInfo *MRI,
+                                   SmallVectorImpl<MachineInstr *> &PHIs,
+                                   Register Dst) {
+  DenseMap<MachineInstr *, MachineInstr *> ChangedPHIMap;
+  for (auto It = PHIs.rbegin(), End = PHIs.rend(); It != End; ++It) {
+    MachineInstr *PHI = *It;
+    SmallVector<std::pair<MachineOperand, MachineOperand>, 4> PHIOps;
+    // We check if the current PHI node can be changed by looking at its
+    // operands. If all the operands are either copies from primed
+    // accumulators, implicit definitions or other unprimed accumulator
+    // PHI nodes, we change it.
+    for (unsigned PHIOp = 1, NumOps = PHI->getNumOperands(); PHIOp != NumOps;
+         PHIOp += 2) {
+      Register RegOp = PHI->getOperand(PHIOp).getReg();
+      MachineInstr *PHIInput = MRI->getVRegDef(RegOp);
+      unsigned Opcode = PHIInput->getOpcode();
+      assert((Opcode == PPC::COPY || Opcode == PPC::IMPLICIT_DEF ||
+              Opcode == PPC::PHI) &&
+             "Unexpected instruction");
+      if (Opcode == PPC::COPY) {
+        assert(MRI->getRegClass(PHIInput->getOperand(1).getReg()) ==
+                   &PPC::ACCRCRegClass &&
+               "Unexpected register class");
+        PHIOps.push_back({PHIInput->getOperand(1), PHI->getOperand(PHIOp + 1)});
+      } else if (Opcode == PPC::IMPLICIT_DEF) {
+        Register AccReg = MRI->createVirtualRegister(&PPC::ACCRCRegClass);
+        BuildMI(*PHIInput->getParent(), PHIInput, PHIInput->getDebugLoc(),
+                TII->get(PPC::IMPLICIT_DEF), AccReg);
+        PHIOps.push_back({MachineOperand::CreateReg(AccReg, false),
+                          PHI->getOperand(PHIOp + 1)});
+      } else if (Opcode == PPC::PHI) {
+        // We found a PHI operand. At this point we know this operand
+        // has already been changed so we get its associated changed form
+        // from the map.
+        assert(ChangedPHIMap.count(PHIInput) == 1 &&
+               "This PHI node should have already been changed.");
+        MachineInstr *PrimedAccPHI = ChangedPHIMap.lookup(PHIInput);
+        PHIOps.push_back({MachineOperand::CreateReg(
+                              PrimedAccPHI->getOperand(0).getReg(), false),
+                          PHI->getOperand(PHIOp + 1)});
+      }
+    }
+    Register AccReg = Dst;
+    // If the PHI node we are changing is the root node, the register it defines
+    // will be the destination register of the original copy (of the PHI def).
+    // For all other PHI's in the list, we need to create another primed
+    // accumulator virtual register as the PHI will no longer define the
+    // unprimed accumulator.
+    if (PHI != PHIs[0])
+      AccReg = MRI->createVirtualRegister(&PPC::ACCRCRegClass);
+    MachineInstrBuilder NewPHI = BuildMI(
+        *PHI->getParent(), PHI, PHI->getDebugLoc(), TII->get(PPC::PHI), AccReg);
+    for (auto RegMBB : PHIOps)
+      NewPHI.add(RegMBB.first).add(RegMBB.second);
+    ChangedPHIMap[PHI] = NewPHI.getInstr();
+  }
+}
+
 // Perform peephole optimizations.
 bool PPCMIPeephole::simplifyCode(void) {
   bool Simplified = false;
@@ -321,6 +428,38 @@ bool PPCMIPeephole::simplifyCode(void) {
 
       default:
         break;
+      case PPC::COPY: {
+        Register Src = MI.getOperand(1).getReg();
+        Register Dst = MI.getOperand(0).getReg();
+        if (!Register::isVirtualRegister(Src) ||
+            !Register::isVirtualRegister(Dst))
+          break;
+        if (MRI->getRegClass(Src) != &PPC::UACCRCRegClass ||
+            MRI->getRegClass(Dst) != &PPC::ACCRCRegClass)
+          break;
+
+        // We are copying an unprimed accumulator to a primed accumulator.
+        // If the input to the copy is a PHI that is fed only by (i) copies in
+        // the other direction (ii) implicitly defined unprimed accumulators or
+        // (iii) other PHI nodes satisfying (i) and (ii), we can change
+        // the PHI to a PHI on primed accumulators (as long as we also change
+        // its operands). To detect and change such copies, we first get a list
+        // of all the PHI nodes starting from the root PHI node in BFS order.
+        // We then visit all these PHI nodes to check if they can be changed to
+        // primed accumulator PHI nodes and if so, we change them.
+        MachineInstr *RootPHI = MRI->getVRegDef(Src);
+        if (RootPHI->getOpcode() != PPC::PHI)
+          break;
+
+        SmallVector<MachineInstr *, 4> PHIs;
+        if (!collectUnprimedAccPHIs(MRI, RootPHI, PHIs))
+          break;
+
+        convertUnprimedAccPHIs(TII, MRI, PHIs, Dst);
+
+        ToErase = &MI;
+        break;
+      }
       case PPC::LI:
       case PPC::LI8: {
         // If we are materializing a zero, look for any use operands for which

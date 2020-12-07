@@ -1228,73 +1228,34 @@ using ModuleAnalysisManagerFunctionProxy =
 /// Note that although function passes can access module analyses, module
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
-template <typename FunctionPassT>
 class ModuleToFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToFunctionPassAdaptor<FunctionPassT>> {
+    : public PassInfoMixin<ModuleToFunctionPassAdaptor> {
 public:
-  explicit ModuleToFunctionPassAdaptor(FunctionPassT Pass)
+  using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
+
+  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass)
       : Pass(std::move(Pass)) {}
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(M);
-
-    PreservedAnalyses PA = PreservedAnalyses::all();
-    for (Function &F : M) {
-      if (F.isDeclaration())
-        continue;
-
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<Function>(Pass, F))
-        continue;
-
-      PreservedAnalyses PassPA;
-      {
-        TimeTraceScope TimeScope(Pass.name(), F.getName());
-        PassPA = Pass.run(F, FAM);
-      }
-
-      PI.runAfterPass(Pass, F, PassPA);
-
-      // We know that the function pass couldn't have invalidated any other
-      // function's analyses (that's the contract of a function pass), so
-      // directly handle the function analysis manager's invalidation here.
-      FAM.invalidate(F, PassPA);
-
-      // Then intersect the preserved set so that invalidation of module
-      // analyses will eventually occur when the module pass completes.
-      PA.intersect(std::move(PassPA));
-    }
-
-    // The FunctionAnalysisManagerModuleProxy is preserved because (we assume)
-    // the function passes we ran didn't add or remove any functions.
-    //
-    // We also preserve all analyses on Functions, because we did all the
-    // invalidation we needed to do above.
-    PA.preserveSet<AllAnalysesOn<Function>>();
-    PA.preserve<FunctionAnalysisManagerModuleProxy>();
-    return PA;
-  }
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 
 private:
-  FunctionPassT Pass;
+  std::unique_ptr<PassConceptT> Pass;
 };
 
 /// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
-ModuleToFunctionPassAdaptor<FunctionPassT>
+ModuleToFunctionPassAdaptor
 createModuleToFunctionPassAdaptor(FunctionPassT Pass) {
-  return ModuleToFunctionPassAdaptor<FunctionPassT>(std::move(Pass));
+  using PassModelT =
+      detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
+                        FunctionAnalysisManager>;
+
+  return ModuleToFunctionPassAdaptor(
+      std::make_unique<PassModelT>(std::move(Pass)));
 }
 
 /// A utility pass template to force an analysis result to be available.

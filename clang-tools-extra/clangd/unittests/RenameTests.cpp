@@ -816,6 +816,13 @@ TEST(RenameTest, WithinFileRename) {
           [[F^oo]] foo = static_cast<[[F^oo]]>(boo);
         }
       )cpp",
+
+      // ObjC, should not crash.
+      R"cpp(
+        @interface ObjC {
+          char [[da^ta]];
+        } @end
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -823,6 +830,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
     auto AST = TU.build();
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
@@ -937,6 +945,13 @@ TEST(RenameTest, Renameable) {
          }
        )cpp",
        "not a supported kind", !HeaderFile, Index},
+
+      {R"cpp(// disallow rename on non-normal identifiers.
+         @interface Foo {}
+         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         @end
+       )cpp",
+       "not a supported kind", HeaderFile, Index},
 
       {R"cpp(
          void foo(int);

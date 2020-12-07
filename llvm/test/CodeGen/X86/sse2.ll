@@ -269,7 +269,7 @@ define void @test7() nounwind {
   ret void
 }
 
-@x = external global [4 x i32]
+@x = external dso_local global [4 x i32]
 
 define <2 x i64> @test8() nounwind {
 ; X86-SSE-LABEL: test8:

@@ -22,6 +22,7 @@
 #include "DependencyAnalysis.h"
 #include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/CFG.h"
 
 using namespace llvm;

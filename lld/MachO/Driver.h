@@ -19,6 +19,7 @@ namespace lld {
 namespace macho {
 
 class DylibFile;
+class InputFile;
 
 class MachOOptTable : public llvm::opt::OptTable {
 public:
@@ -35,11 +36,19 @@ enum {
 #undef OPTION
 };
 
+void parseLCLinkerOption(InputFile*, unsigned argc, StringRef data);
+
+std::string createResponseFile(const llvm::opt::InputArgList &args);
+
 // Check for both libfoo.dylib and libfoo.tbd (in that order).
 llvm::Optional<std::string> resolveDylibPath(llvm::StringRef path);
 
 llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
                                               DylibFile *umbrella = nullptr);
+
+uint32_t getModTime(llvm::StringRef path);
+
+void printArchiveMemberLoad(StringRef reason, const InputFile *);
 
 } // namespace macho
 } // namespace lld

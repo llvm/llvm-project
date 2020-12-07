@@ -4,6 +4,10 @@
 ; RUN:   -check-prefix=CHECK-LE %s
 
 declare i64 @llvm.abs.i64(i64, i1 immarg)
+declare <2 x i64> @llvm.abs.v2i64(<2 x i64>, i1)
+declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
+declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
+declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 
 define i64@neg_abs(i64 %x) {
 ; CHECK-LE-LABEL: neg_abs:
@@ -15,4 +19,61 @@ define i64@neg_abs(i64 %x) {
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   %neg = sub nsw i64 0, %abs
   ret i64 %neg
+}
+
+define <2 x i64> @neg_abs_v2i64(<2 x i64> %0) {
+; CHECK-LE-LABEL: neg_abs_v2i64:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; CHECK-LE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-LE-NEXT:    xxswapd vs35, vs0
+; CHECK-LE-NEXT:    vsrad v3, v2, v3
+; CHECK-LE-NEXT:    xxlxor vs34, vs34, vs35
+; CHECK-LE-NEXT:    vsubudm v2, v3, v2
+; CHECK-LE-NEXT:    blr
+  %abs = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %0, i1 true)
+  %neg.abs = sub <2 x i64> zeroinitializer, %abs
+  ret <2 x i64> %neg.abs
+}
+
+define <4 x i32> @neg_abs_v4i32(<4 x i32> %0) {
+; CHECK-LE-LABEL: neg_abs_v4i32:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    vspltisw v3, -16
+; CHECK-LE-NEXT:    vspltisw v4, 15
+; CHECK-LE-NEXT:    vsubuwm v3, v4, v3
+; CHECK-LE-NEXT:    vsraw v3, v2, v3
+; CHECK-LE-NEXT:    xxlxor vs34, vs34, vs35
+; CHECK-LE-NEXT:    vsubuwm v2, v3, v2
+; CHECK-LE-NEXT:    blr
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %0, i1 true)
+  %neg.abs = sub <4 x i32> zeroinitializer, %abs
+  ret <4 x i32> %neg.abs
+}
+
+define <8 x i16> @neg_abs_v8i16(<8 x i16> %0) {
+; CHECK-LE-LABEL: neg_abs_v8i16:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    vspltish v3, 15
+; CHECK-LE-NEXT:    vsrah v3, v2, v3
+; CHECK-LE-NEXT:    xxlxor vs34, vs34, vs35
+; CHECK-LE-NEXT:    vsubuhm v2, v3, v2
+; CHECK-LE-NEXT:    blr
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %0, i1 true)
+  %neg.abs = sub <8 x i16> zeroinitializer, %abs
+  ret <8 x i16> %neg.abs
+}
+
+define <16 x i8> @neg_abs_v16i8(<16 x i8> %0) {
+; CHECK-LE-LABEL: neg_abs_v16i8:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    vspltisb v3, 7
+; CHECK-LE-NEXT:    vsrab v3, v2, v3
+; CHECK-LE-NEXT:    xxlxor vs34, vs34, vs35
+; CHECK-LE-NEXT:    vsububm v2, v3, v2
+; CHECK-LE-NEXT:    blr
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %0, i1 true)
+  %neg.abs = sub <16 x i8> zeroinitializer, %abs
+  ret <16 x i8> %neg.abs
 }

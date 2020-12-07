@@ -42,7 +42,6 @@ body: |
     ; GFX9: $vgpr0_vgpr1_vgpr2 = COPY [[GLOBAL_LOAD_DWORDX3_]]
     ; GFX10-LABEL: name: load_global_v3s32
     ; GFX10: liveins: $vgpr0_vgpr1
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96 = GLOBAL_LOAD_DWORDX3 [[COPY]], 0, 0, 0, 0, implicit $exec :: (load 12, align 4, addrspace 1)
     ; GFX10: $vgpr0_vgpr1_vgpr2 = COPY [[GLOBAL_LOAD_DWORDX3_]]

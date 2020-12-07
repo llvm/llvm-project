@@ -1704,11 +1704,7 @@ static void __kmp_set_queuing_lock_flags(kmp_queuing_lock_t *lck,
 
 /* RTM Adaptive locks */
 
-#if (KMP_COMPILER_ICC && __INTEL_COMPILER >= 1300) ||                          \
-    (KMP_COMPILER_MSVC && _MSC_VER >= 1700) ||                                 \
-    (KMP_COMPILER_CLANG && (KMP_MSVC_COMPAT || __MINGW32__)) ||                \
-    (KMP_COMPILER_GCC && __MINGW32__)
-
+#if KMP_HAVE_RTM_INTRINSICS
 #include <immintrin.h>
 #define SOFT_ABORT_MASK (_XABORT_RETRY | _XABORT_CONFLICT | _XABORT_EXPLICIT)
 
@@ -2003,6 +1999,7 @@ static __inline void __kmp_step_badness(kmp_adaptive_lock_t *lck) {
 }
 
 // Check whether speculation should be attempted.
+KMP_ATTRIBUTE_TARGET_RTM
 static __inline int __kmp_should_speculate(kmp_adaptive_lock_t *lck,
                                            kmp_int32 gtid) {
   kmp_uint32 badness = lck->lk.adaptive.badness;
@@ -2013,6 +2010,7 @@ static __inline int __kmp_should_speculate(kmp_adaptive_lock_t *lck,
 
 // Attempt to acquire only the speculative lock.
 // Does not back off to the non-speculative lock.
+KMP_ATTRIBUTE_TARGET_RTM
 static int __kmp_test_adaptive_lock_only(kmp_adaptive_lock_t *lck,
                                          kmp_int32 gtid) {
   int retries = lck->lk.adaptive.max_soft_retries;
@@ -2154,6 +2152,7 @@ static void __kmp_acquire_adaptive_lock_with_checks(kmp_adaptive_lock_t *lck,
   lck->lk.qlk.owner_id = gtid + 1;
 }
 
+KMP_ATTRIBUTE_TARGET_RTM
 static int __kmp_release_adaptive_lock(kmp_adaptive_lock_t *lck,
                                        kmp_int32 gtid) {
   if (__kmp_is_unlocked_queuing_lock(GET_QLK_PTR(
@@ -2777,6 +2776,7 @@ static void __kmp_destroy_rtm_lock_with_checks(kmp_queuing_lock_t *lck) {
   __kmp_destroy_queuing_lock_with_checks(lck);
 }
 
+KMP_ATTRIBUTE_TARGET_RTM
 static void __kmp_acquire_rtm_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   unsigned retries = 3, status;
   do {
@@ -2804,6 +2804,7 @@ static void __kmp_acquire_rtm_lock_with_checks(kmp_queuing_lock_t *lck,
   __kmp_acquire_rtm_lock(lck, gtid);
 }
 
+KMP_ATTRIBUTE_TARGET_RTM
 static int __kmp_release_rtm_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   if (__kmp_is_unlocked_queuing_lock(lck)) {
     // Releasing from speculation
@@ -2820,6 +2821,7 @@ static int __kmp_release_rtm_lock_with_checks(kmp_queuing_lock_t *lck,
   return __kmp_release_rtm_lock(lck, gtid);
 }
 
+KMP_ATTRIBUTE_TARGET_RTM
 static int __kmp_test_rtm_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   unsigned retries = 3, status;
   do {

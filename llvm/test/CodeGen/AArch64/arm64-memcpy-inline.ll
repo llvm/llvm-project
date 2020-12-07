@@ -2,8 +2,8 @@
 
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 
-@src = external global %struct.x
-@dst = external global %struct.x
+@src = external dso_local global %struct.x
+@dst = external dso_local global %struct.x
 
 @.str1 = private unnamed_addr constant [31 x i8] c"DHRYSTONE PROGRAM, SOME STRING\00", align 1
 @.str2 = private unnamed_addr constant [36 x i8] c"DHRYSTONE PROGRAM, SOME STRING BLAH\00", align 1

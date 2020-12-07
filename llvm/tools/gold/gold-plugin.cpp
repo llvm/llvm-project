@@ -21,6 +21,7 @@
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -213,6 +214,7 @@ namespace options {
   static std::string RemarksFilename;
   static std::string RemarksPasses;
   static bool RemarksWithHotness = false;
+  static Optional<uint64_t> RemarksHotnessThreshold = 0;
   static std::string RemarksFormat;
 
   // Context sensitive PGO options.
@@ -297,6 +299,12 @@ namespace options {
       RemarksPasses = std::string(opt);
     } else if (opt == "opt-remarks-with-hotness") {
       RemarksWithHotness = true;
+    } else if (opt.consume_front("opt-remarks-hotness-threshold=")) {
+      auto ResultOrErr = remarks::parseHotnessThresholdOption(opt);
+      if (!ResultOrErr)
+        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s", opt);
+      else
+        RemarksHotnessThreshold = *ResultOrErr;
     } else if (opt.consume_front("opt-remarks-format=")) {
       RemarksFormat = std::string(opt);
     } else if (opt.consume_front("stats-file=")) {
@@ -931,6 +939,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.RemarksFilename = options::RemarksFilename;
   Conf.RemarksPasses = options::RemarksPasses;
   Conf.RemarksWithHotness = options::RemarksWithHotness;
+  Conf.RemarksHotnessThreshold = options::RemarksHotnessThreshold;
   Conf.RemarksFormat = options::RemarksFormat;
 
   // Use new pass manager if set in driver

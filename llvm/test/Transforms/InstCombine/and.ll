@@ -979,7 +979,7 @@ define i32 @lowmask_sext_in_reg(i32 %x) {
 ; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
 ; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 20
 ; CHECK-NEXT:    call void @use32(i32 [[R]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 4095
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %l = shl i32 %x, 20
@@ -988,6 +988,8 @@ define i32 @lowmask_sext_in_reg(i32 %x) {
   %and = and i32 %r, 4095
   ret i32 %and
 }
+
+; Negative test - mismatched shift amounts
 
 define i32 @lowmask_not_sext_in_reg(i32 %x) {
 ; CHECK-LABEL: @lowmask_not_sext_in_reg(
@@ -1004,6 +1006,8 @@ define i32 @lowmask_not_sext_in_reg(i32 %x) {
   ret i32 %and
 }
 
+; Negative test - too much shift for mask
+
 define i32 @not_lowmask_sext_in_reg(i32 %x) {
 ; CHECK-LABEL: @not_lowmask_sext_in_reg(
 ; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
@@ -1018,6 +1022,8 @@ define i32 @not_lowmask_sext_in_reg(i32 %x) {
   %and = and i32 %r, 4096
   ret i32 %and
 }
+
+; Negative test - too much shift for mask
 
 define i32 @not_lowmask_sext_in_reg2(i32 %x) {
 ; CHECK-LABEL: @not_lowmask_sext_in_reg2(
@@ -1039,7 +1045,7 @@ define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, <2 x i32>* %p) {
 ; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], <i32 20, i32 20>
 ; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], <i32 20, i32 20>
 ; CHECK-NEXT:    store <2 x i32> [[R]], <2 x i32>* [[P:%.*]], align 8
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[R]], <i32 4095, i32 4095>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], <i32 4095, i32 4095>
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %l = shl <2 x i32> %x, <i32 20, i32 20>

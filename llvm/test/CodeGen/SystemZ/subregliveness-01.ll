@@ -6,8 +6,8 @@
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
 
-@g_439 = external global i32, align 4
-@g_399 = external global { i8, i8, i8, i8, i8, i8 }, align 8
+@g_439 = external dso_local global i32, align 4
+@g_399 = external dso_local global { i8, i8, i8, i8, i8, i8 }, align 8
 
 ; Function Attrs: nounwind
 define void @main() #0 {

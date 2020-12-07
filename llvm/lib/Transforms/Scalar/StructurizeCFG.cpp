@@ -57,7 +57,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "structurizecfg"
 
 // The name for newly created blocks.
-static const char *const FlowBlockName = "Flow";
+const char FlowBlockName[] = "Flow";
 
 namespace {
 

@@ -420,7 +420,6 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-32-NEXT:  ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s4, s3, 0xfffffff
 ; GCN-NEXT:    s_cmp_gt_i32 s3, -1

@@ -27,7 +27,6 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s, 
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -68,7 +67,6 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, i32 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm tfe
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -113,7 +111,6 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm tfe lwe
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0

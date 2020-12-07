@@ -5,6 +5,7 @@ from __future__ import print_function
 import re
 import select
 import threading
+import time
 import traceback
 
 from six.moves import queue
@@ -74,8 +75,6 @@ class SocketPacketPump(object):
         if not pump_socket:
             raise Exception("pump_socket cannot be None")
 
-        self._thread = None
-        self._stop_thread = False
         self._socket = pump_socket
         self._logger = logger
         self._receive_buffer = ""
@@ -83,29 +82,42 @@ class SocketPacketPump(object):
         self._pump_queues = pump_queues
 
     def __enter__(self):
-        """Support the python 'with' statement.
-
-        Start the pump thread."""
-        self.start_pump_thread()
+        self._receive_buffer = ""
+        self._accumulated_output = ""
         return self
 
     def __exit__(self, exit_type, value, the_traceback):
-        """Support the python 'with' statement.
+        pass
 
-        Shut down the pump thread."""
-        self.stop_pump_thread()
+    def _read(self, timeout_seconds, q):
+        now = time.monotonic()
+        deadline = now + timeout_seconds
+        while q.empty() and now <= deadline:
+            can_read, _, _ = select.select([self._socket], [], [], deadline-now)
+            now = time.monotonic()
+            if can_read and self._socket in can_read:
+                try:
+                    new_bytes = seven.bitcast_to_string(self._socket.recv(4096))
+                    if self._logger and new_bytes and len(new_bytes) > 0:
+                        self._logger.debug(
+                            "pump received bytes: {}".format(new_bytes))
+                except:
+                    # Likely a closed socket.  Done with the pump thread.
+                    if self._logger:
+                        self._logger.debug(
+                            "socket read failed, stopping pump read thread\n" +
+                            traceback.format_exc(3))
+                        break
+                self._process_new_bytes(new_bytes)
+        if q.empty():
+            raise queue.Empty()
+        return q.get(True)
 
-    def start_pump_thread(self):
-        if self._thread:
-            raise Exception("pump thread is already running")
-        self._stop_thread = False
-        self._thread = threading.Thread(target=self._run_method)
-        self._thread.start()
+    def get_output(self, timeout_seconds):
+        return self._read(timeout_seconds, self._pump_queues.output_queue())
 
-    def stop_pump_thread(self):
-        self._stop_thread = True
-        if self._thread:
-            self._thread.join()
+    def get_packet(self, timeout_seconds):
+        return self._read(timeout_seconds, self._pump_queues.packet_queue())
 
     def _process_new_bytes(self, new_bytes):
         if not new_bytes:
@@ -161,34 +173,6 @@ class SocketPacketPump(object):
                     # We don't have enough in the receive bufferto make a full
                     # packet. Stop trying until we read more.
                     has_more = False
-
-    def _run_method(self):
-        self._receive_buffer = ""
-        self._accumulated_output = ""
-
-        if self._logger:
-            self._logger.info("socket pump starting")
-
-        # Keep looping around until we're asked to stop the thread.
-        while not self._stop_thread:
-            can_read, _, _ = select.select([self._socket], [], [], 0)
-            if can_read and self._socket in can_read:
-                try:
-                    new_bytes = seven.bitcast_to_string(self._socket.recv(4096))
-                    if self._logger and new_bytes and len(new_bytes) > 0:
-                        self._logger.debug(
-                            "pump received bytes: {}".format(new_bytes))
-                except:
-                    # Likely a closed socket.  Done with the pump thread.
-                    if self._logger:
-                        self._logger.debug(
-                            "socket read failed, stopping pump read thread\n" +
-                            traceback.format_exc(3))
-                    break
-                self._process_new_bytes(new_bytes)
-
-        if self._logger:
-            self._logger.info("socket pump exiting")
 
     def get_accumulated_output(self):
         return self._accumulated_output

@@ -162,4 +162,34 @@ entry:
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
 
+; Intentionally does not have any fn attrs.
+declare dso_local void @foo(i8*)
+
+; @bar_sspstrong and @bar_nossp are the same function, but differ only in
+; function attributes. Test that a callee without stack protector function
+; attribute does not trigger a stack guard slot in a caller that also does not
+; have a stack protector slot.
+define dso_local void @bar_sspstrong(i64 %0) #0 {
+; CHECK-LABEL: @bar_sspstrong
+; CHECK-NEXT: %StackGuardSlot = alloca i8*
+  %2 = alloca i64, align 8
+  store i64 %0, i64* %2, align 8
+  %3 = load i64, i64* %2, align 8
+  %4 = alloca i8, i64 %3, align 16
+  call void @foo(i8* %4)
+  ret void
+}
+
+; Intentionally does not have any fn attrs.
+define dso_local void @bar_nossp(i64 %0) {
+; CHECK-LABEL: @bar_nossp
+; CHECK-NEXT: %2 = alloca i64
+  %2 = alloca i64, align 8
+  store i64 %0, i64* %2, align 8
+  %3 = load i64, i64* %2, align 8
+  %4 = alloca i8, i64 %3, align 16
+  call void @foo(i8* %4)
+  ret void
+}
+
 attributes #0 = { sspstrong }

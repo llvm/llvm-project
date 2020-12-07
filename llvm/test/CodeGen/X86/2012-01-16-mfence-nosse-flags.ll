@@ -1,7 +1,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686-linux -mattr=-sse | FileCheck %s
 ; PR11768
 
-@ptr = external global i8*
+@ptr = external dso_local global i8*
 
 define void @baz() nounwind ssp {
 entry:

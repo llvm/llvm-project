@@ -5,12 +5,12 @@
 // Clang used to crash trying to recover while adding 'this->' before Work(x);
 
 template <typename> struct A {
-  static void Work(int);  // expected-note{{must qualify identifier}}
+  static void Work(int);  // expected-note{{here}}
 };
 
 template <typename T> struct B : public A<T> {
   template <typename T2> B(T2 x) {
-    Work(x);  // expected-error{{use of undeclared identifier}}
+    Work(x);  // expected-error{{explicit qualification required}}
   }
 };
 
@@ -58,10 +58,10 @@ namespace test1 {
   }
   template <class T>
   void NonTemplateClass::MemberFuncTemplate(ArraySlice<T> resource_data, int) {
-    // expected-error@+1 {{use of undeclared identifier 'UndeclaredMethod'}}
+    // expected-error@+1 {{member 'UndeclaredMethod' used before its declaration}}
     UndeclaredMethod(resource_data);
   }
   // expected-error@+2 {{out-of-line definition of 'UndeclaredMethod' does not match any declaration}}
-  // expected-note@+1 {{must qualify identifier to find this declaration in dependent base class}}
+  // expected-note@+1 {{member is declared here}}
   void NonTemplateClass::UndeclaredMethod() {}
 }

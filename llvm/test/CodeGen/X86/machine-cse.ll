@@ -178,7 +178,7 @@ return:
 }
 
 ; PR13578
-@t2_global = external global i32
+@t2_global = external dso_local global i32
 
 declare i1 @t2_func()
 

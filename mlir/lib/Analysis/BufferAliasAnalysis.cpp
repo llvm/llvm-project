@@ -58,13 +58,12 @@ void BufferAliasAnalysis::build(Operation *op) {
 
   // Add additional aliases created by view changes to the alias list.
   op->walk([&](ViewLikeOpInterface viewInterface) {
-    aliases[viewInterface.getViewSource()].insert(
-        viewInterface.getOperation()->getResult(0));
+    aliases[viewInterface.getViewSource()].insert(viewInterface->getResult(0));
   });
 
   // Query all branch interfaces to link block argument aliases.
   op->walk([&](BranchOpInterface branchInterface) {
-    Block *parentBlock = branchInterface.getOperation()->getBlock();
+    Block *parentBlock = branchInterface->getBlock();
     for (auto it = parentBlock->succ_begin(), e = parentBlock->succ_end();
          it != e; ++it) {
       // Query the branch op interface to get the successor operands.
@@ -93,7 +92,7 @@ void BufferAliasAnalysis::build(Operation *op) {
     }
 
     // Wire flow between regions and from region exits.
-    for (Region &region : regionInterface.getOperation()->getRegions()) {
+    for (Region &region : regionInterface->getRegions()) {
       // Iterate over all successor region entries that are reachable from the
       // current region.
       SmallVector<RegionSuccessor, 2> successorRegions;

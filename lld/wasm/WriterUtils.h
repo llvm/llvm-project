@@ -40,6 +40,9 @@ void writeI32Const(raw_ostream &os, int32_t number, const Twine &msg);
 
 void writeI64Const(raw_ostream &os, int64_t number, const Twine &msg);
 
+void writePtrConst(raw_ostream &os, int64_t number, bool is64,
+                   const Twine &msg);
+
 void writeMemArg(raw_ostream &os, uint32_t alignment, uint64_t offset);
 
 void writeInitExpr(raw_ostream &os, const llvm::wasm::WasmInitExpr &initExpr);

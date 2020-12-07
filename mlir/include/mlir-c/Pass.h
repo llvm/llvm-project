@@ -54,7 +54,7 @@ MLIR_CAPI_EXPORTED MlirPassManager mlirPassManagerCreate(MlirContext ctx);
 MLIR_CAPI_EXPORTED void mlirPassManagerDestroy(MlirPassManager passManager);
 
 /// Checks if a PassManager is null.
-static inline int mlirPassManagerIsNull(MlirPassManager passManager) {
+static inline bool mlirPassManagerIsNull(MlirPassManager passManager) {
   return !passManager.ptr;
 }
 

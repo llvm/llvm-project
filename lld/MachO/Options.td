@@ -14,6 +14,10 @@ def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
 def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
+def reproduce: Separate<["--"], "reproduce">;
+def reproduce_eq: Joined<["--"], "reproduce=">,
+    Alias<!cast<Separate>(reproduce)>,
+    HelpText<"Write tar file containing inputs and command to reproduce link">;
 
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
@@ -30,14 +34,12 @@ def grp_kind : OptionGroup<"kind">, HelpText<"OUTPUT KIND">;
 
 def execute : Flag<["-"], "execute">,
      HelpText<"Produce a main executable (default)">,
-     Flags<[HelpHidden]>,
      Group<grp_kind>;
 def dylib : Flag<["-"], "dylib">,
      HelpText<"Produce a shared library">,
      Group<grp_kind>;
 def bundle : Flag<["-"], "bundle">,
      HelpText<"Produce a bundle">,
-     Flags<[HelpHidden]>,
      Group<grp_kind>;
 def r : Flag<["-"], "r">,
      HelpText<"Merge multiple object files into one, retaining relocations">,
@@ -313,11 +315,9 @@ def grp_main : OptionGroup<"main">, HelpText<"MAIN EXECUTABLE">;
 
 def pie : Flag<["-"], "pie">,
      HelpText<"Build a position independent executable (default for macOS 10.7 and later)">,
-     Flags<[HelpHidden]>,
      Group<grp_main>;
 def no_pie : Flag<["-"], "no_pie">,
      HelpText<"Do not build a position independent executable (default for macOS 10.6 and earlier)">,
-     Flags<[HelpHidden]>,
      Group<grp_main>;
 def pagezero_size : Separate<["-"], "pagezero_size">,
      MetaVarName<"<size>">,
@@ -426,8 +426,7 @@ def commons : Separate<["-"], "commons">,
 def grp_introspect : OptionGroup<"introspect">, HelpText<"INTROSPECTING THE LINKER">;
 
 def why_load : Flag<["-"], "why_load">,
-     HelpText<"Log the symbol that compels loading of each object file from a static library">,
-     Flags<[HelpHidden]>,
+     HelpText<"Log why each object file is loaded from a static library">,
      Group<grp_introspect>;
 def whyload : Flag<["-"], "whyload">,
      Alias<why_load>,
@@ -445,7 +444,6 @@ def print_statistics : Flag<["-"], "print_statistics">,
      Group<grp_introspect>;
 def t : Flag<["-"], "t">,
      HelpText<"Log every file the linker loads: object, archive, and dylib">,
-     Flags<[HelpHidden]>,
      Group<grp_introspect>;
 def whatsloaded : Flag<["-"], "whatsloaded">,
      HelpText<"Logs only the object files the linker loads">,
@@ -606,8 +604,7 @@ def no_application_extension : Flag<["-"], "no_application_extension">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
 def fatal_warnings : Flag<["-"], "fatal_warnings">,
-     HelpText<"Escalate warnings as errors">,
-     Flags<[HelpHidden]>,
+     HelpText<"Treat warnings as errors">,
      Group<grp_rare>;
 def no_eh_labels : Flag<["-"], "no_eh_labels">,
      HelpText<"In -r mode, suppress .eh labels in the __eh_frame section">,

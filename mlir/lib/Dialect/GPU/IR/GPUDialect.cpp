@@ -17,11 +17,11 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -836,7 +836,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op.getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
-  p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+  p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }
 

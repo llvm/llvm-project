@@ -21,6 +21,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include <map>
 
 namespace llvm {
 
@@ -409,6 +410,8 @@ public:
   ArrayRef<OpcodeGroup> getGroups() const { return Groups; }
 };
 
+using ProcModelMapTy = std::map<const Record*, unsigned>;
+
 /// Top level container for machine model data.
 class CodeGenSchedModels {
   RecordKeeper &Records;
@@ -421,7 +424,6 @@ class CodeGenSchedModels {
   std::vector<CodeGenProcModel> ProcModels;
 
   // Map Processor's MachineModel or ProcItin to a CodeGenProcModel index.
-  using ProcModelMapTy = DenseMap<Record*, unsigned>;
   ProcModelMapTy ProcModelMap;
 
   // Per-operand SchedReadWrite types.
@@ -443,6 +445,7 @@ class CodeGenSchedModels {
   InstClassMapTy InstrClassMap;
 
   std::vector<STIPredicateFunction> STIPredicates;
+  std::vector<unsigned> getAllProcIndices() const;
 
 public:
   CodeGenSchedModels(RecordKeeper& RK, const CodeGenTarget &TGT);

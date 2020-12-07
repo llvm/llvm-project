@@ -380,7 +380,7 @@ unsigned long long
 __bitset<_N_words, _Size>::to_ullong(true_type, true_type) const
 {
     unsigned long long __r = __first_[0];
-    for (std::size_t __i = 1; __i < sizeof(unsigned long long) / sizeof(__storage_type); ++__i)
+    for (size_t __i = 1; __i < sizeof(unsigned long long) / sizeof(__storage_type); ++__i)
         __r |= static_cast<unsigned long long>(__first_[__i]) << (sizeof(__storage_type) * CHAR_BIT);
     return __r;
 }

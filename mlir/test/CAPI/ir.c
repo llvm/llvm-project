@@ -13,11 +13,11 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Registration.h"
-#include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardDialect.h"
-#include "mlir-c/StandardTypes.h"
 
 #include <assert.h>
 #include <math.h>
@@ -549,12 +549,12 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // clang-format on
 }
 
-/// Dumps instances of all standard types to check that C API works correctly.
-/// Additionally, performs simple identity checks that a standard type
+/// Dumps instances of all builtin types to check that C API works correctly.
+/// Additionally, performs simple identity checks that a builtin type
 /// constructed with C API can be inspected and has the expected type. The
-/// latter achieves full coverage of C API for standard types. Returns 0 on
+/// latter achieves full coverage of C API for builtin types. Returns 0 on
 /// success and a non-zero error code on failure.
-static int printStandardTypes(MlirContext ctx) {
+static int printBuiltinTypes(MlirContext ctx) {
   // Integer types.
   MlirType i32 = mlirIntegerTypeGet(ctx, 32);
   MlirType si32 = mlirIntegerTypeSignedGet(ctx, 32);
@@ -732,7 +732,14 @@ void callbackSetFixedLengthString(const char *data, intptr_t len,
   strncpy(userData, data, len);
 }
 
-int printStandardAttributes(MlirContext ctx) {
+bool stringIsEqual(const char *lhs, MlirStringRef rhs) {
+  if (strlen(lhs) != rhs.length) {
+    return false;
+  }
+  return !strncmp(lhs, rhs.data, rhs.length);
+}
+
+int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute floating =
       mlirFloatAttrDoubleGet(ctx, mlirF64TypeGet(ctx), 2.0);
   if (!mlirAttributeIsAFloat(floating) ||
@@ -763,9 +770,10 @@ int printStandardAttributes(MlirContext ctx) {
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
-      mlirOpaqueAttrGet(ctx, "std", 3, data, mlirNoneTypeGet(ctx));
+      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("std"), 3, data,
+                        mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
-      strcmp("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
+      !stringIsEqual("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
 
   MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
@@ -775,7 +783,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(opaque);
   // CHECK: #std.abc
 
-  MlirAttribute string = mlirStringAttrGet(ctx, 2, data + 3);
+  MlirAttribute string =
+      mlirStringAttrGet(ctx, mlirStringRefCreate(data + 3, 2));
   if (!mlirAttributeIsAString(string))
     return 6;
 
@@ -786,7 +795,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(string);
   // CHECK: "de"
 
-  MlirAttribute flatSymbolRef = mlirFlatSymbolRefAttrGet(ctx, 3, data + 5);
+  MlirAttribute flatSymbolRef =
+      mlirFlatSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 5, 3));
   if (!mlirAttributeIsAFlatSymbolRef(flatSymbolRef))
     return 8;
 
@@ -799,7 +809,8 @@ int printStandardAttributes(MlirContext ctx) {
   // CHECK: @fgh
 
   MlirAttribute symbols[] = {flatSymbolRef, flatSymbolRef};
-  MlirAttribute symbolRef = mlirSymbolRefAttrGet(ctx, 2, data + 8, 2, symbols);
+  MlirAttribute symbolRef =
+      mlirSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 8, 2), 2, symbols);
   if (!mlirAttributeIsASymbolRef(symbolRef) ||
       mlirSymbolRefAttrGetNumNestedReferences(symbolRef) != 2 ||
       !mlirAttributeEqual(mlirSymbolRefAttrGetNestedReference(symbolRef, 0),
@@ -1280,19 +1291,19 @@ int registerOnlyStd() {
 
 // Wraps a diagnostic into additional text we can match against.
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
-  fprintf(stderr, "processing diagnostic (userData: %d) <<\n", (int)userData);
+  fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   mlirLocationPrint(loc, printToStderr, NULL);
   assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
-  fprintf(stderr, ">> end of diagnostic (userData: %d)\n", (int)userData);
+  fprintf(stderr, ">> end of diagnostic (userData: %ld)\n", (long)userData);
   return mlirLogicalResultSuccess();
 }
 
 // Logs when the delete user data callback is called
 static void deleteUserData(void *userData) {
-  fprintf(stderr, "deleting user data (userData: %d)\n", (int)userData);
+  fprintf(stderr, "deleting user data (userData: %ld)\n", (long)userData);
 }
 
 void testDiagnostics() {
@@ -1321,9 +1332,9 @@ int main() {
     return 1;
   buildWithInsertionsAndPrint(ctx);
 
-  if (printStandardTypes(ctx))
+  if (printBuiltinTypes(ctx))
     return 2;
-  if (printStandardAttributes(ctx))
+  if (printBuiltinAttributes(ctx))
     return 3;
   if (printAffineMap(ctx))
     return 4;

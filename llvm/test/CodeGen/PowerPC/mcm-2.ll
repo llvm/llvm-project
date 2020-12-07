@@ -21,9 +21,7 @@ entry:
 ; MEDIUM: addis [[REG1:[0-9]+]], 2, [[VAR:[a-z0-9A-Z_.]+]]@toc@ha
 ; MEDIUM: addi [[REG2:[0-9]+]], [[REG1]], [[VAR]]@toc@l
 ; MEDIUM: lwz {{[0-9]+}}, 0([[REG2]])
-; MEDIUM: addis [[REG3:[0-9]+]], 2, [[VAR]]@toc@ha
-; MEDIUM: addi [[REG4:[0-9]+]], [[REG3]], [[VAR]]@toc@l
-; MEDIUM: stw {{[0-9]+}}, 0([[REG4]])
+; MEDIUM: stw {{[0-9]+}}, 0([[REG2]])
 ; MEDIUM: .type [[VAR]],@object
 ; MEDIUM: .lcomm [[VAR]],4,4
 
@@ -31,9 +29,7 @@ entry:
 ; LARGE: addis [[REG1:[0-9]+]], 2, [[VAR:[a-z0-9A-Z_.]+]]@toc@ha
 ; LARGE: ld [[REG2:[0-9]+]], [[VAR]]@toc@l([[REG1]])
 ; LARGE: lwz {{[0-9]+}}, 0([[REG2]])
-; LARGE: addis [[REG3:[0-9]+]], 2, [[VAR]]@toc@ha
-; LARGE: ld [[REG4:[0-9]+]], [[VAR]]@toc@l([[REG3]])
-; LARGE: stw {{[0-9]+}}, 0([[REG4]])
+; LARGE: stw {{[0-9]+}}, 0([[REG2]])
 ; LARGE:      .type test_fn_static.si,@object
 ; LARGE-NEXT: .lcomm test_fn_static.si,4,4
 
