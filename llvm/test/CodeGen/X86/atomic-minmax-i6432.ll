@@ -2,7 +2,7 @@
 ; RUN: llc -mattr=+cmov -mtriple=i386-pc-linux -verify-machineinstrs < %s | FileCheck %s -check-prefix=LINUX
 ; RUN: llc -mattr=+cmov -mtriple=i386-macosx -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s -check-prefix=PIC
 
-@sc64 = external global i64
+@sc64 = external dso_local global i64
 
 define i64 @atomic_max_i64() nounwind {
 ; LINUX-LABEL: atomic_max_i64:

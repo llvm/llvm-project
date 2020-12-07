@@ -9585,6 +9585,18 @@ void ScratchTypeSystemClang::Finalize() {
   m_scratch_ast_source_up.reset();
 }
 
+TypeSystemClang *ScratchTypeSystemClang::GetForTarget(Target &target,
+                                                      bool create_on_demand) {
+  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
+      lldb::eLanguageTypeC, create_on_demand);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err), "Couldn't get scratch TypeSystemClang");
+    return nullptr;
+  }
+  return llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
+}
+
 UserExpression *ScratchTypeSystemClang::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,

@@ -204,10 +204,21 @@ mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
   assert(resultAttrs.size() == resultTypes.size());
   addArgAndResultAttrs(builder, result, argAttrs, resultAttrs);
 
-  // Parse the optional function body.
+  // Parse the optional function body. The printer will not print the body if
+  // its empty, so disallow parsing of empty body in the parser.
   auto *body = result.addRegion();
-  return parser.parseOptionalRegion(
-      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  OptionalParseResult parseResult = parser.parseOptionalRegion(
+      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes,
+      /*enableNameShadowing=*/false);
+  if (parseResult.hasValue()) {
+    if (failed(*parseResult))
+      return failure();
+    // Function body was parsed, make sure its not empty.
+    if (body->empty())
+      return parser.emitError(loc, "expected non-empty function body");
+  }
+  return success();
 }
 
 // Print a function result list.

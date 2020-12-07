@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mcpu=haswell | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=haswell | FileCheck %s --check-prefix=X64
 
-@var_580 = external local_unnamed_addr global i8, align 1
+@var_580 = external dso_local local_unnamed_addr global i8, align 1
 
 define void @foo(i8 %a0) {
 ; X86-LABEL: foo:

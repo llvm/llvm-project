@@ -7,7 +7,7 @@ target datalayout =
 target triple = "x86_64-unknown-linux-gnu"
         %"byte[]" = type { i64, i8* }
         %"char[][]" = type { i64, %"byte[]"* }
-@.str = external constant [7 x i8]              ; <[7 x i8]*> [#uses=1]
+@.str = external dso_local constant [7 x i8]              ; <[7 x i8]*> [#uses=1]
 
 ; CHECK-LABEL: @_Dmain
 ; CHECK: load i8, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0)

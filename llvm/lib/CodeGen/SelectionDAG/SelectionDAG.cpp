@@ -2999,38 +2999,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   case ISD::SIGN_EXTEND_INREG: {
-    EVT EVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
-    unsigned EBits = EVT.getScalarSizeInBits();
-
-    // Sign extension.  Compute the demanded bits in the result that are not
-    // present in the input.
-    APInt NewBits = APInt::getHighBitsSet(BitWidth, BitWidth - EBits);
-
-    APInt InSignMask = APInt::getSignMask(EBits);
-    APInt InputDemandedBits = APInt::getLowBitsSet(BitWidth, EBits);
-
-    // If the sign extended bits are demanded, we know that the sign
-    // bit is demanded.
-    InSignMask = InSignMask.zext(BitWidth);
-    if (NewBits.getBoolValue())
-      InputDemandedBits |= InSignMask;
-
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.One &= InputDemandedBits;
-    Known.Zero &= InputDemandedBits;
-
-    // If the sign bit of the input is known set or clear, then we know the
-    // top bits of the result.
-    if (Known.Zero.intersects(InSignMask)) {        // Input sign bit known clear
-      Known.Zero |= NewBits;
-      Known.One  &= ~NewBits;
-    } else if (Known.One.intersects(InSignMask)) {  // Input sign bit known set
-      Known.One  |= NewBits;
-      Known.Zero &= ~NewBits;
-    } else {                              // Input sign bit unknown
-      Known.Zero &= ~NewBits;
-      Known.One  &= ~NewBits;
-    }
+    EVT EVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    Known = Known.sextInReg(EVT.getScalarSizeInBits());
     break;
   }
   case ISD::CTTZ:

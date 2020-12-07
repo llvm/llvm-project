@@ -3,10 +3,10 @@
 
 target triple = "x86_64-unknown-unknown"
 
-@g64 = external global i64, align 8
-@g32 = external global i32, align 4
-@g16 = external global i16, align 2
-@g8 = external global i8, align 1
+@g64 = external dso_local global i64, align 8
+@g32 = external dso_local global i32, align 4
+@g16 = external dso_local global i16, align 2
+@g8 = external dso_local global i8, align 1
 
 declare void @a()
 declare void @b()

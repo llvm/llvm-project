@@ -190,9 +190,18 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     if (Arch == Triple::ppc || TT.isPPC64())
       return false;
 
-    // Check if we can use copy relocations.
-    if (!(GV && GV->isThreadLocal()) && RM == Reloc::Static)
-      return true;
+    // dso_local is traditionally implied for Reloc::Static. Eventually we shall
+    // drop the if block entirely and respect dso_local/dso_preemptable
+    // specifiers set by the frontend.
+    if (RM == Reloc::Static) {
+      // We currently respect dso_local/dso_preemptable specifiers for
+      // variables.
+      if (!GV || F)
+        return true;
+      // TODO Remove the special case for x86-32 and wasm.
+      if ((Arch == Triple::x86 || TT.isWasm()) && !GV->isThreadLocal())
+        return true;
+    }
   } else if (TT.isOSBinFormatELF()) {
     // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
     // alias, set the flag. We cannot set dso_local for other global values,

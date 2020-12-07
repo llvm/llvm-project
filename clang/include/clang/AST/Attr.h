@@ -259,7 +259,10 @@ public:
 
   /// Construct from a result from \c serialize.
   static ParamIdx deserialize(SerialType S) {
-    ParamIdx P(*reinterpret_cast<ParamIdx *>(&S));
+    // Using this two-step static_cast via void * instead of reinterpret_cast
+    // silences a -Wstrict-aliasing false positive from GCC7 and earlier.
+    void *ParamIdxPtr = static_cast<void *>(&S);
+    ParamIdx P(*static_cast<ParamIdx *>(ParamIdxPtr));
     assert((!P.IsValid || P.Idx >= 1) && "valid Idx must be one-origin");
     return P;
   }

@@ -176,7 +176,7 @@ entry:
 ; NORMAL: pushl    $_ext
 ; NORMAL-NEXT: call
 declare void @f(i8*)
-@ext = external constant i8
+@ext = external dso_local constant i8
 
 define void @test6() {
   call void @f(i8* @ext)
@@ -288,7 +288,7 @@ define void @test10() optsize {
 ; NORMAL-NEXT: pushl [[EAX]]
 ; NORMAL-NEXT: call
 ; NORMAL-NEXT: addl $16, %esp
-@the_global = external global i32
+@the_global = external dso_local global i32
 define void @test11() optsize {
   %myload = load i32, i32* @the_global
   store i32 42, i32* @the_global

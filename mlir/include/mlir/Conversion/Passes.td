@@ -394,9 +394,10 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
 
     Convert operations from the vector dialect into the LLVM IR dialect
     operations. The lowering pass provides several options to control
-    the kind of optimizations that are allowed. It also provides options
-    that augment the architectural-neutral vector dialect with
-    architectural-specific dialects (AVX512, Neon, etc.).
+    the kinds of optimizations that are allowed. It also provides options
+    that enable the use of one or more architectural-specific dialects
+    (AVX512, Neon, SVE, etc.) in combination with the architectural-neutral
+    vector dialect lowering.
 
   }];
   let constructor = "mlir::createConvertVectorToLLVMPass()";
@@ -411,7 +412,8 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
 	   "faster code">,
     Option<"enableAVX512", "enable-avx512",
            "bool", /*default=*/"false",
-           "Augments the vector dialect with the AVX512 dialect during lowering">
+           "Enables the use of AVX512 dialect while lowering the vector "
+	   "dialect.">
   ];
 }
 

@@ -646,23 +646,23 @@ public:
   // Region Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parses a region. Any parsed blocks are appended to "region" and must be
+  /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes "arguments" of types "argTypes". If "enableNameShadowing" is
+  /// region takes 'arguments' of types 'argTypes'. If 'enableNameShadowing' is
   /// set to true, the argument names are allowed to shadow the names of other
-  /// existing SSA values defined above the region scope. "enableNameShadowing"
+  /// existing SSA values defined above the region scope. 'enableNameShadowing'
   /// can only be set to true for regions attached to operations that are
-  /// "IsolatedFromAbove".
+  /// 'IsolatedFromAbove.
   virtual ParseResult parseRegion(Region &region,
                                   ArrayRef<OperandType> arguments = {},
                                   ArrayRef<Type> argTypes = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
-  virtual ParseResult parseOptionalRegion(Region &region,
-                                          ArrayRef<OperandType> arguments = {},
-                                          ArrayRef<Type> argTypes = {},
-                                          bool enableNameShadowing = false) = 0;
+  virtual OptionalParseResult
+  parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments = {},
+                      ArrayRef<Type> argTypes = {},
+                      bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is
   /// allocated and placed in `region`. If no region is present or on failure,

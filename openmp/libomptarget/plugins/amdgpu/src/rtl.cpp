@@ -925,6 +925,26 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return res;
 }
 
+static atmi_status_t atmi_calloc(void **ret_ptr, size_t size,
+                                 atmi_mem_place_t place) {
+  uint64_t rounded = 4 * ((size + 3) / 4);
+  void *ptr;
+  atmi_status_t err = atmi_malloc(&ptr, rounded, place);
+  if (err != ATMI_STATUS_SUCCESS) {
+    return err;
+  }
+
+  hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
+  if (rc != HSA_STATUS_SUCCESS) {
+    fprintf(stderr, "zero fill device_state failed with %u\n", rc);
+    atmi_free(ptr);
+    return ATMI_STATUS_ERROR;
+  }
+
+  *ret_ptr = ptr;
+  return ATMI_STATUS_SUCCESS;
+}
+
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                                                  __tgt_device_image *image) {
   // This function loads the device image onto gpu[device_id] and does other
@@ -1024,7 +1044,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       assert(dss.second == 0);
       void *ptr = NULL;
       atmi_status_t err =
-          atmi_malloc(&ptr, device_State_bytes, get_gpu_mem_place(device_id));
+          atmi_calloc(&ptr, device_State_bytes, get_gpu_mem_place(device_id));
       if (err != ATMI_STATUS_SUCCESS) {
         fprintf(stderr, "Failed to allocate device_state array\n");
         return NULL;
@@ -1060,13 +1080,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                                                device_id);
     if (err != ATMI_STATUS_SUCCESS) {
       fprintf(stderr, "memcpy install of state_ptr failed\n");
-      return NULL;
-    }
-
-    assert((device_State_bytes & 0x3) == 0); // known >= 4 byte aligned
-    hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, device_State_bytes / 4);
-    if (rc != HSA_STATUS_SUCCESS) {
-      fprintf(stderr, "zero fill device_state failed with %u\n", rc);
       return NULL;
     }
   }

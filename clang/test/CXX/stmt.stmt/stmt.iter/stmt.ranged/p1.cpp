@@ -151,6 +151,7 @@ void g() {
 
   for (extern int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'extern'}}
   for (static int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'static'}}
+  for (thread_local int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'thread_local'}}
   for (register int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'register'}} expected-warning 0-1{{register}} expected-error 0-1{{register}}
   for (constexpr int a : X::C()) {} // OK per CWG issue #1204.
 

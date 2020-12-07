@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -629,22 +628,22 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type *>(TStorage.buffer);
+    return reinterpret_cast<storage_type *>(&TStorage);
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type *>(TStorage.buffer);
+    return reinterpret_cast<const storage_type *>(&TStorage);
   }
 
   error_type *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<error_type *>(ErrorStorage.buffer);
+    return reinterpret_cast<error_type *>(&ErrorStorage);
   }
 
   const error_type *getErrorStorage() const {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<const error_type *>(ErrorStorage.buffer);
+    return reinterpret_cast<const error_type *>(&ErrorStorage);
   }
 
   // Used by ExpectedAsOutParameter to reset the checked flag.
@@ -678,8 +677,8 @@ private:
   }
 
   union {
-    AlignedCharArrayUnion<storage_type> TStorage;
-    AlignedCharArrayUnion<error_type> ErrorStorage;
+    std::aligned_union_t<1, storage_type> TStorage;
+    std::aligned_union_t<1, error_type> ErrorStorage;
   };
   bool HasError : 1;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS

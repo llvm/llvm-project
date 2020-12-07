@@ -1367,7 +1367,7 @@ private:
             TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_JsFatArrow,
             TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
             TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
-            TT_UntouchableMacroFunc))
+            TT_UntouchableMacroFunc, TT_ConstraintJunctions))
       CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -1621,7 +1621,11 @@ private:
                !Current.Previous->is(tok::kw_operator)) {
       // not auto operator->() -> xxx;
       Current.setType(TT_TrailingReturnArrow);
-
+    } else if (Current.is(tok::arrow) && Current.Previous &&
+               Current.Previous->is(tok::r_brace)) {
+      // Concept implicit conversion contraint needs to be treated like
+      // a trailing return type  ... } -> <type>.
+      Current.setType(TT_TrailingReturnArrow);
     } else if (isDeductionGuide(Current)) {
       // Deduction guides trailing arrow " A(...) -> A<T>;".
       Current.setType(TT_TrailingReturnArrow);
@@ -1722,8 +1726,8 @@ private:
       // colon after this, this is the only place which annotates the identifier
       // as a selector.)
       Current.setType(TT_SelectorName);
-    } else if (Current.isOneOf(tok::identifier, tok::kw_const,
-                               tok::kw_noexcept) &&
+    } else if (Current.isOneOf(tok::identifier, tok::kw_const, tok::kw_noexcept,
+                               tok::kw_requires) &&
                Current.Previous &&
                !Current.Previous->isOneOf(tok::equal, tok::at) &&
                Line.MightBeFunctionDecl && Contexts.size() == 1) {
@@ -1839,8 +1843,8 @@ private:
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
     if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
-                          tok::kw_throw, tok::arrow, Keywords.kw_override,
-                          Keywords.kw_final) ||
+                          tok::kw_requires, tok::kw_throw, tok::arrow,
+                          Keywords.kw_override, Keywords.kw_final) ||
         isCpp11AttributeSpecifier(*Tok.Next))
       return false;
 
@@ -2817,6 +2821,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         isKeywordWithCondition(*Right.MatchingParen->Previous))
       return true;
   }
+
+  // requires ( or requires(
+  if (Right.is(tok::l_paren) && Left.is(tok::kw_requires))
+    return spaceRequiredBeforeParens(Right);
+  // requires clause Concept1<T> && Concept2<T>
+  if (Left.is(TT_ConstraintJunctions) && Right.is(tok::identifier))
+    return true;
+
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))
     return (Right.is(TT_CastRParen) ||
             (Left.MatchingParen && Left.MatchingParen->is(TT_CastRParen)))
@@ -3594,11 +3606,17 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.Previous->is(tok::string_literal) &&
       Right.Next->is(tok::string_literal))
     return true;
+  // Can break after template<> declaration
   if (Right.Previous->ClosesTemplateDeclaration &&
       Right.Previous->MatchingParen &&
-      Right.Previous->MatchingParen->NestingLevel == 0 &&
-      Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes)
-    return true;
+      Right.Previous->MatchingParen->NestingLevel == 0) {
+    // Put concepts on the next line e.g.
+    // template<typename T>
+    // concept ...
+    if (Right.is(tok::kw_concept))
+      return Style.BreakBeforeConceptDeclarations;
+    return (Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes);
+  }
   if (Right.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma &&
       !Style.ConstructorInitializerAllOnOneLineOrOnePerLine)

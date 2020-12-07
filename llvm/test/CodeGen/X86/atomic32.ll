@@ -4,8 +4,8 @@
 ; RUN: llc < %s -O0 -mtriple=i686-unknown-unknown -mcpu=corei7 -mattr=-cmov,-sse -verify-machineinstrs | FileCheck %s --check-prefixes=X86,X86-NOCMOV
 ; RUN: llc < %s -O0 -mtriple=i686-unknown-unknown -mcpu=corei7 -mattr=-cmov,-sse,-x87 -verify-machineinstrs | FileCheck %s --check-prefixes=X86,X86-NOX87
 
-@sc32 = external global i32
-@fsc32 = external global float
+@sc32 = external dso_local global i32
+@fsc32 = external dso_local global float
 
 define void @atomic_fetch_add32() nounwind {
 ; X64-LABEL: atomic_fetch_add32:

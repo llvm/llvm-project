@@ -172,13 +172,15 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
 }
 
 static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
-                                                    StringRef JSONDatabase,
+                                                    std::string JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
       JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
+  // Overwrite the string to verify we're not reading from it later.
+  JSONDatabase.assign(JSONDatabase.size(), '*');
   std::vector<CompileCommand> Commands = Database->getCompileCommands(FileName);
   EXPECT_LE(Commands.size(), 1u);
   if (Commands.empty())

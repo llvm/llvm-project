@@ -8719,7 +8719,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
         // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
         // than mmap the files several times.
         auto Entry =
-            ToFileManager.getFile(Cache->OrigEntry->getName());
+            ToFileManager.getOptionalFileRef(Cache->OrigEntry->getName());
         // FIXME: The filename may be a virtual name that does probably not
         // point to a valid file and we get no Entry here. In this case try with
         // the memory buffer below.
@@ -9000,26 +9000,23 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     Result.MakeVector();
     MutableArrayRef<APValue> Elts =
         Result.setVectorUninit(FromValue.getVectorLength());
-    ImportLoop(
-        ((const APValue::Vec *)(const char *)FromValue.Data.buffer)->Elts,
-        Elts.data(), FromValue.getVectorLength());
+    ImportLoop(((const APValue::Vec *)(const char *)&FromValue.Data)->Elts,
+               Elts.data(), FromValue.getVectorLength());
     break;
   }
   case APValue::Array:
     Result.MakeArray(FromValue.getArrayInitializedElts(),
                      FromValue.getArraySize());
-    ImportLoop(
-        ((const APValue::Arr *)(const char *)FromValue.Data.buffer)->Elts,
-        ((const APValue::Arr *)(const char *)Result.Data.buffer)->Elts,
-        FromValue.getArrayInitializedElts());
+    ImportLoop(((const APValue::Arr *)(const char *)&FromValue.Data)->Elts,
+               ((const APValue::Arr *)(const char *)&Result.Data)->Elts,
+               FromValue.getArrayInitializedElts());
     break;
   case APValue::Struct:
     Result.MakeStruct(FromValue.getStructNumBases(),
                       FromValue.getStructNumFields());
     ImportLoop(
-        ((const APValue::StructData *)(const char *)FromValue.Data.buffer)
-            ->Elts,
-        ((const APValue::StructData *)(const char *)Result.Data.buffer)->Elts,
+        ((const APValue::StructData *)(const char *)&FromValue.Data)->Elts,
+        ((const APValue::StructData *)(const char *)&Result.Data)->Elts,
         FromValue.getStructNumBases() + FromValue.getStructNumFields());
     break;
   case APValue::Union: {

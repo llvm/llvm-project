@@ -8,7 +8,7 @@
 
 extern int __fixdfsivfp(double a);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
 int test__fixdfsivfp(double a)
 {
 	int actual = __fixdfsivfp(a);
@@ -22,7 +22,7 @@ int test__fixdfsivfp(double a)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
     if (test__fixdfsivfp(0.0))
         return 1;
     if (test__fixdfsivfp(1.0))

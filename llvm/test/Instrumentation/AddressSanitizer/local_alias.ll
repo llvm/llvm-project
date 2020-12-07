@@ -1,11 +1,16 @@
+; Defaults
 ; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-INDICATOR,CHECK-NOALIAS
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-INDICATOR,CHECK-NOALIAS
+
+; {newPM,legacyPM} x {alias0,alias1} x {odr0,odr1}
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=0 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=0 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-INDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-INDICATOR
 ; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -119,7 +119,7 @@
 
 ; clang -g -S -gsplit-dwarf -O1 small.c
 
-@c = external global i32
+@c = external dso_local global i32
 
 ; Function Attrs: nounwind uwtable
 define void @bar() #0 !dbg !4 {

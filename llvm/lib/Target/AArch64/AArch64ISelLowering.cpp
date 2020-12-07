@@ -475,6 +475,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i64, Custom);
   setOperationAction(ISD::CTPOP, MVT::i128, Custom);
 
+  setOperationAction(ISD::ABS, MVT::i32, Custom);
+  setOperationAction(ISD::ABS, MVT::i64, Custom);
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -3968,6 +3971,22 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
+// Generate SUBS and CSEL for integer abs.
+static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+
+  SDLoc DL(Op);
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                            Op.getOperand(0));
+  // Generate SUBS & CSEL.
+  SDValue Cmp =
+      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT::i32),
+                  Op.getOperand(0), DAG.getConstant(0, DL, VT));
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
+                     DAG.getConstant(AArch64CC::PL, DL, MVT::i32),
+                     Cmp.getValue(1));
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -4197,6 +4216,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMINNM_PRED);
   case ISD::VSELECT:
     return LowerFixedLengthVectorSelectToSVE(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
   }
 }
 
@@ -11323,34 +11344,6 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(AArch64ISD::CMGEz, SDLoc(N), VT, Shift.getOperand(0));
 }
 
-// Generate SUBS and CSEL for integer abs.
-static SDValue performIntegerAbsCombine(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
-
-  // Check pattern of XOR(ADD(X,Y), Y) where Y is SRA(X, size(X)-1)
-  // and change it to SUB and CSEL.
-  if (VT.isInteger() && N->getOpcode() == ISD::XOR &&
-      N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1 &&
-      N1.getOpcode() == ISD::SRA && N1.getOperand(0) == N0.getOperand(0))
-    if (ConstantSDNode *Y1C = dyn_cast<ConstantSDNode>(N1.getOperand(1)))
-      if (Y1C->getAPIntValue() == VT.getSizeInBits() - 1) {
-        SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                  N0.getOperand(0));
-        // Generate SUBS & CSEL.
-        SDValue Cmp =
-            DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT::i32),
-                        N0.getOperand(0), DAG.getConstant(0, DL, VT));
-        return DAG.getNode(AArch64ISD::CSEL, DL, VT, N0.getOperand(0), Neg,
-                           DAG.getConstant(AArch64CC::PL, DL, MVT::i32),
-                           SDValue(Cmp.getNode(), 1));
-      }
-  return SDValue();
-}
-
 // VECREDUCE_ADD( EXTEND(v16i8_type) ) to
 // VECREDUCE_ADD( DOTv16i8(v16i8_type) )
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
@@ -11430,10 +11423,7 @@ static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
-    return Cmp;
-
-  return performIntegerAbsCombine(N, DAG);
+  return foldVectorXorShiftIntoCmp(N, DAG, Subtarget);
 }
 
 SDValue

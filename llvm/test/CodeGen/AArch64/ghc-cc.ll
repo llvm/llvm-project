@@ -2,26 +2,26 @@
 
 ; Check the GHC call convention works (aarch64)
 
-@base  = external global i64 ; assigned to register: r19
-@sp    = external global i64 ; assigned to register: r20
-@hp    = external global i64 ; assigned to register: r21
-@r1    = external global i64 ; assigned to register: r22
-@r2    = external global i64 ; assigned to register: r23
-@r3    = external global i64 ; assigned to register: r24
-@r4    = external global i64 ; assigned to register: r25
-@r5    = external global i64 ; assigned to register: r26
-@r6    = external global i64 ; assigned to register: r27
-@splim = external global i64 ; assigned to register: r28
+@base  = external dso_local global i64 ; assigned to register: r19
+@sp    = external dso_local global i64 ; assigned to register: r20
+@hp    = external dso_local global i64 ; assigned to register: r21
+@r1    = external dso_local global i64 ; assigned to register: r22
+@r2    = external dso_local global i64 ; assigned to register: r23
+@r3    = external dso_local global i64 ; assigned to register: r24
+@r4    = external dso_local global i64 ; assigned to register: r25
+@r5    = external dso_local global i64 ; assigned to register: r26
+@r6    = external dso_local global i64 ; assigned to register: r27
+@splim = external dso_local global i64 ; assigned to register: r28
 
-@f1 = external global float  ; assigned to register: s8
-@f2 = external global float  ; assigned to register: s9
-@f3 = external global float  ; assigned to register: s10
-@f4 = external global float  ; assigned to register: s11
+@f1 = external dso_local global float  ; assigned to register: s8
+@f2 = external dso_local global float  ; assigned to register: s9
+@f3 = external dso_local global float  ; assigned to register: s10
+@f4 = external dso_local global float  ; assigned to register: s11
 
-@d1 = external global double ; assigned to register: d12
-@d2 = external global double ; assigned to register: d13
-@d3 = external global double ; assigned to register: d14
-@d4 = external global double ; assigned to register: d15
+@d1 = external dso_local global double ; assigned to register: d12
+@d2 = external dso_local global double ; assigned to register: d13
+@d3 = external dso_local global double ; assigned to register: d14
+@d4 = external dso_local global double ; assigned to register: d15
 
 define ghccc i64 @addtwo(i64 %x, i64 %y) nounwind {
 entry:

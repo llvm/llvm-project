@@ -86,7 +86,7 @@ struct MaskRndScaleOpPS512Conversion : public ConvertToLLVMPattern {
       return failure();
     return matchAndRewriteOneToOne<MaskRndScaleOp,
                                    LLVM::x86_avx512_mask_rndscale_ps_512>(
-        *this, this->typeConverter, op, operands, rewriter);
+        *this, *getTypeConverter(), op, operands, rewriter);
   }
 };
 
@@ -103,7 +103,7 @@ struct MaskRndScaleOpPD512Conversion : public ConvertToLLVMPattern {
       return failure();
     return matchAndRewriteOneToOne<MaskRndScaleOp,
                                    LLVM::x86_avx512_mask_rndscale_pd_512>(
-        *this, this->typeConverter, op, operands, rewriter);
+        *this, *getTypeConverter(), op, operands, rewriter);
   }
 };
 
@@ -120,7 +120,7 @@ struct ScaleFOpPS512Conversion : public ConvertToLLVMPattern {
       return failure();
     return matchAndRewriteOneToOne<MaskScaleFOp,
                                    LLVM::x86_avx512_mask_scalef_ps_512>(
-        *this, this->typeConverter, op, operands, rewriter);
+        *this, *getTypeConverter(), op, operands, rewriter);
   }
 };
 
@@ -137,7 +137,7 @@ struct ScaleFOpPD512Conversion : public ConvertToLLVMPattern {
       return failure();
     return matchAndRewriteOneToOne<MaskScaleFOp,
                                    LLVM::x86_avx512_mask_scalef_pd_512>(
-        *this, this->typeConverter, op, operands, rewriter);
+        *this, *getTypeConverter(), op, operands, rewriter);
   }
 };
 } // namespace

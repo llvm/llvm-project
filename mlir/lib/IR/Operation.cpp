@@ -119,16 +119,18 @@ Operation *Operation::create(Location location, OperationName name,
       needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
   }
 
-  // Compute the byte size for the operation and the operand storage.
-  auto byteSize =
-      totalSizeToAlloc<detail::InLineOpResult, detail::TrailingOpResult,
-                       BlockOperand, Region, detail::OperandStorage>(
-          numInlineResults, numTrailingResults, numSuccessors, numRegions,
-          needsOperandStorage ? 1 : 0);
-  byteSize +=
-      llvm::alignTo(detail::OperandStorage::additionalAllocSize(numOperands),
-                    alignof(Operation));
-  void *rawMem = malloc(byteSize);
+  // Compute the byte size for the operation and the operand storage. This takes
+  // into account the size of the operation, its trailing objects, and its
+  // prefixed objects.
+  size_t byteSize =
+      totalSizeToAlloc<BlockOperand, Region, detail::OperandStorage>(
+          numSuccessors, numRegions, needsOperandStorage ? 1 : 0) +
+      detail::OperandStorage::additionalAllocSize(numOperands);
+  size_t prefixByteSize = llvm::alignTo(
+      Operation::prefixAllocSize(numTrailingResults, numInlineResults),
+      alignof(Operation));
+  char *mallocMem = reinterpret_cast<char *>(malloc(byteSize + prefixByteSize));
+  void *rawMem = mallocMem + prefixByteSize;
 
   // Create the new Operation.
   Operation *op =
@@ -200,8 +202,12 @@ Operation::~Operation() {
 
 /// Destroy this operation or one of its subclasses.
 void Operation::destroy() {
+  // Operations may have additional prefixed allocation, which needs to be
+  // accounted for here when computing the address to free.
+  char *rawMem = reinterpret_cast<char *>(this) -
+                 llvm::alignTo(prefixAllocSize(), alignof(Operation));
   this->~Operation();
-  free(this);
+  free(rawMem);
 }
 
 /// Return the context this operation is associated with.

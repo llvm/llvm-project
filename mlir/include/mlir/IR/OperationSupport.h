@@ -570,11 +570,11 @@ namespace detail {
 /// This class provides the implementation for an in-line operation result. This
 /// is an operation result whose number can be stored inline inside of the bits
 /// of an Operation*.
-struct InLineOpResult : public IRObjectWithUseList<OpOperand> {};
+struct alignas(8) InLineOpResult : public IRObjectWithUseList<OpOperand> {};
 /// This class provides the implementation for an out-of-line operation result.
 /// This is an operation result whose number cannot be stored inline inside of
 /// the bits of an Operation*.
-struct TrailingOpResult : public IRObjectWithUseList<OpOperand> {
+struct alignas(8) TrailingOpResult : public IRObjectWithUseList<OpOperand> {
   TrailingOpResult(uint64_t trailingResultNumber)
       : trailingResultNumber(trailingResultNumber) {}
 

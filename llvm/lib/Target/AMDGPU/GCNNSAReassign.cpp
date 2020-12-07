@@ -279,7 +279,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand &Op = MI->getOperand(VAddr0Idx + I);
       Register Reg = Op.getReg();
       LiveInterval *LI = &LIS->getInterval(Reg);
-      if (llvm::find(Intervals, LI) != Intervals.end()) {
+      if (llvm::is_contained(Intervals, LI)) {
         // Same register used, unable to make sequential
         Intervals.clear();
         break;

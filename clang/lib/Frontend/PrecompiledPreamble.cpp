@@ -735,7 +735,7 @@ PrecompiledPreamble::PCHStorage::getKind() const {
 
 PrecompiledPreamble::TempPCHFile &PrecompiledPreamble::PCHStorage::asFile() {
   assert(getKind() == Kind::TempFile);
-  return *reinterpret_cast<TempPCHFile *>(Storage.buffer);
+  return *reinterpret_cast<TempPCHFile *>(&Storage);
 }
 
 const PrecompiledPreamble::TempPCHFile &
@@ -746,7 +746,7 @@ PrecompiledPreamble::PCHStorage::asFile() const {
 PrecompiledPreamble::InMemoryPreamble &
 PrecompiledPreamble::PCHStorage::asMemory() {
   assert(getKind() == Kind::InMemory);
-  return *reinterpret_cast<InMemoryPreamble *>(Storage.buffer);
+  return *reinterpret_cast<InMemoryPreamble *>(&Storage);
 }
 
 const PrecompiledPreamble::InMemoryPreamble &

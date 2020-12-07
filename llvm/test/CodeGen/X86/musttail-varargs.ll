@@ -324,7 +324,7 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 
 %struct.Foo = type { i1, i8*, i8* }
 
-@g = external global i32
+@g = external dso_local global i32
 
 define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-LABEL: h_thunk:

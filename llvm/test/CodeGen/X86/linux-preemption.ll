@@ -41,7 +41,7 @@ define i32* @get_external_default_global() {
   ret i32* @external_default_global
 }
 ; CHECK: movq external_default_global@GOTPCREL(%rip), %rax
-; STATIC: movl $external_default_global, %eax
+; STATIC: movq external_default_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_default_global@GOT(%eax), %eax
 
 @strong_local_global = dso_local global i32 42
@@ -90,7 +90,7 @@ define i32* @get_external_preemptable_global() {
   ret i32* @external_preemptable_global
 }
 ; CHECK: movq external_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC: movl $external_preemptable_global, %eax
+; STATIC: movq external_preemptable_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_preemptable_global@GOT(%eax), %eax
 
 ; aliases

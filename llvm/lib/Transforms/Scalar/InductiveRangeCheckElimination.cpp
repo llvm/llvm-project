@@ -146,7 +146,6 @@ class InductiveRangeCheck {
   const SCEV *Step = nullptr;
   const SCEV *End = nullptr;
   Use *CheckUse = nullptr;
-  bool IsSigned = true;
 
   static bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, ScalarEvolution &SE,
                                   Value *&Index, Value *&Length,
@@ -161,7 +160,6 @@ public:
   const SCEV *getBegin() const { return Begin; }
   const SCEV *getStep() const { return Step; }
   const SCEV *getEnd() const { return End; }
-  bool isSigned() const { return IsSigned; }
 
   void print(raw_ostream &OS) const {
     OS << "InductiveRangeCheck:\n";
@@ -405,7 +403,6 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   IRC.Begin = IndexAddRec->getStart();
   IRC.Step = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
-  IRC.IsSigned = IsSigned;
   Checks.push_back(IRC);
 }
 

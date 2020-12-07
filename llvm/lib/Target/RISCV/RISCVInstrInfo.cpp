@@ -604,14 +604,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_SIMM12:
           Ok = isInt<12>(Imm);
           break;
-        case RISCVOp::OPERAND_SIMM13_LSB0:
-          Ok = isShiftedInt<12, 1>(Imm);
-          break;
         case RISCVOp::OPERAND_UIMM20:
           Ok = isUInt<20>(Imm);
-          break;
-        case RISCVOp::OPERAND_SIMM21_LSB0:
-          Ok = isShiftedInt<20, 1>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
           if (STI.getTargetTriple().isArch64Bit())

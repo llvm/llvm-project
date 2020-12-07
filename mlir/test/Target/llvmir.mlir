@@ -1350,7 +1350,7 @@ llvm.func @useInlineAsm(%arg0: !llvm.i32) {
   %3 = llvm.inline_asm is_align_stack "foo", "=r,r,r" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
 
   // CHECK-NEXT:  call i8 asm inteldialect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !13
-  %4 = llvm.inline_asm asm_dialect = 1 "foo", "=r,r,r" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
+  %4 = llvm.inline_asm asm_dialect = "intel" "foo", "=r,r,r" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
 
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}}), !dbg !14
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (!llvm.i32) -> !llvm.struct<(i8, i8)>
