@@ -45,6 +45,29 @@
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
+// hostrpc interface, FIXME: consider moving to its own include these are
+// statically linked into amdgpu/plugin if present from hostrpc_services.a,
+// linked as --whole-archive to override the weak symbols that are used to
+// implement a fallback for toolchains that do not yet have a hostrpc library.
+extern "C" {
+unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
+                                    uint32_t device_id);
+hsa_status_t hostrpc_init();
+hsa_status_t hostrpc_terminate();
+
+__attribute__((weak)) hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
+__attribute__((weak)) hsa_status_t hostrpc_terminate() {
+  return HSA_STATUS_SUCCESS;
+}
+__attribute__((weak)) unsigned long
+hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
+  DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
+     "missing\n",
+     device_id);
+  return 0;
+}
+}
+
 int print_kernel_trace;
 
 // Size of the target call stack struture
@@ -431,6 +454,8 @@ public:
       DP("Error when initializing HSA-ATMI\n");
       return;
     }
+    // Init hostcall soon after initializing ATMI
+    hostrpc_init();
 
     HSAAgents = find_gpu_agents();
     NumberOfDevices = (int)HSAAgents.size();
@@ -520,6 +545,8 @@ public:
     // atmi_finalize removes access to it
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
+    // Terminate hostrpc before finalizing ATMI
+    hostrpc_terminate();
     atmi_finalize();
   }
 };
@@ -1540,6 +1567,8 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
   return packet_id;
 }
 
+extern bool g_atmi_hostcall_required; // declared without header by atmi
+
 static int32_t __tgt_rtl_run_target_team_region_locked(
     int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
@@ -1682,6 +1711,22 @@ int32_t __tgt_rtl_run_target_team_region_locked(
       impl_args->offset_x = 0;
       impl_args->offset_y = 0;
       impl_args->offset_z = 0;
+
+      // assign a hostcall buffer for the selected Q
+      if (g_atmi_hostcall_required) {
+        // hostrpc_assign_buffer is not thread safe, and this function is
+        // under a multiple reader lock, not a writer lock.
+        static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
+        pthread_mutex_lock(&hostcall_init_lock);
+        impl_args->hostcall_ptr = hostrpc_assign_buffer(
+            DeviceInfo.HSAAgents[device_id], queue, device_id);
+        pthread_mutex_unlock(&hostcall_init_lock);
+        if (!impl_args->hostcall_ptr) {
+          DP("hostrpc_assign_buffer failed, gpu would dereference null and "
+             "error\n");
+          return OFFLOAD_FAIL;
+        }
+      }
 
       packet->kernarg_address = kernarg;
     }
