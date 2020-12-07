@@ -18,6 +18,7 @@
 #define DEBUG_TYPE "load-binary"
 
 using namespace llvm;
+using namespace sampleprof;
 
 static cl::opt<bool> ShowDisassembly("show-disassembly", cl::ReallyHidden,
                                      cl::init(false), cl::ZeroOrMore,
@@ -95,9 +96,61 @@ void ProfiledBinary::load() {
   // Disassemble the text sections.
   disassemble(Obj);
 
+  // Use function start and return address to infer prolog and epilog
+  ProEpilogTracker.inferPrologOffsets(FuncStartAddrMap);
+  ProEpilogTracker.inferEpilogOffsets(RetAddrs);
+
   // TODO: decode other sections.
 
   return;
+}
+
+bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
+                                        uint64_t Address2) const {
+  uint64_t Offset1 = virtualAddrToOffset(Address1);
+  uint64_t Offset2 = virtualAddrToOffset(Address2);
+  const FrameLocationStack &Context1 = getFrameLocationStack(Offset1);
+  const FrameLocationStack &Context2 = getFrameLocationStack(Offset2);
+  if (Context1.size() != Context2.size())
+    return false;
+
+  // The leaf frame contains location within the leaf, and it
+  // needs to be remove that as it's not part of the calling context
+  return std::equal(Context1.begin(), Context1.begin() + Context1.size() - 1,
+                    Context2.begin(), Context2.begin() + Context2.size() - 1);
+}
+
+std::string
+ProfiledBinary::getExpandedContextStr(const std::list<uint64_t> &Stack) const {
+  std::string ContextStr;
+  SmallVector<std::string, 8> ContextVec;
+  // Process from frame root to leaf
+  for (auto Iter = Stack.rbegin(); Iter != Stack.rend(); Iter++) {
+    uint64_t Offset = virtualAddrToOffset(*Iter);
+    const FrameLocationStack &ExpandedContext = getFrameLocationStack(Offset);
+    for (const auto &Loc : ExpandedContext) {
+      ContextVec.push_back(getCallSite(Loc));
+    }
+  }
+
+  assert(ContextVec.size() && "Context length should be at least 1");
+
+  std::ostringstream OContextStr;
+  for (uint32_t I = 0; I < (uint32_t)ContextVec.size(); I++) {
+    if (OContextStr.str().size()) {
+      OContextStr << " @ ";
+    }
+
+    if (I == ContextVec.size() - 1) {
+      // Only keep the function name for the leaf frame
+      StringRef Ref(ContextVec[I]);
+      OContextStr << Ref.split(":").first.str();
+    } else {
+      OContextStr << ContextVec[I];
+    }
+  }
+
+  return OContextStr.str();
 }
 
 void ProfiledBinary::setPreferredBaseAddress(const ELFObjectFileBase *Obj) {
@@ -142,7 +195,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
     if (ShowDisassembly) {
       outs() << format("%8" PRIx64 ":", Offset);
       size_t Start = outs().tell();
-      IP->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
+      IPrinter->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
       if (ShowSourceLocations) {
         unsigned Cur = outs().tell() - Start;
         if (Cur < 40)
@@ -154,6 +207,10 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
     }
 
     const MCInstrDesc &MCDesc = MII->get(Inst.getOpcode());
+
+    // Populate a vector of the symbolized callsite at this location
+    InstructionPointer IP(this, Offset);
+    Offset2LocStackMap[Offset] = symbolize(IP, true);
 
     // Populate address maps.
     CodeAddrs.push_back(Offset);
@@ -206,9 +263,9 @@ void ProfiledBinary::setUpDisassembler(const ELFObjectFileBase *Obj) {
   MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  IP.reset(TheTarget->createMCInstPrinter(Triple(TripleName), AsmPrinterVariant,
-                                          *AsmInfo, *MII, *MRI));
-  IP->setPrintBranchImmAsAddress(true);
+  IPrinter.reset(TheTarget->createMCInstPrinter(
+      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  IPrinter->setPrintBranchImmAsAddress(true);
 }
 
 void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
@@ -283,7 +340,8 @@ void ProfiledBinary::setupSymbolizer() {
   Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
 }
 
-FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP) {
+FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
+                                             bool UseCanonicalFnName) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
   auto Addr = object::SectionedAddress{IP.Offset + PreferredBaseAddress,
@@ -297,13 +355,42 @@ FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP) {
     const auto &CallerFrame = InlineStack.getFrame(I);
     if (CallerFrame.FunctionName == "<invalid>")
       break;
+    StringRef FunctionName(CallerFrame.FunctionName);
+    if (UseCanonicalFnName)
+      FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
     LineLocation Line(CallerFrame.Line - CallerFrame.StartLine,
                       CallerFrame.Discriminator);
-    FrameLocation Callsite(CallerFrame.FunctionName, Line);
+    FrameLocation Callsite(FunctionName.str(), Line);
     CallStack.push_back(Callsite);
   }
 
   return CallStack;
+}
+
+InstructionPointer::InstructionPointer(ProfiledBinary *Binary, uint64_t Address,
+                                       bool RoundToNext)
+    : Binary(Binary), Address(Address) {
+  Index = Binary->getIndexForAddr(Address);
+  if (RoundToNext) {
+    // we might get address which is not the code
+    // it should round to the next valid address
+    this->Address = Binary->getAddressforIndex(Index);
+  }
+}
+
+void InstructionPointer::advance() {
+  Index++;
+  Address = Binary->getAddressforIndex(Index);
+}
+
+void InstructionPointer::backward() {
+  Index--;
+  Address = Binary->getAddressforIndex(Index);
+}
+
+void InstructionPointer::update(uint64_t Addr) {
+  Address = Addr;
+  Index = Binary->getIndexForAddr(Address);
 }
 
 } // end namespace sampleprof
