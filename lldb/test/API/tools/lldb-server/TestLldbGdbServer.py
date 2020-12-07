@@ -745,7 +745,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
 
     @skipIfWindows # no SIGSEGV support
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
+    @expectedFailureNetBSD
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
         self.init_llgs_test()
