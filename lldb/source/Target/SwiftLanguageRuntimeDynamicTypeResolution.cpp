@@ -1089,7 +1089,6 @@ GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
   return ts.RemangleAsType(dem, node);
-  return ts.RemangleAsSwiftifiedType(dem, node);
 }
 
 CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
