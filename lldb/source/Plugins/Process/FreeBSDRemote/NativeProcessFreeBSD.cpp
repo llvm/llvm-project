@@ -485,9 +485,6 @@ Status NativeProcessFreeBSD::Kill() {
 Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                                  MemoryRegionInfo &range_info) {
 
-  // TODO: figure out why it breaks stuff
-  return Status("currently breaks determining module list");
-
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
     return Status("unsupported");

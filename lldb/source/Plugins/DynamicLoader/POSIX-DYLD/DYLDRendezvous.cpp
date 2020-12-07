@@ -295,8 +295,15 @@ bool DYLDRendezvous::SaveSOEntriesFromRemote(
       return false;
 
     // Only add shared libraries and not the executable.
-    if (!SOEntryIsMainExecutable(entry))
+    if (!SOEntryIsMainExecutable(entry)) {
       m_soentries.push_back(entry);
+      // This function is called only once, at the very beginning
+      // of the program.  Make sure to add all soentries that are
+      // already present at this point.  This is necessary to cover
+      // DT_NEEDED on FreeBSD since (unlike Linux) it does not report
+      // loading these libraries separately.
+      m_added_soentries.push_back(entry);
+    }
   }
 
   m_loaded_modules = module_list;
