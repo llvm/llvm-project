@@ -150,15 +150,9 @@ private:
 };
 
 /// A matcher that always returns true.
-///
-/// We only ever need one instance of this matcher, so we create a global one
-/// and reuse it to reduce the overhead of the matcher and increase the chance
-/// of cache hits.
 class TrueMatcherImpl : public DynMatcherInterface {
 public:
-  TrueMatcherImpl() {
-    Retain(); // Reference count will never become zero.
-  }
+  TrueMatcherImpl() = default;
 
   bool dynMatches(const DynTypedNode &, ASTMatchFinder *,
                   BoundNodesTreeBuilder *) const override {
@@ -192,8 +186,6 @@ private:
 };
 
 } // namespace
-
-static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
 
 bool ASTMatchFinder::isTraversalIgnoringImplicitNodes() const {
   return getASTContext().getParentMapContext().getTraversalKind() ==
@@ -273,7 +265,12 @@ DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
 }
 
 DynTypedMatcher DynTypedMatcher::trueMatcher(ASTNodeKind NodeKind) {
-  return DynTypedMatcher(NodeKind, NodeKind, &*TrueMatcherInstance);
+  // We only ever need one instance of TrueMatcherImpl, so we create a static
+  // instance and reuse it to reduce the overhead of the matcher and increase
+  // the chance of cache hits.
+  static const llvm::IntrusiveRefCntPtr<TrueMatcherImpl> Instance =
+      new TrueMatcherImpl();
+  return DynTypedMatcher(NodeKind, NodeKind, Instance);
 }
 
 bool DynTypedMatcher::canMatchNodesOfKind(ASTNodeKind Kind) const {
