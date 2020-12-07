@@ -16,10 +16,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i8(i8* %base, <vscale x 2 x i64> %o
 define <vscale x 2 x i64> @masked_gather_nxv2i16(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffff
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
@@ -32,10 +29,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i16(i8* %base, <vscale x 2 x i64> %
 define <vscale x 2 x i64> @masked_gather_nxv2i32(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
@@ -48,10 +42,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i32(i8* %base, <vscale x 2 x i64> %
 define <vscale x 2 x i64> @masked_gather_nxv2i64(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x i64*>
@@ -62,10 +53,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64(i8* %base, <vscale x 2 x i64> %
 define <vscale x 2 x half> @masked_gather_nxv2f16(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x half*>
@@ -76,10 +64,7 @@ define <vscale x 2 x half> @masked_gather_nxv2f16(i8* %base, <vscale x 2 x i64> 
 define <vscale x 2 x float> @masked_gather_nxv2f32(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x float*>
@@ -90,10 +75,7 @@ define <vscale x 2 x float> @masked_gather_nxv2f32(i8* %base, <vscale x 2 x i64>
 define <vscale x 2 x double> @masked_gather_nxv2f64(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x double*>
@@ -117,10 +99,7 @@ define <vscale x 2 x i64> @masked_sgather_nxv2i8(i8* %base, <vscale x 2 x i64> %
 define <vscale x 2 x i64> @masked_sgather_nxv2i16(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_sgather_nxv2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
@@ -134,10 +113,7 @@ define <vscale x 2 x i64> @masked_sgather_nxv2i16(i8* %base, <vscale x 2 x i64> 
 define <vscale x 2 x i64> @masked_sgather_nxv2i32(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_sgather_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret

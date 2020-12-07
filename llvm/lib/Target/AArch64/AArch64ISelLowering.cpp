@@ -3894,6 +3894,9 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   SDVTList VTs = DAG.getVTList(PassThru.getSimpleValueType(), MVT::Other);
 
+  if (getGatherScatterIndexIsExtended(Index))
+    Index = Index.getOperand(0);
+
   SDValue Ops[] = {Chain, Mask, BasePtr, Index, InputVT, PassThru};
   return DAG.getNode(getGatherVecOpcode(IsScaled, IsSigned, IdxNeedsExtend), DL,
                      VTs, Ops);

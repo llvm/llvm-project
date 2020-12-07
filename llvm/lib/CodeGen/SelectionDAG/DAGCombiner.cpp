@@ -9410,13 +9410,13 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, SelectionDAG &DAG) {
 }
 
 // Fold sext/zext of index into index type.
-bool refineIndexType(MaskedScatterSDNode *MSC, SDValue &Index, bool Scaled,
-                     SelectionDAG &DAG) {
+bool refineIndexType(MaskedGatherScatterSDNode *MGS, SDValue &Index,
+                     bool Scaled, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue Op = Index.getOperand(0);
-    MSC->setIndexType(Scaled ? ISD::UNSIGNED_SCALED : ISD::UNSIGNED_UNSCALED);
+    MGS->setIndexType(Scaled ? ISD::UNSIGNED_SCALED : ISD::UNSIGNED_UNSCALED);
     if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
       Index = Op;
       return true;
@@ -9425,7 +9425,7 @@ bool refineIndexType(MaskedScatterSDNode *MSC, SDValue &Index, bool Scaled,
 
   if (Index.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue Op = Index.getOperand(0);
-    MSC->setIndexType(Scaled ? ISD::SIGNED_SCALED : ISD::SIGNED_UNSCALED);
+    MGS->setIndexType(Scaled ? ISD::SIGNED_SCALED : ISD::SIGNED_UNSCALED);
     if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
       Index = Op;
       return true;
@@ -9494,11 +9494,30 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
   SDValue Mask = MGT->getMask();
+  SDValue Chain = MGT->getChain();
+  SDValue Index = MGT->getIndex();
+  SDValue Scale = MGT->getScale();
+  SDValue PassThru = MGT->getPassThru();
+  SDValue BasePtr = MGT->getBasePtr();
   SDLoc DL(N);
 
   // Zap gathers with a zero mask.
   if (ISD::isBuildVectorAllZeros(Mask.getNode()))
-    return CombineTo(N, MGT->getPassThru(), MGT->getChain());
+    return CombineTo(N, PassThru, MGT->getChain());
+
+  if (refineUniformBase(BasePtr, Index, DAG)) {
+    SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
+                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemOperand(), MGT->getIndexType());
+  }
+
+  if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
+    SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
+                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemOperand(), MGT->getIndexType());
+  }
 
   return SDValue();
 }
