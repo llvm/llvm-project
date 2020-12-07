@@ -15,6 +15,7 @@ class TestBreakpointInGlobalConstructors(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(oslist=["freebsd"], bugnumber='llvm.org/pr48373')
     @expectedFailureNetBSD
     def test(self):
         self.build()
