@@ -70,7 +70,7 @@ namespace llvm {
 template <class Derived> class RefCountedBase {
   mutable unsigned RefCount = 0;
 
-public:
+protected:
   RefCountedBase() = default;
   RefCountedBase(const RefCountedBase &) {}
   RefCountedBase &operator=(const RefCountedBase &) = delete;
