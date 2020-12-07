@@ -18,6 +18,7 @@
 namespace clang {
 namespace clangd {
 namespace {
+using ::testing::ElementsAreArray;
 using ::testing::UnorderedElementsAreArray;
 
 // Create a selection tree corresponding to a point or pair of points.
@@ -452,7 +453,8 @@ TEST(SelectionTest, CommonAncestor) {
     if (Test.ranges().empty()) {
       // If no [[range]] is marked in the example, there should be no selection.
       EXPECT_FALSE(T.commonAncestor()) << C.Code << "\n" << T;
-      EXPECT_THAT(Tracer.takeMetric("selection_recovery"), testing::IsEmpty());
+      EXPECT_THAT(Tracer.takeMetric("selection_recovery", "C++"),
+                  testing::IsEmpty());
     } else {
       // If there is an expected selection, common ancestor should exist
       // with the appropriate node type.
@@ -468,8 +470,8 @@ TEST(SelectionTest, CommonAncestor) {
       // and no nodes outside it are selected.
       EXPECT_TRUE(verifyCommonAncestor(T.root(), T.commonAncestor(), C.Code))
           << C.Code;
-      EXPECT_THAT(Tracer.takeMetric("selection_recovery"),
-                  testing::ElementsAreArray({0}));
+      EXPECT_THAT(Tracer.takeMetric("selection_recovery", "C++"),
+                  ElementsAreArray({0}));
     }
   }
 }
@@ -494,10 +496,10 @@ TEST(SelectionTree, Metrics) {
   auto AST = TestTU::withCode(Annotations(Code).code()).build();
   trace::TestTracer Tracer;
   auto T = makeSelectionTree(Code, AST);
-  EXPECT_THAT(Tracer.takeMetric("selection_recovery"),
-              testing::ElementsAreArray({1}));
-  EXPECT_THAT(Tracer.takeMetric("selection_recovery_type"),
-              testing::ElementsAreArray({1}));
+  EXPECT_THAT(Tracer.takeMetric("selection_recovery", "C++"),
+              ElementsAreArray({1}));
+  EXPECT_THAT(Tracer.takeMetric("selection_recovery_type", "C++"),
+              ElementsAreArray({1}));
 }
 
 // FIXME: Doesn't select the binary operator node in
