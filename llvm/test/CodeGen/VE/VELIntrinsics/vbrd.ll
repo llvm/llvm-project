@@ -263,7 +263,7 @@ declare <256 x double> @llvm.ve.vl.vbrds.vsmvl(float, <256 x i1>, <256 x double>
 define void @vbrdw_vsl(i32 signext %0, i8* %1) {
 ; CHECK-LABEL: vbrdw_vsl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vbrdl %v0, %s0
@@ -286,7 +286,7 @@ define void @vbrdw_vsvl(i32 signext %0, i8* %1) {
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vld %v0, 8, %s1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    vbrdl %v0, %s0
 ; CHECK-NEXT:    vst %v0, 8, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -306,7 +306,7 @@ define void @vbrdw_vsmvl(i32 signext %0, i8* %1) {
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    vld %v0, 8, %s1
-; CHECK-NEXT:    adds.w.sx %s3, %s0, (0)1
+; CHECK-NEXT:    and %s3, %s0, (32)0
 ; CHECK-NEXT:    lvm %vm1, 3, %s0
 ; CHECK-NEXT:    vbrdl %v0, %s3, %vm1
 ; CHECK-NEXT:    vst %v0, 8, %s1

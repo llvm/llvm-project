@@ -339,16 +339,9 @@ bool PPCInstrInfo::getFMAPatterns(
     return true;
   };
 
-  auto IsReassociable = [&](const MachineInstr &Instr, int16_t &AddOpIdx,
-                            bool IsLeaf, bool IsAdd) {
-    int16_t Idx = -1;
-    if (!IsAdd) {
-      Idx = getFMAOpIdxInfo(Instr.getOpcode());
-      if (Idx < 0)
-        return false;
-    } else if (Instr.getOpcode() !=
-               FMAOpIdxInfo[getFMAOpIdxInfo(Root.getOpcode())]
-                           [InfoArrayIdxFAddInst])
+  auto IsReassociableAdd = [&](const MachineInstr &Instr) {
+    if (Instr.getOpcode() !=
+        FMAOpIdxInfo[getFMAOpIdxInfo(Root.getOpcode())][InfoArrayIdxFAddInst])
       return false;
 
     // Instruction can be reassociated.
@@ -361,7 +354,26 @@ bool PPCInstrInfo::getFMAPatterns(
     if (!IsAllOpsVirtualReg(Instr))
       return false;
 
-    if (IsAdd && IsLeaf)
+    return true;
+  };
+
+  auto IsReassociableFMA = [&](const MachineInstr &Instr, int16_t &AddOpIdx,
+                               bool IsLeaf) {
+    int16_t Idx = getFMAOpIdxInfo(Instr.getOpcode());
+    if (Idx < 0)
+      return false;
+
+    // Instruction can be reassociated.
+    // fast math flags may prohibit reassociation.
+    if (!(Instr.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+          Instr.getFlag(MachineInstr::MIFlag::FmNsz)))
+      return false;
+
+    // Instruction operands are virtual registers for reassociation.
+    if (!IsAllOpsVirtualReg(Instr))
+      return false;
+
+    if (IsLeaf)
       return true;
 
     AddOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxAddOpIdx];
@@ -379,7 +391,7 @@ bool PPCInstrInfo::getFMAPatterns(
 
   int16_t AddOpIdx = -1;
   // Root must be a valid FMA like instruction.
-  if (!IsReassociable(Root, AddOpIdx, false, false))
+  if (!IsReassociableFMA(Root, AddOpIdx, false))
     return false;
 
   assert((AddOpIdx >= 0) && "add operand index not right!");
@@ -389,7 +401,7 @@ bool PPCInstrInfo::getFMAPatterns(
 
   // Prev must be a valid FMA like instruction.
   AddOpIdx = -1;
-  if (!IsReassociable(*Prev, AddOpIdx, false, false))
+  if (!IsReassociableFMA(*Prev, AddOpIdx, false))
     return false;
 
   assert((AddOpIdx >= 0) && "add operand index not right!");
@@ -397,11 +409,11 @@ bool PPCInstrInfo::getFMAPatterns(
   Register RegA = Prev->getOperand(AddOpIdx).getReg();
   MachineInstr *Leaf = MRI.getUniqueVRegDef(RegA);
   AddOpIdx = -1;
-  if (IsReassociable(*Leaf, AddOpIdx, true, false)) {
+  if (IsReassociableFMA(*Leaf, AddOpIdx, true)) {
     Patterns.push_back(MachineCombinerPattern::REASSOC_XMM_AMM_BMM);
     return true;
   }
-  if (IsReassociable(*Leaf, AddOpIdx, true, true)) {
+  if (IsReassociableAdd(*Leaf)) {
     Patterns.push_back(MachineCombinerPattern::REASSOC_XY_AMM_BMM);
     return true;
   }

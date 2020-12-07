@@ -5,8 +5,8 @@
 %struct.anon1 = type { i32, i32, i32 }
 %struct.anon2 = type { i32, [32 x i32], i32 }
 
-@arr1 = external global [65 x %struct.anon1], align 16
-@arr2 = external global [65 x %struct.anon2], align 16
+@arr1 = external dso_local global [65 x %struct.anon1], align 16
+@arr2 = external dso_local global [65 x %struct.anon2], align 16
 
 define void @test1(i64 %x) nounwind {
 ; ENABLED-LABEL: test1:

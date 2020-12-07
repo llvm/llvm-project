@@ -30,7 +30,7 @@ define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 
 define i8 @knownnegation(i8 %x, i8 %y) {
 ; CHECK-LABEL: @knownnegation(
-; CHECK-NEXT:    ret i8 0 
+; CHECK-NEXT:    ret i8 0
 ;
   %xy = sub i8 %x, %y
   %yx = sub i8 %y, %x
@@ -48,4 +48,10 @@ define <2 x i8> @knownnegation_commute_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %r
 }
 
-
+define i32 @poison(i32 %x) {
+; CHECK-LABEL: @poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %y = add i32 %x, poison
+  ret i32 %y
+}

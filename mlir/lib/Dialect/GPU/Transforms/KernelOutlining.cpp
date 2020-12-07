@@ -239,7 +239,7 @@ public:
     bool modified = false;
     for (auto func : getOperation().getOps<FuncOp>()) {
       // Insert just after the function.
-      Block::iterator insertPt(func.getOperation()->getNextNode());
+      Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         llvm::SetVector<Value> operands;
         std::string kernelFnName =

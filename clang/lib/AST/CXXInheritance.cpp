@@ -33,29 +33,6 @@
 
 using namespace clang;
 
-/// Computes the set of declarations referenced by these base
-/// paths.
-void CXXBasePaths::ComputeDeclsFound() {
-  assert(NumDeclsFound == 0 && !DeclsFound &&
-         "Already computed the set of declarations");
-
-  llvm::SmallSetVector<NamedDecl *, 8> Decls;
-  for (paths_iterator Path = begin(), PathEnd = end(); Path != PathEnd; ++Path)
-    Decls.insert(Path->Decls.front());
-
-  NumDeclsFound = Decls.size();
-  DeclsFound = std::make_unique<NamedDecl *[]>(NumDeclsFound);
-  std::copy(Decls.begin(), Decls.end(), DeclsFound.get());
-}
-
-CXXBasePaths::decl_range CXXBasePaths::found_decls() {
-  if (NumDeclsFound == 0)
-    ComputeDeclsFound();
-
-  return decl_range(decl_iterator(DeclsFound.get()),
-                    decl_iterator(DeclsFound.get() + NumDeclsFound));
-}
-
 /// isAmbiguous - Determines whether the set of paths provided is
 /// ambiguous, i.e., there are two or more paths that refer to
 /// different base class subobjects of the same type. BaseType must be

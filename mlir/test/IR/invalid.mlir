@@ -1572,3 +1572,7 @@ func @invalid_region_dominance_with_dominance_free_regions() {
   }
   return
 }
+
+// -----
+
+func @foo() {} // expected-error {{expected non-empty function body}}

@@ -702,7 +702,7 @@ defines the relation between the region results and the operation results.
 
 Each value in MLIR has a type defined by the type system below. There are a
 number of primitive types (like integers) and also aggregate types for tensors
-and memory buffers. MLIR [standard types](#standard-types) do not include
+and memory buffers. MLIR [builtin types](#builtin-types) do not include
 structures, arrays, or dictionaries.
 
 MLIR has an open type system (i.e. there is no fixed list of types), and types
@@ -710,7 +710,7 @@ may have application-specific semantics. For example, MLIR supports a set of
 [dialect types](#dialect-types).
 
 ```
-type ::= type-alias | dialect-type | standard-type
+type ::= type-alias | dialect-type | builtin-type
 
 type-list-no-parens ::=  type (`,` type)*
 type-list-parens ::= `(` `)`
@@ -807,13 +807,13 @@ characters.
 
 See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
-### Standard Types
+### Builtin Types
 
-Standard types are a core set of [dialect types](#dialect-types) that are
-defined in a builtin dialect and thus available to all users of MLIR.
+Builtin types are a core set of [dialect types](#dialect-types) that are defined
+in a builtin dialect and thus available to all users of MLIR.
 
 ```
-standard-type ::=     complex-type
+builtin-type ::=      complex-type
                     | float-type
                     | function-type
                     | index-type
@@ -1337,7 +1337,7 @@ dialect and not the function argument.
 Attribute values are represented by the following forms:
 
 ```
-attribute-value ::= attribute-alias | dialect-attribute | standard-attribute
+attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 ```
 
 ### Attribute Value Aliases
@@ -1369,49 +1369,49 @@ Example:
 
 Similarly to operations, dialects may define custom attribute values. The
 syntactic structure of these values is identical to custom dialect type values,
-except that dialect attributes values are distinguished with a leading '#',
-while dialect types are distinguished with a leading '!'.
+except that dialect attribute values are distinguished with a leading '#', while
+dialect types are distinguished with a leading '!'.
 
 ```
-dialect-attribute ::= '#' opaque-dialect-item
-dialect-attribute ::= '#' pretty-dialect-item
+dialect-attribute-value ::= '#' opaque-dialect-item
+dialect-attribute-value ::= '#' pretty-dialect-item
 ```
 
-Dialect attributes can be specified in a verbose form, e.g. like this:
+Dialect attribute values can be specified in a verbose form, e.g. like this:
 
 ```mlir
-// Complex attribute
+// Complex attribute value.
 #foo<"something<abcd>">
 
-// Even more complex attribute
+// Even more complex attribute value.
 #foo<"something<a%%123^^^>>>">
 ```
 
-Dialect attributes that are simple enough can use the pretty format, which is a
-lighter weight syntax that is equivalent to the above forms:
+Dialect attribute values that are simple enough can use the pretty format, which
+is a lighter weight syntax that is equivalent to the above forms:
 
 ```mlir
 // Complex attribute
 #foo.something<abcd>
 ```
 
-Sufficiently complex dialect attributes are required to use the verbose form for
-generality. For example, the more complex type shown above wouldn't be valid in
-the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
-that are not allowed in the lighter syntax, as well as unbalanced `<>`
-characters.
+Sufficiently complex dialect attribute values are required to use the verbose
+form for generality. For example, the more complex type shown above would not be
+valid in the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains
+characters that are not allowed in the lighter syntax, as well as unbalanced
+`<>` characters.
 
-See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) on how to define dialect
 attribute values.
 
-### Standard Attribute Values
+### Builtin Attribute Values
 
-Standard attributes are a core set of
+Builtin attributes are a core set of
 [dialect attributes](#dialect-attribute-values) that are defined in a builtin
 dialect and thus available to all users of MLIR.
 
 ```
-standard-attribute ::=   affine-map-attribute
+builtin-attribute ::=    affine-map-attribute
                        | array-attribute
                        | bool-attribute
                        | dictionary-attribute

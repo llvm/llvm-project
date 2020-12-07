@@ -361,6 +361,7 @@ let Predicates = [HasStdExtD, IsRV64] in {
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FMV_D_X X0)>;
 
+// Moves (no conversion)
 def : Pat<(bitconvert GPR:$rs1), (FMV_D_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
 
@@ -372,7 +373,7 @@ def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR64:$rs1)), i32),
           (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
-def : Pat<(sint_to_fp (sext_inreg GPR:$rs1, i32)), (FCVT_D_W $rs1)>;
+def : Pat<(sint_to_fp (sexti32 GPR:$rs1)), (FCVT_D_W $rs1)>;
 def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_D_WU $rs1)>;
 
 def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_L_D FPR64:$rs1, 0b001)>;

@@ -499,7 +499,7 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
 bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
                                llvm::AMDGPU::GPUKind Kind) {
   const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
-  static bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
 
   return !HasWave32 || DriverArgs.hasFlag(
     options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);

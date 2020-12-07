@@ -274,7 +274,6 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 bool StackProtector::RequiresStackProtector() {
   bool Strong = false;
   bool NeedsProtector = false;
-  HasPrologue = findStackProtectorIntrinsic(*F);
 
   if (F->hasFnAttribute(Attribute::SafeStack))
     return false;
@@ -295,8 +294,6 @@ bool StackProtector::RequiresStackProtector() {
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
   } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
     Strong = true;
-  else if (HasPrologue)
-    NeedsProtector = true;
   else if (!F->hasFnAttribute(Attribute::StackProtect))
     return false;
 

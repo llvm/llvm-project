@@ -35,7 +35,7 @@ entry:
 declare %class.A* @_Z3facv() #1
 
 ; virt_fn.ll
-@p = external global void (i32)**
+@p = external dso_local global void (i32)**
 
 define i32 @test2() #0 {
   ;ATOM-LABEL: test2:

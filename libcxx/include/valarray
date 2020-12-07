@@ -136,6 +136,7 @@ public:
     void operator>>=(const valarray<value_type>& v) const;
 
     void operator=(const value_type& x) const;
+    void operator=(const valarray<T>& val_arr) const;
 
     slice_array() = delete;
 };
@@ -1264,6 +1265,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void operator=(const value_type& __x) const;
 
+    _LIBCPP_INLINE_VISIBILITY
+    void operator=(const valarray<value_type>& __va) const;
+
 private:
     _LIBCPP_INLINE_VISIBILITY
     slice_array(const slice& __sl, const valarray<value_type>& __v)
@@ -1301,6 +1305,15 @@ slice_array<_Tp>::operator=(const _Expr& __v) const
     value_type* __t = __vp_;
     for (size_t __i = 0; __i < __size_; ++__i, __t += __stride_)
         *__t = __v[__i];
+}
+
+template <class _Tp>
+inline void
+slice_array<_Tp>::operator=(const valarray<value_type>& __va) const
+{
+    value_type* __t = __vp_;
+    for (size_t __i = 0; __i < __va.size(); ++__i, __t += __stride_)
+        *__t = __va[__i];
 }
 
 template <class _Tp>

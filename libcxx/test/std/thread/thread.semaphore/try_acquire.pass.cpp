@@ -22,6 +22,7 @@
 
 // <semaphore>
 
+#include <cassert>
 #include <semaphore>
 #include <thread>
 

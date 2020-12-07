@@ -662,14 +662,14 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (unsigned i = 0; CSRegs[i]; ++i)
       SavedRegs.set(CSRegs[i]);
 
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtD() ||
-        MF.getSubtarget<RISCVSubtarget>().hasStdExtF()) {
+    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtF()) {
 
       // If interrupt is enabled, this list contains all FP registers.
       const MCPhysReg * Regs = MF.getRegInfo().getCalleeSavedRegs();
 
       for (unsigned i = 0; Regs[i]; ++i)
-        if (RISCV::FPR32RegClass.contains(Regs[i]) ||
+        if (RISCV::FPR16RegClass.contains(Regs[i]) ||
+            RISCV::FPR32RegClass.contains(Regs[i]) ||
             RISCV::FPR64RegClass.contains(Regs[i]))
           SavedRegs.set(Regs[i]);
     }

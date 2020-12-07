@@ -441,7 +441,7 @@ public:
 
   unsigned getPlatformFlags() const override { return EF.getHeader().e_flags; }
 
-  const ELFFile<ELFT> *getELFFile() const { return &EF; }
+  const ELFFile<ELFT> &getELFFile() const { return EF; }
 
   bool isDyldType() const { return isDyldELFObject; }
   static bool classof(const Binary *v) {

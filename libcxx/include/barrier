@@ -58,6 +58,9 @@ namespace std
 # error <barrier> is not supported on this single threaded system
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 14
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -288,7 +291,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b(__count, std::move(__completion)) {
+        : __b(__count, _VSTD::move(__completion)) {
     }
 
     barrier(barrier const&) = delete;
@@ -302,7 +305,7 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __phase) const
     {
-        __b.wait(std::move(__phase));
+        __b.wait(_VSTD::move(__phase));
     }
 	_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait()
@@ -319,5 +322,7 @@ public:
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 14
+
+_LIBCPP_POP_MACROS
 
 #endif //_LIBCPP_BARRIER

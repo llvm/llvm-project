@@ -457,6 +457,10 @@ class StdLibraryFunctionsChecker
       CaseConstraints.push_back(std::move(CS));
       return *this;
     }
+    Summary &Case(const ConstraintSet &CS) {
+      CaseConstraints.push_back(CS);
+      return *this;
+    }
     Summary &ArgConstraint(ValueConstraintPtr VC) {
       assert(VC->getArgNo() != Ret &&
              "Arg constraint should not refer to the return value");
@@ -1235,9 +1239,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // read()-like functions that never return more than buffer size.
   auto FreadSummary =
       Summary(NoEvalCall)
-          .Case({
-              ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-          })
+          .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                 ReturnValueCondition(WithinRange, Range(0, SizeMax))})
           .ArgConstraint(NotNull(ArgNo(0)))
           .ArgConstraint(NotNull(ArgNo(3)))
           .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
@@ -1722,7 +1725,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "ftello", Signature(ArgTypes{FilePtrTy}, RetType{Off_tTy}),
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
 
-    Optional<RangeInt> Off_tMax = getMaxValue(Off_tTy);
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
     addToFunctionSummaryMap(
@@ -1732,10 +1734,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, Off_tMax))));
+                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
 
     Optional<QualType> Off64_tTy = lookupTy("off64_t");
-    Optional<RangeInt> Off64_tMax = getMaxValue(Off_tTy);
     // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,
     // off64_t offset);
     addToFunctionSummaryMap(
@@ -1745,7 +1746,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, Off64_tMax))));
+                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
 
     // int pipe(int fildes[2]);
     addToFunctionSummaryMap(
@@ -1766,6 +1767,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
@@ -1781,6 +1784,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
             RetType{Ssize_tTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(3)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2)))
@@ -1844,6 +1849,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     Optional<QualType> Socklen_tPtrRestrictTy = getRestrictTy(Socklen_tPtrTy);
     Optional<RangeInt> Socklen_tMax = getMaxValue(Socklen_tTy);
 
+    const auto ReturnsZeroOrMinusOne =
+        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
+
     // In 'socket.h' of some libc implementations with C99, sockaddr parameter
     // is a transparent union of the underlying sockaddr_ family of pointers
     // instead of being a pointer to struct sockaddr. In these cases, the
@@ -1852,6 +1860,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // constraints which require pointer types for the sockaddr param.
     auto Accept =
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, Range(-1, IntMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)));
     if (!addToFunctionSummaryMap(
             "accept",
@@ -1874,6 +1883,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             Signature(ArgTypes{IntTy, ConstStructSockaddrPtrTy, Socklen_tTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
+                .Case(ReturnsZeroOrMinusOne)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -1886,6 +1896,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           "bind",
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tTy}, RetType{IntTy}),
           Summary(NoEvalCall)
+              .Case(ReturnsZeroOrMinusOne)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax)))
               .ArgConstraint(
@@ -1899,6 +1910,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                Socklen_tPtrRestrictTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
+                .Case(ReturnsZeroOrMinusOne)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -1908,6 +1920,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tPtrRestrictTy},
                     RetType{IntTy}),
           Summary(NoEvalCall)
+              .Case(ReturnsZeroOrMinusOne)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -1919,6 +1932,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                Socklen_tPtrRestrictTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
+                .Case(ReturnsZeroOrMinusOne)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))
@@ -1928,6 +1942,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tPtrRestrictTy},
                     RetType{IntTy}),
           Summary(NoEvalCall)
+              .Case(ReturnsZeroOrMinusOne)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -1938,6 +1953,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             Signature(ArgTypes{IntTy, ConstStructSockaddrPtrTy, Socklen_tTy},
                       RetType{IntTy}),
             Summary(NoEvalCall)
+                .Case(ReturnsZeroOrMinusOne)
                 .ArgConstraint(
                     ArgumentCondition(0, WithinRange, Range(0, IntMax)))
                 .ArgConstraint(NotNull(ArgNo(1)))))
@@ -1945,11 +1961,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           "connect",
           Signature(ArgTypes{IntTy, Irrelevant, Socklen_tTy}, RetType{IntTy}),
           Summary(NoEvalCall)
+              .Case(ReturnsZeroOrMinusOne)
               .ArgConstraint(
                   ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     auto Recvfrom =
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2)));
@@ -1973,6 +1992,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     auto Sendto =
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2)));
@@ -1996,6 +2017,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap("listen",
                             Signature(ArgTypes{IntTy, IntTy}, RetType{IntTy}),
                             Summary(NoEvalCall)
+                                .Case(ReturnsZeroOrMinusOne)
                                 .ArgConstraint(ArgumentCondition(
                                     0, WithinRange, Range(0, IntMax))));
 
@@ -2005,6 +2027,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, VoidPtrTy, SizeTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2))));
@@ -2015,12 +2039,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         getPointerTy(getConstTy(StructMsghdrTy));
 
     // ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
-    addToFunctionSummaryMap("recvmsg",
-                            Signature(ArgTypes{IntTy, StructMsghdrPtrTy, IntTy},
-                                      RetType{Ssize_tTy}),
-                            Summary(NoEvalCall)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+    addToFunctionSummaryMap(
+        "recvmsg",
+        Signature(ArgTypes{IntTy, StructMsghdrPtrTy, IntTy},
+                  RetType{Ssize_tTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
     addToFunctionSummaryMap(
@@ -2028,6 +2054,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstStructMsghdrPtrTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
@@ -2038,6 +2065,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, IntTy, IntTy, ConstVoidPtrTy, Socklen_tTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
+            .Case(ReturnsZeroOrMinusOne)
             .ArgConstraint(NotNull(ArgNo(3)))
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
@@ -2053,6 +2081,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                            Socklen_tPtrRestrictTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
+            .Case(ReturnsZeroOrMinusOne)
             .ArgConstraint(NotNull(ArgNo(3)))
             .ArgConstraint(NotNull(ArgNo(4))));
 
@@ -2062,6 +2091,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(-1, Ssize_tMax))})
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
                                       /*BufSize=*/ArgNo(2))));
@@ -2070,7 +2101,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "socketpair",
         Signature(ArgTypes{IntTy, IntTy, IntTy, IntPtrTy}, RetType{IntTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(3))));
+        Summary(NoEvalCall)
+            .Case(ReturnsZeroOrMinusOne)
+            .ArgConstraint(NotNull(ArgNo(3))));
 
     // int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen,
     //                 char *restrict node, socklen_t nodelen,

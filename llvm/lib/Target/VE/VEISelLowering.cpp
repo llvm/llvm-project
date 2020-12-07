@@ -913,10 +913,6 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 
   // Handle PIC mode first. VE needs a got load for every variable!
   if (isPositionIndependent()) {
-    // GLOBAL_BASE_REG codegen'ed with call. Inform MFI that this
-    // function has calls.
-    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-    MFI.setHasCalls(true);
     auto GlobalN = dyn_cast<GlobalAddressSDNode>(Op);
 
     if (isa<ConstantPoolSDNode>(Op) || isa<JumpTableSDNode>(Op) ||

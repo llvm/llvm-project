@@ -457,8 +457,8 @@ append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ SANITIZER_COMMON_CFLA
 append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SANITIZER_COMMON_LINK_FLAGS)
 
 # Remove -stdlib= which is unused when passing -nostdinc++...
-string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag ${CMAKE_CXX_FLAGS})
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})

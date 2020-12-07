@@ -1127,3 +1127,5 @@ let Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64] in {
   defm VAMOMINUEI64 : VAMO<AMOOPVamoMinu, LSWidth64, "vamominuei64.v">;
   defm VAMOMAXUEI64 : VAMO<AMOOPVamoMaxu, LSWidth64, "vamomaxuei64.v">;
 } // Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64]
+
+include "RISCVInstrInfoVPseudos.td"

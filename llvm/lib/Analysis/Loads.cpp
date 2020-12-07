@@ -12,7 +12,9 @@
 
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -107,10 +109,49 @@ static bool isDereferenceableAndAlignedPointer(
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
                                               Size, DL, CtxI, DT, Visited, MaxDepth);
 
-  if (const auto *Call = dyn_cast<CallBase>(V))
+  if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
                                                 DT, Visited, MaxDepth);
+
+    // If we have a call we can't recurse through, check to see if this is an
+    // allocation function for which we can establish an minimum object size.
+    // Such a minimum object size is analogous to a deref_or_null attribute in
+    // that we still need to prove the result non-null at point of use.
+    // NOTE: We can only use the object size as a base fact as we a) need to
+    // prove alignment too, and b) don't want the compile time impact of a
+    // separate recursive walk.
+    ObjectSizeOpts Opts;
+    // TODO: It may be okay to round to align, but that would imply that
+    // accessing slightly out of bounds was legal, and we're currently
+    // inconsistent about that.  For the moment, be conservative.
+    Opts.RoundToAlign = false;
+    Opts.NullIsUnknownSize = true;
+    uint64_t ObjSize;
+    // TODO: Plumb through TLI so that malloc routines and such working.
+    if (getObjectSize(V, ObjSize, DL, nullptr, Opts)) {
+      APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
+      if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
+          isKnownNonZero(V, DL, 0, nullptr, CtxI, DT) &&
+          // TODO: We're currently inconsistent about whether deref(N) is a
+          // global fact or a point in time fact.  Once D61652 eventually
+          // lands, this check will be restricted to the point in time
+          // variant. For that variant, we need to prove that object hasn't
+          // been conditionally freed before ontext instruction - if it has, we
+          // might be hoisting over the inverse conditional and creating a
+          // dynamic use after free. 
+          !PointerMayBeCapturedBefore(V, true, true, CtxI, DT, true)) {
+        // As we recursed through GEPs to get here, we've incrementally
+        // checked that each step advanced by a multiple of the alignment. If
+        // our base is properly aligned, then the original offset accessed
+        // must also be. 
+        Type *Ty = V->getType();
+        assert(Ty->isSized() && "must be sized");
+        APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+        return isAligned(V, Offset, Alignment, DL);
+      }
+    }
+  }
 
   // If we don't know, assume the worst.
   return false;

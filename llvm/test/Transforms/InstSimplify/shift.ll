@@ -237,3 +237,53 @@ define <2 x i64> @shl_or_shr2v(<2 x i32> %a, <2 x i32> %b) {
   %tmp5 = lshr <2 x i64> %tmp4, <i64 31, i64 31>
   ret <2 x i64> %tmp5
 }
+
+; TOOD: these should be poison
+
+define i32 @poison(i32 %x) {
+; CHECK-LABEL: @poison(
+; CHECK-NEXT:    ret i32 undef
+;
+  %v = lshr i32 %x, poison
+  ret i32 %v
+}
+
+define i32 @poison2(i32 %x) {
+; CHECK-LABEL: @poison2(
+; CHECK-NEXT:    ret i32 undef
+;
+  %v = ashr i32 %x, poison
+  ret i32 %v
+}
+
+define i32 @poison3(i32 %x) {
+; CHECK-LABEL: @poison3(
+; CHECK-NEXT:    ret i32 undef
+;
+  %v = shl i32 %x, poison
+  ret i32 %v
+}
+
+define i32 @poison4(i32 %x) {
+; CHECK-LABEL: @poison4(
+; CHECK-NEXT:    ret i32 0
+;
+  %v = lshr i32 poison, %x
+  ret i32 %v
+}
+
+define i32 @poison5(i32 %x) {
+; CHECK-LABEL: @poison5(
+; CHECK-NEXT:    ret i32 0
+;
+  %v = ashr i32 poison, %x
+  ret i32 %v
+}
+
+define i32 @poison6(i32 %x) {
+; CHECK-LABEL: @poison6(
+; CHECK-NEXT:    ret i32 0
+;
+  %v = shl i32 poison, %x
+  ret i32 %v
+}

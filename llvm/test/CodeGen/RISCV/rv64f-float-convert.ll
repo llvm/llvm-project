@@ -169,7 +169,7 @@ define float @sitofp_aext_i32_to_f32(i32 %a) nounwind {
 define float @sitofp_sext_i32_to_f32(i32 signext %a) nounwind {
 ; RV64IF-LABEL: sitofp_sext_i32_to_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.s.l ft0, a0
+; RV64IF-NEXT:    fcvt.s.w ft0, a0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %1 = sitofp i32 %a to float

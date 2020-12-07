@@ -222,6 +222,7 @@ void ScopedString::append(const char *Format, va_list Args) {
       static_cast<uptr>(formatString(C, sizeof(C), Format, Args)) + 1;
   String.resize(Length + AdditionalLength);
   formatString(String.data() + Length, AdditionalLength, Format, ArgsCopy);
+  va_end(ArgsCopy);
   Length = strlen(String.data());
   CHECK_LT(Length, String.size());
 }

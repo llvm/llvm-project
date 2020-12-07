@@ -444,7 +444,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{s32, s1}, {s64, s1}, {p0, s1}})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
-      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .minScalarEltSameAsIf(all(isVector(0), isVector(1)), 1, 0)
       .lowerIf(isVector(0));
 
   // Pointer-handling

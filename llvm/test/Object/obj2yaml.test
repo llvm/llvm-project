@@ -358,35 +358,10 @@
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x4
 # ELF-MIPSEL-NEXT:     Content:         0000023C00004224E8FFBD271400BFAF1000B0AF218059000000018E000024240000198E09F8200321E000020000198E09F8200321E00002000002241000B08F1400BF8F0800E0031800BD27
-# ELF-MIPSEL-NEXT:   - Name:            .rel.text
-# ELF-MIPSEL-NEXT:     Type:            SHT_REL
-# ELF-MIPSEL-NEXT:     Link:            .symtab
-# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
-# ELF-MIPSEL-NEXT:     Offset:          0x434
-# ELF-MIPSEL-NEXT:     Info:            .text
-# ELF-MIPSEL-NEXT:     Relocations:
-# ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_HI16
-# ELF-MIPSEL-NEXT:       - Offset:          0x4
-# ELF-MIPSEL-NEXT:         Symbol:          _gp_disp
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
-# ELF-MIPSEL-NEXT:       - Offset:          0x18
-# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_GOT16
-# ELF-MIPSEL-NEXT:       - Offset:          0x1C
-# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
-# ELF-MIPSEL-NEXT:       - Offset:          0x20
-# ELF-MIPSEL-NEXT:         Symbol:          puts
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
-# ELF-MIPSEL-NEXT:       - Offset:          0x2C
-# ELF-MIPSEL-NEXT:         Symbol:          SomeOtherFunction
-# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
 # ELF-MIPSEL-NEXT:   - Name:            .data
 # ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x4
-# ELF-MIPSEL-NEXT:     Offset:          0x80
 # ELF-MIPSEL-NEXT:   - Name:            .bss
 # ELF-MIPSEL-NEXT:     Type:            SHT_NOBITS
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
@@ -416,6 +391,29 @@
 # ELF-MIPSEL-NEXT:     GPRSize:         REG_32
 # ELF-MIPSEL-NEXT:     CPR1Size:        REG_32
 # ELF-MIPSEL-NEXT:     Flags1:          [ ODDSPREG ]
+# ELF-MIPSEL-NEXT:   - Name:            .rel.text
+# ELF-MIPSEL-NEXT:     Type:            SHT_REL
+# ELF-MIPSEL-NEXT:     Link:            .symtab
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Info:            .text
+# ELF-MIPSEL-NEXT:     Relocations:
+# ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_HI16
+# ELF-MIPSEL-NEXT:       - Offset:          0x4
+# ELF-MIPSEL-NEXT:         Symbol:          _gp_disp
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
+# ELF-MIPSEL-NEXT:       - Offset:          0x18
+# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_GOT16
+# ELF-MIPSEL-NEXT:       - Offset:          0x1C
+# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
+# ELF-MIPSEL-NEXT:       - Offset:          0x20
+# ELF-MIPSEL-NEXT:         Symbol:          puts
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
+# ELF-MIPSEL-NEXT:       - Offset:          0x2C
+# ELF-MIPSEL-NEXT:         Symbol:          SomeOtherFunction
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
 # ELF-MIPSEL-NEXT: Symbols:
 # ELF-MIPSEL-NEXT:     - Name:            trivial.ll
 # ELF-MIPSEL-NEXT:       Type:            STT_FILE
@@ -461,6 +459,20 @@
 # ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 # ELF-MIPSEL-NEXT:     - Name:            puts
 # ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT: SectionHeaderTable:
+# ELF-MIPSEL-NEXT:   Sections:
+# ELF-MIPSEL-NEXT:     - Name: .text
+# ELF-MIPSEL-NEXT:     - Name: .rel.text
+# ELF-MIPSEL-NEXT:     - Name: .data
+# ELF-MIPSEL-NEXT:     - Name: .bss
+# ELF-MIPSEL-NEXT:     - Name: .mdebug.abi32
+# ELF-MIPSEL-NEXT:     - Name: .rodata.str1.1
+# ELF-MIPSEL-NEXT:     - Name: .reginfo
+# ELF-MIPSEL-NEXT:     - Name: .MIPS.abiflags
+# ELF-MIPSEL-NEXT:     - Name: .shstrtab
+# ELF-MIPSEL-NEXT:     - Name: .symtab
+# ELF-MIPSEL-NEXT:     - Name: .strtab
+# ELF-MIPSEL-NEXT: ...
 
 # RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mips64el | FileCheck %s --check-prefix ELF-MIPS64EL
 
@@ -480,20 +492,10 @@
 # ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
 # ELF-MIPS64EL-NEXT:     Content:         '00000000000000000000000000000000'
-# ELF-MIPS64EL-NEXT:   - Name:            .rela.data
-# ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
-# ELF-MIPS64EL-NEXT:     Link:            .symtab
-# ELF-MIPS64EL-NEXT:     AddressAlign:    0x8
-# ELF-MIPS64EL-NEXT:     Offset:          0x410
-# ELF-MIPS64EL-NEXT:     Info:            .data
-# ELF-MIPS64EL-NEXT:     Relocations:
-# ELF-MIPS64EL-NEXT:       - Symbol:          zed
-# ELF-MIPS64EL-NEXT:         Type:            R_MIPS_64
 # ELF-MIPS64EL-NEXT:   - Name:            .bss
 # ELF-MIPS64EL-NEXT:     Type:            SHT_NOBITS
 # ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
-# ELF-MIPS64EL-NEXT:     Offset:          0x50
 # ELF-MIPS64EL-NEXT:   - Name:            .MIPS.options
 # ELF-MIPS64EL-NEXT:     Type:            SHT_MIPS_OPTIONS
 # ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MIPS_NOSTRIP ]
@@ -503,6 +505,14 @@
 # ELF-MIPS64EL-NEXT:   - Name:            .pdr
 # ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x4
+# ELF-MIPS64EL-NEXT:   - Name:            .rela.data
+# ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
+# ELF-MIPS64EL-NEXT:     Link:            .symtab
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x8
+# ELF-MIPS64EL-NEXT:     Info:            .data
+# ELF-MIPS64EL-NEXT:     Relocations:
+# ELF-MIPS64EL-NEXT:       - Symbol:          zed
+# ELF-MIPS64EL-NEXT:         Type:            R_MIPS_64
 # ELF-MIPS64EL-NEXT: Symbols:
 # ELF-MIPS64EL-NEXT:     - Name:            .text
 # ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
@@ -523,6 +533,18 @@
 # ELF-MIPS64EL-NEXT:       Section:         .pdr
 # ELF-MIPS64EL-NEXT:     - Name:            zed
 # ELF-MIPS64EL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPS64EL-NEXT: SectionHeaderTable:
+# ELF-MIPS64EL-NEXT:   Sections:
+# ELF-MIPS64EL-NEXT:     - Name: .text
+# ELF-MIPS64EL-NEXT:     - Name: .data
+# ELF-MIPS64EL-NEXT:     - Name: .rela.data
+# ELF-MIPS64EL-NEXT:     - Name: .bss
+# ELF-MIPS64EL-NEXT:     - Name: .MIPS.options
+# ELF-MIPS64EL-NEXT:     - Name: .pdr
+# ELF-MIPS64EL-NEXT:     - Name: .shstrtab
+# ELF-MIPS64EL-NEXT:     - Name: .symtab
+# ELF-MIPS64EL-NEXT:     - Name: .strtab
+# ELF-MIPS64EL-NEXT: ...
 
 # RUN: yaml2obj %s -o %t-x86-64
 # RUN: obj2yaml %t-x86-64 | FileCheck %s --check-prefix ELF-X86-64

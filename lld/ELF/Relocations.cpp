@@ -945,7 +945,15 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
 // Returns true if the undefined symbol will produce an error message.
 static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
-  if (!sym.isUndefined() || sym.isWeak())
+  if (!sym.isUndefined())
+    return false;
+  // If versioned, issue an error (even if the symbol is weak) because we don't
+  // know the defining filename which is required to construct a Verneed entry.
+  if (*sym.getVersionSuffix() == '@') {
+    undefs.push_back({&sym, {{&sec, offset}}, false});
+    return true;
+  }
+  if (sym.isWeak())
     return false;
 
   bool canBeExternal = !sym.isLocal() && sym.visibility == STV_DEFAULT;

@@ -375,6 +375,8 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
 
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
+  void CheckObjectInNamelist(
+      const parser::Name &, const Symbol &, Symbol::Flag);
 };
 
 template <typename T>
@@ -1107,6 +1109,10 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (dataSharingAttributeFlags.test(ompFlag)) {
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
+                  if (privateDataSharingAttributeFlags.test(ompFlag)) {
+                    CheckObjectInNamelist(*name, *symbol, ompFlag);
+                  }
+
                   if (ompFlag == Symbol::Flag::OmpAllocate) {
                     AddAllocateName(name);
                   }
@@ -1255,6 +1261,20 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
       context_.Say(name.source,
           "Non-THREADPRIVATE object '%s' in COPYIN clause"_err_en_US,
           checkSymbol->name());
+  }
+}
+
+void OmpAttributeVisitor::CheckObjectInNamelist(
+    const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
+  if (symbol.GetUltimate().test(Symbol::Flag::InNamelist)) {
+    llvm::StringRef clauseName{"PRIVATE"};
+    if (ompFlag == Symbol::Flag::OmpFirstPrivate)
+      clauseName = "FIRSTPRIVATE";
+    else if (ompFlag == Symbol::Flag::OmpLastPrivate)
+      clauseName = "LASTPRIVATE";
+    context_.Say(name.source,
+        "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
+        name.ToString(), clauseName.str());
   }
 }
 

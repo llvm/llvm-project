@@ -730,7 +730,12 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  if (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX)
+  // Only R_X86_64_[REX_]GOTPCRELX can be relaxed. GNU as may emit GOTPCRELX
+  // with addend != -4. Such an instruction does not load the full GOT entry, so
+  // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
+  // (addend=0) loads the high 32 bits of the GOT entry.
+  if ((type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX) ||
+      addend != -4)
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];

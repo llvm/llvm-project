@@ -171,23 +171,23 @@ static void appendSubframeworkPaths(Module *Mod,
     llvm::sys::path::append(Path, "Frameworks", Paths[I-1] + ".framework");
 }
 
-const FileEntry *ModuleMap::findHeader(
+Optional<FileEntryRef> ModuleMap::findHeader(
     Module *M, const Module::UnresolvedHeaderDirective &Header,
     SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
   // Search for the header file within the module's home directory.
   auto *Directory = M->Directory;
   SmallString<128> FullPathName(Directory->getName());
 
-  auto GetFile = [&](StringRef Filename) -> const FileEntry * {
-    auto File = SourceMgr.getFileManager().getFile(Filename);
-    if (!File ||
-        (Header.Size && (*File)->getSize() != *Header.Size) ||
-        (Header.ModTime && (*File)->getModificationTime() != *Header.ModTime))
-      return nullptr;
+  auto GetFile = [&](StringRef Filename) -> Optional<FileEntryRef> {
+    auto File =
+        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    if (!File || (Header.Size && File->getSize() != *Header.Size) ||
+        (Header.ModTime && File->getModificationTime() != *Header.ModTime))
+      return None;
     return *File;
   };
 
-  auto GetFrameworkFile = [&]() -> const FileEntry * {
+  auto GetFrameworkFile = [&]() -> Optional<FileEntryRef> {
     unsigned FullPathLength = FullPathName.size();
     appendSubframeworkPaths(M, RelativePathName);
     unsigned RelativePathLength = RelativePathName.size();
@@ -195,7 +195,7 @@ const FileEntry *ModuleMap::findHeader(
     // Check whether this file is in the public headers.
     llvm::sys::path::append(RelativePathName, "Headers", Header.FileName);
     llvm::sys::path::append(FullPathName, RelativePathName);
-    if (auto *File = GetFile(FullPathName))
+    if (auto File = GetFile(FullPathName))
       return File;
 
     // Check whether this file is in the private headers.
@@ -227,7 +227,7 @@ const FileEntry *ModuleMap::findHeader(
   // Lookup for normal headers.
   llvm::sys::path::append(RelativePathName, Header.FileName);
   llvm::sys::path::append(FullPathName, RelativePathName);
-  auto *NormalHdrFile = GetFile(FullPathName);
+  auto NormalHdrFile = GetFile(FullPathName);
 
   if (!NormalHdrFile && Directory->getName().endswith(".framework")) {
     // The lack of 'framework' keyword in a module declaration it's a simple
@@ -241,7 +241,7 @@ const FileEntry *ModuleMap::findHeader(
           << Header.FileName << M->getFullModuleName();
       NeedsFramework = true;
     }
-    return nullptr;
+    return None;
   }
 
   return NormalHdrFile;
@@ -251,18 +251,18 @@ void ModuleMap::resolveHeader(Module *Mod,
                               const Module::UnresolvedHeaderDirective &Header,
                               bool &NeedsFramework) {
   SmallString<128> RelativePathName;
-  if (const FileEntry *File =
+  if (Optional<FileEntryRef> File =
           findHeader(Mod, Header, RelativePathName, NeedsFramework)) {
     if (Header.IsUmbrella) {
-      const DirectoryEntry *UmbrellaDir = File->getDir();
+      const DirectoryEntry *UmbrellaDir = &File->getDir().getDirEntry();
       if (Module *UmbrellaMod = UmbrellaDirs[UmbrellaDir])
         Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
           << UmbrellaMod->getFullModuleName();
       else
         // Record this umbrella header.
-        setUmbrellaHeader(Mod, File, RelativePathName.str());
+        setUmbrellaHeader(Mod, *File, RelativePathName.str());
     } else {
-      Module::Header H = {std::string(RelativePathName.str()), File};
+      Module::Header H = {std::string(RelativePathName.str()), *File};
       if (Header.Kind == Module::HK_Excluded)
         excludeHeader(Mod, H);
       else
@@ -300,7 +300,7 @@ bool ModuleMap::resolveAsBuiltinHeader(
   // supplied by Clang. Find that builtin header.
   SmallString<128> Path;
   llvm::sys::path::append(Path, BuiltinIncludeDir->getName(), Header.FileName);
-  auto File = SourceMgr.getFileManager().getFile(Path);
+  auto File = SourceMgr.getFileManager().getOptionalFileRef(Path);
   if (!File)
     return false;
 
@@ -1012,7 +1012,7 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   // Look for an umbrella header.
   SmallString<128> UmbrellaName = StringRef(FrameworkDir->getName());
   llvm::sys::path::append(UmbrellaName, "Headers", ModuleName + ".h");
-  auto UmbrellaHeader = FileMgr.getFile(UmbrellaName);
+  auto UmbrellaHeader = FileMgr.getOptionalFileRef(UmbrellaName);
 
   // FIXME: If there's no umbrella header, we could probably scan the
   // framework to load *everything*. But, it's not clear that this is a good
@@ -1121,21 +1121,21 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   return Result;
 }
 
-void ModuleMap::setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
+void ModuleMap::setUmbrellaHeader(Module *Mod, FileEntryRef UmbrellaHeader,
                                   Twine NameAsWritten) {
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
-  Mod->Umbrella = UmbrellaHeader;
+  Mod->Umbrella = &UmbrellaHeader.getMapEntry();
   Mod->UmbrellaAsWritten = NameAsWritten.str();
-  UmbrellaDirs[UmbrellaHeader->getDir()] = Mod;
+  UmbrellaDirs[UmbrellaHeader.getDir()] = Mod;
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapAddUmbrellaHeader(&SourceMgr.getFileManager(), UmbrellaHeader);
 }
 
-void ModuleMap::setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
+void ModuleMap::setUmbrellaDir(Module *Mod, DirectoryEntryRef UmbrellaDir,
                                Twine NameAsWritten) {
-  Mod->Umbrella = UmbrellaDir;
+  Mod->Umbrella = &UmbrellaDir.getMapEntry();
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   UmbrellaDirs[UmbrellaDir] = Mod;
 }
@@ -2416,15 +2416,15 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   }
 
   // Look for this file.
-  const DirectoryEntry *Dir = nullptr;
+  Optional<DirectoryEntryRef> Dir;
   if (llvm::sys::path::is_absolute(DirName)) {
-    if (auto D = SourceMgr.getFileManager().getDirectory(DirName))
+    if (auto D = SourceMgr.getFileManager().getOptionalDirectoryRef(DirName))
       Dir = *D;
   } else {
     SmallString<128> PathName;
     PathName = Directory->getName();
     llvm::sys::path::append(PathName, DirName);
-    if (auto D = SourceMgr.getFileManager().getDirectory(PathName))
+    if (auto D = SourceMgr.getFileManager().getOptionalDirectoryRef(PathName))
       Dir = *D;
   }
 
@@ -2445,7 +2445,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
         SourceMgr.getFileManager().getVirtualFileSystem();
     for (llvm::vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
-      if (auto FE = SourceMgr.getFileManager().getFile(I->path())) {
+      if (auto FE = SourceMgr.getFileManager().getOptionalFileRef(I->path())) {
         Module::Header Header = {std::string(I->path()), *FE};
         Headers.push_back(std::move(Header));
       }
@@ -2459,7 +2459,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     return;
   }
 
-  if (Module *OwningModule = Map.UmbrellaDirs[Dir]) {
+  if (Module *OwningModule = Map.UmbrellaDirs[*Dir]) {
     Diags.Report(UmbrellaLoc, diag::err_mmap_umbrella_clash)
       << OwningModule->getFullModuleName();
     HadError = true;
@@ -2467,7 +2467,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   }
 
   // Record this umbrella directory.
-  Map.setUmbrellaDir(ActiveModule, Dir, DirName);
+  Map.setUmbrellaDir(ActiveModule, *Dir, DirName);
 }
 
 /// Parse a module export declaration.

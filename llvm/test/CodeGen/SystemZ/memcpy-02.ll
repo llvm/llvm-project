@@ -8,8 +8,8 @@
 @g2dst = global i16 2
 @g3 = global i32 3
 @g4 = global i64 4
-@g5src = external global fp128, align 16
-@g5dst = external global fp128, align 16
+@g5src = external dso_local global fp128, align 16
+@g5dst = external dso_local global fp128, align 16
 
 ; Test the simple i8 case.
 define void @f1(i8 *%ptr1) {

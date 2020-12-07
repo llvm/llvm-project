@@ -480,16 +480,16 @@ Sections:
 # RUN:     --check-prefixes=PHENTSIZE-WARN,PHENTSIZE-GNU
 
 # PHENTSIZE-WARN:      warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_HASH: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_STRTAB: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_SYMTAB: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_RELA: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_HASH: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_STRTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELA: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': DT_SYMENT value of 0x987 is not the size of a symbol (0x18)
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_REL: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_JMPREL: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_RELR: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_GNU_HASH: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_REL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
 
 # PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
 # PHENTSIZE-LLVM-NEXT: LoadName: <?>

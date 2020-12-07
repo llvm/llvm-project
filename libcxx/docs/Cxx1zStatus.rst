@@ -35,6 +35,7 @@ Paper Status
 
 .. csv-table::
    :file: Cxx1zStatusPaperStatus.csv
+   :header-rows: 1
    :widths: auto
 
 .. note::
@@ -50,6 +51,7 @@ Library Working Group Issues Status
 
 .. csv-table::
    :file: Cxx1zStatusIssuesStatus.csv
+   :header-rows: 1
    :widths: auto
 
 Last Updated: 17-Nov-2020

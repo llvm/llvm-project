@@ -83,6 +83,41 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
   return KnownOut;
 }
 
+KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
+  unsigned BitWidth = getBitWidth();
+  assert(BitWidth >= SrcBitWidth && "Illegal sext-in-register");
+
+  // Sign extension.  Compute the demanded bits in the result that are not
+  // present in the input.
+  APInt NewBits = APInt::getHighBitsSet(BitWidth, BitWidth - SrcBitWidth);
+
+  // If the sign extended bits are demanded, we know that the sign
+  // bit is demanded.
+  APInt InSignMask = APInt::getSignMask(SrcBitWidth).zext(BitWidth);
+  APInt InDemandedBits = APInt::getLowBitsSet(BitWidth, SrcBitWidth);
+  if (NewBits.getBoolValue())
+    InDemandedBits |= InSignMask;
+
+  KnownBits Result;
+  Result.One = One & InDemandedBits;
+  Result.Zero = Zero & InDemandedBits;
+
+  // If the sign bit of the input is known set or clear, then we know the
+  // top bits of the result.
+  if (Result.Zero.intersects(InSignMask)) { // Input sign bit known clear
+    Result.Zero |= NewBits;
+    Result.One &= ~NewBits;
+  } else if (Result.One.intersects(InSignMask)) { // Input sign bit known set
+    Result.One |= NewBits;
+    Result.Zero &= ~NewBits;
+  } else { // Input sign bit unknown
+    Result.Zero &= ~NewBits;
+    Result.One &= ~NewBits;
+  }
+
+  return Result;
+}
+
 KnownBits KnownBits::makeGE(const APInt &Val) const {
   // Count the number of leading bit positions where our underlying value is
   // known to be less than or equal to Val.

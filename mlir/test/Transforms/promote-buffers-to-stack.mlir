@@ -1,6 +1,7 @@
 // RUN: mlir-opt -promote-buffers-to-stack -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix DEFINDEX
 // RUN: mlir-opt -promote-buffers-to-stack="bitwidth-of-index-type=256 max-alloc-size-in-bytes=128" -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix BIGINDEX
 // RUN: mlir-opt -promote-buffers-to-stack="bitwidth-of-index-type=256 max-alloc-size-in-bytes=64" -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix LOWLIMIT
+// RUN: mlir-opt -promote-buffers-to-stack="max-rank-of-allocated-memref=2" -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix RANK
 
 // This file checks the behavior of PromoteBuffersToStack pass for converting
 // AllocOps into AllocaOps, if possible.
@@ -13,8 +14,6 @@
 //    bb3
 // PromoteBuffersToStack expected behavior: It should convert %0 into an
 // AllocaOp.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @condBranch
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -47,8 +46,6 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // PromoteBuffersToStack expected behavior:
 // Since the alloc has dynamic type, it is not converted into an alloca.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @condBranchDynamicType
 func @condBranchDynamicType(
   %arg0: i1,
@@ -79,6 +76,41 @@ func @condBranchDynamicType(
 
 // -----
 
+// CHECK-LABEL: func @dynamicRanked
+func @dynamicRanked(%tensor: tensor<*xf32>) {
+  %0 = rank %tensor : tensor<*xf32>
+  %1 = alloc(%0) : memref<?xindex>
+  return
+}
+
+// CHECK-NEXT: %[[RANK:.*]] = rank
+// CHECK-NEXT: %[[ALLOCA:.*]] = alloca(%[[RANK]])
+
+// -----
+
+// CHECK-LABEL: func @dynamicRanked2D
+func @dynamicRanked2D(%tensor: tensor<*xf32>) {
+  %0 = rank %tensor : tensor<*xf32>
+  %1 = alloc(%0, %0) : memref<?x?xindex>
+  return
+}
+
+// CHECK-NEXT: %[[RANK:.*]] = rank
+//  RANK-NEXT: %[[ALLOC:.*]] = alloca(%[[RANK]], %[[RANK]])
+// DEFINDEX-NEXT: %[[ALLOC:.*]] = alloc(%[[RANK]], %[[RANK]])
+
+// -----
+
+// CHECK-LABEL: func @dynamicNoRank
+func @dynamicNoRank(%arg0: index) {
+  %0 = alloc(%arg0) : memref<?xindex>
+  return
+}
+
+// CHECK-NEXT: %[[ALLOC:.*]] = alloc
+
+// -----
+
 // Test Case: Existing AllocOp with no users.
 // PromoteBuffersToStack expected behavior: It should convert it to an
 // AllocaOp.
@@ -101,8 +133,6 @@ func @emptyUsesValue(%arg0: memref<4xf32>) {
 //    bb2
 // PromoteBuffersToStack expected behavior: It should convert it into an
 // AllocaOp.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @criticalEdge
 func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -132,8 +162,6 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //    bb2
 // PromoteBuffersToStack expected behavior: It converts the alloc in an alloca.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @invCriticalEdge
 func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
@@ -160,8 +188,6 @@ func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //   \   /
 //    bb3 <- Initial position of the second AllocOp
 // PromoteBuffersToStack expected behavior: It converts the allocs into allocas.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @ifElse
 func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -198,8 +224,6 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //    bb3
 // PromoteBuffersToStack expected behavior: It converts the alloc into alloca.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @ifElseNoUsers
 func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
@@ -232,8 +256,6 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //       bb5 <- Initial position of the second AllocOp
 // PromoteBuffersToStack expected behavior: The two allocs should be converted
 // into allocas.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @ifElseNested
 func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -270,8 +292,6 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // PromoteBuffersToStack expected behavior: It converts the two AllocOps into
 // allocas.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @redundantOperations
 func @redundantOperations(%arg0: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
@@ -298,8 +318,6 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 //                                     bb3
 // PromoteBuffersToStack expected behavior: Both AllocOps are converted into
 // allocas.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @moving_alloc_and_inserting_missing_dealloc
 func @moving_alloc_and_inserting_missing_dealloc(
@@ -334,8 +352,6 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // region of a RegionBufferBasedOp.
 // PromoteBuffersToStack expected behavior: The AllocOps are converted into
 // allocas.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
 func @nested_regions_and_cond_branch(
@@ -372,8 +388,6 @@ func @nested_regions_and_cond_branch(
 // PromoteBuffersToStack expected behavior: The first alloc is returned, so
 // there is no conversion allowed. The second alloc is converted, since it
 // only remains in the scope of the function.
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @memref_in_function_results
 func @memref_in_function_results(
@@ -583,4 +597,5 @@ func @indexElementType() {
 // DEFINDEX-NEXT: alloca()
 // BIGINDEX-NEXT: alloca()
 // LOWLIMIT-NEXT: alloc()
+// RANK-NEXT: alloca()
 // CHECK-NEXT: return

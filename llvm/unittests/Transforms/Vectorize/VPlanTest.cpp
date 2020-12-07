@@ -470,7 +470,7 @@ TEST(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
 
   VPValue Addr;
   VPValue Mask;
-  VPInterleaveRecipe Recipe(nullptr, &Addr, &Mask);
+  VPInterleaveRecipe Recipe(nullptr, &Addr, {}, &Mask);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

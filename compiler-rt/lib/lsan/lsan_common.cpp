@@ -315,15 +315,15 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       __libc_iterate_dynamic_tls(os_id, cb, frontier);
 #else
       if (dtls && !DTLSInDestruction(dtls)) {
-        for (uptr j = 0; j < dtls->dtv_size; ++j) {
-          uptr dtls_beg = dtls->dtv[j].beg;
-          uptr dtls_end = dtls_beg + dtls->dtv[j].size;
+        ForEachDVT(dtls, [&](const DTLS::DTV &dtv, int id) {
+          uptr dtls_beg = dtv.beg;
+          uptr dtls_end = dtls_beg + dtv.size;
           if (dtls_beg < dtls_end) {
-            LOG_THREADS("DTLS %zu at %p-%p.\n", j, dtls_beg, dtls_end);
+            LOG_THREADS("DTLS %zu at %p-%p.\n", id, dtls_beg, dtls_end);
             ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
                                  kReachable);
           }
-        }
+        });
       } else {
         // We are handling a thread with DTLS under destruction. Log about
         // this and continue.

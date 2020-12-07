@@ -1,5 +1,3 @@
-target triple = "wasm32-unknown-unknown"
-
 @a = hidden global [6 x i8] c"hello\00", align 1
 @b = hidden global [8 x i8] c"goodbye\00", align 1
 @c = hidden global [9 x i8] c"whatever\00", align 1
@@ -8,8 +6,9 @@ target triple = "wasm32-unknown-unknown"
 @e = private constant [9 x i8] c"constant\00", align 1
 @f = private constant i8 43, align 4
 
-; RUN: llc -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.passive.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc --mtriple=wasm32-unknown-unknown -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.passive.o
+; RUN: llc --mtriple=wasm64-unknown-unknown -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.passive64.o
+; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.o
 
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.o
 ; RUN: obj2yaml %t.merged.wasm | FileCheck %s --check-prefix=MERGE
@@ -76,6 +75,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.merged.passive.wasm | FileCheck %s --check-prefix=PASSIVE-MERGE
+; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive64.wasm %t.passive64.o
+; RUN: obj2yaml %t.merged.passive64.wasm | FileCheck %s --check-prefix=PASSIVE-MERGE
 
 ; PASSIVE-MERGE-LABEL: - Type:            DATACOUNT
 ; PASSIVE-MERGE-NEXT:    Count:           2
@@ -99,6 +100,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.separate.passive.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
+; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive64.wasm %t.passive64.o
+; RUN: obj2yaml %t.separate.passive64.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
 
 ; PASSIVE-SEPARATE-LABEL: - Type:            DATACOUNT
 ; PASSIVE-SEPARATE-NEXT:    Count:           6

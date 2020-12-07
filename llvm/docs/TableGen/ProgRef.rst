@@ -167,10 +167,11 @@ TableGen has two kinds of string literals:
 
 .. productionlist::
    TokString: '"' (non-'"' characters and escapes) '"'
-   TokCodeFragment: "[{" (shortest text not containing "}]") "}]"
+   TokCode: "[{" (shortest text not containing "}]") "}]"
 
-A :token:`TokCodeFragment` is nothing more than a multi-line string literal
-delimited by ``[{`` and ``}]``. It can break across lines.
+A :token:`TokCode` is nothing more than a multi-line string literal
+delimited by ``[{`` and ``}]``. It can break across lines and the
+line breaks are retained in the string.
 
 The current implementation accepts the following escape sequences::
 
@@ -254,7 +255,7 @@ high-level types (e.g., ``dag``). This flexibility allows you to describe a
 wide range of records conveniently and compactly.
 
 .. productionlist::
-   Type: "bit" | "int" | "string" | "code" | "dag"
+   Type: "bit" | "int" | "string" | "dag"
        :| "bits" "<" `TokInteger` ">"
        :| "list" "<" `Type` ">"
        :| `ClassID`
@@ -270,11 +271,6 @@ wide range of records conveniently and compactly.
 ``string``
     The ``string`` type represents an ordered sequence of characters of arbitrary
     length.
-
-``code``
-    The ``code`` type represents a code fragment. The values are the same as
-    those for the ``string`` type; the ``code`` type is provided just to indicate
-    the programmer's intention.
 
 ``bits<``\ *n*\ ``>``
     The ``bits`` type is a fixed-sized integer of arbitrary length *n* that
@@ -348,12 +344,12 @@ Simple values
 The :token:`SimpleValue` has a number of forms.
 
 .. productionlist::
-   SimpleValue: `TokInteger` | `TokString`+ | `TokCodeFragment`
+   SimpleValue: `TokInteger` | `TokString`+ | `TokCode`
 
-A value can be an integer literal, a string literal, or a code fragment
-literal. Multiple adjacent string literals are concatenated as in C/C++; the
-simple value is the concatenation of the strings. Code fragments become
-strings and then are indistinguishable from them.
+A value can be an integer literal, a string literal, or a code literal.
+Multiple adjacent string literals are concatenated as in C/C++; the simple
+value is the concatenation of the strings. Code literals become strings and
+are then indistinguishable from them.
 
 .. productionlist::
    SimpleValue2: "true" | "false"
@@ -616,14 +612,15 @@ name of a multiclass.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
-   BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
+   BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
 
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
 uninitialized. The type must be specified; TableGen will not infer it from
-the value.
+the value. The keyword ``code`` may be used to emphasize that the field
+has a string value that is code.
 
 The ``let`` form is used to reset a field to a new value. This can be done
 for fields defined directly in the body or fields inherited from

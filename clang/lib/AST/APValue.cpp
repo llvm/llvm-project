@@ -321,7 +321,7 @@ APValue::APValue(const APValue &RHS) : Kind(None) {
   }
   case Vector:
     MakeVector();
-    setVector(((const Vec *)(const char *)RHS.Data.buffer)->Elts,
+    setVector(((const Vec *)(const char *)&RHS.Data)->Elts,
               RHS.getVectorLength());
     break;
   case ComplexInt:
@@ -392,29 +392,29 @@ APValue &APValue::operator=(APValue &&RHS) {
 
 void APValue::DestroyDataAndMakeUninit() {
   if (Kind == Int)
-    ((APSInt*)(char*)Data.buffer)->~APSInt();
+    ((APSInt *)(char *)&Data)->~APSInt();
   else if (Kind == Float)
-    ((APFloat*)(char*)Data.buffer)->~APFloat();
+    ((APFloat *)(char *)&Data)->~APFloat();
   else if (Kind == FixedPoint)
-    ((APFixedPoint *)(char *)Data.buffer)->~APFixedPoint();
+    ((APFixedPoint *)(char *)&Data)->~APFixedPoint();
   else if (Kind == Vector)
-    ((Vec*)(char*)Data.buffer)->~Vec();
+    ((Vec *)(char *)&Data)->~Vec();
   else if (Kind == ComplexInt)
-    ((ComplexAPSInt*)(char*)Data.buffer)->~ComplexAPSInt();
+    ((ComplexAPSInt *)(char *)&Data)->~ComplexAPSInt();
   else if (Kind == ComplexFloat)
-    ((ComplexAPFloat*)(char*)Data.buffer)->~ComplexAPFloat();
+    ((ComplexAPFloat *)(char *)&Data)->~ComplexAPFloat();
   else if (Kind == LValue)
-    ((LV*)(char*)Data.buffer)->~LV();
+    ((LV *)(char *)&Data)->~LV();
   else if (Kind == Array)
-    ((Arr*)(char*)Data.buffer)->~Arr();
+    ((Arr *)(char *)&Data)->~Arr();
   else if (Kind == Struct)
-    ((StructData*)(char*)Data.buffer)->~StructData();
+    ((StructData *)(char *)&Data)->~StructData();
   else if (Kind == Union)
-    ((UnionData*)(char*)Data.buffer)->~UnionData();
+    ((UnionData *)(char *)&Data)->~UnionData();
   else if (Kind == MemberPointer)
-    ((MemberPointerData*)(char*)Data.buffer)->~MemberPointerData();
+    ((MemberPointerData *)(char *)&Data)->~MemberPointerData();
   else if (Kind == AddrLabelDiff)
-    ((AddrLabelDiffData*)(char*)Data.buffer)->~AddrLabelDiffData();
+    ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
   Kind = None;
 }
 
@@ -448,10 +448,9 @@ bool APValue::needsCleanup() const {
            "same size.");
     return getComplexIntReal().needsCleanup();
   case LValue:
-    return reinterpret_cast<const LV *>(Data.buffer)->hasPathPtr();
+    return reinterpret_cast<const LV *>(&Data)->hasPathPtr();
   case MemberPointer:
-    return reinterpret_cast<const MemberPointerData *>(Data.buffer)
-        ->hasPathPtr();
+    return reinterpret_cast<const MemberPointerData *>(&Data)->hasPathPtr();
   }
   llvm_unreachable("Unknown APValue kind!");
 }
@@ -885,49 +884,49 @@ bool APValue::toIntegralConstant(APSInt &Result, QualType SrcTy,
 
 const APValue::LValueBase APValue::getLValueBase() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const void*)Data.buffer)->Base;
+  return ((const LV *)(const void *)&Data)->Base;
 }
 
 bool APValue::isLValueOnePastTheEnd() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const void*)Data.buffer)->IsOnePastTheEnd;
+  return ((const LV *)(const void *)&Data)->IsOnePastTheEnd;
 }
 
 CharUnits &APValue::getLValueOffset() {
   assert(isLValue() && "Invalid accessor");
-  return ((LV*)(void*)Data.buffer)->Offset;
+  return ((LV *)(void *)&Data)->Offset;
 }
 
 bool APValue::hasLValuePath() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const char*)Data.buffer)->hasPath();
+  return ((const LV *)(const char *)&Data)->hasPath();
 }
 
 ArrayRef<APValue::LValuePathEntry> APValue::getLValuePath() const {
   assert(isLValue() && hasLValuePath() && "Invalid accessor");
-  const LV &LVal = *((const LV*)(const char*)Data.buffer);
+  const LV &LVal = *((const LV *)(const char *)&Data);
   return llvm::makeArrayRef(LVal.getPath(), LVal.PathLength);
 }
 
 unsigned APValue::getLValueCallIndex() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const char*)Data.buffer)->Base.getCallIndex();
+  return ((const LV *)(const char *)&Data)->Base.getCallIndex();
 }
 
 unsigned APValue::getLValueVersion() const {
   assert(isLValue() && "Invalid accessor");
-  return ((const LV*)(const char*)Data.buffer)->Base.getVersion();
+  return ((const LV *)(const char *)&Data)->Base.getVersion();
 }
 
 bool APValue::isNullPointer() const {
   assert(isLValue() && "Invalid usage");
-  return ((const LV*)(const char*)Data.buffer)->IsNullPtr;
+  return ((const LV *)(const char *)&Data)->IsNullPtr;
 }
 
 void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
                         bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
-  LV &LVal = *((LV*)(char*)Data.buffer);
+  LV &LVal = *((LV *)(char *)&Data);
   LVal.Base = B;
   LVal.IsOnePastTheEnd = false;
   LVal.Offset = O;
@@ -939,7 +938,7 @@ MutableArrayRef<APValue::LValuePathEntry>
 APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
                          bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
-  LV &LVal = *((LV *)(char *)Data.buffer);
+  LV &LVal = *((LV *)(char *)&Data);
   LVal.Base = B;
   LVal.IsOnePastTheEnd = IsOnePastTheEnd;
   LVal.Offset = O;
@@ -959,42 +958,42 @@ void APValue::setLValue(LValueBase B, const CharUnits &O,
 
 void APValue::setUnion(const FieldDecl *Field, const APValue &Value) {
   assert(isUnion() && "Invalid accessor");
-  ((UnionData *)(char *)Data.buffer)->Field =
+  ((UnionData *)(char *)&Data)->Field =
       Field ? Field->getCanonicalDecl() : nullptr;
-  *((UnionData*)(char*)Data.buffer)->Value = Value;
+  *((UnionData *)(char *)&Data)->Value = Value;
 }
 
 const ValueDecl *APValue::getMemberPointerDecl() const {
   assert(isMemberPointer() && "Invalid accessor");
   const MemberPointerData &MPD =
-      *((const MemberPointerData *)(const char *)Data.buffer);
+      *((const MemberPointerData *)(const char *)&Data);
   return MPD.MemberAndIsDerivedMember.getPointer();
 }
 
 bool APValue::isMemberPointerToDerivedMember() const {
   assert(isMemberPointer() && "Invalid accessor");
   const MemberPointerData &MPD =
-      *((const MemberPointerData *)(const char *)Data.buffer);
+      *((const MemberPointerData *)(const char *)&Data);
   return MPD.MemberAndIsDerivedMember.getInt();
 }
 
 ArrayRef<const CXXRecordDecl*> APValue::getMemberPointerPath() const {
   assert(isMemberPointer() && "Invalid accessor");
   const MemberPointerData &MPD =
-      *((const MemberPointerData *)(const char *)Data.buffer);
+      *((const MemberPointerData *)(const char *)&Data);
   return llvm::makeArrayRef(MPD.getPath(), MPD.PathLength);
 }
 
 void APValue::MakeLValue() {
   assert(isAbsent() && "Bad state change");
   static_assert(sizeof(LV) <= DataSize, "LV too big");
-  new ((void*)(char*)Data.buffer) LV();
+  new ((void *)(char *)&Data) LV();
   Kind = LValue;
 }
 
 void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   assert(isAbsent() && "Bad state change");
-  new ((void*)(char*)Data.buffer) Arr(InitElts, Size);
+  new ((void *)(char *)&Data) Arr(InitElts, Size);
   Kind = Array;
 }
 
@@ -1006,7 +1005,7 @@ MutableArrayRef<const CXXRecordDecl *>
 APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
                                 unsigned Size) {
   assert(isAbsent() && "Bad state change");
-  MemberPointerData *MPD = new ((void *)(char *)Data.buffer) MemberPointerData;
+  MemberPointerData *MPD = new ((void *)(char *)&Data) MemberPointerData;
   Kind = MemberPointer;
   MPD->MemberAndIsDerivedMember.setPointer(
       Member ? cast<ValueDecl>(Member->getCanonicalDecl()) : nullptr);

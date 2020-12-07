@@ -22,7 +22,7 @@ define void @store8(i8* %p, i8 %a) {
 define i1 @cmp(i8 %a, i8 %b) {
   ; CHECK: call void @__dfsan_cmp_callback(i16 %[[l:.*]])
   ; CHECK: %c = icmp ne i8 %a, %b
-  ; CHECK: store i16 %[[l]], i16* @__dfsan_retval_tls
+  ; CHECK: store i16 %[[l]], i16* bitcast ({{.*}}* @__dfsan_retval_tls to i16*)
   
   %c = icmp ne i8 %a, %b
   ret i1 %c

@@ -2171,12 +2171,11 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, vector, memref, indices, permMap, maskedArrayAttr);
 }
 
-/// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value memref, ValueRange indices,
                             AffineMap permutationMap) {
-  build(builder, result, vector, memref, indices,
-        /*maybeMasked=*/ArrayRef<bool>{});
+  build(builder, result, vector, memref, indices, permutationMap,
+        /*maybeMasked=*/ArrayAttr());
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -2776,7 +2775,7 @@ static void print(OpAsmPrinter &p, TupleOp op) {
   p.printOperands(op.getOperands());
   p.printOptionalAttrDict(op.getAttrs());
   p << " : ";
-  llvm::interleaveComma(op.getOperation()->getOperandTypes(), p);
+  llvm::interleaveComma(op->getOperandTypes(), p);
 }
 
 static LogicalResult verify(TupleOp op) { return success(); }

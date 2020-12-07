@@ -8,8 +8,8 @@
 ;
 ; CHECK: fn2 Clobbered Registers: {{.*}} $r0h
 
-@h = external global [0 x i32], align 4
-@n = external global i32*, align 8
+@h = external dso_local global [0 x i32], align 4
+@n = external dso_local global i32*, align 8
 
 define void @fn1() {
 bb:

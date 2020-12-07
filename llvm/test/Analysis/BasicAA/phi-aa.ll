@@ -150,3 +150,26 @@ loop:
   store i32 0, i32* %p2
   br label %loop
 }
+
+; CHECK-LABEL: phi_and_gep_unknown_size
+; CHECK: Just Mod:   call void @llvm.memset.p0i8.i32(i8* %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0i8.i32(i8* %z, i8 0, i32 %size, i1 false)
+; TODO: This should be NoModRef.
+define void @phi_and_gep_unknown_size(i1 %c, i8* %x, i8* %y, i8* noalias %z, i32 %size) {
+entry:
+  br i1 %c, label %true, label %false
+
+true:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi i8* [ %x, %true ], [ %y, %false ]
+  %g = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i32(i8* %g, i8 0, i32 %size, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %z, i8 0, i32 %size, i1 false)
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)

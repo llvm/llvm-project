@@ -22,6 +22,7 @@ namespace llvm {
 void PrintNote(const Twine &Msg);
 void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
 
+LLVM_ATTRIBUTE_NORETURN void PrintFatalNote(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void PrintFatalNote(ArrayRef<SMLoc> ErrorLoc,
                                             const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void PrintFatalNote(const Record *Rec,
@@ -37,6 +38,7 @@ void PrintError(const Twine &Msg);
 void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
 void PrintError(const char *Loc, const Twine &Msg);
 void PrintError(const Record *Rec, const Twine &Msg);
+void PrintError(const RecordVal *RecVal, const Twine &Msg);
 
 LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void PrintFatalError(ArrayRef<SMLoc> ErrorLoc,

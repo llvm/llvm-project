@@ -57,6 +57,19 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
                nullptr},
               {1, GEP->getPointerOperand()}};
     }
+    Value *Op0;
+    ConstantInt *CI;
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
+      return {{0, nullptr},
+              {1, GEP->getPointerOperand()},
+              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+              m_ZExt(m_NUWShl(m_Value(Op0), m_ConstantInt(CI)))))
+      return {{0, nullptr},
+              {1, GEP->getPointerOperand()},
+              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+
     return {{0, nullptr},
             {1, GEP->getPointerOperand()},
             {1, GEP->getOperand(GEP->getNumOperands() - 1)}};

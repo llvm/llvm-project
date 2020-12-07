@@ -54,7 +54,7 @@ struct B { int x; };
 // This fails to substitue for A but no diagnostic
 // should be emitted.
 template<typename T, typename T::foo* = nullptr>
-__host__ __device__ void sfinae(T t) { // com-note {{candidate template ignored: substitution failure [with T = B]}}
+__host__ __device__ void sfinae(T t) { // host-note {{candidate template ignored: substitution failure [with T = B]}}
   t.x = 1;
 }
 
@@ -64,13 +64,13 @@ __host__ __device__ void sfinae(T t) { // com-note {{candidate template ignored:
 // file scope.
 
 template<typename T, typename T::isA* = nullptr>
-__host__ __device__ void sfinae(T t) { // com-note {{candidate template ignored: substitution failure [with T = B]}}
+__host__ __device__ void sfinae(T t) { // host-note {{candidate template ignored: substitution failure [with T = B]}}
   t.x = 1;
 }
 
 void test_sfinae() {
   sfinae(A());
-  sfinae(B()); // com-error{{no matching function for call to 'sfinae'}}
+  sfinae(B()); // host-error{{no matching function for call to 'sfinae'}}
 }
 
 // Make sure throw is diagnosed in OpenMP parallel region in host function.

@@ -13,10 +13,10 @@
 #define TYPEDETAIL_H_
 
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/TrailingObjects.h"

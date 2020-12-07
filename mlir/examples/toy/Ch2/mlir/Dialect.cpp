@@ -14,8 +14,8 @@
 #include "toy/Dialect.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 
 using namespace mlir;
 using namespace mlir::toy;

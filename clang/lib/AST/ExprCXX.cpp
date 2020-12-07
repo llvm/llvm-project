@@ -1271,6 +1271,10 @@ ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
   return Record->getLambdaExplicitTemplateParameters();
 }
 
+Expr *LambdaExpr::getTrailingRequiresClause() const {
+  return getCallOperator()->getTrailingRequiresClause();
+}
+
 bool LambdaExpr::isMutable() const { return !getCallOperator()->isConst(); }
 
 LambdaExpr::child_range LambdaExpr::children() {

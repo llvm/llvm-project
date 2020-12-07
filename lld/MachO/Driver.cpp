@@ -24,6 +24,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <algorithm>
@@ -177,7 +179,7 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
     for (auto root : roots) {
       SmallString<261> buffer(root);
       path::append(buffer, path);
-      if (warnIfNotDirectory(optionLetter, buffer))
+      if (fs::is_directory(buffer))
         paths.push_back(saver.save(buffer.str()));
     }
   }
@@ -211,21 +213,40 @@ getFrameworkSearchPaths(opt::InputArgList &args,
                         {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
+namespace {
+struct ArchiveMember {
+  MemoryBufferRef mbref;
+  uint32_t modTime;
+};
+} // namespace
+
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
+static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
+  Archive *archive = file.get();
+  make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
-  std::vector<MemoryBufferRef> v;
+  std::vector<ArchiveMember> v;
   Error err = Error::success();
-  for (const Archive::Child &c : file->children(err)) {
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = archive->isThin() && tar;
+
+  for (const Archive::Child &c : archive->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
+    if (addToTar)
+      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
+    uint32_t modTime = toTimeT(
+        CHECK(c.getLastModified(), mb.getBufferIdentifier() +
+                                       ": could not get the modification "
+                                       "time for a child of the archive"));
+    v.push_back({mbref, modTime});
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -234,14 +255,15 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
-static InputFile *addFile(StringRef path) {
+static InputFile *addFile(StringRef path, bool forceLoadArchive) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
   InputFile *newFile = nullptr;
 
-  switch (identify_magic(mbref.getBuffer())) {
+  auto magic = identify_magic(mbref.getBuffer());
+  switch (magic) {
   case file_magic::archive: {
     std::unique_ptr<object::Archive> file = CHECK(
         object::Archive::create(mbref), path + ": failed to parse archive");
@@ -249,10 +271,16 @@ static InputFile *addFile(StringRef path) {
     if (!file->isEmpty() && !file->hasSymbolTable())
       error(path + ": archive has no index; run ranlib to add one");
 
-    if (config->allLoad) {
-      if (Optional<MemoryBufferRef> buffer = readFile(path))
-        for (MemoryBufferRef member : getArchiveMembers(*buffer))
-          inputFiles.push_back(make<ObjFile>(member));
+    if (config->allLoad || forceLoadArchive) {
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
+        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
+          inputFiles.push_back(
+              make<ObjFile>(member.mbref, member.modTime, path));
+          printArchiveMemberLoad(
+              (forceLoadArchive ? "-force_load" : "-all_load"),
+              inputFiles.back());
+        }
+      }
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
@@ -262,17 +290,22 @@ static InputFile *addFile(StringRef path) {
       // we already found that it contains an ObjC symbol. We should also
       // consider creating a LazyObjFile class in order to avoid double-loading
       // these files here and below (as part of the ArchiveFile).
-      if (Optional<MemoryBufferRef> buffer = readFile(path))
-        for (MemoryBufferRef member : getArchiveMembers(*buffer))
-          if (hasObjCSection(member))
-            inputFiles.push_back(make<ObjFile>(member));
+      if (Optional<MemoryBufferRef> buffer = readFile(path)) {
+        for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
+          if (hasObjCSection(member.mbref)) {
+            inputFiles.push_back(
+                make<ObjFile>(member.mbref, member.modTime, path));
+            printArchiveMemberLoad("-ObjC", inputFiles.back());
+          }
+        }
+      }
     }
 
     newFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref);
+    newFile = make<ObjFile>(mbref, getModTime(path), "");
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -289,9 +322,67 @@ static InputFile *addFile(StringRef path) {
   default:
     error(path + ": unhandled file type");
   }
-  if (newFile)
+  if (newFile) {
+    // printArchiveMemberLoad() prints both .a and .o names, so no need to
+    // print the .a name here.
+    if (config->printEachFile && magic != file_magic::archive)
+      lld::outs() << toString(newFile) << '\n';
     inputFiles.push_back(newFile);
+  }
   return newFile;
+}
+
+static void addLibrary(StringRef name, bool isWeak) {
+  if (Optional<std::string> path = findLibrary(name)) {
+    auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
+    if (isWeak && dylibFile)
+      dylibFile->forceWeakImport = true;
+    return;
+  }
+  error("library not found for -l" + name);
+}
+
+static void addFramework(StringRef name, bool isWeak) {
+  if (Optional<std::string> path = findFramework(name)) {
+    auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
+    if (isWeak && dylibFile)
+      dylibFile->forceWeakImport = true;
+    return;
+  }
+  error("framework not found for -framework " + name);
+}
+
+// Parses LC_LINKER_OPTION contents, which can add additional command line flags.
+void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
+  SmallVector<const char *, 4> argv;
+  size_t offset = 0;
+  for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
+    argv.push_back(data.data() + offset);
+    offset += strlen(data.data() + offset) + 1;
+  }
+  if (argv.size() != argc || offset > data.size())
+    fatal(toString(f) + ": invalid LC_LINKER_OPTION");
+
+  MachOOptTable table;
+  unsigned missingIndex, missingCount;
+  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
+  if (missingCount)
+    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
+  for (auto *arg : args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + arg->getAsString(args));
+
+  for (auto *arg : args) {
+    switch (arg->getOption().getID()) {
+    case OPT_l:
+      addLibrary(arg->getValue(), false);
+      break;
+    case OPT_framework:
+      addFramework(arg->getValue(), false);
+      break;
+    default:
+      error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
+    }
+  }
 }
 
 static void addFileList(StringRef path) {
@@ -300,13 +391,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(path);
-}
-
-static void forceLoadArchive(StringRef path) {
-  if (Optional<MemoryBufferRef> buffer = readFile(path))
-    for (MemoryBufferRef member : getArchiveMembers(*buffer))
-      inputFiles.push_back(make<ObjFile>(member));
+    addFile(path, false);
 }
 
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
@@ -548,6 +633,27 @@ static void warnIfUnimplementedOption(const opt::Option &opt) {
   }
 }
 
+static const char *getReproduceOption(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_reproduce))
+    return arg->getValue();
+  return getenv("LLD_REPRODUCE");
+}
+
+static bool isPie(opt::InputArgList &args) {
+  if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
+    return false;
+
+  // TODO: add logic here as we support more archs. E.g. i386 should default
+  // to PIE from 10.7, arm64 should always be PIE, etc
+  assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
+
+  if (config->platform.kind == MachO::PlatformKind::macOS &&
+      config->platform.minimum >= VersionTuple(10, 6))
+    return true;
+
+  return args.hasArg(OPT_pie);
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -569,6 +675,20 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     return true;
   }
 
+  if (const char *path = getReproduceOption(args)) {
+    // Note that --reproduce is a debug option so you can ignore it
+    // if you are trying to understand the whole picture of the code.
+    Expected<std::unique_ptr<TarWriter>> errOrWriter =
+        TarWriter::create(path, path::stem(path));
+    if (errOrWriter) {
+      tar = std::move(*errOrWriter);
+      tar->append("response.txt", createResponseFile(args));
+      tar->append("version.txt", getLLDVersion() + "\n");
+    } else {
+      error("--reproduce: " + toString(errOrWriter.takeError()));
+    }
+  }
+
   config = make<Configuration>();
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
@@ -580,6 +700,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
+  config->printEachFile = args.hasArg(OPT_t);
+  config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
@@ -622,10 +744,11 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     // TODO: are any of these better handled via filtered() or getLastArg()?
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(arg->getValue());
+      addFile(arg->getValue(), false);
       break;
     case OPT_weak_library: {
-      auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(arg->getValue()));
+      auto *dylibFile =
+          dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false));
       if (dylibFile)
         dylibFile->forceWeakImport = true;
       break;
@@ -634,32 +757,16 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      forceLoadArchive(arg->getValue());
+      addFile(arg->getValue(), true);
       break;
     case OPT_l:
-    case OPT_weak_l: {
-      StringRef name = arg->getValue();
-      if (Optional<std::string> path = findLibrary(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
-        if (opt.getID() == OPT_weak_l && dylibFile)
-          dylibFile->forceWeakImport = true;
-        break;
-      }
-      error("library not found for -l" + name);
+    case OPT_weak_l:
+      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
       break;
-    }
     case OPT_framework:
-    case OPT_weak_framework: {
-      StringRef name = arg->getValue();
-      if (Optional<std::string> path = findFramework(name)) {
-        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
-        if (opt.getID() == OPT_weak_framework && dylibFile)
-          dylibFile->forceWeakImport = true;
-        break;
-      }
-      error("framework not found for -framework " + name);
+    case OPT_weak_framework:
+      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
       break;
-    }
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
@@ -669,8 +776,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   config->isPic = config->outputType == MH_DYLIB ||
-                  config->outputType == MH_BUNDLE ||
-                  (config->outputType == MH_EXECUTE && args.hasArg(OPT_pie));
+                  config->outputType == MH_BUNDLE || isPie(args);
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
@@ -690,7 +796,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     parseOrderFile(orderFile);
 
   if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-    error("undefined symbol: " + config->entry->getName());
+    error("undefined symbol: " + toString(*config->entry));
     return false;
   }
 

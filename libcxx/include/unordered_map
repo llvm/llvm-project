@@ -1178,7 +1178,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args)
     {
-        return __table_.__emplace_unique_key_args(__k, _VSTD::piecewise_construct,
+        return __table_.__emplace_unique_key_args(__k, piecewise_construct,
             _VSTD::forward_as_tuple(__k),
             _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
@@ -1187,7 +1187,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args)
     {
-        return __table_.__emplace_unique_key_args(__k, _VSTD::piecewise_construct,
+        return __table_.__emplace_unique_key_args(__k, piecewise_construct,
             _VSTD::forward_as_tuple(_VSTD::move(__k)),
             _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
@@ -1738,8 +1738,8 @@ _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
 {
     return __table_.__emplace_unique_key_args(__k,
-        std::piecewise_construct, std::forward_as_tuple(__k),
-                                  std::forward_as_tuple()).first->__get_value().second;
+        piecewise_construct, _VSTD::forward_as_tuple(__k),
+                             _VSTD::forward_as_tuple()).first->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1747,8 +1747,8 @@ _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](key_type&& __k)
 {
     return __table_.__emplace_unique_key_args(__k,
-        std::piecewise_construct, std::forward_as_tuple(std::move(__k)),
-                                  std::forward_as_tuple()).first->__get_value().second;
+        piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__k)),
+                             _VSTD::forward_as_tuple()).first->__get_value().second;
 }
 #else // _LIBCPP_CXX03_LANG
 

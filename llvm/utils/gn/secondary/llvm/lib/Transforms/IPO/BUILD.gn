@@ -53,6 +53,7 @@ static_library("IPO") {
     "PruneEH.cpp",
     "SCCP.cpp",
     "SampleProfile.cpp",
+    "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",
     "StripSymbols.cpp",
     "SyntheticCountsPropagation.cpp",

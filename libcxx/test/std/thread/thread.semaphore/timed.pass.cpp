@@ -25,6 +25,7 @@
 #include <semaphore>
 #include <thread>
 #include <chrono>
+#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

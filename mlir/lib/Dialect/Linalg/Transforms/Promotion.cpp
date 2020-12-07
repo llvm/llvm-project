@@ -345,7 +345,7 @@ promoteSubViews(OpBuilder &b, LinalgOp op,
       opViews.push_back(view.value());
     }
   }
-  op.getOperation()->setOperands(0, opViews.size(), opViews);
+  op->setOperands(0, opViews.size(), opViews);
 
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPointAfter(op);

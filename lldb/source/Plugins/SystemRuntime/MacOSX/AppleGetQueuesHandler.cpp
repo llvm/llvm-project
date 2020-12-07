@@ -180,7 +180,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     // Next make the runner function for our implementation utility function.
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(thread.GetProcess()->GetTarget());
     CompilerType get_queues_return_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
     Status error;
@@ -220,7 +220,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  TypeSystemClang *clang_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetQueuesReturnInfo return_value;

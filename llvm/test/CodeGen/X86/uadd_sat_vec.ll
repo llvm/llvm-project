@@ -937,7 +937,7 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i64:
@@ -947,7 +947,7 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm1
-; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2i64:
@@ -1012,12 +1012,12 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; AVX1-NEXT:    vpaddq %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm4
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -1028,7 +1028,7 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm1
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: v4i64:
@@ -1118,12 +1118,12 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; AVX1-NEXT:    vpaddq %xmm7, %xmm4, %xmm4
 ; AVX1-NEXT:    vpxor %xmm5, %xmm4, %xmm7
 ; AVX1-NEXT:    vpcmpgtq %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vpor %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpor %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpxor %xmm5, %xmm0, %xmm6
 ; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm5, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm6, %xmm2
-; AVX1-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpxor %xmm5, %xmm2, %xmm4
@@ -1131,12 +1131,12 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; AVX1-NEXT:    vpaddq %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm5, %xmm2, %xmm6
 ; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm5, %xmm1, %xmm4
 ; AVX1-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm5, %xmm1, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpor %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
@@ -1147,12 +1147,12 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm4, %ymm0, %ymm2
 ; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm5, %ymm2
-; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm4, %ymm1, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpxor %ymm4, %ymm1, %ymm3
 ; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: v8i64:

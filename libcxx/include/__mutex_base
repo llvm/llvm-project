@@ -379,12 +379,12 @@ __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d)
 
     using __ratio = ratio_divide<_Period, nano>;
     using __ns_rep = nanoseconds::rep;
-    __ns_rep __result_max = std::numeric_limits<__ns_rep>::max();
+    __ns_rep __result_max = numeric_limits<__ns_rep>::max();
     if (__d.count() > 0 && __d.count() > __result_max / __ratio::num) {
         return nanoseconds::max();
     }
 
-    __ns_rep __result_min = std::numeric_limits<__ns_rep>::min();
+    __ns_rep __result_min = numeric_limits<__ns_rep>::min();
     if (__d.count() < 0 && __d.count() < __result_min / __ratio::num) {
         return nanoseconds::min();
     }

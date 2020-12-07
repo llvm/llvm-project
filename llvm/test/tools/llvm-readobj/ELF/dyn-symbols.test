@@ -90,7 +90,7 @@ ProgramHeaders:
 # RUN: llvm-readelf %t2.so --dyn-symbols 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
 
-# NOPHDRS-LLVM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-LLVM: warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-LLVM:      DynamicSymbols [
 # NOPHDRS-LLVM-NEXT:   Symbol {
 # NOPHDRS-LLVM-NEXT:     Name:  (0)
@@ -112,7 +112,7 @@ ProgramHeaders:
 # NOPHDRS-LLVM-NEXT:   }
 # NOPHDRS-LLVM-NEXT: ]
 
-# NOPHDRS-GNU:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-GNU:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-NAMEWARN: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # NOPHDRS-GNU:      Symbol table '[[NAME]]' contains 2 entries:
 # NOPHDRS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
@@ -153,7 +153,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefixes=NOSHT-DYNSYM,NOSHT-DYNSYM-LLVM
 # RUN: llvm-readelf %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefix=NOSHT-DYNSYM
 
-# NOSHT-DYNSYM:           warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
+# NOSHT-DYNSYM:           warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
 # NOSHT-DYNSYM-LLVM:      DynamicSymbols [
 # NOSHT-DYNSYM-LLVM-NEXT: ]
 
@@ -181,7 +181,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-LLVM
 # RUN: llvm-readelf %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-GNU
 
-# BROKEN-DTSYMTAB:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# BROKEN-DTSYMTAB:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # BROKEN-DTSYMTAB-LLVM: Name: foo
 # BROKEN-DTSYMTAB-GNU:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
 
@@ -451,11 +451,15 @@ DynamicSymbols: []
 ## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
 #     value of the symbol size for the platform.
 # RUN: yaml2obj %s -D BITS=32 --docnum=12 -o %t12
-# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
-# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
 # RUN: yaml2obj %s -D BITS=64 --docnum=12 -o %t13
-# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
-# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
 
 # DYNSYM-SIZE-INVALID3: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x10){{$}}
 # DYNSYM-SIZE-INVALID4: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x18){{$}}
@@ -502,6 +506,8 @@ Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Entries:
+      - Tag:   DT_SYMENT
+        Value: 0x123
       - Tag:   DT_SYMENT
         Value: 0x123
       - Tag:   DT_NULL
@@ -610,6 +616,7 @@ Sections:
   - Name:     .dynsym
     Type:     SHT_DYNSYM
     EntSize:  [[ENTSIZE=<none>]]
+    Link:     [[LINK=<none>]]
     ShOffset: [[OFFSET=<none>]]
     ShSize:   [[SIZE=<none>]]
 DynamicSymbols:
@@ -642,3 +649,65 @@ DynamicSymbols:
 
 # SIZE-BROKEN-LLVM:      DynamicSymbols [
 # SIZE-BROKEN-LLVM-NEXT: ]
+
+## d) check we report a warning when the sh_link field of the SHT_DYNSYM section
+##    is not a valid section index or is not an index of a valid string table.
+# RUN: yaml2obj --docnum=14 %s -DLINK=0xffffffff -o %t16.link
+# RUN: llvm-readobj %t16.link --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+## Also test that we are able to dump section headers even if the .dynsym section's sh_link field is broken.
+# RUN: llvm-readobj %t16.link --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-SEC-HDRS-LLVM,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-SEC-HDRS-GNU,LINK-BROKEN-GNU
+
+# RUN: yaml2obj --docnum=14 %s -DLINK=0x0 -o %t16.link.0
+# RUN: llvm-readobj %t16.link.0 --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link.0 --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+## Also test that we are able to dump section headers even if the .dynsym section's sh_link field is broken.
+# RUN: llvm-readobj %t16.link.0 --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-SEC-HDRS-LLVM,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link.0 --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-SEC-HDRS-GNU,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+# LINK-BROKEN1: warning: '[[FILE]]': unable to get the string table for the SHT_DYNSYM section with index 1: invalid section index: 4294967295
+# LINK-BROKEN2: warning: '[[FILE]]': unable to get the string table for the SHT_DYNSYM section with index 1: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
+
+# LINK-SEC-HDRS-LLVM: Sections [
+# LINK-SEC-HDRS-GNU:  There are 5 section headers, starting at offset 0x80:
+
+# LINK-BROKEN-LLVM:      DynamicSymbols [
+# LINK-BROKEN-LLVM-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
+# LINK-BROKEN-LLVM-NEXT:   Symbol {
+# LINK-BROKEN-LLVM-NEXT:     Name: <?> (0)
+# LINK-BROKEN-LLVM-NEXT:     Value: 0x0
+# LINK-BROKEN-LLVM-NEXT:     Size: 0
+# LINK-BROKEN-LLVM-NEXT:     Binding: Local (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Type: None (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Other: 0
+# LINK-BROKEN-LLVM-NEXT:     Section: Undefined (0x0)
+# LINK-BROKEN-LLVM-NEXT:   }
+# LINK-BROKEN-LLVM-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
+# LINK-BROKEN-LLVM-NEXT:   Symbol {
+# LINK-BROKEN-LLVM-NEXT:     Name: <?> (1)
+# LINK-BROKEN-LLVM-NEXT:     Value: 0x0
+# LINK-BROKEN-LLVM-NEXT:     Size: 0
+# LINK-BROKEN-LLVM-NEXT:     Binding: Local (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Type: None (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Other: 0
+# LINK-BROKEN-LLVM-NEXT:     Section: Undefined (0x0)
+# LINK-BROKEN-LLVM-NEXT:   }
+# LINK-BROKEN-LLVM-NEXT: ]
+
+# LINK-BROKEN-GNU:      Symbol table '.dynsym' contains 2 entries:
+# LINK-BROKEN-GNU-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
+# LINK-BROKEN-GNU-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
+# LINK-BROKEN-GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>
+# LINK-BROKEN-GNU-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
+# LINK-BROKEN-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>

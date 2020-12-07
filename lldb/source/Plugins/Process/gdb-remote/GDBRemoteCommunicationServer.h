@@ -27,7 +27,6 @@ class ProcessGDBRemote;
 
 class GDBRemoteCommunicationServer : public GDBRemoteCommunication {
 public:
-  using PortMap = std::map<uint16_t, lldb::pid_t>;
   using PacketHandler =
       std::function<PacketResult(StringExtractorGDBRemote &packet,
                                  Status &error, bool &interrupt, bool &quit)>;

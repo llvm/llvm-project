@@ -128,7 +128,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
   SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) {
     // TODO: support multi-results.
-    if (op.getOperation()->getNumResults() <= 1)
+    if (op->getNumResults() <= 1)
       linalgOps.push_back(op);
   });
 

@@ -2,7 +2,7 @@
 ; PR1339
 
 @"$bar" = global i32 zeroinitializer
-@"$qux" = external global i32
+@"$qux" = external dso_local global i32
 
 define i32 @"$foo"() nounwind {
 ; CHECK: movl	($bar),

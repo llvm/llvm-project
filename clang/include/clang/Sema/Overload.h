@@ -31,7 +31,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1050,6 +1049,9 @@ class Sema;
     }
 
     void destroyCandidates();
+
+    /// Whether diagnostics should be deferred.
+    bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,

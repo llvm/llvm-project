@@ -113,8 +113,10 @@ public:
 
 class LCDysymtab : public LoadCommand {
 public:
-  LCDysymtab(IndirectSymtabSection *indirectSymtabSection)
-      : indirectSymtabSection(indirectSymtabSection) {}
+  LCDysymtab(SymtabSection *symtabSection,
+             IndirectSymtabSection *indirectSymtabSection)
+      : symtabSection(symtabSection),
+        indirectSymtabSection(indirectSymtabSection) {}
 
   uint32_t getSize() const override { return sizeof(dysymtab_command); }
 
@@ -122,11 +124,19 @@ public:
     auto *c = reinterpret_cast<dysymtab_command *>(buf);
     c->cmd = LC_DYSYMTAB;
     c->cmdsize = getSize();
+
+    c->ilocalsym = 0;
+    c->iextdefsym = c->nlocalsym = symtabSection->getNumLocalSymbols();
+    c->nextdefsym = symtabSection->getNumExternalSymbols();
+    c->iundefsym = c->iextdefsym + c->nextdefsym;
+    c->nundefsym = symtabSection->getNumUndefinedSymbols();
+
     c->indirectsymoff = indirectSymtabSection->fileOff;
     c->nindirectsyms = indirectSymtabSection->getNumSymbols();
   }
 
-  IndirectSymtabSection *indirectSymtabSection = nullptr;
+  SymtabSection *symtabSection;
+  IndirectSymtabSection *indirectSymtabSection;
 };
 
 class LCSegment : public LoadCommand {
@@ -380,7 +390,7 @@ void Writer::scanRelocations() {
       if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (isa<Undefined>(s))
           error("undefined symbol " + toString(*s) + ", referenced from " +
-                sys::path::filename(isec->file->getName()));
+                toString(isec->file));
         else
           target->prepareSymbolRelocation(s, isec, r);
       } else {
@@ -396,7 +406,8 @@ void Writer::createLoadCommands() {
   in.header->addLoadCommand(make<LCDyldInfo>(
       in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
-  in.header->addLoadCommand(make<LCDysymtab>(indirectSymtabSection));
+  in.header->addLoadCommand(
+      make<LCDysymtab>(symtabSection, indirectSymtabSection));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -578,6 +589,10 @@ void Writer::createOutputSections() {
   MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
       mergedOutputSections;
   for (InputSection *isec : inputSections) {
+    // Instead of emitting DWARF sections, we emit STABS symbols to the object
+    // files that contain them.
+    if (isDebugSection(isec->flags) && isec->segname == segment_names::dwarf)
+      continue;
     MergedOutputSection *&osec =
         mergedOutputSections[{isec->segname, isec->name}];
     if (osec == nullptr)
@@ -591,8 +606,9 @@ void Writer::createOutputSections() {
     if (unwindInfoSection && segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
       unwindInfoSection->setCompactUnwindSection(osec);
-    } else
+    } else {
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
+    }
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
@@ -601,7 +617,7 @@ void Writer::createOutputSections() {
       if (ssec->isNeeded())
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
     } else {
-      error("section from " + it->second->firstSection()->file->getName() +
+      error("section from " + toString(it->second->firstSection()->file) +
             " conflicts with synthetic section " + ssec->segname + "," +
             ssec->name);
     }

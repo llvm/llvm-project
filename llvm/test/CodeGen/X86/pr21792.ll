@@ -4,7 +4,7 @@
 ; This fixes a missing cases in the MI scheduler's constrainLocalCopy exposed by
 ; PR21792
 
-@stuff = external constant [256 x double], align 16
+@stuff = external dso_local constant [256 x double], align 16
 
 define void @func(<4 x float> %vx) {
 ; CHECK-LABEL: func:

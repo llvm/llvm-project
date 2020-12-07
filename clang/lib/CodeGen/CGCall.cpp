@@ -2168,12 +2168,20 @@ void CodeGenModule::ConstructAttributeList(
     if (!CodeGenOpts.NullPointerIsValid &&
         getContext().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
       Attrs.addAttribute(llvm::Attribute::NonNull);
+      Attrs.addDereferenceableAttr(
+          getMinimumObjectSize(
+              FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
+              .getQuantity());
+    } else {
+      // FIXME dereferenceable should be correct here, regardless of
+      // NullPointerIsValid. However, dereferenceable currently does not always
+      // respect NullPointerIsValid and may imply nonnull and break the program.
+      // See https://reviews.llvm.org/D66618 for discussions.
+      Attrs.addDereferenceableOrNullAttr(
+          getMinimumObjectSize(
+              FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
+              .getQuantity());
     }
-
-    Attrs.addDereferenceableAttr(
-        getMinimumObjectSize(
-            FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
-            .getQuantity());
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }

@@ -348,7 +348,7 @@ namespace rdar8018274 {
   };
 
   void test2(UeberDerived ud) {
-    int i = ud; // expected-error{{ambiguous conversion from derived class 'rdar8018274::SuperDerived' to base class 'rdar8018274::Base'}}
+    int i = ud; // expected-error{{ambiguous conversion from derived class 'rdar8018274::UeberDerived' to base class 'rdar8018274::Base'}}
   }
 
   struct Base2 {

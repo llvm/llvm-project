@@ -77,7 +77,8 @@ class COFFDumper : public ObjDumper {
 public:
   friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj), Writer(Writer), Types(100) {}
+      : ObjDumper(Writer, Obj->getFileName()), Obj(Obj), Writer(Writer),
+        Types(100) {}
 
   void printFileHeaders() override;
   void printSectionHeaders() override;

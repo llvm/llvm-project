@@ -5052,10 +5052,12 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
     return CharUnits::fromQuantity(16);
   } else if (Ty->isVectorType()) {
     return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16 : 8);
-  } else if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128) {
-    // IEEE 128-bit floating numbers are also stored in vector registers.
-    // And both IEEE quad-precision and IBM extended double (ppc_fp128) should
-    // be quad-word aligned.
+  } else if (Ty->isRealFloatingType() &&
+             &getContext().getFloatTypeSemantics(Ty) ==
+                 &llvm::APFloat::IEEEquad()) {
+    // According to ABI document section 'Optional Save Areas': If extended
+    // precision floating-point values in IEEE BINARY 128 QUADRUPLE PRECISION
+    // format are supported, map them to a single quadword, quadword aligned.
     return CharUnits::fromQuantity(16);
   }
 

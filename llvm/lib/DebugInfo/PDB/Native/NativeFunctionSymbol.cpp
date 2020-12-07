@@ -78,10 +78,7 @@ static bool inlineSiteContainsAddress(InlineSiteSym &IS,
       break;
     case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset:
       CodeOffset += Annot.U2;
-      if (OffsetInFunc >= CodeOffset)
-        Found = true;
-      CodeOffset += Annot.U1;
-      if (Found && OffsetInFunc < CodeOffset)
+      if (OffsetInFunc >= CodeOffset && OffsetInFunc < CodeOffset + Annot.U1)
         return true;
       Found = false;
       break;

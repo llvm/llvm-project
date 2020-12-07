@@ -664,7 +664,10 @@ class GdbRemoteTestCaseBase(TestBase):
         # Check the bare-minimum expected set of register info keys.
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
-        self.assertTrue("offset" in reg_info)
+
+        if not self.getArchitecture() == 'aarch64':
+            self.assertTrue("offset" in reg_info)
+
         self.assertTrue("encoding" in reg_info)
         self.assertTrue("format" in reg_info)
 
@@ -989,6 +992,13 @@ class GdbRemoteTestCaseBase(TestBase):
         for reg_info in reg_infos:
             if ("generic" in reg_info) and (
                     reg_info["generic"] == generic_name):
+                return reg_info
+        return None
+
+    def find_register_with_name_and_dwarf_regnum(self, reg_infos, name, dwarf_num):
+        self.assertIsNotNone(reg_infos)
+        for reg_info in reg_infos:
+            if (reg_info["name"] == name) and (reg_info["dwarf"] == dwarf_num):
                 return reg_info
         return None
 

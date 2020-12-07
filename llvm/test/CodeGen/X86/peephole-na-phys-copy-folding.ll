@@ -6,8 +6,8 @@
 ; EFLAGS. Make sure the flags are used directly, instead of needlessly using
 ; saving and restoring specific conditions.
 
-@L = external global i32
-@M = external global i8
+@L = external dso_local global i32
+@M = external dso_local global i8
 
 declare i32 @bar(i64)
 

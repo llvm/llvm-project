@@ -139,10 +139,9 @@ define arm_aapcs_vfpcc <16 x i8> @bitcast_to_v16i1(i16 %b, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    mov r4, sp
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
-; CHECK-LE-NEXT:    uxth r0, r0
 ; CHECK-LE-NEXT:    sub.w r4, r7, #8
-; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-LE-NEXT:    vmsr p0, r0
+; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-LE-NEXT:    vpsel q0, q0, q1
 ; CHECK-LE-NEXT:    mov sp, r4
 ; CHECK-LE-NEXT:    pop {r4, r6, r7, pc}
@@ -160,7 +159,6 @@ define arm_aapcs_vfpcc <16 x i8> @bitcast_to_v16i1(i16 %b, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
-; CHECK-BE-NEXT:    uxth r0, r0
 ; CHECK-BE-NEXT:    sub.w r4, r7, #8
 ; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    vmsr p0, r0

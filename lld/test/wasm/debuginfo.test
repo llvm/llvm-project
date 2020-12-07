@@ -71,7 +71,7 @@ CHECK-NEXT:                DW_AT_type	(0x000000a7 "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(8)
-CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x0)
+CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0xffffffff)
 
 CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                DW_AT_low_pc

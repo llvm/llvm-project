@@ -124,16 +124,6 @@ def create_parser():
         action='append',
         help='Run "setting set SETTING VALUE" before executing any test.')
     group.add_argument(
-        '-s',
-        metavar='name',
-        help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')
-    group.add_argument(
-        '-S',
-        '--session-file-format',
-        default=configuration.session_file_format,
-        metavar='format',
-        help='Specify session file name format.  See configuration.py for a description.')
-    group.add_argument(
         '-y',
         type=int,
         metavar='count',

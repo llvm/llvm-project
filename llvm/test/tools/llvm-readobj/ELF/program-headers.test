@@ -607,16 +607,16 @@ ProgramHeaders:
 
 ## Show the size of the output produced. It is used in the YAML below.
 # RUN: wc -c < %t.err | FileCheck %s --check-prefix=SIZE
-# SIZE: 560
+# SIZE: 616
 
 ## Write the additional 'C', '\0, 'C' bytes to the end.
 # RUN: echo -n -e "C\x00C" >> %t.err
 
 # RUN: llvm-readelf --program-headers %t.err 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=ERROR-INTERP
+# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=ERROR-INTERP --implicit-check-not=warning:
 
 # ERROR-INTERP:      Type           Offset
-# ERROR-INTERP-NEXT: INTERP         0x000[[#%x,OFFSET:0x230]]
+# ERROR-INTERP-NEXT: INTERP         0x000[[#%x,OFFSET:0x268]]
 # ERROR-INTERP-NEXT:     [Requesting program interpreter: C]
 # ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 1]]
 # ERROR-INTERP-NEXT:     [Requesting program interpreter: ]
@@ -626,6 +626,7 @@ ProgramHeaders:
 # ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0x[[#OFFSET+3]]: it goes past the end of the file (0x[[#OFFSET + 3]])
 # ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
 # ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0xaabbccddeeff1122: it goes past the end of the file (0x[[#OFFSET + 3]])
+# ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
 
 --- !ELF
 FileHeader:
@@ -635,19 +636,23 @@ FileHeader:
 ProgramHeaders:
 ## Case 1: the offset points to the first additional byte.
   - Type:   PT_INTERP
-    Offset: 560
+    Offset: 616
 ## Case 1: the offset points to the second additional byte,
 ##         which is a null byte.
   - Type:   PT_INTERP
-    Offset: 561
+    Offset: 617
 ## Case 3: the offset points to the third additional
 ##         byte, which is the last byte in the file.
   - Type:   PT_INTERP
-    Offset: 562
+    Offset: 618
 ## Case 4: the offset goes 1 byte past the end of the file.
   - Type:   PT_INTERP
-    Offset: 563
+    Offset: 619
 ## Case 5: an arbitrary large offset that goes past the end of the file.
+  - Type:   PT_INTERP
+    Offset: 0xAABBCCDDEEFF1122
+## Case 6: the same as case 5. Used to demonstrate that we don't report
+##         the same warning twice.
   - Type:   PT_INTERP
     Offset: 0xAABBCCDDEEFF1122
 

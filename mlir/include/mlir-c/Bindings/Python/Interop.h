@@ -28,6 +28,7 @@
 
 #define MLIR_PYTHON_CAPSULE_ATTRIBUTE "mlir.ir.Attribute._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_CONTEXT "mlir.ir.Context._CAPIPtr"
+#define MLIR_PYTHON_CAPSULE_LOCATION "mlir.ir.Location._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_MODULE "mlir.ir.Module._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_OPERATION "mlir.ir.Operation._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_TYPE "mlir.ir.Type._CAPIPtr"
@@ -104,6 +105,24 @@ static inline MlirContext mlirPythonCapsuleToContext(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_CONTEXT);
   MlirContext context = {ptr};
   return context;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirLocation.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the location in any way. */
+static inline PyObject *mlirPythonLocationToCapsule(MlirLocation loc) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(loc),
+                       MLIR_PYTHON_CAPSULE_LOCATION, NULL);
+}
+
+/** Extracts an MlirLocation from a capsule as produced from
+ * mlirPythonLocationToCapsule. If the capsule is not of the right type, then
+ * a null module is returned (as checked via mlirLocationIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+static inline MlirLocation mlirPythonCapsuleToLocation(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_LOCATION);
+  MlirLocation loc = {ptr};
+  return loc;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirModule.

@@ -840,9 +840,10 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
   // FIXME: Flat scratch does not have to be limited to a dword per store.
   for (unsigned i = 0, e = NumSubRegs; i != e; ++i, Offset += EltSize) {
-    Register SubReg = NumSubRegs == 1
-                          ? Register(ValueReg)
-                          : getSubReg(ValueReg, getSubRegFromChannel(i));
+    Register SubReg =
+        NumSubRegs == 1
+            ? ValueReg
+            : Register(getSubReg(ValueReg, getSubRegFromChannel(i)));
 
     unsigned SOffsetRegState = 0;
     unsigned SrcDstRegState = getDefRegState(!IsStore);
@@ -968,9 +969,10 @@ void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
 
   // Backup EXEC
   if (OnlyExecLo) {
-    SavedExecReg = NumSubRegs == 1
-                       ? SuperReg
-                       : getSubReg(SuperReg, SplitParts[FirstPart + ExecLane]);
+    SavedExecReg =
+        NumSubRegs == 1
+            ? SuperReg
+            : Register(getSubReg(SuperReg, SplitParts[FirstPart + ExecLane]));
   } else {
     // If src/dst is an odd size it is possible subreg0 is not aligned.
     for (; ExecLane < (NumSubRegs - 1); ++ExecLane) {
@@ -1037,9 +1039,9 @@ void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
           .addImm(ExecLane + 1);
     }
     BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
-            NumSubRegs == 1
-                ? SavedExecReg
-                : getSubReg(SuperReg, SplitParts[FirstPart + ExecLane]))
+            NumSubRegs == 1 ? SavedExecReg
+                            : Register(getSubReg(
+                                  SuperReg, SplitParts[FirstPart + ExecLane])))
         .addReg(VGPR, RegState::Kill)
         .addImm(ExecLane);
   }
@@ -1081,8 +1083,9 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
   if (SpillToVGPR) {
     for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
-      Register SubReg =
-          NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
+      Register SubReg = NumSubRegs == 1
+                            ? SuperReg
+                            : Register(getSubReg(SuperReg, SplitParts[i]));
       SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
 
       bool UseKill = IsKill && i == NumSubRegs - 1;
@@ -1135,8 +1138,9 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
       for (unsigned i = Offset * PerVGPR,
                     e = std::min((Offset + 1) * PerVGPR, NumSubRegs);
            i < e; ++i) {
-        Register SubReg =
-            NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
+        Register SubReg = NumSubRegs == 1
+                              ? SuperReg
+                              : Register(getSubReg(SuperReg, SplitParts[i]));
 
         MachineInstrBuilder WriteLane =
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), TmpVGPR)
@@ -1199,8 +1203,9 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
 
   if (SpillToVGPR) {
     for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
-      Register SubReg =
-          NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
+      Register SubReg = NumSubRegs == 1
+                            ? SuperReg
+                            : Register(getSubReg(SuperReg, SplitParts[i]));
 
       SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
       auto MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
@@ -1226,8 +1231,9 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       for (unsigned i = Offset * PerVGPR,
                     e = std::min((Offset + 1) * PerVGPR, NumSubRegs);
            i < e; ++i) {
-        Register SubReg =
-            NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
+        Register SubReg = NumSubRegs == 1
+                              ? SuperReg
+                              : Register(getSubReg(SuperReg, SplitParts[i]));
 
         bool LastSubReg = (i + 1 == e);
         auto MIB =

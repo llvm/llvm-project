@@ -16,14 +16,23 @@ class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let AltNames = alt;
 }
 
-class RISCVReg32<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
+class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;
   let AltNames = alt;
 }
 
+def sub_16 : SubRegIndex<16>;
+class RISCVReg32<RISCVReg16 subreg> : Register<""> {
+  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
+  let SubRegs = [subreg];
+  let SubRegIndices = [sub_16];
+  let AsmName = subreg.AsmName;
+  let AltNames = subreg.AltNames;
+}
+
 // Because RISCVReg64 register have AsmName and AltNames that alias with their
-// 32-bit sub-register, RISCVAsmParser will need to coerce a register number
-// from a RISCVReg32 to the equivalent RISCVReg64 when appropriate.
+// 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
+// from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
 def sub_32 : SubRegIndex<32>;
 class RISCVReg64<RISCVReg32 subreg> : Register<""> {
   let HWEncoding{4-0} = subreg.HWEncoding{4-0};
@@ -179,38 +188,43 @@ def SP : RegisterClass<"RISCV", [XLenVT], 32, (add X2)> {
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {
-  def F0_F  : RISCVReg32<0, "f0", ["ft0"]>, DwarfRegNum<[32]>;
-  def F1_F  : RISCVReg32<1, "f1", ["ft1"]>, DwarfRegNum<[33]>;
-  def F2_F  : RISCVReg32<2, "f2", ["ft2"]>, DwarfRegNum<[34]>;
-  def F3_F  : RISCVReg32<3, "f3", ["ft3"]>, DwarfRegNum<[35]>;
-  def F4_F  : RISCVReg32<4, "f4", ["ft4"]>, DwarfRegNum<[36]>;
-  def F5_F  : RISCVReg32<5, "f5", ["ft5"]>, DwarfRegNum<[37]>;
-  def F6_F  : RISCVReg32<6, "f6", ["ft6"]>, DwarfRegNum<[38]>;
-  def F7_F  : RISCVReg32<7, "f7", ["ft7"]>, DwarfRegNum<[39]>;
-  def F8_F  : RISCVReg32<8, "f8", ["fs0"]>, DwarfRegNum<[40]>;
-  def F9_F  : RISCVReg32<9, "f9", ["fs1"]>, DwarfRegNum<[41]>;
-  def F10_F : RISCVReg32<10,"f10", ["fa0"]>, DwarfRegNum<[42]>;
-  def F11_F : RISCVReg32<11,"f11", ["fa1"]>, DwarfRegNum<[43]>;
-  def F12_F : RISCVReg32<12,"f12", ["fa2"]>, DwarfRegNum<[44]>;
-  def F13_F : RISCVReg32<13,"f13", ["fa3"]>, DwarfRegNum<[45]>;
-  def F14_F : RISCVReg32<14,"f14", ["fa4"]>, DwarfRegNum<[46]>;
-  def F15_F : RISCVReg32<15,"f15", ["fa5"]>, DwarfRegNum<[47]>;
-  def F16_F : RISCVReg32<16,"f16", ["fa6"]>, DwarfRegNum<[48]>;
-  def F17_F : RISCVReg32<17,"f17", ["fa7"]>, DwarfRegNum<[49]>;
-  def F18_F : RISCVReg32<18,"f18", ["fs2"]>, DwarfRegNum<[50]>;
-  def F19_F : RISCVReg32<19,"f19", ["fs3"]>, DwarfRegNum<[51]>;
-  def F20_F : RISCVReg32<20,"f20", ["fs4"]>, DwarfRegNum<[52]>;
-  def F21_F : RISCVReg32<21,"f21", ["fs5"]>, DwarfRegNum<[53]>;
-  def F22_F : RISCVReg32<22,"f22", ["fs6"]>, DwarfRegNum<[54]>;
-  def F23_F : RISCVReg32<23,"f23", ["fs7"]>, DwarfRegNum<[55]>;
-  def F24_F : RISCVReg32<24,"f24", ["fs8"]>, DwarfRegNum<[56]>;
-  def F25_F : RISCVReg32<25,"f25", ["fs9"]>, DwarfRegNum<[57]>;
-  def F26_F : RISCVReg32<26,"f26", ["fs10"]>, DwarfRegNum<[58]>;
-  def F27_F : RISCVReg32<27,"f27", ["fs11"]>, DwarfRegNum<[59]>;
-  def F28_F : RISCVReg32<28,"f28", ["ft8"]>, DwarfRegNum<[60]>;
-  def F29_F : RISCVReg32<29,"f29", ["ft9"]>, DwarfRegNum<[61]>;
-  def F30_F : RISCVReg32<30,"f30", ["ft10"]>, DwarfRegNum<[62]>;
-  def F31_F : RISCVReg32<31,"f31", ["ft11"]>, DwarfRegNum<[63]>;
+  def F0_H  : RISCVReg16<0, "f0", ["ft0"]>, DwarfRegNum<[32]>;
+  def F1_H  : RISCVReg16<1, "f1", ["ft1"]>, DwarfRegNum<[33]>;
+  def F2_H  : RISCVReg16<2, "f2", ["ft2"]>, DwarfRegNum<[34]>;
+  def F3_H  : RISCVReg16<3, "f3", ["ft3"]>, DwarfRegNum<[35]>;
+  def F4_H  : RISCVReg16<4, "f4", ["ft4"]>, DwarfRegNum<[36]>;
+  def F5_H  : RISCVReg16<5, "f5", ["ft5"]>, DwarfRegNum<[37]>;
+  def F6_H  : RISCVReg16<6, "f6", ["ft6"]>, DwarfRegNum<[38]>;
+  def F7_H  : RISCVReg16<7, "f7", ["ft7"]>, DwarfRegNum<[39]>;
+  def F8_H  : RISCVReg16<8, "f8", ["fs0"]>, DwarfRegNum<[40]>;
+  def F9_H  : RISCVReg16<9, "f9", ["fs1"]>, DwarfRegNum<[41]>;
+  def F10_H : RISCVReg16<10,"f10", ["fa0"]>, DwarfRegNum<[42]>;
+  def F11_H : RISCVReg16<11,"f11", ["fa1"]>, DwarfRegNum<[43]>;
+  def F12_H : RISCVReg16<12,"f12", ["fa2"]>, DwarfRegNum<[44]>;
+  def F13_H : RISCVReg16<13,"f13", ["fa3"]>, DwarfRegNum<[45]>;
+  def F14_H : RISCVReg16<14,"f14", ["fa4"]>, DwarfRegNum<[46]>;
+  def F15_H : RISCVReg16<15,"f15", ["fa5"]>, DwarfRegNum<[47]>;
+  def F16_H : RISCVReg16<16,"f16", ["fa6"]>, DwarfRegNum<[48]>;
+  def F17_H : RISCVReg16<17,"f17", ["fa7"]>, DwarfRegNum<[49]>;
+  def F18_H : RISCVReg16<18,"f18", ["fs2"]>, DwarfRegNum<[50]>;
+  def F19_H : RISCVReg16<19,"f19", ["fs3"]>, DwarfRegNum<[51]>;
+  def F20_H : RISCVReg16<20,"f20", ["fs4"]>, DwarfRegNum<[52]>;
+  def F21_H : RISCVReg16<21,"f21", ["fs5"]>, DwarfRegNum<[53]>;
+  def F22_H : RISCVReg16<22,"f22", ["fs6"]>, DwarfRegNum<[54]>;
+  def F23_H : RISCVReg16<23,"f23", ["fs7"]>, DwarfRegNum<[55]>;
+  def F24_H : RISCVReg16<24,"f24", ["fs8"]>, DwarfRegNum<[56]>;
+  def F25_H : RISCVReg16<25,"f25", ["fs9"]>, DwarfRegNum<[57]>;
+  def F26_H : RISCVReg16<26,"f26", ["fs10"]>, DwarfRegNum<[58]>;
+  def F27_H : RISCVReg16<27,"f27", ["fs11"]>, DwarfRegNum<[59]>;
+  def F28_H : RISCVReg16<28,"f28", ["ft8"]>, DwarfRegNum<[60]>;
+  def F29_H : RISCVReg16<29,"f29", ["ft9"]>, DwarfRegNum<[61]>;
+  def F30_H : RISCVReg16<30,"f30", ["ft10"]>, DwarfRegNum<[62]>;
+  def F31_H : RISCVReg16<31,"f31", ["ft11"]>, DwarfRegNum<[63]>;
+
+  foreach Index = 0-31 in {
+    def F#Index#_F : RISCVReg32<!cast<RISCVReg16>("F"#Index#"_H")>,
+      DwarfRegNum<[!add(Index, 32)]>;
+  }
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
@@ -220,6 +234,14 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
+def FPR16 : RegisterClass<"RISCV", [f16], 16, (add
+    (sequence "F%u_H", 0, 7),
+    (sequence "F%u_H", 10, 17),
+    (sequence "F%u_H", 28, 31),
+    (sequence "F%u_H", 8, 9),
+    (sequence "F%u_H", 18, 27)
+)>;
+
 def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
     (sequence "F%u_F", 0, 7),
     (sequence "F%u_F", 10, 17),
@@ -247,6 +269,69 @@ def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
   (sequence "F%u_D", 10, 15),
   (sequence "F%u_D", 8, 9)
 )>;
+
+// Vector type mapping to LLVM types.
+//
+// Though the V extension allows that VLEN be as small as 8,
+// this approach assumes that VLEN>=64.
+// Additionally, the only supported ELEN values are 32 and 64,
+// thus `vscale` can be defined as VLEN/64,
+// allowing the same types with either ELEN value.
+//
+//         MF8    MF4     MF2     M1      M2      M4       M8
+// i64*    N/A    N/A     N/A     nxv1i64 nxv2i64 nxv4i64  nxv8i64
+// i32     N/A    N/A     nxv1i32 nxv2i32 nxv4i32 nxv8i32  nxv16i32
+// i16     N/A    nxv1i16 nxv2i16 nxv4i16 nxv8i16 nxv16i16 nxv32i16
+// i8      nxv1i8 nxv2i8  nxv4i8  nxv8i8  nxv16i8 nxv32i8  nxv64i8
+// double* N/A    N/A     N/A     nxv1f64 nxv2f64 nxv4f64  nxv8f64
+// float   N/A    N/A     nxv1f32 nxv2f32 nxv4f32 nxv8f32  nxv16f32
+// half    N/A    nxv1f16 nxv2f16 nxv4f16 nxv8f16 nxv16f16 nxv32f16
+// * ELEN=64
+
+defvar vint8mf8_t = nxv1i8;
+defvar vint8mf4_t = nxv2i8;
+defvar vint8mf2_t = nxv4i8;
+defvar vint8m1_t = nxv8i8;
+defvar vint8m2_t = nxv16i8;
+defvar vint8m4_t = nxv32i8;
+defvar vint8m8_t = nxv64i8;
+
+defvar vint16mf4_t = nxv1i16;
+defvar vint16mf2_t = nxv2i16;
+defvar vint16m1_t  = nxv4i16;
+defvar vint16m2_t  = nxv8i16;
+defvar vint16m4_t  = nxv16i16;
+defvar vint16m8_t  = nxv32i16;
+
+defvar vint32mf2_t = nxv1i32;
+defvar vint32m1_t  = nxv2i32;
+defvar vint32m2_t  = nxv4i32;
+defvar vint32m4_t  = nxv8i32;
+defvar vint32m8_t  = nxv16i32;
+
+defvar vint64m1_t = nxv1i64;
+defvar vint64m2_t = nxv2i64;
+defvar vint64m4_t = nxv4i64;
+defvar vint64m8_t = nxv8i64;
+
+defvar vfloat32mf2_t = nxv1f32;
+defvar vfloat32m1_t  = nxv2f32;
+defvar vfloat32m2_t  = nxv4f32;
+defvar vfloat32m4_t  = nxv8f32;
+defvar vfloat32m8_t  = nxv16f32;
+
+defvar vfloat64m1_t = nxv1f64;
+defvar vfloat64m2_t = nxv2f64;
+defvar vfloat64m4_t = nxv4f64;
+defvar vfloat64m8_t = nxv8f64;
+
+defvar vbool1_t  = nxv64i1;
+defvar vbool2_t  = nxv32i1;
+defvar vbool4_t  = nxv16i1;
+defvar vbool8_t  = nxv8i1;
+defvar vbool16_t = nxv4i1;
+defvar vbool32_t = nxv2i1;
+defvar vbool64_t = nxv1i1;
 
 // Vector registers
 let RegAltNameIndices = [ABIRegAltName] in {
@@ -293,44 +378,52 @@ class RegisterTypes<list<ValueType> reg_types> {
   list<ValueType> types = reg_types;
 }
 
-// The order of registers represents the preferred allocation sequence,
-// meaning caller-save regs are listed before callee-save.
-def VR : RegisterClass<"RISCV", [nxv8i8, nxv4i16, nxv2i32, nxv1i64],
-                       64, (add
-    (sequence "V%u", 25, 31),
-    (sequence "V%u", 8, 24),
-    (sequence "V%u", 0, 7)
-  )> {
-  let Size = 64;
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+  : RegisterClass<"RISCV",
+                  regTypes,
+                  // FIXME: Spill alignment set to 16 bytes.
+                  128,
+                  regList> {
+  int VLMul = Vlmul;
+  int Size = !mul(Vlmul, 64); // FIXME: assuming ELEN=64
 }
 
-def VRNoV0 : RegisterClass<"RISCV", [nxv8i8, nxv4i16, nxv2i32, nxv1i64],
-                           64, (add
-    (sequence "V%u", 25, 31),
-    (sequence "V%u", 8, 24),
-    (sequence "V%u", 1, 7)
-  )> {
-  let Size = 64;
-}
+def VR : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
+               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+               vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
+               vfloat32mf2_t, vfloat32m1_t, vfloat64m1_t,
+               vbool64_t, vbool32_t, vbool16_t, vbool8_t, vbool4_t,
+               vbool2_t, vbool1_t],
+           (add (sequence "V%u", 25, 31),
+                (sequence "V%u", 8, 24),
+                (sequence "V%u", 0, 7)), 1>;
 
-def VRM2 : RegisterClass<"RISCV", [nxv16i8, nxv8i16, nxv4i32, nxv2i64], 64,
-                         (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
-                              V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2)> {
-  let Size = 128;
-}
+def VRNoV0 : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
+                   vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                   vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
+                   vfloat32mf2_t, vfloat32m1_t, vfloat64m1_t,
+                   vbool64_t, vbool32_t, vbool16_t, vbool8_t, vbool4_t,
+                   vbool2_t, vbool1_t],
+               (add (sequence "V%u", 25, 31),
+                    (sequence "V%u", 8, 24),
+                    (sequence "V%u", 1, 7)), 1>;
 
-def VRM4 : RegisterClass<"RISCV", [nxv32i8, nxv16i16, nxv8i32, nxv4i64], 64,
-                         (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4)> {
-  let Size = 256;
-}
+def VRM2 : VReg<[vint8m2_t, vint16m2_t, vint32m2_t, vint64m2_t,
+                 vfloat32m2_t, vfloat64m2_t],
+             (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
+                  V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2), 2>;
 
-def VRM8 : RegisterClass<"RISCV", [nxv32i16, nxv16i32, nxv8i64], 64,
-                         (add V8M8, V16M8, V24M8, V0M8)> {
-  let Size = 512;
-}
+def VRM4 : VReg<[vint8m4_t, vint16m4_t, vint32m4_t, vint64m4_t,
+                 vfloat32m4_t, vfloat64m4_t],
+             (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4), 4>;
 
-def VMaskVT : RegisterTypes<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, nxv32i1]>;
+def VRM8 : VReg<[vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
+                 vfloat32m8_t, vfloat64m8_t],
+             (add V8M8, V16M8, V24M8, V0M8), 8>;
 
-def VMV0 : RegisterClass<"RISCV", VMaskVT.types, 64, (add V0)> {
+defvar VMaskVTs = [vbool64_t, vbool32_t, vbool16_t, vbool8_t,
+                   vbool4_t, vbool2_t, vbool1_t];
+
+def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
   let Size = 64;
 }

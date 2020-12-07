@@ -14,8 +14,8 @@
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/Function.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 

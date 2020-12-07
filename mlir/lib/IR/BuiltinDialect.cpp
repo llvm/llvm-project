@@ -15,9 +15,9 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/MapVector.h"
 
 using namespace mlir;
@@ -155,8 +155,7 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
     newAttrs.insert(attr);
   for (auto &attr : getAttrs())
     newAttrs.insert(attr);
-  dest.getOperation()->setAttrs(
-      DictionaryAttr::get(newAttrs.takeVector(), getContext()));
+  dest->setAttrs(DictionaryAttr::get(newAttrs.takeVector(), getContext()));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);
@@ -229,9 +228,9 @@ static LogicalResult verify(ModuleOp op) {
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
                                 mlir::SymbolTable::getVisibilityAttrName()},
             attr.first.strref()))
-      return op.emitOpError()
-             << "can only contain dialect-specific attributes, found: '"
-             << attr.first << "'";
+      return op.emitOpError() << "can only contain attributes with "
+                                 "dialect-prefixed names, found: '"
+                              << attr.first << "'";
   }
 
   return success();

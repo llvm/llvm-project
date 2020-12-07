@@ -5957,6 +5957,118 @@ TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
   EXPECT_EQ(Record, CompletedTags.front());
 }
 
+TEST_P(ImportFunctions, CTADImplicit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      A a{(int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU,
+      cxxDeductionGuideDecl(hasParameter(0, hasType(asString("A<T>")))));
+  auto *ToD = Import(FromD, Lang_CXX17);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->isCopyDeductionCandidate());
+  // Check that the deduced class template is also imported.
+  EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
+      FromD->getDeducedTemplate()));
+}
+
+TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template <typename T> explicit A(T) -> A<float>;
+      A a{(int)0}; // calls A<float>::A(float)
+      )",
+      Lang_CXX17, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl(unless(isImplicit())));
+  // Not-implicit: i.e. not compiler-generated, user defined.
+  ASSERT_FALSE(FromD->isImplicit());
+  ASSERT_TRUE(FromD->isExplicit()); // Has the explicit keyword.
+  auto *ToD = Import(FromD, Lang_CXX17);
+  ASSERT_TRUE(ToD);
+  EXPECT_FALSE(FromD->isImplicit());
+  EXPECT_TRUE(ToD->isExplicit());
+}
+
+// FIXME Move these tests out of ASTImporterTest. For that we need to factor
+// out the ASTImporter specific pars from ASTImporterOptionSpecificTestBase
+// into a new test Fixture. Then we should lift up this Fixture to its own
+// implementation file and only then could we reuse the Fixture in other AST
+// unitttests.
+struct CTAD : ASTImporterOptionSpecificTestBase {};
+
+TEST_P(CTAD, DeductionGuideShouldReferToANonLocalTypedef) {
+  Decl *TU = getTuDecl(
+      R"(
+      typedef int U;
+      template <typename T> struct A {
+        A(U, T);
+      };
+      A a{(int)0, (int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *Guide = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl());
+  auto *Typedef = FirstDeclMatcher<TypedefNameDecl>().match(
+      TU, typedefNameDecl(hasName("U")));
+  ParmVarDecl *Param = Guide->getParamDecl(0);
+  // The type of the first param (which is a typedef) should match the typedef
+  // in the global scope.
+  EXPECT_EQ(Param->getType()->getAs<TypedefType>()->getDecl(), Typedef);
+}
+
+TEST_P(CTAD, DeductionGuideShouldReferToANonLocalTypedefInParamPtr) {
+  Decl *TU = getTuDecl(
+      R"(
+      typedef int U;
+      template <typename T> struct A {
+        A(U*, T);
+      };
+      A a{(int*)0, (int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *Guide = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl());
+  auto *Typedef = FirstDeclMatcher<TypedefNameDecl>().match(
+      TU, typedefNameDecl(hasName("U")));
+  ParmVarDecl *Param = Guide->getParamDecl(0);
+  EXPECT_EQ(Param->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<TypedefType>()
+                ->getDecl(),
+            Typedef);
+}
+
+TEST_P(CTAD, DeductionGuideShouldCopyALocalTypedef) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        typedef T U;
+        A(U, T);
+      };
+      A a{(int)0, (int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *Guide = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl());
+  auto *Typedef = FirstDeclMatcher<TypedefNameDecl>().match(
+      TU, typedefNameDecl(hasName("U")));
+  ParmVarDecl *Param = Guide->getParamDecl(0);
+  EXPECT_NE(Param->getType()->getAs<TypedefType>()->getDecl(), Typedef);
+}
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, CTAD,
+                        DefaultTestValuesForRunOptions, );
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 

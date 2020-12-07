@@ -9,7 +9,6 @@ define i32 @global_atomic_csub(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
@@ -25,7 +24,6 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
@@ -42,7 +40,6 @@ define void @global_atomic_csub_nortn(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
@@ -58,7 +55,6 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
@@ -76,7 +72,6 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(i32 addrspace(1)*
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x1000
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-NEXT:    global_atomic_csub v0, v1, v0, s[0:1] glc
@@ -90,7 +85,6 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(i32 addrspace(1)*
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x1000
-; GFX11-NEXT:    ; implicit-def: $vcc_hi
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_atomic_csub v0, v1, v0, s[0:1] glc

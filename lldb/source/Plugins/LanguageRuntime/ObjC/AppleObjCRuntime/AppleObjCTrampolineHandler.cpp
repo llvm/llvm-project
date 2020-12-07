@@ -521,7 +521,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     const ABI *abi = process->GetABI().get();
 
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
@@ -827,8 +827,8 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
       }
 
       // Next make the runner function for our implementation utility function.
-      TypeSystemClang *clang_ast_context =
-          TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
+      TypeSystemClang *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+          thread.GetProcess()->GetTarget());
       if (!clang_ast_context)
         return LLDB_INVALID_ADDRESS;
 
@@ -931,7 +931,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     TargetSP target_sp(thread.CalculateTarget());
 
-    TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+    TypeSystemClang *clang_ast_context =
+        ScratchTypeSystemClang::GetForTarget(*target_sp);
     if (!clang_ast_context)
       return ret_plan_sp;
 

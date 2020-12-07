@@ -113,6 +113,8 @@ VPUser *VPRecipeBase::toVPUser() {
     return U;
   if (auto *U = dyn_cast<VPReductionRecipe>(this))
     return U;
+  if (auto *U = dyn_cast<VPPredInstPHIRecipe>(this))
+    return U;
   return nullptr;
 }
 
@@ -966,15 +968,23 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
-    << VPlanIngredient(getUnderlyingInstr());
+  O << "\"" << (IsUniform ? "CLONE " : "REPLICATE ");
+
+  if (!getUnderlyingInstr()->getType()->isVoidTy()) {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+  O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+  printOperands(O, SlotTracker);
+
   if (AlsoPack)
     O << " (S->V)";
 }
 
 void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "\"PHI-PREDICATED-INSTRUCTION " << VPlanIngredient(PredInst);
+  O << "\"PHI-PREDICATED-INSTRUCTION ";
+  printOperands(O, SlotTracker);
 }
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,

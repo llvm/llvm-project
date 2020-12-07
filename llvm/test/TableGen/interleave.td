@@ -28,9 +28,9 @@ def Rec1 {
 }
 
 // CHECK: def Rec2
-// CHECK: Test1 = "01234567";
-// CHECK: Test2 = "0, 1, 2, 3, 4, 5, 6, 7";
-// CHECK: Test3 = "0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 42";
+// CHECK:   Test1 = "01234567";
+// CHECK:   Test2 = "0, 1, 2, 3, 4, 5, 6, 7";
+// CHECK:   Test3 = "0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 42";
 
 def Rec2 {
   string Test1 = !interleave(IntList, "");
@@ -39,9 +39,9 @@ def Rec2 {
 }
 
 // CHECK: def Rec3
-// CHECK: Test1 = "271";
-// CHECK: Test2 = "2, 7, 1";
-// CHECK: Test3 = "2 & 7 & 1 & 0";
+// CHECK:   Test1 = "271";
+// CHECK:   Test2 = "2, 7, 1";
+// CHECK:   Test3 = "2 & 7 & 1 & 0";
 
 def Rec3 {
   string Test1 = !interleave(BitsList, "");
@@ -50,9 +50,9 @@ def Rec3 {
 }
 
 // CHECK: def Rec4
-// CHECK: Test1 = "01101";
-// CHECK: Test2 = "0, 1, 1, 0, 1";
-// CHECK: Test3 = "0 and 1 and 1 and 0 and 1 and 1";
+// CHECK:   Test1 = "01101";
+// CHECK:   Test2 = "0, 1, 1, 0, 1";
+// CHECK:   Test3 = "0 and 1 and 1 and 0 and 1 and 1";
 
 def Rec4 {
   string Test1 = !interleave(BitList, "");
@@ -61,13 +61,22 @@ def Rec4 {
 }
 
 // CHECK: def Rec5
-// CHECK: Colors = ["red", "green", "yellow"];
-// CHECK: ColorList = "redify, greenify, yellowify";
+// CHECK:   Colors = ["red", "green", "yellow"];
+// CHECK:   ColorList = "redify, greenify, yellowify";
 
 def Rec5 {
   list<string> Colors = ["red", "green", "yellow"];
   string ColorList = !interleave(Ishify<Colors>.ret, ", ");
 }
+
+// CHECK: def Rec6
+// CHECK:   code OperatorList = [{+, -, *, /, ?:, ;}];
+
+def Rec6 {
+  list<string> Operators = ["+", "-", "*", "/", "?:"];
+  code OperatorList = !interleave(!listconcat(Operators, [[{;}]]), ", ");
+}
+
 
 #ifdef ERROR1
 def op;

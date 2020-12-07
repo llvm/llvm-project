@@ -54,6 +54,7 @@ struct GenericEnum {
 struct GenericField {
   std::string Name;
   RecTy *RecType = nullptr;
+  bool IsCode = false;
   bool IsIntrinsic = false;
   bool IsInstruction = false;
   GenericEnum *Enum = nullptr;
@@ -111,14 +112,15 @@ private:
 
   std::string primaryRepresentation(SMLoc Loc, const GenericField &Field,
                                     Init *I) {
-    if (StringInit *SI = dyn_cast<StringInit>(I))
-      return SI->getAsString();
-    else if (BitsInit *BI = dyn_cast<BitsInit>(I))
+    if (StringInit *SI = dyn_cast<StringInit>(I)) {
+      if (Field.IsCode || SI->hasCodeFormat())
+        return std::string(SI->getValue());
+      else
+        return SI->getAsString();
+    } else if (BitsInit *BI = dyn_cast<BitsInit>(I))
       return "0x" + utohexstr(getAsInt(BI));
     else if (BitInit *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
-    else if (CodeInit *CI = dyn_cast<CodeInit>(I))
-      return std::string(CI->getValue());
     else if (Field.IsIntrinsic)
       return "Intrinsic::" + getIntrinsic(I).EnumName;
     else if (Field.IsInstruction)
@@ -149,10 +151,6 @@ private:
   }
 
   bool compareBy(Record *LHS, Record *RHS, const SearchIndex &Index);
-
-  bool isIntegral(Init *I) {
-    return isa<BitsInit>(I) || isa<CodeInit>(I) || isIntrinsic(I);
-  }
 
   std::string searchableFieldType(const GenericTable &Table,
                                   const SearchIndex &Index,
@@ -545,13 +543,19 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   OS << "#endif\n\n";
 }
 
-bool SearchableTableEmitter::parseFieldType(GenericField &Field, Init *II) {
-  if (auto DI = dyn_cast<DefInit>(II)) {
-    Record *TypeRec = DI->getDef();
-    if (TypeRec->isSubClassOf("GenericEnum")) {
-      Field.Enum = EnumMap[TypeRec];
-      Field.RecType = RecordRecTy::get(Field.Enum->Class);
+bool SearchableTableEmitter::parseFieldType(GenericField &Field, Init *TypeOf) {
+  if (auto Type = dyn_cast<StringInit>(TypeOf)) {
+    if (Type->getValue() == "code") {
+      Field.IsCode = true;
       return true;
+    } else {
+      if (Record *TypeRec = Records.getDef(Type->getValue())) {
+        if (TypeRec->isSubClassOf("GenericEnum")) {
+          Field.Enum = EnumMap[TypeRec];
+          Field.RecType = RecordRecTy::get(Field.Enum->Class);
+          return true;
+        }
+      }
     }
   }
 
@@ -708,12 +712,14 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     for (const auto &FieldName : Fields) {
       Table->Fields.emplace_back(FieldName); // Construct a GenericField.
 
-      if (auto TypeOfVal = TableRec->getValue(("TypeOf_" + FieldName).str())) {
-        if (!parseFieldType(Table->Fields.back(), TypeOfVal->getValue())) {
-          PrintFatalError(TypeOfVal, 
-                          Twine("Table '") + Table->Name +
-                              "' has invalid 'TypeOf_" + FieldName +
-                              "': " + TypeOfVal->getValue()->getAsString());
+      if (auto TypeOfRecordVal = TableRec->getValue(("TypeOf_" + FieldName).str())) {
+        if (!parseFieldType(Table->Fields.back(), TypeOfRecordVal->getValue())) {
+          PrintError(TypeOfRecordVal, 
+                     Twine("Table '") + Table->Name +
+                         "' has invalid 'TypeOf_" + FieldName +
+                         "': " + TypeOfRecordVal->getValue()->getAsString());
+          PrintFatalNote("The 'TypeOf_xxx' field must be a string naming a "
+                         "GenericEnum record, or \"code\"");
         }
       }
     }

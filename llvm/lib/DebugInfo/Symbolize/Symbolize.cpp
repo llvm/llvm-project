@@ -287,10 +287,8 @@ bool darwinDsymMatchesBinary(const MachOObjectFile *DbgObj,
 }
 
 template <typename ELFT>
-Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> *Obj) {
-  if (!Obj)
-    return {};
-  auto PhdrsOrErr = Obj->program_headers();
+Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> &Obj) {
+  auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
     return {};
@@ -299,7 +297,7 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> *Obj) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
     Error Err = Error::success();
-    for (auto N : Obj->notes(P, Err))
+    for (auto N : Obj.notes(P, Err))
       if (N.getType() == ELF::NT_GNU_BUILD_ID && N.getName() == ELF::ELF_NOTE_GNU)
         return N.getDesc();
     consumeError(std::move(Err));
@@ -557,11 +555,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
 
-      PDB_ReaderType ReaderType = PDB_ReaderType::Native;
-#if LLVM_ENABLE_DIA_SDK
-      if (!Opts.UseNativePDBReader)
-        ReaderType = PDB_ReaderType::DIA;
-#endif
+      PDB_ReaderType ReaderType =
+          Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
       if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                     Session)) {
         Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());

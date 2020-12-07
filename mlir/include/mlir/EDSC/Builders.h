@@ -16,7 +16,7 @@
 
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 
 namespace mlir {
@@ -30,6 +30,7 @@ namespace edsc {
 /// setting and restoring of insertion points.
 class ScopedContext {
 public:
+  ScopedContext(OpBuilder &b);
   ScopedContext(OpBuilder &b, Location location);
 
   /// Sets the insertion point of the builder to 'newInsertPt' for the duration

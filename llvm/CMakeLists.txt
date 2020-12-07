@@ -52,7 +52,13 @@ project(LLVM
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS NO)
+if (CYGWIN)
+  # Cygwin is a bit stricter and lack things like 'strdup', 'stricmp', etc in
+  # c++xx mode.
+  set(CMAKE_CXX_EXTENSIONS YES)
+else()
+  set(CMAKE_CXX_EXTENSIONS NO)
+endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")
@@ -697,6 +703,9 @@ else()
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
+set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
+  "Enable the experimental new pass manager by default.")
+
 include(HandleLLVMOptions)
 
 find_package(Python3 COMPONENTS Interpreter)
@@ -808,6 +817,10 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
 endif()
+
+# Keep the legacy CMake flag ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER for
+# compatibility.
+set(LLVM_ENABLE_NEW_PASS_MANAGER ${ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER})
 
 # Configure the three LLVM configuration header files.
 configure_file(

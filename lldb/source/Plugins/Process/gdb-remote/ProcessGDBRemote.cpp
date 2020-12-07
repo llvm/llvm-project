@@ -451,7 +451,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     return;
 
   char packet[128];
-  uint32_t reg_offset = 0;
+  uint32_t reg_offset = LLDB_INVALID_INDEX32;
   uint32_t reg_num = 0;
   for (StringExtractorGDBRemote::ResponseType response_type =
            StringExtractorGDBRemote::eResponse;
@@ -564,7 +564,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
         reg_info.byte_offset = reg_offset;
         assert(reg_info.byte_size != 0);
-        reg_offset += reg_info.byte_size;
+        reg_offset = LLDB_INVALID_INDEX32;
         if (!value_regs.empty()) {
           value_regs.push_back(LLDB_INVALID_REGNUM);
           reg_info.value_regs = value_regs.data();
@@ -4276,14 +4276,14 @@ struct GdbServerTargetInfo {
 
 bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
                     GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp,
-                    uint32_t &cur_reg_num, uint32_t &reg_offset) {
+                    uint32_t &reg_num_remote, uint32_t &reg_num_local) {
   if (!feature_node)
     return false;
 
+  uint32_t reg_offset = LLDB_INVALID_INDEX32;
   feature_node.ForEachChildElementWithName(
-      "reg",
-      [&target_info, &dyn_reg_info, &cur_reg_num, &reg_offset,
-       &abi_sp](const XMLNode &reg_node) -> bool {
+      "reg", [&target_info, &dyn_reg_info, &reg_num_remote, &reg_num_local,
+              &reg_offset, &abi_sp](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
         ConstString reg_name;
@@ -4305,8 +4305,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
                 LLDB_INVALID_REGNUM, // eh_frame reg num
                 LLDB_INVALID_REGNUM, // DWARF reg num
                 LLDB_INVALID_REGNUM, // generic reg num
-                cur_reg_num,         // process plugin reg num
-                cur_reg_num          // native register number
+                reg_num_remote,      // process plugin reg num
+                reg_num_local        // native register number
             },
             nullptr,
             nullptr,
@@ -4433,7 +4433,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 
         reg_info.byte_offset = reg_offset;
         assert(reg_info.byte_size != 0);
-        reg_offset += reg_info.byte_size;
+        reg_offset = LLDB_INVALID_INDEX32;
         if (!value_regs.empty()) {
           value_regs.push_back(LLDB_INVALID_REGNUM);
           reg_info.value_regs = value_regs.data();
@@ -4443,7 +4443,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           reg_info.invalidate_regs = invalidate_regs.data();
         }
 
-        ++cur_reg_num;
+        reg_num_remote = reg_info.kinds[eRegisterKindProcessPlugin] + 1;
+        ++reg_num_local;
         reg_info.name = reg_name.AsCString();
         if (abi_sp)
           abi_sp->AugmentRegisterInfo(reg_info);
@@ -4462,8 +4463,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 // for nested register definition files.  It returns true if it was able
 // to fetch and parse an xml file.
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
-    ArchSpec &arch_to_use, std::string xml_filename, uint32_t &cur_reg_num,
-    uint32_t &reg_offset) {
+    ArchSpec &arch_to_use, std::string xml_filename, uint32_t &reg_num_remote,
+    uint32_t &reg_num_local) {
   // request the target xml file
   std::string raw;
   lldb_private::Status lldberr;
@@ -4567,12 +4568,12 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       ABISP abi_to_use_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
       for (auto &feature_node : feature_nodes) {
         ParseRegisters(feature_node, target_info, this->m_register_info,
-                       abi_to_use_sp, cur_reg_num, reg_offset);
+                       abi_to_use_sp, reg_num_remote, reg_num_local);
       }
 
       for (const auto &include : target_info.includes) {
-        GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include, cur_reg_num,
-                                              reg_offset);
+        GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include,
+                                              reg_num_remote, reg_num_local);
       }
     }
   } else {
@@ -4592,9 +4593,10 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return false;
 
-  uint32_t cur_reg_num = 0;
-  uint32_t reg_offset = 0;
-  if (GetGDBServerRegisterInfoXMLAndProcess (arch_to_use, "target.xml", cur_reg_num, reg_offset))
+  uint32_t reg_num_remote = 0;
+  uint32_t reg_num_local = 0;
+  if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
+                                            reg_num_remote, reg_num_local))
     this->m_register_info.Finalize(arch_to_use);
 
   return m_register_info.GetNumRegisters() > 0;

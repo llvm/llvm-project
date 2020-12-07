@@ -1,5 +1,5 @@
 # The binary contains two (merged) covmap sections which
-# have duplicate CovMapRecords from comdat (template instantation).
+# have duplicate CovMapRecords from comdat (template instantiation).
 # This test makes sure the reader reads it properly. It also
 # tests that the coverage data from different instantiations
 # of the same template function are properly merged in show
