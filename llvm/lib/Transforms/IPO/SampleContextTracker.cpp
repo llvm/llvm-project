@@ -271,7 +271,7 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(StringRef Name,
         continue;
 
       ContextTrieNode &ToNode = promoteMergeContextSamplesTree(*FromNode);
-      assert(!Node || Node == &ToNode && "Expect only one base profile");
+      assert((!Node || Node == &ToNode) && "Expect only one base profile");
       Node = &ToNode;
     }
   }
