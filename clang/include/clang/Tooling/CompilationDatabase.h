@@ -184,10 +184,15 @@ public:
       int &Argc, const char *const *Argv, std::string &ErrorMsg,
       Twine Directory = ".");
 
-  /// Reads flags from the given file, one-per line.
+  /// Reads flags from the given file, one-per-line.
   /// Returns nullptr and sets ErrorMessage if we can't read the file.
   static std::unique_ptr<FixedCompilationDatabase>
   loadFromFile(StringRef Path, std::string &ErrorMsg);
+
+  /// Reads flags from the given buffer, one-per-line.
+  /// Directory is the command CWD, typically the parent of compile_flags.txt.
+  static std::unique_ptr<FixedCompilationDatabase>
+  loadFromBuffer(StringRef Directory, StringRef Data, std::string &ErrorMsg);
 
   /// Constructs a compilation data base from a specified directory
   /// and command line.

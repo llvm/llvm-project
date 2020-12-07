@@ -543,6 +543,27 @@ TEST(FixedCompilationDatabase, GetAllCompileCommands) {
   EXPECT_EQ(0ul, Database.getAllCompileCommands().size());
 }
 
+TEST(FixedCompilationDatabase, FromBuffer) {
+  const char *Data = R"(
+
+ -DFOO=BAR
+
+--baz
+
+  )";
+  std::string ErrorMsg;
+  auto CDB =
+      FixedCompilationDatabase::loadFromBuffer("/cdb/dir", Data, ErrorMsg);
+
+  std::vector<CompileCommand> Result = CDB->getCompileCommands("/foo/bar.cc");
+  ASSERT_EQ(1ul, Result.size());
+  EXPECT_EQ("/cdb/dir", Result.front().Directory);
+  EXPECT_EQ("/foo/bar.cc", Result.front().Filename);
+  EXPECT_THAT(
+      Result.front().CommandLine,
+      ElementsAre(EndsWith("clang-tool"), "-DFOO=BAR", "--baz", "/foo/bar.cc"));
+}
+
 TEST(ParseFixedCompilationDatabase, ReturnsNullOnEmptyArgumentList) {
   int Argc = 0;
   std::string ErrorMsg;
