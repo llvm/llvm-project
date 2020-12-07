@@ -4609,6 +4609,16 @@ def : Pat<(int_ppc_dcbfl xoaddr:$dst),
 def : Pat<(int_ppc_dcbflp xoaddr:$dst),
           (DCBF 3, xoaddr:$dst)>;
 
+let Predicates = [IsISA3_1] in {
+  def DCBFPS  : PPCAsmPseudo<"dcbfps $dst", (ins memrr:$dst)>;
+  def DCBSTPS : PPCAsmPseudo<"dcbstps $dst", (ins memrr:$dst)>;
+
+  def : Pat<(int_ppc_dcbfps xoaddr:$dst),
+            (DCBF 4, xoaddr:$dst)>;
+  def : Pat<(int_ppc_dcbstps xoaddr:$dst),
+            (DCBF 6, xoaddr:$dst)>;
+}
+
 def : InstAlias<"crset $bx", (CREQV crbitrc:$bx, crbitrc:$bx, crbitrc:$bx)>;
 def : InstAlias<"crclr $bx", (CRXOR crbitrc:$bx, crbitrc:$bx, crbitrc:$bx)>;
 def : InstAlias<"crmove $bx, $by", (CROR crbitrc:$bx, crbitrc:$by, crbitrc:$by)>;
