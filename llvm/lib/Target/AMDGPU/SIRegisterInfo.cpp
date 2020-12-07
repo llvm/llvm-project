@@ -697,8 +697,10 @@ static MachineInstrBuilder spillVGPRtoAGPR(const GCNSubtarget &ST,
   unsigned Opc = (IsStore ^ TRI->isVGPR(MRI, Reg)) ? AMDGPU::V_ACCVGPR_WRITE_B32
                                                    : AMDGPU::V_ACCVGPR_READ_B32;
 
-  return BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(Opc), Dst)
-           .addReg(Src, getKillRegState(IsKill));
+  auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(Opc), Dst)
+               .addReg(Src, getKillRegState(IsKill));
+  MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
+  return MIB;
 }
 
 // This differs from buildSpillLoadStore by only scavenging a VGPR. It does not
@@ -871,10 +873,12 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
           RS->setRegUsed(TmpReg);
         }
         if (IsStore) {
-          auto AccRead = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_READ_B32), TmpReg)
+          auto AccRead = BuildMI(*MBB, MI, DL,
+                                 TII->get(AMDGPU::V_ACCVGPR_READ_B32), TmpReg)
             .addReg(SubReg, getKillRegState(IsKill));
           if (NeedSuperRegDef)
             AccRead.addReg(ValueReg, RegState::ImplicitDefine);
+          AccRead->setAsmPrinterFlag(MachineInstr::ReloadReuse);
         }
         SubReg = TmpReg;
       }
@@ -908,10 +912,12 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       if (!IsAGPR && NeedSuperRegDef)
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
 
-      if (!IsStore && TmpReg != AMDGPU::NoRegister)
+      if (!IsStore && TmpReg != AMDGPU::NoRegister) {
         MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32),
                       FinalReg)
           .addReg(TmpReg, RegState::Kill);
+        MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
+      }
     } else {
       if (NeedSuperRegDef)
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
