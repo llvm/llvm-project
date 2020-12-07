@@ -46,7 +46,6 @@ public:
   void createOutputSections();
   void createLoadCommands();
   void assignAddresses(OutputSegment *);
-  void createSymtabContents();
 
   void openFile();
   void writeSections();

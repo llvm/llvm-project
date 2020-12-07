@@ -203,7 +203,6 @@ public:
   void assignIndexes() override;
   void writeBody() override;
   void addGlobal(InputGlobal *global);
-  void addDataAddressGlobal(DefinedData *global);
 
   // Add an internal GOT entry global that corresponds to the given symbol.
   // Normally GOT entries are imported and assigned by the external dynamic

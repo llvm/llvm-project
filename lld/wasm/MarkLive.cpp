@@ -43,7 +43,6 @@ public:
 private:
   void enqueue(Symbol *sym);
   void enqueueInitFunctions(const ObjFile *sym);
-  void markSymbol(Symbol *sym);
   void mark();
   bool isCallCtorsLive();
 
