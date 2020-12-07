@@ -330,6 +330,8 @@ enum : unsigned {
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
   WASM_COMDAT_FUNCTION = 0x1,
+  // GLOBAL, EVENT, and TABLE are in here but LLVM doesn't use them yet.
+  WASM_COMDAT_SECTION = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_SYMBOL_TABLE
