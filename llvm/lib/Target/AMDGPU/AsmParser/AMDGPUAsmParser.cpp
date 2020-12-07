@@ -187,6 +187,7 @@ public:
     ImmTyABID,
     ImmTyEndpgm,
     ImmTyWaitVDST,
+    ImmTyWaitEXP,
   };
 
   enum ImmKindTy {
@@ -704,6 +705,7 @@ public:
   bool isU16Imm() const;
   bool isEndpgm() const;
   bool isWaitVDST() const;
+  bool isWaitEXP() const;
 
   StringRef getExpressionAsToken() const {
     assert(isExpr());
@@ -914,6 +916,7 @@ public:
     case ImmTyABID: OS << "ABID"; break;
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
+    case ImmTyWaitEXP: OS << "WaitEXP"; break;
     }
   }
 
@@ -1517,6 +1520,7 @@ public:
   void cvtVOP3P(MCInst &Inst, const OperandVector &Operands);
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
+  void cvtVINTERP(MCInst &Inst, const OperandVector &Operands);
 
   void cvtMIMG(MCInst &Inst, const OperandVector &Operands,
                bool IsAtomic = false);
@@ -1555,6 +1559,9 @@ public:
 
   OperandMatchResultTy parseWaitVDST(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultWaitVDST() const;
+
+  OperandMatchResultTy parseWaitEXP(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultWaitEXP() const;
 };
 
 struct OptionalOperand {
@@ -7067,7 +7074,8 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"blgp", AMDGPUOperand::ImmTyBLGP, false, nullptr},
   {"cbsz", AMDGPUOperand::ImmTyCBSZ, false, nullptr},
   {"abid", AMDGPUOperand::ImmTyABID, false, nullptr},
-  {"wait_vdst", AMDGPUOperand::ImmTyWaitVDST, false, nullptr}
+  {"wait_vdst", AMDGPUOperand::ImmTyWaitVDST, false, nullptr},
+  {"wait_exp", AMDGPUOperand::ImmTyWaitEXP, false, nullptr}
 };
 
 OperandMatchResultTy AMDGPUAsmParser::parseOptionalOperand(OperandVector &Operands) {
@@ -7215,6 +7223,66 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
 
   if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
+  }
+}
+
+void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
+{
+  OptionalImmIndexMap OptionalIdx;
+  unsigned Opc = Inst.getOpcode();
+
+  unsigned I = 1;
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
+    ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
+  }
+
+  for (unsigned E = Operands.size(); I != E; ++I) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
+    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
+    } else if (Op.isImmModifier()) {
+      OptionalIdx[Op.getImmTy()] = I;
+    } else {
+      llvm_unreachable("unhandled operand type");
+    }
+  }
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
+
+  int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+  if (OpSelIdx != -1)
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOpSel);
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyWaitEXP);
+
+  if (OpSelIdx == -1)
+    return;
+
+  const int Ops[] = { AMDGPU::OpName::src0,
+                      AMDGPU::OpName::src1,
+                      AMDGPU::OpName::src2 };
+  const int ModOps[] = { AMDGPU::OpName::src0_modifiers,
+                         AMDGPU::OpName::src1_modifiers,
+                         AMDGPU::OpName::src2_modifiers };
+
+  unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+
+  for (int J = 0; J < 3; ++J) {
+    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
+    if (OpIdx == -1)
+      break;
+
+    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
+    uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+
+    if ((OpSel & (1 << J)) != 0)
+      ModVal |= SISrcMods::OP_SEL_0;
+    if (ModOps[J] == AMDGPU::OpName::src0_modifiers &&
+        (OpSel & (1 << 3)) != 0)
+      ModVal |= SISrcMods::DST_OP_SEL;
+
+    Inst.getOperand(ModIdx).setImm(ModVal);
   }
 }
 
@@ -8054,4 +8122,35 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVDST() const {
 
 bool AMDGPUOperand::isWaitVDST() const {
   return isImmTy(ImmTyWaitVDST) && isUInt<4>(getImm());
+}
+
+//===----------------------------------------------------------------------===//
+// VINTERP
+//===----------------------------------------------------------------------===//
+
+OperandMatchResultTy AMDGPUAsmParser::parseWaitEXP(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  int64_t Imm = 0;
+
+  if (!parseExpr(Imm)) {
+    // The operand is optional, if not present default to 0
+    Imm = 0;
+  }
+
+  if (!isUInt<3>(Imm)) {
+    Error(S, "expected a 3-bit value");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(
+      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyWaitEXP));
+  return MatchOperand_Success;
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitEXP() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitEXP);
+}
+
+bool AMDGPUOperand::isWaitEXP() const {
+  return isImmTy(ImmTyWaitEXP) && isUInt<3>(getImm());
 }

@@ -1344,6 +1344,7 @@ def int_amdgcn_interp_p2 :
           // See int_amdgcn_v_interp_p1 for why this is IntrNoMem.
 
 // __builtin_amdgcn_interp_p1_f16 <i>, <attr_chan>, <attr>, <high>, <m0>
+// high selects whether high or low 16-bits are loaded from LDS
 def int_amdgcn_interp_p1_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p1_f16">,
   Intrinsic<[llvm_float_ty],
@@ -1352,6 +1353,7 @@ def int_amdgcn_interp_p1_f16 :
              ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 // __builtin_amdgcn_interp_p2_f16 <p1>, <j>, <attr_chan>, <attr>, <high>, <m0>
+// high selects whether high or low 16-bits are loaded from LDS
 def int_amdgcn_interp_p2_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p2_f16">,
   Intrinsic<[llvm_half_ty],
@@ -1375,6 +1377,38 @@ def int_amdgcn_lds_param_load :
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+
+// __builtin_amdgcn_interp_inreg_p10 <p>, <i>, <p0>
+def int_amdgcn_interp_inreg_p10 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __builtin_amdgcn_interp_inreg_p2 <p>, <j>, <tmp>
+def int_amdgcn_interp_inreg_p2 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __builtin_amdgcn_interp_inreg_p10_f16 <p>, <i>, <p0>, <high>
+// high selects whether high or low 16-bits are used for p and p0 operands
+def int_amdgcn_interp_inreg_p10_f16:
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10_f16">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<3>>]>;
+
+// __builtin_amdgcn_interp_inreg_p2_f16 <p>, <j>, <tmp>, <high>
+// high selects whether high or low 16-bits are used for p operand
+def int_amdgcn_interp_inreg_p2_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2_f16">,
+  Intrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<3>>]>;
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
