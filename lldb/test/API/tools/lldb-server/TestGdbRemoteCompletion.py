@@ -27,6 +27,7 @@ class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.stub_hostname = "localhost"
         self.port = int(lldbutil.wait_for_file_on_target(self, port_file))
         self.sock = self.create_socket()
+        self._server = Server(self.sock, server)
 
         self.add_no_ack_remote_stream()
 
