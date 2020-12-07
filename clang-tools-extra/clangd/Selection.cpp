@@ -38,21 +38,24 @@ using Node = SelectionTree::Node;
 using ast_type_traits::DynTypedNode;
 
 // Measure the fraction of selections that were enabled by recovery AST.
-void recordMetrics(const SelectionTree &S) {
+void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
+  if (!trace::enabled())
+    return;
+  const char *LanguageLabel = Lang.CPlusPlus ? "C++" : Lang.ObjC ? "ObjC" : "C";
   static constexpr trace::Metric SelectionUsedRecovery(
-      "selection_recovery", trace::Metric::Distribution);
-  static constexpr trace::Metric RecoveryType("selection_recovery_type",
-                                              trace::Metric::Distribution);
+      "selection_recovery", trace::Metric::Distribution, "language");
+  static constexpr trace::Metric RecoveryType(
+      "selection_recovery_type", trace::Metric::Distribution, "language");
   const auto *Common = S.commonAncestor();
   for (const auto *N = Common; N; N = N->Parent) {
     if (const auto *RE = N->ASTNode.get<RecoveryExpr>()) {
-      SelectionUsedRecovery.record(1); // used recovery ast.
-      RecoveryType.record(RE->isTypeDependent() ? 0 : 1);
+      SelectionUsedRecovery.record(1, LanguageLabel); // used recovery ast.
+      RecoveryType.record(RE->isTypeDependent() ? 0 : 1, LanguageLabel);
       return;
     }
   }
   if (Common)
-    SelectionUsedRecovery.record(0); // unused.
+    SelectionUsedRecovery.record(0, LanguageLabel); // unused.
 }
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
@@ -834,7 +837,7 @@ SelectionTree::SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
            .printToString(SM));
   Nodes = SelectionVisitor::collect(AST, Tokens, PrintPolicy, Begin, End, FID);
   Root = Nodes.empty() ? nullptr : &Nodes.front();
-  recordMetrics(*this);
+  recordMetrics(*this, AST.getLangOpts());
   dlog("Built selection tree\n{0}", *this);
 }
 
