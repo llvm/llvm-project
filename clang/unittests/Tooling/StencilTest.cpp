@@ -30,7 +30,9 @@ using MatchResult = MatchFinder::MatchResult;
 
 // Create a valid translation-unit from a statement.
 static std::string wrapSnippet(StringRef StatementCode) {
-  return ("struct S { int field; }; auto stencil_test_snippet = []{" +
+  return ("namespace N { class C {}; } "
+          "namespace { class AnonC {}; } "
+          "struct S { int field; }; auto stencil_test_snippet = []{" +
           StatementCode + "};")
       .str();
 }
@@ -55,14 +57,14 @@ struct TestMatch {
 // `StatementCode` may contain other statements not described by `Matcher`.
 static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
                                            StatementMatcher Matcher) {
-  auto AstUnit = tooling::buildASTFromCode(wrapSnippet(StatementCode));
+  auto AstUnit = tooling::buildASTFromCodeWithArgs(wrapSnippet(StatementCode),
+                                                   {"-Wno-unused-value"});
   if (AstUnit == nullptr) {
     ADD_FAILURE() << "AST construction failed";
     return llvm::None;
   }
   ASTContext &Context = AstUnit->getASTContext();
-  auto Matches = ast_matchers::match(
-      traverse(ast_type_traits::TK_AsIs, wrapMatcher(Matcher)), Context);
+  auto Matches = ast_matchers::match(wrapMatcher(Matcher), Context);
   // We expect a single, exact match for the statement.
   if (Matches.size() != 1) {
     ADD_FAILURE() << "Wrong number of matches: " << Matches.size();
@@ -365,6 +367,66 @@ TEST_F(StencilTest, AccessOpImplicitThis) {
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue("field"));
 }
 
+TEST_F(StencilTest, DescribeType) {
+  std::string Snippet = "int *x; x;";
+  std::string Expected = "int *";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeSugaredType) {
+  std::string Snippet = "using Ty = int; Ty *x; x;";
+  std::string Expected = "Ty *";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeDeclType) {
+  std::string Snippet = "S s; s;";
+  std::string Expected = "S";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeQualifiedType) {
+  std::string Snippet = "N::C c; c;";
+  std::string Expected = "N::C";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeUnqualifiedType) {
+  std::string Snippet = "using N::C; C c; c;";
+  std::string Expected = "N::C";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeAnonNamespaceType) {
+  std::string Snippet = "AnonC c; c;";
+  std::string Expected = "(anonymous namespace)::AnonC";
+  auto StmtMatch =
+      matchStmt(Snippet, declRefExpr(hasType(qualType().bind("type"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("type")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
 TEST_F(StencilTest, RunOp) {
   StringRef Id = "id";
   auto SimpleFn = [Id](const MatchResult &R) {
@@ -436,6 +498,12 @@ TEST_F(StencilTest, CatOfInvalidRangeFails) {
   });
 }
 
+// The `StencilToStringTest` tests verify that the string representation of the
+// stencil combinator matches (as best possible) the spelling of the
+// combinator's construction.  Exceptions include those combinators that have no
+// explicit spelling (like raw text) and those supporting non-printable
+// arguments (like `run`, `selection`).
+
 TEST(StencilToStringTest, RawTextOp) {
   auto S = cat("foo bar baz");
   StringRef Expected = R"("foo bar baz")";
@@ -445,6 +513,12 @@ TEST(StencilToStringTest, RawTextOp) {
 TEST(StencilToStringTest, RawTextOpEscaping) {
   auto S = cat("foo \"bar\" baz\\n");
   StringRef Expected = R"("foo \"bar\" baz\\n")";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, DescribeOp) {
+  auto S = describe("Id");
+  StringRef Expected = R"repr(describe("Id"))repr";
   EXPECT_EQ(S->toString(), Expected);
 }
 
