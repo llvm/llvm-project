@@ -3400,12 +3400,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     if (N0.getOpcode() == ISD::XOR && N1.getOpcode() == ISD::SRA) {
       SDValue X0 = N0.getOperand(0), X1 = N0.getOperand(1);
       SDValue S0 = N1.getOperand(0);
-      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0)) {
-        unsigned OpSizeInBits = VT.getScalarSizeInBits();
+      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
         if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
-          if (C->getAPIntValue() == (OpSizeInBits - 1))
+          if (C->getAPIntValue() == (VT.getScalarSizeInBits() - 1))
             return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
-      }
     }
   }
 
@@ -7683,12 +7681,10 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
       SDValue A0 = A.getOperand(0), A1 = A.getOperand(1);
       SDValue S0 = S.getOperand(0);
-      if ((A0 == S && A1 == S0) || (A1 == S && A0 == S0)) {
-        unsigned OpSizeInBits = VT.getScalarSizeInBits();
+      if ((A0 == S && A1 == S0) || (A1 == S && A0 == S0))
         if (ConstantSDNode *C = isConstOrConstSplat(S.getOperand(1)))
-          if (C->getAPIntValue() == (OpSizeInBits - 1))
+          if (C->getAPIntValue() == (VT.getScalarSizeInBits() - 1))
             return DAG.getNode(ISD::ABS, DL, VT, S0);
-      }
     }
   }
 
@@ -21993,9 +21989,8 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
 /// transform: LogBase2(V) = (EltBits - 1) - ctlz(V).
 SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
   EVT VT = V.getValueType();
-  unsigned EltBits = VT.getScalarSizeInBits();
   SDValue Ctlz = DAG.getNode(ISD::CTLZ, DL, VT, V);
-  SDValue Base = DAG.getConstant(EltBits - 1, DL, VT);
+  SDValue Base = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
   SDValue LogBase2 = DAG.getNode(ISD::SUB, DL, VT, Base, Ctlz);
   return LogBase2;
 }
