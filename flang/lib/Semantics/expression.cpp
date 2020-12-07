@@ -1640,7 +1640,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                         GetRank(*valueShape), symbol->name()),
                     *symbol);
               } else if (CheckConformance(messages, *componentShape,
-                             *valueShape, "component", "value")) {
+                             *valueShape, "component", "value", false,
+                             true /* can expand scalar value */)) {
                 if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0 &&
                     !IsExpandableScalar(*converted)) {
                   AttachDeclaration(
@@ -1930,7 +1931,7 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
     if (std::optional<characteristics::Procedure> procedure{
             characteristics::Procedure::Characterize(
-                ProcedureDesignator{specific}, context_.intrinsics())}) {
+                ProcedureDesignator{specific}, context_.foldingContext())}) {
       ActualArguments localActuals{actuals};
       if (specific.has<semantics::ProcBindingDetails>()) {
         if (!adjustActuals.value()(specific, localActuals)) {
@@ -2233,8 +2234,8 @@ static bool IsExternalCalledImplicitly(
 std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     parser::CharBlock callSite, const ProcedureDesignator &proc,
     ActualArguments &arguments) {
-  auto chars{
-      characteristics::Procedure::Characterize(proc, context_.intrinsics())};
+  auto chars{characteristics::Procedure::Characterize(
+      proc, context_.foldingContext())};
   if (chars) {
     bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
     if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
@@ -2937,7 +2938,8 @@ bool ArgumentAnalyzer::CheckConformance() const {
       auto rhShape{GetShape(foldingContext, *rhs)};
       if (lhShape && rhShape) {
         return evaluate::CheckConformance(foldingContext.messages(), *lhShape,
-            *rhShape, "left operand", "right operand");
+            *rhShape, "left operand", "right operand", true,
+            true /* scalar expansion is allowed */);
       }
     }
   }

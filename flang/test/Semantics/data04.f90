@@ -62,7 +62,7 @@ module m
       end type
       type(large) largeNumber
       type(large), allocatable :: allocatableLarge
-      !ERROR: An automatic variable must not be initialized
+      !ERROR: An automatic variable or component must not be initialized
       type(large) :: largeNumberArray(i)
       type(large) :: largeArray(5)
       character :: name(i)

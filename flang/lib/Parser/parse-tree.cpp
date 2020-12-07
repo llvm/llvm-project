@@ -246,5 +246,4 @@ CharBlock Variable::GetSource() const {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
-
 } // namespace Fortran::parser

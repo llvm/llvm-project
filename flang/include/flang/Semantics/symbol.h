@@ -167,8 +167,6 @@ public:
   MaybeExpr &init() { return init_; }
   const MaybeExpr &init() const { return init_; }
   void set_init(MaybeExpr &&expr) { init_ = std::move(expr); }
-  bool initWasValidated() const { return initWasValidated_; }
-  void set_initWasValidated(bool yes = true) { initWasValidated_ = yes; }
   ArraySpec &shape() { return shape_; }
   const ArraySpec &shape() const { return shape_; }
   ArraySpec &coshape() { return coshape_; }
@@ -190,7 +188,6 @@ public:
 
 private:
   MaybeExpr init_;
-  bool initWasValidated_{false};
   ArraySpec shape_;
   ArraySpec coshape_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in

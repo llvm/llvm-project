@@ -515,12 +515,10 @@ void ConstructInitializer(const Symbol &symbol,
       if (IsPointer(symbol)) {
         mutableObject.set_init(
             initialization.image.AsConstantDataPointer(*symbolType));
-        mutableObject.set_initWasValidated();
       } else {
         if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
           mutableObject.set_init(
               initialization.image.AsConstant(context, *symbolType, *extents));
-          mutableObject.set_initWasValidated();
         } else {
           exprAnalyzer.Say(symbol.name(),
               "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,
