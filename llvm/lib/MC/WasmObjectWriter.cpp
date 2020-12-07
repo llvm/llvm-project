@@ -1787,10 +1787,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeTypeSection(Signatures);
     writeImportSection(Imports, DataSize, TableElems.size());
     writeFunctionSection(Functions);
+    writeTableSection(Tables);
     // Skip the "memory" section; we import the memory instead.
     writeEventSection(Events);
     writeGlobalSection(Globals);
-    writeTableSection(Tables);
     writeExportSection(Exports);
     writeElemSection(TableElems);
     writeDataCountSection();
