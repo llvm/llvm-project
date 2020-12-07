@@ -558,6 +558,7 @@ private:
                           unsigned NumTemplateArgs);
   void mangleTemplateArgs(TemplateName TN, const TemplateArgumentList &AL);
   void mangleTemplateArg(TemplateArgument A, bool NeedExactType);
+  void mangleTemplateArgExpr(const Expr *E);
   void mangleValueInTemplateArg(QualType T, const APValue &V, bool TopLevel,
                                 bool NeedExactType = false);
 
@@ -3528,8 +3529,8 @@ void CXXNameMangler::mangleType(const DependentSizedMatrixType *T) {
   Out << "u" << VendorQualifier.size() << VendorQualifier;
 
   Out << "I";
-  mangleTemplateArg(T->getRowExpr(), false);
-  mangleTemplateArg(T->getColumnExpr(), false);
+  mangleTemplateArgExpr(T->getRowExpr());
+  mangleTemplateArgExpr(T->getColumnExpr());
   mangleType(T->getElementType());
   Out << "E";
 }
@@ -3916,6 +3917,7 @@ void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity) {
   //              ::= ds <expression> <expression>                   # expr.*expr
   //              ::= sZ <template-param>                            # size of a parameter pack
   //              ::= sZ <function-param>    # size of a function parameter pack
+  //              ::= u <source-name> <template-arg>* E # vendor extended expression
   //              ::= <expr-primary>
   // <expr-primary> ::= L <type> <value number> E    # integer literal
   //                ::= L <type <value float> E      # floating literal
@@ -4007,14 +4009,26 @@ recurse:
 
   case Expr::CXXUuidofExprClass: {
     const CXXUuidofExpr *UE = cast<CXXUuidofExpr>(E);
-    if (UE->isTypeOperand()) {
-      QualType UuidT = UE->getTypeOperand(Context.getASTContext());
-      Out << "u8__uuidoft";
-      mangleType(UuidT);
+    // As of clang 12, uuidof uses the vendor extended expression
+    // mangling. Previously, it used a special-cased nonstandard extension.
+    if (Context.getASTContext().getLangOpts().getClangABICompat() >
+        LangOptions::ClangABI::Ver11) {
+      Out << "u8__uuidof";
+      if (UE->isTypeOperand())
+        mangleType(UE->getTypeOperand(Context.getASTContext()));
+      else
+        mangleTemplateArgExpr(UE->getExprOperand());
+      Out << 'E';
     } else {
-      Expr *UuidExp = UE->getExprOperand();
-      Out << "u8__uuidofz";
-      mangleExpression(UuidExp, Arity);
+      if (UE->isTypeOperand()) {
+        QualType UuidT = UE->getTypeOperand(Context.getASTContext());
+        Out << "u8__uuidoft";
+        mangleType(UuidT);
+      } else {
+        Expr *UuidExp = UE->getExprOperand();
+        Out << "u8__uuidofz";
+        mangleExpression(UuidExp, Arity);
+      }
     }
     break;
   }
@@ -4312,13 +4326,39 @@ recurse:
       break;
     }
 
+    auto MangleAlignofSizeofArg = [&] {
+      if (SAE->isArgumentType()) {
+        Out << 't';
+        mangleType(SAE->getArgumentType());
+      } else {
+        Out << 'z';
+        mangleExpression(SAE->getArgumentExpr());
+      }
+    };
+
     switch(SAE->getKind()) {
     case UETT_SizeOf:
       Out << 's';
+      MangleAlignofSizeofArg();
       break;
     case UETT_PreferredAlignOf:
+      // As of clang 12, we mangle __alignof__ differently than alignof. (They
+      // have acted differently since Clang 8, but were previously mangled the
+      // same.)
+      if (Context.getASTContext().getLangOpts().getClangABICompat() >
+          LangOptions::ClangABI::Ver11) {
+        Out << "u11__alignof__";
+        if (SAE->isArgumentType())
+          mangleType(SAE->getArgumentType());
+        else
+          mangleTemplateArgExpr(SAE->getArgumentExpr());
+        Out << 'E';
+        break;
+      }
+      LLVM_FALLTHROUGH;
     case UETT_AlignOf:
       Out << 'a';
+      MangleAlignofSizeofArg();
       break;
     case UETT_VecStep: {
       DiagnosticsEngine &Diags = Context.getDiags();
@@ -4335,13 +4375,6 @@ recurse:
       Diags.Report(DiagID);
       return;
     }
-    }
-    if (SAE->isArgumentType()) {
-      Out << 't';
-      mangleType(SAE->getArgumentType());
-    } else {
-      Out << 'z';
-      mangleExpression(SAE->getArgumentExpr());
     }
     break;
   }
@@ -4971,23 +5004,7 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
     mangleType(A.getAsTemplateOrTemplatePattern());
     break;
   case TemplateArgument::Expression: {
-    // It's possible to end up with a DeclRefExpr here in certain
-    // dependent cases, in which case we should mangle as a
-    // declaration.
-    const Expr *E = A.getAsExpr()->IgnoreParenImpCasts();
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
-      const ValueDecl *D = DRE->getDecl();
-      if (isa<VarDecl>(D) || isa<FunctionDecl>(D)) {
-        Out << 'L';
-        mangle(D);
-        Out << 'E';
-        break;
-      }
-    }
-
-    Out << 'X';
-    mangleExpression(E);
-    Out << 'E';
+    mangleTemplateArgExpr(A.getAsExpr());
     break;
   }
   case TemplateArgument::Integral:
@@ -5042,6 +5059,26 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
     Out << 'E';
   }
   }
+}
+
+void CXXNameMangler::mangleTemplateArgExpr(const Expr *E) {
+  // It's possible to end up with a DeclRefExpr here in certain
+  // dependent cases, in which case we should mangle as a
+  // declaration.
+  E = E->IgnoreParenImpCasts();
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const ValueDecl *D = DRE->getDecl();
+    if (isa<VarDecl>(D) || isa<FunctionDecl>(D)) {
+      Out << 'L';
+      mangle(D);
+      Out << 'E';
+      return;
+    }
+  }
+
+  Out << 'X';
+  mangleExpression(E);
+  Out << 'E';
 }
 
 /// Determine whether a given value is equivalent to zero-initialization for
