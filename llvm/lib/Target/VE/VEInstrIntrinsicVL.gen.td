@@ -1021,3 +1021,5 @@ def : Pat<(int_ve_vl_vshf_vvvsl v256f64:$vy, v256f64:$vz, i64:$sy, i32:$vl), (VS
 def : Pat<(int_ve_vl_vshf_vvvsvl v256f64:$vy, v256f64:$vz, i64:$sy, v256f64:$pt, i32:$vl), (VSHFvvrl_v v256f64:$vy, v256f64:$vz, i64:$sy, i32:$vl, v256f64:$pt)>;
 def : Pat<(int_ve_vl_vshf_vvvsl v256f64:$vy, v256f64:$vz, uimm6:$N, i32:$vl), (VSHFvvil v256f64:$vy, v256f64:$vz, (ULO7 $N), i32:$vl)>;
 def : Pat<(int_ve_vl_vshf_vvvsvl v256f64:$vy, v256f64:$vz, uimm6:$N, v256f64:$pt, i32:$vl), (VSHFvvil_v v256f64:$vy, v256f64:$vz, (ULO7 $N), i32:$vl, v256f64:$pt)>;
+def : Pat<(int_ve_vl_vcp_vvmvl v256f64:$vz, v256i1:$vm, v256f64:$pt, i32:$vl), (VCPvml_v v256f64:$vz, v256i1:$vm, i32:$vl, v256f64:$pt)>;
+def : Pat<(int_ve_vl_vex_vvmvl v256f64:$vz, v256i1:$vm, v256f64:$pt, i32:$vl), (VEXvml_v v256f64:$vz, v256i1:$vm, i32:$vl, v256f64:$pt)>;
