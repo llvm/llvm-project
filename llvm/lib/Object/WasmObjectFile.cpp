@@ -745,6 +745,15 @@ Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
                                                 object_error::parse_failed);
         getDefinedFunction(Index).Comdat = ComdatIndex;
         break;
+      case wasm::WASM_COMDAT_SECTION:
+        if (Index >= Sections.size())
+          return make_error<GenericBinaryError>(
+              "COMDAT section index out of range", object_error::parse_failed);
+        if (Sections[Index].Type != wasm::WASM_SEC_CUSTOM)
+          return make_error<GenericBinaryError>(
+              "Non-custom section in a COMDAT", object_error::parse_failed);
+        Sections[Index].Comdat = ComdatIndex;
+        break;
       }
     }
   }
