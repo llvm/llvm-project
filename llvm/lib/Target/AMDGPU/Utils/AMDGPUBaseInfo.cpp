@@ -315,7 +315,6 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
   return 0;
 }
 
-// TODO-GFX11
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
@@ -345,7 +344,6 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
-  // TODO-GFX11
   if (!isGFX10Plus(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
