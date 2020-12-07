@@ -2657,6 +2657,10 @@ static std::string formatObjCParamQualifiers(unsigned ObjCQuals,
       case NullabilityKind::Unspecified:
         Result += "null_unspecified ";
         break;
+
+      case NullabilityKind::NullableResult:
+        llvm_unreachable("Not supported as a context-sensitive keyword!");
+        break;
       }
     }
   }
