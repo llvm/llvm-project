@@ -224,7 +224,7 @@ namespace {
       (void) llvm::createMustBeExecutedContextPrinter();
       (void) llvm::createFloat2IntPass();
       (void) llvm::createEliminateAvailableExternallyPass();
-      (void) llvm::createScalarizeMaskedMemIntrinPass();
+      (void)llvm::createScalarizeMaskedMemIntrinLegacyPass();
       (void) llvm::createWarnMissedTransformationsPass();
       (void) llvm::createHardwareLoopsPass();
       (void) llvm::createInjectTLIMappingsLegacyPass();

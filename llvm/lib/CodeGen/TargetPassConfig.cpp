@@ -710,7 +710,7 @@ void TargetPassConfig::addIRPasses() {
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
   // that stores/loads element one-by-one if the appropriate mask bit is set.
-  addPass(createScalarizeMaskedMemIntrinPass());
+  addPass(createScalarizeMaskedMemIntrinLegacyPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
   // Allow disabling it for testing purposes.
