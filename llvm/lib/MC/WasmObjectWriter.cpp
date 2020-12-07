@@ -328,9 +328,6 @@ private:
   void writeCustomSection(WasmCustomSection &CustomSection,
                           const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeCustomRelocSections();
-  void
-  updateCustomSectionRelocations(const SmallVector<WasmFunction, 4> &Functions,
-                                 const MCAsmLayout &Layout);
 
   uint64_t getProvisionalValue(const WasmRelocationEntry &RelEntry,
                                const MCAsmLayout &Layout);
