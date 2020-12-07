@@ -125,7 +125,7 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_XNACK = 1 << 7,
 
   // Sram-ecc is available.
-  FEATURE_SRAM_ECC = 1 << 8,
+  FEATURE_SRAMECC = 1 << 8,
 };
 
 StringRef getArchNameAMDGCN(GPUKind AK);
