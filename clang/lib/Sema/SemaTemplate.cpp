@@ -2084,8 +2084,7 @@ public:
       TypeLocBuilder InnerTLB;
       QualType Transformed =
           TransformType(InnerTLB, OrigDecl->getTypeSourceInfo()->getTypeLoc());
-      TypeSourceInfo *TSI =
-          TransformType(InnerTLB.getTypeSourceInfo(Context, Transformed));
+      TypeSourceInfo *TSI = InnerTLB.getTypeSourceInfo(Context, Transformed);
       if (isa<TypeAliasDecl>(OrigDecl))
         Decl = TypeAliasDecl::Create(
             Context, Context.getTranslationUnitDecl(), OrigDecl->getBeginLoc(),
