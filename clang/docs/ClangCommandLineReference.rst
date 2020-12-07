@@ -3169,8 +3169,6 @@ PowerPC
 
 .. option:: -mpower9-vector, -mno-power9-vector
 
-.. option:: -mqpx, -mno-qpx
-
 .. option:: -msecure-plt
 
 .. option:: -mspe, -mno-spe
