@@ -1007,8 +1007,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     bool HasVariants = false;
     for (const CodeGenSchedTransition &CGT :
            make_range(SC.Transitions.begin(), SC.Transitions.end())) {
-      if (CGT.ProcIndices[0] == 0 ||
-          is_contained(CGT.ProcIndices, ProcModel.Index)) {
+      if (CGT.ProcIndex == ProcModel.Index) {
         HasVariants = true;
         break;
       }
@@ -1551,9 +1550,8 @@ static void collectProcessorIndices(const CodeGenSchedClass &SC,
   // transition rules specified by variant class `SC`.
   for (const CodeGenSchedTransition &T : SC.Transitions) {
     IdxVec PI;
-    std::set_union(T.ProcIndices.begin(), T.ProcIndices.end(),
-                   ProcIndices.begin(), ProcIndices.end(),
-                   std::back_inserter(PI));
+    std::set_union(&T.ProcIndex, &T.ProcIndex + 1, ProcIndices.begin(),
+                   ProcIndices.end(), std::back_inserter(PI));
     ProcIndices.swap(PI);
   }
 }
@@ -1607,7 +1605,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
       // Now emit transitions associated with processor PI.
       const CodeGenSchedTransition *FinalT = nullptr;
       for (const CodeGenSchedTransition &T : SC.Transitions) {
-        if (PI != 0 && !count(T.ProcIndices, PI))
+        if (PI != 0 && T.ProcIndex != PI)
           continue;
 
         // Emit only transitions based on MCSchedPredicate, if it's the case.
