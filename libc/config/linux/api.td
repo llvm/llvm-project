@@ -179,6 +179,22 @@ def MathAPI : PublicAPI<"math.h"> {
   ];
 }
 
+def FenvAPI: PublicAPI<"fenv.h"> {
+  let Macros = [
+    SimpleMacroDef<"FE_DIVBYZERO", "1">,
+    SimpleMacroDef<"FE_INEXACT", "2">,
+    SimpleMacroDef<"FE_INVALID", "4">,
+    SimpleMacroDef<"FE_OVERFLOW", "8">,
+    SimpleMacroDef<"FE_UNDERFLOW", "16">,
+    SimpleMacroDef<"FE_ALL_EXCEPT", "(FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW)">,
+
+    SimpleMacroDef<"FE_DOWNWARD", "1">,
+    SimpleMacroDef<"FE_TONEAREST", "2">,
+    SimpleMacroDef<"FE_TOWARDZERO", "4">,
+    SimpleMacroDef<"FE_UPWARD", "8">,
+  ];
+}
+
 def StringAPI : PublicAPI<"string.h"> {
   let TypeDeclarations = [
     SizeT,

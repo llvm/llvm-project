@@ -2523,6 +2523,9 @@ public:
   // Do not offer code action on typo-corrections.
   EXPECT_UNAVAILABLE(Header + "/*error-ok*/c^c C;");
 
+  // NestedNameSpecifier, but no namespace.
+  EXPECT_UNAVAILABLE(Header + "class Foo {}; class F^oo foo;");
+
   // Check that we do not trigger in header files.
   FileName = "test.h";
   ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.

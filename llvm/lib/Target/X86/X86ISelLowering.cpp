@@ -4127,9 +4127,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer.
+    // GOT pointer (except regcall).
     if (!isTailCall) {
-      RegsToPass.push_back(std::make_pair(
+      // Indirect call with RegCall calling convertion may use up all the
+      // general registers, so it is not suitable to bind EBX reister for
+      // GOT address, just let register allocator handle it.
+      if (CallConv != CallingConv::X86_RegCall)
+        RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
     } else {
@@ -8789,8 +8793,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
               MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
               Alignment);
-          SDValue Brdcst = DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
-          return DAG.getBitcast(VT, Brdcst);
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
         }
       }
     }

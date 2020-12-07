@@ -19,8 +19,8 @@
 
 #include "flang/Lower/ConvertType.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
 

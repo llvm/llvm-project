@@ -30,6 +30,9 @@
 
 namespace mlir {
 class Dialect;
+class DictionaryAttr;
+class ElementsAttr;
+class MutableDictionaryAttr;
 class Operation;
 struct OperationState;
 class OpAsmParser;

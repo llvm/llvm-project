@@ -55,7 +55,7 @@ bool DagLeaf::isEnumAttrCase() const {
 }
 
 bool DagLeaf::isStringAttr() const {
-  return isa<llvm::StringInit, llvm::CodeInit>(def);
+  return isa<llvm::StringInit>(def);
 }
 
 Constraint DagLeaf::getAsConstraint() const {

@@ -56,7 +56,7 @@ func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
 // VECNEST:         vector.transfer_read
 // VECNEST-NEXT:    affine.for %{{.*}} = 0 to 30 {
 // VECNEST:           vector.transfer_read
-// VECNEST-NEXT:      vector.transfer_write
+// VECNEST-NEXT:      vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] {permutation_map = #{{.*}}}
 // VECNEST-NEXT:    }
 // VECNEST-NEXT:    vector.transfer_write
 // VECNEST:       }

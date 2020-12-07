@@ -13,7 +13,7 @@
 
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 using namespace mlir;
 

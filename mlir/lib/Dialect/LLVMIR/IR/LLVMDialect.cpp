@@ -14,10 +14,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/AsmParser/Parser.h"

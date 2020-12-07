@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+!RUN: %S/test_errors.sh %s %t %f18
 subroutine s1
   integer i, j
   real r(2)
@@ -182,3 +182,18 @@ module s15
   !ERROR: 'a(3_8)' and 'a(1_8)' cannot have the same first storage unit
   equivalence(b(2),a(1))
 end module
+
+subroutine s16
+
+  integer var, dupName
+
+  ! There should be no error message for the following
+  equivalence (dupName, var)
+
+  interface
+    subroutine interfaceSub (dupName)
+      integer dupName
+    end subroutine interfaceSub
+  end interface
+
+end subroutine s16

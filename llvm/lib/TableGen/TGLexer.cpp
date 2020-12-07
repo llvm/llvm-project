@@ -540,7 +540,7 @@ tgtok::TokKind TGLexer::LexBracket() {
     }
   }
 
-  return ReturnError(CodeStart-2, "Unterminated Code Block");
+  return ReturnError(CodeStart - 2, "Unterminated code block");
 }
 
 /// LexExclaim - Lex '!' and '![a-zA-Z]+'.

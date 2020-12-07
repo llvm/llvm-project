@@ -2674,6 +2674,7 @@ public:
                                 SkipBodyInfo *SkipBody = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
+  ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
   bool isObjCMethodDecl(Decl *D) {
     return D && isa<ObjCMethodDecl>(D);
@@ -6550,7 +6551,8 @@ public:
   /// on a lambda (if it exists) in C++2a.
   void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
                                                 ArrayRef<NamedDecl *> TParams,
-                                                SourceLocation RAngleLoc);
+                                                SourceLocation RAngleLoc,
+                                                ExprResult RequiresClause);
 
   /// Introduce the lambda parameters into scope.
   void addLambdaParameters(
@@ -7927,6 +7929,9 @@ public:
 
     // A requirement in a requires-expression.
     UPPC_Requirement,
+
+    // A requires-clause.
+    UPPC_RequiresClause,
   };
 
   /// Diagnose unexpanded parameter packs.

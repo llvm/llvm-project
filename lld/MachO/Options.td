@@ -444,7 +444,6 @@ def print_statistics : Flag<["-"], "print_statistics">,
      Group<grp_introspect>;
 def t : Flag<["-"], "t">,
      HelpText<"Log every file the linker loads: object, archive, and dylib">,
-     Flags<[HelpHidden]>,
      Group<grp_introspect>;
 def whatsloaded : Flag<["-"], "whatsloaded">,
      HelpText<"Logs only the object files the linker loads">,

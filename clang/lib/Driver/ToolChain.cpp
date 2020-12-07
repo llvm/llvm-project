@@ -232,8 +232,11 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
   // the same as the ones that appear in the triple. Roughly speaking, this is
   // an inverse of the darwin::getArchTypeForDarwinArchName() function.
   switch (Triple.getArch()) {
-  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64: {
+    if (getTriple().isArm64e())
+      return "arm64e";
     return "arm64";
+  }
   case llvm::Triple::aarch64_32:
     return "arm64_32";
   case llvm::Triple::ppc:
@@ -704,6 +707,9 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
     if (!Triple.isOSBinFormatMachO())
+      return getTripleString();
+
+    if (Triple.isArm64e())
       return getTripleString();
 
     // FIXME: older versions of ld64 expect the "arm64" component in the actual

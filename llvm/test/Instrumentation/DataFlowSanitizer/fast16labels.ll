@@ -6,11 +6,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @add(i8 %a, i8 %b) {
   ; CHECK-LABEL: define i8 @"dfs$add"
-  ; CHECK-DAG: %[[ALABEL:.*]] = load{{.*}}__dfsan_arg_tls, i64 0, i64 0
-  ; CHECK-DAG: %[[BLABEL:.*]] = load{{.*}}__dfsan_arg_tls, i64 0, i64 1
+  ; CHECK-DAG: %[[ALABEL:.*]] = load [[ST:.*]], [[ST]]* bitcast ([[VT:\[.*\]]]* @__dfsan_arg_tls to [[ST]]*), align [[ALIGN:2]]
+  ; CHECK-DAG: %[[BLABEL:.*]] = load [[ST]], [[ST]]* inttoptr (i64 add (i64 ptrtoint ([[VT]]* @__dfsan_arg_tls to i64), i64 2) to [[ST]]*), align [[ALIGN]]
   ; CHECK: %[[ADDLABEL:.*]] = or i16 %[[ALABEL]], %[[BLABEL]]
   ; CHECK: add i8
-  ; CHECK: store i16 %[[ADDLABEL]], i16* @__dfsan_retval_tls
+  ; CHECK: store [[ST]] %[[ADDLABEL]], [[ST]]* bitcast ([[VT]]* @__dfsan_retval_tls to [[ST]]*), align [[ALIGN]]
   ; CHECK: ret i8
   %c = add i8 %a, %b
   ret i8 %c

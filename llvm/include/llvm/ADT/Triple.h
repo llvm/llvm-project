@@ -129,6 +129,8 @@ public:
     ARMSubArch_v5te,
     ARMSubArch_v4t,
 
+    AArch64SubArch_arm64e,
+
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
@@ -775,6 +777,12 @@ public:
   // Tests whether the target is CSKY
   bool isCSKY() const {
     return getArch() == Triple::csky;
+  }
+
+  /// Tests whether the target is the Apple "arm64e" AArch64 subarch.
+  bool isArm64e() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
   /// Tests whether the target supports comdat

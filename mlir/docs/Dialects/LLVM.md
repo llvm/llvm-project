@@ -370,7 +370,7 @@ constants must be created as SSA values before being used in other operations.
 `llvm.mlir.constant` creates such values for scalars and vectors. It has a
 mandatory `value` attribute, which may be an integer, floating point attribute;
 dense or sparse attribute containing integers or floats. The type of the
-attribute is one of the corresponding MLIR standard types. It may be omitted for
+attribute is one of the corresponding MLIR builtin types. It may be omitted for
 `i64` and `f64` types that are implied. The operation produces a new SSA value
 of the specified LLVM IR dialect type. The type of that value _must_ correspond
 to the attribute type converted to LLVM IR.

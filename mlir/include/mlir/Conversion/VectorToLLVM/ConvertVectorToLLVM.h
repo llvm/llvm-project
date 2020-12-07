@@ -23,12 +23,17 @@ class OperationPass;
 struct LowerVectorToLLVMOptions {
   bool reassociateFPReductions = false;
   bool enableIndexOptimizations = true;
+  bool enableAVX512 = false;
   LowerVectorToLLVMOptions &setReassociateFPReductions(bool b) {
     reassociateFPReductions = b;
     return *this;
   }
   LowerVectorToLLVMOptions &setEnableIndexOptimizations(bool b) {
     enableIndexOptimizations = b;
+    return *this;
+  }
+  LowerVectorToLLVMOptions &setEnableAVX512(bool b) {
+    enableAVX512 = b;
     return *this;
   }
 };

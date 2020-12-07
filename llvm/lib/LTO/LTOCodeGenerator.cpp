@@ -377,6 +377,8 @@ bool LTOCodeGenerator::determineTarget() {
       MCpu = "core2";
     else if (Triple.getArch() == llvm::Triple::x86)
       MCpu = "yonah";
+    else if (Triple.isArm64e())
+      MCpu = "apple-a12";
     else if (Triple.getArch() == llvm::Triple::aarch64 ||
              Triple.getArch() == llvm::Triple::aarch64_32)
       MCpu = "cyclone";

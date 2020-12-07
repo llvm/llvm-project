@@ -46,7 +46,7 @@ llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
 
 uint32_t getModTime(llvm::StringRef path);
 
-void printWhyLoad(StringRef reason, const InputFile *);
+void printArchiveMemberLoad(StringRef reason, const InputFile *);
 
 } // namespace macho
 } // namespace lld

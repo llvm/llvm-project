@@ -3,9 +3,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 define {i32, i32} @test({i32, i32} %a, i1 %c) {
-  ; CHECK: [[E0:%.*]] = load i16, i16* getelementptr inbounds ([64 x i16], [64 x i16]* @__dfsan_arg_tls, i64 0, i64 0), align 2
+  ; CHECK: [[E0:%.*]] = load i16, i16* bitcast ([100 x i64]* @__dfsan_arg_tls to i16*), align [[ALIGN:2]]
   ; CHECK: [[E3:%.*]] = phi i16 [ [[E0]], %T ], [ [[E0]], %F ]
-  ; CHECK: store i16 [[E3]], i16* @__dfsan_retval_tls, align 2
+  ; CHECK: store i16 [[E3]], i16* bitcast ([100 x i64]* @__dfsan_retval_tls to i16*), align [[ALIGN]]
 
 entry:
   br i1 %c, label %T, label %F

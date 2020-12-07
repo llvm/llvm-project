@@ -26,6 +26,9 @@
 // ARM64-DARWIN: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
 // ARM64-DARWIN-SAME: "-target-feature" "+aes"
 
+// RUN: %clang -target arm64-apple-darwin -arch arm64e -### -c %s 2>&1 | FileCheck -check-prefix=ARM64E-DARWIN %s
+// ARM64E-DARWIN: "-cc1"{{.*}} "-triple" "arm64e{{.*}}" "-target-cpu" "apple-a12"
+
 // RUN: %clang -target arm64-apple-darwin -arch arm64_32 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-DARWIN %s
 // ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "aarch64_32{{.*}}" "-target-cpu" "apple-s4"
 

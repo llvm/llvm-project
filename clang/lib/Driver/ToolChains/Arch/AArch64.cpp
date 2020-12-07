@@ -40,7 +40,12 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   // Handle CPU name is 'native'.
   if (CPU == "native")
     return std::string(llvm::sys::getHostCPUName());
-  else if (CPU.size())
+
+  // arm64e requires v8.3a and only runs on apple-a12 and later CPUs.
+  if (Triple.isArm64e())
+    return "apple-a12";
+
+  if (CPU.size())
     return CPU;
 
   if (Triple.isTargetMachineMac() &&

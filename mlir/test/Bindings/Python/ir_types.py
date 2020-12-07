@@ -197,10 +197,11 @@ def testComplexType():
 
 run(testComplexType)
 
+
 # CHECK-LABEL: TEST: testConcreteShapedType
-# Shaped type is not a kind of standard types, it is the base class for
-# vectors, memrefs and tensors, so this test case uses an instance of vector
-# to test the shaped type. The class hierarchy is preserved on the python side.
+# Shaped type is not a kind of builtin types, it is the base class for vectors,
+# memrefs and tensors, so this test case uses an instance of vector to test the
+# shaped type. The class hierarchy is preserved on the python side.
 def testConcreteShapedType():
   with Context() as ctx:
     vector = VectorType(Type.parse("vector<2x3xf32>"))

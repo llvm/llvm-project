@@ -197,12 +197,6 @@ def ModuleOp : Builtin_Op<"module", [
     /// Return the name of this module if present.
     Optional<StringRef> getName() { return sym_name(); }
 
-    /// Print this module in the custom top-level form.
-    void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
-    void print(raw_ostream &os, AsmState &state,
-               OpPrintingFlags flags = llvm::None);
-    void dump();
-
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//

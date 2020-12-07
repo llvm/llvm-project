@@ -1186,9 +1186,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     TopLevelDeclsInPreamble.clear();
   }
 
-  // Create a file manager object to provide access to and cache the filesystem.
-  Clang->setFileManager(&getFileManager());
-
   // Create the source manager.
   Clang->setSourceManager(&getSourceManager());
 

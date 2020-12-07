@@ -56,3 +56,9 @@ API Changes
   - ``ceil2`` has been renamed to ``bit_ceil``
   - ``floor2`` has been renamed to ``bit_floor``
   - ``log2p1`` has been renamed to ``bit_width``
+
+- In C++20 mode, ``std::filesystem::path::u8string()`` and
+  ``generic_u8string()`` now return ``std::u8string`` according to P0428,
+  while they return ``std::string`` in C++17. This can cause source
+  incompatibility, which is discussed and acknowledged in P1423, but that
+  paper doesn't suggest any remediation for this incompatibility.

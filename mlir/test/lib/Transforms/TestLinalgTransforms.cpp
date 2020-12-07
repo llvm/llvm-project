@@ -71,7 +71,7 @@ struct TestLinalgTransforms
           "Test a fused pass that forwards linalg.copy to vector.transfer"),
       llvm::cl::init(false)};
   Option<bool> testGenericToVectorPattern{
-      *this, "test-contraction-to-vector-patterns",
+      *this, "test-linalg-to-vector-patterns",
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
@@ -464,14 +464,15 @@ static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
   applyPatternsAndFoldGreedily(funcOp, std::move(forwardPattern));
 }
 
-static void applyContractionToVectorPatterns(FuncOp funcOp) {
+static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   OwningRewritePatternList patterns;
-  patterns.insert<LinalgVectorizationPattern<BatchMatmulOp>,
-                  LinalgVectorizationPattern<MatmulOp>,
-                  LinalgVectorizationPattern<MatvecOp>,
-                  LinalgVectorizationPattern<VecmatOp>,
-                  LinalgVectorizationPattern<DotOp>,
-                  LinalgVectorizationPattern<GenericOp>>(funcOp.getContext());
+  patterns.insert<
+      LinalgVectorizationPattern<BatchMatmulOp>,
+      LinalgVectorizationPattern<MatmulOp>,
+      LinalgVectorizationPattern<MatvecOp>,
+      LinalgVectorizationPattern<VecmatOp>, LinalgVectorizationPattern<DotOp>,
+      LinalgVectorizationPattern<FillOp>, LinalgVectorizationPattern<CopyOp>,
+      LinalgVectorizationPattern<GenericOp>>(funcOp.getContext());
   applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
@@ -516,7 +517,7 @@ void TestLinalgTransforms::runOnFunction() {
   if (testVectorTransferForwardingPatterns)
     return applyVectorTransferForwardingPatterns(getFunction());
   if (testGenericToVectorPattern)
-    return applyContractionToVectorPatterns(getFunction());
+    return applyLinalgToVectorPatterns(getFunction());
   if (testAffineMinSCFCanonicalizationPatterns)
     return applyAffineMinSCFCanonicalizationPatterns(getFunction());
 }

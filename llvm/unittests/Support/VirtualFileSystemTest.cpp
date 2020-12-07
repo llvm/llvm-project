@@ -939,7 +939,7 @@ TEST_F(InMemoryFileSystemTest, OverlayFile) {
 
 TEST_F(InMemoryFileSystemTest, OverlayFileNoOwn) {
   auto Buf = MemoryBuffer::getMemBuffer("a");
-  FS.addFileNoOwn("/a", 0, Buf.get());
+  FS.addFileNoOwn("/a", 0, *Buf);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_EQ("/a", Stat->getName());

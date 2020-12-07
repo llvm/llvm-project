@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Parser.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;

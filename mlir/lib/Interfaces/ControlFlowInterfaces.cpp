@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
