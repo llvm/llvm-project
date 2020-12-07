@@ -381,8 +381,8 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
   if (const auto *symbol{scope.symbol()}) {
     os << ' ' << symbol->name();
   }
-  if (scope.size()) {
-    os << " size=" << scope.size() << " alignment=" << scope.alignment();
+  if (scope.alignment().has_value()) {
+    os << " size=" << scope.size() << " alignment=" << *scope.alignment();
   }
   if (scope.derivedTypeSpec()) {
     os << " instantiation of " << *scope.derivedTypeSpec();

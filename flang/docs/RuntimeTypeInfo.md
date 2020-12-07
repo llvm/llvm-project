@@ -216,7 +216,7 @@ So the derived type information for a defined assignment needs to
 comprise:
 * address(es) of the subroutine
 * whether the first, second, or both arguments are descriptors
-* whether the subroutine is elemental
+* whether the subroutine is elemental (necessarily also impure)
 
 ### User defined derived type I/O
 

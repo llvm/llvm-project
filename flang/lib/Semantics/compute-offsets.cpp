@@ -85,12 +85,16 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
   }
+  if (scope.alignment().has_value()) {
+    return; // prevent infinite recursion in error cases
+  }
+  scope.SetAlignment(0);
   // Build dependents_ from equivalences: symbol -> symbol+offset
   for (const EquivalenceSet &set : scope.equivalenceSets()) {
     DoEquivalenceSet(set);
   }
   offset_ = 0;
-  alignment_ = 0;
+  alignment_ = 1;
   // Compute a base symbol and overall block size for each
   // disjoint EQUIVALENCE storage sequence.
   for (auto &[symbol, dep] : dependents_) {
@@ -128,7 +132,7 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
     }
   }
   scope.set_size(offset_);
-  scope.set_alignment(alignment_);
+  scope.SetAlignment(alignment_);
   // Assign offsets in COMMON blocks.
   for (auto &pair : scope.commonBlocks()) {
     DoCommonBlock(*pair.second);
@@ -357,8 +361,9 @@ auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
     }
   } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
     if (derived->scope()) {
+      DoScope(*const_cast<Scope *>(derived->scope()));
       result.size = derived->scope()->size();
-      result.alignment = derived->scope()->alignment();
+      result.alignment = derived->scope()->alignment().value_or(0);
     }
   } else {
     DIE("not intrinsic or derived");
