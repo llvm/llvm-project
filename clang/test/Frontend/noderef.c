@@ -73,6 +73,7 @@ int test() {
   // Nested struct access
   struct S2 NODEREF *s2_noderef;    // expected-note 5 {{s2_noderef declared here}}
   p = s2_noderef->a;  // ok since result is an array in a struct
+  p = (*s2_noderef).a; // ok since result is an array in a struct
   p = s2_noderef->a2; // ok
   p = s2_noderef->b;  // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}
   p = s2_noderef->b2; // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}
