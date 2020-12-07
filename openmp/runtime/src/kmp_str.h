@@ -81,7 +81,7 @@ int __kmp_str_fname_match(kmp_str_fname_t const *fname, char const *pattern);
    structure keeps source location in more convenient form.
    Usage:
 
-   kmp_str_loc_t loc = __kmp_str_loc_init( ident->psource, 0 );
+   kmp_str_loc_t loc = __kmp_str_loc_init(ident->psource, false);
    // use loc.file, loc.func, loc.line, loc.col.
    // loc.fname is available if second argument of __kmp_str_loc_init is true.
    __kmp_str_loc_free( & loc );
@@ -98,7 +98,8 @@ struct kmp_str_loc {
   int col;
 }; // struct kmp_str_loc
 typedef struct kmp_str_loc kmp_str_loc_t;
-kmp_str_loc_t __kmp_str_loc_init(char const *psource, int init_fname);
+kmp_str_loc_t __kmp_str_loc_init(char const *psource, bool init_fname);
+void __kmp_str_loc_numbers(char const *Psource, int *Line, int *Col);
 void __kmp_str_loc_free(kmp_str_loc_t *loc);
 
 int __kmp_str_eqf(char const *lhs, char const *rhs);
