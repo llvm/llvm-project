@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='function(memprof),module(memprof-module)' -S | FileCheck --check-prefixes=STATIC %s
 
-; RUN: cp %s %t.pic.ll
+; RUN: cat %s > %t.pic.ll
 ; RUN: echo -e '!llvm.module.flags = !{!0}\n!0 = !{i32 7, !"PIC Level", i32 1}' >> %t.pic.ll
 ; RUN: opt < %t.pic.ll -passes='function(memprof),module(memprof-module)' -S | FileCheck --check-prefixes=PIC %s
 
