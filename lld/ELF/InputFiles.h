@@ -312,6 +312,10 @@ public:
   template <class ELFT> void parse();
   void fetch();
 
+  // Check if a non-common symbol should be fetched to override a common
+  // definition.
+  bool shouldFetchForCommon(const StringRef &name);
+
   bool fetched = false;
 
 private:
@@ -330,6 +334,10 @@ public:
   // function does nothing (so we don't instantiate the same file
   // more than once.)
   void fetch(const Archive::Symbol &sym);
+
+  // Check if a non-common symbol should be fetched to override a common
+  // definition.
+  bool shouldFetchForCommon(const Archive::Symbol &sym);
 
   size_t getMemberCount() const;
   size_t getFetchedMemberCount() const { return seen.size(); }
