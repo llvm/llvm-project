@@ -185,25 +185,21 @@ static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
   return FlagToValueNormalizer<T>{std::move(Value)};
 }
 
-static Optional<bool> normalizeBooleanFlag(OptSpecifier PosOpt,
-                                           OptSpecifier NegOpt,
-                                           unsigned TableIndex,
-                                           const ArgList &Args,
-                                           DiagnosticsEngine &Diags) {
-  if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
-    return A->getOption().matches(PosOpt);
-  return None;
+static auto makeBooleanFlagNormalizer(OptSpecifier NegOpt) {
+  return [NegOpt](OptSpecifier PosOpt, unsigned, const ArgList &Args,
+                  DiagnosticsEngine &) -> Optional<bool> {
+    if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
+      return A->getOption().matches(PosOpt);
+    return None;
+  };
 }
 
-static void denormalizeBooleanFlag(SmallVectorImpl<const char *> &Args,
-                                   const char *Spelling,
-                                   const char *NegSpelling,
-                                   CompilerInvocation::StringAllocator SA,
-                                   unsigned TableIndex, unsigned Value) {
-  if (Value)
-    Args.push_back(Spelling);
-  else
-    Args.push_back(NegSpelling);
+static auto makeBooleanFlagDenormalizer(const char *NegSpelling) {
+  return [NegSpelling](
+             SmallVectorImpl<const char *> &Args, const char *PosSpelling,
+             CompilerInvocation::StringAllocator, unsigned, unsigned Value) {
+    Args.push_back(Value ? PosSpelling : NegSpelling);
+  };
 }
 
 static Optional<SimpleEnumValue>
@@ -3779,23 +3775,7 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
           this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
   }
 
-#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
-  {                                                                            \
-    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
-    if (IMPLIED_CHECK)                                                         \
-      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
-    if (auto MaybeValue =                                                      \
-            NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = MERGER(                                                  \
-          this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
-  }
-
 #include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING_BOOLEAN
 #undef OPTION_WITH_MARSHALLING
   return true;
 }
@@ -4060,20 +4040,7 @@ void CompilerInvocation::generateCC1CommandLine(
     }(EXTRACTOR(this->KEYPATH));                                               \
   }
 
-#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
-  if ((FLAGS)&options::CC1Option) {                                            \
-    bool Extracted = EXTRACTOR(this->KEYPATH);                                 \
-    if (ALWAYS_EMIT ||                                                         \
-        (Extracted != ((IMPLIED_CHECK) ? (IMPLIED_VALUE) : (DEFAULT_VALUE))))  \
-      DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX, Extracted);  \
-  }
-
 #include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING_BOOLEAN
 #undef OPTION_WITH_MARSHALLING
 }
 
