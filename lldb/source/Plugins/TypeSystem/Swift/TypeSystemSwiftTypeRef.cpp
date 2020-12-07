@@ -1680,6 +1680,8 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type,
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = DemangleCanonicalType(dem, type);
+    // Note: There are a number of other candidates, and this list may need
+    // updating. Ex: `NoEscapeFunctionType`, `ThinFunctionType`, etc.
     return node && (node->getKind() == Node::Kind::FunctionType ||
                     node->getKind() == Node::Kind::ImplFunctionType);
   };
