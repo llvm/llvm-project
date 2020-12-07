@@ -35,24 +35,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.init_llgs_test()
         server = self.connect_to_debug_monitor()
 
-    def start_no_ack_mode(self):
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        self.add_no_ack_remote_stream()
-        self.expect_gdbremote_sequence()
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_start_no_ack_mode_debugserver(self):
-        self.init_debugserver_test()
-        self.start_no_ack_mode()
-
-    @llgs_test
-    def test_start_no_ack_mode_llgs(self):
-        self.init_llgs_test()
-        self.start_no_ack_mode()
-
     def thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -99,13 +81,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.list_threads_in_stop_reply_supported()
 
     def c_packet_works(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             ["read packet: $c#63",
              "send packet: $W00#00"],
@@ -127,16 +103,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.c_packet_works()
 
     def inferior_print_exit(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # build launch args
-        launch_args += ["hello, world"]
-
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["hello, world"])
         self.test_sequence.add_log_lines(
             ["read packet: $vCont;c#a8",
              {"type": "output_match", "regex": self.maybe_strict_output_regex(r"hello, world\r\n")},
@@ -162,16 +130,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.inferior_print_exit()
 
     def first_launch_stop_reply_thread_matches_first_qC(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # build launch args
-        launch_args += ["hello, world"]
-
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(["read packet: $qC#00",
                                           {"direction": "send",
                                            "regex": r"^\$QC([0-9a-fA-F]+)#",
@@ -235,14 +194,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.attach_commandline_continue_app_exits()
 
     def qRegisterInfo_returns_one_valid_result(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # Build the expected protocol stream
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             ["read packet: $qRegisterInfo0#00",
              {"direction": "send", "regex": r"^\$(.+);#[0-9A-Fa-f]{2}", "capture": {1: "reginfo_0"}}],
@@ -271,14 +223,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qRegisterInfo_returns_one_valid_result()
 
     def qRegisterInfo_returns_all_valid_results(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # Build the expected protocol stream.
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
         # Run the stream.
@@ -303,14 +248,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qRegisterInfo_returns_all_valid_results()
 
     def qRegisterInfo_contains_required_generics(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # Build the expected protocol stream
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
         # Run the packet stream.
@@ -351,14 +289,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qRegisterInfo_contains_required_generics()
 
     def qRegisterInfo_contains_at_least_one_register_set(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # Build the expected protocol stream
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
         # Run the packet stream.
@@ -408,14 +339,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         return " avx " in cpuinfo
 
     def qRegisterInfo_contains_avx_registers(self):
-        launch_args = self.install_and_create_launch_args()
-
-        server = self.connect_to_debug_monitor()
-        self.assertIsNotNone(server)
-
-        # Build the expected protocol stream
-        self.add_no_ack_remote_stream()
-        self.add_verified_launch_packets(launch_args)
+        self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
         # Run the packet stream.
