@@ -86,7 +86,7 @@ llvm::Error Lua::RegisterBreakpointCallback(void *baton, const char *body) {
   std::string func_str = llvm::formatv(fmt_str, body).str();
   if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
     llvm::Error e = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
+        llvm::formatv("{0}", lua_tostring(m_lua_state, -1)),
         llvm::inconvertibleErrorCode());
     // Pop error message from the stack.
     lua_pop(m_lua_state, 2);
