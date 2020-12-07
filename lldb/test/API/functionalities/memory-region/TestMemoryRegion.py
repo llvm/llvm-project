@@ -23,6 +23,7 @@ class MemoryCommandRegion(TestBase):
             'main.cpp',
             '// Run here before printing memory regions')
 
+    @expectedFailureAll(oslist=["freebsd"])
     def test(self):
         self.build()
 
