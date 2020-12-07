@@ -2502,6 +2502,7 @@ static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
   return isKnownNonZero(Op, Depth + 1, Q);
 }
 
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                             const Query &Q) {
@@ -2514,7 +2515,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   if (Depth >= MaxAnalysisRecursionDepth)
     return false;
 
-  // See if we can recurse through (exactly one of) our operands.
+  // See if we can recurse through (exactly one of) our operands.  This
+  // requires our operation be 1-to-1 and map every input value to exactly
+  // one output value.  Such an operation is invertible.
   auto *O1 = dyn_cast<Operator>(V1);
   auto *O2 = dyn_cast<Operator>(V2);
   if (O1 && O2 && O1->getOpcode() == O2->getOpcode()) {
@@ -2527,6 +2530,23 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
         return isKnownNonEqual(O1->getOperand(1), O2->getOperand(1),
                                Depth + 1, Q);
       if (O1->getOperand(1) == O2->getOperand(1))
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    case Instruction::Mul:
+      // invertible if A * B == (A * B) mod 2^N where A, and B are integers
+      // and N is the bitwdith.  The nsw case is non-obvious, but proven by
+      // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
+      if ((!cast<BinaryOperator>(O1)->hasNoUnsignedWrap() ||
+           !cast<BinaryOperator>(O2)->hasNoUnsignedWrap()) &&
+          (!cast<BinaryOperator>(O1)->hasNoSignedWrap() ||
+           !cast<BinaryOperator>(O2)->hasNoSignedWrap()))
+        break;
+
+      // Assume operand order has been canonicalized
+      if (O1->getOperand(1) == O2->getOperand(1) &&
+          isa<ConstantInt>(O1->getOperand(1)) &&
+          !cast<ConstantInt>(O1->getOperand(1))->isZero())
         return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
                                Depth + 1, Q);
       break;
