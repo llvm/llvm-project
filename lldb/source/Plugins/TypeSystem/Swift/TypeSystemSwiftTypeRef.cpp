@@ -2048,11 +2048,21 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
   else
     return impl();
 }
+
 llvm::Optional<uint64_t>
 TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
                                       ExecutionContextScope *exe_scope) {
-  return m_swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
+  auto impl = [&]() -> llvm::Optional<uint64_t> {
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      return runtime->GetByteStride(GetCanonicalType(type));
+    }
+    return {};
+  };
+  VALIDATE_AND_RETURN(impl, GetByteStride, type,
+                      (ReconstructType(type), exe_scope));
 }
+
 lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                                                    uint64_t &count) {
   return m_swift_ast_context->GetEncoding(ReconstructType(type), count);
