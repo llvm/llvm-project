@@ -7843,26 +7843,14 @@ public:
                              bool AllowExplicitConversions,
                              const Qualifiers &VisibleTypeConversionsQuals);
 
-  /// pointer_begin - First pointer type found;
-  iterator pointer_begin() { return PointerTypes.begin(); }
-
-  /// pointer_end - Past the last pointer type found;
-  iterator pointer_end() { return PointerTypes.end(); }
-
-  /// member_pointer_begin - First member pointer type found;
-  iterator member_pointer_begin() { return MemberPointerTypes.begin(); }
-
-  /// member_pointer_end - Past the last member pointer type found;
-  iterator member_pointer_end() { return MemberPointerTypes.end(); }
-
-  /// enumeration_begin - First enumeration type found;
-  iterator enumeration_begin() { return EnumerationTypes.begin(); }
-
-  /// enumeration_end - Past the last enumeration type found;
-  iterator enumeration_end() { return EnumerationTypes.end(); }
-
+  llvm::iterator_range<iterator> pointer_types() { return PointerTypes; }
+  llvm::iterator_range<iterator> member_pointer_types() {
+    return MemberPointerTypes;
+  }
+  llvm::iterator_range<iterator> enumeration_types() {
+    return EnumerationTypes;
+  }
   llvm::iterator_range<iterator> vector_types() { return VectorTypes; }
-
   llvm::iterator_range<iterator> matrix_types() { return MatrixTypes; }
 
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
@@ -8346,19 +8334,17 @@ public:
   //       T*         operator++(T*VQ&, int);
   //       T*         operator--(T*VQ&, int);
   void addPlusPlusMinusMinusPointerOverloads() {
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
+    for (QualType PtrTy : CandidateTypes[0].pointer_types()) {
       // Skip pointer types that aren't pointers to object types.
-      if (!(*Ptr)->getPointeeType()->isObjectType())
+      if (!PtrTy->getPointeeType()->isObjectType())
         continue;
 
-      addPlusPlusMinusMinusStyleOverloads(*Ptr,
-        (!(*Ptr).isVolatileQualified() &&
-         VisibleTypeConversionsQuals.hasVolatile()),
-        (!(*Ptr).isRestrictQualified() &&
-         VisibleTypeConversionsQuals.hasRestrict()));
+      addPlusPlusMinusMinusStyleOverloads(
+          PtrTy,
+          (!PtrTy.isVolatileQualified() &&
+           VisibleTypeConversionsQuals.hasVolatile()),
+          (!PtrTy.isRestrictQualified() &&
+           VisibleTypeConversionsQuals.hasRestrict()));
     }
   }
 
@@ -8373,11 +8359,7 @@ public:
   //   ref-qualifier, there exist candidate operator functions of the form
   //       T&         operator*(T*);
   void addUnaryStarPointerOverloads() {
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
-      QualType ParamTy = *Ptr;
+    for (QualType ParamTy : CandidateTypes[0].pointer_types()) {
       QualType PointeeTy = ParamTy->getPointeeType();
       if (!PointeeTy->isObjectType() && !PointeeTy->isFunctionType())
         continue;
@@ -8417,13 +8399,8 @@ public:
   //
   //       T*         operator+(T*);
   void addUnaryPlusPointerOverloads() {
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
-      QualType ParamTy = *Ptr;
+    for (QualType ParamTy : CandidateTypes[0].pointer_types())
       S.AddBuiltinCandidate(&ParamTy, Args, CandidateSet);
-    }
   }
 
   // C++ [over.built]p10:
@@ -8457,16 +8434,12 @@ public:
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
     for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx) {
-      for (BuiltinCandidateTypeSet::iterator
-                MemPtr = CandidateTypes[ArgIdx].member_pointer_begin(),
-             MemPtrEnd = CandidateTypes[ArgIdx].member_pointer_end();
-           MemPtr != MemPtrEnd;
-           ++MemPtr) {
+      for (QualType MemPtrTy : CandidateTypes[ArgIdx].member_pointer_types()) {
         // Don't add the same builtin candidate twice.
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*MemPtr)).second)
+        if (!AddedTypes.insert(S.Context.getCanonicalType(MemPtrTy)).second)
           continue;
 
-        QualType ParamTypes[2] = { *MemPtr, *MemPtr };
+        QualType ParamTypes[2] = {MemPtrTy, MemPtrTy};
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
 
@@ -8509,8 +8482,7 @@ public:
       UserDefinedBinaryOperators;
 
     for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx) {
-      if (CandidateTypes[ArgIdx].enumeration_begin() !=
-          CandidateTypes[ArgIdx].enumeration_end()) {
+      if (!CandidateTypes[ArgIdx].enumeration_types().empty()) {
         for (OverloadCandidateSet::iterator C = CandidateSet.begin(),
                                          CEnd = CandidateSet.end();
              C != CEnd; ++C) {
@@ -8548,22 +8520,16 @@ public:
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
     for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx) {
-      for (BuiltinCandidateTypeSet::iterator
-                Ptr = CandidateTypes[ArgIdx].pointer_begin(),
-             PtrEnd = CandidateTypes[ArgIdx].pointer_end();
-           Ptr != PtrEnd; ++Ptr) {
+      for (QualType PtrTy : CandidateTypes[ArgIdx].pointer_types()) {
         // Don't add the same builtin candidate twice.
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*Ptr)).second)
+        if (!AddedTypes.insert(S.Context.getCanonicalType(PtrTy)).second)
           continue;
 
-        QualType ParamTypes[2] = { *Ptr, *Ptr };
+        QualType ParamTypes[2] = {PtrTy, PtrTy};
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
-      for (BuiltinCandidateTypeSet::iterator
-                Enum = CandidateTypes[ArgIdx].enumeration_begin(),
-             EnumEnd = CandidateTypes[ArgIdx].enumeration_end();
-           Enum != EnumEnd; ++Enum) {
-        CanQualType CanonType = S.Context.getCanonicalType(*Enum);
+      for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
+        CanQualType CanonType = S.Context.getCanonicalType(EnumTy);
 
         // Don't add the same builtin candidate twice, or if a user defined
         // candidate exists.
@@ -8571,7 +8537,7 @@ public:
             UserDefinedBinaryOperators.count(std::make_pair(CanonType,
                                                             CanonType)))
           continue;
-        QualType ParamTypes[2] = { *Enum, *Enum };
+        QualType ParamTypes[2] = {EnumTy, EnumTy};
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
     }
@@ -8603,15 +8569,12 @@ public:
         S.Context.getPointerDiffType(),
         S.Context.getPointerDiffType(),
       };
-      for (BuiltinCandidateTypeSet::iterator
-                Ptr = CandidateTypes[Arg].pointer_begin(),
-             PtrEnd = CandidateTypes[Arg].pointer_end();
-           Ptr != PtrEnd; ++Ptr) {
-        QualType PointeeTy = (*Ptr)->getPointeeType();
+      for (QualType PtrTy : CandidateTypes[Arg].pointer_types()) {
+        QualType PointeeTy = PtrTy->getPointeeType();
         if (!PointeeTy->isObjectType())
           continue;
 
-        AsymmetricParamTypes[Arg] = *Ptr;
+        AsymmetricParamTypes[Arg] = PtrTy;
         if (Arg == 0 || Op == OO_Plus) {
           // operator+(T*, ptrdiff_t) or operator-(T*, ptrdiff_t)
           // T* operator+(ptrdiff_t, T*);
@@ -8619,10 +8582,10 @@ public:
         }
         if (Op == OO_Minus) {
           // ptrdiff_t operator-(T, T);
-          if (!AddedTypes.insert(S.Context.getCanonicalType(*Ptr)).second)
+          if (!AddedTypes.insert(S.Context.getCanonicalType(PtrTy)).second)
             continue;
 
-          QualType ParamTypes[2] = { *Ptr, *Ptr };
+          QualType ParamTypes[2] = {PtrTy, PtrTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }
@@ -8778,24 +8741,18 @@ public:
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
     for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
-      for (BuiltinCandidateTypeSet::iterator
-                Enum = CandidateTypes[ArgIdx].enumeration_begin(),
-             EnumEnd = CandidateTypes[ArgIdx].enumeration_end();
-           Enum != EnumEnd; ++Enum) {
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*Enum)).second)
+      for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
+        if (!AddedTypes.insert(S.Context.getCanonicalType(EnumTy)).second)
           continue;
 
-        AddBuiltinAssignmentOperatorCandidates(S, *Enum, Args, CandidateSet);
+        AddBuiltinAssignmentOperatorCandidates(S, EnumTy, Args, CandidateSet);
       }
 
-      for (BuiltinCandidateTypeSet::iterator
-                MemPtr = CandidateTypes[ArgIdx].member_pointer_begin(),
-             MemPtrEnd = CandidateTypes[ArgIdx].member_pointer_end();
-           MemPtr != MemPtrEnd; ++MemPtr) {
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*MemPtr)).second)
+      for (QualType MemPtrTy : CandidateTypes[ArgIdx].member_pointer_types()) {
+        if (!AddedTypes.insert(S.Context.getCanonicalType(MemPtrTy)).second)
           continue;
 
-        AddBuiltinAssignmentOperatorCandidates(S, *MemPtr, Args, CandidateSet);
+        AddBuiltinAssignmentOperatorCandidates(S, MemPtrTy, Args, CandidateSet);
       }
     }
   }
@@ -8820,49 +8777,44 @@ public:
     /// Set of (canonical) types that we've already handled.
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
+    for (QualType PtrTy : CandidateTypes[0].pointer_types()) {
       // If this is operator=, keep track of the builtin candidates we added.
       if (isEqualOp)
-        AddedTypes.insert(S.Context.getCanonicalType(*Ptr));
-      else if (!(*Ptr)->getPointeeType()->isObjectType())
+        AddedTypes.insert(S.Context.getCanonicalType(PtrTy));
+      else if (!PtrTy->getPointeeType()->isObjectType())
         continue;
 
       // non-volatile version
       QualType ParamTypes[2] = {
-        S.Context.getLValueReferenceType(*Ptr),
-        isEqualOp ? *Ptr : S.Context.getPointerDiffType(),
+          S.Context.getLValueReferenceType(PtrTy),
+          isEqualOp ? PtrTy : S.Context.getPointerDiffType(),
       };
       S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                             /*IsAssignmentOperator=*/ isEqualOp);
 
-      bool NeedVolatile = !(*Ptr).isVolatileQualified() &&
+      bool NeedVolatile = !PtrTy.isVolatileQualified() &&
                           VisibleTypeConversionsQuals.hasVolatile();
       if (NeedVolatile) {
         // volatile version
         ParamTypes[0] =
-          S.Context.getLValueReferenceType(S.Context.getVolatileType(*Ptr));
+            S.Context.getLValueReferenceType(S.Context.getVolatileType(PtrTy));
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                               /*IsAssignmentOperator=*/isEqualOp);
       }
 
-      if (!(*Ptr).isRestrictQualified() &&
+      if (!PtrTy.isRestrictQualified() &&
           VisibleTypeConversionsQuals.hasRestrict()) {
         // restrict version
-        ParamTypes[0]
-          = S.Context.getLValueReferenceType(S.Context.getRestrictType(*Ptr));
+        ParamTypes[0] =
+            S.Context.getLValueReferenceType(S.Context.getRestrictType(PtrTy));
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                               /*IsAssignmentOperator=*/isEqualOp);
 
         if (NeedVolatile) {
           // volatile restrict version
-          ParamTypes[0]
-            = S.Context.getLValueReferenceType(
-                S.Context.getCVRQualifiedType(*Ptr,
-                                              (Qualifiers::Volatile |
-                                               Qualifiers::Restrict)));
+          ParamTypes[0] =
+              S.Context.getLValueReferenceType(S.Context.getCVRQualifiedType(
+                  PtrTy, (Qualifiers::Volatile | Qualifiers::Restrict)));
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                                 /*IsAssignmentOperator=*/isEqualOp);
         }
@@ -8870,48 +8822,43 @@ public:
     }
 
     if (isEqualOp) {
-      for (BuiltinCandidateTypeSet::iterator
-                Ptr = CandidateTypes[1].pointer_begin(),
-             PtrEnd = CandidateTypes[1].pointer_end();
-           Ptr != PtrEnd; ++Ptr) {
+      for (QualType PtrTy : CandidateTypes[1].pointer_types()) {
         // Make sure we don't add the same candidate twice.
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*Ptr)).second)
+        if (!AddedTypes.insert(S.Context.getCanonicalType(PtrTy)).second)
           continue;
 
         QualType ParamTypes[2] = {
-          S.Context.getLValueReferenceType(*Ptr),
-          *Ptr,
+            S.Context.getLValueReferenceType(PtrTy),
+            PtrTy,
         };
 
         // non-volatile version
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                               /*IsAssignmentOperator=*/true);
 
-        bool NeedVolatile = !(*Ptr).isVolatileQualified() &&
-                           VisibleTypeConversionsQuals.hasVolatile();
+        bool NeedVolatile = !PtrTy.isVolatileQualified() &&
+                            VisibleTypeConversionsQuals.hasVolatile();
         if (NeedVolatile) {
           // volatile version
-          ParamTypes[0] =
-            S.Context.getLValueReferenceType(S.Context.getVolatileType(*Ptr));
+          ParamTypes[0] = S.Context.getLValueReferenceType(
+              S.Context.getVolatileType(PtrTy));
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                                 /*IsAssignmentOperator=*/true);
         }
 
-        if (!(*Ptr).isRestrictQualified() &&
+        if (!PtrTy.isRestrictQualified() &&
             VisibleTypeConversionsQuals.hasRestrict()) {
           // restrict version
-          ParamTypes[0]
-            = S.Context.getLValueReferenceType(S.Context.getRestrictType(*Ptr));
+          ParamTypes[0] = S.Context.getLValueReferenceType(
+              S.Context.getRestrictType(PtrTy));
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                                 /*IsAssignmentOperator=*/true);
 
           if (NeedVolatile) {
             // volatile restrict version
-            ParamTypes[0]
-              = S.Context.getLValueReferenceType(
-                  S.Context.getCVRQualifiedType(*Ptr,
-                                                (Qualifiers::Volatile |
-                                                 Qualifiers::Restrict)));
+            ParamTypes[0] =
+                S.Context.getLValueReferenceType(S.Context.getCVRQualifiedType(
+                    PtrTy, (Qualifiers::Volatile | Qualifiers::Restrict)));
             S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
                                   /*IsAssignmentOperator=*/true);
           }
@@ -9046,12 +8993,9 @@ public:
   //        T*         operator+(ptrdiff_t, T*);     [ABOVE]
   //        T&         operator[](ptrdiff_t, T*);
   void addSubscriptOverloads() {
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
-      QualType ParamTypes[2] = { *Ptr, S.Context.getPointerDiffType() };
-      QualType PointeeType = (*Ptr)->getPointeeType();
+    for (QualType PtrTy : CandidateTypes[0].pointer_types()) {
+      QualType ParamTypes[2] = {PtrTy, S.Context.getPointerDiffType()};
+      QualType PointeeType = PtrTy->getPointeeType();
       if (!PointeeType->isObjectType())
         continue;
 
@@ -9059,12 +9003,9 @@ public:
       S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
     }
 
-    for (BuiltinCandidateTypeSet::iterator
-              Ptr = CandidateTypes[1].pointer_begin(),
-           PtrEnd = CandidateTypes[1].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
-      QualType ParamTypes[2] = { S.Context.getPointerDiffType(), *Ptr };
-      QualType PointeeType = (*Ptr)->getPointeeType();
+    for (QualType PtrTy : CandidateTypes[1].pointer_types()) {
+      QualType ParamTypes[2] = {S.Context.getPointerDiffType(), PtrTy};
+      QualType PointeeType = PtrTy->getPointeeType();
       if (!PointeeType->isObjectType())
         continue;
 
@@ -9083,11 +9024,8 @@ public:
   //
   //    where CV12 is the union of CV1 and CV2.
   void addArrowStarOverloads() {
-    for (BuiltinCandidateTypeSet::iterator
-             Ptr = CandidateTypes[0].pointer_begin(),
-           PtrEnd = CandidateTypes[0].pointer_end();
-         Ptr != PtrEnd; ++Ptr) {
-      QualType C1Ty = (*Ptr);
+    for (QualType PtrTy : CandidateTypes[0].pointer_types()) {
+      QualType C1Ty = PtrTy;
       QualType C1;
       QualifierCollector Q1;
       C1 = QualType(Q1.strip(C1Ty->getPointeeType()), 0);
@@ -9100,16 +9038,13 @@ public:
         continue;
       if (!VisibleTypeConversionsQuals.hasRestrict() && Q1.hasRestrict())
         continue;
-      for (BuiltinCandidateTypeSet::iterator
-                MemPtr = CandidateTypes[1].member_pointer_begin(),
-             MemPtrEnd = CandidateTypes[1].member_pointer_end();
-           MemPtr != MemPtrEnd; ++MemPtr) {
-        const MemberPointerType *mptr = cast<MemberPointerType>(*MemPtr);
+      for (QualType MemPtrTy : CandidateTypes[1].member_pointer_types()) {
+        const MemberPointerType *mptr = cast<MemberPointerType>(MemPtrTy);
         QualType C2 = QualType(mptr->getClass(), 0);
         C2 = C2.getUnqualifiedType();
         if (C1 != C2 && !S.IsDerivedFrom(CandidateSet.getLocation(), C1, C2))
           break;
-        QualType ParamTypes[2] = { *Ptr, *MemPtr };
+        QualType ParamTypes[2] = {PtrTy, MemPtrTy};
         // build CV12 T&
         QualType T = mptr->getPointeeType();
         if (!VisibleTypeConversionsQuals.hasVolatile() &&
@@ -9139,40 +9074,31 @@ public:
     llvm::SmallPtrSet<QualType, 8> AddedTypes;
 
     for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
-      for (BuiltinCandidateTypeSet::iterator
-                Ptr = CandidateTypes[ArgIdx].pointer_begin(),
-             PtrEnd = CandidateTypes[ArgIdx].pointer_end();
-           Ptr != PtrEnd; ++Ptr) {
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*Ptr)).second)
+      for (QualType PtrTy : CandidateTypes[ArgIdx].pointer_types()) {
+        if (!AddedTypes.insert(S.Context.getCanonicalType(PtrTy)).second)
           continue;
 
-        QualType ParamTypes[2] = { *Ptr, *Ptr };
+        QualType ParamTypes[2] = {PtrTy, PtrTy};
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
 
-      for (BuiltinCandidateTypeSet::iterator
-                MemPtr = CandidateTypes[ArgIdx].member_pointer_begin(),
-             MemPtrEnd = CandidateTypes[ArgIdx].member_pointer_end();
-           MemPtr != MemPtrEnd; ++MemPtr) {
-        if (!AddedTypes.insert(S.Context.getCanonicalType(*MemPtr)).second)
+      for (QualType MemPtrTy : CandidateTypes[ArgIdx].member_pointer_types()) {
+        if (!AddedTypes.insert(S.Context.getCanonicalType(MemPtrTy)).second)
           continue;
 
-        QualType ParamTypes[2] = { *MemPtr, *MemPtr };
+        QualType ParamTypes[2] = {MemPtrTy, MemPtrTy};
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
 
       if (S.getLangOpts().CPlusPlus11) {
-        for (BuiltinCandidateTypeSet::iterator
-                  Enum = CandidateTypes[ArgIdx].enumeration_begin(),
-               EnumEnd = CandidateTypes[ArgIdx].enumeration_end();
-             Enum != EnumEnd; ++Enum) {
-          if (!(*Enum)->castAs<EnumType>()->getDecl()->isScoped())
+        for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
+          if (!EnumTy->castAs<EnumType>()->getDecl()->isScoped())
             continue;
 
-          if (!AddedTypes.insert(S.Context.getCanonicalType(*Enum)).second)
+          if (!AddedTypes.insert(S.Context.getCanonicalType(EnumTy)).second)
             continue;
 
-          QualType ParamTypes[2] = { *Enum, *Enum };
+          QualType ParamTypes[2] = {EnumTy, EnumTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }
