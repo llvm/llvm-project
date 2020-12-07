@@ -348,16 +348,24 @@ FixedCompilationDatabase::loadFromFile(StringRef Path, std::string &ErrorMsg) {
     ErrorMsg = "Error while opening fixed database: " + Result.message();
     return nullptr;
   }
+  return loadFromBuffer(llvm::sys::path::parent_path(Path),
+                        (*File)->getBuffer(), ErrorMsg);
+}
+
+std::unique_ptr<FixedCompilationDatabase>
+FixedCompilationDatabase::loadFromBuffer(StringRef Directory, StringRef Data,
+                                         std::string &ErrorMsg) {
+  ErrorMsg.clear();
   std::vector<std::string> Args;
-  for (llvm::StringRef Line :
-       llvm::make_range(llvm::line_iterator(**File), llvm::line_iterator())) {
+  StringRef Line;
+  while (!Data.empty()) {
+    std::tie(Line, Data) = Data.split('\n');
     // Stray whitespace is almost certainly unintended.
     Line = Line.trim();
     if (!Line.empty())
       Args.push_back(Line.str());
   }
-  return std::make_unique<FixedCompilationDatabase>(
-      llvm::sys::path::parent_path(Path), std::move(Args));
+  return std::make_unique<FixedCompilationDatabase>(Directory, std::move(Args));
 }
 
 FixedCompilationDatabase::
