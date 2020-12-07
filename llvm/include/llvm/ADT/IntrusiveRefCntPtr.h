@@ -75,6 +75,18 @@ public:
   RefCountedBase(const RefCountedBase &) {}
   RefCountedBase &operator=(const RefCountedBase &) = delete;
 
+#ifndef NDEBUG
+  ~RefCountedBase() {
+    assert(RefCount == 0 &&
+           "Destruction occured when there are still references to this.");
+  }
+#else
+  // Default the destructor in release builds, A trivial destructor may enable
+  // better codegen.
+  ~RefCountedBase() = default;
+#endif
+
+public:
   void Retain() const { ++RefCount; }
 
   void Release() const {
@@ -93,6 +105,17 @@ protected:
   ThreadSafeRefCountedBase(const ThreadSafeRefCountedBase &) {}
   ThreadSafeRefCountedBase &
   operator=(const ThreadSafeRefCountedBase &) = delete;
+
+#ifndef NDEBUG
+  ~ThreadSafeRefCountedBase() {
+    assert(RefCount == 0 &&
+           "Destruction occured when there are still references to this.");
+  }
+#else
+  // Default the destructor in release builds, A trivial destructor may enable
+  // better codegen.
+  ~ThreadSafeRefCountedBase() = default;
+#endif
 
 public:
   void Retain() const { RefCount.fetch_add(1, std::memory_order_relaxed); }
