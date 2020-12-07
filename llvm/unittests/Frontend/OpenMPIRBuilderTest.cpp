@@ -1071,6 +1071,92 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  Type *LCTy = Type::getInt32Ty(Ctx);
+  Value *StartVal = ConstantInt::get(LCTy, 10);
+  Value *StopVal = ConstantInt::get(LCTy, 52);
+  Value *StepVal = ConstantInt::get(LCTy, 2);
+  auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
+
+  CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
+      Loc, LoopBodyGen, StartVal, StopVal, StepVal,
+      /*IsSigned=*/false, /*InclusiveStop=*/false);
+
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  InsertPointTy AllocaIP = Builder.saveIP();
+
+  CLI = OMPBuilder.createStaticWorkshareLoop(Loc, CLI, AllocaIP,
+                                             /*NeedsBarrier=*/true);
+  auto AllocaIter = BB->begin();
+  ASSERT_GE(std::distance(BB->begin(), BB->end()), 4);
+  AllocaInst *PLastIter = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PLowerBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PUpperBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PStride = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  EXPECT_NE(PLastIter, nullptr);
+  EXPECT_NE(PLowerBound, nullptr);
+  EXPECT_NE(PUpperBound, nullptr);
+  EXPECT_NE(PStride, nullptr);
+
+  auto PreheaderIter = CLI->getPreheader()->begin();
+  ASSERT_GE(
+      std::distance(CLI->getPreheader()->begin(), CLI->getPreheader()->end()),
+      7);
+  StoreInst *LowerBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *UpperBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *StrideStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  ASSERT_NE(LowerBoundStore, nullptr);
+  ASSERT_NE(UpperBoundStore, nullptr);
+  ASSERT_NE(StrideStore, nullptr);
+
+  auto *OrigLowerBound =
+      dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
+  auto *OrigUpperBound =
+      dyn_cast<ConstantInt>(UpperBoundStore->getValueOperand());
+  auto *OrigStride = dyn_cast<ConstantInt>(StrideStore->getValueOperand());
+  ASSERT_NE(OrigLowerBound, nullptr);
+  ASSERT_NE(OrigUpperBound, nullptr);
+  ASSERT_NE(OrigStride, nullptr);
+  EXPECT_EQ(OrigLowerBound->getValue(), 0);
+  EXPECT_EQ(OrigUpperBound->getValue(), 20);
+  EXPECT_EQ(OrigStride->getValue(), 1);
+
+  // Check that the loop IV is updated to account for the lower bound returned
+  // by the OpenMP runtime call.
+  BinaryOperator *Add = dyn_cast<BinaryOperator>(&CLI->getBody()->front());
+  EXPECT_EQ(Add->getOperand(0), CLI->getIndVar());
+  auto *LoadedLowerBound = dyn_cast<LoadInst>(Add->getOperand(1));
+  ASSERT_NE(LoadedLowerBound, nullptr);
+  EXPECT_EQ(LoadedLowerBound->getPointerOperand(), PLowerBound);
+
+  // Check that the trip count is updated to account for the lower and upper
+  // bounds return by the OpenMP runtime call.
+  auto *AddOne = dyn_cast<Instruction>(CLI->getTripCount());
+  ASSERT_NE(AddOne, nullptr);
+  ASSERT_TRUE(AddOne->isBinaryOp());
+  auto *One = dyn_cast<ConstantInt>(AddOne->getOperand(1));
+  ASSERT_NE(One, nullptr);
+  EXPECT_EQ(One->getValue(), 1);
+  auto *Difference = dyn_cast<Instruction>(AddOne->getOperand(0));
+  ASSERT_NE(Difference, nullptr);
+  ASSERT_TRUE(Difference->isBinaryOp());
+  EXPECT_EQ(Difference->getOperand(1), LoadedLowerBound);
+  auto *LoadedUpperBound = dyn_cast<LoadInst>(Difference->getOperand(0));
+  ASSERT_NE(LoadedUpperBound, nullptr);
+  EXPECT_EQ(LoadedUpperBound->getPointerOperand(), PUpperBound);
+
+  // The original loop iterator should only be used in the condition, in the
+  // increment and in the statement that adds the lower bound to it.
+  Value *IV = CLI->getIndVar();
+  EXPECT_EQ(std::distance(IV->use_begin(), IV->use_end()), 3);
+}
+
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
