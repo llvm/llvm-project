@@ -59,7 +59,7 @@ public:
   }
 };
 char AArch64CompressJumpTables::ID = 0;
-}
+} // namespace
 
 INITIALIZE_PASS(AArch64CompressJumpTables, DEBUG_TYPE,
                 "AArch64 compress jump tables pass", false, false)
@@ -104,7 +104,7 @@ bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
   int MaxOffset = std::numeric_limits<int>::min(),
       MinOffset = std::numeric_limits<int>::max();
   MachineBasicBlock *MinBlock = nullptr;
-  for (auto Block : JT.MBBs) {
+  for (auto *Block : JT.MBBs) {
     int BlockOffset = BlockInfo[Block->getNumber()];
     assert(BlockOffset % 4 == 0 && "misaligned basic block");
 
@@ -124,13 +124,14 @@ bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
   }
 
   int Span = MaxOffset - MinOffset;
-  auto AFI = MF->getInfo<AArch64FunctionInfo>();
+  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
   if (isUInt<8>(Span / 4)) {
     AFI->setJumpTableEntryInfo(JTIdx, 1, MinBlock->getSymbol());
     MI.setDesc(TII->get(AArch64::JumpTableDest8));
     ++NumJT8;
     return true;
-  } else if (isUInt<16>(Span / 4)) {
+  }
+  if (isUInt<16>(Span / 4)) {
     AFI->setJumpTableEntryInfo(JTIdx, 2, MinBlock->getSymbol());
     MI.setDesc(TII->get(AArch64::JumpTableDest16));
     ++NumJT16;
