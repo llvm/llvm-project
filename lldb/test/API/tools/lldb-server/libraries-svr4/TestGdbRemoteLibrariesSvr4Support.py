@@ -120,7 +120,7 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     def test_libraries_svr4_load_addr(self):
         self.setup_test()
         self.libraries_svr4_has_correct_load_addr()
