@@ -8,7 +8,7 @@
 # CHECK:   tBcc %bb.4, 0
 # CHECK:   tB %bb.2
 # CHECK: bb.3.while.body:
-# CHECK:   t2CMPri $lr, 0, 14
+# CHECK:   t2CMPri renamable $lr, 0, 14
 # CHECK:   tBcc %bb.3, 1
 # CHECK:   tB %bb.4
 # CHECK: bb.4.while.end:
