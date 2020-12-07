@@ -414,22 +414,23 @@ protected:
       // to set or collect command callback.  Otherwise, call the methods
       // associated with this object.
       if (m_options.m_use_script_language) {
+        Status error;
         ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter(
             /*can_create=*/true, m_options.m_script_language);
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner) {
-          script_interp->SetBreakpointCommandCallback(
+          error = script_interp->SetBreakpointCommandCallback(
               m_bp_options_vec, m_options.m_one_liner.c_str());
         } else if (!m_func_options.GetName().empty()) {
-          Status error = script_interp->SetBreakpointCommandCallbackFunction(
+          error = script_interp->SetBreakpointCommandCallbackFunction(
               m_bp_options_vec, m_func_options.GetName().c_str(),
               m_func_options.GetStructuredData());
-          if (!error.Success())
-            result.SetError(error);
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
         }
+        if (!error.Success())
+          result.SetError(error);
       } else {
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner)
