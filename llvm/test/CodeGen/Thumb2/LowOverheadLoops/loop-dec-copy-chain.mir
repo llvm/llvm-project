@@ -296,7 +296,7 @@ body:             |
   ; CHECK:   renamable $r4, dead $cpsr = tEOR killed renamable $r4, killed renamable $r5, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   tSTRi killed renamable $r4, killed renamable $r6, 3, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep1)
-  ; CHECK:   t2CMPri killed $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2CMPri killed renamable $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   tBcc %bb.4, 1 /* CC::ne */, killed $cpsr
   ; CHECK:   tB %bb.5, 14 /* CC::al */, $noreg
   ; CHECK: bb.5.bb13:

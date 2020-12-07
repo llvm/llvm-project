@@ -18,6 +18,7 @@
 #include "ARM.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -58,6 +59,7 @@ public:
   }
 
 private:
+  bool RevertLoopWithCall(MachineLoop *ML);
   bool ConvertTailPredLoop(MachineLoop *ML, MachineDominatorTree *DT);
   MachineInstr &ReplaceRegisterUseWithVPNOT(MachineBasicBlock &MBB,
                                             MachineInstr &Instr,
@@ -154,6 +156,31 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
   LLVM_DEBUG(dbgs() << "  found loop start: " << *LoopStart);
 
   return true;
+}
+
+bool MVEVPTOptimisations::RevertLoopWithCall(MachineLoop *ML) {
+  LLVM_DEBUG(dbgs() << "RevertLoopWithCall on loop " << ML->getHeader()->getName()
+                    << "\n");
+
+  MachineInstr *LoopEnd, *LoopPhi, *LoopStart, *LoopDec;
+  if (!findLoopComponents(ML, MRI, LoopStart, LoopPhi, LoopDec, LoopEnd))
+    return false;
+
+  // Check if there is an illegal instruction (a call) in the low overhead loop
+  // and if so revert it now before we get any further.
+  for (MachineBasicBlock *MBB : ML->blocks()) {
+    for (MachineInstr &MI : *MBB) {
+      if (MI.isCall()) {
+        LLVM_DEBUG(dbgs() << "Found call in loop, reverting: " << MI);
+        RevertDoLoopStart(LoopStart, TII);
+        RevertLoopDec(LoopDec, TII);
+        RevertLoopEnd(LoopEnd, TII);
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Convert t2DoLoopStart to t2DoLoopStartTP if the loop contains VCTP
@@ -662,7 +689,7 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   const ARMSubtarget &STI =
       static_cast<const ARMSubtarget &>(Fn.getSubtarget());
 
-  if (!STI.isThumb2() || !STI.hasMVEIntegerOps())
+  if (!STI.isThumb2() || !STI.hasLOB())
     return false;
 
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
@@ -674,8 +701,10 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
                     << "********** Function: " << Fn.getName() << '\n');
 
   bool Modified = false;
-  for (MachineLoop *ML : MLI->getBase().getLoopsInPreorder())
+  for (MachineLoop *ML : MLI->getBase().getLoopsInPreorder()) {
+    Modified |= RevertLoopWithCall(ML);
     Modified |= ConvertTailPredLoop(ML, DT);
+  }
 
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= ReplaceVCMPsByVPNOTs(MBB);
