@@ -55,9 +55,9 @@ Options
 
 .. option:: AddConstToQualified
    
-   When set to `1` the check will add const qualifiers variables defined as
+   When set to `true` the check will add const qualifiers variables defined as
    ``auto *`` or ``auto &`` when applicable.
-   Default value is '1'.
+   Default value is `true`.
 
 .. code-block:: c++
 
@@ -65,7 +65,7 @@ Options
    auto *Foo2 = cast<const int *>(Bar2);
    auto &Foo3 = cast<const int &>(Bar3);
 
-If AddConstToQualified is set to `0`,  it will be transformed into:
+If AddConstToQualified is set to `false`,  it will be transformed into:
 
 .. code-block:: c++
 
@@ -81,4 +81,4 @@ Otherwise it will be transformed into:
    const auto *Foo2 = cast<const int *>(Bar2);
    const auto &Foo3 = cast<const int &>(Bar3);
 
-Note in the LLVM alias, the default value is `0`.
+Note in the LLVM alias, the default value is `false`.

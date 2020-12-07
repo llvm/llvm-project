@@ -35,7 +35,7 @@ Options
 
 .. option:: StrictMode
 
-   When zero (default value), the check will ignore trivially unused parameters,
+   When `false` (default value), the check will ignore trivially unused parameters,
    i.e. when the corresponding function has an empty body (and in case of
    constructors - no constructor initializers). When the function body is empty,
    an unused parameter is unlikely to be unnoticed by a human reader, and

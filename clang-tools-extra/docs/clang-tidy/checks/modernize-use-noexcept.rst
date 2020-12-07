@@ -87,4 +87,4 @@ transforms to:
     ~bar() noexcept(false);
   }
 
-if the :option:`UseNoexceptFalse` option is set to `0`.
+if the :option:`UseNoexceptFalse` option is set to `false`.
