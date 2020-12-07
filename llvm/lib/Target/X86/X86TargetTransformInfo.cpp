@@ -232,16 +232,16 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
       bool Op2Signed = false;
       unsigned Op2MinSize = BaseT::minRequiredElementSize(Args[1], Op2Signed);
 
-      bool signedMode = Op1Signed | Op2Signed;
+      bool SignedMode = Op1Signed || Op2Signed;
       unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
 
       if (OpMinSize <= 7)
         return LT.first * 3; // pmullw/sext
-      if (!signedMode && OpMinSize <= 8)
+      if (!SignedMode && OpMinSize <= 8)
         return LT.first * 3; // pmullw/zext
       if (OpMinSize <= 15)
         return LT.first * 5; // pmullw/pmulhw/pshuf
-      if (!signedMode && OpMinSize <= 16)
+      if (!SignedMode && OpMinSize <= 16)
         return LT.first * 5; // pmullw/pmulhw/pshuf
     }
 
