@@ -94,7 +94,7 @@ function(add_lldb_library name)
 
     if (HAVE_LIBDPU)
       target_link_directories(${name} PUBLIC ${UPMEM_API_LIB})
-      target_link_libraries(${name} PUBLIC dpu verbose)
+      target_link_libraries(${name} PUBLIC dpu dpuverbose)
     endif()
 
     if(CLANG_LINK_CLANG_DYLIB)
