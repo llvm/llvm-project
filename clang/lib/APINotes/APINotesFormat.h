@@ -19,7 +19,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Bitcode/RecordLayout.h"
+#include "llvm/Bitcode/BitcodeConvenience.h"
 #include "llvm/Bitstream/BitCodes.h"
 
 namespace clang {
