@@ -1973,7 +1973,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
     auto *GV = new GlobalVariable(M, Type::getInt8PtrTy(M.getContext()), false,
                                   GlobalVariable::ExternalLinkage, nullptr,
                                   "__stack_chk_guard");
-    if (getTargetMachine().getRelocationModel() == Reloc::Static)
+    if (TM.getRelocationModel() == Reloc::Static &&
+        !TM.getTargetTriple().isWindowsGNUEnvironment())
       GV->setDSOLocal(true);
   }
 }
