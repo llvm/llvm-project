@@ -506,26 +506,6 @@ program openacc_clause_validity
   end do
   !$acc end parallel loop
 
-  !$acc kernels device_type(*) async
-  do i = 1, N
-    a(i) = 3.14
-  end do
-  !$acc end kernels
-
-  !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS directive
-  !$acc kernels device_type(*) if(.TRUE.)
-  do i = 1, N
-    a(i) = 3.14
-  end do
-  !$acc end kernels
-
-  !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS LOOP directive
-  !$acc kernels loop device_type(*) if(.TRUE.)
-  do i = 1, N
-    a(i) = 3.14
-  end do
-  !$acc end kernels loop
-
   !$acc serial device_type(*) async
   do i = 1, N
     a(i) = 3.14
@@ -622,10 +602,28 @@ program openacc_clause_validity
     reduction_l = d(i) .neqv. e(i)
   end do
 
+  !$acc kernels async
+  !$acc end kernels
+
+  !$acc kernels async(1)
+  !$acc end kernels
+
+  !$acc kernels async(async1)
+  !$acc end kernels
+
+  !$acc kernels wait(wait1)
+  !$acc end kernels
+
+  !$acc kernels wait(wait1, wait2)
+  !$acc end kernels
+
   !$acc kernels wait(1, 2) async(3)
   !$acc end kernels
 
   !$acc kernels wait(queues: 1, 2) async(3)
+  !$acc end kernels
+
+  !$acc kernels wait(1) wait(2) async(3)
   !$acc end kernels
 
   !$acc kernels wait(devnum: 1: 1, 2) async(3)
@@ -633,6 +631,98 @@ program openacc_clause_validity
 
   !$acc kernels wait(devnum: 1: queues: 1, 2) async(3)
   !$acc end kernels
+
+  !$acc kernels num_gangs(8)
+  !$acc end kernels
+
+  !$acc kernels num_workers(8)
+  !$acc end kernels
+
+  !$acc kernels vector_length(128)
+  !$acc end kernels
+
+  !$acc kernels if(.true.)
+  !$acc end kernels
+
+  !$acc kernels if(ifCondition)
+  !$acc end kernels
+
+  !ERROR: At most one IF clause can appear on the KERNELS directive
+  !$acc kernels if(.true.) if(ifCondition)
+  !$acc end kernels
+
+  !$acc kernels self
+  !$acc end kernels
+
+  !$acc kernels self(.true.)
+  !$acc end kernels
+
+  !$acc kernels self(ifCondition)
+  !$acc end kernels
+
+  !$acc kernels copy(aa) copyin(bb) copyout(cc)
+  !$acc end kernels
+
+  !$acc kernels copy(aa, bb) copyout(zero: cc)
+  !$acc end kernels
+
+  !$acc kernels present(aa, bb) create(cc)
+  !$acc end kernels
+
+  !$acc kernels copyin(readonly: aa, bb) create(zero: cc)
+  !$acc end kernels
+
+  !$acc kernels deviceptr(aa, bb) no_create(cc)
+  !$acc end kernels
+
+  !$acc kernels attach(aa, bb, cc)
+  !$acc end kernels
+
+  !ERROR: PRIVATE clause is not allowed on the KERNELS directive
+  !$acc kernels private(aa, bb, cc)
+  !$acc end kernels
+
+  !$acc kernels default(none)
+  !$acc end kernels
+
+  !$acc kernels default(present)
+  !$acc end kernels
+
+  !ERROR: At most one DEFAULT clause can appear on the KERNELS directive
+  !$acc kernels default(none) default(present)
+  !$acc end kernels
+
+  !$acc kernels device_type(*)
+  !$acc end kernels
+
+  !$acc kernels device_type(1)
+  !$acc end kernels
+
+  !$acc kernels device_type(1, 3)
+  !$acc end kernels
+
+  !$acc kernels device_type(*) async wait num_gangs(8) num_workers(8) vector_length(128)
+  !$acc end kernels
+
+  !$acc kernels device_type(*) async
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS directive
+  !$acc kernels device_type(*) if(.TRUE.)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS LOOP directive
+  !$acc kernels loop device_type(*) if(.TRUE.)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end kernels loop
 
   !$acc wait
 
