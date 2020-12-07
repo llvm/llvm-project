@@ -552,20 +552,10 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
 /// If not, we can skip instantiating it. The attribute may or may not have
 /// been instantiated yet.
 static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
-  // 'preferred_name' is only relevant to the matching specialization of the
+  // Never instantiate preferred_name attributes; they're relevant only on the
   // template.
-  if (const auto *PNA = dyn_cast<PreferredNameAttr>(A)) {
-    QualType T = PNA->getTypedefType();
-    const auto *RD = cast<CXXRecordDecl>(D);
-    if (!T->isDependentType() && !RD->isDependentContext() &&
-        !declaresSameEntity(T->getAsCXXRecordDecl(), RD))
-      return false;
-    for (const auto *ExistingPNA : D->specific_attrs<PreferredNameAttr>())
-      if (S.Context.hasSameType(ExistingPNA->getTypedefType(),
-                                PNA->getTypedefType()))
-        return false;
-    return true;
-  }
+  if (const auto *PNA = dyn_cast<PreferredNameAttr>(A))
+    return false;
 
   return true;
 }

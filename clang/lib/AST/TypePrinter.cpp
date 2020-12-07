@@ -1350,11 +1350,16 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
 
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
   // Print the preferred name if we have one for this type.
-  for (const auto *PNA : T->getDecl()->specific_attrs<PreferredNameAttr>()) {
-    if (declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
-                           T->getDecl()))
-      return printTypeSpec(
-          PNA->getTypedefType()->castAs<TypedefType>()->getDecl(), OS);
+  if (const auto *Spec =
+          dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl())) {
+    for (const auto *PNA : Spec->getSpecializedTemplate()
+                               ->getTemplatedDecl()
+                               ->getMostRecentDecl()
+                               ->specific_attrs<PreferredNameAttr>()) {
+      if (declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(), Spec))
+        return printTypeSpec(
+            PNA->getTypedefType()->castAs<TypedefType>()->getDecl(), OS);
+    }
   }
 
   printTag(T->getDecl(), OS);

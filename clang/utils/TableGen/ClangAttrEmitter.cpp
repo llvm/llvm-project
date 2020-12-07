@@ -3330,12 +3330,13 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
 
-    OS << "        return new (C) " << R.getName() << "Attr(C, *A";
+    OS << "      return new (C) " << R.getName() << "Attr(C, *A";
     for (auto const &ai : Args) {
       OS << ", ";
       ai->writeTemplateInstantiationArgs(OS);
     }
-    OS << ");\n    }\n";
+    OS << ");\n"
+       << "    }\n";
   }
   OS << "  } // end switch\n"
      << "  llvm_unreachable(\"Unknown attribute!\");\n"
