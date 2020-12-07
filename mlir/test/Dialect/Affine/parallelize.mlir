@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize| FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize='max-nested=1' | FileCheck --check-prefix=MAX-NESTED %s
 
 // CHECK-LABEL:    func @reduce_window_max() {
 func @reduce_window_max() {
@@ -144,3 +145,18 @@ func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
   }
   return
 }
+
+// MAX-NESTED-LABEL: @max_nested
+func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
+                 %ub0: index, %ub1: index) {
+  // MAX-NESTED: affine.parallel
+  affine.for %i = affine_map<(d0) -> (d0)>(%lb0) to affine_map<(d0) -> (d0)>(%ub0) {
+    // MAX-NESTED: affine.for
+    affine.for %j = affine_map<(d0) -> (d0)>(%lb1) to affine_map<(d0) -> (d0)>(%ub1) {
+      affine.load %m[%i, %j] : memref<?x?xf32>
+    }
+  }
+  return
+}
+
+
