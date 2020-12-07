@@ -334,7 +334,7 @@ void __kmp_str_loc_numbers(char const *Psource, int *LineBeg,
     *LineBeg = 0;
   }
   if (Str) {
-    // Read end line number.
+    // Read end line or column number.
     *LineEndOrCol = atoi(Str + 1);
   } else {
     // Broken format of input string, cannot read the number.
