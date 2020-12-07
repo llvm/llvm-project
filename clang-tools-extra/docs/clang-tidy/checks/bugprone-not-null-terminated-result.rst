@@ -57,9 +57,9 @@ Rewrite based on the destination array
   efficient than the safe version.
 
 - If copy to the destination array can overflow [1] and
-  ``AreSafeFunctionsAvailable`` is set to ``Yes``, ``y`` or non-zero and it is
-  possible to obtain the capacity of the destination array then the new function
-  could be the safe version (ending with ``cpy_s``).
+  :option:`WantToUseSafeFunctions` is set to `true` and it is possible to
+  obtain the capacity of the destination array then the new function could be
+  the safe version (ending with ``cpy_s``).
 
 - If the new function is could be safe version and C++ files are analysed and
   the destination array is plain ``char``/``wchar_t`` without ``un/signed`` then
@@ -127,6 +127,6 @@ Options
 
 .. option::  WantToUseSafeFunctions
 
-   An integer non-zero value specifying if the target environment is considered
-   to implement '_s' suffixed memory and string handler functions which are
-   safer than older versions (e.g. 'memcpy_s()'). The default value is ``1``.
+   The value `true` specifies that the target environment is considered to
+   implement '_s' suffixed memory and string handler functions which are safer 
+   than older versions (e.g. 'memcpy_s()'). The default value is `true`.

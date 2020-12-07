@@ -126,10 +126,10 @@ Options
 
 .. option::  AllowIntegerConditions
 
-   When non-zero, the check will allow conditional integer conversions. Default
-   is `0`.
+   When `true`, the check will allow conditional integer conversions. Default
+   is `false`.
 
 .. option::  AllowPointerConditions
 
-   When non-zero, the check will allow conditional pointer conversions. Default
-   is `0`.
+   When `true`, the check will allow conditional pointer conversions. Default
+   is `false`.
