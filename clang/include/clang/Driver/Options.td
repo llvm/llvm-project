@@ -2639,8 +2639,6 @@ def mno_mfocrf : Flag<["-"], "mno-mfocrf">, Group<m_ppc_Features_Group>;
 def mno_mfcrf : Flag<["-"], "mno-mfcrf">, Alias<mno_mfocrf>;
 def mpopcntd : Flag<["-"], "mpopcntd">, Group<m_ppc_Features_Group>;
 def mno_popcntd : Flag<["-"], "mno-popcntd">, Group<m_ppc_Features_Group>;
-def mqpx : Flag<["-"], "mqpx">, Group<m_ppc_Features_Group>;
-def mno_qpx : Flag<["-"], "mno-qpx">, Group<m_ppc_Features_Group>;
 def mcrbits : Flag<["-"], "mcrbits">, Group<m_ppc_Features_Group>;
 def mno_crbits : Flag<["-"], "mno-crbits">, Group<m_ppc_Features_Group>;
 def minvariant_function_descriptors :
