@@ -28,7 +28,7 @@
 #define FORTRAN_LOWER_CALLINTERFACE_H
 
 #include "flang/Common/reference.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include <memory>
 #include <optional>
 

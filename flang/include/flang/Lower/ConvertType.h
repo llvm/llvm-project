@@ -22,7 +22,7 @@
 #define FORTRAN_LOWER_CONVERT_TYPE_H
 
 #include "flang/Common/Fortran.h"
-#include "mlir/IR/Types.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
