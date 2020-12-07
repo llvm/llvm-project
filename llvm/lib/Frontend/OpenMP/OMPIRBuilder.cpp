@@ -999,6 +999,118 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
   return createCanonicalLoop(Builder.saveIP(), BodyGen, TripCount);
 }
 
+// Returns an LLVM function to call for initializing loop bounds using OpenMP
+// static scheduling depending on `type`. Only i32 and i64 are supported by the
+// runtime. Always interpret integers as unsigned similarly to
+// CanonicalLoopInfo.
+static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
+                                                  OpenMPIRBuilder &OMPBuilder) {
+  unsigned Bitwidth = Ty->getIntegerBitWidth();
+  if (Bitwidth == 32)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_for_static_init_4u);
+  if (Bitwidth == 64)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_for_static_init_8u);
+  llvm_unreachable("unknown OpenMP loop iterator bitwidth");
+}
+
+// Sets the number of loop iterations to the given value. This value must be
+// valid in the condition block (i.e., defined in the preheader) and is
+// interpreted as an unsigned integer.
+void setCanonicalLoopTripCount(CanonicalLoopInfo *CLI, Value *TripCount) {
+  Instruction *CmpI = &CLI->getCond()->front();
+  assert(isa<CmpInst>(CmpI) && "First inst must compare IV with TripCount");
+  CmpI->setOperand(1, TripCount);
+  CLI->assertOK();
+}
+
+CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
+    const LocationDescription &Loc, CanonicalLoopInfo *CLI,
+    InsertPointTy AllocaIP, bool NeedsBarrier, Value *Chunk) {
+  // Set up the source location value for OpenMP runtime.
+  if (!updateToLocation(Loc))
+    return nullptr;
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *SrcLoc = getOrCreateIdent(SrcLocStr);
+
+  // Declare useful OpenMP runtime functions.
+  Value *IV = CLI->getIndVar();
+  Type *IVTy = IV->getType();
+  FunctionCallee StaticInit = getKmpcForStaticInitForType(IVTy, M, *this);
+  FunctionCallee StaticFini =
+      getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
+
+  // Allocate space for computed loop bounds as expected by the "init" function.
+  Builder.restoreIP(AllocaIP);
+  Type *I32Type = Type::getInt32Ty(M.getContext());
+  Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
+  Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
+  Value *PUpperBound = Builder.CreateAlloca(IVTy, nullptr, "p.upperbound");
+  Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
+
+  // At the end of the preheader, prepare for calling the "init" function by
+  // storing the current loop bounds into the allocated space. A canonical loop
+  // always iterates from 0 to trip-count with step 1. Note that "init" expects
+  // and produces an inclusive upper bound.
+  Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
+  Constant *Zero = ConstantInt::get(IVTy, 0);
+  Constant *One = ConstantInt::get(IVTy, 1);
+  Builder.CreateStore(Zero, PLowerBound);
+  Value *UpperBound = Builder.CreateSub(CLI->getTripCount(), One);
+  Builder.CreateStore(UpperBound, PUpperBound);
+  Builder.CreateStore(One, PStride);
+
+  if (!Chunk)
+    Chunk = One;
+
+  Value *ThreadNum = getOrCreateThreadID(SrcLoc);
+
+  // TODO: extract scheduling type and map it to OMP constant. This is curently
+  // happening in kmp.h and its ilk and needs to be moved to OpenMP.td first.
+  constexpr int StaticSchedType = 34;
+  Constant *SchedulingType = ConstantInt::get(I32Type, StaticSchedType);
+
+  // Call the "init" function and update the trip count of the loop with the
+  // value it produced.
+  Builder.CreateCall(StaticInit,
+                     {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
+                      PUpperBound, PStride, One, Chunk});
+  Value *LowerBound = Builder.CreateLoad(PLowerBound);
+  Value *InclusiveUpperBound = Builder.CreateLoad(PUpperBound);
+  Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
+  Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One);
+  setCanonicalLoopTripCount(CLI, TripCount);
+
+  // Update all uses of the induction variable except the one in the condition
+  // block that compares it with the actual upper bound, and the increment in
+  // the latch block.
+  // TODO: this can eventually move to CanonicalLoopInfo or to a new
+  // CanonicalLoopInfoUpdater interface.
+  Builder.SetInsertPoint(CLI->getBody(), CLI->getBody()->getFirstInsertionPt());
+  Value *UpdatedIV = Builder.CreateAdd(IV, LowerBound);
+  IV->replaceUsesWithIf(UpdatedIV, [&](Use &U) {
+    auto *Instr = dyn_cast<Instruction>(U.getUser());
+    return !Instr ||
+           (Instr->getParent() != CLI->getCond() &&
+            Instr->getParent() != CLI->getLatch() && Instr != UpdatedIV);
+  });
+
+  // In the "exit" block, call the "fini" function.
+  Builder.SetInsertPoint(CLI->getExit(),
+                         CLI->getExit()->getTerminator()->getIterator());
+  Builder.CreateCall(StaticFini, {SrcLoc, ThreadNum});
+
+  // Add the barrier if requested.
+  if (NeedsBarrier)
+    createBarrier(Loc, omp::Directive::OMPD_for, /* ForceSimpleCall */ false,
+                  /* CheckCancelFlag */ false);
+
+  CLI->assertOK();
+  return CLI;
+}
+
 void CanonicalLoopInfo::eraseFromParent() {
   assert(IsValid && "can only erase previously valid loop cfg");
   IsValid = false;
