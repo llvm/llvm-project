@@ -2306,9 +2306,7 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
     using namespace swift::Demangle;
     Demangler dem;
     auto *node = DemangleCanonicalType(dem, type);
-    if (IsFunctionType(type, nullptr))
-      return false;
-    return ContainsGenericTypeParameter(node);
+    return ContainsGenericTypeParameter(node) && !IsFunctionType(type, nullptr);
   };
   VALIDATE_AND_RETURN(impl, IsMeaninglessWithoutDynamicResolution, type,
                       (ReconstructType(type)));
