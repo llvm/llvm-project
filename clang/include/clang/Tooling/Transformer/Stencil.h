@@ -123,6 +123,15 @@ inline Stencil ifBound(llvm::StringRef Id, llvm::StringRef TrueText,
 /// Stencil.  This supports user-defined extensions to the \c Stencil language.
 Stencil run(MatchConsumer<std::string> C);
 
+/// Produces a human-readable rendering of the node bound to `Id`, suitable for
+/// diagnostics and debugging. This operator can be applied to any node, but is
+/// targeted at those whose source cannot be printed directly, including:
+///
+/// * Types. represented based on their structure. Note that namespace
+///   qualifiers are always printed, with the anonymous namespace represented
+///   explicitly. No desugaring or canonicalization is applied.
+Stencil describe(llvm::StringRef Id);
+
 /// For debug use only; semantics are not guaranteed.
 ///
 /// \returns the string resulting from calling the node's print() method.
