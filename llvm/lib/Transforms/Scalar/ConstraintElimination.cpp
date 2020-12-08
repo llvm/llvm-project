@@ -63,12 +63,12 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
               m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
       return {{0, nullptr},
               {1, GEP->getPointerOperand()},
-              {pow(2, CI->getSExtValue()), Op0}};
+              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_ZExt(m_NUWShl(m_Value(Op0), m_ConstantInt(CI)))))
       return {{0, nullptr},
               {1, GEP->getPointerOperand()},
-              {pow(2, CI->getSExtValue()), Op0}};
+              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
 
     return {{0, nullptr},
             {1, GEP->getPointerOperand()},
@@ -346,8 +346,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (CB.Not)
       R = ConstraintSystem::negate(R);
 
-    CS.addVariableRowFill(R);
-    DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
+    // If R has been added to the system, queue it for removal once it goes
+    // out-of-scope.
+    if (CS.addVariableRowFill(R))
+      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
   }
 
   return Changed;
