@@ -50,12 +50,13 @@ Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
   assert(Result->front().size() == LookupSymbols.size() &&
          "Result has incorrect number of elements");
 
-  SymbolNameVector MissingSymbols;
   auto ResultI = Result->front().begin();
-  for (auto &KV : LookupSymbols)
+  for (auto &KV : LookupSymbols) {
     if (*ResultI)
       NewSymbols[KV.first] =
-          JITEvaluatedSymbol(*ResultI++, JITSymbolFlags::Exported);
+          JITEvaluatedSymbol(*ResultI, JITSymbolFlags::Exported);
+    ResultI++;
+  }
 
   // If there were no resolved symbols bail out.
   if (NewSymbols.empty())
