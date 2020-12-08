@@ -48,3 +48,9 @@ Options
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
+
+.. option:: IgnoreDefaultInitialization
+
+   If set to non-zero, the check does not suggest edits that will transform
+   default initialization into value initialization, as this can cause
+   performance regressions. Default is `1`.
