@@ -35,12 +35,46 @@ using namespace llvm;
 STATISTIC(ArtificialDbgLine,
           "Number of probes that have an artificial debug line");
 
-SampleProfileProber::SampleProfileProber(Function &Func) : F(&Func) {
+SampleProfileProber::SampleProfileProber(Function &Func,
+                                         const std::string &CurModuleUniqueId)
+    : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {
   BlockProbeIds.clear();
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
   computeProbeIdForBlocks();
   computeProbeIdForCallsites();
+  computeCFGHash();
+}
+
+// Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
+// value of each BB in the CFG. The higher 32 bits record the number of edges
+// preceded by the number of indirect calls.
+// This is derived from FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash().
+void SampleProfileProber::computeCFGHash() {
+  std::vector<uint8_t> Indexes;
+  JamCRC JC;
+  for (auto &BB : *F) {
+    auto *TI = BB.getTerminator();
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      auto *Succ = TI->getSuccessor(I);
+      auto Index = getBlockId(Succ);
+      for (int J = 0; J < 4; J++)
+        Indexes.push_back((uint8_t)(Index >> (J * 8)));
+    }
+  }
+
+  JC.update(Indexes);
+
+  FunctionHash = (uint64_t)CallProbeIds.size() << 48 |
+                 (uint64_t)Indexes.size() << 32 | JC.getCRC();
+  // Reserve bit 60-63 for other information purpose.
+  FunctionHash &= 0x0FFFFFFFFFFFFFFF;
+  assert(FunctionHash && "Function checksum should not be zero");
+  LLVM_DEBUG(dbgs() << "\nFunction Hash Computation for " << F->getName()
+                    << ":\n"
+                    << " CRC = " << JC.getCRC() << ", Edges = "
+                    << Indexes.size() << ", ICSites = " << CallProbeIds.size()
+                    << ", Hash = " << FunctionHash << "\n");
 }
 
 void SampleProfileProber::computeProbeIdForBlocks() {
@@ -150,14 +184,50 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
       Call->setDebugLoc(DIL);
     }
   }
+
+  // Create module-level metadata that contains function info necessary to
+  // synthesize probe-based sample counts,  which are
+  // - FunctionGUID
+  // - FunctionHash.
+  // - FunctionName
+  auto Hash = getFunctionHash();
+  auto *MD = MDB.createPseudoProbeDesc(Guid, Hash, &F);
+  auto *NMD = M->getNamedMetadata(PseudoProbeDescMetadataName);
+  assert(NMD && "llvm.pseudo_probe_desc should be pre-created");
+  NMD->addOperand(MD);
+
+  // Preserve a comdat group to hold all probes materialized later. This
+  // allows that when the function is considered dead and removed, the
+  // materialized probes are disposed too.
+  // Imported functions are defined in another module. They do not need
+  // the following handling since same care will be taken for them in their
+  // original module. The pseudo probes inserted into an imported functions
+  // above will naturally not be emitted since the imported function is free
+  // from object emission. However they will be emitted together with the
+  // inliner functions that the imported function is inlined into. We are not
+  // creating a comdat group for an import function since it's useless anyway.
+  if (!F.isDeclarationForLinker()) {
+    if (TM) {
+      auto Triple = TM->getTargetTriple();
+      if (Triple.supportsCOMDAT() && TM->getFunctionSections()) {
+        GetOrCreateFunctionComdat(F, Triple, CurModuleUniqueId);
+      }
+    }
+  }
 }
 
 PreservedAnalyses SampleProfileProbePass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
+  auto ModuleId = getUniqueModuleId(&M);
+  // Create the pseudo probe desc metadata beforehand.
+  // Note that modules with only data but no functions will require this to
+  // be set up so that they will be known as probed later.
+  M.getOrInsertNamedMetadata(PseudoProbeDescMetadataName);
+
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    SampleProfileProber ProbeManager(F);
+    SampleProfileProber ProbeManager(F, ModuleId);
     ProbeManager.instrumentOneFunc(F, TM);
   }
 

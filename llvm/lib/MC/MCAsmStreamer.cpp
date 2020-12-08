@@ -24,6 +24,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -349,6 +350,10 @@ public:
                           const MCSymbolRefExpr *To, uint64_t Count) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+
+  void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
+                       uint64_t Attr,
+                       const MCPseudoProbeInlineStack &InlineStack) override;
 
   void emitBundleAlignMode(unsigned AlignPow2) override;
   void emitBundleLock(bool AlignToEnd) override;
@@ -2119,6 +2124,18 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
   if (Comments.size() && Comments.back() != '\n')
     GetCommentOS() << "\n";
 
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitPseudoProbe(
+    uint64_t Guid, uint64_t Index, uint64_t Type, uint64_t Attr,
+    const MCPseudoProbeInlineStack &InlineStack) {
+  OS << "\t.pseudoprobe\t" << Guid << " " << Index << " " << Type << " "
+     << Attr;
+  // Emit inline stack like
+  //  @ GUIDmain:3 @ GUIDCaller:1 @ GUIDDirectCaller:11
+  for (const auto &Site : InlineStack)
+    OS << " @ " << std::get<0>(Site) << ":" << std::get<1>(Site);
   EmitEOL();
 }
 
