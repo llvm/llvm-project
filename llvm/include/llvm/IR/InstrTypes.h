@@ -599,12 +599,6 @@ public:
     BasicBlock *InsertAtEnd  ///< The block to insert the instruction into
   );
 
-  /// Check whether it is valid to call getCastOpcode for these types.
-  static bool isCastable(
-    Type *SrcTy, ///< The Type from which the value should be cast.
-    Type *DestTy ///< The Type to which the value should be cast.
-  );
-
   /// Check whether a bitcast between these types is valid
   static bool isBitCastable(
     Type *SrcTy, ///< The Type from which the value should be cast.
