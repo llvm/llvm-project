@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -triple riscv32 -target-feature +d -target-abi ilp32d \
+// RUN:     -Wno-missing-declarations -emit-llvm %s -o - | FileCheck %s
+
+struct empty_float2 { struct {}; float f; float g; };
+
+// CHECK: define float @_Z14f_empty_float212empty_float2(float %0, float %1)
+// FIXME: Extraneous padding before the second float
+// CHECK: { [4 x i8], float, [4 x i8], float }
+float f_empty_float2(empty_float2 a) {
+    return a.g;
+}
+
+struct empty_double2 { struct {}; double f; double g; };
+
+// CHECK: define double @_Z15f_empty_double213empty_double2(double %0, double %1)
+// FIXME: Extraneous padding before the second double
+// CHECK: { [8 x i8], double, [8 x i8], double }
+double f_empty_double2(empty_double2 a) {
+    return a.g;
+}
+
+struct empty_float_double { struct {}; float f; double g; };
+
+// CHECK: define double @_Z20f_empty_float_double18empty_float_double(float %0, double %1)
+// CHECK: { [4 x i8], float, double }
+double f_empty_float_double(empty_float_double a) {
+    return a.g;
+}
+
+struct empty_double_float { struct {}; double f; float g; };
+
+// CHECK: define double @_Z20f_empty_double_float18empty_double_float(double %0, float %1)
+// FIXME: Extraneous padding before the float
+// CHECK: { [8 x i8], double, [8 x i8], float }
+double f_empty_double_float(empty_double_float a) {
+    return a.g;
+}
