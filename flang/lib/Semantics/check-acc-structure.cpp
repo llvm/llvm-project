@@ -54,6 +54,35 @@ bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
   return false;
 }
 
+bool AccStructureChecker::IsComputeConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::ACCD_parallel ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  if (dirContext_.size() <= 1)
+    return false;
+
+  // Check all nested context skipping the first one.
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return true;
+  }
+  return false;
+}
+
+void AccStructureChecker::CheckNotInComputeConstruct() {
+  if (IsInsideComputeConstruct())
+    context_.Say(GetContext().directiveSource,
+        "Directive %s may not be called within a compute region"_err_en_US,
+        ContextDirectiveAsFortran());
+}
+
 void AccStructureChecker::Enter(const parser::AccClause &x) {
   SetContextClause(x);
 }
@@ -175,11 +204,15 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
   switch (standaloneDir.v) {
   case llvm::acc::Directive::ACCD_enter_data:
   case llvm::acc::Directive::ACCD_exit_data:
-  case llvm::acc::Directive::ACCD_set:
     // Restriction - line 1310-1311 (ENTER DATA)
     // Restriction - line 1312-1313 (EXIT DATA)
-    // Restriction - line 2610 (SET)
     CheckRequireAtLeastOneOf();
+    break;
+  case llvm::acc::Directive::ACCD_set:
+    // Restriction - line 2610
+    CheckRequireAtLeastOneOf();
+    // Restriction - line 2602
+    CheckNotInComputeConstruct();
     break;
   case llvm::acc::Directive::ACCD_update:
     // Restriction - line 2636
@@ -187,6 +220,12 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
     // Restriction - line 2669
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
+    break;
+  case llvm::acc::Directive::ACCD_init:
+  case llvm::acc::Directive::ACCD_shutdown:
+    // Restriction - line 2525 (INIT)
+    // Restriction - line 2561 (SHUTDOWN)
+    CheckNotInComputeConstruct();
     break;
   default:
     break;
