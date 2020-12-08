@@ -876,7 +876,9 @@ def not_for_dyld_shared_cache : Flag<["-"], "not_for_dyld_shared_cache">,
      Group<grp_rare>;
 def mllvm : Separate<["-"], "mllvm">,
      HelpText<"Options to pass to LLVM">,
-     Flags<[HelpHidden]>,
+     Group<grp_rare>;
+def mcpu : Separate<["-"], "mcpu">,
+     HelpText<"Processor family target for LTO code generation">,
      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
@@ -1208,10 +1210,6 @@ def iosmac_version_min : Flag<["-"], "iosmac_version_min">,
 def uikitformac_version_min : Flag<["-"], "uikitformac_version_min">,
      Alias<maccatalyst_version_min>,
      HelpText<"Alias for -maccatalyst_version_min">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def mcpu : Flag<["-"], "mcpu">,
-     HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def no_compact_unwind : Flag<["-"], "no_compact_unwind">,
