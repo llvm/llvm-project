@@ -227,4 +227,4 @@ llvm::Optional<InstrumentationData> &InstrumentationData::InstanceImpl() {
   return g_instrumentation_data;
 }
 
-bool lldb_private::repro::Recorder::g_global_boundary;
+thread_local bool lldb_private::repro::Recorder::g_global_boundary = false;
