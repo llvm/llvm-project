@@ -196,7 +196,7 @@
 "`3150 <https://wg21.link/LWG3150>`__","``UniformRandomBitGenerator``\  should validate ``min``\  and ``max``\ ","Prague","",""
 "`3175 <https://wg21.link/LWG3175>`__","The ``CommonReference``\  requirement of concept ``SwappableWith``\  is not satisfied in the example","Prague","",""
 "`3194 <https://wg21.link/LWG3194>`__","``ConvertibleTo``\  prose does not match code","Prague","",""
-"`3200 <https://wg21.link/LWG3200>`__","``midpoint``\  should not constrain ``T``\  is complete","Prague","",""
+"`3200 <https://wg21.link/LWG3200>`__","``midpoint``\  should not constrain ``T``\  is complete","Prague","|Nothing To Do|",""
 "`3201 <https://wg21.link/LWG3201>`__","``lerp``\  should be marked as ``noexcept``\ ","Prague","|Complete|",""
 "`3226 <https://wg21.link/LWG3226>`__","``zoned_time``\  constructor from ``string_view``\  should accept ``zoned_time<Duration2, TimeZonePtr2>``\ ","Prague","",""
 "`3233 <https://wg21.link/LWG3233>`__","Broken requirements for ``shared_ptr``\  converting constructors","Prague","",""
