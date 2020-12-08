@@ -160,6 +160,24 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   }
 };
 
+static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
+                                                    const StringRef &Name) {
+  // FIXME: Duplicates functionality from
+  // MC/WasmObjectWriter::recordRelocation, as well as WebAssemblyCodegen's
+  // WebAssembly:getOrCreateFunctionTableSymbol.
+  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  if (Sym) {
+    if (!Sym->isFunctionTable())
+      Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
+  } else {
+    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym->setFunctionTable();
+    // The default function table is synthesized by the linker.
+    Sym->setUndefined();
+  }
+  return Sym;
+}
+
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
   MCAsmLexer &Lexer;
@@ -531,6 +549,15 @@ public:
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
       ExpectFuncType = true;
+      // Ensure that the object file has a __indirect_function_table import, as
+      // we call_indirect against it.
+      auto &Ctx = getStreamer().getContext();
+      MCSymbolWasm *Sym =
+          GetOrCreateFunctionTableSymbol(Ctx, "__indirect_function_table");
+      // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
+      // it as NO_STRIP so as to ensure that the indirect function table makes
+      // it to linked output.
+      Sym->setNoStrip();
     } else if (Name == "ref.null") {
       ExpectHeapType = true;
     }
