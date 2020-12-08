@@ -21,6 +21,7 @@ static_library("performance") {
     "MoveConstArgCheck.cpp",
     "MoveConstructorInitCheck.cpp",
     "NoAutomaticMoveCheck.cpp",
+    "NoIntToPtrCheck.cpp",
     "NoexceptMoveConstructorCheck.cpp",
     "PerformanceTidyModule.cpp",
     "TriviallyDestructibleCheck.cpp",
