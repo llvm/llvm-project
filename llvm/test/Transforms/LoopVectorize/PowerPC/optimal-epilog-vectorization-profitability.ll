@@ -16,6 +16,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK-NOT: vec.epilog.ph
 ; CHECK-NOT: vec.epilog.vector.body
 ; CHECK-NOT: vec.epilog.middle.block
+; CHECK: ret void
 
 define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) #0 {
 entry:
@@ -53,6 +54,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NOT: vec.epilog.ph
 ; CHECK-NOT: vec.epilog.vector.body
 ; CHECK-NOT: vec.epilog.middle.block
+; CHECK: ret void
 
 define dso_local void @f2(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) #1 {
 entry:
@@ -90,6 +92,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-MIN-D-NOT: vec.epilog.ph
 ; CHECK-MIN-D-NOT: vec.epilog.vector.body
 ; CHECK-MIN-D-NOT: vec.epilog.middle.block
+; CHECK-MIN-D: ret void
 
 ; Specify a smaller minimum VF (via `-epilogue-vectorization-minimum-VF=4`) and
 ; make sure the epilogue gets vectorized in that case.
@@ -99,6 +102,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-MIN-4: vec.epilog.ph
 ; CHECK-MIN-4: vec.epilog.vector.body
 ; CHECK-MIN-4: vec.epilog.middle.block
+; CHECK-MIN-4: ret void
 
 define dso_local void @f3(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) {
 entry:
