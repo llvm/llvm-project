@@ -178,9 +178,7 @@ define i64 @sroiw_bug(i64 %a) nounwind {
 ; RV64IB-LABEL: sroiw_bug:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    srli a0, a0, 1
-; RV64IB-NEXT:    addi a1, zero, 1
-; RV64IB-NEXT:    slli a1, a1, 31
-; RV64IB-NEXT:    or a0, a0, a1
+; RV64IB-NEXT:    sbseti a0, a0, 31
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: sroiw_bug:
