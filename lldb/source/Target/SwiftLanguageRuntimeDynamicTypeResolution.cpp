@@ -1722,6 +1722,8 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
     const swift::reflection::TypeRef *type_ref =
         reflection_ctx->readTypeFromMetadata(*metadata_location);
+    if (!type_ref)
+      return;
     substitutions.insert({{depth, index}, type_ref});
   });
 
