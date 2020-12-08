@@ -1066,6 +1066,21 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
       return true;
     }
 
+    // Attempt to fold:
+    //
+    // %add = G_ADD %x, 1
+    // %select = G_SELECT cc, %reg, %add
+    //
+    // Into:
+    // %select = CSINC %reg, %x, cc
+    if (mi_match(Reg, MRI, m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)))) {
+      Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
+      Reg = MatchReg;
+      if (Invert)
+        CC = AArch64CC::getInvertedCondCode(CC);
+      return true;
+    }
+
     return false;
   };
 
