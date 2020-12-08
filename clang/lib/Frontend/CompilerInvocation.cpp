@@ -869,10 +869,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.DebugPassManager =
-      Args.hasFlag(OPT_fdebug_pass_manager, OPT_fno_debug_pass_manager,
-                   /* Default */ false);
-
   if (Arg *A = Args.getLastArg(OPT_fveclib)) {
     StringRef Name = A->getValue();
     if (Name == "Accelerate")
@@ -3767,7 +3763,7 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
     IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
     TABLE_INDEX)                                                               \
-  {                                                                            \
+  if ((FLAGS)&options::CC1Option) {                                            \
     this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
     if (IMPLIED_CHECK)                                                         \
       this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \

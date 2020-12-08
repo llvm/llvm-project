@@ -325,10 +325,6 @@ class FlagDefExpanded<FlagDef flag, string prefix, string name, string spelling>
   string Spelling
     = prefix#!cond(flag.Polarity.Value : "", true : "no-")#spelling;
 
-  // Does the flag have CC1Option?
-  bit IsCC1 = !not(!empty(!filter(opt_flag, flag.OptionFlags,
-                                  !eq(opt_flag, CC1Option))));
-
   // Can the flag be implied by another flag?
   bit CanBeImplied = !not(!empty(flag.ImpliedBy));
 
@@ -336,18 +332,14 @@ class FlagDefExpanded<FlagDef flag, string prefix, string name, string spelling>
   code ValueAsCode = !cond(flag.Value : "true", true: "false");
 }
 
-// Creates simple flag record.
-class BoolOptionFlag<FlagDefExpanded flag, code keypath, Default default>
-  : Flag<["-"], flag.Spelling>, Flags<flag.OptionFlags>, HelpText<flag.Help> {}
-
-// Creates marshalled flag record.
-class CC1BoolOptionFlag<FlagDefExpanded flag, FlagDefExpanded other,
-                        code keypath, Default default>
+// Creates record with a marshalled flag.
+class BoolOptionFlag<FlagDefExpanded flag, FlagDefExpanded other,
+                     FlagDefExpanded implied, code keypath, Default default>
   : Flag<["-"], flag.Spelling>, Flags<flag.OptionFlags>, HelpText<flag.Help>,
     MarshallingInfoBooleanFlag<keypath, default.Value, flag.ValueAsCode,
                                flag.RecordName, other.ValueAsCode,
                                other.RecordName, other.Spelling>,
-    ImpliedByAnyOf<flag.ImpliedBy, flag.ValueAsCode> {}
+    ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode> {}
 
 // Generates TableGen records for two command line flags that control the same
 // keypath via the marshalling infrastructure.
@@ -370,17 +362,10 @@ multiclass BoolOptionBase<string spelling_base, code keypath, Default default,
   // TODO: Assert that the flags have different value.
   // TODO: Assert that only one of the flags can be implied.
 
-  if flag1.IsCC1 then {
-    def flag1.RecordName : CC1BoolOptionFlag<flag1, flag2, keypath, default>;
-  } else {
-    def flag1.RecordName : BoolOptionFlag<flag1, keypath, default>;
-  }
+  defvar implied = !cond(flag1.CanBeImplied: flag1, true: flag2);
 
-  if flag2.IsCC1 then {
-    def flag2.RecordName : CC1BoolOptionFlag<flag2, flag1, keypath, default>;
-  } else {
-    def flag2.RecordName : BoolOptionFlag<flag2, keypath, default>;
-  }
+  def flag1.RecordName : BoolOptionFlag<flag1, flag2, implied, keypath, default>;
+  def flag2.RecordName : BoolOptionFlag<flag2, flag1, implied, keypath, default>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4322,10 +4307,11 @@ def flto_visibility_public_std:
 def flto_unit: Flag<["-"], "flto-unit">,
     HelpText<"Emit IR to support LTO unit features (CFI, whole program vtable opt)">;
 def fno_lto_unit: Flag<["-"], "fno-lto-unit">;
-def fdebug_pass_manager : Flag<["-"], "fdebug-pass-manager">,
-    HelpText<"Prints debug information for the new pass manager">;
-def fno_debug_pass_manager : Flag<["-"], "fno-debug-pass-manager">,
-    HelpText<"Disables debug printing for the new pass manager">;
+defm debug_pass_manager : BoolOption<"debug-pass-manager",
+  "CodeGenOpts.DebugPassManager", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Prints debug information for the new pass manager">,
+  ResetBy<NegFlag, [], "Disables debug printing for the new pass manager">,
+  BothFlags<[]>, "f">;
 def fexperimental_debug_variable_locations : Flag<["-"],
     "fexperimental-debug-variable-locations">,
     HelpText<"Use experimental new value-tracking variable locations">;
