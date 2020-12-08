@@ -1622,6 +1622,8 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     return MatchOperand_NoMatch;
   if (Lmul != 1 && Lmul != 2 && Lmul != 4 && Lmul != 8)
     return MatchOperand_NoMatch;
+  if (Fractional && Lmul == 1)
+    return MatchOperand_NoMatch;
   getLexer().Lex();
 
   if (!getLexer().is(AsmToken::Comma))
@@ -1631,9 +1633,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   Name = getLexer().getTok().getIdentifier();
   // ta or tu
   bool TailAgnostic;
-  if (Name.consume_front("ta"))
+  if (Name == "ta")
     TailAgnostic = true;
-  else if (Name.consume_front("tu"))
+  else if (Name == "tu")
     TailAgnostic = false;
   else
     return MatchOperand_NoMatch;
@@ -1646,9 +1648,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   Name = getLexer().getTok().getIdentifier();
   // ma or mu
   bool MaskedoffAgnostic;
-  if (Name.consume_front("ma"))
+  if (Name == "ma")
     MaskedoffAgnostic = true;
-  else if (Name.consume_front("mu"))
+  else if (Name == "mu")
     MaskedoffAgnostic = false;
   else
     return MatchOperand_NoMatch;
