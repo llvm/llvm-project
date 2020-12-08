@@ -183,6 +183,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                  "__nv_log10");
   patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__nv_log2f",
                                                 "__nv_log2");
+  patterns.insert<OpToFuncCallLowering<RsqrtOp>>(converter, "__nv_rsqrtf",
+                                                 "__nv_rsqrt");
   patterns.insert<OpToFuncCallLowering<SinOp>>(converter, "__nv_sinf",
                                                "__nv_sin");
   patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
