@@ -134,11 +134,43 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
 void mlir::affineParallelize(AffineForOp forOp) {
   Location loc = forOp.getLoc();
   OpBuilder outsideBuilder(forOp);
+
+  // If a loop has a 'max' in the lower bound, emit it outside the parallel loop
+  // as it does not have implicit 'max' behavior.
+  AffineMap lowerBoundMap = forOp.getLowerBoundMap();
+  ValueRange lowerBoundOperands = forOp.getLowerBoundOperands();
+  AffineMap upperBoundMap = forOp.getUpperBoundMap();
+  ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
+
+  bool needsMax = lowerBoundMap.getNumResults() > 1;
+  bool needsMin = upperBoundMap.getNumResults() > 1;
+  AffineMap identityMap;
+  if (needsMax || needsMin) {
+    if (forOp->getParentOp() &&
+        !forOp->getParentOp()->hasTrait<OpTrait::AffineScope>())
+      return;
+
+    identityMap = AffineMap::getMultiDimIdentityMap(1, loc->getContext());
+  }
+  if (needsMax) {
+    auto maxOp = outsideBuilder.create<AffineMaxOp>(loc, lowerBoundMap,
+                                                    lowerBoundOperands);
+    lowerBoundMap = identityMap;
+    lowerBoundOperands = maxOp->getResults();
+  }
+
+  // Same for the upper bound.
+  if (needsMin) {
+    auto minOp = outsideBuilder.create<AffineMinOp>(loc, upperBoundMap,
+                                                    upperBoundOperands);
+    upperBoundMap = identityMap;
+    upperBoundOperands = minOp->getResults();
+  }
+
   // Creating empty 1-D affine.parallel op.
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
-      loc, llvm::None, llvm::None, forOp.getLowerBoundMap(),
-      forOp.getLowerBoundOperands(), forOp.getUpperBoundMap(),
-      forOp.getUpperBoundOperands());
+      loc, llvm::None, llvm::None, lowerBoundMap, lowerBoundOperands,
+      upperBoundMap, upperBoundOperands);
   // Steal the body of the old affine for op and erase it.
   newPloop.region().takeBody(forOp.region());
   forOp.erase();
