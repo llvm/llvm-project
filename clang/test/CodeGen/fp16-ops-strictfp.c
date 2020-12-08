@@ -11,7 +11,6 @@
 //
 // Test that the constrained intrinsics are picking up the exception
 // metadata from the AST instead of the global default from the command line.
-// FIXME: All cases of "fpexcept.maytrap" in this test are wrong.
 
 #pragma float_control(except, on)
 
@@ -62,31 +61,31 @@ void foo(void) {
   // NOTNATIVE: store {{.*}} half {{.*}}, half*
   h1 = +h1;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xH3C00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xH3C00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h1++;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xH3C00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xH3C00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   ++h1;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xHBC00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xHBC00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   --h1;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xHBC00, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half 0xHBC00, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h1--;
 
@@ -530,52 +529,52 @@ void foo(void) {
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 += h1;
 
   // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fptrunc.f16.f32(float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 += (__fp16)1.0f;
 
-  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 += f2;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.maytrap") 
+  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.maytrap") 
+  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, i32*
   i0 += h0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fadd.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fadd.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 += i0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.fsub.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fsub.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 -= h1;
 
@@ -583,42 +582,42 @@ void foo(void) {
   // NATIVE-HALF: call half @llvm.experimental.constrained.fsub.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fsub.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 -= (__fp16)1.0;
 
-  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: call float @llvm.experimental.constrained.fsub.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 -= f2;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fsub.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fsub.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, i32*
   i0 -= h0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fsub.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fsub.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 -= i0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.fmul.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 *= h1;
 
@@ -626,77 +625,77 @@ void foo(void) {
   // NATIVE-HALF: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fmul.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 *= (__fp16)1.0;
 
-  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 *= f2;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fmul.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, i32*
   i0 *= h0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fmul.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 *= i0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.fdiv.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fdiv.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 /= h1;
 
   // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fptrunc.f16.f64(double 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fdiv.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fdiv.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 /= (__fp16)1.0;
 
-  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: call float @llvm.experimental.constrained.fdiv.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 /= f2;
 
-  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fdiv.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NATIVE-HALF: call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fdiv.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: store {{.*}} i32 {{.*}}, i32*
   i0 /= h0;
 
   // NATIVE-HALF: call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NATIVE-HALF: call half @llvm.experimental.constrained.fdiv.f16(half %{{.*}}, half %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // NOTNATIVE: call float @llvm.experimental.constrained.fdiv.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  // NOTNATIVE: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: store {{.*}} half {{.*}}, half*
   h0 /= i0;
 
