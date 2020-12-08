@@ -114,3 +114,33 @@ func @non_affine_load() {
   }
   return
 }
+
+// CHECK-LABEL: for_with_minmax
+func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
+                      %ub0: index, %ub1: index) {
+  // CHECK: %[[lb:.*]] = affine.max
+  // CHECK: %[[ub:.*]] = affine.min
+  // CHECK: affine.parallel (%{{.*}}) = (%[[lb]]) to (%[[ub]])
+  affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %lb1)
+          to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
+    affine.load %m[%i] : memref<?xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: nested_for_with_minmax
+func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
+                             %ub0: index, %ub1: index) {
+  // CHECK: affine.parallel
+  affine.for %j = 0 to 10 {
+    // Cannot parallelize the inner loop because we would need to compute
+    // affine.max for its lower bound inside the loop, and that is not (yet)
+    // considered as a valid affine dimension.
+    // CHECK: affine.for
+    affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %j)
+            to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
+      affine.load %m[%i] : memref<?xf32>
+    }
+  }
+  return
+}
