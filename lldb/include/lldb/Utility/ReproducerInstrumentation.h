@@ -17,6 +17,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <map>
+#include <thread>
 #include <type_traits>
 
 template <typename T,
@@ -77,6 +78,13 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 // infrastructure. This is useful when you need to see traces before the logger
 // is initialized or enabled.
 // #define LLDB_REPRO_INSTR_TRACE
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+inline llvm::raw_ostream &this_thread_id() {
+  size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+  return llvm::errs().write_hex(tid) << " :: ";
+}
+#endif
 
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
   R.Register<Class * Signature>(&construct<Class Signature>::record, "",       \
@@ -600,8 +608,8 @@ private:
   /// objects (in which case we serialize their index).
   template <typename T> void Serialize(T *t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     if (std::is_fundamental<T>::value) {
       Serialize(*t);
@@ -616,8 +624,8 @@ private:
   /// to objects (in which case we serialize their index).
   template <typename T> void Serialize(T &t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     if (is_trivially_serializable<T>::value) {
       m_stream.write(reinterpret_cast<const char *>(&t), sizeof(T));
@@ -637,8 +645,8 @@ private:
 
   void Serialize(const char *t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     const size_t size = t ? strlen(t) : std::numeric_limits<size_t>::max();
     Serialize(size);
@@ -842,8 +850,8 @@ private:
 
 #ifdef LLDB_REPRO_INSTR_TRACE
   void Log(unsigned id) {
-    llvm::errs() << "Recording " << id << ": " << m_pretty_func << " ("
-                 << m_pretty_args << ")\n";
+    this_thread_id() << "Recording " << id << ": " << m_pretty_func << " ("
+                     << m_pretty_args << ")\n";
   }
 #endif
 
