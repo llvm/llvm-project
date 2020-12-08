@@ -4,32 +4,14 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX7 %s
 
 define amdgpu_ps i128 @extractelement_sgpr_v4i128_sgpr_idx(<4 x i128> addrspace(4)* inreg %ptr, i32 inreg %idx) {
-; GFX9-LABEL: extractelement_sgpr_v4i128_sgpr_idx:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x0
-; GFX9-NEXT:    s_lshl_b32 m0, s4, 1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_movrels_b64 s[0:1], s[8:9]
-; GFX9-NEXT:    s_movrels_b64 s[2:3], s[10:11]
-; GFX9-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: extractelement_sgpr_v4i128_sgpr_idx:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x0
-; GFX8-NEXT:    s_lshl_b32 m0, s4, 1
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_movrels_b64 s[0:1], s[8:9]
-; GFX8-NEXT:    s_movrels_b64 s[2:3], s[10:11]
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX7-LABEL: extractelement_sgpr_v4i128_sgpr_idx:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x0
-; GFX7-NEXT:    s_lshl_b32 m0, s4, 1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_movrels_b64 s[0:1], s[8:9]
-; GFX7-NEXT:    s_movrels_b64 s[2:3], s[10:11]
-; GFX7-NEXT:    ; return to shader part epilog
+; GCN-LABEL: extractelement_sgpr_v4i128_sgpr_idx:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x0
+; GCN-NEXT:    s_lshl_b32 m0, s4, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_movrels_b64 s[0:1], s[8:9]
+; GCN-NEXT:    s_movrels_b64 s[2:3], s[10:11]
+; GCN-NEXT:    ; return to shader part epilog
   %vector = load <4 x i128>, <4 x i128> addrspace(4)* %ptr
   %element = extractelement <4 x i128> %vector, i32 %idx
   ret i128 %element
@@ -43,8 +25,8 @@ define amdgpu_ps i128 @extractelement_vgpr_v4i128_sgpr_idx(<4 x i128> addrspace(
 ; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:32
 ; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:48
 ; GFX9-NEXT:    s_lshl_b32 s0, s2, 1
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX9-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GFX9-NEXT:    s_lshl_b32 s2, s0, 1
+; GFX9-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v3
