@@ -1318,12 +1318,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 #endif // !defined(_LIBCPP_NODEBUG_TYPE)
 
-#if __has_attribute(__preferred_name__)
-#define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
-#else
-#define _LIBCPP_PREFERRED_NAME(x)
-#endif
-
 #if defined(_LIBCPP_ABI_MICROSOFT) && \
     (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
 #  define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)

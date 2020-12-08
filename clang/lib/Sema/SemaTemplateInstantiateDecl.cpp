@@ -548,30 +548,12 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
   S.addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
-/// Determine whether the attribute A might be relevent to the declaration D.
-/// If not, we can skip instantiating it. The attribute may or may not have
-/// been instantiated yet.
-static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
-  // Never instantiate preferred_name attributes; they're relevant only on the
-  // template.
-  if (const auto *PNA = dyn_cast<PreferredNameAttr>(A))
-    return false;
-
-  return true;
-}
-
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
     LocalInstantiationScope *OuterMostScope) {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(New)) {
-    // FIXME: This function is called multiple times for the same template
-    // specialization. We should only instantiate attributes that were added
-    // since the previous instantiation.
     for (const auto *TmplAttr : Tmpl->attrs()) {
-      if (!isRelevantAttr(*this, New, TmplAttr))
-        continue;
-
       // FIXME: If any of the special case versions from InstantiateAttrs become
       // applicable to template declaration, we'll need to add them here.
       CXXThisScopeRAII ThisScope(
@@ -580,7 +562,7 @@ void Sema::InstantiateAttrsForDecl(
 
       Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
           TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, NewAttr))
+      if (NewAttr)
         New->addAttr(NewAttr);
     }
   }
@@ -605,9 +587,6 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             LateInstantiatedAttrVec *LateAttrs,
                             LocalInstantiationScope *OuterMostScope) {
   for (const auto *TmplAttr : Tmpl->attrs()) {
-    if (!isRelevantAttr(*this, New, TmplAttr))
-      continue;
-
     // FIXME: This should be generalized to more than just the AlignedAttr.
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
     if (Aligned && Aligned->isAlignmentDependent()) {
@@ -730,7 +709,7 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, TmplAttr))
+      if (NewAttr)
         New->addAttr(NewAttr);
     }
   }
