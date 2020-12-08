@@ -263,8 +263,15 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       break;
     }
 
+    // Don't promote if the symbol is not defined in the module. This avoids
+    // creating a reference to a symbol that doesn't exist in the module
+    // This can happen when we compile with a sample profile collected from
+    // one binary but used for another, which may have profiled targets that
+    // aren't used in the new binary. We might have a declaration initially in
+    // the case where the symbol is globally dead in the binary and removed by
+    // ThinLTO.
     Function *TargetFunction = Symtab->getFunction(Target);
-    if (TargetFunction == nullptr) {
+    if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
       LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", &CB)
