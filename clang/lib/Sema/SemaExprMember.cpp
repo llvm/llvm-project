@@ -1810,6 +1810,14 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     Qualifiers Combined = BaseQuals + MemberQuals;
     if (Combined != MemberQuals)
       MemberType = Context.getQualifiedType(MemberType, Combined);
+
+    // Pick up NoDeref from the base in case we end up using AddrOf on the
+    // result. E.g. the expression
+    //     &someNoDerefPtr->pointerMember
+    // should be a noderef pointer again.
+    if (BaseType->hasAttr(attr::NoDeref))
+      MemberType =
+          Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }
 
   auto *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
