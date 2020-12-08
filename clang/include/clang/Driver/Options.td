@@ -271,7 +271,7 @@ multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
 multiclass BooleanMarshalledFFlag<string name, code keypath, code default_value, string pos_help = "", string neg_help=""> {
   def fno_#NAME : Flag<["-"], "fno-"#name>, HelpText<neg_help>;
   def f#NAME : Flag<["-"], "f"#name>, HelpText<pos_help>,
-    MarshallingInfoBooleanFlag<keypath, default_value, !cast<Option>("fno_"#NAME)>;
+    MarshallingInfoBooleanFlag<keypath, default_value, "fno_"#NAME, "-fno-"#name>;
 }
 
 /////////
