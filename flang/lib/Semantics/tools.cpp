@@ -490,7 +490,8 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
   } else {
     const auto &symbol{derived->typeSymbol()};
     return symbol.owner().IsModule() &&
-        symbol.owner().GetName().value() == "__fortran_builtins" &&
+        (symbol.owner().GetName().value() == "__fortran_builtins" ||
+            symbol.owner().GetName().value() == "__fortran_type_info") &&
         symbol.name() == "__builtin_"s + name;
   }
 }
@@ -638,10 +639,16 @@ bool IsAutomatic(const Symbol &symbol) {
 }
 
 bool IsFinalizable(const Symbol &symbol) {
-  if (const DeclTypeSpec * type{symbol.GetType()}) {
-    if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-      return IsFinalizable(*derived);
+  if (IsPointer(symbol)) {
+    return false;
+  }
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (object->isDummy() && !IsIntentOut(symbol)) {
+      return false;
     }
+    const DeclTypeSpec *type{object->type()};
+    const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+    return derived && IsFinalizable(*derived);
   }
   return false;
 }

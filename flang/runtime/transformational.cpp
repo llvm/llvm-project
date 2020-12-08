@@ -90,7 +90,7 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
 
   // Create and populate the result's descriptor.
   const DescriptorAddendum *sourceAddendum{source.Addendum()};
-  const DerivedType *sourceDerivedType{
+  const typeInfo::DerivedType *sourceDerivedType{
       sourceAddendum ? sourceAddendum->derivedType() : nullptr};
   OwningPtr<Descriptor> result;
   if (sourceDerivedType) {
@@ -105,7 +105,7 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
   RUNTIME_CHECK(terminator, resultAddendum);
   resultAddendum->flags() |= DescriptorAddendum::DoNotFinalize;
   if (sourceDerivedType) {
-    std::size_t lenParameters{sourceDerivedType->lenParameters()};
+    std::size_t lenParameters{sourceAddendum->LenParameters()};
     for (std::size_t j{0}; j < lenParameters; ++j) {
       resultAddendum->SetLenParameterValue(
           j, sourceAddendum->LenParameterValue(j));

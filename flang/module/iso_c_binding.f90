@@ -15,8 +15,8 @@ module iso_c_binding
     c_ptr => __builtin_c_ptr, &
     c_funptr => __builtin_c_funptr
 
-  type(c_ptr), parameter :: c_null_ptr = c_ptr()
-  type(c_funptr), parameter :: c_null_funptr = c_funptr()
+  type(c_ptr), parameter :: c_null_ptr = c_ptr(0)
+  type(c_funptr), parameter :: c_null_funptr = c_funptr(0)
 
   ! Table 18.2 (in clause 18.3.1)
   ! TODO: Specialize (via macros?) for alternative targets
