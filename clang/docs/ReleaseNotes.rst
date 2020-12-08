@@ -117,6 +117,7 @@ Modified Compiler Flags
 - Now that `this` pointers are tagged with `nonnull` and `dereferenceable(N)`,
   `-fno-delete-null-pointer-checks` has gained the power to remove the
   `nonnull` attribute on `this` for configurations that need it to be nullable.
+- ``-gsplit-dwarf`` no longer implies ``-g2``.
 
 New Pragmas in Clang
 --------------------
