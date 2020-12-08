@@ -22,6 +22,7 @@
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "llvm/Support/Errno.h"
@@ -253,16 +254,25 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
         parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
     semantics.Perform();
     semantics.EmitMessages(llvm::errs());
-    if (driver.dumpSymbols) {
-      semantics.DumpSymbols(llvm::outs());
-    }
     if (semantics.AnyFatalError()) {
+      if (driver.dumpSymbols) {
+        semantics.DumpSymbols(llvm::outs());
+      }
       llvm::errs() << driver.prefix << "semantic errors in " << path << '\n';
       exitStatus = EXIT_FAILURE;
       if (driver.dumpParseTree) {
         Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
       }
       return {};
+    }
+    auto tables{
+        Fortran::semantics::BuildRuntimeDerivedTypeTables(semanticsContext)};
+    if (!tables.schemata) {
+      llvm::errs() << driver.prefix
+                   << "could not find module file for __fortran_type_info\n";
+    }
+    if (driver.dumpSymbols) {
+      semantics.DumpSymbols(llvm::outs());
     }
     if (driver.dumpUnparseWithSymbols) {
       Fortran::semantics::UnparseWithSymbols(
