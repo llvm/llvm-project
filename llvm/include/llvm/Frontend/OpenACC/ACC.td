@@ -210,8 +210,7 @@ def ACCC_Reduction : Clause<"reduction"> {
 
 // 2.5.5
 def ACCC_Self : Clause<"self"> {
-  let flangClassValue = "ScalarLogicalExpr";
-  let isValueOptional = true;
+  let flangClassValue = "AccSelfClause";
 }
 
 // 2.9.5
