@@ -1109,6 +1109,10 @@ def warn_objc_direct_property_ignored : Warning<
   InGroup<IgnoredAttributes>;
 def err_objc_direct_dynamic_property : Error<
   "direct property cannot be @dynamic">;
+def err_objc_direct_protocol_conformance : Error<
+  "%select{category %1|class extension}0 cannot conform to protocol %2 because "
+  "of direct members declared in interface %3">;
+def note_direct_member_here : Note<"direct member declared here">;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "
@@ -4062,9 +4066,15 @@ def warn_attr_swift_name_multiple_selfs : Warning<
 def warn_attr_swift_name_static_subscript : Warning<
   "%0 attribute for 'subscript' must take a 'self:' parameter">,
   InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_num_params : Warning<
-  "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
-  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_num_params
+  : Warning<"too %select{few|many}0 parameters in the signature specified by "
+            "the %1 attribute (expected %2; got %3)">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_decl_missing_params
+  : Warning<"%0 attribute cannot be applied to a %select{function|method}1 "
+            "with no parameters">,
+    InGroup<SwiftNameAttribute>;
+
 def err_attr_swift_error_no_error_parameter : Error<
   "%0 attribute can only be applied to a %select{function|method}1 "
   "with an error parameter">;
