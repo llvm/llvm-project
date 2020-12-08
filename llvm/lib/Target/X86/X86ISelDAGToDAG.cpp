@@ -4641,6 +4641,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
+    case Intrinsic::x86_tilezero_internal: {
+      if (!Subtarget->hasAMXTILE())
+        break;
+      unsigned Opc = X86::PTILEZEROV;
+      SDValue Chain = Node->getOperand(0);
+      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
+      SDValue Ops[] = {Node->getOperand(2), Node->getOperand(3), CFG, Chain};
+      MachineSDNode *CNode =
+          CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
+      ReplaceNode(Node, CNode);
+      return;
+    }
     }
     break;
   }
