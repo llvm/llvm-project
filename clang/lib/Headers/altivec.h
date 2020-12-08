@@ -3502,7 +3502,7 @@ static __inline__ vector signed __int128 __ATTRS_o_ai
 vec_div(vector signed __int128 __a, vector signed __int128 __b) {
   return __a / __b;
 }
-#endif __POWER10_VECTOR__
+#endif /* __POWER10_VECTOR__ */
 
 /* vec_xvtdiv */
 
