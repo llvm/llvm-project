@@ -220,6 +220,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: SEQ and AUTO clauses are mutually exclusive and may not appear on the same LOOP directive
+  !$acc loop auto seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop tile(2)
   do i = 1, N
     a(i) = 3.14
@@ -288,6 +296,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: At most one VECTOR clause can appear on the LOOP directive
+  !$acc loop vector vector(128)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop vector
   do i = 1, N
     a(i) = 3.14
@@ -316,6 +332,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: At most one WORKER clause can appear on the LOOP directive
+  !$acc loop worker worker(10)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop worker
   do i = 1, N
     a(i) = 3.14
@@ -338,6 +362,14 @@ program openacc_clause_validity
 
   !$acc parallel
   !$acc loop worker(num: worker_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: At most one GANG clause can appear on the LOOP directive
+  !$acc loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -523,6 +555,22 @@ program openacc_clause_validity
   !$acc parallel
   !ERROR: Clause GANG is not allowed if clause SEQ appears on the LOOP directive
   !$acc loop gang seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Clause WORKER is not allowed if clause SEQ appears on the LOOP directive
+  !$acc loop worker seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Clause VECTOR is not allowed if clause SEQ appears on the LOOP directive
+  !$acc loop vector seq
   do i = 1, N
     a(i) = 3.14
   end do
