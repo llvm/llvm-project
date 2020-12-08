@@ -1033,31 +1033,36 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
   // By default, we'll try and emit a CSEL.
   unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
   bool Optimized = false;
-  auto TryFoldBinOpIntoSelect = [&Opc, &False, Is32Bit, &MRI]() {
+  auto TryFoldBinOpIntoSelect = [&Opc, Is32Bit, &CC, &MRI](Register &Reg,
+                                                           bool Invert) {
     // Attempt to fold:
     //
-    // sub = G_SUB 0, x
-    // select = G_SELECT cc, true, sub
+    // %sub = G_SUB 0, %x
+    // %select = G_SELECT cc, %reg, %sub
     //
     // Into:
-    // select = CSNEG true, x, cc
+    // %select = CSNEG %reg, %x, cc
     Register MatchReg;
-    if (mi_match(False, MRI, m_Neg(m_Reg(MatchReg)))) {
+    if (mi_match(Reg, MRI, m_Neg(m_Reg(MatchReg)))) {
       Opc = Is32Bit ? AArch64::CSNEGWr : AArch64::CSNEGXr;
-      False = MatchReg;
+      Reg = MatchReg;
+      if (Invert)
+        CC = AArch64CC::getInvertedCondCode(CC);
       return true;
     }
 
     // Attempt to fold:
     //
-    // xor = G_XOR x, -1
-    // select = G_SELECT cc, true, xor
+    // %xor = G_XOR %x, -1
+    // %select = G_SELECT cc, %reg, %xor
     //
     // Into:
-    // select = CSINV true, x, cc
-    if (mi_match(False, MRI, m_Not(m_Reg(MatchReg)))) {
+    // %select = CSINV %reg, %x, cc
+    if (mi_match(Reg, MRI, m_Not(m_Reg(MatchReg)))) {
       Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
-      False = MatchReg;
+      Reg = MatchReg;
+      if (Invert)
+        CC = AArch64CC::getInvertedCondCode(CC);
       return true;
     }
 
@@ -1139,7 +1144,8 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     return false;
   };
 
-  Optimized |= TryFoldBinOpIntoSelect();
+  Optimized |= TryFoldBinOpIntoSelect(False, /*Invert = */ false);
+  Optimized |= TryFoldBinOpIntoSelect(True, /*Invert = */ true);
   Optimized |= TryOptSelectCst();
   auto SelectInst = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
   constrainSelectedInstRegOperands(*SelectInst, TII, TRI, RBI);
