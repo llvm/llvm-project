@@ -109,3 +109,10 @@ auto f(); // expected-note {{candidate function not viable}}
 // verify no crash on evaluating the size of undeduced auto type.
 static_assert(sizeof(f(1)), ""); // expected-error {{no matching function for call to 'f'}}
 }
+
+namespace test10 {
+// Ensure we don't assert here.
+int f(); // expected-note {{candidate}}
+template<typename T> const int k = f(T()); // expected-error {{no matching function}}
+static_assert(k<int> == 1, ""); // expected-note {{instantiation of}}
+}
