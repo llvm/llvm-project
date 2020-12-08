@@ -275,3 +275,14 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
+
+  - label: "Apple back-deployment macosx10.14"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.14"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
