@@ -1606,6 +1606,11 @@ def : Pat<(atomic_store_64 iaddrX4:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr
 def : Pat<(atomic_store_64 xaddrX4:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
+// DARN (deliver random number)
+// L=0 for 32-bit, L=1 for conditioned random, L=2 for raw random
+def : Pat<(int_ppc_darn32), (EXTRACT_SUBREG (DARN 0), sub_32)>;
+def : Pat<(int_ppc_darn), (DARN 1)>;
+def : Pat<(int_ppc_darnraw), (DARN 2)>;
 
 class X_L1_RA5_RB5<bits<6> opcode, bits<10> xo, string opc, RegisterOperand ty,
                    InstrItinClass itin, list<dag> pattern>
