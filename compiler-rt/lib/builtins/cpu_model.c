@@ -68,6 +68,7 @@ enum ProcessorTypes {
   INTEL_GOLDMONT,
   INTEL_GOLDMONT_PLUS,
   INTEL_TREMONT,
+  AMDFAM19H,
   CPU_TYPE_MAX
 };
 
@@ -97,6 +98,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_COOPERLAKE,
   INTEL_COREI7_SAPPHIRERAPIDS,
   INTEL_COREI7_ALDERLAKE,
+  AMDFAM19H_ZNVER3,
   CPU_SUBTYPE_MAX
 };
 
@@ -548,6 +550,14 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     if (Model <= 0x0f) {
       *Subtype = AMDFAM17H_ZNVER1;
       break; // 00h-0Fh: Zen1
+    }
+    break;
+  case 25:
+    CPU = "znver3";
+    *Type = AMDFAM19H;
+    if (Model <= 0x0f) {
+      *Subtype = AMDFAM19H_ZNVER3;
+      break; // 00h-0Fh: Zen3
     }
     break;
   default:

@@ -64,6 +64,10 @@ defm optimize_bb_jumps: BB<"optimize-bb-jumps",
     "Remove direct jumps at the end to the next basic block",
     "Do not remove any direct jumps at the end to the next basic block (default)">;
 
+defm fortran_common : BB<"fortran-common",
+    "Search archive members for definitions to override COMMON symbols (default)",
+    "Do not search archive members for definitions to override COMMON symbols">;
+
 defm split_stack_adjust_size
     : Eq<"split-stack-adjust-size",
          "Specify adjustment to stack size when a split-stack function calls a "

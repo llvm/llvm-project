@@ -171,8 +171,6 @@ private:
                                  NodeSet &ElimNodes /* in, out */) const;
   std::unique_ptr<MachineGadgetGraph>
   trimMitigatedEdges(std::unique_ptr<MachineGadgetGraph> Graph) const;
-  void findAndCutEdges(MachineGadgetGraph &G,
-                       EdgeSet &CutEdges /* out */) const;
   int insertFences(MachineFunction &MF, MachineGadgetGraph &G,
                    EdgeSet &CutEdges /* in, out */) const;
   bool instrUsesRegToAccessMemory(const MachineInstr &I, unsigned Reg) const;

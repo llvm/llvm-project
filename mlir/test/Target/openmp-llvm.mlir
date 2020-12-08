@@ -264,3 +264,30 @@ llvm.func @test_omp_parallel_5() -> () {
   }
   llvm.return
 }
+
+// CHECK-LABEL: define void @test_omp_master()
+llvm.func @test_omp_master() -> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @{{.*}} to
+// CHECK: omp.par.region1:
+  omp.parallel {
+    omp.master {
+// CHECK: [[OMP_THREAD_3_4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{[0-9]+}})
+// CHECK: {{[0-9]+}} = call i32 @__kmpc_master(%struct.ident_t* @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: omp.master.region
+// CHECK: call void @__kmpc_end_master(%struct.ident_t* @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: br label %omp_region.end
+      omp.terminator
+    }
+    omp.terminator
+  }
+  omp.parallel {
+    omp.parallel {
+      omp.master {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}

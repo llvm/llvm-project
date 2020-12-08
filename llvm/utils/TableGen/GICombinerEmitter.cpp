@@ -615,7 +615,6 @@ public:
   /// response to the generated cl::opt.
   void emitNameMatcher(raw_ostream &OS) const;
 
-  void generateDeclarationsCodeForTree(raw_ostream &OS, const GIMatchTree &Tree) const;
   void generateCodeForTree(raw_ostream &OS, const GIMatchTree &Tree,
                            StringRef Indent) const;
 };

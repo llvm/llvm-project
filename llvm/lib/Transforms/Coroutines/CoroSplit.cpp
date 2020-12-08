@@ -104,7 +104,6 @@ private:
   ValueToValueMapTy VMap;
   IRBuilder<> Builder;
   Value *NewFramePtr = nullptr;
-  Value *SwiftErrorSlot = nullptr;
 
   /// The active suspend instruction; meaningful only for continuation and async
   /// ABIs.
@@ -152,7 +151,6 @@ private:
     llvm_unreachable("Unknown CoroCloner::Kind enum");
   }
 
-  void createDeclaration();
   void replaceEntryBlock();
   Value *deriveNewFramePointer();
   void replaceRetconOrAsyncSuspendUses();
@@ -160,7 +158,6 @@ private:
   void replaceCoroEnds();
   void replaceSwiftErrorOps();
   void handleFinalSuspend();
-  void maybeFreeContinuationStorage();
 };
 
 } // end anonymous namespace

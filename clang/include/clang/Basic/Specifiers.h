@@ -309,7 +309,12 @@ namespace clang {
     /// unspecified. This captures a (fairly rare) case where we
     /// can't conclude anything about the nullability of the type even
     /// though it has been considered.
-    Unspecified
+    Unspecified,
+    // Generally behaves like Nullable, except when used in a block parameter
+    // that was imported into a swift async method. There, swift will assume
+    // that the parameter can get null even if no error occured. _Nullable
+    // parameters are assumed to only get null on error.
+    NullableResult,
   };
 
   /// Return true if \p L has a weaker nullability annotation than \p R. The

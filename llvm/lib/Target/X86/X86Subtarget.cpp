@@ -166,6 +166,10 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
   }
 
+  // 32-bit ELF references GlobalAddress directly in static relocation model.
+  // We cannot use MO_GOT because EBX may not be set up.
+  if (TM.getRelocationModel() == Reloc::Static)
+    return X86II::MO_NO_FLAG;
   return X86II::MO_GOT;
 }
 
@@ -202,6 +206,9 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
          (!F && M.getRtLibUseGOT())) &&
         is64Bit())
        return X86II::MO_GOTPCREL;
+    // Reference ExternalSymbol directly in static relocation model.
+    if (!is64Bit() && !GV && TM.getRelocationModel() == Reloc::Static)
+      return X86II::MO_NO_FLAG;
     return X86II::MO_PLT;
   }
 

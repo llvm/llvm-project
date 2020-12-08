@@ -23,8 +23,8 @@ Options
 
 .. option:: WarnOnAllAutoCopies
 
-   When non-zero, warns on any use of `auto` as the type of the range-based for
-   loop variable. Default is `0`.
+   When `true`, warns on any use of `auto` as the type of the range-based for
+   loop variable. Default is `false`.
 
 .. option:: AllowedTypes
 

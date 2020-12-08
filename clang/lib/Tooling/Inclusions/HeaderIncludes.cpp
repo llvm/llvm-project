@@ -190,8 +190,11 @@ StringRef matchingStem(llvm::StringRef Path) {
 IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                StringRef FileName)
     : Style(Style), FileName(FileName) {
-  for (const auto &Category : Style.IncludeCategories)
-    CategoryRegexs.emplace_back(Category.Regex, llvm::Regex::IgnoreCase);
+  for (const auto &Category : Style.IncludeCategories) {
+    CategoryRegexs.emplace_back(Category.Regex, Category.RegexIsCaseSensitive
+                                                    ? llvm::Regex::NoFlags
+                                                    : llvm::Regex::IgnoreCase);
+  }
   IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
                FileName.endswith(".cpp") || FileName.endswith(".c++") ||
                FileName.endswith(".cxx") || FileName.endswith(".m") ||

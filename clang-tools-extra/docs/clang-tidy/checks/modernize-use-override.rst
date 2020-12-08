@@ -25,15 +25,15 @@ Options
 
 .. option:: IgnoreDestructors
 
-   If set to non-zero, this check will not diagnose destructors. Default is `0`.
+   If set to `true`, this check will not diagnose destructors. Default is `false`.
 
 .. option:: AllowOverrideAndFinal
 
-   If set to non-zero, this check will not diagnose ``override`` as redundant
+   If set to `true`, this check will not diagnose ``override`` as redundant
    with ``final``. This is useful when code will be compiled by a compiler with
    warning/error checking flags requiring ``override`` explicitly on overridden
    members, such as ``gcc -Wsuggest-override``/``gcc -Werror=suggest-override``.
-   Default is `0`.
+   Default is `false`.
 
 .. option:: OverrideSpelling
 

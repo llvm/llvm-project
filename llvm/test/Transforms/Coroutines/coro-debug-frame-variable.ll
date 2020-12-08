@@ -37,8 +37,8 @@
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC:[0-9]+]]
 ; CHECK:         call void @llvm.dbg.declare(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC]]
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR]], metadata !DIExpression()), !dbg ![[IDBGLOC]]
-; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP]], metadata ![[IVAR]], metadata !DIExpression()), !dbg ![[IDBGLOC]]
+; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC]]
+; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP]], metadata ![[IVAR]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC]]
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
@@ -50,8 +50,8 @@
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK:         call void @llvm.dbg.declare(metadata [10 x i32]* [[XGEP_RESUME]], metadata ![[XVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME]]
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP_RESUME]], metadata ![[XVAR_RESUME]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME]]
-; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME]]
+; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP_RESUME]], metadata ![[XVAR_RESUME]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC_RESUME]]
+; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC_RESUME]]
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ;
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"

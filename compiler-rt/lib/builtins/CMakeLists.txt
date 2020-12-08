@@ -513,12 +513,14 @@ if(NOT ANDROID)
 endif()
 append_list_if(COMPILER_RT_HAS_ASM_LSE -DHAS_ASM_LSE CUSTOM_FLAGS)
 string(REPLACE " " "\t" CUSTOM_FLAGS "${CUSTOM_FLAGS}")
+set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
+file(MAKE_DIRECTORY ${OA_HELPERS_DIR})
 
 foreach(pat cas swp ldadd ldclr ldeor ldset)
   foreach(size 1 2 4 8 16)
     foreach(model 1 2 3 4)
       if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
-        set(helper_asm outline_atomic_${pat}${size}_${model}.S)
+        set(helper_asm ${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S)
         add_custom_command(
           OUTPUT ${helper_asm}
           COMMAND ${CMAKE_C_COMPILER} -E ${CUSTOM_FLAGS} -DL_${pat} -DSIZE=${size} -DMODEL=${model}

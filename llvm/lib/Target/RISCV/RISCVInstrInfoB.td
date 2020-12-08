@@ -716,13 +716,10 @@ let Predicates = [HasStdExtZbs] in
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
           (SBEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 
-def SDT_RISCVGREVGORC  : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<1, 2>]>;
-def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDT_RISCVGREVGORC, []>;
-def riscv_greviw   : SDNode<"RISCVISD::GREVIW", SDT_RISCVGREVGORC, []>;
-def riscv_gorci    : SDNode<"RISCVISD::GORCI", SDT_RISCVGREVGORC, []>;
-def riscv_gorciw   : SDNode<"RISCVISD::GORCIW", SDT_RISCVGREVGORC, []>;
+def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDTIntBinOp, []>;
+def riscv_greviw   : SDNode<"RISCVISD::GREVIW", SDTIntBinOp, []>;
+def riscv_gorci    : SDNode<"RISCVISD::GORCI", SDTIntBinOp, []>;
+def riscv_gorciw   : SDNode<"RISCVISD::GORCIW", SDTIntBinOp, []>;
 
 let Predicates = [HasStdExtZbp] in {
 def : Pat<(riscv_grevi GPR:$rs1, timm:$shamt), (GREVI GPR:$rs1, timm:$shamt)>;

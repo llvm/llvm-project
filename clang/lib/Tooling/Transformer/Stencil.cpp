@@ -63,6 +63,7 @@ enum class UnaryNodeOperator {
   MaybeDeref,
   AddressOf,
   MaybeAddressOf,
+  Describe,
 };
 
 // Generic container for stencil operations with a (single) node-id argument.
@@ -133,6 +134,9 @@ std::string toStringData(const UnaryOperationData &Data) {
   case UnaryNodeOperator::MaybeAddressOf:
     OpName = "maybeAddressOf";
     break;
+  case UnaryNodeOperator::Describe:
+    OpName = "describe";
+    break;
   }
   return (OpName + "(\"" + Data.Id + "\")").str();
 }
@@ -174,11 +178,11 @@ Error evalData(const RawTextData &Data, const MatchFinder::MatchResult &,
   return Error::success();
 }
 
-Error evalData(const DebugPrintNodeData &Data,
-               const MatchFinder::MatchResult &Match, std::string *Result) {
+static Error printNode(StringRef Id, const MatchFinder::MatchResult &Match,
+                       std::string *Result) {
   std::string Output;
   llvm::raw_string_ostream Os(Output);
-  auto NodeOrErr = getNode(Match.Nodes, Data.Id);
+  auto NodeOrErr = getNode(Match.Nodes, Id);
   if (auto Err = NodeOrErr.takeError())
     return Err;
   NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
@@ -186,8 +190,18 @@ Error evalData(const DebugPrintNodeData &Data,
   return Error::success();
 }
 
+Error evalData(const DebugPrintNodeData &Data,
+               const MatchFinder::MatchResult &Match, std::string *Result) {
+  return printNode(Data.Id, Match, Result);
+}
+
 Error evalData(const UnaryOperationData &Data,
                const MatchFinder::MatchResult &Match, std::string *Result) {
+  // The `Describe` operation can be applied to any node, not just expressions,
+  // so it is handled here, separately.
+  if (Data.Op == UnaryNodeOperator::Describe)
+    return printNode(Data.Id, Match, Result);
+
   const auto *E = Match.Nodes.getNodeAs<Expr>(Data.Id);
   if (E == nullptr)
     return llvm::make_error<StringError>(
@@ -217,6 +231,8 @@ Error evalData(const UnaryOperationData &Data,
     }
     Source = tooling::buildAddressOf(*E, *Match.Context);
     break;
+  case UnaryNodeOperator::Describe:
+    llvm_unreachable("This case is handled at the start of the function");
   }
   if (!Source)
     return llvm::make_error<StringError>(
@@ -357,6 +373,11 @@ Stencil transformer::addressOf(llvm::StringRef ExprId) {
 Stencil transformer::maybeAddressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
       UnaryNodeOperator::MaybeAddressOf, std::string(ExprId));
+}
+
+Stencil transformer::describe(StringRef Id) {
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Describe, std::string(Id));
 }
 
 Stencil transformer::access(StringRef BaseId, Stencil Member) {

@@ -1138,7 +1138,6 @@ private:
   bool parseDirectiveFPOStackAlign(SMLoc L);
   bool parseDirectiveFPOEndPrologue(SMLoc L);
   bool parseDirectiveFPOEndProc(SMLoc L);
-  bool parseDirectiveFPOData(SMLoc L);
 
   /// SEH directives.
   bool parseSEHRegisterNumber(unsigned RegClassID, unsigned &RegNo);

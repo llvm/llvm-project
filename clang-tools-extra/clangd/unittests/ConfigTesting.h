@@ -24,6 +24,12 @@ namespace config {
 struct CapturedDiags {
   std::function<void(const llvm::SMDiagnostic &)> callback() {
     return [this](const llvm::SMDiagnostic &D) {
+      if (Files.empty() || Files.back() != D.getFilename())
+        Files.push_back(D.getFilename().str());
+
+      if (D.getKind() > llvm::SourceMgr::DK_Warning)
+        return;
+
       Diagnostics.emplace_back();
       Diag &Out = Diagnostics.back();
       Out.Message = D.getMessage().str();
@@ -50,7 +56,13 @@ struct CapturedDiags {
           << D.Message << "@" << llvm::to_string(D.Pos);
     }
   };
-  std::vector<Diag> Diagnostics;
+  std::vector<Diag> Diagnostics;  // Warning or higher.
+  std::vector<std::string> Files; // Filename from diagnostics including notes.
+
+  void clear() {
+    Diagnostics.clear();
+    Files.clear();
+  }
 };
 
 MATCHER_P(DiagMessage, M, "") { return arg.Message == M; }

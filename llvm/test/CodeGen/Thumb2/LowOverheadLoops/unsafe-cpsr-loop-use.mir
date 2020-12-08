@@ -113,7 +113,7 @@ body:             |
   ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2 /* CC::hs */, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
   ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep4)
   ; CHECK:   renamable $lr = tMOVr killed $lr, 14 /* CC::al */, $noreg
-  ; CHECK:   t2CMPri $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2CMPri renamable $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   tBcc %bb.1, 1 /* CC::ne */, killed $cpsr
   ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.while.end:

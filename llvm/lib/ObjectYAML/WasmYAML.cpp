@@ -472,6 +472,7 @@ void ScalarEnumerationTraits<WasmYAML::ComdatKind>::enumeration(
 #define ECase(X) IO.enumCase(Kind, #X, wasm::WASM_COMDAT_##X);
   ECase(FUNCTION);
   ECase(DATA);
+  ECase(SECTION);
 #undef ECase
 }
 

@@ -21,28 +21,22 @@ char UnparseableEnumOptionError::ID;
 char UnparseableIntegerOptionError::ID;
 
 std::string MissingOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "option not found '" << OptionName << '\'';
+  llvm::SmallString<128> Buffer({"option not found '", OptionName, "'"});
   return std::string(Buffer);
 }
 
 std::string UnparseableEnumOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "invalid configuration value '" << LookupValue << "' for option '"
-         << LookupName << '\'';
+  llvm::SmallString<256> Buffer({"invalid configuration value '", LookupValue,
+                                 "' for option '", LookupName, "'"});
   if (SuggestedValue)
-    Output << "; did you mean '" << *SuggestedValue << "'?";
+    Buffer.append({"; did you mean '", *SuggestedValue, "'?"});
   return std::string(Buffer);
 }
 
 std::string UnparseableIntegerOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "invalid configuration value '" << LookupValue << "' for option '"
-         << LookupName << "'; expected "
-         << (IsBoolean ? "a bool" : "an integer value");
+  llvm::SmallString<256> Buffer({"invalid configuration value '", LookupValue,
+                                 "' for option '", LookupName, "'; expected ",
+                                 (IsBoolean ? "a bool" : "an integer value")});
   return std::string(Buffer);
 }
 

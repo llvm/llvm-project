@@ -3889,7 +3889,7 @@ void __kmp_cleanup_user_locks(void) {
       if (__kmp_env_consistency_check && (!IS_CRITICAL(lck)) &&
           ((loc = __kmp_get_user_lock_location(lck)) != NULL) &&
           (loc->psource != NULL)) {
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 0);
+        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, false);
         KMP_WARNING(CnsLockNotDestroyed, str_loc.file, str_loc.line);
         __kmp_str_loc_free(&str_loc);
       }

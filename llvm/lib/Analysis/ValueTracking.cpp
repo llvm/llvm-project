@@ -350,13 +350,14 @@ bool llvm::isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth,
   return Known.isNegative();
 }
 
-static bool isKnownNonEqual(const Value *V1, const Value *V2, const Query &Q);
+static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
+                            const Query &Q);
 
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const DataLayout &DL, AssumptionCache *AC,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
-  return ::isKnownNonEqual(V1, V2,
+  return ::isKnownNonEqual(V1, V2, 0,
                            Query(DL, AC, safeCxtI(V1, safeCxtI(V2, CxtI)), DT,
                                  UseInstrInfo, /*ORE=*/nullptr));
 }
@@ -2486,7 +2487,8 @@ bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
 }
 
 /// Return true if V2 == V1 + X, where X is known non-zero.
-static bool isAddOfNonZero(const Value *V1, const Value *V2, const Query &Q) {
+static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
+                           const Query &Q) {
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
   if (!BO || BO->getOpcode() != Instruction::Add)
     return false;
@@ -2497,24 +2499,74 @@ static bool isAddOfNonZero(const Value *V1, const Value *V2, const Query &Q) {
     Op = BO->getOperand(0);
   else
     return false;
-  return isKnownNonZero(Op, 0, Q);
+  return isKnownNonZero(Op, Depth + 1, Q);
 }
 
+
 /// Return true if it is known that V1 != V2.
-static bool isKnownNonEqual(const Value *V1, const Value *V2, const Query &Q) {
+static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
+                            const Query &Q) {
   if (V1 == V2)
     return false;
   if (V1->getType() != V2->getType())
     // We can't look through casts yet.
     return false;
-  if (isAddOfNonZero(V1, V2, Q) || isAddOfNonZero(V2, V1, Q))
+
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return false;
+
+  // See if we can recurse through (exactly one of) our operands.  This
+  // requires our operation be 1-to-1 and map every input value to exactly
+  // one output value.  Such an operation is invertible.
+  auto *O1 = dyn_cast<Operator>(V1);
+  auto *O2 = dyn_cast<Operator>(V2);
+  if (O1 && O2 && O1->getOpcode() == O2->getOpcode()) {
+    switch (O1->getOpcode()) {
+    default: break;
+    case Instruction::Add:
+    case Instruction::Sub:
+      // Assume operand order has been canonicalized
+      if (O1->getOperand(0) == O2->getOperand(0))
+        return isKnownNonEqual(O1->getOperand(1), O2->getOperand(1),
+                               Depth + 1, Q);
+      if (O1->getOperand(1) == O2->getOperand(1))
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    case Instruction::Mul:
+      // invertible if A * B == (A * B) mod 2^N where A, and B are integers
+      // and N is the bitwdith.  The nsw case is non-obvious, but proven by
+      // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
+      if ((!cast<BinaryOperator>(O1)->hasNoUnsignedWrap() ||
+           !cast<BinaryOperator>(O2)->hasNoUnsignedWrap()) &&
+          (!cast<BinaryOperator>(O1)->hasNoSignedWrap() ||
+           !cast<BinaryOperator>(O2)->hasNoSignedWrap()))
+        break;
+
+      // Assume operand order has been canonicalized
+      if (O1->getOperand(1) == O2->getOperand(1) &&
+          isa<ConstantInt>(O1->getOperand(1)) &&
+          !cast<ConstantInt>(O1->getOperand(1))->isZero())
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    case Instruction::SExt:
+    case Instruction::ZExt:
+      if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    };
+  }
+  
+  if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
     // Are any known bits in V1 contradictory to known bits in V2? If V1
     // has a known zero where V2 has a known one, they must not be equal.
-    KnownBits Known1 = computeKnownBits(V1, 0, Q);
-    KnownBits Known2 = computeKnownBits(V2, 0, Q);
+    KnownBits Known1 = computeKnownBits(V1, Depth, Q);
+    KnownBits Known2 = computeKnownBits(V2, Depth, Q);
 
     if (Known1.Zero.intersects(Known2.One) ||
         Known2.Zero.intersects(Known1.One))

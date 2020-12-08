@@ -455,11 +455,7 @@ public:
     std::string SectionName;
     bool Valid = false;
     SourceLocation PragmaLocation;
-
-    void Act(SourceLocation PragmaLocation,
-             PragmaClangSectionAction Action,
-             StringLiteral* Name);
-   };
+  };
 
    PragmaClangSection PragmaClangBSSSection;
    PragmaClangSection PragmaClangDataSection;
@@ -1076,10 +1072,6 @@ public:
   /// have been declared.
   bool GlobalNewDeleteDeclared;
 
-  /// A flag to indicate that we're in a context that permits abstract
-  /// references to fields.  This is really a
-  bool AllowAbstractFieldReference;
-
   /// Describes how the expressions currently being parsed are
   /// evaluated at run-time, if at all.
   enum class ExpressionEvaluationContext {
@@ -1137,9 +1129,6 @@ public:
 
     /// Whether the enclosing context needed a cleanup.
     CleanupInfo ParentCleanup;
-
-    /// Whether we are in a decltype expression.
-    bool IsDecltype;
 
     /// The number of active cleanup objects when we entered
     /// this expression evaluation context.
@@ -1639,7 +1628,6 @@ public:
     llvm::Optional<ImmediateDiagBuilder> ImmediateDiag;
     llvm::Optional<unsigned> PartialDiagId;
   };
-  using DiagBuilderT = SemaDiagnosticBuilder;
 
   /// Is the last error level diagnostic immediate. This is used to determined
   /// whether the next info diagnostic should be immediate.
@@ -2813,12 +2801,6 @@ public:
   /// implicit instantiation. Check that any relevant explicit specializations
   /// and partial specializations are visible, and diagnose if not.
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
-
-  /// We've found a use of a template specialization that would select a
-  /// partial specialization. Check that the partial specialization is visible,
-  /// and diagnose if not.
-  void checkPartialSpecializationVisibility(SourceLocation Loc,
-                                            NamedDecl *Spec);
 
   /// Retrieve a suitable printing policy for diagnostics.
   PrintingPolicy getPrintingPolicy() const {
@@ -5713,45 +5695,6 @@ public:
     }
   };
 
-  /// Determine what sort of exception specification a defaulted
-  /// copy constructor of a class will have.
-  ImplicitExceptionSpecification
-  ComputeDefaultedDefaultCtorExceptionSpec(SourceLocation Loc,
-                                           CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification a defaulted
-  /// default constructor of a class will have, and whether the parameter
-  /// will be const.
-  ImplicitExceptionSpecification
-  ComputeDefaultedCopyCtorExceptionSpec(CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification a defaulted
-  /// copy assignment operator of a class will have, and whether the
-  /// parameter will be const.
-  ImplicitExceptionSpecification
-  ComputeDefaultedCopyAssignmentExceptionSpec(CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification a defaulted move
-  /// constructor of a class will have.
-  ImplicitExceptionSpecification
-  ComputeDefaultedMoveCtorExceptionSpec(CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification a defaulted move
-  /// assignment operator of a class will have.
-  ImplicitExceptionSpecification
-  ComputeDefaultedMoveAssignmentExceptionSpec(CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification a defaulted
-  /// destructor of a class will have.
-  ImplicitExceptionSpecification
-  ComputeDefaultedDtorExceptionSpec(CXXMethodDecl *MD);
-
-  /// Determine what sort of exception specification an inheriting
-  /// constructor of a class will have.
-  ImplicitExceptionSpecification
-  ComputeInheritingCtorExceptionSpec(SourceLocation Loc,
-                                     CXXConstructorDecl *CD);
-
   /// Evaluate the implicit exception specification for a defaulted
   /// special member function.
   void EvaluateImplicitExceptionSpec(SourceLocation Loc, FunctionDecl *FD);
@@ -6749,14 +6692,6 @@ public:
   void
   DiagnoseUnsatisfiedConstraint(const ASTConstraintSatisfaction &Satisfaction,
                                 bool First = true);
-
-  /// \brief Emit diagnostics explaining why a constraint expression was deemed
-  /// unsatisfied because it was ill-formed.
-  void DiagnoseUnsatisfiedIllFormedConstraint(SourceLocation DiagnosticLocation,
-                                              StringRef Diagnostic);
-
-  void DiagnoseRedeclarationConstraintMismatch(SourceLocation Old,
-                                               SourceLocation New);
 
   // ParseObjCStringLiteral - Parse Objective-C string literals.
   ExprResult ParseObjCStringLiteral(SourceLocation *AtLocs,
@@ -9925,9 +9860,6 @@ public:
   /// AddMsStructLayoutForRecord - Adds ms_struct layout attribute to record.
   void AddMsStructLayoutForRecord(RecordDecl *RD);
 
-  /// FreePackedContext - Deallocate and null out PackContext.
-  void FreePackedContext();
-
   /// PushNamespaceVisibilityAttr - Note that we've entered a
   /// namespace with a visibility attribute.
   void PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
@@ -12516,6 +12448,7 @@ private:
   /// Nullability type specifiers.
   IdentifierInfo *Ident__Nonnull = nullptr;
   IdentifierInfo *Ident__Nullable = nullptr;
+  IdentifierInfo *Ident__Nullable_result = nullptr;
   IdentifierInfo *Ident__Null_unspecified = nullptr;
 
   IdentifierInfo *Ident_NSError = nullptr;

@@ -27,7 +27,7 @@ global_atomic_csub v2, v0, v2, s[2:3] glc
 global_atomic_csub v2, v0, v2, s[2:3] offset:100 glc slc
 // GFX10: encoding: [0x64,0x80,0xd3,0xdc,0x00,0x02,0x02,0x02]
 
-buffer_atomic_csub v5, off, s[8:11], s3
+buffer_atomic_csub v5, off, s[8:11], s3 glc
 // GFX10: encoding: [0x00,0x40,0xd0,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_atomic_csub v5, off, s[8:11], s3 offset:4095 glc

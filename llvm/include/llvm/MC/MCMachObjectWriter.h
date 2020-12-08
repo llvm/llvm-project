@@ -235,16 +235,6 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordScatteredRelocation(const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFragment *Fragment,
-                                 const MCFixup &Fixup, MCValue Target,
-                                 unsigned Log2Size, uint64_t &FixedValue);
-
-  void recordTLVPRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                            const MCFragment *Fragment, const MCFixup &Fixup,
-                            MCValue Target, uint64_t &FixedValue);
-
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override;

@@ -2663,6 +2663,10 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
 
+.. option:: -mcode-object-version=<version>
+
+Specify code object ABI version. Defaults to 4. (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -3168,8 +3172,6 @@ PowerPC
 .. option:: -mpower8-vector, -mno-power8-vector
 
 .. option:: -mpower9-vector, -mno-power9-vector
-
-.. option:: -mqpx, -mno-qpx
 
 .. option:: -msecure-plt
 

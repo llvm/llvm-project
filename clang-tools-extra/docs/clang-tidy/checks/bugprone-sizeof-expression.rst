@@ -169,21 +169,21 @@ Options
 
 .. option:: WarnOnSizeOfConstant
 
-   When non-zero, the check will warn on an expression like
-   ``sizeof(CONSTANT)``. Default is `1`.
+   When `true`, the check will warn on an expression like
+   ``sizeof(CONSTANT)``. Default is `true`.
 
 .. option:: WarnOnSizeOfIntegerExpression
 
-   When non-zero, the check will warn on an expression like ``sizeof(expr)``
-   where the expression results in an integer. Default is `0`.
+   When `true`, the check will warn on an expression like ``sizeof(expr)``
+   where the expression results in an integer. Default is `false`.
 
 .. option:: WarnOnSizeOfThis
 
-   When non-zero, the check will warn on an expression like ``sizeof(this)``.
-   Default is `1`.
+   When `true`, the check will warn on an expression like ``sizeof(this)``.
+   Default is `true`.
 
 .. option:: WarnOnSizeOfCompareToConstant
 
-   When non-zero, the check will warn on an expression like
+   When `true`, the check will warn on an expression like
    ``sizeof(epxr) <= k`` for a suspicious constant `k` while `k` is `0` or
-   greater than `0x8000`. Default is `1`.
+   greater than `0x8000`. Default is `true`.

@@ -1083,7 +1083,30 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
                             Constant::getNullValue(VScaleV4Int32Ty));
   int Index = 0;
   EXPECT_FALSE(Id13->isExtractSubvectorMask(Index));
+  EXPECT_FALSE(Id13->changesLength());
+  EXPECT_FALSE(Id13->increasesLength());
   delete Id13;
+
+  // Result has twice as many operands.
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  ShuffleVectorInst *Id14 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            UndefValue::get(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  EXPECT_TRUE(Id14->changesLength());
+  EXPECT_TRUE(Id14->increasesLength());
+  delete Id14;
+
+  // Not possible to express these masks for scalable vectors, make sure we
+  // don't crash.
+  ShuffleVectorInst *Id15 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty));
+  EXPECT_FALSE(Id15->isIdentityWithPadding());
+  EXPECT_FALSE(Id15->isIdentityWithExtract());
+  EXPECT_FALSE(Id15->isConcat());
+  delete Id15;
 }
 
 TEST(InstructionsTest, GetSplat) {

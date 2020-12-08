@@ -272,7 +272,7 @@ body:             |
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL renamable $r9, killed renamable $r0, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r6, dead early-clobber renamable $r11 = MVE_ASRLr killed renamable $r6, killed renamable $r11, renamable $r2, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r12 = t2STR_POST renamable $r6, killed renamable $r12, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.i39)
-  ; CHECK:   dead $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK:   dead renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   renamable $r8 = t2SUBri killed renamable $r8, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r0 = tMOVr $r7, 14 /* CC::al */, $noreg
   ; CHECK:   $r4 = tMOVr $r5, 14 /* CC::al */, $noreg

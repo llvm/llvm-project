@@ -175,7 +175,7 @@ STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
 
 static cl::opt<bool> EnableEpilogueVectorization(
-    "enable-epilogue-vectorization", cl::init(false), cl::Hidden,
+    "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
 
 static cl::opt<unsigned> EpilogueVectorizationForceVF(

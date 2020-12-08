@@ -689,7 +689,33 @@ void Symbol::resolveDefined(const Defined &other) {
                     other.value);
 }
 
+template <class LazyT>
+static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
+  backwardReferences.erase(&oldSym);
+  oldSym.replace(newSym);
+  newSym.fetch();
+}
+
 template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
+  // For common objects, we want to look for global or weak definitions that
+  // should be fetched as the cannonical definition instead.
+  if (isCommon() && elf::config->fortranCommon) {
+    if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
+      ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
+      const Archive::Symbol &archiveSym = laSym->sym;
+      if (archive->shouldFetchForCommon(archiveSym)) {
+        replaceCommon(*this, other);
+        return;
+      }
+    } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
+      LazyObjFile *obj = cast<LazyObjFile>(loSym->file);
+      if (obj->shouldFetchForCommon(loSym->getName())) {
+        replaceCommon(*this, other);
+        return;
+      }
+    }
+  }
+
   if (!isUndefined()) {
     // See the comment in resolveUndefined().
     if (isDefined())

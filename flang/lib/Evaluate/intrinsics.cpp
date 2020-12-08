@@ -1635,8 +1635,7 @@ public:
 
 private:
   DynamicType GetSpecificType(const TypePattern &) const;
-  SpecificCall HandleNull(
-      ActualArguments &, FoldingContext &, const IntrinsicProcTable &) const;
+  SpecificCall HandleNull(ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_F_Pointer(
       ActualArguments &, FoldingContext &) const;
 
@@ -1760,8 +1759,7 @@ bool CheckAndRearrangeArguments(ActualArguments &arguments,
 
 // The NULL() intrinsic is a special case.
 SpecificCall IntrinsicProcTable::Implementation::HandleNull(
-    ActualArguments &arguments, FoldingContext &context,
-    const IntrinsicProcTable &intrinsics) const {
+    ActualArguments &arguments, FoldingContext &context) const {
   static const char *const keywords[]{"mold", nullptr};
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
@@ -1775,7 +1773,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           const Symbol *last{GetLastSymbol(*mold)};
           CHECK(last);
           auto procPointer{
-              characteristics::Procedure::Characterize(*last, intrinsics)};
+              characteristics::Procedure::Characterize(*last, context)};
           // procPointer is null if there was an error with the analysis
           // associated with the procedure pointer
           if (procPointer) {
@@ -1900,21 +1898,19 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   }
 }
 
-static bool CheckAssociated(SpecificCall &call,
-    parser::ContextualMessages &messages,
-    const IntrinsicProcTable &intrinsics) {
+static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   if (const auto &pointerArg{call.arguments[0]}) {
     if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
       if (const Symbol * pointerSymbol{GetLastSymbol(*pointerExpr)}) {
         if (!pointerSymbol->attrs().test(semantics::Attr::POINTER)) {
-          AttachDeclaration(
-              messages.Say("POINTER= argument of ASSOCIATED() must be a "
-                           "POINTER"_err_en_US),
+          AttachDeclaration(context.messages().Say(
+                                "POINTER= argument of ASSOCIATED() must be a "
+                                "POINTER"_err_en_US),
               *pointerSymbol);
         } else {
           const auto pointerProc{characteristics::Procedure::Characterize(
-              *pointerSymbol, intrinsics)};
+              *pointerSymbol, context)};
           if (const auto &targetArg{call.arguments[1]}) {
             if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
               std::optional<characteristics::Procedure> targetProc{
@@ -1926,7 +1922,7 @@ static bool CheckAssociated(SpecificCall &call,
                       std::get_if<ProcedureRef>(&targetExpr->u)}) {
                 if (auto targetRefedChars{
                         characteristics::Procedure::Characterize(
-                            *targetProcRef, intrinsics)}) {
+                            *targetProcRef, context)}) {
                   targetProc = *targetRefedChars;
                   targetName = targetProcRef->proc().GetName() + "()";
                   isCall = true;
@@ -1934,7 +1930,7 @@ static bool CheckAssociated(SpecificCall &call,
               } else if (targetSymbol && !targetProc) {
                 // proc that's not a call
                 targetProc = characteristics::Procedure::Characterize(
-                    *targetSymbol, intrinsics);
+                    *targetSymbol, context);
                 targetName = targetSymbol->name().ToString();
               }
 
@@ -1945,7 +1941,7 @@ static bool CheckAssociated(SpecificCall &call,
                           CheckProcCompatibility(
                               isCall, pointerProc, &*targetProc)}) {
                     AttachDeclaration(
-                        messages.Say(std::move(*msg),
+                        context.messages().Say(std::move(*msg),
                             "pointer '" + pointerSymbol->name().ToString() +
                                 "'",
                             targetName),
@@ -1955,7 +1951,7 @@ static bool CheckAssociated(SpecificCall &call,
                   // procedure pointer and object target
                   if (!IsNullPointer(*targetExpr)) {
                     AttachDeclaration(
-                        messages.Say(
+                        context.messages().Say(
                             "POINTER= argument '%s' is a procedure "
                             "pointer but the TARGET= argument '%s' is not a "
                             "procedure or procedure pointer"_err_en_US,
@@ -1966,9 +1962,10 @@ static bool CheckAssociated(SpecificCall &call,
               } else if (targetProc) {
                 // object pointer and procedure target
                 AttachDeclaration(
-                    messages.Say("POINTER= argument '%s' is an object pointer "
-                                 "but the TARGET= argument '%s' is a "
-                                 "procedure designator"_err_en_US,
+                    context.messages().Say(
+                        "POINTER= argument '%s' is an object pointer "
+                        "but the TARGET= argument '%s' is a "
+                        "procedure designator"_err_en_US,
                         pointerSymbol->name(), targetName),
                     *pointerSymbol);
               } else {
@@ -1978,9 +1975,10 @@ static bool CheckAssociated(SpecificCall &call,
                           targetSymbol->attrs().test(
                               semantics::Attr::TARGET))) {
                     AttachDeclaration(
-                        messages.Say("TARGET= argument '%s' must have either "
-                                     "the POINTER or the TARGET "
-                                     "attribute"_err_en_US,
+                        context.messages().Say(
+                            "TARGET= argument '%s' must have either "
+                            "the POINTER or the TARGET "
+                            "attribute"_err_en_US,
                             targetName),
                         *targetSymbol);
                   }
@@ -2002,16 +2000,14 @@ static bool CheckAssociated(SpecificCall &call,
     ok = false;
   }
   if (!ok) {
-    messages.Say(
+    context.messages().Say(
         "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
   }
   return ok;
 }
 
 // Applies any semantic checks peculiar to an intrinsic.
-static bool ApplySpecificChecks(SpecificCall &call,
-    parser::ContextualMessages &messages,
-    const IntrinsicProcTable &intrinsics) {
+static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
   if (name == "allocated") {
@@ -2023,17 +2019,17 @@ static bool ApplySpecificChecks(SpecificCall &call,
       }
     }
     if (!ok) {
-      messages.Say(
+      context.messages().Say(
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "associated") {
-    return CheckAssociated(call, messages, intrinsics);
+    return CheckAssociated(call, context);
   } else if (name == "loc") {
     if (const auto &arg{call.arguments[0]}) {
       ok = arg->GetAssumedTypeDummy() || GetLastSymbol(arg->UnwrapExpr());
     }
     if (!ok) {
-      messages.Say(
+      context.messages().Say(
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
   } else if (name == "present") {
@@ -2045,7 +2041,7 @@ static bool ApplySpecificChecks(SpecificCall &call,
       }
     }
     if (!ok) {
-      messages.Say(
+      context.messages().Say(
           "Argument of PRESENT() must be the name of an OPTIONAL dummy argument"_err_en_US);
     }
   }
@@ -2085,7 +2081,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     }
   } else {
     if (call.name == "null") {
-      return HandleNull(arguments, context, intrinsics);
+      return HandleNull(arguments, context);
     }
   }
 
@@ -2134,7 +2130,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   for (auto iter{genericRange.first}; iter != genericRange.second; ++iter) {
     if (auto specificCall{
             matchOrBufferMessages(*iter->second, genericBuffer)}) {
-      ApplySpecificChecks(*specificCall, context.messages(), intrinsics);
+      ApplySpecificChecks(*specificCall, context);
       return specificCall;
     }
   }

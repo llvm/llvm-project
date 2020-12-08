@@ -1243,7 +1243,7 @@ define i64 @blsi64_branch(i64 %x) {
   ret i64 %tmp2
 }
 
-declare void @bar()
+declare dso_local void @bar()
 
 define void @pr42118_i32(i32 %x) {
 ; X86-LABEL: pr42118_i32:

@@ -273,10 +273,16 @@ std::vector<Fragment> Fragment::parseYAML(llvm::StringRef YAML,
       Fragment Fragment;
       Fragment.Source.Manager = SM;
       Fragment.Source.Location = N->getSourceRange().Start;
+      SM->PrintMessage(Fragment.Source.Location, llvm::SourceMgr::DK_Note,
+                       "Parsing config fragment");
       if (Parser(*SM).parse(Fragment, *N))
         Result.push_back(std::move(Fragment));
     }
   }
+  SM->PrintMessage(SM->FindLocForLineAndColumn(SM->getMainFileID(), 0, 0),
+                   llvm::SourceMgr::DK_Note,
+                   "Parsed " + llvm::Twine(Result.size()) +
+                       " fragments from file");
   // Hack: stash the buffer in the SourceMgr to keep it alive.
   // SM has two entries: "main" non-owning buffer, and ignored owning buffer.
   SM->AddNewSourceBuffer(std::move(Buf), llvm::SMLoc());

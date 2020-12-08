@@ -1563,12 +1563,20 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
 
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
-  if (auto nullability = ReceiverType->getNullability(Context))
+  if (Optional<NullabilityKind> nullability =
+          ReceiverType->getNullability(Context)) {
+    if (*nullability == NullabilityKind::NullableResult)
+      nullability = NullabilityKind::Nullable;
     receiverNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
+  }
 
   unsigned resultNullabilityIdx = 0;
-  if (auto nullability = resultType->getNullability(Context))
+  if (Optional<NullabilityKind> nullability =
+          resultType->getNullability(Context)) {
+    if (*nullability == NullabilityKind::NullableResult)
+      nullability = NullabilityKind::Nullable;
     resultNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
+  }
 
   // The table of nullability mappings, indexed by the receiver's nullability
   // and then the result type's nullability.

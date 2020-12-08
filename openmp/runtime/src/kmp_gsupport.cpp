@@ -102,8 +102,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER)(void) {
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
   __kmpc_barrier(&loc, gtid);
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -250,20 +250,20 @@ void *KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SINGLE_COPY_START)(void) {
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
   __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
 
   // Retrieve the value of the copyprivate data point, and wait for all
   // threads to do likewise, then return.
   retval = __kmp_team_from_gtid(gtid)->t.t_copypriv_data;
+  {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  if (ompt_enabled.enabled) {
     OMPT_STORE_RETURN_ADDRESS(gtid);
-  }
 #endif
-  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+    __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+  }
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.enabled) {
     ompt_frame->enter_frame = ompt_data_none;
@@ -286,16 +286,16 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SINGLE_COPY_END)(void *data) {
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
   __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+  {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  if (ompt_enabled.enabled) {
     OMPT_STORE_RETURN_ADDRESS(gtid);
-  }
 #endif
-  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+    __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+  }
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.enabled) {
     ompt_frame->enter_frame = ompt_data_none;
@@ -482,8 +482,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &parent_frame, NULL, NULL);
     parent_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   MKLOC(loc, "GOMP_parallel_start");
@@ -1231,10 +1231,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
 #if OMPT_SUPPORT
   kmp_taskdata_t *current_task;
   if (ompt_enabled.enabled) {
-    OMPT_STORE_RETURN_ADDRESS(gtid);
     current_task = __kmp_threads[gtid]->th.th_current_task;
     current_task->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   if (if_cond) {
@@ -1262,8 +1262,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
       thread->th.ompt_thread_info.wait_id = 0;
       thread->th.ompt_thread_info.state = ompt_state_work_parallel;
       taskdata->ompt_task_info.frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-      OMPT_STORE_RETURN_ADDRESS(gtid);
     }
+    OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
     if (gomp_flags & KMP_GOMP_TASK_DEPENDS_FLAG) {
       KMP_ASSERT(depend);
@@ -1300,8 +1300,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKWAIT)(void) {
   int gtid = __kmp_entry_gtid();
 
 #if OMPT_SUPPORT
-  if (ompt_enabled.enabled)
-    OMPT_STORE_RETURN_ADDRESS(gtid);
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   KA_TRACE(20, ("GOMP_taskwait: T#%d\n", gtid));
@@ -1378,8 +1377,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS_START)(
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &parent_frame, NULL, NULL);
     parent_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   MKLOC(loc, "GOMP_parallel_sections_start");
@@ -1410,8 +1409,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SECTIONS_END)(void) {
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
   __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
 #if OMPT_SUPPORT
@@ -1446,8 +1445,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL)(void (*task)(void *),
   if (ompt_enabled.enabled) {
     parent_task_info = __ompt_get_task_info_object(0);
     parent_task_info->frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
-    OMPT_STORE_RETURN_ADDRESS(gtid);
   }
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
   __kmp_GOMP_fork_call(&loc, gtid, num_threads, flags, task,
                        (microtask_t)__kmp_GOMP_microtask_wrapper, 2, task,
@@ -1459,12 +1458,12 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL)(void (*task)(void *),
   }
 #endif
   task(data);
+  {
 #if OMPT_SUPPORT
-  if (ompt_enabled.enabled) {
     OMPT_STORE_RETURN_ADDRESS(gtid);
-  }
 #endif
-  KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
+    KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
+  }
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     task_info->frame.exit_frame = ompt_data_none;
@@ -1515,15 +1514,18 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
          gtid, lb, ub, str, chunk_sz));                                        \
                                                                                \
     ompt_pre();                                                                \
+    IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid);)                          \
     __kmp_GOMP_fork_call(&loc, gtid, num_threads, flags, task,                 \
                          (microtask_t)__kmp_GOMP_parallel_microtask_wrapper,   \
                          9, task, data, num_threads, &loc, (schedule), lb,     \
                          (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);      \
                                                                                \
-    IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid);)                          \
-    KMP_DISPATCH_INIT(&loc, gtid, (schedule), lb,                              \
-                      (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz,          \
-                      (schedule) != kmp_sch_static);                           \
+    {                                                                          \
+      IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid);)                        \
+      KMP_DISPATCH_INIT(&loc, gtid, (schedule), lb,                            \
+                        (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz,        \
+                        (schedule) != kmp_sch_static);                         \
+    }                                                                          \
     task(data);                                                                \
     KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();                         \
     ompt_post();                                                               \
@@ -1558,8 +1560,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKGROUP_START)(void) {
   KA_TRACE(20, ("GOMP_taskgroup_start: T#%d\n", gtid));
 
 #if OMPT_SUPPORT
-  if (ompt_enabled.enabled)
-    OMPT_STORE_RETURN_ADDRESS(gtid);
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   __kmpc_taskgroup(&loc, gtid);
@@ -1573,8 +1574,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKGROUP_END)(void) {
   KA_TRACE(20, ("GOMP_taskgroup_end: T#%d\n", gtid));
 
 #if OMPT_SUPPORT
-  if (ompt_enabled.enabled)
-    OMPT_STORE_RETURN_ADDRESS(gtid);
+  OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
   __kmpc_end_taskgroup(&loc, gtid);

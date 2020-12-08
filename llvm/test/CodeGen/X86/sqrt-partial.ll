@@ -104,6 +104,6 @@ define double @partial_dep_minsize(double %x, double %y) minsize {
   ret double %t
 }
 
-declare float @sqrtf(float)
-declare double @sqrt(double)
-declare double @llvm.sqrt.f64(double)
+declare dso_local float @sqrtf(float)
+declare dso_local double @sqrt(double)
+declare dso_local double @llvm.sqrt.f64(double)

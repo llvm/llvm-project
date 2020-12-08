@@ -108,6 +108,7 @@ struct WasmSection {
   uint32_t Type = 0;         // Section type (See below)
   uint32_t Offset = 0;       // Offset with in the file
   StringRef Name;            // Section name (User-defined sections only)
+  uint32_t Comdat = UINT32_MAX; // From the "comdat info" section
   ArrayRef<uint8_t> Content; // Section content
   std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
 };

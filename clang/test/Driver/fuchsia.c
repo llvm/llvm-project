@@ -239,7 +239,7 @@
 // CHECK-THINLTO: "-plugin-opt=jobs=8"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
-// RUN:     -gsplit-dwarf -c %s 2>&1 \
+// RUN:     -gsplit-dwarf -g -c %s 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SPLIT-DWARF
 // CHECK-SPLIT-DWARF: "-split-dwarf-output" "fuchsia.dwo"
 

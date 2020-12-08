@@ -52,7 +52,6 @@ public:
   void printTemplateArgs(Record *Rec, raw_ostream &OS);
   void printSuperclasses(Record *Rec, raw_ostream &OS);
   void printFields(Record *Rec, raw_ostream &OS);
-  std::string formatLocation(const SMLoc Loc);
 }; // emitter class
 
 } // anonymous namespace

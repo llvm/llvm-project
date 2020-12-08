@@ -182,11 +182,6 @@ public:
   bool replacedSelectWithOperand(SelectInst *SI, const ICmpInst *Icmp,
                                  const unsigned SIOpd);
 
-  /// Try to replace instruction \p I with value \p V which are pointers
-  /// in different address space.
-  /// \return true if successful.
-  bool replacePointer(Instruction &I, Value *V);
-
   LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
                                  const Twine &Suffix = "");
 

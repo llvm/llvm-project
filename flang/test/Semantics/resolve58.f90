@@ -30,7 +30,7 @@ subroutine s3(a, b)
   real :: b(*,*)  ! C836
   !ERROR: Implied-shape array 'c' must be a named constant
   real :: c(*)  ! C836
-  !ERROR: Named constant 'd' array must have explicit or implied shape
+  !ERROR: Named constant 'd' array must have constant or implied shape
   integer, parameter :: d(:) = [1, 2, 3]
 end
 

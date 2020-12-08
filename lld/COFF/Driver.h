@@ -96,9 +96,6 @@ public:
 private:
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
-  // Opens a file. Path has to be resolved already.
-  MemoryBufferRef openFile(StringRef path);
-
   // Searches a file from search paths.
   Optional<StringRef> findFile(StringRef filename);
   Optional<StringRef> findLib(StringRef filename);
@@ -205,8 +202,6 @@ void checkFailIfMismatch(StringRef arg, InputFile *source);
 // Convert Windows resource files (.res files) to a .obj file.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
                                  ArrayRef<ObjFile *> objs);
-
-void runMSVCLinker(std::string rsp, ArrayRef<StringRef> objects);
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {

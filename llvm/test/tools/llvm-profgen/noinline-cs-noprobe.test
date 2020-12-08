@@ -1,0 +1,60 @@
+; RUN: llvm-profgen --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --show-unwinder-output | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:[main:1 @ foo:3 @ bar]:12:3
+; CHECK: 0: 3
+; CHECK: 1: 3
+; CHECK: 2: 2
+; CHECK: 4: 1
+; CHECK: 5: 3
+; CHECK:[main:1 @ foo]:9:0
+; CHECK: 2: 3
+; CHECK: 3: 3 bar:3
+
+; CHECK-UNWINDER: Binary(noinline-cs-noprobe.perfbin)'s Range Counter:
+; CHECK-UNWINDER: main:1 @ foo
+; CHECK-UNWINDER:   (5ff, 62f): 3
+; CHECK-UNWINDER:   (634, 637): 3
+; CHECK-UNWINDER:   (645, 645): 3
+; CHECK-UNWINDER: main:1 @ foo:3 @ bar
+; CHECK-UNWINDER:   (5b0, 5c8): 1
+; CHECK-UNWINDER:   (5b0, 5d7): 2
+; CHECK-UNWINDER:   (5dc, 5e9): 1
+; CHECK-UNWINDER:   (5e5, 5e9): 2
+
+; CHECK-UNWINDER: Binary(noinline-cs-noprobe.perfbin)'s Branch Counter:
+; CHECK-UNWINDER: main:1 @ foo
+; CHECK-UNWINDER:   (62f, 5b0): 3
+; CHECK-UNWINDER:   (637, 645): 3
+; CHECK-UNWINDER:   (645, 5ff): 3
+; CHECK-UNWINDER: main:1 @ foo:3 @ bar
+; CHECK-UNWINDER:   (5c8, 5dc): 2
+; CHECK-UNWINDER:   (5d7, 5e5): 2
+; CHECK-UNWINDER:   (5e9, 634): 3
+
+
+
+
+
+; original code:
+; clang -O0 -g test.c -o a.out
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

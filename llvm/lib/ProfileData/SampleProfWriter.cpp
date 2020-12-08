@@ -276,7 +276,10 @@ std::error_code SampleProfileWriterCompactBinary::write(
 /// it needs to be parsed by the SampleProfileReaderText class.
 std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   auto &OS = *OutputStream;
-  OS << S.getName() << ":" << S.getTotalSamples();
+  if (FunctionSamples::ProfileIsCS)
+    OS << "[" << S.getNameWithContext() << "]:" << S.getTotalSamples();
+  else
+    OS << S.getName() << ":" << S.getTotalSamples();
   if (Indent == 0)
     OS << ":" << S.getHeadSamples();
   OS << "\n";

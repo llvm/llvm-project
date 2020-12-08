@@ -540,7 +540,8 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
+    const Symbol *derivedTypeSymbol) {
   if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
@@ -554,7 +555,10 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
       return true;
     } else if (!IsPointer(symbol) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
-        if (derived->HasDefaultInitialization()) {
+        if (&derived->typeSymbol() == derivedTypeSymbol) {
+          // error recovery: avoid infinite recursion on invalid
+          // recursive usage of a derived type
+        } else if (derived->HasDefaultInitialization()) {
           return true;
         }
       }

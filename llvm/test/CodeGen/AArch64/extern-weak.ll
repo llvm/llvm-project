@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
 ; RUN: llc -mtriple=aarch64-none-none-eabi -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
 
-declare extern_weak i32 @var()
+declare extern_weak dso_local i32 @var()
 
 define i32()* @foo() {
 ; The usual ADRP/ADD pair can't be used for a weak reference because it must

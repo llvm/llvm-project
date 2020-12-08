@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-declare void @func()
+declare dso_local void @func()
 
 define i32 @test_spill(
     i32 addrspace(1)* %arg00, i32 addrspace(1)* %arg01, i32 addrspace(1)* %arg02, i32 addrspace(1)* %arg03, i32 addrspace(1)* %arg04, i32 addrspace(1)* %arg05,
@@ -194,7 +194,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32 immarg
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 immarg, i32 immarg, void ()*, i32 immarg, i32 immarg, ...)
 
 ; Function Attrs: nounwind
-declare void @llvm.stackprotector(i8*, i8**) #1
+declare dso_local void @llvm.stackprotector(i8*, i8**) #1
 
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind }

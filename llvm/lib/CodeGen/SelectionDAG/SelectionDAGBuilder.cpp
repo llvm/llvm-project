@@ -1141,7 +1141,7 @@ void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
       if (isMatchingDbgValue(DDI))
         salvageUnresolvedDbgValue(DDI);
 
-    DDIV.erase(remove_if(DDIV, isMatchingDbgValue), DDIV.end());
+    erase_if(DDIV, isMatchingDbgValue);
   }
 }
 
@@ -4416,7 +4416,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
-    IndexType = ISD::SIGNED_SCALED;
+    IndexType = ISD::SIGNED_UNSCALED;
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
   SDValue Ops[] = { Root, Src0, Mask, Base, Index, Scale };

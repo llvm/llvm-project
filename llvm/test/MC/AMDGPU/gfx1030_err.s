@@ -140,3 +140,9 @@ ds_write_src2_b32 v1 offset:65535
 
 ds_write_src2_b64 v1 offset:65535
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_csub v5, off, s[8:11], s3 offset:4095
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use glc
+
+global_atomic_csub v2, v[0:1], v2, off offset:100 slc
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use glc

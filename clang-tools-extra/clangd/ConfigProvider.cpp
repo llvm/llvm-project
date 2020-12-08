@@ -83,7 +83,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
     const ThreadsafeFS &FS;
 
     mutable std::mutex Mu;
-    // Keys are the ancestor directory, not the actual config path within it.
+    // Keys are the (posix-style) ancestor directory, not the config within it.
     // We only insert into this map, so pointers to values are stable forever.
     // Mutex guards the map itself, not the values (which are threadsafe).
     mutable llvm::StringMap<FileConfigCache> Cache;
@@ -117,6 +117,8 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
           if (It == Cache.end()) {
             llvm::SmallString<256> ConfigPath = Ancestor;
             path::append(ConfigPath, RelPath);
+            // Use native slashes for reading the file, affects diagnostics.
+            llvm::sys::path::native(ConfigPath);
             It = Cache.try_emplace(Ancestor, ConfigPath.str(), Ancestor).first;
           }
           Caches.push_back(&It->second);

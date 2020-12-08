@@ -1064,24 +1064,14 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
   }
   llvm_unreachable("Unknown Reloc::Model kind");
 }
-
-static void HandleAmdgcnLegacyOptions(const Driver &D,
-                                      const ArgList &Args,
-                                      ArgStringList &CmdArgs) {
-  if (auto *CodeObjArg = Args.getLastArg(options::OPT_mcode_object_v3_legacy,
-                                         options::OPT_mno_code_object_v3_legacy)) {
-    if (CodeObjArg->getOption().getID() == options::OPT_mcode_object_v3_legacy) {
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3" <<
-        "-mllvm --amdhsa-code-object-version=3";
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("--amdhsa-code-object-version=3");
-    } else {
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3" <<
-        "-mllvm --amdhsa-code-object-version=2";
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("--amdhsa-code-object-version=2");
-    }
-  }
+static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
+                                                 const ArgList &Args,
+                                                 ArgStringList &CmdArgs) {
+  unsigned CodeObjVer = getOrCheckAMDGPUCodeObjectVersion(D, Args);
+  CmdArgs.insert(CmdArgs.begin() + 1,
+                 Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
+                                    Twine(CodeObjVer)));
+  CmdArgs.insert(CmdArgs.begin() + 1, "-mllvm");
 }
 
 void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
@@ -6243,8 +6233,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  HandleAmdgcnLegacyOptions(D, Args, CmdArgs);
   if (Triple.isAMDGPU()) {
+    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
+
     if (Args.hasFlag(options::OPT_munsafe_fp_atomics,
                      options::OPT_mno_unsafe_fp_atomics))
       CmdArgs.push_back("-munsafe-fp-atomics");
@@ -7229,7 +7220,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(SplitDebugName(JA, Args, Input, Output));
   }
 
-  HandleAmdgcnLegacyOptions(D, Args, CmdArgs);
+  if (Triple.isAMDGPU())
+    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());

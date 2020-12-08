@@ -19,7 +19,7 @@ define void @t1(i32 %x) nounwind ssp {
   ret void
 }
 
-declare void @foo()
+declare dso_local void @foo()
 
 define void @t2() nounwind ssp {
 ; X86-LABEL: t2:
@@ -37,7 +37,7 @@ define void @t2() nounwind ssp {
   ret void
 }
 
-declare i32 @foo2()
+declare dso_local i32 @foo2()
 
 define void @t3() nounwind ssp {
 ; X86-LABEL: t3:
@@ -55,7 +55,7 @@ define void @t3() nounwind ssp {
   ret void
 }
 
-declare i32 @foo3()
+declare dso_local i32 @foo3()
 
 define void @t4(void (i32)* nocapture %x) nounwind ssp {
 ; X86-LABEL: t4:
@@ -167,7 +167,7 @@ bb1:
   ret i32 %t3
 }
 
-declare i32 @bar(i32)
+declare dso_local i32 @bar(i32)
 
 define i32 @t7(i32 %a, i32 %b, i32 %c) nounwind ssp {
 ; X86-LABEL: t7:
@@ -185,7 +185,7 @@ define i32 @t7(i32 %a, i32 %b, i32 %c) nounwind ssp {
   ret i32 %t0
 }
 
-declare i32 @bar2(i32, i32, i32)
+declare dso_local i32 @bar2(i32, i32, i32)
 
 define signext i16 @t8() nounwind ssp {
 ; X86-LABEL: t8:
@@ -204,7 +204,7 @@ entry:
   ret i16 %0
 }
 
-declare signext i16 @bar3()
+declare dso_local signext i16 @bar3()
 
 define signext i16 @t9(i32 (i32)* nocapture %x) nounwind ssp {
 ; X86-LABEL: t9:
@@ -252,7 +252,7 @@ entry:
   unreachable
 }
 
-declare i32 @foo4()
+declare dso_local i32 @foo4()
 
 ; In 32-bit mode, it's emitting a bunch of dead loads that are not being
 ; eliminated currently.
@@ -299,7 +299,7 @@ bb6:
   ret i32 0
 }
 
-declare i32 @foo5(i32, i32, i32, i32, i32)
+declare dso_local i32 @foo5(i32, i32, i32, i32, i32)
 
 %struct.t = type { i32, i32, i32, i32, i32 }
 
@@ -345,7 +345,7 @@ bb2:
   ret i32 0
 }
 
-declare i32 @foo6(i32, i32, %struct.t* byval(%struct.t) align 4)
+declare dso_local i32 @foo6(i32, i32, %struct.t* byval(%struct.t) align 4)
 
 ; rdar://r7717598
 %struct.ns = type { i32, i32 }
@@ -406,7 +406,7 @@ entry:
 
 ; rdar://6195379
 ; llvm can't do sibcall for this in 32-bit mode (yet).
-declare fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4, i8 signext) nounwind ssp
+declare dso_local fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4, i8 signext) nounwind ssp
 
 %struct.__block_descriptor = type { i64, i64 }
 %struct.__block_descriptor_withcopydispose = type { i64, i64, i8*, i8* }
@@ -483,7 +483,7 @@ define void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
   ret void
 }
 
-declare void @f(%struct.foo* noalias sret(%struct.foo)) nounwind
+declare dso_local void @f(%struct.foo* noalias sret(%struct.foo)) nounwind
 
 define void @t16() nounwind ssp {
 ; X86-LABEL: t16:
@@ -506,7 +506,7 @@ entry:
   ret void
 }
 
-declare double @bar4()
+declare dso_local double @bar4()
 
 ; rdar://6283267
 define void @t17() nounwind ssp {
@@ -528,7 +528,7 @@ entry:
   ret void
 }
 
-declare void @bar5(...)
+declare dso_local void @bar5(...)
 
 ; rdar://7774847
 define void @t18() nounwind ssp {
@@ -554,7 +554,7 @@ entry:
   ret void
 }
 
-declare double @bar6(...)
+declare dso_local double @bar6(...)
 
 define void @t19() alignstack(32) nounwind {
 ; X86-LABEL: t19:
@@ -621,7 +621,7 @@ entry:
   ret double %0
 }
 
-declare fastcc double @foo20(double) nounwind
+declare dso_local fastcc double @foo20(double) nounwind
 
 ; bug 28417
 define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
@@ -1044,9 +1044,9 @@ define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
   ret void
 }
 
-declare fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
-declare fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo), %struct.foo* noalias) nounwind
-declare fastcc void @t21_f_non_sret(%struct.foo*) nounwind
+declare dso_local fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
+declare dso_local fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo), %struct.foo* noalias) nounwind
+declare dso_local fastcc void @t21_f_non_sret(%struct.foo*) nounwind
 
 declare ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
 

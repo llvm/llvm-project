@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
@@ -30,7 +31,7 @@ public:
   using Base::operator();
 
   bool operator()(const TypeParamInquiry &inq) const {
-    return IsKindTypeParameter(inq.parameter());
+    return semantics::IsKindTypeParameter(inq.parameter());
   }
   bool operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
@@ -98,6 +99,28 @@ template bool IsConstantExpr(const Expr<SomeType> &);
 template bool IsConstantExpr(const Expr<SomeInteger> &);
 template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 template bool IsConstantExpr(const StructureConstructor &);
+
+// IsActuallyConstant()
+struct IsActuallyConstantHelper {
+  template <typename A> bool operator()(const A &) { return false; }
+  template <typename T> bool operator()(const Constant<T> &) { return true; }
+  template <typename T> bool operator()(const Parentheses<T> &x) {
+    return (*this)(x.left());
+  }
+  template <typename T> bool operator()(const Expr<T> &x) {
+    return std::visit([=](const auto &y) { return (*this)(y); }, x.u);
+  }
+  template <typename A> bool operator()(const A *x) { return x && (*this)(*x); }
+  template <typename A> bool operator()(const std::optional<A> &x) {
+    return x && (*this)(*x);
+  }
+};
+
+template <typename A> bool IsActuallyConstant(const A &x) {
+  return IsActuallyConstantHelper{}(x);
+}
+
+template bool IsActuallyConstant(const Expr<SomeType> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
@@ -243,6 +266,110 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   }
 }
 
+class ScalarExpansionVisitor : public AnyTraverse<ScalarExpansionVisitor,
+                                   std::optional<Expr<SomeType>>> {
+public:
+  using Result = std::optional<Expr<SomeType>>;
+  using Base = AnyTraverse<ScalarExpansionVisitor, Result>;
+  ScalarExpansionVisitor(
+      ConstantSubscripts &&shape, std::optional<ConstantSubscripts> &&lb)
+      : Base{*this}, shape_{std::move(shape)}, lbounds_{std::move(lb)} {}
+  using Base::operator();
+  template <typename T> Result operator()(const Constant<T> &x) {
+    auto expanded{x.Reshape(std::move(shape_))};
+    if (lbounds_) {
+      expanded.set_lbounds(std::move(*lbounds_));
+    }
+    return AsGenericExpr(std::move(expanded));
+  }
+
+private:
+  ConstantSubscripts shape_;
+  std::optional<ConstantSubscripts> lbounds_;
+};
+
+// Converts, folds, and then checks type, rank, and shape of an
+// initialization expression for a named constant, a non-pointer
+// variable static initializatio, a component default initializer,
+// a type parameter default value, or instantiated type parameter value.
+std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
+    Expr<SomeType> &&x, FoldingContext &context,
+    const semantics::Scope *instantiation) {
+  CHECK(!IsPointer(symbol));
+  if (auto symTS{
+          characteristics::TypeAndShape::Characterize(symbol, context)}) {
+    auto xType{x.GetType()};
+    if (auto converted{ConvertToType(symTS->type(), std::move(x))}) {
+      auto folded{Fold(context, std::move(*converted))};
+      if (IsActuallyConstant(folded)) {
+        int symRank{GetRank(symTS->shape())};
+        if (IsImpliedShape(symbol)) {
+          if (folded.Rank() == symRank) {
+            return {std::move(folded)};
+          } else {
+            context.messages().Say(
+                "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
+                symbol.name(), symRank, folded.Rank());
+          }
+        } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+          if (folded.Rank() == 0 && symRank > 0) {
+            return ScalarConstantExpander{std::move(*extents),
+                AsConstantExtents(
+                    context, GetLowerBounds(context, NamedEntity{symbol}))}
+                .Expand(std::move(folded));
+          } else if (auto resultShape{GetShape(context, folded)}) {
+            if (CheckConformance(context.messages(), symTS->shape(),
+                    *resultShape, "initialized object",
+                    "initialization expression", false, false)) {
+              return {std::move(folded)};
+            }
+          }
+        } else if (IsNamedConstant(symbol)) {
+          if (IsExplicitShape(symbol)) {
+            context.messages().Say(
+                "Named constant '%s' array must have constant shape"_err_en_US,
+                symbol.name());
+          } else {
+            // Declaration checking handles other cases
+          }
+        } else {
+          context.messages().Say(
+              "Shape of initialized object '%s' must be constant"_err_en_US,
+              symbol.name());
+        }
+      } else if (IsErrorExpr(folded)) {
+      } else if (IsLenTypeParameter(symbol)) {
+        return {std::move(folded)};
+      } else if (IsKindTypeParameter(symbol)) {
+        if (instantiation) {
+          context.messages().Say(
+              "Value of kind type parameter '%s' (%s) must be a scalar INTEGER constant"_err_en_US,
+              symbol.name(), folded.AsFortran());
+        } else {
+          return {std::move(folded)};
+        }
+      } else if (IsNamedConstant(symbol)) {
+        context.messages().Say(
+            "Value of named constant '%s' (%s) cannot be computed as a constant value"_err_en_US,
+            symbol.name(), folded.AsFortran());
+      } else {
+        context.messages().Say(
+            "Initialization expression for '%s' (%s) cannot be computed as a constant value"_err_en_US,
+            symbol.name(), folded.AsFortran());
+      }
+    } else if (xType) {
+      context.messages().Say(
+          "Initialization expression cannot be converted to declared type of '%s' from %s"_err_en_US,
+          symbol.name(), xType->AsFortran());
+    } else {
+      context.messages().Say(
+          "Initialization expression cannot be converted to declared type of '%s'"_err_en_US,
+          symbol.name());
+    }
+  }
+  return std::nullopt;
+}
+
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
     : public AnyTraverse<CheckSpecificationExprHelper,
@@ -251,8 +378,8 @@ public:
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<CheckSpecificationExprHelper, Result>;
   explicit CheckSpecificationExprHelper(
-      const semantics::Scope &s, const IntrinsicProcTable &table)
-      : Base{*this}, scope_{s}, table_{table} {}
+      const semantics::Scope &s, FoldingContext &context)
+      : Base{*this}, scope_{s}, context_{context} {}
   using Base::operator();
 
   Result operator()(const ProcedureDesignator &) const {
@@ -338,7 +465,7 @@ public:
     } else {
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
       if (scope_.IsDerivedType()) { // C750, C754
-        if ((table_.IsIntrinsic(intrin.name) &&
+        if ((context_.intrinsics().IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
                     badIntrinsicsForComponents_.end()) ||
             IsProhibitedFunction(intrin.name)) {
@@ -346,7 +473,7 @@ public:
               "' not allowed for derived type components or type parameter"
               " values";
         }
-        if (table_.GetIntrinsicClass(intrin.name) ==
+        if (context_.intrinsics().GetIntrinsicClass(intrin.name) ==
                 IntrinsicClass::inquiryFunction &&
             !IsConstantExpr(x)) {
           return "non-constant reference to inquiry intrinsic '"s +
@@ -367,38 +494,34 @@ public:
 
 private:
   const semantics::Scope &scope_;
-  const IntrinsicProcTable &table_;
+  FoldingContext &context_;
   const std::set<std::string> badIntrinsicsForComponents_{
       "allocated", "associated", "extends_type_of", "present", "same_type_as"};
   static bool IsProhibitedFunction(std::string name) { return false; }
 };
 
 template <typename A>
-void CheckSpecificationExpr(const A &x, parser::ContextualMessages &messages,
-    const semantics::Scope &scope, const IntrinsicProcTable &table) {
-  if (auto why{CheckSpecificationExprHelper{scope, table}(x)}) {
-    messages.Say("Invalid specification expression: %s"_err_en_US, *why);
+void CheckSpecificationExpr(
+    const A &x, const semantics::Scope &scope, FoldingContext &context) {
+  if (auto why{CheckSpecificationExprHelper{scope, context}(x)}) {
+    context.messages().Say(
+        "Invalid specification expression: %s"_err_en_US, *why);
   }
 }
 
-template void CheckSpecificationExpr(const Expr<SomeType> &,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
-template void CheckSpecificationExpr(const Expr<SomeInteger> &,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
-template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
-template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
-template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(
-    const std::optional<Expr<SubscriptInteger>> &, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &);
+    const Expr<SomeType> &, const semantics::Scope &, FoldingContext &);
+template void CheckSpecificationExpr(
+    const Expr<SomeInteger> &, const semantics::Scope &, FoldingContext &);
+template void CheckSpecificationExpr(
+    const Expr<SubscriptInteger> &, const semantics::Scope &, FoldingContext &);
+template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
+    const semantics::Scope &, FoldingContext &);
+template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
+    const semantics::Scope &, FoldingContext &);
+template void CheckSpecificationExpr(
+    const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
+    FoldingContext &);
 
 // IsSimplyContiguous() -- 9.5.4
 class IsSimplyContiguousHelper
@@ -406,8 +529,8 @@ class IsSimplyContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsSimplyContiguousHelper, Result>;
-  explicit IsSimplyContiguousHelper(const IntrinsicProcTable &t)
-      : Base{*this}, table_{t} {}
+  explicit IsSimplyContiguousHelper(FoldingContext &c)
+      : Base{*this}, context_{c} {}
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
@@ -448,7 +571,7 @@ public:
 
   template <typename T> Result operator()(const FunctionRef<T> &x) const {
     if (auto chars{
-            characteristics::Procedure::Characterize(x.proc(), table_)}) {
+            characteristics::Procedure::Characterize(x.proc(), context_)}) {
       if (chars->functionResult) {
         const auto &result{*chars->functionResult};
         return !result.IsProcedurePointer() &&
@@ -487,20 +610,37 @@ private:
     return rank;
   }
 
-  const IntrinsicProcTable &table_;
+  FoldingContext &context_;
 };
 
 template <typename A>
-bool IsSimplyContiguous(const A &x, const IntrinsicProcTable &table) {
+bool IsSimplyContiguous(const A &x, FoldingContext &context) {
   if (IsVariable(x)) {
-    auto known{IsSimplyContiguousHelper{table}(x)};
+    auto known{IsSimplyContiguousHelper{context}(x)};
     return known && *known;
   } else {
     return true; // not a variable
   }
 }
 
-template bool IsSimplyContiguous(
-    const Expr<SomeType> &, const IntrinsicProcTable &);
+template bool IsSimplyContiguous(const Expr<SomeType> &, FoldingContext &);
+
+// IsErrorExpr()
+struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {
+  using Result = bool;
+  using Base = AnyTraverse<IsErrorExprHelper, Result>;
+  IsErrorExprHelper() : Base{*this} {}
+  using Base::operator();
+
+  bool operator()(const SpecificIntrinsic &x) {
+    return x.name == IntrinsicProcTable::InvalidName;
+  }
+};
+
+template <typename A> bool IsErrorExpr(const A &x) {
+  return IsErrorExprHelper{}(x);
+}
+
+template bool IsErrorExpr(const Expr<SomeType> &);
 
 } // namespace Fortran::evaluate
