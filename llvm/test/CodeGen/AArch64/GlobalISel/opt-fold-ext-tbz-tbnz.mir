@@ -78,8 +78,9 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $h0
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, $h0, %subreg.hsub
-  ; CHECK:   %copy:gpr32 = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   TBNZW %copy, 3, %bb.1
+  ; CHECK:   %copy:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy
+  ; CHECK:   TBNZW [[COPY]], 3, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
