@@ -1284,7 +1284,7 @@ public:
 
   ValueDecl *getDecl() { return D; }
   const ValueDecl *getDecl() const { return D; }
-  void setDecl(ValueDecl *NewD) { D = NewD; }
+  void setDecl(ValueDecl *NewD);
 
   DeclarationNameInfo getNameInfo() const {
     return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);
@@ -3167,7 +3167,7 @@ public:
   /// The returned declaration will be a FieldDecl or (in C++) a VarDecl (for
   /// static data members), a CXXMethodDecl, or an EnumConstantDecl.
   ValueDecl *getMemberDecl() const { return MemberDecl; }
-  void setMemberDecl(ValueDecl *D) { MemberDecl = D; }
+  void setMemberDecl(ValueDecl *D);
 
   /// Retrieves the declaration found by lookup.
   DeclAccessPair getFoundDecl() const {

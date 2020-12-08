@@ -486,6 +486,11 @@ DeclRefExpr *DeclRefExpr::CreateEmpty(const ASTContext &Context,
   return new (Mem) DeclRefExpr(EmptyShell());
 }
 
+void DeclRefExpr::setDecl(ValueDecl *NewD) {
+  D = NewD;
+  setDependence(computeDependence(this, NewD->getASTContext()));
+}
+
 SourceLocation DeclRefExpr::getBeginLoc() const {
   if (hasQualifier())
     return getQualifierLoc().getBeginLoc();
@@ -1570,6 +1575,11 @@ MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
                                             NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(MemberExpr));
   return new (Mem) MemberExpr(EmptyShell());
+}
+
+void MemberExpr::setMemberDecl(ValueDecl *D) {
+  MemberDecl = D;
+  setDependence(computeDependence(this));
 }
 
 SourceLocation MemberExpr::getBeginLoc() const {
