@@ -10,7 +10,9 @@ namespace {
 class TestCheck : public ClangTidyCheck {
 public:
   TestCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context) {
+    diag("DiagWithNoLoc");
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {
     Finder->addMatcher(ast_matchers::varDecl().bind("var"), this);
   }
@@ -26,9 +28,10 @@ public:
 TEST(ClangTidyDiagnosticConsumer, SortsErrors) {
   std::vector<ClangTidyError> Errors;
   runCheckOnCode<TestCheck>("int a;", &Errors);
-  EXPECT_EQ(2ul, Errors.size());
-  EXPECT_EQ("type specifier", Errors[0].Message.Message);
-  EXPECT_EQ("variable", Errors[1].Message.Message);
+  EXPECT_EQ(3ul, Errors.size());
+  EXPECT_EQ("DiagWithNoLoc", Errors[0].Message.Message);
+  EXPECT_EQ("type specifier", Errors[1].Message.Message);
+  EXPECT_EQ("variable", Errors[2].Message.Message);
 }
 
 } // namespace test

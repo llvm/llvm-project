@@ -97,7 +97,7 @@ PreferMemberInitializerCheck::PreferMemberInitializerCheck(
       IsUseDefaultMemberInitEnabled(
           Context->isCheckEnabled("modernize-use-default-member-init")),
       UseAssignment(OptionsView("modernize-use-default-member-init",
-                                Context->getOptions().CheckOptions)
+                                Context->getOptions().CheckOptions, Context)
                         .get("UseAssignment", false)) {}
 
 void PreferMemberInitializerCheck::storeOptions(
