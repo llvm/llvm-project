@@ -271,6 +271,12 @@ void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
 //===----------------------------------------------------------------------===//
 // AssumingAllOp
 //===----------------------------------------------------------------------===//
+
+void AssumingAllOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<AssumingAllOneOp>(context);
+}
+
 OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
   // Iterate in reverse to first handle all constant operands. They are
   // guaranteed to be the tail of the inputs because this is commutative.
@@ -393,6 +399,11 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
 }
 
 OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
+
+void ConstShapeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<TensorCastConstShape>(context);
+}
 
 //===----------------------------------------------------------------------===//
 // CstrBroadcastableOp

@@ -105,6 +105,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Shape_ConstSizeOp : Shape_Op<"const_size", [
@@ -630,6 +631,7 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let assemblyFormat = "$inputs attr-dict";
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 
   let verifier = [{ return ::verify(*this); }];
 }
