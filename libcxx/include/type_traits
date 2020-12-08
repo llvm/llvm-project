@@ -1821,7 +1821,7 @@ template <typename _Tp>
 static void __test_noexcept(_Tp) noexcept;
 
 template<typename _Fm, typename _To>
-static bool_constant<noexcept(__test_noexcept<_To>(declval<_Fm>()))>
+static bool_constant<noexcept(_VSTD::__test_noexcept<_To>(declval<_Fm>()))>
 __is_nothrow_convertible_test();
 
 template <typename _Fm, typename _To>
@@ -3293,7 +3293,7 @@ void __implicit_conversion_to(_Tp) noexcept { }
 
 template <class _Tp, class _Arg>
 struct __libcpp_is_nothrow_constructible</*is constructible*/true, /*is reference*/true, _Tp, _Arg>
-    : public integral_constant<bool, noexcept(__implicit_conversion_to<_Tp>(declval<_Arg>()))>
+    : public integral_constant<bool, noexcept(_VSTD::__implicit_conversion_to<_Tp>(declval<_Arg>()))>
 {
 };
 

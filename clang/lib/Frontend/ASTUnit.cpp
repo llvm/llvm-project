@@ -2237,28 +2237,30 @@ void ASTUnit::CodeComplete(
     = new AugmentedCodeCompleteConsumer(*this, Consumer, CodeCompleteOpts);
   Clang->setCodeCompletionConsumer(AugmentedConsumer);
 
+  auto getUniqueID =
+      [&FileMgr](StringRef Filename) -> Optional<llvm::sys::fs::UniqueID> {
+    if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
+      return Status->getUniqueID();
+    return None;
+  };
+
+  auto hasSameUniqueID = [getUniqueID](StringRef LHS, StringRef RHS) {
+    if (LHS == RHS)
+      return true;
+    if (auto LHSID = getUniqueID(LHS))
+      if (auto RHSID = getUniqueID(RHS))
+        return *LHSID == *RHSID;
+    return false;
+  };
+
   // If we have a precompiled preamble, try to use it. We only allow
   // the use of the precompiled preamble if we're if the completion
   // point is within the main file, after the end of the precompiled
   // preamble.
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
-  if (Preamble) {
-    std::string CompleteFilePath(File);
-
-    auto &VFS = FileMgr.getVirtualFileSystem();
-    auto CompleteFileStatus = VFS.status(CompleteFilePath);
-    if (CompleteFileStatus) {
-      llvm::sys::fs::UniqueID CompleteFileID = CompleteFileStatus->getUniqueID();
-
-      std::string MainPath(OriginalSourceFile);
-      auto MainStatus = VFS.status(MainPath);
-      if (MainStatus) {
-        llvm::sys::fs::UniqueID MainID = MainStatus->getUniqueID();
-        if (CompleteFileID == MainID && Line > 1)
-          OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-              PCHContainerOps, Inv, &VFS, false, Line - 1);
-      }
-    }
+  if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
+    OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
+        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,

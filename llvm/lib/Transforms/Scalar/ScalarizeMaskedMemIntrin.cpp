@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -41,12 +42,13 @@ using namespace llvm;
 
 namespace {
 
-class ScalarizeMaskedMemIntrin : public FunctionPass {
+class ScalarizeMaskedMemIntrinLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit ScalarizeMaskedMemIntrin() : FunctionPass(ID) {
-    initializeScalarizeMaskedMemIntrinPass(*PassRegistry::getPassRegistry());
+  explicit ScalarizeMaskedMemIntrinLegacyPass() : FunctionPass(ID) {
+    initializeScalarizeMaskedMemIntrinLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override;
@@ -68,13 +70,13 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                              const TargetTransformInfo &TTI,
                              const DataLayout &DL);
 
-char ScalarizeMaskedMemIntrin::ID = 0;
+char ScalarizeMaskedMemIntrinLegacyPass::ID = 0;
 
-INITIALIZE_PASS(ScalarizeMaskedMemIntrin, DEBUG_TYPE,
+INITIALIZE_PASS(ScalarizeMaskedMemIntrinLegacyPass, DEBUG_TYPE,
                 "Scalarize unsupported masked memory intrinsics", false, false)
 
-FunctionPass *llvm::createScalarizeMaskedMemIntrinPass() {
-  return new ScalarizeMaskedMemIntrin();
+FunctionPass *llvm::createScalarizeMaskedMemIntrinLegacyPass() {
+  return new ScalarizeMaskedMemIntrinLegacyPass();
 }
 
 static bool isConstantIntVector(Value *Mask) {
@@ -821,13 +823,10 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
   ModifiedDT = true;
 }
 
-bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
+static bool runImpl(Function &F, const TargetTransformInfo &TTI) {
   bool EverMadeChange = false;
-
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &DL = F.getParent()->getDataLayout();
-
   bool MadeChange = true;
+  auto &DL = F.getParent()->getDataLayout();
   while (MadeChange) {
     MadeChange = false;
     for (Function::iterator I = F.begin(); I != F.end();) {
@@ -842,8 +841,22 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
 
     EverMadeChange |= MadeChange;
   }
-
   return EverMadeChange;
+}
+
+bool ScalarizeMaskedMemIntrinLegacyPass::runOnFunction(Function &F) {
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return runImpl(F, TTI);
+}
+
+PreservedAnalyses
+ScalarizeMaskedMemIntrinPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (!runImpl(F, TTI))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<TargetIRAnalysis>();
+  return PA;
 }
 
 static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,

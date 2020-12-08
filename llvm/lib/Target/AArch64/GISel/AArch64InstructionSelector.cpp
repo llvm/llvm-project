@@ -1033,8 +1033,12 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
   // By default, we'll try and emit a CSEL.
   unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
   bool Optimized = false;
-  auto TryFoldBinOpIntoSelect = [&Opc, Is32Bit, &CC, &MRI](Register &Reg,
-                                                           bool Invert) {
+  auto TryFoldBinOpIntoSelect = [&Opc, Is32Bit, &CC, &MRI,
+                                 &Optimized](Register &Reg, Register &OtherReg,
+                                             bool Invert) {
+    if (Optimized)
+      return false;
+
     // Attempt to fold:
     //
     // %sub = G_SUB 0, %x
@@ -1046,8 +1050,10 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     if (mi_match(Reg, MRI, m_Neg(m_Reg(MatchReg)))) {
       Opc = Is32Bit ? AArch64::CSNEGWr : AArch64::CSNEGXr;
       Reg = MatchReg;
-      if (Invert)
+      if (Invert) {
         CC = AArch64CC::getInvertedCondCode(CC);
+        std::swap(Reg, OtherReg);
+      }
       return true;
     }
 
@@ -1061,8 +1067,10 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     if (mi_match(Reg, MRI, m_Not(m_Reg(MatchReg)))) {
       Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
       Reg = MatchReg;
-      if (Invert)
+      if (Invert) {
         CC = AArch64CC::getInvertedCondCode(CC);
+        std::swap(Reg, OtherReg);
+      }
       return true;
     }
 
@@ -1076,8 +1084,10 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     if (mi_match(Reg, MRI, m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)))) {
       Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
       Reg = MatchReg;
-      if (Invert)
+      if (Invert) {
         CC = AArch64CC::getInvertedCondCode(CC);
+        std::swap(Reg, OtherReg);
+      }
       return true;
     }
 
@@ -1159,8 +1169,8 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     return false;
   };
 
-  Optimized |= TryFoldBinOpIntoSelect(False, /*Invert = */ false);
-  Optimized |= TryFoldBinOpIntoSelect(True, /*Invert = */ true);
+  Optimized |= TryFoldBinOpIntoSelect(False, True, /*Invert = */ false);
+  Optimized |= TryFoldBinOpIntoSelect(True, False, /*Invert = */ true);
   Optimized |= TryOptSelectCst();
   auto SelectInst = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
   constrainSelectedInstRegOperands(*SelectInst, TII, TRI, RBI);

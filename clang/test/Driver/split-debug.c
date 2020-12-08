@@ -17,11 +17,21 @@
 // RUN: %clang -### -c -target amdgcn-amd-amdhsa -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 
 /// -gsplit-dwarf is a no-op on a non-ELF platform.
-// RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
-// NOSPLIT-NOT: "-split-dwarf
+// RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=DARWIN
+// DARWIN:     "-debug-info-kind=standalone"
+// DARWIN-NOT: "-split-dwarf
 
-/// -gsplit-dwarf currently enables debug fission even without -g.
-// RUN: %clang -### -c -target x86_64 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+/// -gsplit-dwarf is a no-op if no -g is specified.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=G0
+
+/// -gno-split-dwarf disables debug fission.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gno-split-dwarf -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
+
+// NOSPLIT:     "-debug-info-kind=limited"
+// NOSPLIT-NOT: "-ggnu-pubnames"
+// NOSPLIT-NOT: "-split-dwarf
 
 /// Test -gsplit-dwarf=single.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g %s 2>&1 | FileCheck %s --check-prefix=SINGLE
@@ -59,8 +69,8 @@
 /// Interaction with -g0.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g0 -### %s 2>&1 | FileCheck %s --check-prefix=G0
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g0 %s 2>&1 | FileCheck %s --check-prefix=G0
-// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
-// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=SINGLE
+// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=G0
+// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=G0
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g0 -fsplit-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G0
 
 // G0-NOT: "-debug-info-kind=
@@ -69,7 +79,7 @@
 /// Interaction with -g1 (-gmlt).
 // RUN: %clang -### -S -target x86_64 -gsplit-dwarf -g1 %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
 // RUN: %clang -### -S -target x86_64 -gsplit-dwarf -g1 -fno-split-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
-// RUN: %clang -### -S -target x86_64 -gmlt -gsplit-dwarf -fno-split-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+// RUN: %clang -### -S -target x86_64 -gmlt -gsplit-dwarf -fno-split-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
 
 // G1_WITH_SPLIT: "-debug-info-kind=line-tables-only"
 // G1_WITH_SPLIT: "-split-dwarf-file"

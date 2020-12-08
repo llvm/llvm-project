@@ -552,7 +552,7 @@ FunctionPass *createInstSimplifyLegacyPass();
 // createScalarizeMaskedMemIntrinPass - Replace masked load, store, gather
 // and scatter intrinsics with scalar code when target doesn't support them.
 //
-FunctionPass *createScalarizeMaskedMemIntrinPass();
+FunctionPass *createScalarizeMaskedMemIntrinLegacyPass();
 } // End llvm namespace
 
 #endif

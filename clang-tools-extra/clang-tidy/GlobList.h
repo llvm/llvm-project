@@ -33,7 +33,7 @@ public:
 
   /// Returns \c true if the pattern matches \p S. The result is the last
   /// matching glob's Positive flag.
-  bool contains(StringRef S);
+  bool contains(StringRef S) const;
 
 private:
 

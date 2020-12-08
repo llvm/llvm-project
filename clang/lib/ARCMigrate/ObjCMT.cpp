@@ -2054,12 +2054,8 @@ template<> struct DenseMapInfo<EditEntry> {
     return Entry;
   }
   static unsigned getHashValue(const EditEntry& Val) {
-    llvm::FoldingSetNodeID ID;
-    ID.AddPointer(Val.File);
-    ID.AddInteger(Val.Offset);
-    ID.AddInteger(Val.RemoveLen);
-    ID.AddString(Val.Text);
-    return ID.ComputeHash();
+    return (unsigned)llvm::hash_combine(Val.File, Val.Offset, Val.RemoveLen,
+                                        Val.Text);
   }
   static bool isEqual(const EditEntry &LHS, const EditEntry &RHS) {
     return LHS.File == RHS.File &&
