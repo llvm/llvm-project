@@ -64,7 +64,6 @@ public:
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  ArrayRef<llvm::MachO::section_64> sectionHeaders;
   std::vector<SubsectionMap> subsections;
   // Provides an easy way to sort InputFiles deterministically.
   const int id;
@@ -80,15 +79,6 @@ protected:
   InputFile(Kind kind, const llvm::MachO::InterfaceFile &interface)
       : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
-  void parseSections(ArrayRef<llvm::MachO::section_64>);
-
-  void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
-                    bool subsectionsViaSymbols);
-
-  Symbol *parseNonSectionSymbol(const structs::nlist_64 &sym, StringRef name);
-
-  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
-
 private:
   const Kind fileKind;
   const StringRef name;
@@ -99,21 +89,26 @@ private:
 // .o file
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
+  ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
+  ArrayRef<llvm::MachO::section_64> sectionHeaders;
 
 private:
+  void parseSections(ArrayRef<llvm::MachO::section_64>);
+  void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
+                    bool subsectionsViaSymbols);
+  Symbol *parseNonSectionSymbol(const structs::nlist_64 &sym, StringRef name);
+  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
   void parseDebugInfo();
 };
 
 // command-line -sectcreate file
 class OpaqueFile : public InputFile {
 public:
-  explicit OpaqueFile(MemoryBufferRef mb, StringRef segName,
-                      StringRef sectName);
+  OpaqueFile(MemoryBufferRef mb, StringRef segName, StringRef sectName);
   static bool classof(const InputFile *f) { return f->kind() == OpaqueKind; }
 };
 
