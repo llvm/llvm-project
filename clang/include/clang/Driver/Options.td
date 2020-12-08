@@ -2287,7 +2287,7 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
   ResetBy<NegFlag>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
-  Flags<[NoXarchOption,CoreOption,CC1Option]>, Group<Action_Group>;
+  Flags<[NoXarchOption,CoreOption,CC1Option,FC1Option]>, Group<Action_Group>;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;
 def ftemplate_depth_EQ : Joined<["-"], "ftemplate-depth=">, Group<f_Group>;
 def ftemplate_depth_ : Joined<["-"], "ftemplate-depth-">, Group<f_Group>;
