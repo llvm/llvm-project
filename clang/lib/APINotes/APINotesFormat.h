@@ -252,7 +252,6 @@ struct StoredObjCSelector {
 } // namespace api_notes
 } // namespace clang
 
-
 namespace llvm {
   template<>
   struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
