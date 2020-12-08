@@ -200,9 +200,8 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_shared_ptr_arrays",
-    "values": { "c++17": int(201611) },
+    "values": { "c++17": int(201611) }, # "c++20": int(201707) # Enable this when we support arrays in std::make_shared
     "headers": ["memory"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_memory_resource",
     "values": { "c++17": int(201603) },
