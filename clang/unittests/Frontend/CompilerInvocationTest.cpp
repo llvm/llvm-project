@@ -88,7 +88,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNone) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_TRUE(Invocation.getCodeGenOpts().Autolink);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fautolink"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-autolink"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNegChange) {
@@ -98,7 +100,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNegChange) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_FALSE(Invocation.getCodeGenOpts().Autolink);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-autolink")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fautolink"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultTruePresentPosReset) {
@@ -120,7 +124,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNone) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-ginline-line-tables"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-inline-line-tables"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
@@ -130,7 +136,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_TRUE(Invocation.getCodeGenOpts().NoInlineLineTables);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gno-inline-line-tables")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-ginline-line-tables"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosReset) {
@@ -152,7 +160,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNoneX) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gcodeview-ghash"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-codeview-ghash"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
@@ -162,7 +172,9 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
   ASSERT_FALSE(Diags->hasErrorOccurred());
   ASSERT_TRUE(Invocation.getCodeGenOpts().CodeViewGHash);
 
-  // TODO: Test argument generation.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gcodeview-ghash")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-codeview-ghash"))));
 }
 
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegReset) {
