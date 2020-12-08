@@ -2656,14 +2656,12 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     return true;
   }
 
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
-    .addReg(IdxReg)
-    .addImm(AMDGPU::VGPRIndexMode::SRC0_ENABLE);
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstReg)
-    .addReg(SrcReg, 0, SubReg)
-    .addReg(SrcReg, RegState::Implicit)
-    .addReg(AMDGPU::M0, RegState::Implicit);
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
+  const MCInstrDesc &GPRIDXDesc =
+      TII.getIndirectGPRIDXPseudo(TRI.getRegSizeInBits(*SrcRC), true);
+  BuildMI(*BB, MI, DL, GPRIDXDesc, DstReg)
+      .addReg(SrcReg)
+      .addReg(IdxReg)
+      .addImm(SubReg);
 
   MI.eraseFromParent();
   return true;
@@ -2717,25 +2715,27 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   MachineBasicBlock *BB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  if (IndexMode) {
-    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
-      .addReg(IdxReg)
-      .addImm(AMDGPU::VGPRIndexMode::DST_ENABLE);
-  } else {
+  if (!IndexMode) {
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
       .addReg(IdxReg);
+
+    const MCInstrDesc &RegWriteOp = TII.getIndirectRegWriteMovRelPseudo(
+        VecSize, ValSize, VecRB->getID() == AMDGPU::SGPRRegBankID);
+    BuildMI(*BB, MI, DL, RegWriteOp, DstReg)
+        .addReg(VecReg)
+        .addReg(ValReg)
+        .addImm(SubReg);
+    MI.eraseFromParent();
+    return true;
   }
 
-  const MCInstrDesc &RegWriteOp
-    = TII.getIndirectRegWritePseudo(VecSize, ValSize,
-                                    VecRB->getID() == AMDGPU::SGPRRegBankID);
-  BuildMI(*BB, MI, DL, RegWriteOp, DstReg)
-    .addReg(VecReg)
-    .addReg(ValReg)
-    .addImm(SubReg);
-
-  if (IndexMode)
-    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
+  const MCInstrDesc &GPRIDXDesc =
+      TII.getIndirectGPRIDXPseudo(TRI.getRegSizeInBits(*VecRC), false);
+  BuildMI(*BB, MI, DL, GPRIDXDesc, DstReg)
+      .addReg(VecReg)
+      .addReg(ValReg)
+      .addReg(IdxReg)
+      .addImm(SubReg);
 
   MI.eraseFromParent();
   return true;
