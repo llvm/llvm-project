@@ -470,6 +470,7 @@ template <> struct hash<bool>;
 template <> struct hash<char>;
 template <> struct hash<signed char>;
 template <> struct hash<unsigned char>;
+template <> struct hash<char8_t>; // since C++20
 template <> struct hash<char16_t>;
 template <> struct hash<char32_t>;
 template <> struct hash<wchar_t>;
