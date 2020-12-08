@@ -96,6 +96,14 @@ public:
                          StringRef Message,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
+  DiagnosticBuilder diag(StringRef CheckName, StringRef Message,
+                         DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
+  /// Report any errors to do with reading the configuration using this method.
+  DiagnosticBuilder
+  configurationDiag(StringRef Message,
+                    DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
   /// Sets the \c SourceManager of the used \c DiagnosticsEngine.
   ///
   /// This is called from the \c ClangTidyCheck base class.
