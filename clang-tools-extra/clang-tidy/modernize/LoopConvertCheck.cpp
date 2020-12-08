@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
@@ -501,10 +500,10 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
       ReverseHeader(Options.get("MakeReverseRangeHeader", "")) {
 
   if (ReverseFunction.empty() && !ReverseHeader.empty()) {
-    llvm::WithColor::warning()
-        << "modernize-loop-convert: 'MakeReverseRangeHeader' is set but "
-           "'MakeReverseRangeFunction' is not, disabling reverse loop "
-           "transformation\n";
+    configurationDiag(
+        "modernize-loop-convert: 'MakeReverseRangeHeader' is set but "
+        "'MakeReverseRangeFunction' is not, disabling reverse loop "
+        "transformation");
     UseReverseRanges = false;
   } else if (ReverseFunction.empty()) {
     UseReverseRanges = UseCxx20IfAvailable && getLangOpts().CPlusPlus20;

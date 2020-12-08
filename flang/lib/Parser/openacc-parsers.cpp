@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Top-level grammar specification for OpenACC 3.0.
+// Top-level grammar specification for OpenACC 3.1.
 
 #include "basic-parsers.h"
 #include "expr-parsers.h"

@@ -53,6 +53,195 @@ program openacc_clause_validity
   !$acc init device_type(2, i, j)
   !$acc init device_num(i) device_type(i, j) if(ifCondition)
 
+  !$acc parallel
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc parallel
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc parallel
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
   !$acc set
 
@@ -220,6 +409,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: SEQ and AUTO clauses are mutually exclusive and may not appear on the same LOOP directive
+  !$acc loop auto seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop tile(2)
   do i = 1, N
     a(i) = 3.14
@@ -288,6 +485,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: At most one VECTOR clause can appear on the LOOP directive
+  !$acc loop vector vector(128)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop vector
   do i = 1, N
     a(i) = 3.14
@@ -316,6 +521,14 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: At most one WORKER clause can appear on the LOOP directive
+  !$acc loop worker worker(10)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop worker
   do i = 1, N
     a(i) = 3.14
@@ -338,6 +551,14 @@ program openacc_clause_validity
 
   !$acc parallel
   !$acc loop worker(num: worker_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: At most one GANG clause can appear on the LOOP directive
+  !$acc loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -523,6 +744,22 @@ program openacc_clause_validity
   !$acc parallel
   !ERROR: Clause GANG is not allowed if clause SEQ appears on the LOOP directive
   !$acc loop gang seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Clause WORKER is not allowed if clause SEQ appears on the LOOP directive
+  !$acc loop worker seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Clause VECTOR is not allowed if clause SEQ appears on the LOOP directive
+  !$acc loop vector seq
   do i = 1, N
     a(i) = 3.14
   end do

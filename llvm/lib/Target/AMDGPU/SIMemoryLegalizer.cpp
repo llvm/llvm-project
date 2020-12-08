@@ -1334,7 +1334,8 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
 
-      if (MI->getOpcode() == TargetOpcode::BUNDLE && MI->mayLoadOrStore()) {
+      // Unbundle instructions after the post-RA scheduler.
+      if (MI->isBundle()) {
         MachineBasicBlock::instr_iterator II(MI->getIterator());
         for (MachineBasicBlock::instr_iterator I = ++II, E = MBB.instr_end();
              I != E && I->isBundledWithPred(); ++I) {

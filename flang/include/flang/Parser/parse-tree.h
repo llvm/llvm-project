@@ -3781,7 +3781,7 @@ struct OpenMPConstruct {
       u;
 };
 
-// Parse tree nodes for OpenACC 3.0 directives and clauses
+// Parse tree nodes for OpenACC 3.1 directives and clauses
 
 struct AccObject {
   UNION_CLASS_BOILERPLATE(AccObject);

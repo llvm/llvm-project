@@ -1507,17 +1507,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_shared_ptr_arrays
-#     error "__cpp_lib_shared_ptr_arrays should be defined in c++17"
-#   endif
-#   if __cpp_lib_shared_ptr_arrays != 201611L
-#     error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++17"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_shared_ptr_arrays
-#     error "__cpp_lib_shared_ptr_arrays should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_shared_ptr_arrays
+#   error "__cpp_lib_shared_ptr_arrays should be defined in c++17"
+# endif
+# if __cpp_lib_shared_ptr_arrays != 201611L
+#   error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++17"
 # endif
 
 # ifndef __cpp_lib_shared_ptr_weak_type
@@ -2365,17 +2359,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_shared_ptr_arrays
-#     error "__cpp_lib_shared_ptr_arrays should be defined in c++2a"
-#   endif
-#   if __cpp_lib_shared_ptr_arrays != 201611L
-#     error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_shared_ptr_arrays
-#     error "__cpp_lib_shared_ptr_arrays should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_shared_ptr_arrays
+#   error "__cpp_lib_shared_ptr_arrays should be defined in c++2a"
+# endif
+# if __cpp_lib_shared_ptr_arrays != 201611L
+#   error "__cpp_lib_shared_ptr_arrays should have the value 201611L in c++2a"
 # endif
 
 # ifndef __cpp_lib_shared_ptr_weak_type

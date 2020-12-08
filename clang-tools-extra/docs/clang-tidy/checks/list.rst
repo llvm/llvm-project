@@ -265,6 +265,7 @@ Clang-Tidy Checks
    `performance-move-const-arg <performance-move-const-arg.html>`_, "Yes"
    `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
    `performance-no-automatic-move <performance-no-automatic-move.html>`_,
+   `performance-no-int-to-ptr <performance-no-int-to-ptr.html>`_,
    `performance-noexcept-move-constructor <performance-noexcept-move-constructor.html>`_, "Yes"
    `performance-trivially-destructible <performance-trivially-destructible.html>`_, "Yes"
    `performance-type-promotion-in-math-fn <performance-type-promotion-in-math-fn.html>`_, "Yes"

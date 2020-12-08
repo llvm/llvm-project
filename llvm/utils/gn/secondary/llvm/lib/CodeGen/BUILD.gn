@@ -169,7 +169,6 @@ static_library("CodeGen") {
     "ResetMachineFunctionPass.cpp",
     "SafeStack.cpp",
     "SafeStackLayout.cpp",
-    "ScalarizeMaskedMemIntrin.cpp",
     "ScheduleDAG.cpp",
     "ScheduleDAGInstrs.cpp",
     "ScheduleDAGPrinter.cpp",
