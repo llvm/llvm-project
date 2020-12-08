@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -19,7 +19,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -1349,19 +1348,6 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
 }
 
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
-  // Print the preferred name if we have one for this type.
-  if (const auto *Spec =
-          dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl())) {
-    for (const auto *PNA : Spec->getSpecializedTemplate()
-                               ->getTemplatedDecl()
-                               ->getMostRecentDecl()
-                               ->specific_attrs<PreferredNameAttr>()) {
-      if (declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(), Spec))
-        return printTypeSpec(
-            PNA->getTypedefType()->castAs<TypedefType>()->getDecl(), OS);
-    }
-  }
-
   printTag(T->getDecl(), OS);
 }
 

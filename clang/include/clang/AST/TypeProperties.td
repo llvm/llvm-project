@@ -484,12 +484,8 @@ let Class = TagType in {
     let Read = [{ node->isDependentType() }];
   }
   def : Property<"declaration", DeclRef> {
-    // We don't know which declaration was originally referenced here, and we
-    // cannot reference a declaration that follows the use (because that can
-    // introduce deserialization cycles), so conservatively generate a
-    // reference to the first declaration.
-    // FIXME: If this is a reference to a class template specialization, that
-    // can still introduce a deserialization cycle.
+    // Serializing a reference to the canonical declaration is apparently
+    // necessary to make module-merging work.
     let Read = [{ node->getDecl()->getCanonicalDecl() }];
   }
 }

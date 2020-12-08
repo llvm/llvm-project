@@ -1380,43 +1380,6 @@ static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
 }
 
-static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *RD = cast<CXXRecordDecl>(D);
-  ClassTemplateDecl *CTD = RD->getDescribedClassTemplate();
-  assert(CTD && "attribute does not appertain to this declaration");
-
-  ParsedType PT = AL.getTypeArg();
-  TypeSourceInfo *TSI = nullptr;
-  QualType T = S.GetTypeFromParser(PT, &TSI);
-  if (!TSI)
-    TSI = S.Context.getTrivialTypeSourceInfo(T, AL.getLoc());
-
-  if (!T.hasQualifiers() && T->getAs<TypedefType>()) {
-    // Find the template name, if this type names a template specialization.
-    const TemplateDecl *Template = nullptr;
-    if (const auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
-            T->getAsCXXRecordDecl())) {
-      Template = CTSD->getSpecializedTemplate();
-    } else if (const auto *TST = T->getAs<TemplateSpecializationType>()) {
-      while (TST && TST->isTypeAlias())
-        TST = TST->getAliasedType()->getAs<TemplateSpecializationType>();
-      if (TST)
-        Template = TST->getTemplateName().getAsTemplateDecl();
-    }
-
-    if (Template && declaresSameEntity(Template, CTD)) {
-      D->addAttr(::new (S.Context) PreferredNameAttr(S.Context, AL, TSI));
-      return;
-    }
-  }
-
-  S.Diag(AL.getLoc(), diag::err_attribute_preferred_name_arg_invalid)
-      << T << CTD;
-  if (const auto *TT = T->getAs<TypedefType>())
-    S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
-        << TT->getDecl();
-}
-
 static bool checkIBOutletCommon(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The IBOutlet/IBOutletCollection attributes only apply to instance
   // variables or properties of Objective-C classes.  The outlet must also
@@ -7814,9 +7777,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_Packed:
     handlePackedAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_PreferredName:
-    handlePreferredName(S, D, AL);
     break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
