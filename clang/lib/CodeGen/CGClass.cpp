@@ -2820,7 +2820,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    EmitTrapCheck(TypeTest);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail);
     return;
   }
 
