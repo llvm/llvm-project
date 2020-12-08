@@ -258,6 +258,14 @@ private:
   MachineInstr *emitCSetForFCmp(Register Dst, CmpInst::Predicate Pred,
                                 MachineIRBuilder &MIRBuilder) const;
 
+  /// Emit the overflow op for \p Opcode.
+  ///
+  /// \p Opcode is expected to be an overflow op's opcode, e.g. G_UADDO,
+  /// G_USUBO, etc.
+  std::pair<MachineInstr *, AArch64CC::CondCode>
+  emitOverflowOp(unsigned Opcode, Register Dst, MachineOperand &LHS,
+                 MachineOperand &RHS, MachineIRBuilder &MIRBuilder) const;
+
   /// Emit a TB(N)Z instruction which tests \p Bit in \p TestReg.
   /// \p IsNegative is true if the test should be "not zero".
   /// This will also optimize the test bit instruction when possible.
@@ -2672,35 +2680,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_UADDO: {
-    // TODO: Support other types.
-    unsigned OpSize = Ty.getSizeInBits();
-    if (OpSize != 32 && OpSize != 64) {
-      LLVM_DEBUG(
-          dbgs()
-          << "G_UADDO currently only supported for 32 and 64 b types.\n");
-      return false;
-    }
-
-    // TODO: Support vectors.
-    if (Ty.isVector()) {
-      LLVM_DEBUG(dbgs() << "G_UADDO currently only supported for scalars.\n");
-      return false;
-    }
-
-    // Add and set the set condition flag.
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_SSUBO: {
+    // Emit the operation and get the correct condition code.
     MachineIRBuilder MIRBuilder(I);
-    emitADDS(I.getOperand(0).getReg(), I.getOperand(2), I.getOperand(3),
-             MIRBuilder);
+    auto OpAndCC = emitOverflowOp(Opcode, I.getOperand(0).getReg(),
+                                  I.getOperand(2), I.getOperand(3), MIRBuilder);
 
     // Now, put the overflow result in the register given by the first operand
-    // to the G_UADDO. CSINC increments the result when the predicate is false,
-    // so to get the increment when it's true, we need to use the inverse. In
-    // this case, we want to increment when carry is set.
+    // to the overflow op. CSINC increments the result when the predicate is
+    // false, so to get the increment when it's true, we need to use the
+    // inverse. In this case, we want to increment when carry is set.
+    Register ZReg = AArch64::WZR;
     auto CsetMI = MIRBuilder
                       .buildInstr(AArch64::CSINCWr, {I.getOperand(1).getReg()},
-                                  {Register(AArch64::WZR), Register(AArch64::WZR)})
-                      .addImm(getInvertedCondCode(AArch64CC::HS));
+                                  {ZReg, ZReg})
+                      .addImm(getInvertedCondCode(OpAndCC.second));
     constrainSelectedInstRegOperands(*CsetMI, TII, TRI, RBI);
     I.eraseFromParent();
     return true;
@@ -4285,6 +4281,23 @@ AArch64InstructionSelector::emitCSetForICMP(Register DefReg, unsigned Pred,
           .addImm(InvCC);
   constrainSelectedInstRegOperands(*I, TII, TRI, RBI);
   return &*I;
+}
+
+std::pair<MachineInstr *, AArch64CC::CondCode>
+AArch64InstructionSelector::emitOverflowOp(unsigned Opcode, Register Dst,
+                                           MachineOperand &LHS,
+                                           MachineOperand &RHS,
+                                           MachineIRBuilder &MIRBuilder) const {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case TargetOpcode::G_SADDO:
+    return std::make_pair(emitADDS(Dst, LHS, RHS, MIRBuilder), AArch64CC::VS);
+  case TargetOpcode::G_UADDO:
+    return std::make_pair(emitADDS(Dst, LHS, RHS, MIRBuilder), AArch64CC::HS);
+  case TargetOpcode::G_SSUBO:
+    return std::make_pair(emitSUBS(Dst, LHS, RHS, MIRBuilder), AArch64CC::VS);
+  }
 }
 
 bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
