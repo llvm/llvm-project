@@ -59,6 +59,44 @@ def ImmROTL2RW : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+// Checks if this mask has a single 0 bit and cannot be used with ANDI.
+def SBCLRMask : ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return !isInt<12>(Imm) && isPowerOf2_64(~Imm);
+  return !isInt<12>(Imm) && isPowerOf2_32(~Imm);
+}]>;
+
+// Checks if this mask has a single 1 bit and cannot be used with ORI/XORI.
+def SBSETINVMask : ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return !isInt<12>(Imm) && isPowerOf2_64(Imm);
+  return !isInt<12>(Imm) && isPowerOf2_32(Imm);
+}]>;
+
+def SBCLRXForm : SDNodeXForm<imm, [{
+  // Find the lowest 0.
+  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingOnes(),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+def SBSETINVXForm : SDNodeXForm<imm, [{
+  // Find the lowest 1.
+  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+// Similar to above, but makes sure the immediate has 33 sign bits. When used
+// with an AND/OR/XOR where the other operand has at least 33 sign bits, the
+// result will have 33 sign bits. This can match SBCLRIW/SBSETIW/SBINVIW.
+def SBCLRWMask : ImmLeaf<i64, [{
+  // After checking the sign bits, truncate to 32 bits for power of 2 check.
+  return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(~Imm);
+}]>;
+
+def SBSETINVWMask : ImmLeaf<i64, [{
+  return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(Imm);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -692,6 +730,13 @@ def : Pat<(and (shiftop<srl> GPR:$rs1, GPR:$rs2), 1),
 
 def : Pat<(shiftop<shl> 1, GPR:$rs2),
           (SBSET X0, GPR:$rs2)>;
+
+def : Pat<(and GPR:$rs1, SBCLRMask:$mask),
+          (SBCLRI GPR:$rs1, (SBCLRXForm imm:$mask))>;
+def : Pat<(or GPR:$rs1, SBSETINVMask:$mask),
+          (SBSETI GPR:$rs1, (SBSETINVXForm imm:$mask))>;
+def : Pat<(xor GPR:$rs1, SBSETINVMask:$mask),
+          (SBINVI GPR:$rs1, (SBSETINVXForm imm:$mask))>;
 }
 
 let Predicates = [HasStdExtZbb] in {
@@ -902,6 +947,14 @@ def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
 
 def : Pat<(riscv_sllw 1, GPR:$rs2),
           (SBSETW X0, GPR:$rs2)>;
+
+def : Pat<(and (assertsexti32 GPR:$rs1), SBCLRWMask:$mask),
+          (SBCLRIW GPR:$rs1, (SBCLRXForm imm:$mask))>;
+def : Pat<(or (assertsexti32 GPR:$rs1), SBSETINVWMask:$mask),
+          (SBSETIW GPR:$rs1, (SBSETINVXForm imm:$mask))>;
+def : Pat<(xor (assertsexti32 GPR:$rs1), SBSETINVWMask:$mask),
+          (SBINVIW GPR:$rs1, (SBSETINVXForm imm:$mask))>;
+
 } // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
