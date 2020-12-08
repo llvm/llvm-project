@@ -254,15 +254,24 @@ declare void @foo4(...)
 declare void @foo5(...)
 
 ;; Check TLS references
-@tlsptr = external thread_local global i32*
-@tlsdst = external thread_local global i32
-@tlssrc = external thread_local global i32
+@tlsptrgd = thread_local global i32* null
+@tlsdstgd = thread_local global i32 0
+@tlssrcgd = thread_local global i32 0
+@tlsptrld = thread_local(localdynamic) global i32* null
+@tlsdstld = thread_local(localdynamic) global i32 0
+@tlssrcld = thread_local(localdynamic) global i32 0
+@tlsptrie = thread_local(initialexec) global i32* null
+@tlsdstie = thread_local(initialexec) global i32 0
+@tlssrcie = thread_local(initialexec) global i32 0
+@tlsptrle = thread_local(localexec) global i32* null
+@tlsdstle = thread_local(localexec) global i32 0
+@tlssrcle = thread_local(localexec) global i32 0
 
 define void @test8() nounwind {
 entry:
-    store i32* @tlsdst, i32** @tlsptr
-    %tmp.s = load i32, i32* @tlssrc
-    store i32 %tmp.s, i32* @tlsdst
+    store i32* @tlsdstgd, i32** @tlsptrgd
+    %tmp.s = load i32, i32* @tlssrcgd
+    store i32 %tmp.s, i32* @tlsdstgd
     ret void
 
 ; CHECK-LABEL:	test8:
@@ -270,18 +279,95 @@ entry:
 ; CHECK-I686-NEXT:	.L8$pb:
 ; CHECK-I686-NEXT:	popl
 ; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L8$pb), %ebx
-; CHECK-I686-DAG:	leal	tlsdst@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	leal	tlsdstgd@TLSGD(,%ebx), %eax
 ; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
-; CHECK-I686-DAG:	leal	tlsptr@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	leal	tlsptrgd@TLSGD(,%ebx), %eax
 ; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
-; CHECK-I686-DAG:	leal	tlssrc@TLSGD(,%ebx), %eax
+; CHECK-I686-DAG:	leal	tlssrcgd@TLSGD(,%ebx), %eax
 ; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
-; CHECK-X32-DAG:	leaq	tlsdst@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	leaq	tlsdstgd@TLSGD(%rip), %rdi
 ; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
-; CHECK-X32-DAG:	leaq	tlsptr@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	leaq	tlsptrgd@TLSGD(%rip), %rdi
 ; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
-; CHECK-X32-DAG:	leaq	tlssrc@TLSGD(%rip), %rdi
+; CHECK-X32-DAG:	leaq	tlssrcgd@TLSGD(%rip), %rdi
 ; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
+; CHECK-I686:	ret
+; CHECK-X32:	retq
+}
+
+define void @test9() nounwind {
+entry:
+    store i32* @tlsdstld, i32** @tlsptrld
+    %tmp.s = load i32, i32* @tlssrcld
+    store i32 %tmp.s, i32* @tlsdstld
+    ret void
+
+; CHECK-LABEL:	test9:
+; CHECK-I686:	calll	.L9$pb
+; CHECK-I686-NEXT:	.L9$pb:
+; CHECK-I686-NEXT:	popl
+; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L9$pb), %ebx
+; CHECK-I686:	leal	tlsdstld@TLSLDM(%ebx), %eax
+; CHECK-X32:	leaq	tlsdstld@TLSLD(%rip), %rdi
+; CHECK-I686:	calll	___tls_get_addr@PLT
+; CHECK-X32:	callq	__tls_get_addr@PLT
+; CHECK:	leal	tlsdstld@DTPOFF(
+; CHECK:	movl	{{%.*}}, tlsptrld@DTPOFF(
+; CHECK:	movl	tlssrcld@DTPOFF(
+; CHECK:	movl	{{%.*}}, tlsdstld@DTPOFF(
+; CHECK-I686:	ret
+; CHECK-X32:	retq
+}
+
+define void @test10() nounwind {
+entry:
+    store i32* @tlsdstie, i32** @tlsptrie
+    %tmp.s = load i32, i32* @tlssrcie
+    store i32 %tmp.s, i32* @tlsdstie
+    ret void
+
+; CHECK-LABEL:	test10:
+; CHECK-I686:	calll	.L10$pb
+; CHECK-I686-NEXT:	.L10$pb:
+; CHECK-I686-NEXT:	popl
+; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L10$pb),
+; CHECK-I686-DAG:	movl	tlsdstie@GOTNTPOFF(
+; CHECK-I686-DAG:	movl	%gs:0,
+; CHECK-X32-DAG:	movl	tlsdstie@GOTTPOFF(%rip),
+; CHECK-X32-DAG:	movl	%fs:0,
+; CHECK:	addl
+; CHECK-I686:	movl	tlsptrie@GOTNTPOFF(
+; CHECK-X32:	movl	tlsptrie@GOTTPOFF(%rip),
+; CHECK-I686:	movl	{{%.*}}, %gs:(
+; CHECK-X32:	movl	{{%.*}}, %fs:(
+; CHECK-I686:	movl	tlssrcie@GOTNTPOFF(
+; CHECK-X32:	movl	tlssrcie@GOTTPOFF(%rip),
+; CHECK-I686:	movl	%gs:(
+; CHECK-X32:	movl	%fs:(
+; CHECK-I686:	movl	{{%.*}}, %gs:(
+; CHECK-X32:	movl	{{%.*}}, %fs:(
+; CHECK-I686:	ret
+; CHECK-X32:	retq
+}
+
+define void @test11() nounwind {
+entry:
+    store i32* @tlsdstle, i32** @tlsptrle
+    %tmp.s = load i32, i32* @tlssrcle
+    store i32 %tmp.s, i32* @tlsdstle
+    ret void
+
+; CHECK-LABEL:	test11:
+; CHECK-I686:	movl	%gs:0,
+; CHECK-X32:	movl	%fs:0,
+; CHECK-I686:	leal	tlsdstle@NTPOFF(
+; CHECK-X32:	leal	tlsdstle@TPOFF(
+; CHECK-I686:	movl	{{%.*}}, %gs:tlsptrle@NTPOFF
+; CHECK-X32:	movl	{{%.*}}, %fs:tlsptrle@TPOFF
+; CHECK-I686:	movl	%gs:tlssrcle@NTPOFF,
+; CHECK-X32:	movl	%fs:tlssrcle@TPOFF,
+; CHECK-I686:	movl	{{%.*}}, %gs:tlsdstle@NTPOFF
+; CHECK-X32:	movl	{{%.*}}, %fs:tlsdstle@TPOFF
 ; CHECK-I686:	ret
 ; CHECK-X32:	retq
 }
