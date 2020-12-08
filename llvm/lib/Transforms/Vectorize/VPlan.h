@@ -163,7 +163,6 @@ public:
     assert(Instance.Part < UF && "Queried Scalar Part is too large.");
     assert(Instance.Lane < VF.getKnownMinValue() &&
            "Queried Scalar Lane is too large.");
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
 
     if (!hasAnyScalarValue(Key))
       return false;
