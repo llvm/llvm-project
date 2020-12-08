@@ -3873,6 +3873,12 @@ struct AccSizeExprList {
   WRAPPER_CLASS_BOILERPLATE(AccSizeExprList, std::list<AccSizeExpr>);
 };
 
+struct AccSelfClause {
+  UNION_CLASS_BOILERPLATE(AccSelfClause);
+  std::variant<std::optional<ScalarLogicalExpr>, AccObjectList> u;
+  CharBlock source;
+};
+
 struct AccGangArgument {
   TUPLE_CLASS_BOILERPLATE(AccGangArgument);
   std::tuple<std::optional<ScalarIntExpr>, std::optional<AccSizeExpr>> t;
