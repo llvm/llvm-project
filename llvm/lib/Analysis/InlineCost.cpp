@@ -2332,6 +2332,13 @@ Optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (!Callee)
     return InlineResult::failure("indirect call");
 
+  // When callee coroutine function is inlined into caller coroutine function
+  // before coro-split pass,
+  // coro-early pass can not handle this quiet well.
+  // So we won't inline the coroutine function if it have not been unsplited
+  if (Callee->isPresplitCoroutine())
+    return InlineResult::failure("unsplited coroutine call");
+
   // Never inline calls with byval arguments that does not have the alloca
   // address space. Since byval arguments can be replaced with a copy to an
   // alloca, the inlined code would need to be adjusted to handle that the
