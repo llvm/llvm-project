@@ -166,6 +166,10 @@ TEST(CheckOptionsValidation, MissingOptions) {
   ClangTidyOptions Options;
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,
+                       &DiagConsumer, false);
+  Context.setDiagnosticsEngine(&DE);
   TestCheck TestCheck(&Context);
   CHECK_ERROR(TestCheck.getLocal("Opt"), MissingOptionError,
               "option not found 'test.Opt'");
@@ -191,6 +195,10 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,
+                       &DiagConsumer, false);
+  Context.setDiagnosticsEngine(&DE);
   TestCheck TestCheck(&Context);
 
 #define CHECK_ERROR_INT(Name, Expected)                                        \

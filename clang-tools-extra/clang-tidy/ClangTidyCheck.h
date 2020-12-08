@@ -176,6 +176,15 @@ public:
   DiagnosticBuilder diag(SourceLocation Loc, StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
+  /// Add a diagnostic with the check's name.
+  DiagnosticBuilder diag(StringRef Description,
+                         DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
+  /// Adds a diagnostic to report errors in the check's configuration.
+  DiagnosticBuilder
+  configurationDiag(StringRef Description,
+                    DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+
   /// Should store all options supported by this check with their
   /// current values or default values for options that haven't been overridden.
   ///
@@ -192,7 +201,8 @@ public:
   public:
     /// Initializes the instance using \p CheckName + "." as a prefix.
     OptionsView(StringRef CheckName,
-                const ClangTidyOptions::OptionMap &CheckOptions);
+                const ClangTidyOptions::OptionMap &CheckOptions,
+                ClangTidyContext *Context);
 
     /// Read a named option from the ``Context``.
     ///
@@ -268,7 +278,7 @@ public:
       if (llvm::Expected<T> ValueOr = get<T>(LocalName))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -314,7 +324,7 @@ public:
       if (llvm::Expected<T> ValueOr = getLocalOrGlobal<T>(LocalName))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -353,7 +363,7 @@ public:
       if (auto ValueOr = get<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -395,7 +405,7 @@ public:
       if (auto ValueOr = getLocalOrGlobal<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -407,7 +417,7 @@ public:
       if (auto ValueOr = get<T>(LocalName))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return llvm::None;
     }
 
@@ -420,7 +430,7 @@ public:
       if (auto ValueOr = getLocalOrGlobal<T>(LocalName))
         return *ValueOr;
       else
-        logIfOptionParsingError(ValueOr.takeError());
+        reportOptionParsingError(ValueOr.takeError());
       return llvm::None;
     }
 
@@ -481,11 +491,12 @@ public:
     void storeInt(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
                   int64_t Value) const;
 
-    /// Logs an Error to stderr if a \p Err is not a MissingOptionError.
-    static void logIfOptionParsingError(llvm::Error &&Err);
+    /// Emits a diagnostic if \p Err is not a MissingOptionError.
+    void reportOptionParsingError(llvm::Error &&Err) const;
 
     std::string NamePrefix;
     const ClangTidyOptions::OptionMap &CheckOptions;
+    ClangTidyContext *Context;
   };
 
 private:
