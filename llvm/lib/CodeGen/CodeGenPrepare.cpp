@@ -473,12 +473,12 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   OptSize = F.hasOptSize();
   if (ProfileGuidedSectionPrefix) {
     if (PSI->isFunctionHotInCallGraph(&F, *BFI))
-      F.setSectionPrefix(".hot");
+      F.setSectionPrefix("hot");
     else if (PSI->isFunctionColdInCallGraph(&F, *BFI))
-      F.setSectionPrefix(".unlikely");
+      F.setSectionPrefix("unlikely");
     else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
              PSI->isFunctionHotnessUnknown(F))
-      F.setSectionPrefix(".unknown");
+      F.setSectionPrefix("unknown");
   }
 
   /// This optimization identifies DIV instructions that can be
