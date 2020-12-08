@@ -2065,13 +2065,30 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
 lldb::Format TypeSystemSwiftTypeRef::GetFormat(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetFormat(ReconstructType(type));
 }
+
 uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
-  return m_swift_ast_context->GetNumChildren(ReconstructType(type),
-                                             omit_empty_base_classes, exe_ctx);
+  auto impl = [&]() -> uint32_t {
+    if (!exe_ctx)
+      return 0;
+
+    // TODO: which of these should be logged on failure?
+    if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+      if (auto *runtime =
+              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+        if (auto num_children =
+                runtime->GetNumChildren(GetCanonicalType(type), nullptr))
+          return *num_children;
+
+    return 0;
+  };
+  VALIDATE_AND_RETURN(
+      impl, GetNumChildren, type,
+      (ReconstructType(type), omit_empty_base_classes, exe_ctx));
 }
+
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumFields(ReconstructType(type));
 }
