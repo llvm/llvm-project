@@ -356,14 +356,15 @@ private:
   getExtendTypeForInst(MachineInstr &MI, MachineRegisterInfo &MRI,
                        bool IsLoadStore = false) const;
 
-  /// Instructions that accept extend modifiers like UXTW expect the register
-  /// being extended to be a GPR32. Narrow ExtReg to a 32-bit register using a
-  /// subregister copy if necessary. Return either ExtReg, or the result of the
-  /// new copy.
-  Register narrowExtendRegIfNeeded(Register ExtReg,
-                                             MachineIRBuilder &MIB) const;
-  Register widenGPRBankRegIfNeeded(Register Reg, unsigned Size,
-                                   MachineIRBuilder &MIB) const;
+  /// Move \p Reg to \p RC if \p Reg is not already on \p RC.
+  ///
+  /// \returns Either \p Reg if no change was necessary, or the new register
+  /// created by moving \p Reg.
+  ///
+  /// Note: This uses emitCopy right now.
+  Register moveScalarRegClass(Register Reg, const TargetRegisterClass &RC,
+                              MachineIRBuilder &MIB) const;
+
   ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -1353,10 +1354,10 @@ MachineInstr *AArch64InstructionSelector::emitTestBit(
   // TBNZW work.
   bool UseWReg = Bit < 32;
   unsigned NecessarySize = UseWReg ? 32 : 64;
-  if (Size < NecessarySize)
-    TestReg = widenGPRBankRegIfNeeded(TestReg, NecessarySize, MIB);
-  else if (Size > NecessarySize)
-    TestReg = narrowExtendRegIfNeeded(TestReg, MIB);
+  if (Size != NecessarySize)
+    TestReg = moveScalarRegClass(
+        TestReg, UseWReg ? AArch64::GPR32RegClass : AArch64::GPR64RegClass,
+        MIB);
 
   static const unsigned OpcTable[2][2] = {{AArch64::TBZX, AArch64::TBNZX},
                                           {AArch64::TBZW, AArch64::TBNZW}};
@@ -5152,7 +5153,7 @@ AArch64InstructionSelector::selectExtendedSHL(
 
     // Need a 32-bit wide register here.
     MachineIRBuilder MIB(*MRI.getVRegDef(Root.getReg()));
-    OffsetReg = narrowExtendRegIfNeeded(OffsetReg, MIB);
+    OffsetReg = moveScalarRegClass(OffsetReg, AArch64::GPR32RegClass, MIB);
   }
 
   // We can use the LHS of the GEP as the base, and the LHS of the shift as an
@@ -5372,8 +5373,8 @@ AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
 
   // Need a 32-bit wide register.
   MachineIRBuilder MIB(*PtrAdd);
-  Register ExtReg =
-      narrowExtendRegIfNeeded(OffsetInst->getOperand(1).getReg(), MIB);
+  Register ExtReg = moveScalarRegClass(OffsetInst->getOperand(1).getReg(),
+                                       AArch64::GPR32RegClass, MIB);
   unsigned SignExtend = Ext == AArch64_AM::SXTW;
 
   // Base is LHS, offset is ExtReg.
@@ -5647,65 +5648,19 @@ AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
   }
 }
 
-Register AArch64InstructionSelector::narrowExtendRegIfNeeded(
-    Register ExtReg, MachineIRBuilder &MIB) const {
+Register AArch64InstructionSelector::moveScalarRegClass(
+    Register Reg, const TargetRegisterClass &RC, MachineIRBuilder &MIB) const {
   MachineRegisterInfo &MRI = *MIB.getMRI();
-  if (MRI.getType(ExtReg).getSizeInBits() == 32)
-    return ExtReg;
+  auto Ty = MRI.getType(Reg);
+  assert(!Ty.isVector() && "Expected scalars only!");
+  if (Ty.getSizeInBits() == TRI.getRegSizeInBits(RC))
+    return Reg;
 
-  // Insert a copy to move ExtReg to GPR32.
-  Register NarrowReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-  auto Copy = MIB.buildCopy({NarrowReg}, {ExtReg});
-
-  // Select the copy into a subregister copy.
+  // Create a copy and immediately select it.
+  // FIXME: We should have an emitCopy function?
+  auto Copy = MIB.buildCopy({&RC}, {Reg});
   selectCopy(*Copy, TII, MRI, TRI, RBI);
   return Copy.getReg(0);
-}
-
-Register AArch64InstructionSelector::widenGPRBankRegIfNeeded(
-    Register Reg, unsigned WideSize, MachineIRBuilder &MIB) const {
-  assert(WideSize >= 8 && "WideSize is smaller than all possible registers?");
-  MachineRegisterInfo &MRI = *MIB.getMRI();
-  unsigned NarrowSize = MRI.getType(Reg).getSizeInBits();
-  assert(WideSize >= NarrowSize &&
-         "WideSize cannot be smaller than NarrowSize!");
-
-  // If the sizes match, just return the register.
-  //
-  // If NarrowSize is an s1, then we can select it to any size, so we'll treat
-  // it as a don't care.
-  if (NarrowSize == WideSize || NarrowSize == 1)
-    return Reg;
-
-  // Now check the register classes.
-  const RegisterBank *RB = RBI.getRegBank(Reg, MRI, TRI);
-  const TargetRegisterClass *OrigRC = getMinClassForRegBank(*RB, NarrowSize);
-  const TargetRegisterClass *WideRC = getMinClassForRegBank(*RB, WideSize);
-  assert(OrigRC && "Could not determine narrow RC?");
-  assert(WideRC && "Could not determine wide RC?");
-
-  // If the sizes differ, but the register classes are the same, there is no
-  // need to insert a SUBREG_TO_REG.
-  //
-  // For example, an s8 that's supposed to be a GPR will be selected to either
-  // a GPR32 or a GPR64 register. Note that this assumes that the s8 will
-  // always end up on a GPR32.
-  if (OrigRC == WideRC)
-    return Reg;
-
-  // We have two different register classes. Insert a SUBREG_TO_REG.
-  unsigned SubReg = 0;
-  getSubRegForClass(OrigRC, TRI, SubReg);
-  assert(SubReg && "Couldn't determine subregister?");
-
-  // Build the SUBREG_TO_REG and return the new, widened register.
-  auto SubRegToReg =
-      MIB.buildInstr(AArch64::SUBREG_TO_REG, {WideRC}, {})
-          .addImm(0)
-          .addUse(Reg)
-          .addImm(SubReg);
-  constrainSelectedInstRegOperands(*SubRegToReg, TII, TRI, RBI);
-  return SubRegToReg.getReg(0);
 }
 
 /// Select an "extended register" operand. This operand folds in an extend
@@ -5768,7 +5723,7 @@ AArch64InstructionSelector::selectArithExtendedRegister(
   // We require a GPR32 here. Narrow the ExtReg if needed using a subregister
   // copy.
   MachineIRBuilder MIB(*RootDef);
-  ExtReg = narrowExtendRegIfNeeded(ExtReg, MIB);
+  ExtReg = moveScalarRegClass(ExtReg, AArch64::GPR32RegClass, MIB);
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); },
            [=](MachineInstrBuilder &MIB) {
