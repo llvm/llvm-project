@@ -13,6 +13,7 @@ add_clang_library(clangTidyPerformanceModule
   MoveConstArgCheck.cpp
   MoveConstructorInitCheck.cpp
   NoAutomaticMoveCheck.cpp
+  NoIntToPtrCheck.cpp
   NoexceptMoveConstructorCheck.cpp
   PerformanceTidyModule.cpp
   TriviallyDestructibleCheck.cpp
