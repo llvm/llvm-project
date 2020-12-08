@@ -31,6 +31,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Scalar.h"
 #include <algorithm>
 #include <cassert>
 

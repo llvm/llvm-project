@@ -76,10 +76,6 @@ namespace llvm {
   /// matching during instruction selection.
   FunctionPass *createCodeGenPreparePass();
 
-  /// createScalarizeMaskedMemIntrinPass - Replace masked load, store, gather
-  /// and scatter intrinsics with scalar code when target doesn't support them.
-  FunctionPass *createScalarizeMaskedMemIntrinPass();
-
   /// AtomicExpandID -- Lowers atomic operations in terms of either cmpxchg
   /// load-linked/store-conditional loops.
   extern char &AtomicExpandID;
