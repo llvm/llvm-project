@@ -38,42 +38,43 @@ public:
   }
 };
 
-TEST_F(CommandLineTest, OptIsInitializedWithCustomDefaultValue) {
+// Boolean option with a keypath that defaults to true.
+// The only flag with a negative spelling can set the keypath to false.
+
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagNotPresent) {
   const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-
   ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
 }
 
-TEST_F(CommandLineTest, OptOfNegativeFlagIsPopulatedWithFalse) {
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
   const char *Args[] = {"-fno-temp-file"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-
   ASSERT_FALSE(Invocation.getFrontendOpts().UseTemporary);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
 }
 
-TEST_F(CommandLineTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
-  const char *Args[] = {"-cl-unsafe-math-optimizations"};
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagUnknownPresent) {
+  const char *Args[] = {"-ftemp-file"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  ASSERT_FALSE(Diags->hasErrorOccurred());
-
-  // Explicitly provided flag.
-  ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
-
-  // Flags directly implied by explicitly provided flag.
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
-  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
-
-  // Flag transitively implied by explicitly provided flag.
-  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
+  // Driver-only flag.
+  ASSERT_TRUE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
 }
 
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
@@ -157,75 +158,101 @@ TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("pic"))));
 }
 
-TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
+// Tree of boolean options that can be (directly or transitively) implied by
+// their parent:
+//
+//   * -cl-unsafe-math-optimizations
+//     * -cl-mad-enable
+//     * -menable-unsafe-fp-math
+//       * -freciprocal-math
+
+TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
   const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_FALSE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_FALSE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_FALSE(Invocation.getLangOpts()->AllowRecip);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
-}
-
-TEST_F(CommandLineTest, PresentNegativeFlagGenerated) {
-  const char *Args[] = {"-fno-temp-file"};
-
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
-
-  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
-}
-
-TEST_F(CommandLineTest, NotPresentAndNotImpliedNotGenerated) {
-  const char *Args[] = {""};
-
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
-
-  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-
-  // Missing options are not generated.
+  // Not generated - missing.
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
-TEST_F(CommandLineTest, NotPresentAndImpliedNotGenerated) {
+TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
+  // Explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
+  // Directly implied by explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  // Transitively implied by explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  // Missing options that were implied are not generated.
+  // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  // Not generated - implied by the generated root flag.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
-TEST_F(CommandLineTest, PresentAndImpliedNotGenerated) {
+TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
   const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
-                        "-menable-unsafe-fp-math"};
+                        "-menable-unsafe-fp-math", "-freciprocal-math"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  // Present options that were also implied are not generated.
+  // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  // Not generated - implied by their generated parent.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
+}
+
+TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
+  const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math",
+                        "-freciprocal-math"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  // Not generated - missing.
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
+  // Generated - explicitly provided.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-menable-unsafe-fp-math")));
+  // Not generated - implied by its generated parent.
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
