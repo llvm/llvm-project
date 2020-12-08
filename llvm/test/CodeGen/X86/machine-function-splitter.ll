@@ -207,8 +207,8 @@ declare i32 @__gxx_personality_v0(...)
 !12 = !{i32 999900, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 7000}
-!15 = !{!"function_section_prefix", !".hot"}
-!16 = !{!"function_section_prefix", !".unlikely"}
+!15 = !{!"function_section_prefix", !"hot"}
+!16 = !{!"function_section_prefix", !"unlikely"}
 !17 = !{!"branch_weights", i32 7000, i32 0}
 !18 = !{!"branch_weights", i32 3000, i32 4000}
 !19 = !{!"branch_weights", i32 1000, i32 6000}
