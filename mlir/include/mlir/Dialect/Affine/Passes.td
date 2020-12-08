@@ -118,6 +118,11 @@ def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
 def AffineParallelize : FunctionPass<"affine-parallelize"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
   let constructor = "mlir::createAffineParallelizePass()";
+  let options = [
+    Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
+           "Maximum number of nested parallel loops to produce. "
+           "Defaults to unlimited (UINT_MAX).">,
+  ];
 }
 
 def AffineLoopNormalize : FunctionPass<"affine-loop-normalize"> {
