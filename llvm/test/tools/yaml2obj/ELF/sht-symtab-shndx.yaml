@@ -5,7 +5,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --symbols 2>&1 %t1 | FileCheck -DFILE=%t1 %s --check-prefix=CASE1
 
-# CASE1: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# CASE1: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:

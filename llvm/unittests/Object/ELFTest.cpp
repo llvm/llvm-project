@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELF.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -53,4 +54,36 @@ TEST(ELFTest, getELFRelocationTypeNameForVE) {
 
 TEST(ELFTest, getELFRelativeRelocationType) {
   EXPECT_EQ(0U, getELFRelativeRelocationType(EM_VE));
+}
+
+// This is a test for the DataRegion helper struct, defined in ELF.h header.
+TEST(ELFTest, DataRegionTest) {
+  std::vector<uint8_t> Data = {0, 1, 2};
+
+  // Used to check that the operator[] works properly.
+  auto CheckOperator = [&](DataRegion<uint8_t> &R) {
+    for (size_t I = 0, E = Data.size(); I != E; ++I) {
+      Expected<uint8_t> ValOrErr = R[I];
+      ASSERT_THAT_EXPECTED(ValOrErr, Succeeded());
+      EXPECT_EQ(*ValOrErr, I);
+    }
+  };
+
+  // Check we can use the constructor that takes an ArrayRef<T>.
+  DataRegion<uint8_t> Region(Data);
+
+  CheckOperator(Region);
+  const char *ErrMsg1 =
+      "the index is greater than or equal to the number of entries (3)";
+  EXPECT_THAT_ERROR(Region[3].takeError(), FailedWithMessage(ErrMsg1));
+  EXPECT_THAT_ERROR(Region[4].takeError(), FailedWithMessage(ErrMsg1));
+
+  // Check we can use the constructor that takes the data begin and the
+  // data end pointers.
+  Region = {Data.data(), Data.data() + Data.size()};
+
+  CheckOperator(Region);
+  const char *ErrMsg2 = "can't read past the end of the file";
+  EXPECT_THAT_ERROR(Region[3].takeError(), FailedWithMessage(ErrMsg2));
+  EXPECT_THAT_ERROR(Region[4].takeError(), FailedWithMessage(ErrMsg2));
 }
