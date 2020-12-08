@@ -38,11 +38,6 @@ void reportAndResetTimings(raw_ostream *OutStream = nullptr);
 /// Request the timer for this legacy-pass-manager's pass instance.
 Timer *getPassTimer(Pass *);
 
-/// If the user specifies the -time-passes argument on an LLVM tool command line
-/// then the value of this boolean will be true, otherwise false.
-/// This is the storage for the -time-passes option.
-extern bool TimePassesIsEnabled;
-
 /// This class implements -time-passes functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
 /// execution time. They collect timing info into individual timers as
@@ -70,9 +65,11 @@ class TimePassesHandler {
   raw_ostream *OutStream = nullptr;
 
   bool Enabled;
+  bool PerRun;
 
 public:
-  TimePassesHandler(bool Enabled = TimePassesIsEnabled);
+  TimePassesHandler();
+  TimePassesHandler(bool Enabled, bool PerRun = false);
 
   /// Destructor handles the print action if it has not been handled before.
   ~TimePassesHandler() { print(); }
