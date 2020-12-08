@@ -52,7 +52,7 @@ static int GetTimestamp(void) {
     return 0;
   }
   timespec ts;
-  timespec_get(&ts, TIME_UTC);
+  clock_gettime(CLOCK_REALTIME, &ts);
   return (ts.tv_sec - memprof_init_timestamp_s) * 1000 + ts.tv_nsec / 1000000;
 }
 
