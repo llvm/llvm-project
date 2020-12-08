@@ -1329,7 +1329,7 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                                  const CallExpr *TheCall,
                                                  bool IsDelete) {
   CallArgList Args;
-  EmitCallArgs(Args, Type->getParamTypes(), TheCall->arguments());
+  EmitCallArgs(Args, Type, TheCall->arguments());
   // Find the allocation or deallocation function that we're calling.
   ASTContext &Ctx = getContext();
   DeclarationName Name = Ctx.DeclarationNames

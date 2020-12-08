@@ -3818,13 +3818,79 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
   EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
 }
 
+#ifndef NDEBUG
+// Determine whether the given argument is an Objective-C method
+// that may have type parameters in its signature.
+static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
+  const DeclContext *dc = method->getDeclContext();
+  if (const ObjCInterfaceDecl *classDecl = dyn_cast<ObjCInterfaceDecl>(dc)) {
+    return classDecl->getTypeParamListAsWritten();
+  }
+
+  if (const ObjCCategoryDecl *catDecl = dyn_cast<ObjCCategoryDecl>(dc)) {
+    return catDecl->getTypeParamList();
+  }
+
+  return false;
+}
+#endif
+
+/// EmitCallArgs - Emit call arguments for a function.
 void CodeGenFunction::EmitCallArgs(
-    CallArgList &Args, ArrayRef<QualType> ArgTypes,
+    CallArgList &Args, PrototypeWrapper Prototype,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
     AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+  SmallVector<QualType, 16> ArgTypes;
+
+  assert((ParamsToSkip == 0 || Prototype.P) &&
+         "Can't skip parameters if type info is not provided");
+
+  // First, use the argument types that the type info knows about
+  bool IsVariadic = false;
+  if (Prototype.P) {
+    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
+    if (MD) {
+      IsVariadic = MD->isVariadic();
+      ArgTypes.assign(MD->param_type_begin() + ParamsToSkip,
+                      MD->param_type_end());
+    } else {
+      const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
+      IsVariadic = FPT->isVariadic();
+      ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
+                      FPT->param_type_end());
+    }
+
+#ifndef NDEBUG
+    // Check that the prototyped types match the argument expression types.
+    bool isGenericMethod = MD && isObjCMethodWithTypeParams(MD);
+    CallExpr::const_arg_iterator Arg = ArgRange.begin();
+    for (QualType Ty : ArgTypes) {
+      assert(Arg != ArgRange.end() && "Running over edge of argument list!");
+      assert(
+          (isGenericMethod || Ty->isVariablyModifiedType() ||
+           Ty.getNonReferenceType()->isObjCRetainableType() ||
+           getContext()
+                   .getCanonicalType(Ty.getNonReferenceType())
+                   .getTypePtr() ==
+               getContext().getCanonicalType((*Arg)->getType()).getTypePtr()) &&
+          "type mismatch in call argument!");
+      ++Arg;
+    }
+
+    // Either we've emitted all the call args, or we have a call to variadic
+    // function.
+    assert((Arg == ArgRange.end() || IsVariadic) &&
+           "Extra arguments in non-variadic function!");
+#endif
+  }
+
+  // If we still have any arguments, emit them using the type of the argument.
+  for (auto *A : llvm::make_range(std::next(ArgRange.begin(), ArgTypes.size()),
+                                  ArgRange.end()))
+    ArgTypes.push_back(IsVariadic ? getVarArgType(A) : A->getType());
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
-  // We *have* to evaluate arguments from right to left in the MS C++ ABI,
+  // We must evaluate arguments from right to left in the MS C++ ABI,
   // because arguments are destroyed left to right in the callee. As a special
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
