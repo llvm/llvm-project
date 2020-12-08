@@ -201,6 +201,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
     CheckRequireAtLeastOneOf();
     break;
   case llvm::acc::Directive::ACCD_update:
+    // Restriction - line 2636
+    CheckRequireAtLeastOneOf();
     // Restriction - 2301
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
@@ -281,7 +283,6 @@ CHECK_SIMPLE_CLAUSE(Present, ACCC_present)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
 CHECK_SIMPLE_CLAUSE(Reduction, ACCC_reduction)
-CHECK_SIMPLE_CLAUSE(Self, ACCC_self)
 CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
 CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
@@ -341,6 +342,28 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
           parser::ToUpperCaseLetters(
               llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_copyout)
                   .str()),
+          ContextDirectiveAsFortran());
+    }
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
+  CheckAllowed(llvm::acc::Clause::ACCC_self);
+  const parser::AccSelfClause &accSelfClause = x.v;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_update &&
+      std::holds_alternative<std::optional<parser::ScalarLogicalExpr>>(
+          accSelfClause.u)) {
+    context_.Say(GetContext().clauseSource,
+        "SELF clause on the %s directive must have a var-list"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (GetContext().directive != llvm::acc::Directive::ACCD_update &&
+      std::holds_alternative<parser::AccObjectList>(accSelfClause.u)) {
+    const auto &accObjectList =
+        std::get<parser::AccObjectList>(accSelfClause.u);
+    if (accObjectList.v.size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "SELF clause on the %s directive only accepts optional scalar logical"
+          " expression"_err_en_US,
           ContextDirectiveAsFortran());
     }
   }

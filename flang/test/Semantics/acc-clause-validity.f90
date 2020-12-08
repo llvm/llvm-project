@@ -173,9 +173,40 @@ program openacc_clause_validity
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
 
+  !ERROR: At least one of DEVICE, HOST, SELF clause must appear on the UPDATE directive
+  !$acc update
+
   !$acc update self(a, f) host(g) device(h)
 
-  !$acc update device(i) device_type(*) async
+  !$acc update host(aa) async(1)
+
+  !$acc update device(bb) async(async1)
+
+  !ERROR: At most one ASYNC clause can appear on the UPDATE directive
+  !$acc update host(aa, bb) async(1) async(2)
+
+  !$acc update self(bb, cc(:)) wait(1)
+
+  !ERROR: SELF clause on the UPDATE directive must have a var-list
+  !$acc update self
+
+  !$acc update device(aa, bb, cc) wait(wait1)
+
+  !$acc update host(aa) host(bb) device(cc) wait(1,2)
+
+  !$acc update device(aa, cc) wait(wait1, wait2)
+
+  !$acc update device(aa) device_type(*) async
+
+  !$acc update host(bb) device_type(*) wait
+
+  !$acc update self(cc) device_type(1,2) async device_type(3) wait
+
+  !ERROR: At most one IF clause can appear on the UPDATE directive
+  !$acc update device(aa) if(.true.) if(ifCondition)
+
+  !ERROR: At most one IF_PRESENT clause can appear on the UPDATE directive
+  !$acc update device(bb) if_present if_present
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the UPDATE directive
   !$acc update device(i) device_type(*) if(.TRUE.)
@@ -201,6 +232,12 @@ program openacc_clause_validity
   end do
 
   !$acc parallel loop self
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !ERROR: SELF clause on the PARALLEL LOOP directive only accepts optional scalar logical expression
+  !$acc parallel loop self(bb, cc(:))
   do i = 1, N
     a(i) = 3.14
   end do

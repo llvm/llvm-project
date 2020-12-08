@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../utils/TypeTraits.h"
 #include "MakeSharedCheck.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
@@ -49,13 +50,17 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
           Options.get("MakeSmartPtrFunctionHeader", "<memory>")),
       MakeSmartPtrFunctionName(
           Options.get("MakeSmartPtrFunction", MakeSmartPtrFunctionName)),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreDefaultInitialization(
+          Options.get("IgnoreDefaultInitialization", true)) {}
 
 void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
   Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "IgnoreDefaultInitialization",
+                IgnoreDefaultInitialization);
 }
 
 bool MakeSmartPtrCheck::isLanguageVersionSupported(
@@ -120,14 +125,18 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
   if (New->getType()->getPointeeType()->getContainedAutoType())
     return;
 
-  // Be conservative for cases where we construct an array without any
-  // initialization.
+  // Be conservative for cases where we construct and default initialize.
+  //
   // For example,
+  //    P.reset(new int)    // check fix: P = std::make_unique<int>()
   //    P.reset(new int[5]) // check fix: P = std::make_unique<int []>(5)
   //
-  // The fix of the check has side effect, it introduces default initialization
+  // The fix of the check has side effect, it introduces value initialization
   // which maybe unexpected and cause performance regression.
-  if (New->isArray() && !New->hasInitializer())
+  bool Initializes = New->hasInitializer() ||
+                     !utils::type_traits::isTriviallyDefaultConstructible(
+                         New->getAllocatedType(), *Result.Context);
+  if (!Initializes && IgnoreDefaultInitialization)
     return;
   if (Construct)
     checkConstruct(SM, Result.Context, Construct, Type, New);

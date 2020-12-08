@@ -52,14 +52,11 @@ define arm_aapcs_vfpcc void @const(<8 x i16> %acc0, <8 x i16> %acc1, i32* nocapt
 ; CHECK-NEXT:    .save {r4, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r6, r7, lr}
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    mvns r1, r1
-; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vpsttee
 ; CHECK-NEXT:    vaddvt.s16 r12, q1
 ; CHECK-NEXT:    vaddvt.s16 r2, q0
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vaddvt.s16 r4, q1
-; CHECK-NEXT:    vaddvt.s16 r6, q0
+; CHECK-NEXT:    vaddve.s16 r4, q1
+; CHECK-NEXT:    vaddve.s16 r6, q0
 ; CHECK-NEXT:    stm.w r0, {r2, r6, r12}
 ; CHECK-NEXT:    str r4, [r0, #12]
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
@@ -88,9 +85,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @xorvpnot_i32(<4 x i32> %acc0, i16 signext %p0) {
 ; CHECK-LABEL: xorvpnot_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvns r0, r0
-; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -104,9 +101,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @xorvpnot_i16(<8 x i16> %acc0, i16 signext %p0) {
 ; CHECK-LABEL: xorvpnot_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvns r0, r0
-; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -120,15 +117,30 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @xorvpnot_i8(<16 x i8> %acc0, i16 signext %p0) {
 ; CHECK-LABEL: xorvpnot_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvns r0, r0
-; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %l3 = xor i16 %p0, -1
   %l4 = zext i16 %l3 to i32
   %l5 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %l4)
+  %l6 = select <16 x i1> %l5, <16 x i8> %acc0, <16 x i8> zeroinitializer
+  ret <16 x i8> %l6
+}
+
+define arm_aapcs_vfpcc <16 x i8> @xorvpnot_i8_2(<16 x i8> %acc0, i32 %p0) {
+; CHECK-LABEL: xorvpnot_i8_2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %l3 = xor i32 %p0, 65535
+  %l5 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %l3)
   %l6 = select <16 x i1> %l5, <16 x i8> %acc0, <16 x i8> zeroinitializer
   ret <16 x i8> %l6
 }

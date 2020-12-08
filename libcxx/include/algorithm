@@ -895,7 +895,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _InputIterator
 for_each_n(_InputIterator __first, _Size __orig_n, _Function __f)
 {
-    typedef decltype(__convert_to_integral(__orig_n)) _IntegralSize;
+    typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
     while (__n > 0)
     {
@@ -1614,7 +1614,7 @@ search_n(_ForwardIterator __first, _ForwardIterator __last,
          _Size __count, const _Tp& __value_, _BinaryPredicate __pred)
 {
     return _VSTD::__search_n<typename add_lvalue_reference<_BinaryPredicate>::type>
-           (__first, __last, __convert_to_integral(__count), __value_, __pred,
+           (__first, __last, _VSTD::__convert_to_integral(__count), __value_, __pred,
            typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
@@ -1625,7 +1625,7 @@ _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value_)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type __v;
-    return _VSTD::search_n(__first, __last, __convert_to_integral(__count),
+    return _VSTD::search_n(__first, __last, _VSTD::__convert_to_integral(__count),
                            __value_, __equal_to<__v, _Tp>());
 }
 
@@ -1827,7 +1827,7 @@ typename enable_if
 >::type
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
-    typedef decltype(__convert_to_integral(__orig_n)) _IntegralSize;
+    typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
     if (__n > 0)
     {
@@ -1852,7 +1852,7 @@ typename enable_if
 >::type
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
-    typedef decltype(__convert_to_integral(__orig_n)) _IntegralSize;
+    typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
     return _VSTD::copy(__first, __first + __n, __result);
 }
@@ -2057,7 +2057,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 fill_n(_OutputIterator __first, _Size __n, const _Tp& __value_)
 {
-   return _VSTD::__fill_n(__first, __convert_to_integral(__n), __value_);
+   return _VSTD::__fill_n(__first, _VSTD::__convert_to_integral(__n), __value_);
 }
 
 // fill
@@ -2105,7 +2105,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen)
 {
-    typedef decltype(__convert_to_integral(__orig_n)) _IntegralSize;
+    typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
     for (; __n > 0; ++__first, (void) --__n)
         *__first = __gen();

@@ -285,18 +285,16 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       MIBuilder.addImm((uint64_t)BlockMask);
     }
 
+    // Erase all dead instructions (VPNOT's). Do that now so that they do not
+    // mess with the bundle creation.
+    for (MachineInstr *DeadMI : DeadInstructions)
+      DeadMI->eraseFromParent();
+    DeadInstructions.clear();
+
     finalizeBundle(
         Block, MachineBasicBlock::instr_iterator(MIBuilder.getInstr()), MBIter);
 
     Modified = true;
-  }
-
-  // Erase all dead instructions
-  for (MachineInstr *DeadMI : DeadInstructions) {
-    if (DeadMI->isInsideBundle())
-      DeadMI->eraseFromBundle();
-    else
-      DeadMI->eraseFromParent();
   }
 
   return Modified;
