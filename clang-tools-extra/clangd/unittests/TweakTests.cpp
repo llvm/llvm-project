@@ -607,7 +607,11 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
-  EXPECT_THAT(apply(" if(true) [[if (false) return;]] "), StartsWith("fail"));
+  EXPECT_THAT(apply(" if(true) [[if (false) return;]] "),
+              StartsWith("unavailable"));
+  EXPECT_THAT(
+      apply("#define RETURN_IF_ERROR(x) if (x) return\nRETU^RN_IF_ERROR(4);"),
+      StartsWith("unavailable"));
 
   FileName = "a.c";
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
