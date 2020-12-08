@@ -25,6 +25,8 @@ def SDT_RISCVCall     : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
 def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                              SDTCisSameAs<0, 4>,
                                              SDTCisSameAs<4, 5>]>;
+def SDT_RISCVReadCycleWide : SDTypeProfile<2, 0, [SDTCisVT<0, i32>,
+                                                  SDTCisVT<1, i32>]>;
 
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -51,6 +53,10 @@ def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDTIntShiftOp>;
 def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDTIntShiftOp>;
 def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDTIntShiftOp>;
+
+def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
+                                   SDT_RISCVReadCycleWide,
+                                   [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -1170,9 +1176,10 @@ let Predicates = [IsRV64] in
 def : Pat<(readcyclecounter), (CSRRS CYCLE.Encoding, X0)>;
 // On RV32, ReadCycleWide will be expanded to the suggested loop reading both
 // halves of the 64-bit "cycle" CSR.
-let Predicates = [IsRV32], usesCustomInserter = 1, hasSideEffects = 0,
-mayLoad = 0, mayStore = 0, hasNoSchedulingInfo = 1 in
-def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins), [], "", "">;
+let Predicates = [IsRV32], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins),
+                           [(set GPR:$lo, GPR:$hi, (riscv_read_cycle_wide))],
+                           "", "">;
 
 /// traps
 
