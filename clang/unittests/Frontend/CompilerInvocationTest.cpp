@@ -198,7 +198,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentNone) {
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(PassManagerResetByFlag)));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerResetByFlag))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerChangedByFlag))));
 }
 
@@ -222,7 +222,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
   ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, PassManagerDefault);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(PassManagerResetByFlag)));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerResetByFlag))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerChangedByFlag))));
 }
 

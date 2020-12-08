@@ -173,7 +173,6 @@ class MarshallingInfoBitfieldFlag<code keypath, code value>
 
 class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code neg_name, string neg_spelling>
   : MarshallingInfoFlag<keypath, defaultvalue> {
-  bit ShouldAlwaysEmit = 1;
   code Normalizer = "makeBooleanFlagNormalizer(OPT_"#neg_name#")";
   code Denormalizer = "makeBooleanFlagDenormalizer(\""#neg_spelling#"\")";
 }
