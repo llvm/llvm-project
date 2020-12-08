@@ -19552,8 +19552,8 @@ static SDValue getSubVectorSrc(SDValue V, SDValue Index, EVT SubVT) {
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   if (IndexC && V.getOpcode() == ISD::CONCAT_VECTORS &&
       V.getOperand(0).getValueType() == SubVT &&
-      (IndexC->getZExtValue() % SubVT.getVectorNumElements()) == 0) {
-    uint64_t SubIdx = IndexC->getZExtValue() / SubVT.getVectorNumElements();
+      (IndexC->getZExtValue() % SubVT.getVectorMinNumElements()) == 0) {
+    uint64_t SubIdx = IndexC->getZExtValue() / SubVT.getVectorMinNumElements();
     return V.getOperand(SubIdx);
   }
   return SDValue();

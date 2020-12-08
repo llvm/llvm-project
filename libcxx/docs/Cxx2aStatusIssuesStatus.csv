@@ -168,7 +168,7 @@
 "`3230 <https://wg21.link/LWG3230>`__","Format specifier ``%y/%Y``\  is missing locale alternative versions","Belfast","",""
 "`3232 <https://wg21.link/LWG3232>`__","Inconsistency in ``zoned_time``\  deduction guides","Belfast","",""
 "`3222 <https://wg21.link/LWG3222>`__","P0574R1 introduced preconditions on non-existent parameters","Belfast","",""
-"`3221 <https://wg21.link/LWG3221>`__","Result of ``year_month``\  arithmetic with ``months``\  is ambiguous","Belfast","",""
+"`3221 <https://wg21.link/LWG3221>`__","Result of ``year_month``\  arithmetic with ``months``\  is ambiguous","Belfast","|Complete|","8.0"
 "`3235 <https://wg21.link/LWG3235>`__","``parse``\  manipulator without abbreviation is not callable","Belfast","",""
 "`3246 <https://wg21.link/LWG3246>`__","What are the constraints on the template parameter of ``basic_format_arg``\ ?","Belfast","",""
 "`3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","Belfast","",""

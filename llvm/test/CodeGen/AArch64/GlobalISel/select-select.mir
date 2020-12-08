@@ -378,6 +378,36 @@ body:             |
 
 ...
 ---
+name:            csneg_inverted_cc
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; G_SELECT cc, (G_SUB 0, %x), %false -> CSNEG %x, %false, inv_cc
+
+    ; CHECK-LABEL: name: csneg_inverted_cc
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %reg1:gpr32 = COPY $w1
+    ; CHECK: %f:gpr32 = COPY $w2
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %reg0, 0, implicit-def $nzcv
+    ; CHECK: %select:gpr32 = CSNEGWr %reg1, %f, 0, implicit $nzcv
+    ; CHECK: $w0 = COPY %select
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cond:gpr(s1) = G_TRUNC %reg0(s32)
+    %reg1:gpr(s32) = COPY $w1
+    %f:gpr(s32) = COPY $w2
+    %zero:gpr(s32) = G_CONSTANT i32 0
+    %sub:gpr(s32) = G_SUB %zero(s32), %reg1
+    %select:gpr(s32) = G_SELECT %cond(s1), %sub, %f
+    $w0 = COPY %select(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
 name:            csneg_s64
 legalized:       true
 regBankSelected: true
@@ -464,6 +494,36 @@ body:             |
     %negative_one:gpr(s32) = G_CONSTANT i32 -1
     %xor:gpr(s32) = G_XOR %reg1(s32), %negative_one
     %select:gpr(s32) = G_SELECT %cond(s1), %t, %xor
+    $w0 = COPY %select(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            csinv_inverted_cc
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; G_SELECT cc, (G_XOR x, -1), %false -> CSINV %x, %false, inv_cc
+
+    ; CHECK-LABEL: name: csinv_inverted_cc
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %reg1:gpr32 = COPY $w1
+    ; CHECK: %f:gpr32 = COPY $w2
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %reg0, 0, implicit-def $nzcv
+    ; CHECK: %select:gpr32 = CSINVWr %reg1, %f, 0, implicit $nzcv
+    ; CHECK: $w0 = COPY %select
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s32) = COPY $w1
+    %cond:gpr(s1) = G_TRUNC %reg0(s32)
+    %f:gpr(s32) = COPY $w2
+    %negative_one:gpr(s32) = G_CONSTANT i32 -1
+    %xor:gpr(s32) = G_XOR %reg1(s32), %negative_one
+    %select:gpr(s32) = G_SELECT %cond(s1), %xor, %f
     $w0 = COPY %select(s32)
     RET_ReallyLR implicit $w0
 

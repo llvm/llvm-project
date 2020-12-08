@@ -36,7 +36,7 @@ add_flang_library(FortranRuntime
   buffer.cpp
   character.cpp
   connection.cpp
-  derived-type.cpp
+  derived.cpp
   descriptor.cpp
   edit-input.cpp
   edit-output.cpp

@@ -96,6 +96,10 @@ private:
 struct AsyncParallelForPass
     : public AsyncParallelForBase<AsyncParallelForPass> {
   AsyncParallelForPass() = default;
+  AsyncParallelForPass(int numWorkerThreads) {
+    assert(numWorkerThreads >= 1);
+    numConcurrentAsyncExecute = numWorkerThreads;
+  }
   void runOnFunction() override;
 };
 
@@ -275,4 +279,9 @@ void AsyncParallelForPass::runOnFunction() {
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createAsyncParallelForPass() {
   return std::make_unique<AsyncParallelForPass>();
+}
+
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createAsyncParallelForPass(int numWorkerThreads) {
+  return std::make_unique<AsyncParallelForPass>(numWorkerThreads);
 }

@@ -29,7 +29,7 @@ void RTNAME(AllocatableInitCharacter)(Descriptor &descriptor,
 }
 
 void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
-    const DerivedType &derivedType, int rank, int corank) {
+    const typeInfo::DerivedType &derivedType, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
