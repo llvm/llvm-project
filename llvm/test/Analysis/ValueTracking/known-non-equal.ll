@@ -130,4 +130,76 @@ define i1 @sub2(i8 %B, i8 %C) {
   ret i1 %cmp
 }
 
+; op could wrap mapping two values to the same output value.
+define i1 @mul1(i8 %B) {
+; CHECK-LABEL: @mul1(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = mul i8 [[A]], 27
+; CHECK-NEXT:    [[B_OP:%.*]] = mul i8 [[B]], 27
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP]], [[B_OP]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = mul i8 %A, 27
+  %B.op = mul i8 %B, 27
+
+  %cmp = icmp eq i8 %A.op, %B.op
+  ret i1 %cmp
+}
+
+define i1 @mul2(i8 %B) {
+; CHECK-LABEL: @mul2(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = mul nuw i8 %A, 27
+  %B.op = mul nuw i8 %B, 27
+
+  %cmp = icmp eq i8 %A.op, %B.op
+  ret i1 %cmp
+}
+
+define i1 @mul3(i8 %B) {
+; CHECK-LABEL: @mul3(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = mul nsw i8 %A, 27
+  %B.op = mul nsw i8 %B, 27
+
+  %cmp = icmp eq i8 %A.op, %B.op
+  ret i1 %cmp
+}
+
+; Multiply by zero collapses all values to one
+define i1 @mul4(i8 %B) {
+; CHECK-LABEL: @mul4(
+; CHECK-NEXT:    ret i1 true
+;
+  %A = add i8 %B, 1
+  %A.op = mul nuw i8 %A, 0
+  %B.op = mul nuw i8 %B, 0
+
+  %cmp = icmp eq i8 %A.op, %B.op
+  ret i1 %cmp
+}
+
+; C might be zero, we can't tell
+define i1 @mul5(i8 %B, i8 %C) {
+; CHECK-LABEL: @mul5(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = mul nuw nsw i8 [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = mul nuw nsw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP]], [[B_OP]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = mul nsw nuw i8 %A, %C
+  %B.op = mul nsw nuw i8 %B, %C
+
+  %cmp = icmp eq i8 %A.op, %B.op
+  ret i1 %cmp
+}
+
+
 !0 = !{ i8 1, i8 5 }
