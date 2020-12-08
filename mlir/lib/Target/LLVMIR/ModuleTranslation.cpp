@@ -536,6 +536,126 @@ LogicalResult ModuleTranslation::convertOmpMaster(Operation &opInst,
   return success();
 }
 
+/// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
+LogicalResult ModuleTranslation::convertOmpWsLoop(Operation &opInst,
+                                                  llvm::IRBuilder<> &builder) {
+  auto loop = cast<omp::WsLoopOp>(opInst);
+  // TODO: this should be in the op verifier instead.
+  if (loop.lowerBound().empty())
+    return failure();
+
+  if (loop.getNumLoops() != 1)
+    return opInst.emitOpError("collapsed loops not yet supported");
+
+  if (loop.schedule_val().hasValue() &&
+      omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue()) !=
+          omp::ClauseScheduleKind::Static)
+    return opInst.emitOpError(
+        "only static (default) loop schedule is currently supported");
+
+  llvm::Function *func = builder.GetInsertBlock()->getParent();
+  llvm::LLVMContext &llvmContext = llvmModule->getContext();
+
+  // Find the loop configuration.
+  llvm::Value *lowerBound = valueMapping.lookup(loop.lowerBound()[0]);
+  llvm::Value *upperBound = valueMapping.lookup(loop.upperBound()[0]);
+  llvm::Value *step = valueMapping.lookup(loop.step()[0]);
+  llvm::Type *ivType = step->getType();
+  llvm::Value *chunk = loop.schedule_chunk_var()
+                           ? valueMapping[loop.schedule_chunk_var()]
+                           : llvm::ConstantInt::get(ivType, 1);
+
+  // Set up the source location value for OpenMP runtime.
+  llvm::DISubprogram *subprogram =
+      builder.GetInsertBlock()->getParent()->getSubprogram();
+  const llvm::DILocation *diLoc =
+      debugTranslation->translateLoc(opInst.getLoc(), subprogram);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
+                                                    llvm::DebugLoc(diLoc));
+
+  // Generator of the canonical loop body. Produces an SESE region of basic
+  // blocks.
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
+  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
+    llvm::IRBuilder<>::InsertPointGuard guard(builder);
+
+    // Make sure further conversions know about the induction variable.
+    valueMapping[loop.getRegion().front().getArgument(0)] = iv;
+
+    llvm::BasicBlock *entryBlock = ip.getBlock();
+    llvm::BasicBlock *exitBlock =
+        entryBlock->splitBasicBlock(ip.getPoint(), "omp.wsloop.exit");
+
+    // Convert the body of the loop.
+    Region &region = loop.region();
+    for (Block &bb : region) {
+      llvm::BasicBlock *llvmBB =
+          llvm::BasicBlock::Create(llvmContext, "omp.wsloop.region", func);
+      blockMapping[&bb] = llvmBB;
+
+      // Retarget the branch of the entry block to the entry block of the
+      // converted region (regions are single-entry).
+      if (bb.isEntryBlock()) {
+        auto *branch = cast<llvm::BranchInst>(entryBlock->getTerminator());
+        branch->setSuccessor(0, llvmBB);
+      }
+    }
+
+    // Block conversion creates a new IRBuilder every time so need not bother
+    // about maintaining the insertion point.
+    llvm::SetVector<Block *> blocks = topologicalSort(region);
+    for (Block *bb : blocks) {
+      if (failed(convertBlock(*bb, bb->isEntryBlock()))) {
+        bodyGenStatus = failure();
+        return;
+      }
+
+      // Special handling for `omp.yield` terminators (we may have more than
+      // one): they return the control to the parent WsLoop operation so replace
+      // them with the branch to the exit block. We handle this here to avoid
+      // relying inter-function communication through the ModuleTranslation
+      // class to set up the correct insertion point. This is also consistent
+      // with MLIR's idiom of handling special region terminators in the same
+      // code that handles the region-owning operation.
+      if (isa<omp::YieldOp>(bb->getTerminator())) {
+        llvm::BasicBlock *llvmBB = blockMapping[bb];
+        builder.SetInsertPoint(llvmBB, llvmBB->end());
+        builder.CreateBr(exitBlock);
+      }
+    }
+
+    connectPHINodes(region, valueMapping, blockMapping, branchMapping);
+  };
+
+  // Delegate actual loop construction to the OpenMP IRBuilder.
+  // TODO: this currently assumes WsLoop is semantically similar to SCF loop,
+  // i.e. it has a positive step, uses signed integer semantics, and its upper
+  // bound is not included. Reconsider this code when WsLoop clearly supports
+  // more cases.
+  llvm::BasicBlock *insertBlock = builder.GetInsertBlock();
+  llvm::CanonicalLoopInfo *loopInfo = ompBuilder->createCanonicalLoop(
+      ompLoc, bodyGen, lowerBound, upperBound, step, /*IsSigned=*/true,
+      /*InclusiveStop=*/false);
+  if (failed(bodyGenStatus))
+    return failure();
+
+  // TODO: get the alloca insertion point from the parallel operation builder.
+  // If we insert the at the top of the current function, they will be passed as
+  // extra arguments into the function the parallel operation builder outlines.
+  // Put them at the start of the current block for now.
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
+      insertBlock, insertBlock->getFirstInsertionPt());
+  loopInfo = ompBuilder->createStaticWorkshareLoop(
+      ompLoc, loopInfo, allocaIP,
+      !loop.nowait().hasValue() || loop.nowait().getValue(), chunk);
+
+  // Continue building IR after the loop.
+  builder.restoreIP(loopInfo->getAfterIP());
+  return success();
+}
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR
 /// (including OpenMP runtime calls).
 LogicalResult
@@ -577,6 +697,13 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
       .Case(
           [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
       .Case([&](omp::MasterOp) { return convertOmpMaster(opInst, builder); })
+      .Case([&](omp::WsLoopOp) { return convertOmpWsLoop(opInst, builder); })
+      .Case([&](omp::YieldOp op) {
+        // Yields are loop terminators that can be just omitted. The loop
+        // structure was created in the function that handles WsLoopOp.
+        assert(op.getNumOperands() == 0 && "unexpected yield with operands");
+        return success();
+      })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
