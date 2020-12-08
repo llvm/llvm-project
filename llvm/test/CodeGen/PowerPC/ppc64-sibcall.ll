@@ -135,7 +135,7 @@ define void @wo_hcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_hcaller:
-; CHECK-SCO: b wo_hcallee
+; CHECK-SCO: bl wo_hcallee
 
 ; SCM-LABEL: wo_hcaller:
 ; SCM:       bl wo_hcallee
@@ -147,7 +147,7 @@ define void @wo_pcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_pcaller:
-; CHECK-SCO: b wo_pcallee
+; CHECK-SCO: bl wo_pcallee
 
 ; SCM-LABEL: wo_pcaller:
 ; SCM:       bl wo_pcallee
@@ -159,7 +159,7 @@ define void @wo_caller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_caller:
-; CHECK-SCO: b wo_callee
+; CHECK-SCO: bl wo_callee
 
 ; SCM-LABEL: wo_caller:
 ; SCM:       bl wo_callee
@@ -171,7 +171,7 @@ define void @w_pcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_pcaller:
-; CHECK-SCO: b w_pcallee
+; CHECK-SCO: bl w_pcallee
 
 ; SCM-LABEL: w_pcaller:
 ; SCM:       bl w_pcallee
@@ -183,7 +183,7 @@ define void @w_hcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_hcaller:
-; CHECK-SCO: b w_hcallee
+; CHECK-SCO: bl w_hcallee
 
 ; SCM-LABEL: w_hcaller:
 ; SCM:       bl w_hcallee
@@ -195,7 +195,7 @@ define void @w_caller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_caller:
-; CHECK-SCO: b w_callee
+; CHECK-SCO: bl w_callee
 
 ; SCM-LABEL: w_caller:
 ; SCM:       bl w_callee
