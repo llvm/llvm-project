@@ -1130,6 +1130,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FADD, VT, Custom);
       setOperationAction(ISD::FDIV, VT, Custom);
       setOperationAction(ISD::FMA, VT, Custom);
+      setOperationAction(ISD::FMAXNUM, VT, Custom);
+      setOperationAction(ISD::FMINNUM, VT, Custom);
       setOperationAction(ISD::FMUL, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Custom);
       setOperationAction(ISD::FSUB, VT, Custom);
