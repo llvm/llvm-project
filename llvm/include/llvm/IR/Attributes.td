@@ -124,7 +124,7 @@ def NoInline : EnumAttr<"noinline">;
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind">;
 
-/// Disable merging for call sites
+/// Disable merging for specified functions or call sites.
 def NoMerge : EnumAttr<"nomerge">;
 
 /// Pointer is known to be not null.

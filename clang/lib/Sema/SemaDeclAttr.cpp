@@ -7910,6 +7910,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttributeWithExclusions<DisableTailCallsAttr, NakedAttr>(S, D,
                                                                          AL);
     break;
+  case ParsedAttr::AT_NoMerge:
+    handleSimpleAttribute<NoMergeAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_Visibility:
     handleVisibilityAttr(S, D, AL, false);
     break;
