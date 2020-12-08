@@ -23,13 +23,10 @@
 namespace Fortran::semantics {
 
 static constexpr inline AccClauseSet
-    parallelAndKernelsOnlyAllowedAfterDeviceTypeClauses{
+    computeConstructOnlyAllowedAfterDeviceTypeClauses{
         llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,
         llvm::acc::Clause::ACCC_num_gangs, llvm::acc::Clause::ACCC_num_workers,
         llvm::acc::Clause::ACCC_vector_length};
-
-static constexpr inline AccClauseSet serialOnlyAllowedAfterDeviceTypeClauses{
-    llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait};
 
 static constexpr inline AccClauseSet loopOnlyAllowedAfterDeviceTypeClauses{
     llvm::acc::Clause::ACCC_auto, llvm::acc::Clause::ACCC_collapse,
@@ -80,27 +77,19 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
   switch (blockDir.v) {
   case llvm::acc::Directive::ACCD_kernels:
   case llvm::acc::Directive::ACCD_parallel:
-    // Restriction - 880-881 (KERNELS)
-    // Restriction - 843-844 (PARALLEL)
+  case llvm::acc::Directive::ACCD_serial:
+    // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        parallelAndKernelsOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 877 (KERNELS)
-    // Restriction - 840 (PARALLEL)
+        computeConstructOnlyAllowedAfterDeviceTypeClauses);
+    // Restriction - line 1001
     CheckNoBranching(block, GetContext().directive, blockDir.source);
     break;
-  case llvm::acc::Directive::ACCD_serial:
-    // Restriction - 919
-    CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        serialOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 916
-    CheckNoBranching(block, llvm::acc::Directive::ACCD_serial, blockDir.source);
-    break;
   case llvm::acc::Directive::ACCD_data:
-    // Restriction - 1117-1118
+    // Restriction - line 1249-1250
     CheckRequireAtLeastOneOf();
     break;
   case llvm::acc::Directive::ACCD_host_data:
-    // Restriction - 1578
+    // Restriction - line 1746
     CheckRequireAtLeastOneOf();
     break;
   default:
@@ -117,7 +106,7 @@ void AccStructureChecker::Enter(
 
 void AccStructureChecker::Leave(
     const parser::OpenACCStandaloneDeclarativeConstruct &) {
-  // Restriction - 2075
+  // Restriction - line 2409
   CheckAtLeastOneClause();
   dirContext_.pop_back();
 }
@@ -144,18 +133,10 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   switch (combinedDir.v) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
-    // Restriction - 1962 -> (880-881) (KERNELS LOOP)
-    // Restriction - 1962 -> (843-844) (PARALLEL LOOP)
-    CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        {llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,
-            llvm::acc::Clause::ACCC_num_gangs,
-            llvm::acc::Clause::ACCC_num_workers,
-            llvm::acc::Clause::ACCC_vector_length});
-    break;
   case llvm::acc::Directive::ACCD_serial_loop:
-    // Restriction - 1962 -> (919) (SERIAL LOOP)
+    // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        {llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait});
+        computeConstructOnlyAllowedAfterDeviceTypeClauses);
     break;
   default:
     break;
@@ -173,10 +154,10 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
   if (loopDir.v == llvm::acc::Directive::ACCD_loop) {
-    // Restriction - 1615-1616
+    // Restriction - line 1818-1819
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         loopOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 1622
+    // Restriction - line 1834
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
@@ -195,15 +176,15 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
   case llvm::acc::Directive::ACCD_enter_data:
   case llvm::acc::Directive::ACCD_exit_data:
   case llvm::acc::Directive::ACCD_set:
-    // Restriction - 1117-1118 (ENTER DATA)
-    // Restriction - 1161-1162 (EXIT DATA)
-    // Restriction - 2254 (SET)
+    // Restriction - line 1310-1311 (ENTER DATA)
+    // Restriction - line 1312-1313 (EXIT DATA)
+    // Restriction - line 2610 (SET)
     CheckRequireAtLeastOneOf();
     break;
   case llvm::acc::Directive::ACCD_update:
     // Restriction - line 2636
     CheckRequireAtLeastOneOf();
-    // Restriction - 2301
+    // Restriction - line 2669
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
     break;
@@ -217,9 +198,9 @@ void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
 }
 void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
-  // Restriction - 2409
+  // Restriction - line 2790
   CheckRequireAtLeastOneOf();
-  // Restriction - 2407-2408
+  // Restriction - line 2788-2789
   CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
       routineOnlyAllowedAfterDeviceTypeClauses);
   dirContext_.pop_back();

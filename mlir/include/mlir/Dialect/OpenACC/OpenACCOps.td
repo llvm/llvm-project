@@ -21,7 +21,7 @@ def OpenACC_Dialect : Dialect {
   let summary = "An OpenACC dialect for MLIR.";
 
   let description = [{
-    This dialect models the construct from the OpenACC 3.0 directive language.
+    This dialect models the construct from the OpenACC 3.1 directive language.
   }];
 
   let cppNamespace = "::mlir::acc";
