@@ -906,11 +906,31 @@ py::object PyOperation::create(
   if (attributes) {
     mlirAttributes.reserve(attributes->size());
     for (auto &it : *attributes) {
-
-      auto name = it.first.cast<std::string>();
-      auto &attribute = it.second.cast<PyAttribute &>();
-      // TODO: Verify attribute originates from the same context.
-      mlirAttributes.emplace_back(std::move(name), attribute);
+      std::string key;
+      try {
+        key = it.first.cast<std::string>();
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute key (not a string) when "
+                          "attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
+      try {
+        auto &attribute = it.second.cast<PyAttribute &>();
+        // TODO: Verify attribute originates from the same context.
+        mlirAttributes.emplace_back(std::move(key), attribute);
+      } catch (py::reference_cast_error &) {
+        // This exception seems thrown when the value is "None".
+        std::string msg =
+            "Found an invalid (`None`?) attribute value for the key \"" + key +
+            "\" when attempting to create the operation \"" + name + "\"";
+        throw py::cast_error(msg);
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute value for the key \"" + key +
+                          "\" when attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
     }
   }
   // Unpack/validate successors.
