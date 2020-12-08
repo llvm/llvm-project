@@ -867,12 +867,11 @@ public:
   }
 
   static std::unique_ptr<RISCVOperand>
-  createVType(APInt Sew, APInt Lmul, bool Fractional, bool TailAgnostic,
+  createVType(unsigned Sew, unsigned Lmul, bool Fractional, bool TailAgnostic,
               bool MaskedoffAgnostic, SMLoc S, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
-    Sew.ashrInPlace(3);
-    unsigned SewLog2 = Sew.logBase2();
-    unsigned LmulLog2 = Lmul.logBase2();
+    unsigned SewLog2 = Log2_32(Sew / 8);
+    unsigned LmulLog2 = Log2_32(Lmul);
     Op->VType.Sew = static_cast<VSEW>(SewLog2);
     if (Fractional) {
       unsigned Flmul = 8 - LmulLog2;
@@ -1598,7 +1597,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   StringRef Name = getLexer().getTok().getIdentifier();
   if (!Name.consume_front("e"))
     return MatchOperand_NoMatch;
-  APInt Sew(16, Name, 10);
+  unsigned Sew;
+  if (Name.getAsInteger(10, Sew))
+    return MatchOperand_NoMatch;
   if (Sew != 8 && Sew != 16 && Sew != 32 && Sew != 64 && Sew != 128 &&
       Sew != 256 && Sew != 512 && Sew != 1024)
     return MatchOperand_NoMatch;
@@ -1616,7 +1617,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   if (Name.consume_front("f")) {
     Fractional = true;
   }
-  APInt Lmul(16, Name, 10);
+  unsigned Lmul;
+  if (Name.getAsInteger(10, Lmul))
+    return MatchOperand_NoMatch;
   if (Lmul != 1 && Lmul != 2 && Lmul != 4 && Lmul != 8)
     return MatchOperand_NoMatch;
   getLexer().Lex();
