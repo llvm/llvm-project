@@ -144,7 +144,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 
 std::unique_ptr<Provider>
 Provider::combine(std::vector<const Provider *> Providers) {
-  struct CombinedProvider : Provider {
+  class CombinedProvider : public Provider {
     std::vector<const Provider *> Providers;
 
     std::vector<CompiledFragment>
@@ -156,14 +156,13 @@ Provider::combine(std::vector<const Provider *> Providers) {
       }
       return Result;
     }
+
+  public:
+    CombinedProvider(std::vector<const Provider *> Providers)
+        : Providers(std::move(Providers)) {}
   };
-  auto Result = std::make_unique<CombinedProvider>();
-  Result->Providers = std::move(Providers);
-  // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
-  //   The constructor that is supposed to allow for Derived to Base
-  //   conversion does not work. Remove this if we drop support for such
-  //   configurations.
-  return std::unique_ptr<Provider>(Result.release());
+
+  return std::make_unique<CombinedProvider>(std::move(Providers));
 }
 
 Config Provider::getConfig(const Params &P, DiagnosticCallback DC) const {
