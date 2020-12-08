@@ -13848,6 +13848,16 @@ PerformPREDICATE_CASTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT, Op->getOperand(0));
   }
 
+  // Turn pred_cast(xor x, -1) into xor(pred_cast x, -1), in order to produce
+  // more VPNOT which might get folded as else predicates.
+  if (Op.getValueType() == MVT::i32 && isBitwiseNot(Op)) {
+    SDValue X =
+        DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT, Op->getOperand(0));
+    SDValue C = DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT,
+                                DCI.DAG.getConstant(65535, dl, MVT::i32));
+    return DCI.DAG.getNode(ISD::XOR, dl, VT, X, C);
+  }
+
   // Only the bottom 16 bits of the source register are used.
   if (Op.getValueType() == MVT::i32) {
     APInt DemandedMask = APInt::getLowBitsSet(32, 16);
