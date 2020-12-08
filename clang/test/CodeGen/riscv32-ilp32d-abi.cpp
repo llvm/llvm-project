@@ -32,3 +32,19 @@ struct empty_double_float { struct {}; double f; float g; };
 double f_empty_double_float(empty_double_float a) {
     return a.g;
 }
+
+struct empty_complex_f { struct {}; float _Complex fc; };
+
+// CHECK: define float @_Z17f_empty_complex_f15empty_complex_f(float %0, float %1)
+// CHECK: { [4 x i8], float, float }
+float f_empty_complex_f(empty_complex_f a) {
+    return __imag__ a.fc;
+}
+
+struct empty_complex_d { struct {}; double _Complex fc; };
+
+// CHECK: define double @_Z17f_empty_complex_d15empty_complex_d(double %0, double %1)
+// CHECK: { [8 x i8], double, double }
+double f_empty_complex_d(empty_complex_d a) {
+    return __imag__ a.fc;
+}
