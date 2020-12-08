@@ -87,3 +87,13 @@ class TestBasicVector(TestBase):
                              ValueCheck(value="4"),
                              ValueCheck(value="5")
                          ])
+
+        # Test that the typedef'd vector type can be substituted.
+        self.expect("expr b.emplace_back(6)")
+        self.expect_expr("b", result_type="vector_long",
+                         result_children=[
+                             ValueCheck(value="3"),
+                             ValueCheck(value="1"),
+                             ValueCheck(value="2"),
+                             ValueCheck(value="6"),
+                         ])
