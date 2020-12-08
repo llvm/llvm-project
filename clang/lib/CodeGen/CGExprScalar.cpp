@@ -3212,6 +3212,7 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
 Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   unsigned IID;
   unsigned OpID = 0;
+  SanitizerHandler OverflowKind;
 
   bool isSigned = Ops.Ty->isSignedIntegerOrEnumerationType();
   switch (Ops.Opcode) {
@@ -3220,18 +3221,21 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
     OpID = 1;
     IID = isSigned ? llvm::Intrinsic::sadd_with_overflow :
                      llvm::Intrinsic::uadd_with_overflow;
+    OverflowKind = SanitizerHandler::AddOverflow;
     break;
   case BO_Sub:
   case BO_SubAssign:
     OpID = 2;
     IID = isSigned ? llvm::Intrinsic::ssub_with_overflow :
                      llvm::Intrinsic::usub_with_overflow;
+    OverflowKind = SanitizerHandler::SubOverflow;
     break;
   case BO_Mul:
   case BO_MulAssign:
     OpID = 3;
     IID = isSigned ? llvm::Intrinsic::smul_with_overflow :
                      llvm::Intrinsic::umul_with_overflow;
+    OverflowKind = SanitizerHandler::MulOverflow;
     break;
   default:
     llvm_unreachable("Unsupported operation for overflow detection");
@@ -3261,7 +3265,7 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
                               : SanitizerKind::UnsignedIntegerOverflow;
       EmitBinOpCheck(std::make_pair(NotOverflow, Kind), Ops);
     } else
-      CGF.EmitTrapCheck(Builder.CreateNot(overflow));
+      CGF.EmitTrapCheck(Builder.CreateNot(overflow), OverflowKind);
     return result;
   }
 
