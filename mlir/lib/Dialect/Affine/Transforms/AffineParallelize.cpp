@@ -36,13 +36,28 @@ struct AffineParallelize : public AffineParallelizeBase<AffineParallelize> {
 
 void AffineParallelize::runOnFunction() {
   FuncOp f = getFunction();
-  SmallVector<AffineForOp, 8> parallelizableLoops;
+
+  // The walker proceeds in post-order, but we need to process outer loops first
+  // to control the number of outer parallel loops, so push candidate loops to
+  // the front of a deque.
+  std::deque<AffineForOp> parallelizableLoops;
   f.walk([&](AffineForOp loop) {
     if (isLoopParallel(loop))
-      parallelizableLoops.push_back(loop);
+      parallelizableLoops.push_front(loop);
   });
-  for (AffineForOp loop : parallelizableLoops)
-    affineParallelize(loop);
+
+  for (AffineForOp loop : parallelizableLoops) {
+    unsigned numParentParallelOps = 0;
+    for (Operation *op = loop->getParentOp();
+         op != nullptr && !op->hasTrait<OpTrait::AffineScope>();
+         op = op->getParentOp()) {
+      if (isa<AffineParallelOp>(op))
+        ++numParentParallelOps;
+    }
+
+    if (numParentParallelOps < maxNested)
+      affineParallelize(loop);
+  }
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineParallelizePass() {
