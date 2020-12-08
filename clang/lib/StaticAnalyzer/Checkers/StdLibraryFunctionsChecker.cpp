@@ -1672,7 +1672,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap("close", Signature(ArgTypes{IntTy}, RetType{IntTy}),
                             Summary(NoEvalCall)
                                 .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+                                    0, WithinRange, Range(-1, IntMax))));
 
     // long fpathconf(int fildes, int name);
     addToFunctionSummaryMap("fpathconf",
@@ -1734,7 +1734,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
+                ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
 
     Optional<QualType> Off64_tTy = lookupTy("off64_t");
     // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,
@@ -1746,7 +1746,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(0, IntMax))));
+                ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
 
     // int pipe(int fildes[2]);
     addToFunctionSummaryMap(
