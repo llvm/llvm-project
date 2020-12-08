@@ -305,7 +305,7 @@ define float @fp-armv8_vmaxnm_NNNole_rev(float %a) {
 define float @fp-armv8_vmaxnm_NNNu(float %b) {
 ; CHECK-LABEL: "fp-armv8_vmaxnm_NNNu":
 ; CHECK: vmaxnm.f32
-; CHEC-NOT: vmaxnm.f32
+; CHECK-NOT: vmaxnm.f32
   %cmp1 = fcmp ugt float 12., %b
   %cond1 = select i1 %cmp1, float 12., float %b
   %cmp2 = fcmp ugt float %cond1, 34.

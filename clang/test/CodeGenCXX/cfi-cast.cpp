@@ -23,7 +23,7 @@ void abp(A *a) {
   // CHECK-DCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-DCAST: [[TRAPBB]]
-  // CHECK-DCAST-NEXT: call void @llvm.trap()
+  // CHECK-DCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-DCAST-NEXT: unreachable
 
   // CHECK-DCAST: [[CONTBB]]
@@ -37,7 +37,7 @@ void abr(A &a) {
   // CHECK-DCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-DCAST: [[TRAPBB]]
-  // CHECK-DCAST-NEXT: call void @llvm.trap()
+  // CHECK-DCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-DCAST-NEXT: unreachable
 
   // CHECK-DCAST: [[CONTBB]]
@@ -51,7 +51,7 @@ void abrr(A &&a) {
   // CHECK-DCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-DCAST: [[TRAPBB]]
-  // CHECK-DCAST-NEXT: call void @llvm.trap()
+  // CHECK-DCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-DCAST-NEXT: unreachable
 
   // CHECK-DCAST: [[CONTBB]]
@@ -65,7 +65,7 @@ void vbp(void *p) {
   // CHECK-UCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-UCAST: [[TRAPBB]]
-  // CHECK-UCAST-NEXT: call void @llvm.trap()
+  // CHECK-UCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-UCAST-NEXT: unreachable
 
   // CHECK-UCAST: [[CONTBB]]
@@ -79,7 +79,7 @@ void vbr(char &r) {
   // CHECK-UCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-UCAST: [[TRAPBB]]
-  // CHECK-UCAST-NEXT: call void @llvm.trap()
+  // CHECK-UCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-UCAST-NEXT: unreachable
 
   // CHECK-UCAST: [[CONTBB]]
@@ -93,7 +93,7 @@ void vbrr(char &&r) {
   // CHECK-UCAST-NEXT: br i1 [[P]], label %[[CONTBB:[^ ]*]], label %[[TRAPBB:[^ ,]*]]
 
   // CHECK-UCAST: [[TRAPBB]]
-  // CHECK-UCAST-NEXT: call void @llvm.trap()
+  // CHECK-UCAST-NEXT: call void @llvm.ubsantrap(i8 2)
   // CHECK-UCAST-NEXT: unreachable
 
   // CHECK-UCAST: [[CONTBB]]

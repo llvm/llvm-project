@@ -1012,6 +1012,9 @@ enum NodeType {
   /// DEBUGTRAP - Trap intended to get the attention of a debugger.
   DEBUGTRAP,
 
+  /// UBSANTRAP - Trap with an immediate describing the kind of sanitizer failure.
+  UBSANTRAP,
+
   /// PREFETCH - This corresponds to a prefetch intrinsic. The first operand
   /// is the chain.  The other operands are the address to prefetch,
   /// read / write specifier, locality specifier and instruction / data cache

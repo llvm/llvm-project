@@ -1255,6 +1255,8 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
                GCCBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
                     GCCBuiltin<"__builtin_debugtrap">;
+def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
+                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],

@@ -229,11 +229,6 @@ TEST(InstructionsTest, CastInst) {
 
   const Constant *v2ptr32 = Constant::getNullValue(V2Int32PtrTy);
 
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isCastable(Int64Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(V8x64Ty, V8x8Ty));
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, V8x64Ty));
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
@@ -249,7 +244,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrTy, V2Int32PtrAS1Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_TRUE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int64PtrAS1Ty));
-  EXPECT_TRUE(CastInst::isCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_EQ(CastInst::AddrSpaceCast, CastInst::getCastOpcode(v2ptr32, true,
                                                              V2Int32PtrAS1Ty,
                                                              true));
