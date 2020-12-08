@@ -559,8 +559,7 @@ TEST_F(ExpandAutoTypeTest, Test) {
   EXPECT_THAT(apply("au^to x = &ns::Func;"),
               StartsWith("fail: Could not expand type of function pointer"));
   // lambda types are not replaced
-  EXPECT_THAT(apply("au^to x = []{};"),
-              StartsWith("fail: Could not expand type of lambda expression"));
+  EXPECT_UNAVAILABLE("au^to x = []{};");
   // inline namespaces
   EXPECT_EQ(apply("au^to x = inl_ns::Visible();"),
             "Visible x = inl_ns::Visible();");
