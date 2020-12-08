@@ -198,7 +198,8 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
                                    FTP);
 }
 
-static CallingConv getCallingConventionForDecl(const Decl *D, bool IsWindows) {
+static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
+                                               bool IsWindows) {
   // Set the appropriate calling convention for the Function.
   if (D->hasAttr<StdCallAttr>())
     return CC_X86StdCall;
@@ -3818,6 +3819,24 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
   EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
 }
 
+// Check if the call is going to use the inalloca convention. This needs to
+// agree with CGFunctionInfo::usesInAlloca. The CGFunctionInfo is arranged
+// later, so we can't check it directly.
+static bool hasInAllocaArgs(CodeGenModule &CGM, CallingConv ExplicitCC,
+                            ArrayRef<QualType> ArgTypes) {
+  // The Swift calling convention doesn't go through the target-specific
+  // argument classification, so it never uses inalloca.
+  // TODO: Consider limiting inalloca use to only calling conventions supported
+  // by MSVC.
+  if (ExplicitCC == CC_Swift)
+    return false;
+  if (!CGM.getTarget().getCXXABI().isMicrosoft())
+    return false;
+  return llvm::any_of(ArgTypes, [&](QualType Ty) {
+    return isInAllocaArgument(CGM.getCXXABI(), Ty);
+  });
+}
+
 #ifndef NDEBUG
 // Determine whether the given argument is an Objective-C method
 // that may have type parameters in its signature.
@@ -3845,17 +3864,27 @@ void CodeGenFunction::EmitCallArgs(
   assert((ParamsToSkip == 0 || Prototype.P) &&
          "Can't skip parameters if type info is not provided");
 
-  // First, use the argument types that the type info knows about
+  // This variable only captures *explicitly* written conventions, not those
+  // applied by default via command line flags or target defaults, such as
+  // thiscall, aapcs, stdcall via -mrtd, etc. Computing that correctly would
+  // require knowing if this is a C++ instance method or being able to see
+  // unprototyped FunctionTypes.
+  CallingConv ExplicitCC = CC_C;
+
+  // First, if a prototype was provided, use those argument types.
   bool IsVariadic = false;
   if (Prototype.P) {
     const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
     if (MD) {
       IsVariadic = MD->isVariadic();
+      ExplicitCC = getCallingConventionForDecl(
+          MD, CGM.getTarget().getTriple().isOSWindows());
       ArgTypes.assign(MD->param_type_begin() + ParamsToSkip,
                       MD->param_type_end());
     } else {
       const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
       IsVariadic = FPT->isVariadic();
+      ExplicitCC = FPT->getExtInfo().getCC();
       ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
                       FPT->param_type_end());
     }
@@ -3923,15 +3952,10 @@ void CodeGenFunction::EmitCallArgs(
   };
 
   // Insert a stack save if we're going to need any inalloca args.
-  bool HasInAllocaArgs = false;
-  if (CGM.getTarget().getCXXABI().isMicrosoft()) {
-    for (ArrayRef<QualType>::iterator I = ArgTypes.begin(), E = ArgTypes.end();
-         I != E && !HasInAllocaArgs; ++I)
-      HasInAllocaArgs = isInAllocaArgument(CGM.getCXXABI(), *I);
-    if (HasInAllocaArgs) {
-      assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
-      Args.allocateArgumentMemory(*this);
-    }
+  if (hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
+    assert(getTarget().getTriple().getArch() == llvm::Triple::x86 &&
+           "inalloca only supported on x86");
+    Args.allocateArgumentMemory(*this);
   }
 
   // Evaluate each argument in the appropriate order.
