@@ -3395,6 +3395,87 @@ static LogicalResult verify(spirv::SpecConstantCompositeOp constOp) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.mlir.yield
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::YieldOp yieldOp) {
+  Operation *parentOp = yieldOp.getParentOp();
+
+  if (!parentOp || !isa<spirv::SpecConstantOperationOp>(parentOp))
+    return yieldOp.emitOpError(
+        "expected parent op to be 'spv.SpecConstantOperation'");
+
+  Block &block = parentOp->getRegion(0).getBlocks().front();
+  Operation &enclosedOp = block.getOperations().front();
+
+  if (yieldOp.getOperand().getDefiningOp() != &enclosedOp)
+    return yieldOp.emitOpError(
+        "expected operand to be defined by preceeding op");
+
+  return success();
+}
+
+static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
+                                                OperationState &state) {
+  // TODO: For now, only generic form is supported.
+  return failure();
+}
+
+static void print(spirv::SpecConstantOperationOp op, OpAsmPrinter &printer) {
+  // TODO
+  printer.printGenericOp(op);
+}
+
+static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
+  Block &block = constOp.getRegion().getBlocks().front();
+
+  if (block.getOperations().size() != 2)
+    return constOp.emitOpError("expected exactly 2 nested ops");
+
+  Operation &yieldOp = block.getOperations().back();
+
+  if (!isa<spirv::YieldOp>(yieldOp))
+    return constOp.emitOpError("expected terminator to be a yield op");
+
+  Operation &enclosedOp = block.getOperations().front();
+
+  // TODO Add a `UsableInSpecConstantOp` trait and mark ops from the list below
+  // with it instead.
+  if (!isa<spirv::SConvertOp, spirv::UConvertOp, spirv::FConvertOp,
+           spirv::SNegateOp, spirv::NotOp, spirv::IAddOp, spirv::ISubOp,
+           spirv::IMulOp, spirv::UDivOp, spirv::SDivOp, spirv::UModOp,
+           spirv::SRemOp, spirv::SModOp, spirv::ShiftRightLogicalOp,
+           spirv::ShiftRightArithmeticOp, spirv::ShiftLeftLogicalOp,
+           spirv::BitwiseOrOp, spirv::BitwiseXorOp, spirv::BitwiseAndOp,
+           spirv::CompositeExtractOp, spirv::CompositeInsertOp,
+           spirv::LogicalOrOp, spirv::LogicalAndOp, spirv::LogicalNotOp,
+           spirv::LogicalEqualOp, spirv::LogicalNotEqualOp, spirv::SelectOp,
+           spirv::IEqualOp, spirv::INotEqualOp, spirv::ULessThanOp,
+           spirv::SLessThanOp, spirv::UGreaterThanOp, spirv::SGreaterThanOp,
+           spirv::ULessThanEqualOp, spirv::SLessThanEqualOp,
+           spirv::UGreaterThanEqualOp, spirv::SGreaterThanEqualOp>(enclosedOp))
+    return constOp.emitOpError("invalid enclosed op");
+
+  if (enclosedOp.getNumOperands() != constOp.getOperands().size())
+    return constOp.emitOpError("invalid number of operands; expected ")
+           << enclosedOp.getNumOperands() << ", actual "
+           << constOp.getOperands().size();
+
+  if (enclosedOp.getNumOperands() != constOp.getRegion().getNumArguments())
+    return constOp.emitOpError("invalid number of region arguments; expected ")
+           << enclosedOp.getNumOperands() << ", actual "
+           << constOp.getRegion().getNumArguments();
+
+  for (auto operand : constOp.getOperands())
+    if (!isa<spirv::ConstantOp, spirv::SpecConstantOp,
+             spirv::SpecConstantCompositeOp, spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
+      return constOp.emitOpError("invalid operand");
+
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 
