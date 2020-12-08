@@ -1739,12 +1739,23 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
 
   QualType ResultTy = E->getType();
 
-  // Do not warn on member accesses to arrays since this returns an array
-  // lvalue and does not actually dereference memory.
-  if (isa<ArrayType>(ResultTy))
-    return;
-
-  if (E->isArrow()) {
+  // Member accesses have four cases:
+  // 1: non-array member via "->": dereferences
+  // 2: non-array member via ".": nothing interesting happens
+  // 3: array member access via "->": nothing interesting happens
+  //    (this returns an array lvalue and does not actually dereference memory)
+  // 4: array member access via ".": *adds* a layer of indirection
+  if (ResultTy->isArrayType()) {
+    if (!E->isArrow()) {
+      // This might be something like:
+      //     (*structPtr).arrayMember
+      // which behaves roughly like:
+      //     &(*structPtr).pointerMember
+      // in that the apparent dereference in the base expression does not
+      // actually happen.
+      CheckAddressOfNoDeref(E->getBase());
+    }
+  } else if (E->isArrow()) {
     if (const auto *Ptr = dyn_cast<PointerType>(
             E->getBase()->getType().getDesugaredType(Context))) {
       if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
