@@ -98,13 +98,8 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                        parenthesized(construct<AccObjectListWithReduction>(
                            Parser<AccReductionOperator>{} / ":",
                            Parser<AccObjectList>{})))) ||
-    // SELF clause is either a simple optional condition for compute construct
-    // or a synonym of the HOST clause for the update directive 2.14.4 holding
-    // an object list.
-    "SELF" >> construct<AccClause>(construct<AccClause::Self>(
-                  maybe(parenthesized(scalarLogicalExpr)))) ||
-    construct<AccClause>(
-        construct<AccClause::Host>(parenthesized(Parser<AccObjectList>{}))) ||
+    "SELF" >> construct<AccClause>(
+                  construct<AccClause::Self>(Parser<AccSelfClause>{})) ||
     "SEQ" >> construct<AccClause>(construct<AccClause::Seq>()) ||
     "TILE" >> construct<AccClause>(construct<AccClause::Tile>(
                   parenthesized(Parser<AccTileExprList>{}))) ||
@@ -175,6 +170,12 @@ TYPE_PARSER(sourced(construct<AccReductionOperator>(
 TYPE_PARSER(construct<AccDefaultClause>(
     parenthesized(first("NONE" >> pure(AccDefaultClause::Arg::None),
         "PRESENT" >> pure(AccDefaultClause::Arg::Present)))))
+
+// SELF clause is either a simple optional condition for compute construct
+// or a synonym of the HOST clause for the update directive 2.14.4 holding
+// an object list.
+TYPE_PARSER(construct<AccSelfClause>(parenthesized(Parser<AccObjectList>{})) ||
+    construct<AccSelfClause>(maybe(parenthesized(scalarLogicalExpr))))
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(construct<AccDataModifier>(
