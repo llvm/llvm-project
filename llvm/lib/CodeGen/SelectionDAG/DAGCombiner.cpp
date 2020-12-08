@@ -3193,18 +3193,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       return N1;
     }
 
-    // Convert 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y)).
+    // Convert 0 - abs(x).
+    SDValue Result;
     if (N1->getOpcode() == ISD::ABS &&
-        !TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-      SDValue X = N1->getOperand(0);
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, DL, VT, X,
-                      DAG.getConstant(BitWidth - 1, DL, getShiftAmountTy(VT)));
-      SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, Shift);
-      AddToWorklist(Shift.getNode());
-      AddToWorklist(Xor.getNode());
-      return DAG.getNode(ISD::SUB, DL, VT, Shift, Xor);
-    }
+        !TLI.isOperationLegalOrCustom(ISD::ABS, VT) &&
+        TLI.expandABS(N1.getNode(), Result, DAG, true))
+      return Result;
   }
 
   // Canonicalize (sub -1, x) -> ~x, i.e. (xor x, -1)
