@@ -94,6 +94,9 @@ public:
   bool IsDerivedType() const { return kind_ == Kind::DerivedType; }
   bool IsStmtFunction() const;
   bool IsParameterizedDerivedType() const;
+  bool IsParameterizedDerivedTypeInstantiation() const {
+    return kind_ == Kind::DerivedType && !symbol_;
+  }
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
 
@@ -207,9 +210,16 @@ public:
 
   void add_importName(const SourceName &);
 
+  // These members pertain to instantiations of parameterized derived types.
   const DerivedTypeSpec *derivedTypeSpec() const { return derivedTypeSpec_; }
   DerivedTypeSpec *derivedTypeSpec() { return derivedTypeSpec_; }
   void set_derivedTypeSpec(DerivedTypeSpec &spec) { derivedTypeSpec_ = &spec; }
+  parser::Message::Reference instantiationContext() const {
+    return instantiationContext_;
+  };
+  void set_instantiationContext(parser::Message::Reference &&mref) {
+    instantiationContext_ = std::move(mref);
+  }
 
   bool hasSAVE() const { return hasSAVE_; }
   void set_hasSAVE(bool yes = true) { hasSAVE_ = yes; }
@@ -249,6 +259,7 @@ private:
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
+  parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement
   // When additional data members are added to Scope, remember to
   // copy them, if appropriate, in InstantiateDerivedType().

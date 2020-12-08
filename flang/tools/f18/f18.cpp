@@ -8,6 +8,7 @@
 
 // Temporary Fortran front end driver main program for development scaffolding.
 
+#include "f18_version.h"
 #include "flang/Common/Fortran-features.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Evaluate/expression.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <cstring>
@@ -36,8 +38,6 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
-
-#include "f18_version.h"
 
 static std::list<std::string> argList(int argc, char *const argv[]) {
   std::list<std::string> result;
@@ -655,6 +655,8 @@ int main(int argc, char *const argv[]) {
       return exitStatus;
     } else if (arg == "-V" || arg == "--version") {
       return printVersion();
+    } else if (arg == "-fdebug-stack-trace") {
+      llvm::sys::PrintStackTraceOnErrorSignal(llvm::StringRef{}, true);
     } else {
       driver.F18_FCArgs.push_back(arg);
       if (arg == "-v") {

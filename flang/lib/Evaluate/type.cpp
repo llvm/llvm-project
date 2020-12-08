@@ -301,11 +301,6 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
   }
 }
 
-bool IsKindTypeParameter(const semantics::Symbol &symbol) {
-  const auto *param{symbol.detailsIf<semantics::TypeParamDetails>()};
-  return param && param->attr() == common::TypeParamAttr::Kind;
-}
-
 // Do the kind type parameters of type1 have the same values as the
 // corresponding kind type parameters of type2?
 static bool AreKindCompatible(const semantics::DerivedTypeSpec &type1,

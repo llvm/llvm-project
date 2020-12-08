@@ -815,10 +815,7 @@ parser::Message *AttachDeclaration(
 
 parser::Message *AttachDeclaration(
     parser::Message *message, const Symbol &symbol) {
-  if (message) {
-    AttachDeclaration(*message, symbol);
-  }
-  return message;
+  return message ? AttachDeclaration(*message, symbol) : nullptr;
 }
 
 class FindImpureCallHelper
@@ -827,12 +824,11 @@ class FindImpureCallHelper
   using Base = AnyTraverse<FindImpureCallHelper, Result>;
 
 public:
-  explicit FindImpureCallHelper(const IntrinsicProcTable &intrinsics)
-      : Base{*this}, intrinsics_{intrinsics} {}
+  explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{characteristics::Procedure::Characterize(
-            call.proc(), intrinsics_)}) {
+    if (auto chars{
+            characteristics::Procedure::Characterize(call.proc(), context_)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }
@@ -841,16 +837,16 @@ public:
   }
 
 private:
-  const IntrinsicProcTable &intrinsics_;
+  FoldingContext &context_;
 };
 
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const Expr<SomeType> &expr) {
-  return FindImpureCallHelper{intrinsics}(expr);
+    FoldingContext &context, const Expr<SomeType> &expr) {
+  return FindImpureCallHelper{context}(expr);
 }
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const ProcedureRef &proc) {
-  return FindImpureCallHelper{intrinsics}(proc);
+    FoldingContext &context, const ProcedureRef &proc) {
+  return FindImpureCallHelper{context}(proc);
 }
 
 // Compare procedure characteristics for equality except that lhs may be
@@ -1064,6 +1060,16 @@ bool IsFunctionResult(const Symbol &symbol) {
              symbol.get<ObjectEntityDetails>().isFuncResult()) ||
       (symbol.has<ProcEntityDetails>() &&
           symbol.get<ProcEntityDetails>().isFuncResult());
+}
+
+bool IsKindTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Kind;
+}
+
+bool IsLenTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Len;
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {
