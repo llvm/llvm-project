@@ -148,9 +148,10 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
     if (!FindParameter(name)) {
       const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
       if (details.init()) {
-        auto expr{
-            evaluate::Fold(foldingContext, common::Clone(details.init()))};
-        AddParamValue(name, ParamValue{std::move(*expr), details.attr()});
+        auto expr{evaluate::Fold(foldingContext, SomeExpr{*details.init()})};
+        AddParamValue(name,
+            ParamValue{
+                std::move(std::get<SomeIntExpr>(expr.u)), details.attr()});
       } else if (!context.HasError(symbol)) {
         messages.Say(name_,
             "Type parameter '%s' lacks a value and has no default"_err_en_US,
@@ -176,8 +177,10 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
 
 bool DerivedTypeSpec::HasDefaultInitialization() const {
   DirectComponentIterator components{*this};
-  return bool{std::find_if(components.begin(), components.end(),
-      [](const Symbol &component) { return IsInitialized(component); })};
+  return bool{std::find_if(
+      components.begin(), components.end(), [&](const Symbol &component) {
+        return IsInitialized(component, false, &typeSymbol());
+      })};
 }
 
 ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
@@ -235,12 +238,24 @@ void DerivedTypeSpec::Instantiate(
           }
         }
       }
+      if (!IsPointer(symbol)) {
+        if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+          if (MaybeExpr & init{object->init()}) {
+            auto restorer{foldingContext.messages().SetLocation(symbol.name())};
+            init = evaluate::NonPointerInitializationExpr(
+                symbol, std::move(*init), foldingContext);
+          }
+        }
+      }
     }
     return;
   }
   Scope &newScope{containingScope.MakeScope(Scope::Kind::DerivedType)};
   newScope.set_derivedTypeSpec(*this);
   ReplaceScope(newScope);
+  auto restorer{foldingContext.WithPDTInstance(*this)};
+  std::string desc{typeSymbol_.name().ToString()};
+  char sep{'('};
   for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
     const SourceName &name{symbol.name()};
     if (typeScope.find(symbol.name()) != typeScope.end()) {
@@ -251,41 +266,40 @@ void DerivedTypeSpec::Instantiate(
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
         paramValue->set_attr(details.attr());
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
-          // Ensure that any kind type parameters with values are
-          // constant by now.
-          if (details.attr() == common::TypeParamAttr::Kind) {
-            // Any errors in rank and type will have already elicited
-            // messages, so don't pile on by complaining further here.
-            if (auto maybeDynamicType{expr->GetType()}) {
-              if (expr->Rank() == 0 &&
-                  maybeDynamicType->category() == TypeCategory::Integer) {
-                if (!evaluate::ToInt64(*expr)) {
-                  if (auto *msg{foldingContext.messages().Say(
-                          "Value of kind type parameter '%s' (%s) is not "
-                          "a scalar INTEGER constant"_err_en_US,
-                          name, expr->AsFortran())}) {
-                    msg->Attach(name, "declared here"_en_US);
-                  }
-                }
-              }
+          if (auto folded{evaluate::NonPointerInitializationExpr(symbol,
+                  SomeExpr{std::move(*expr)}, foldingContext, &newScope)}) {
+            desc += sep;
+            desc += name.ToString();
+            desc += '=';
+            desc += folded->AsFortran();
+            sep = ',';
+            TypeParamDetails instanceDetails{details.attr()};
+            if (const DeclTypeSpec * type{details.type()}) {
+              instanceDetails.set_type(*type);
             }
+            instanceDetails.set_init(
+                std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*folded))));
+            newScope.try_emplace(name, std::move(instanceDetails));
           }
-          TypeParamDetails instanceDetails{details.attr()};
-          if (const DeclTypeSpec * type{details.type()}) {
-            instanceDetails.set_type(*type);
-          }
-          instanceDetails.set_init(std::move(*expr));
-          newScope.try_emplace(name, std::move(instanceDetails));
         }
       }
     }
   }
+  parser::Message *contextMessage{nullptr};
+  if (sep != '(') {
+    desc += ')';
+    contextMessage = new parser::Message{foldingContext.messages().at(),
+        "instantiation of parameterized derived type '%s'"_en_US, desc};
+    if (auto outer{containingScope.instantiationContext()}) {
+      contextMessage->SetContext(outer.get());
+    }
+    newScope.set_instantiationContext(contextMessage);
+  }
   // Instantiate every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  auto restorer{foldingContext.WithPDTInstance(*this)};
   newScope.AddSourceRange(typeScope.sourceRange());
+  auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   InstantiateHelper{context, newScope}.InstantiateComponents(typeScope);
-  CheckInstantiatedDerivedType(context, *this);
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
@@ -309,7 +323,6 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     if (const DeclTypeSpec * newType{InstantiateType(newSymbol)}) {
       details->ReplaceType(*newType);
     }
-    details->set_init(Fold(std::move(details->init())));
     for (ShapeSpec &dim : details->shape()) {
       if (dim.lbound().isExplicit()) {
         dim.lbound().SetExplicit(Fold(std::move(dim.lbound().GetExplicit())));
@@ -325,6 +338,16 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
       if (dim.ubound().isExplicit()) {
         dim.ubound().SetExplicit(Fold(std::move(dim.ubound().GetExplicit())));
       }
+    }
+    if (MaybeExpr & init{details->init()}) {
+      // Non-pointer components with default initializers are
+      // processed now so that those default initializers can be used
+      // in PARAMETER structure constructors.
+      auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
+      init = IsPointer(newSymbol)
+          ? evaluate::Fold(foldingContext(), std::move(*init))
+          : evaluate::NonPointerInitializationExpr(
+                newSymbol, std::move(*init), foldingContext());
     }
   }
 }

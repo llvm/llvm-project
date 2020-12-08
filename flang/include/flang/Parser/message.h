@@ -255,6 +255,7 @@ public:
 
   CharBlock at() const { return at_; }
   Messages *messages() const { return messages_; }
+  Message::Reference contextMessage() const { return contextMessage_; }
   bool empty() const { return !messages_ || messages_->empty(); }
 
   // Set CharBlock for messages; restore when the returned value is deleted
@@ -263,6 +264,13 @@ public:
       at = at_;
     }
     return common::ScopedSet(at_, std::move(at));
+  }
+
+  common::Restorer<Message::Reference> SetContext(Message *m) {
+    if (!m) {
+      m = contextMessage_.get();
+    }
+    return common::ScopedSet(contextMessage_, m);
   }
 
   // Diverts messages to another buffer; restored when the returned
@@ -277,7 +285,11 @@ public:
 
   template <typename... A> Message *Say(CharBlock at, A &&...args) {
     if (messages_ != nullptr) {
-      return &messages_->Say(at, std::forward<A>(args)...);
+      auto &msg{messages_->Say(at, std::forward<A>(args)...)};
+      if (contextMessage_) {
+        msg.SetContext(contextMessage_.get());
+      }
+      return &msg;
     } else {
       return nullptr;
     }
@@ -290,6 +302,7 @@ public:
 private:
   CharBlock at_;
   Messages *messages_{nullptr};
+  Message::Reference contextMessage_;
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_MESSAGE_H_

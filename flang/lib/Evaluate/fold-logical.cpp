@@ -101,7 +101,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (IsSimplyContiguous(*expr, context.intrinsics())) {
+        if (IsSimplyContiguous(*expr, context)) {
           return Expr<T>{true};
         }
       }

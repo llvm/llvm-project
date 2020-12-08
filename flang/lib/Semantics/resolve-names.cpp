@@ -183,24 +183,13 @@ public:
   }
 
   template <typename T>
-  MaybeExpr EvaluateConvertedExpr(
+  MaybeExpr EvaluateNonPointerInitializer(
       const Symbol &symbol, const T &expr, parser::CharBlock source) {
-    if (context().HasError(symbol)) {
-      return std::nullopt;
-    }
-    if (auto maybeExpr{AnalyzeExpr(*context_, expr)}) {
-      if (auto converted{
-              evaluate::ConvertToType(symbol, std::move(*maybeExpr))}) {
-        return FoldExpr(std::move(*converted));
-      }
-      if (auto exprType{maybeExpr->GetType()}) {
-        Say(source,
-            "Initialization expression could not be converted to declared type of '%s' from %s"_err_en_US,
-            symbol.name(), exprType->AsFortran());
-      } else {
-        Say(source,
-            "Initialization expression could not be converted to declared type of '%s'"_err_en_US,
-            symbol.name());
+    if (!context().HasError(symbol)) {
+      if (auto maybeExpr{AnalyzeExpr(*context_, expr)}) {
+        auto restorer{GetFoldingContext().messages().SetLocation(source)};
+        return evaluate::NonPointerInitializationExpr(
+            symbol, std::move(*maybeExpr), GetFoldingContext());
       }
     }
     return std::nullopt;
@@ -835,7 +824,7 @@ public:
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
   void NonPointerInitialization(
-      const parser::Name &, const parser::ConstantExpr &, bool inComponentDecl);
+      const parser::Name &, const parser::ConstantExpr &);
   void CheckExplicitInterface(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
@@ -935,8 +924,6 @@ private:
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
   bool IsUplevelReference(const Symbol &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
-  bool CheckInitialDataTarget(const Symbol &, const SomeExpr &, SourceName);
-  void CheckInitialProcTarget(const Symbol &, const parser::Name &, SourceName);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
   bool PassesLocalityChecks(const parser::Name &name, Symbol &symbol);
@@ -3263,8 +3250,8 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
   ApplyImplicitRules(symbol);
   Walk(expr);
-  if (auto converted{
-          EvaluateConvertedExpr(symbol, expr, expr.thing.value().source)}) {
+  if (auto converted{EvaluateNonPointerInitializer(
+          symbol, expr, expr.thing.value().source)}) {
     symbol.get<ObjectEntityDetails>().set_init(std::move(*converted));
   }
   return false;
@@ -3835,11 +3822,11 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
       SetType(name, *type);
       if (auto &init{
               std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{EvaluateConvertedExpr(
+        if (auto maybeExpr{EvaluateNonPointerInitializer(
                 *symbol, *init, init->thing.thing.thing.value().source)}) {
-          auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)};
-          CHECK(intExpr);
-          symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
+          if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
+            symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
+          }
         }
       }
     }
@@ -5690,43 +5677,6 @@ const parser::Name *DeclarationVisitor::FindComponent(
   return nullptr;
 }
 
-// C764, C765
-bool DeclarationVisitor::CheckInitialDataTarget(
-    const Symbol &pointer, const SomeExpr &expr, SourceName source) {
-  auto &context{GetFoldingContext()};
-  auto restorer{context.messages().SetLocation(source)};
-  auto dyType{evaluate::DynamicType::From(pointer)};
-  CHECK(dyType);
-  auto designator{evaluate::TypedWrapper<evaluate::Designator>(
-      *dyType, evaluate::DataRef{pointer})};
-  CHECK(designator);
-  return CheckInitialTarget(context, *designator, expr);
-}
-
-void DeclarationVisitor::CheckInitialProcTarget(
-    const Symbol &pointer, const parser::Name &target, SourceName source) {
-  // C1519 - must be nonelemental external or module procedure,
-  // or an unrestricted specific intrinsic function.
-  if (const Symbol * targetSym{target.symbol}) {
-    const Symbol &ultimate{targetSym->GetUltimate()};
-    if (ultimate.attrs().test(Attr::INTRINSIC)) {
-    } else if (!ultimate.attrs().test(Attr::EXTERNAL) &&
-        ultimate.owner().kind() != Scope::Kind::Module) {
-      Say(source,
-          "Procedure pointer '%s' initializer '%s' is neither "
-          "an external nor a module procedure"_err_en_US,
-          pointer.name(), ultimate.name());
-    } else if (ultimate.attrs().test(Attr::ELEMENTAL)) {
-      Say(source,
-          "Procedure pointer '%s' cannot be initialized with the "
-          "elemental procedure '%s"_err_en_US,
-          pointer.name(), ultimate.name());
-    } else {
-      // TODO: Check the "shalls" in the 15.4.3.6 paragraphs 7-10.
-    }
-  }
-}
-
 void DeclarationVisitor::Initialization(const parser::Name &name,
     const parser::Initialization &init, bool inComponentDecl) {
   // Traversal of the initializer was deferred to here so that the
@@ -5737,14 +5687,7 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
   }
   Symbol &ultimate{name.symbol->GetUltimate()};
   if (IsAllocatable(ultimate)) {
-    Say(name, "Allocatable component '%s' cannot be initialized"_err_en_US);
-    return;
-  }
-  if (std::holds_alternative<parser::InitialDataTarget>(init.u)) {
-    // Defer analysis further to the end of the specification parts so that
-    // forward references and attribute checks (e.g., SAVE) work better.
-    // TODO: But pointer initializers of components in named constants of
-    // derived types may still need more attention.
+    Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
     return;
   }
   if (auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
@@ -5753,7 +5696,7 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
     std::visit(
         common::visitors{
             [&](const parser::ConstantExpr &expr) {
-              NonPointerInitialization(name, expr, inComponentDecl);
+              NonPointerInitialization(name, expr);
             },
             [&](const parser::NullInit &null) {
               Walk(null);
@@ -5770,7 +5713,9 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               }
             },
             [&](const parser::InitialDataTarget &) {
-              DIE("InitialDataTarget can't appear here");
+              // Defer analysis to the end of the specification part
+              // so that forward references and attribute checks like SAVE
+              // work better.
             },
             [&](const std::list<Indirection<parser::DataStmtValue>> &) {
               // TODO: Need to Walk(init.u); when implementing this case
@@ -5796,7 +5741,7 @@ void DeclarationVisitor::PointerInitialization(
           CHECK(!details->init());
           Walk(target);
           if (MaybeExpr expr{EvaluateExpr(target)}) {
-            CheckInitialDataTarget(ultimate, *expr, target.value().source);
+            // Validation is done in declaration checking.
             details->set_init(std::move(*expr));
           }
         }
@@ -5818,8 +5763,8 @@ void DeclarationVisitor::PointerInitialization(
         CHECK(!details.init());
         Walk(target);
         if (const auto *targetName{std::get_if<parser::Name>(&target.u)}) {
-          CheckInitialProcTarget(ultimate, *targetName, name.source);
           if (targetName->symbol) {
+            // Validation is done in declaration checking.
             details.set_init(*targetName->symbol);
           }
         } else {
@@ -5835,8 +5780,8 @@ void DeclarationVisitor::PointerInitialization(
   }
 }
 
-void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
-    const parser::ConstantExpr &expr, bool inComponentDecl) {
+void DeclarationVisitor::NonPointerInitialization(
+    const parser::Name &name, const parser::ConstantExpr &expr) {
   if (name.symbol) {
     Symbol &ultimate{name.symbol->GetUltimate()};
     if (!context().HasError(ultimate)) {
@@ -5846,15 +5791,13 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         CHECK(!details->init());
         Walk(expr);
-        if (inComponentDecl) {
-          // TODO: check C762 - all bounds and type parameters of component
-          // are colons or constant expressions if component is initialized
+        if (ultimate.owner().IsParameterizedDerivedType()) {
           // Can't convert to type of component, which might not yet
-          // be known; that's done later during instantiation.
+          // be known; that's done later during PDT instantiation.
           if (MaybeExpr value{EvaluateExpr(expr)}) {
             details->set_init(std::move(*value));
           }
-        } else if (MaybeExpr folded{EvaluateConvertedExpr(
+        } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
                        ultimate, expr, expr.thing.value().source)}) {
           details->set_init(std::move(*folded));
         }
@@ -6565,14 +6508,16 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
     return; // error occurred creating scope
   }
   SetScope(*node.scope());
-  // The initializers of pointers, pointer components, and non-deferred
-  // type-bound procedure bindings have not yet been traversed.
+  // The initializers of pointers, the default initializers of pointer
+  // components, and non-deferred type-bound procedure bindings have not
+  // yet been traversed.
   // We do that now, when any (formerly) forward references that appear
-  // in those initializers will resolve to the right symbols.
+  // in those initializers will resolve to the right symbols without
+  // incurring spurious errors with IMPLICIT NONE.
   DeferredCheckVisitor{*this}.Walk(node.spec());
   DeferredCheckVisitor{*this}.Walk(node.exec()); // for BLOCK
   for (Scope &childScope : currScope().children()) {
-    if (childScope.IsDerivedType() && !childScope.symbol()) {
+    if (childScope.IsParameterizedDerivedTypeInstantiation()) {
       FinishDerivedTypeInstantiation(childScope);
     }
   }
@@ -6581,8 +6526,9 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
   }
 }
 
-// Fold object pointer initializer designators with the actual
-// type parameter values of a particular instantiation.
+// Duplicate and fold component object pointer default initializer designators
+// using the actual type parameter values of each particular instantiation.
+// Validation is done later in declaration checking.
 void ResolveNamesVisitor::FinishDerivedTypeInstantiation(Scope &scope) {
   CHECK(scope.IsDerivedType() && !scope.symbol());
   if (DerivedTypeSpec * spec{scope.derivedTypeSpec()}) {
