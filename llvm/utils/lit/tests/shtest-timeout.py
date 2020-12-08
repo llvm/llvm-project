@@ -25,7 +25,6 @@
 # RUN: FileCheck --check-prefix=CHECK-INTSH-ERR < %t.intsh.err %s
 
 # CHECK-INTSH-OUT: TIMEOUT: per_test_timeout :: infinite_loop.py
-# CHECK-INTSH-OUT: command output:
 # CHECK-INTSH-OUT: command reached timeout: True
 
 # CHECK-INTSH-ERR: Using internal shell
