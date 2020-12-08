@@ -135,6 +135,11 @@ New checks
   Alias to the :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone-signal-handler>` check.
 
+- New :doc:`performance-no-int-to-ptr
+  <clang-tidy/checks/performance-no-int-to-ptr>` check.
+
+  Diagnoses every integer to pointer cast.
+
 - New :doc:`readability-function-cognitive-complexity
   <clang-tidy/checks/readability-function-cognitive-complexity>` check.
 
