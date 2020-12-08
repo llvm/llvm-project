@@ -48,8 +48,10 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
           ast_type_traits::TK_AsIs,
-          implicitCastExpr(hasImplicitDestinationType(builtinType()),
-                           hasSourceExpression(hasType(builtinType())),
+          implicitCastExpr(hasImplicitDestinationType(
+                               hasUnqualifiedDesugaredType(builtinType())),
+                           hasSourceExpression(hasType(
+                               hasUnqualifiedDesugaredType(builtinType()))),
                            unless(hasSourceExpression(IsCeilFloorCallExpr)),
                            unless(hasParent(castExpr())),
                            unless(isInTemplateInstantiation()))
@@ -58,16 +60,18 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binary operators:
   //   i += 0.5;
-  Finder->addMatcher(binaryOperator(isAssignmentOperator(),
-                                    hasLHS(expr(hasType(builtinType()))),
-                                    hasRHS(expr(hasType(builtinType()))),
-                                    unless(hasRHS(IsCeilFloorCallExpr)),
-                                    unless(isInTemplateInstantiation()),
-                                    // The `=` case generates an implicit cast
-                                    // which is covered by the previous matcher.
-                                    unless(hasOperatorName("=")))
-                         .bind("binary_op"),
-                     this);
+  Finder->addMatcher(
+      binaryOperator(
+          isAssignmentOperator(),
+          hasLHS(expr(hasType(hasUnqualifiedDesugaredType(builtinType())))),
+          hasRHS(expr(hasType(hasUnqualifiedDesugaredType(builtinType())))),
+          unless(hasRHS(IsCeilFloorCallExpr)),
+          unless(isInTemplateInstantiation()),
+          // The `=` case generates an implicit cast
+          // which is covered by the previous matcher.
+          unless(hasOperatorName("=")))
+          .bind("binary_op"),
+      this);
 }
 
 static const BuiltinType *getBuiltinType(const Expr &E) {
