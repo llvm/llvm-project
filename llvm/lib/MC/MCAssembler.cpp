@@ -383,6 +383,8 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     return cast<MCCVInlineLineTableFragment>(F).getContents().size();
   case MCFragment::FT_CVDefRange:
     return cast<MCCVDefRangeFragment>(F).getContents().size();
+  case MCFragment::FT_PseudoProbe:
+    return cast<MCPseudoProbeAddrFragment>(F).getContents().size();
   case MCFragment::FT_Dummy:
     llvm_unreachable("Should not have been added");
   }
@@ -704,6 +706,11 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     OS << DRF.getContents();
     break;
   }
+  case MCFragment::FT_PseudoProbe: {
+    const MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(F);
+    OS << PF.getContents();
+    break;
+  }
   case MCFragment::FT_Dummy:
     llvm_unreachable("Should not have been added");
   }
@@ -913,6 +920,12 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         MCDwarfCallFrameFragment &DF = cast<MCDwarfCallFrameFragment>(Frag);
         Fixups = DF.getFixups();
         Contents = DF.getContents();
+        break;
+      }
+      case MCFragment::FT_PseudoProbe: {
+        MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(Frag);
+        Fixups = PF.getFixups();
+        Contents = PF.getContents();
         break;
       }
       }
@@ -1170,6 +1183,27 @@ bool MCAssembler::relaxCVDefRange(MCAsmLayout &Layout,
   return OldSize != F.getContents().size();
 }
 
+bool MCAssembler::relaxPseudoProbeAddr(MCAsmLayout &Layout,
+                                       MCPseudoProbeAddrFragment &PF) {
+  uint64_t OldSize = PF.getContents().size();
+  int64_t AddrDelta;
+  bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
+  assert(Abs && "We created a pseudo probe with an invalid expression");
+  (void)Abs;
+  SmallVectorImpl<char> &Data = PF.getContents();
+  Data.clear();
+  raw_svector_ostream OSE(Data);
+  PF.getFixups().clear();
+
+  // Relocations should not be needed in general except on RISC-V which we are
+  // not targeted for now.
+  assert(!getBackend().requiresDiffExpressionRelocations() &&
+         "cannot relax relocations");
+  // AddrDelta is a signed integer
+  encodeSLEB128(AddrDelta, OSE, OldSize);
+  return OldSize != Data.size();
+}
+
 bool MCAssembler::relaxFragment(MCAsmLayout &Layout, MCFragment &F) {
   switch(F.getKind()) {
   default:
@@ -1191,6 +1225,8 @@ bool MCAssembler::relaxFragment(MCAsmLayout &Layout, MCFragment &F) {
     return relaxCVInlineLineTable(Layout, cast<MCCVInlineLineTableFragment>(F));
   case MCFragment::FT_CVDefRange:
     return relaxCVDefRange(Layout, cast<MCCVDefRangeFragment>(F));
+  case MCFragment::FT_PseudoProbe:
+    return relaxPseudoProbeAddr(Layout, cast<MCPseudoProbeAddrFragment>(F));
   }
 }
 

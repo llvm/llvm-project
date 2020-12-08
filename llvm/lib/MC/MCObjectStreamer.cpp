@@ -852,6 +852,9 @@ void MCObjectStreamer::finishImpl() {
   // Dump out the dwarf file & directory tables and line tables.
   MCDwarfLineTable::Emit(this, getAssembler().getDWARFLinetableParams());
 
+  // Emit pseudo probes for the current module.
+  MCPseudoProbeTable::emit(this);
+
   // Update any remaining pending labels with empty data fragments.
   flushPendingLabels();
 

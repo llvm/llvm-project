@@ -66,6 +66,7 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
+class PseudoProbeHandler;
 class raw_ostream;
 class StackMaps;
 class StringRef;
@@ -205,6 +206,10 @@ private:
 
   /// If the target supports dwarf debug info, this pointer is non-null.
   DwarfDebug *DD = nullptr;
+
+  /// A handler that supports pseudo probe emission with embedded inline
+  /// context.
+  PseudoProbeHandler *PP = nullptr;
 
   /// If the current module uses dwarf CFI annotations strictly for debugging.
   bool isCFIMoveForDebugging = false;
@@ -359,6 +364,8 @@ public:
   void emitStackSizeSection(const MachineFunction &MF);
 
   void emitBBAddrMapSection(const MachineFunction &MF);
+
+  void emitPseudoProbe(const MachineInstr &MI);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
 
