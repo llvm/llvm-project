@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the definition file for OpenACC directives and clauses.
+// This is the definition file for OpenACC 3.1 directives and clauses.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,10 +38,10 @@ def ACCC_Async : Clause<"async"> {
   let isValueOptional = true;
 }
 
-// 2.9.6
+// 2.9.7
 def ACCC_Auto : Clause<"auto"> {}
 
-// 2.7.11
+// 2.7.12
 def ACCC_Attach : Clause<"attach"> {
   let flangClassValue = "AccObjectList";
 }
@@ -60,41 +60,41 @@ def ACCC_Collapse : Clause<"collapse"> {
   let flangClassValue = "ScalarIntConstantExpr";
 }
 
-// 2.7.5
+// 2.7.6
 def ACCC_Copy : Clause<"copy"> {
   let flangClassValue = "AccObjectList";
 }
-// 2.7.6
+// 2.7.7
 def ACCC_Copyin : Clause<"copyin"> {
   let flangClassValue = "AccObjectListWithModifier";
 }
 
-// 2.7.7
+// 2.7.8
 def ACCC_Copyout : Clause<"copyout"> {
   let flangClassValue = "AccObjectListWithModifier";
 }
 
-// 2.7.8
+// 2.7.9
 def ACCC_Create : Clause<"create"> {
   let flangClassValue = "AccObjectListWithModifier";
 }
 
-// 2.5.14
+// 2.5.15
 def ACCC_Default : Clause<"default"> {
   let flangClassValue = "AccDefaultClause";
 }
 
-// 2.4.12
+// 2.14.3
 def ACCC_DefaultAsync : Clause<"default_async"> {
   let flangClassValue = "ScalarIntExpr";
 }
 
-// 2.7.10
+// 2.7.11
 def ACCC_Delete : Clause<"delete"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.7.12
+// 2.7.13
 def ACCC_Detach : Clause<"detach"> {
   let flangClassValue = "AccObjectList";
 }
@@ -104,17 +104,17 @@ def ACCC_Device : Clause<"device"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.14.1
+// 2.14.1 - 2.14.2
 def ACCC_DeviceNum : Clause<"device_num">  {
   let flangClassValue = "ScalarIntExpr";
 }
 
-// 2.7.3
+// 2.7.4
 def ACCC_DevicePtr : Clause<"deviceptr"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.13
+// 2.13.1
 def ACCC_DeviceResident : Clause<"device_resident"> {
   let flangClassValue = "AccObjectList";
 }
@@ -130,7 +130,7 @@ def ACCC_DeviceType : Clause<"device_type"> {
 // 2.6.6
 def ACCC_Finalize : Clause<"finalize"> {}
 
-// 2.5.12
+// 2.5.13
 def ACCC_FirstPrivate : Clause<"firstprivate"> {
   let flangClassValue = "AccObjectList";
 }
@@ -146,7 +146,7 @@ def ACCC_Host : Clause<"host"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.5.4
+// 2.5.5
 def ACCC_If : Clause <"if"> {
   let flangClassValue = "ScalarLogicalExpr";
 }
@@ -154,15 +154,15 @@ def ACCC_If : Clause <"if"> {
 // 2.14.4
 def ACCC_IfPresent : Clause<"if_present"> {}
 
-// 2.9.9
+// 2.9.6
 def ACCC_Independent : Clause<"independent"> {}
 
-// 2.13
+// 2.13.3
 def ACCC_Link : Clause<"link"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.7.9
+// 2.7.10
 def ACCC_NoCreate : Clause<"no_create"> {
   let flangClassValue = "AccObjectList";
 }
@@ -170,27 +170,27 @@ def ACCC_NoCreate : Clause<"no_create"> {
 // 2.15.1
 def ACCC_NoHost : Clause<"nohost"> {}
 
-// 2.5.8
+// 2.5.9
 def ACCC_NumGangs : Clause<"num_gangs"> {
   let flangClassValue = "ScalarIntExpr";
 }
 
-// 2.5.9
+// 2.5.10
 def ACCC_NumWorkers : Clause<"num_workers"> {
   let flangClassValue = "ScalarIntExpr";
 }
 
-// 2.7.4
+// 2.7.5
 def ACCC_Present : Clause<"present"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.5.11
+// 2.5.12
 def ACCC_Private : Clause<"private"> {
   let flangClassValue = "AccObjectList";
 }
 
-// 2.9.7
+// 2.9.8
 def ACCC_Tile : Clause <"tile"> {
   let flangClassValue = "AccTileExprList";
 }
@@ -203,12 +203,12 @@ def ACCC_UseDevice : Clause <"use_device"> {
 // 2.12
 def ACCC_Read : Clause<"read"> {}
 
-// 2.5.13
+// 2.5.14
 def ACCC_Reduction : Clause<"reduction"> {
   let flangClassValue = "AccObjectListWithReduction";
 }
 
-// 2.5.5
+// 2.5.6
 def ACCC_Self : Clause<"self"> {
   let flangClassValue = "AccSelfClause";
 }
@@ -222,7 +222,7 @@ def ACCC_Vector : Clause<"vector"> {
   let isValueOptional = true;
 }
 
-// 2.5.10
+// 2.5.11
 def ACCC_VectorLength : Clause<"vector_length"> {
   let flangClassValue = "ScalarIntExpr";
 }
@@ -286,7 +286,7 @@ def ACC_Declare : Directive<"declare"> {
   ];
 }
 
-// 2.5.2
+// 2.5.3
 def ACC_Kernels : Directive<"kernels"> {
   let allowedClauses = [
     VersionedClause<ACCC_Attach>,
@@ -339,7 +339,7 @@ def ACC_Parallel : Directive<"parallel"> {
   ];
 }
 
-// 2.5.3
+// 2.5.2
 def ACC_Serial : Directive<"serial"> {
   let allowedClauses = [
     VersionedClause<ACCC_Attach>,
@@ -493,6 +493,8 @@ def ACC_ExitData : Directive<"exit data"> {
     VersionedClause<ACCC_Detach>
   ];
 }
+
+// 2.8
 def ACC_HostData : Directive<"host_data"> {
   let allowedClauses = [
     VersionedClause<ACCC_If>,
