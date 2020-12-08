@@ -26,7 +26,7 @@ namespace mlir {
 namespace acc {
 
 /// Enumeration used to encode the execution mapping on a loop construct.
-/// They refer directly to the OpenACC 3.0 standard:
+/// They refer directly to the OpenACC 3.1 standard:
 /// 2.9.2. gang
 /// 2.9.3. worker
 /// 2.9.4. vector
