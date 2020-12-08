@@ -31,6 +31,12 @@ vsetvli a2, a0, e8,m1,ma
 vsetvli a2, a0, e8,m1,mu
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
+vsetvli a2, a0, e8x,m1,tu,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1z,tu,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vadd.vv v1, v3, v2, v4.t
 # CHECK-ERROR: operand must be v0.t
 
