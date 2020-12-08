@@ -1013,6 +1013,9 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     auto fields = rti->getFields();
     return fields.size();
   }
+  if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
+    return eti->getNumPayloadCases();
+  }
   // FIXME: Implement more cases.
   return {};
 }
