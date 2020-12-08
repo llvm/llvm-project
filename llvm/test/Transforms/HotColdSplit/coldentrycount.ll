@@ -27,9 +27,9 @@ declare void @sink() cold
 ; CHECK: define {{.*}} @fun.cold.1{{.*}} ![[PROF:[0-9]+]] {{.*}}section_prefix ![[UNLIKELY:[0-9]+]]
 
 ; CHECK: ![[HOTPROF]] = !{!"function_entry_count", i64 100}
-; CHECK: ![[LIKELY]] = !{!"function_section_prefix", !".hot"}
+; CHECK: ![[LIKELY]] = !{!"function_section_prefix", !"hot"}
 ; CHECK: ![[PROF]] = !{!"function_entry_count", i64 0}
-; CHECK: ![[UNLIKELY]] = !{!"function_section_prefix", !".unlikely"}
+; CHECK: ![[UNLIKELY]] = !{!"function_section_prefix", !"unlikely"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
@@ -47,6 +47,6 @@ declare void @sink() cold
 !12 = !{i32 999000, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 100}
-!15 = !{!"function_section_prefix", !".hot"}
+!15 = !{!"function_section_prefix", !"hot"}
 !16 = !{!"function_entry_count", i64 0}
-!17 = !{!"function_section_prefix", !".unlikely"}
+!17 = !{!"function_section_prefix", !"unlikely"}

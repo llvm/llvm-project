@@ -36,11 +36,11 @@ attributes #1 = { "use-sample-profile" }
 
 ; CHECK: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
 ; CHECK: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
-; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
+; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !"unlikely"}
 ; UNKNOWN: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
-; UNKNOWN: ![[UNKNOWN_ID]] = !{!"function_section_prefix", !".unknown"}
+; UNKNOWN: ![[UNKNOWN_ID]] = !{!"function_section_prefix", !"unknown"}
 ; ACCURATE: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
-; ACCURATE: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
+; ACCURATE: ![[COLD_ID]] = !{!"function_section_prefix", !"unlikely"}
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}

@@ -33,8 +33,8 @@ class FunctionSamples;
 
 } // end namespace sampleprof
 
-inline const char *getHotSectionPrefix() { return ".hot"; }
-inline const char *getUnlikelySectionPrefix() { return ".unlikely"; }
+inline const char *getHotSectionPrefix() { return "hot"; }
+inline const char *getUnlikelySectionPrefix() { return "unlikely"; }
 
 class ProfileSummaryBuilder {
 private:
