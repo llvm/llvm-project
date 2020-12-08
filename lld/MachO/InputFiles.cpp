@@ -631,15 +631,26 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   // to it later.
   const object::Archive::Symbol sym_copy = sym;
 
-  auto file = make<ObjFile>(mb, modTime, getName());
+  InputFile *file;
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    file = make<ObjFile>(mb, modTime, getName());
+    break;
+  case file_magic::bitcode:
+    file = make<BitcodeFile>(mb);
+    break;
+  default:
+    StringRef bufname =
+        CHECK(c.getName(), toString(this) + ": could not get buffer name");
+    error(toString(this) + ": archive member " + bufname +
+          " has unhandled file type");
+    return;
+  }
+  inputFiles.push_back(file);
 
   // ld64 doesn't demangle sym here even with -demangle. Match that, so
   // intentionally no call to toMachOString() here.
   printArchiveMemberLoad(sym_copy.getName(), file);
-
-  symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
-  subsections.insert(subsections.end(), file->subsections.begin(),
-                     file->subsections.end());
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
