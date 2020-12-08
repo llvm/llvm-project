@@ -114,6 +114,9 @@ public:
 private:
 
   bool CheckAllowedModifier(llvm::acc::Clause clause);
+  bool IsComputeConstruct(llvm::acc::Directive directive) const;
+  bool IsInsideComputeConstruct() const;
+  void CheckNotInComputeConstruct();
   llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 };

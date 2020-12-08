@@ -53,6 +53,195 @@ program openacc_clause_validity
   !$acc init device_type(2, i, j)
   !$acc init device_num(i) device_type(i, j) if(ifCondition)
 
+  !$acc parallel
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive INIT may not be called within a compute region
+  !$acc init
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive INIT may not be called within a compute region
+    !$acc init
+    a(i) = 3.14
+  end do
+
+  !$acc parallel
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive SHUTDOWN may not be called within a compute region
+  !$acc shutdown
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive SHUTDOWN may not be called within a compute region
+    !$acc shutdown
+    a(i) = 3.14
+  end do
+
+  !$acc parallel
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end parallel
+
+  !$acc serial
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end serial
+
+  !$acc kernels
+  !ERROR: Directive SET may not be called within a compute region
+  !$acc set default_async(i)
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc serial
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end serial
+
+  !$acc kernels
+  !$acc loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  !$acc parallel loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    !ERROR: Directive SET may not be called within a compute region
+    !$acc set default_async(i)
+    a(i) = 3.14
+  end do
+
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
   !$acc set
 
