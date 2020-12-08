@@ -414,6 +414,7 @@ protected:
   bool HasFlatSegmentOffsetBug;
   bool HasImageStoreD16Bug;
   bool HasImageGather4D16Bug;
+  bool HasGFX11ExtraVGPRs;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable;
@@ -1138,6 +1139,8 @@ public:
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
+
+  bool hasGFX11ExtraVGPRs() const { return HasGFX11ExtraVGPRs; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

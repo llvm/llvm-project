@@ -563,6 +563,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
+def FeatureGFX11ExtraVGPRs : SubtargetFeature<"gfx11-extra-vgprs",
+  "HasGFX11ExtraVGPRs",
+  "true",
+  "GFX11 with 50% extra VGPRs and 50% larger allocation granule"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1014,6 +1020,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   [FeatureGFX11,
+   FeatureGFX11ExtraVGPRs,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot1Insts,
