@@ -496,3 +496,44 @@ define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr
   store <2 x float> %result1, <2 x float>* %resultptr, align 8
   ret void
 }
+
+define <4 x float> @load_v2f32_extract_insert_v4f32(<2 x float>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2f32_extract_insert_v4f32(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, <2 x float>* [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %l = load <2 x float>, <2 x float>* %p, align 4
+  %s = extractelement <2 x float> %l, i32 0
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+define <4 x float> @load_v8f32_extract_insert_v4f32(<8 x float>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v8f32_extract_insert_v4f32(
+; CHECK-NEXT:    [[L:%.*]] = load <8 x float>, <8 x float>* [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <8 x float> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %l = load <8 x float>, <8 x float>* %p, align 4
+  %s = extractelement <8 x float> %l, i32 0
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(<1 x i32>* align 16 dereferenceable(16) %p, <1 x i32>* %store_ptr) {
+; CHECK-LABEL: @load_v1i32_extract_insert_v8i32_extra_use(
+; CHECK-NEXT:    [[L:%.*]] = load <1 x i32>, <1 x i32>* [[P:%.*]], align 4
+; CHECK-NEXT:    store <1 x i32> [[L]], <1 x i32>* [[STORE_PTR:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <1 x i32> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i32> undef, i32 [[S]], i32 0
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %l = load <1 x i32>, <1 x i32>* %p, align 4
+  store <1 x i32> %l, <1 x i32>* %store_ptr
+  %s = extractelement <1 x i32> %l, i32 0
+  %r = insertelement <8 x i32> undef, i32 %s, i32 0
+  ret <8 x i32> %r
+}
