@@ -26,7 +26,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,ASM %s
 
-// CHECK: {{".*clang.*"}} "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: {{".*clang.*"}} "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // BC-SAME: "-emit-llvm-bc"
 // LL-SAME: "-emit-llvm"

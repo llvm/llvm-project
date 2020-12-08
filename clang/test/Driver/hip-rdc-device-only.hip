@@ -47,7 +47,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefix=SAVETEMP %s
 
-// COMMON: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// COMMON: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
@@ -59,7 +59,7 @@
 // EMITLL-SAME: {{.*}} "-o" {{"a.*ll"}} "-x" "hip"
 // CHECK-SAME: {{.*}} {{".*a.cu"}}
 
-// COMMON: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// COMMON: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
@@ -71,7 +71,7 @@
 // EMITLL-SAME: {{.*}} "-o" {{"a.*ll"}} "-x" "hip"
 // COMMON-SAME: {{.*}} {{".*a.cu"}}
 
-// COMMON: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// COMMON: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
@@ -83,7 +83,7 @@
 // EMITLL-SAME: {{.*}} "-o" {{"b.*ll"}} "-x" "hip"
 // COMMON-SAME: {{.*}} {{".*b.hip"}}
 
-// COMMON: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// COMMON: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
@@ -95,54 +95,54 @@
 // EMITLL-SAME: {{.*}} "-o" {{"b.*ll"}} "-x" "hip"
 // COMMON-SAME: {{.*}} {{".*b.hip"}}
 
-// SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_TMP_BC:"a.*tmp.bc"]] "-x" "hip-cpp-output" [[A_GFX803_CUI]]
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" {{"a.*.ll"}} "-x" "ir" [[A_GFX803_TMP_BC]]
 
-// SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_TMP_BC:"a.*tmp.bc"]] "-x" "hip-cpp-output" [[A_GFX900_CUI]]
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" {{"a.*.ll"}} "-x" "ir" [[A_GFX900_TMP_BC]]
 
-// SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_TMP_BC:"b.*tmp.bc"]] "-x" "hip-cpp-output" [[B_GFX803_CUI]]
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // SAVETEMP-SAME: {{.*}} "-o" {{"b.*.ll"}} "-x" "ir" [[B_GFX803_TMP_BC]]
 
-// SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_TMP_BC:"b.*tmp.bc"]] "-x" "hip-cpp-output" [[B_GFX900_CUI]]
-// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
+// SAVETEMP-NEXT: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
 // SAVETEMP-SAME: {{.*}} "-o" {{"b.*.ll"}} "-x" "ir" [[B_GFX900_TMP_BC]]
