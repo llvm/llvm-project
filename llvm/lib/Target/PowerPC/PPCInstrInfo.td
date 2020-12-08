@@ -1928,7 +1928,7 @@ def DCBZL  : DCB_Form<1014, 1, (outs), (ins memrr:$dst), "dcbzl $dst",
                       IIC_LdStDCBF, [(int_ppc_dcbzl xoaddr:$dst)]>,
                       PPC970_DGroup_Single;
 
-def DCBF   : DCB_Form_hint<86, (outs), (ins u5imm:$TH, memrr:$dst),
+def DCBF   : DCB_Form_hint<86, (outs), (ins u3imm:$TH, memrr:$dst),
                       "dcbf $dst, $TH", IIC_LdStDCBF, []>,
                       PPC970_DGroup_Single;
 
@@ -2463,7 +2463,7 @@ let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STMW : DForm_1<47, (outs), (ins gprc:$rS, memri:$dst),
                    "stmw $rS, $dst", IIC_LdStLMW, []>;
 
-def SYNC : XForm_24_sync<31, 598, (outs), (ins i32imm:$L),
+def SYNC : XForm_24_sync<31, 598, (outs), (ins u2imm:$L),
                         "sync $L", IIC_LdStSync, []>;
 
 let isCodeGenOnly = 1 in {
@@ -4309,7 +4309,7 @@ def ISYNC : XLForm_2_ext<19, 150, 0, 0, 0, (outs), (ins),
 def ICBI : XForm_1a<31, 982, (outs), (ins memrr:$src),
                     "icbi $src", IIC_LdStICBI, []>;
 
-def WAIT : XForm_24_sync<31, 30, (outs), (ins i32imm:$L),
+def WAIT : XForm_24_sync<31, 30, (outs), (ins u2imm:$L),
                          "wait $L", IIC_LdStLoad, []>;
 
 def MBAR : XForm_mbar<31, 854, (outs), (ins u5imm:$MO),
@@ -4327,7 +4327,7 @@ def MTSRIN: XForm_srin<31, 242, (outs), (ins gprc:$RS, gprc:$RB),
 def MFSRIN: XForm_srin<31, 659, (outs gprc:$RS), (ins gprc:$RB),
             "mfsrin $RS, $RB", IIC_SprMFSR>;
 
-def MTMSR: XForm_mtmsr<31, 146, (outs), (ins gprc:$RS, i32imm:$L),
+def MTMSR: XForm_mtmsr<31, 146, (outs), (ins gprc:$RS, u1imm:$L),
                     "mtmsr $RS, $L", IIC_SprMTMSR>;
 
 def WRTEE: XForm_mtmsr<31, 131, (outs), (ins gprc:$RS),
@@ -4356,7 +4356,7 @@ def : InstAlias<"iccci", (ICCCI R0, R0)>, Requires<[IsPPC4xx]>;
 def MFMSR : XForm_rs<31, 83, (outs gprc:$RT), (ins),
                   "mfmsr $RT", IIC_SprMFMSR, []>;
 
-def MTMSRD : XForm_mtmsr<31, 178, (outs), (ins gprc:$RS, i32imm:$L),
+def MTMSRD : XForm_mtmsr<31, 178, (outs), (ins gprc:$RS, u1imm:$L),
                     "mtmsrd $RS, $L", IIC_SprMTMSRD>;
 
 def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
@@ -4376,11 +4376,11 @@ def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec crrc:$BF, i32imm:$U, 0)>;
 let Predicates = [HasFPU] in {
 let Defs = [RM] in {
 def MTFSF : XFLForm_1<63, 711, (outs),
-                      (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
+                      (ins i32imm:$FLM, f8rc:$FRB, u1imm:$L, i32imm:$W),
                       "mtfsf $FLM, $FRB, $L, $W", IIC_IntMFFS, []>;
 let Defs = [CR1] in
 def MTFSF_rec : XFLForm_1<63, 711, (outs),
-                       (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
+                       (ins i32imm:$FLM, f8rc:$FRB, u1imm:$L, i32imm:$W),
                        "mtfsf. $FLM, $FRB, $L, $W", IIC_IntMFFS, []>, isRecordForm;
 }
 
