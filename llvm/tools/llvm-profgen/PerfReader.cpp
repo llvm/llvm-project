@@ -199,7 +199,10 @@ ProfiledBinary *PerfReader::getBinary(uint64_t Address) {
 }
 
 static void printSampleCounter(ContextRangeCounter &Counter) {
-  for (auto Range : Counter) {
+  // Use ordered map to make the output deterministic
+  std::map<std::string, RangeSample> OrderedCounter(Counter.begin(),
+                                                    Counter.end());
+  for (auto Range : OrderedCounter) {
     outs() << Range.first << "\n";
     for (auto I : Range.second) {
       outs() << "  (" << format("%" PRIx64, I.first.first) << ", "
