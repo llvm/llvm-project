@@ -156,6 +156,17 @@ class RewritePattern : public Pattern {
 public:
   virtual ~RewritePattern() {}
 
+  /// Rewrite the IR rooted at the specified operation with the result of
+  /// this pattern, generating any new operations with the specified
+  /// builder.  If an unexpected error is encountered (an internal
+  /// compiler error), it is emitted through the normal MLIR diagnostic
+  /// hooks and the IR is left in a valid state.
+  virtual void rewrite(Operation *op, PatternRewriter &rewriter) const;
+
+  /// Attempt to match against code rooted at the specified operation,
+  /// which is the same operation code as getRootKind().
+  virtual LogicalResult match(Operation *op) const;
+
   /// Attempt to match against code rooted at the specified operation,
   /// which is the same operation code as getRootKind(). If successful, this
   /// function will automatically perform the rewrite.
@@ -172,18 +183,6 @@ protected:
   /// Inherit the base constructors from `Pattern`.
   using Pattern::Pattern;
 
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().
-  virtual LogicalResult match(Operation *op) const;
-
-private:
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// builder.  If an unexpected error is encountered (an internal
-  /// compiler error), it is emitted through the normal MLIR diagnostic
-  /// hooks and the IR is left in a valid state.
-  virtual void rewrite(Operation *op, PatternRewriter &rewriter) const;
-
   /// An anchor for the virtual table.
   virtual void anchor();
 };
@@ -192,14 +191,12 @@ private:
 /// matching and rewriting against an instance of a derived operation class as
 /// opposed to a raw Operation.
 template <typename SourceOp>
-class OpRewritePattern : public RewritePattern {
-public:
+struct OpRewritePattern : public RewritePattern {
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching.
   OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : RewritePattern(SourceOp::getOperationName(), benefit, context) {}
 
-private:
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, PatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), rewriter);
