@@ -83,13 +83,9 @@ namespace preferred_name {
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition
   // CHECK:     TemplateArgument type 'int'
   // CHECK-NOT: PreferredNameAttr
-  // CHECK:     PreferredNameAttr {{.*}} preferred_name::X
-  // CHECK-NOT: PreferredNameAttr
   // CHECK:     CXXRecordDecl
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition
   // CHECK:     TemplateArgument type 'float'
-  // CHECK-NOT: PreferredNameAttr
-  // CHECK:     PreferredNameAttr {{.*}} preferred_name::Y
   // CHECK-NOT: PreferredNameAttr
   // CHECK:     CXXRecordDecl
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition
@@ -125,5 +121,5 @@ namespace preferred_name {
              clang::preferred_name(const_iterator)]] Iter {};
   };
   auto it = MemberTemplate<int>::Iter<const int>();
-  int n = it; // expected-error {{no viable conversion from 'preferred_name::MemberTemplate<int>::const_iterator' to 'int'}}
+  int n = it; // expected-error {{no viable conversion from 'preferred_name::MemberTemplate<int>::Iter<const int>' to 'int'}}
 }
