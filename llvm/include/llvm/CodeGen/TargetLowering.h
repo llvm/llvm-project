@@ -4393,8 +4393,10 @@ public:
   /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))
   /// \param N Node to expand
   /// \param Result output after conversion
+  /// \param IsNegative indicate negated abs
   /// \returns True, if the expansion was successful, false otherwise
-  bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG,
+                 bool IsNegative = false) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
