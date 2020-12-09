@@ -327,11 +327,23 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
 
 bool mlir::isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
                                   NestedPattern &vectorTransferMatcher) {
+  *memRefDim = -1;
   VectorizableOpFun fun([memRefDim](AffineForOp loop, Operation &op) {
     auto load = dyn_cast<AffineLoadOp>(op);
     auto store = dyn_cast<AffineStoreOp>(op);
-    return load ? isContiguousAccess(loop.getInductionVar(), load, memRefDim)
-                : isContiguousAccess(loop.getInductionVar(), store, memRefDim);
+    int thisOpMemRefDim = -1;
+    bool isContiguous = load ? isContiguousAccess(loop.getInductionVar(), load,
+                                                  &thisOpMemRefDim)
+                             : isContiguousAccess(loop.getInductionVar(), store,
+                                                  &thisOpMemRefDim);
+    if (thisOpMemRefDim != -1) {
+      // If memory accesses vary across different dimensions then the loop is
+      // not vectorizable.
+      if (*memRefDim != -1 && *memRefDim != thisOpMemRefDim)
+        return false;
+      *memRefDim = thisOpMemRefDim;
+    }
+    return isContiguous;
   });
   return isVectorizableLoopBodyWithOpCond(loop, fun, vectorTransferMatcher);
 }
