@@ -891,6 +891,7 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
 typedef struct {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
+  uint32_t sh_type = SHT_NULL;
 } symbol_info;
 
 int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
@@ -913,8 +914,23 @@ int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
     return 1;
   }
 
-  res->size = static_cast<uint32_t>(sym->st_size);
+  if (sym->st_shndx == SHN_UNDEF) {
+    return 1;
+  }
+
+  Elf_Scn *section = elf_getscn(elf, sym->st_shndx);
+  if (!section) {
+    return 1;
+  }
+
+  Elf64_Shdr *header = elf64_getshdr(section);
+  if (!header) {
+    return 1;
+  }
+
   res->addr = sym->st_value + base;
+  res->size = static_cast<uint32_t>(sym->st_size);
+  res->sh_type = header->sh_type;
   return 0;
 }
 
@@ -992,6 +1008,99 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return res;
 }
 
+struct device_environment {
+  // initialise an omptarget_device_environmentTy in the deviceRTL
+  // patches around differences in the deviceRTL between trunk, aomp,
+  // rocmcc. Over time these differences will tend to zero and this class
+  // simplified.
+  // Symbol may be in .data or .bss, and may be missing fields:
+  //  - aomp has debug_level, num_devices, device_num
+  //  - trunk has debug_level
+  //  - under review in trunk is debug_level, device_num
+  //  - rocmcc matches aomp, patch to swap num_devices and device_num
+
+  // If the symbol is in .data (aomp, rocm) it can be written directly.
+  // If it is in .bss, we must wait for it to be allocated space on the
+  // gpu (trunk) and initialize after loading.
+  const char *sym() { return "omptarget_device_environment"; }
+
+  omptarget_device_environmentTy host_device_env;
+  symbol_info si;
+  bool valid = false;
+
+  __tgt_device_image *image;
+  const size_t img_size;
+
+  device_environment(int device_id, int number_devices,
+                     __tgt_device_image *image, const size_t img_size)
+      : image(image), img_size(img_size) {
+
+    host_device_env.num_devices = number_devices;
+    host_device_env.device_num = device_id;
+    host_device_env.debug_level = 0;
+#ifdef OMPTARGET_DEBUG
+    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
+      host_device_env.debug_level = std::stoi(envStr);
+    }
+#endif
+
+    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
+                                             img_size, sym(), &si);
+    if (rc != 0) {
+      DP("Finding global device environment '%s' - symbol missing.\n", sym());
+      return;
+    }
+
+    if (si.size > sizeof(host_device_env)) {
+      DP("Symbol '%s' has size %u, expected at most %zu.\n", sym(), si.size,
+         sizeof(host_device_env));
+      return;
+    }
+
+    valid = true;
+  }
+
+  bool in_image() { return si.sh_type != SHT_NOBITS; }
+
+  atmi_status_t before_loading(void *data, size_t size) {
+    assert(valid);
+    if (in_image()) {
+      DP("Setting global device environment before load (%u bytes)\n", si.size);
+      uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+      void *pos = (char *)data + offset;
+      memcpy(pos, &host_device_env, si.size);
+    }
+    return ATMI_STATUS_SUCCESS;
+  }
+
+  atmi_status_t after_loading() {
+    assert(valid);
+    if (!in_image()) {
+      DP("Setting global device environment after load (%u bytes)\n", si.size);
+      int device_id = host_device_env.device_num;
+
+      void *state_ptr;
+      uint32_t state_ptr_size;
+      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+          get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+      if (err != ATMI_STATUS_SUCCESS) {
+        DP("failed to find %s in loaded image\n", sym());
+        return err;
+      }
+
+      if (state_ptr_size != si.size) {
+        DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+           si.size);
+        return ATMI_STATUS_ERROR;
+      }
+
+      return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                  state_ptr_size, device_id);
+    }
+    return ATMI_STATUS_SUCCESS;
+  }
+};
+
 static atmi_status_t atmi_calloc(void **ret_ptr, size_t size,
                                  atmi_mem_place_t place) {
   uint64_t rounded = 4 * ((size + 3) / 4);
@@ -1047,41 +1156,18 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     return NULL;
   }
 
-  omptarget_device_environmentTy host_device_env;
-  host_device_env.num_devices = DeviceInfo.NumberOfDevices;
-  host_device_env.device_num = device_id;
-  host_device_env.debug_level = 0;
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
-    host_device_env.debug_level = std::stoi(envStr);
-  }
-#endif
-
-  auto on_deserialized_data = [&](void *data, size_t size) -> atmi_status_t {
-    const char *device_env_Name = "omptarget_device_environment";
-    symbol_info si;
-    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
-                                             img_size, device_env_Name, &si);
-    if (rc != 0) {
-      DP("Finding global device environment '%s' - symbol missing.\n",
-         device_env_Name);
-      // no need to return FAIL, consider this is a not a device debug build.
-      return ATMI_STATUS_SUCCESS;
-    }
-    if (si.size != sizeof(host_device_env)) {
-      return ATMI_STATUS_ERROR;
-    }
-    DP("Setting global device environment %u bytes\n", si.size);
-    uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-    void *pos = (char *)data + offset;
-    memcpy(pos, &host_device_env, sizeof(host_device_env));
-    return ATMI_STATUS_SUCCESS;
-  };
-
   {
+    auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
+                                  img_size);
+    if (!env.valid) {
+      return NULL;
+    }
+
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
-        on_deserialized_data);
+        [&](void *data, size_t size) {
+          return env.before_loading(data, size);
+        });
 
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {
@@ -1090,6 +1176,11 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
               " compiler flag: -march=<gpu>\n",
               DeviceInfo.GPUName[device_id].c_str(),
 	      get_elf_mach_gfx_name(elf_e_flags(image)));
+      return NULL;
+    }
+
+    err = env.after_loading();
+    if (err != ATMI_STATUS_SUCCESS) {
       return NULL;
     }
   }
