@@ -2,7 +2,7 @@ SWIFT_SOURCES := main.swift
 SWIFTFLAGS_EXTRAS = -L$(BUILDDIR) -I$(BUILDDIR) -I$(SRCDIR) -lWrapper
 LD_EXTRAS = -Xlinker -rpath -Xlinker $(BUILDDIR)
 
-all: libWrapper.dylib a.out
+all: sdkroot.txt libWrapper.dylib a.out
 
 include Makefile.rules
 
@@ -17,3 +17,7 @@ libWrapper.dylib: libCppLib.dylib
 	$(MAKE) -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Wrapper DYLIB_SWIFT_SOURCES=wrapper.swift \
 		SWIFTFLAGS_EXTRAS="-I$(SRCDIR) -L. -lCppLib -module-link-name Wrapper"
+
+# Make sure Makefile and test agree on the SDK.
+sdkroot.txt:
+	echo $(SDKROOT) > $@
