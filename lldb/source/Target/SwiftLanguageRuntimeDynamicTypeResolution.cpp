@@ -1124,7 +1124,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     CompilerType result =
         tuple ? tuple->element_type : GetTypeFromTypeRef(*ts, field.TR);
     // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
-    if (result.IsFunctionType(nullptr))
+    if (result.IsFunctionType())
       child_byte_size = ts->GetPointerByteSize();
     return result;
   };
