@@ -29,6 +29,7 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -876,6 +877,26 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_nanosleep(const struct timespec *req,
     // Interrupted by a signal, rem is filled with the remaining time.
     dfsan_set_label(0, rem, sizeof(struct timespec));
   }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfsw_recvmsg(
+    int sockfd, struct msghdr *msg, int flags, dfsan_label sockfd_label,
+    dfsan_label msg_label, dfsan_label flags_label, dfsan_label *ret_label) {
+  ssize_t ret = recvmsg(sockfd, msg, flags);
+  if (ret >= 0) {
+    dfsan_set_label(0, msg, sizeof(*msg));
+    dfsan_set_label(0, msg->msg_name, msg->msg_namelen);
+    dfsan_set_label(0, msg->msg_control, msg->msg_controllen);
+    for (size_t remaining = ret, i = 0; remaining > 0; ++i) {
+      assert(i < msg->msg_iovlen);
+      struct iovec *iov = &msg->msg_iov[i];
+      size_t written = remaining < iov->iov_len ? remaining : iov->iov_len;
+      dfsan_set_label(0, iov->iov_base, written);
+      remaining -= written;
+    }
+  }
+  *ret_label = 0;
   return ret;
 }
 
