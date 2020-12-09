@@ -2071,6 +2071,8 @@ uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
+  if (IsFunctionType(type, nullptr))
+    return 0;
 
   // TODO: which of these should be logged on failure?
   if (exe_ctx)
