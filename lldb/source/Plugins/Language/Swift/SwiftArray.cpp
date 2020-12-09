@@ -141,7 +141,7 @@ SwiftArrayBridgedBufferHandler::SwiftArrayBridgedBufferHandler(
     : SwiftArrayBufferHandler(), m_elem_type(), m_synth_array_sp(),
       m_frontend(nullptr) {
   TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process_sp->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
   if (!clang_ast_context)
     return;
   m_elem_type = clang_ast_context->GetBasicType(
@@ -291,7 +291,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
   if (!valobj.GetTargetSP())
     return nullptr;
   TypeSystemClang *clang_ast_context =
-      TypeSystemClang::GetScratch(*valobj.GetTargetSP());
+      ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
   if (!clang_ast_context)
     return nullptr;
 

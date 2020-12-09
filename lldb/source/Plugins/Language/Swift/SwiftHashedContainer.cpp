@@ -325,7 +325,7 @@ HashedCollectionConfig::CocoaObjectAtAddress(
   if (!process_sp)
     return nullptr;
   TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process_sp->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
   if (!clang_ast_context)
     return nullptr;
   CompilerType id = clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
