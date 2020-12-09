@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileEntry.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "gtest/gtest.h"
 
@@ -22,11 +23,21 @@ struct RefMaps {
   FileMap Files;
   DirMap Dirs;
 
-  DirectoryEntry D;
-  DirectoryEntryRef DR;
   SmallVector<std::unique_ptr<FileEntry>, 5> FEs;
+  SmallVector<std::unique_ptr<DirectoryEntry>, 5> DEs;
+  DirectoryEntryRef DR;
 
-  RefMaps() : DR(*Dirs.insert({"dir", D}).first) {}
+  RefMaps() : DR(addDirectory("dir")) {}
+
+  DirectoryEntryRef addDirectory(StringRef Name) {
+    DEs.push_back(std::make_unique<DirectoryEntry>());
+    return DirectoryEntryRef(*Dirs.insert({Name, *DEs.back()}).first);
+  }
+  DirectoryEntryRef addDirectoryAlias(StringRef Name, DirectoryEntryRef Base) {
+    return DirectoryEntryRef(
+        *Dirs.insert({Name, const_cast<DirectoryEntry &>(Base.getDirEntry())})
+             .first);
+  }
 
   FileEntryRef addFile(StringRef Name) {
     FEs.push_back(std::make_unique<FileEntry>());
@@ -110,6 +121,76 @@ TEST(FileEntryTest, isSameRef) {
   EXPECT_TRUE(R1.isSameRef(FileEntryRef(R1.getMapEntry())));
   EXPECT_FALSE(R1.isSameRef(R2));
   EXPECT_FALSE(R1.isSameRef(R1Also));
+}
+
+TEST(FileEntryTest, DenseMapInfo) {
+  RefMaps Refs;
+  FileEntryRef R1 = Refs.addFile("1");
+  FileEntryRef R2 = Refs.addFile("2");
+  FileEntryRef R1Also = Refs.addFileAlias("1-also", R1);
+
+  // Insert R1Also first and confirm it "wins".
+  {
+    SmallDenseSet<FileEntryRef, 8> Set;
+    Set.insert(R1Also);
+    Set.insert(R1);
+    Set.insert(R2);
+    EXPECT_TRUE(Set.find(R1Also)->isSameRef(R1Also));
+    EXPECT_TRUE(Set.find(R1)->isSameRef(R1Also));
+    EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
+  }
+
+  // Insert R1Also second and confirm R1 "wins".
+  {
+    SmallDenseSet<FileEntryRef, 8> Set;
+    Set.insert(R1);
+    Set.insert(R1Also);
+    Set.insert(R2);
+    EXPECT_TRUE(Set.find(R1Also)->isSameRef(R1));
+    EXPECT_TRUE(Set.find(R1)->isSameRef(R1));
+    EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
+  }
+}
+
+TEST(DirectoryEntryTest, isSameRef) {
+  RefMaps Refs;
+  DirectoryEntryRef R1 = Refs.addDirectory("1");
+  DirectoryEntryRef R2 = Refs.addDirectory("2");
+  DirectoryEntryRef R1Also = Refs.addDirectoryAlias("1-also", R1);
+
+  EXPECT_TRUE(R1.isSameRef(DirectoryEntryRef(R1)));
+  EXPECT_TRUE(R1.isSameRef(DirectoryEntryRef(R1.getMapEntry())));
+  EXPECT_FALSE(R1.isSameRef(R2));
+  EXPECT_FALSE(R1.isSameRef(R1Also));
+}
+
+TEST(DirectoryEntryTest, DenseMapInfo) {
+  RefMaps Refs;
+  DirectoryEntryRef R1 = Refs.addDirectory("1");
+  DirectoryEntryRef R2 = Refs.addDirectory("2");
+  DirectoryEntryRef R1Also = Refs.addDirectoryAlias("1-also", R1);
+
+  // Insert R1Also first and confirm it "wins".
+  {
+    SmallDenseSet<DirectoryEntryRef, 8> Set;
+    Set.insert(R1Also);
+    Set.insert(R1);
+    Set.insert(R2);
+    EXPECT_TRUE(Set.find(R1Also)->isSameRef(R1Also));
+    EXPECT_TRUE(Set.find(R1)->isSameRef(R1Also));
+    EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
+  }
+
+  // Insert R1Also second and confirm R1 "wins".
+  {
+    SmallDenseSet<DirectoryEntryRef, 8> Set;
+    Set.insert(R1);
+    Set.insert(R1Also);
+    Set.insert(R2);
+    EXPECT_TRUE(Set.find(R1Also)->isSameRef(R1));
+    EXPECT_TRUE(Set.find(R1)->isSameRef(R1));
+    EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
+  }
 }
 
 } // end namespace
