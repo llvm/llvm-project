@@ -1328,7 +1328,7 @@ template <typename T> bool Equivalent(T l, T r) {
 
 /// Specialization for GetTypeInfo().
 template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
-  if (l != r) {
+  if (l < r) {
     // Failure. Dump it for easier debugging.
     llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext:\n";
 #define HANDLE_ENUM_CASE(VAL, CASE) \
@@ -1399,7 +1399,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(r, eTypeIsBound);
     llvm::dbgs() << "\n";
   }
-  return l == r;
+  return l >= r;
 }
 
 /// Determine wether this demangle tree contains a sugar () node.
