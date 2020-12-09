@@ -17,9 +17,7 @@ using namespace llvm;
 using namespace clang;
 
 using ::testing::Contains;
-using ::testing::Each;
 using ::testing::StrEq;
-using ::testing::StrNe;
 
 namespace {
 class CommandLineTest : public ::testing::Test {
@@ -117,27 +115,26 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
 }
 
-TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnum) {
-  const char *RelocationModelCStr = "static";
-  const char *Args[] = {"clang", "-xc++", "-mrelocation-model",
-                        RelocationModelCStr, "-"};
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
+  const char *Args[] = {"clang", "-xc++", "-mrelocation-model", "static", "-"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  // Non default relocation model
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(RelocationModelCStr)));
-  GeneratedArgs.clear();
+  // Non default relocation model.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("static")));
+}
 
-  RelocationModelCStr = "pic";
-  Args[3] = RelocationModelCStr;
+TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
+  const char *Args[] = {"clang", "-xc++", "-mrelocation-model", "pic", "-"};
 
-  CompilerInvocation Invocation2;
-  CompilerInvocation::CreateFromArgs(Invocation2, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  Invocation2.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Default relocation model.
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("pic"))));
 }
 
 TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
