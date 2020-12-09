@@ -4,8 +4,7 @@
 struct empty_float2 { struct {}; float f; float g; };
 
 // CHECK: define float @_Z14f_empty_float212empty_float2(float %0, float %1)
-// FIXME: Extraneous padding before the second float
-// CHECK: { [4 x i8], float, [4 x i8], float }
+// CHECK: { [4 x i8], float, float }
 float f_empty_float2(empty_float2 a) {
     return a.g;
 }
@@ -13,8 +12,7 @@ float f_empty_float2(empty_float2 a) {
 struct empty_double2 { struct {}; double f; double g; };
 
 // CHECK: define double @_Z15f_empty_double213empty_double2(double %0, double %1)
-// FIXME: Extraneous padding before the second double
-// CHECK: { [8 x i8], double, [8 x i8], double }
+// CHECK: { [8 x i8], double, double }
 double f_empty_double2(empty_double2 a) {
     return a.g;
 }
@@ -30,8 +28,7 @@ double f_empty_float_double(empty_float_double a) {
 struct empty_double_float { struct {}; double f; float g; };
 
 // CHECK: define double @_Z20f_empty_double_float18empty_double_float(double %0, float %1)
-// FIXME: Extraneous padding before the float
-// CHECK: { [8 x i8], double, [8 x i8], float }
+// CHECK: { [8 x i8], double, float }
 double f_empty_double_float(empty_double_float a) {
     return a.g;
 }
