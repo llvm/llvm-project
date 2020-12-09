@@ -287,7 +287,7 @@ static LogicalResult verify(AllocOp op) { return verifyAllocLikeOp(op); }
 
 static LogicalResult verify(AllocaOp op) {
   // An alloca op needs to have an ancestor with an allocation scope trait.
-  if (!op.getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
     return op.emitOpError(
         "requires an ancestor op with AutomaticAllocationScope trait");
 
@@ -547,7 +547,7 @@ static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(AtomicYieldOp op) {
-  Type parentType = op.getParentOp()->getResultTypes().front();
+  Type parentType = op->getParentOp()->getResultTypes().front();
   Type resultType = op.result().getType();
   if (parentType != resultType)
     return op.emitOpError() << "types mismatch between yield op: " << resultType
@@ -660,9 +660,7 @@ Block *BranchOp::getDest() { return getSuccessor(); }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
-void BranchOp::eraseOperand(unsigned index) {
-  getOperation()->eraseOperand(index);
-}
+void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
@@ -684,7 +682,7 @@ Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -1176,7 +1174,7 @@ static LogicalResult verify(ConstantOp &op) {
 
     // Try to find the referenced function.
     auto fn =
-        op.getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
+        op->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
     if (!fn)
       return op.emitOpError()
              << "reference to undefined function '" << fnAttr.getValue() << "'";
@@ -2626,7 +2624,7 @@ OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(ReturnOp op) {
-  auto function = cast<FuncOp>(op.getParentOp());
+  auto function = cast<FuncOp>(op->getParentOp());
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();

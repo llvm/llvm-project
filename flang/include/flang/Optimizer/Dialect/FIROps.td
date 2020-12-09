@@ -270,7 +270,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
     bool hasLenParams() { return bool{getAttr(lenpName())}; }
     
     unsigned numLenParams() {
-      if (auto val = getAttrOfType<mlir::IntegerAttr>(lenpName()))
+      if (auto val = (*this)->getAttrOfType<mlir::IntegerAttr>(lenpName()))
         return val.getInt();
       return 0;
     }
@@ -291,7 +291,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
 
     /// Get the input type of the allocation
     mlir::Type getInType() {
-      return getAttrOfType<mlir::TypeAttr>(inType()).getValue();
+      return (*this)->getAttrOfType<mlir::TypeAttr>(inType()).getValue();
     }
   }];
 
@@ -567,7 +567,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
 
     // The number of destination conditions that may be tested
     unsigned getNumConditions() {
-      return getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).size();
+      return (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).size();
     }
 
     // The selector is the value being tested to determine the destination
@@ -577,7 +577,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
     }
 
     // The number of blocks that may be branched to
-    unsigned getNumDest() { return getOperation()->getNumSuccessors(); }
+    unsigned getNumDest() { return (*this)->getNumSuccessors(); }
 
     llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
@@ -1561,11 +1561,11 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
   let parser = "return parseCoordinateOp(parser, result);";
 
   let printer = [{
-    p << getOperationName() << ' ' << getOperation()->getOperands();
+    p << getOperationName() << ' ' << (*this)->getOperands();
     p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{baseType()});
     p << " : ";
-    p.printFunctionalType(getOperation()->getOperandTypes(),
-        getOperation()->getResultTypes());
+    p.printFunctionalType((*this)->getOperandTypes(),
+        (*this)->getResultTypes());
   }];
   
   let verifier = [{
@@ -1940,9 +1940,9 @@ def fir_LoopOp : region_Op<"do_loop",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
-    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
-    void setStep(Value step) { getOperation()->setOperand(2, step); }
+    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -1952,18 +1952,18 @@ def fir_LoopOp : region_Op<"do_loop",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return getOperation()->getNumOperands() > getNumControlOperands();
+      return (*this)->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumControlOperands();
+      return (*this)->getNumOperands() - getNumControlOperands();
     }
 
     /// Get the body of the loop
     mlir::Block *getBody() { return &region().front(); }
 
     void setUnordered() {
-      getOperation()->setAttr(unorderedAttrName(),
+      (*this)->setAttr(unorderedAttrName(),
                               mlir::UnitAttr::get(getContext()));
     }
   }];
@@ -2062,9 +2062,9 @@ def fir_IterWhileOp : region_Op<"iterate_while",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
-    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
-    void setStep(mlir::Value step) { getOperation()->setOperand(2, step); }
+    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2074,11 +2074,11 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return getOperation()->getNumOperands() > getNumControlOperands();
+      return (*this)->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumControlOperands();
+      return (*this)->getNumOperands() - getNumControlOperands();
     }
   }];
 }
@@ -2705,7 +2705,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     p << " : ";
     p.printType(getType());
     if (hasInitializationBody())
-      p.printRegion(getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+      p.printRegion((*this)->getRegion(0), /*printEntryBlockArgs=*/false,
                     /*printBlockTerminators=*/true);
   }];
 
@@ -2754,7 +2754,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     void appendInitialValue(mlir::Operation *op);
 
     /// A GlobalOp has one region.
-    mlir::Region &getRegion() { return getOperation()->getRegion(0); }
+    mlir::Region &getRegion() { return (*this)->getRegion(0); }
 
     /// A GlobalOp has one block.
     mlir::Block &getBlock() { return getRegion().front(); }
@@ -2763,7 +2763,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     static mlir::ParseResult verifyValidLinkage(StringRef linkage);
 
     bool hasInitializationBody() {
-      return (getOperation()->getNumRegions() == 1) && !getRegion().empty() &&
+      return ((*this)->getNumRegions() == 1) && !getRegion().empty() &&
         !isa<fir::FirEndOp>(getBlock().front());
     }
 
@@ -2869,7 +2869,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
       mlir::SymbolTable::getSymbolAttrName()).getValue();
     p << getOperationName() << " @" << tableName;
 
-    Region &body = getOperation()->getRegion(0);
+    Region &body = (*this)->getRegion(0);
     if (!body.empty())
       p.printRegion(body, /*printEntryBlockArgs=*/false,
                           /*printBlockTerminators=*/false);
@@ -2900,7 +2900,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     void appendTableEntry(mlir::Operation *op);
 
     mlir::Region &getRegion() {
-      return this->getOperation()->getRegion(0);
+      return (*this)->getRegion(0);
     }
 
     mlir::Block &getBlock() {

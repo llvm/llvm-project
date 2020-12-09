@@ -123,7 +123,7 @@ static void mapParallelOp(ParallelOp parallelOp,
                           MappingLevel mappingLevel = MapGrid) {
   // Do not try to add a mapping to already mapped loops or nested loops.
   if (parallelOp.getAttr(getMappingAttrName()) ||
-      ((mappingLevel == MapGrid) && parallelOp.getParentOfType<ParallelOp>()))
+      ((mappingLevel == MapGrid) && parallelOp->getParentOfType<ParallelOp>()))
     return;
 
   MLIRContext *ctx = parallelOp.getContext();

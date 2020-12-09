@@ -523,7 +523,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
   // Look through all global variables in the given `body` block and check if
   // there is a spv.globalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp.getAttrOfType<StringAttr>(
+    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
             spirv::SPIRVDialect::getAttributeName(
                 spirv::Decoration::BuiltIn))) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());

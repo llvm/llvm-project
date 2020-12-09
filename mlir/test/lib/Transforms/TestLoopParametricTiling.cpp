@@ -35,7 +35,7 @@ public:
     FuncOp func = getFunction();
     func.walk([this](scf::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentRegion()->getParentOfType<scf::ForOp>())
+      if (op->getParentRegion()->getParentOfType<scf::ForOp>())
         return;
       extractFixedOuterLoops(op, sizes);
     });
