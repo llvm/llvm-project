@@ -1801,8 +1801,10 @@ define i32 @uadd_sat_via_add(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_via_add_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_nonstrict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C_NOT]], i32 [[A]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
   %c = icmp ule i32 %a, %y
@@ -1823,8 +1825,10 @@ define i32 @uadd_sat_via_add_swapped_select(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_via_add_swapped_select_strict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_swapped_select_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
   %c = icmp ugt i32 %a, %y
@@ -1845,8 +1849,10 @@ define i32 @uadd_sat_via_add_swapped_cmp(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_via_add_swapped_cmp_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_swapped_cmp_nonstrict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C_NOT]], i32 [[A]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
   %c = icmp uge i32 %y, %a
@@ -1867,8 +1873,10 @@ define i32 @uadd_sat_via_add_swapped_cmp_nonstric(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_via_add_swapped_cmp_select_nonstrict(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_via_add_swapped_cmp_select_nonstrict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
   %c = icmp ult i32 %y, %a
