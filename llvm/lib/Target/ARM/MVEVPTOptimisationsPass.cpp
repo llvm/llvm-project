@@ -67,6 +67,7 @@ private:
                                             Register Target);
   bool ReduceOldVCCRValueUses(MachineBasicBlock &MBB);
   bool ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB);
+  bool ReplaceConstByVPNOTs(MachineBasicBlock &MBB, MachineDominatorTree *DT);
   bool ConvertVPSEL(MachineBasicBlock &MBB);
 };
 
@@ -646,6 +647,90 @@ bool MVEVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   return !DeadInstructions.empty();
 }
 
+bool MVEVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
+                                               MachineDominatorTree *DT) {
+  // Scan through the block, looking for instructions that use constants moves
+  // into VPR that are the negative of one another. These are expected to be
+  // COPY's to VCCRRegClass, from a t2MOVi or t2MOVi16. The last seen constant
+  // mask is kept it or and VPNOT's of it are added or reused as we scan through
+  // the function.
+  unsigned LastVPTImm = 0;
+  Register LastVPTReg = 0;
+  SmallSet<MachineInstr *, 4> DeadInstructions;
+
+  for (MachineInstr &Instr : MBB.instrs()) {
+    // Look for predicated MVE instructions.
+    int PIdx = llvm::findFirstVPTPredOperandIdx(Instr);
+    if (PIdx == -1)
+      continue;
+    Register VPR = Instr.getOperand(PIdx + 1).getReg();
+    if (!VPR.isVirtual())
+      continue;
+
+    // From that we are looking for an instruction like %11:vccr = COPY %9:rgpr.
+    MachineInstr *Copy = MRI->getVRegDef(VPR);
+    if (!Copy || Copy->getOpcode() != TargetOpcode::COPY ||
+        !Copy->getOperand(1).getReg().isVirtual() ||
+        MRI->getRegClass(Copy->getOperand(1).getReg()) == &ARM::VCCRRegClass) {
+      LastVPTReg = 0;
+      continue;
+    }
+    Register GPR = Copy->getOperand(1).getReg();
+
+    // Find the Immediate used by the copy.
+    auto getImm = [&](Register GPR) -> unsigned {
+      MachineInstr *Def = MRI->getVRegDef(GPR);
+      if (Def && (Def->getOpcode() == ARM::t2MOVi ||
+                  Def->getOpcode() == ARM::t2MOVi16))
+        return Def->getOperand(1).getImm();
+      return -1U;
+    };
+    unsigned Imm = getImm(GPR);
+    if (Imm == -1U) {
+      LastVPTReg = 0;
+      continue;
+    }
+
+    unsigned NotImm = ~Imm & 0xffff;
+    if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
+      Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
+      if (MRI->use_empty(VPR)) {
+        DeadInstructions.insert(Copy);
+        if (MRI->hasOneUse(GPR))
+          DeadInstructions.insert(MRI->getVRegDef(GPR));
+      }
+      LLVM_DEBUG(dbgs() << "Reusing predicate: in  " << Instr);
+    } else if (LastVPTReg != 0 && LastVPTImm == NotImm) {
+      // We have found the not of a previous constant. Create a VPNot of the
+      // earlier predicate reg and use it instead of the copy.
+      Register NewVPR = MRI->createVirtualRegister(&ARM::VCCRRegClass);
+      auto VPNot = BuildMI(MBB, &Instr, Instr.getDebugLoc(),
+                           TII->get(ARM::MVE_VPNOT), NewVPR)
+                       .addReg(LastVPTReg);
+      addUnpredicatedMveVpredNOp(VPNot);
+
+      // Use the new register and check if the def is now dead.
+      Instr.getOperand(PIdx + 1).setReg(NewVPR);
+      if (MRI->use_empty(VPR)) {
+        DeadInstructions.insert(Copy);
+        if (MRI->hasOneUse(GPR))
+          DeadInstructions.insert(MRI->getVRegDef(GPR));
+      }
+      LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
+                        << Instr);
+      VPR = NewVPR;
+    }
+
+    LastVPTImm = Imm;
+    LastVPTReg = VPR;
+  }
+
+  for (MachineInstr *DI : DeadInstructions)
+    DI->eraseFromParent();
+
+  return !DeadInstructions.empty();
+}
+
 // Replace VPSEL with a predicated VMOV in blocks with a VCTP. This is a
 // somewhat blunt approximation to allow tail predicated with vpsel
 // instructions. We turn a vselect into a VPSEL in ISEL, but they have slightly
@@ -707,6 +792,7 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   for (MachineBasicBlock &MBB : Fn) {
+    Modified |= ReplaceConstByVPNOTs(MBB, DT);
     Modified |= ReplaceVCMPsByVPNOTs(MBB);
     Modified |= ReduceOldVCCRValueUses(MBB);
     Modified |= ConvertVPSEL(MBB);
