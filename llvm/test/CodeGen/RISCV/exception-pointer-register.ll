@@ -17,9 +17,9 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    .cfi_def_cfa_offset 16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    sw s1, 4(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    .cfi_offset s1, -12
@@ -28,18 +28,18 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I-NEXT:  # %bb.1: # %bb2
 ; RV32I-NEXT:  .Ltmp0:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bar
+; RV32I-NEXT:    call bar@plt
 ; RV32I-NEXT:  .Ltmp1:
 ; RV32I-NEXT:    j .LBB0_3
 ; RV32I-NEXT:  .LBB0_2: # %bb1
 ; RV32I-NEXT:  .Ltmp2:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call foo
+; RV32I-NEXT:    call foo@plt
 ; RV32I-NEXT:  .Ltmp3:
 ; RV32I-NEXT:  .LBB0_3: # %end2
-; RV32I-NEXT:    lw s1, 4(sp)
-; RV32I-NEXT:    lw s0, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_4: # %lpad
@@ -48,15 +48,15 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call _Unwind_Resume
+; RV32I-NEXT:    call _Unwind_Resume@plt
 ;
 ; RV64I-LABEL: caller:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-NEXT:    sd ra, 24(sp)
-; RV64I-NEXT:    sd s0, 16(sp)
-; RV64I-NEXT:    sd s1, 8(sp)
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
@@ -65,18 +65,18 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV64I-NEXT:  # %bb.1: # %bb2
 ; RV64I-NEXT:  .Ltmp0:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call bar
+; RV64I-NEXT:    call bar@plt
 ; RV64I-NEXT:  .Ltmp1:
 ; RV64I-NEXT:    j .LBB0_3
 ; RV64I-NEXT:  .LBB0_2: # %bb1
 ; RV64I-NEXT:  .Ltmp2:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call foo
+; RV64I-NEXT:    call foo@plt
 ; RV64I-NEXT:  .Ltmp3:
 ; RV64I-NEXT:  .LBB0_3: # %end2
-; RV64I-NEXT:    ld s1, 8(sp)
-; RV64I-NEXT:    ld s0, 16(sp)
-; RV64I-NEXT:    ld ra, 24(sp)
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_4: # %lpad
@@ -85,7 +85,7 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call _Unwind_Resume
+; RV64I-NEXT:    call _Unwind_Resume@plt
 entry:
   %0 = icmp eq i1* %p, null
   br i1 %0, label %bb1, label %bb2

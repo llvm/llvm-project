@@ -20,11 +20,11 @@ declare void @foo()
 define void @f2() shadowcallstack {
 ; RV32-LABEL: f2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    tail foo
+; RV32-NEXT:    tail foo@plt
 ;
 ; RV64-LABEL: f2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    tail foo
+; RV64-NEXT:    tail foo@plt
   tail call void @foo()
   ret void
 }
@@ -38,10 +38,10 @@ define i32 @f3() shadowcallstack {
 ; RV32-NEXT:    addi s2, s2, 4
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp)
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    call bar
-; RV32-NEXT:    lw ra, 12(sp)
+; RV32-NEXT:    call bar@plt
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
@@ -53,10 +53,10 @@ define i32 @f3() shadowcallstack {
 ; RV64-NEXT:    addi s2, s2, 8
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp)
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    call bar
-; RV64-NEXT:    ld ra, 8(sp)
+; RV64-NEXT:    call bar@plt
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8
@@ -73,28 +73,28 @@ define i32 @f4() shadowcallstack {
 ; RV32-NEXT:    addi s2, s2, 4
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp)
-; RV32-NEXT:    sw s0, 8(sp)
-; RV32-NEXT:    sw s1, 4(sp)
-; RV32-NEXT:    sw s3, 0(sp)
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 0(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    .cfi_offset s1, -12
 ; RV32-NEXT:    .cfi_offset s3, -16
-; RV32-NEXT:    call bar
+; RV32-NEXT:    call bar@plt
 ; RV32-NEXT:    mv s3, a0
-; RV32-NEXT:    call bar
+; RV32-NEXT:    call bar@plt
 ; RV32-NEXT:    mv s1, a0
-; RV32-NEXT:    call bar
+; RV32-NEXT:    call bar@plt
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    call bar
+; RV32-NEXT:    call bar@plt
 ; RV32-NEXT:    add a1, s3, s1
 ; RV32-NEXT:    add a0, s0, a0
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    lw s3, 0(sp)
-; RV32-NEXT:    lw s1, 4(sp)
-; RV32-NEXT:    lw s0, 8(sp)
-; RV32-NEXT:    lw ra, 12(sp)
+; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
@@ -106,28 +106,28 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    addi s2, s2, 8
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
-; RV64-NEXT:    sd ra, 24(sp)
-; RV64-NEXT:    sd s0, 16(sp)
-; RV64-NEXT:    sd s1, 8(sp)
-; RV64-NEXT:    sd s3, 0(sp)
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    .cfi_offset s1, -24
 ; RV64-NEXT:    .cfi_offset s3, -32
-; RV64-NEXT:    call bar
+; RV64-NEXT:    call bar@plt
 ; RV64-NEXT:    mv s3, a0
-; RV64-NEXT:    call bar
+; RV64-NEXT:    call bar@plt
 ; RV64-NEXT:    mv s1, a0
-; RV64-NEXT:    call bar
+; RV64-NEXT:    call bar@plt
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    call bar
+; RV64-NEXT:    call bar@plt
 ; RV64-NEXT:    add a1, s3, s1
 ; RV64-NEXT:    add a0, s0, a0
 ; RV64-NEXT:    addw a0, a1, a0
-; RV64-NEXT:    ld s3, 0(sp)
-; RV64-NEXT:    ld s1, 8(sp)
-; RV64-NEXT:    ld s0, 16(sp)
-; RV64-NEXT:    ld ra, 24(sp)
+; RV64-NEXT:    ld s3, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8
@@ -148,9 +148,9 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV32-NEXT:    sw ra, 0(s2)
 ; RV32-NEXT:    addi s2, s2, 4
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp)
-; RV32-NEXT:    call bar
-; RV32-NEXT:    lw ra, 12(sp)
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    call bar@plt
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
@@ -161,9 +161,9 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV64-NEXT:    sd ra, 0(s2)
 ; RV64-NEXT:    addi s2, s2, 8
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp)
-; RV64-NEXT:    call bar
-; RV64-NEXT:    ld ra, 8(sp)
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    call bar@plt
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8

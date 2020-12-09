@@ -6,9 +6,9 @@ define float @frem_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: frem_f32:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    call fmodf
-; RV32IF-NEXT:    lw ra, 12(sp)
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    call fmodf@plt
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
   %1 = frem float %a, %b
