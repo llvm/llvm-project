@@ -1157,6 +1157,10 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
+// Vector Predication
+#define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
+#include "llvm/IR/VPIntrinsics.def"
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
