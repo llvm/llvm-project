@@ -5536,10 +5536,15 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 }
 
 unsigned BoUpSLP::getVectorElementSize(Value *V) {
-  // If V is a store, just return the width of the stored value without
-  // traversing the expression tree. This is the common case.
-  if (auto *Store = dyn_cast<StoreInst>(V))
-    return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
+  // If V is a store, just return the width of the stored value (or value
+  // truncated just before storing) without traversing the expression tree.
+  // This is the common case.
+  if (auto *Store = dyn_cast<StoreInst>(V)) {
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      return DL->getTypeSizeInBits(Trunc->getSrcTy());
+    else
+      return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
+  }
 
   auto E = InstrElementSize.find(V);
   if (E != InstrElementSize.end())
