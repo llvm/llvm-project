@@ -2075,16 +2075,13 @@ uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
-  if (IsFunctionType(type, nullptr))
-    return 0;
-
   if (exe_ctx)
     if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
       if (auto *runtime =
               SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
         if (auto num_children =
                 runtime->GetNumChildren(GetCanonicalType(type), nullptr)) {
-          // Use lambda to intercept and unwrap the `Optional` return value.
+          // Use a lambda to intercept and unwrap the `Optional` return value.
           return [&]() {
             auto impl = [&]() { return num_children; };
             VALIDATE_AND_RETURN(
