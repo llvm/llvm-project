@@ -374,7 +374,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __move_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__move_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : (char_type*)memmove(__s1, __s2, __n);
         }
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -382,14 +382,14 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
         {
             _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
             return __libcpp_is_constant_evaluated()
-                       ? __copy_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__copy_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : (char_type*)memcpy(__s1, __s2, __n);
         }
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
     char_type* assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __assign_constexpr(__s, __n, __a)
+                       ? _VSTD::__assign_constexpr(__s, __n, __a)
                        : __n == 0 ? __s : (char_type*)memset(__s, to_int_type(__a), __n);
         }
 
@@ -477,7 +477,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __move_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__move_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : wmemmove(__s1, __s2, __n);
         }
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -485,14 +485,14 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
         {
             _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
             return __libcpp_is_constant_evaluated()
-                       ? __copy_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__copy_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : wmemcpy(__s1, __s2, __n);
         }
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
     char_type* assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __assign_constexpr(__s, __n, __a)
+                       ? _VSTD::__assign_constexpr(__s, __n, __a)
                        : __n == 0 ? __s : wmemset(__s, __a, __n);
         }
     static inline _LIBCPP_CONSTEXPR int_type  not_eof(int_type __c) _NOEXCEPT
@@ -610,7 +610,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
     char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __move_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__move_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : (char_type*)memmove(__s1, __s2, __n);
         }
 
@@ -619,7 +619,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
        {
             _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
             return __libcpp_is_constant_evaluated()
-                       ? __copy_constexpr(__s1, __s2, __n)
+                       ? _VSTD::__copy_constexpr(__s1, __s2, __n)
                        : __n == 0 ? __s1 : (char_type*)memcpy(__s1, __s2, __n);
         }
 
@@ -627,7 +627,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
     char_type*       assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT
         {
             return __libcpp_is_constant_evaluated()
-                       ? __assign_constexpr(__s, __n, __a)
+                       ? _VSTD::__assign_constexpr(__s, __n, __a)
                        : __n == 0 ? __s : (char_type*)memset(__s, to_int_type(__a), __n);
         }
 
