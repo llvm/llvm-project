@@ -308,6 +308,10 @@ public:
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
 
+  /// Return whether the type is IEEE compatible, as defined by the eponymous
+  /// method in APFloat.
+  bool isIEEE() const { return APFloat::getZero(getFltSemantics()).isIEEE(); }
+
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
   inline Type *getScalarType() const {
