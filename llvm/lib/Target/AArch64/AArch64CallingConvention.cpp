@@ -35,6 +35,9 @@ static const MCPhysReg DRegList[] = {AArch64::D0, AArch64::D1, AArch64::D2,
 static const MCPhysReg QRegList[] = {AArch64::Q0, AArch64::Q1, AArch64::Q2,
                                      AArch64::Q3, AArch64::Q4, AArch64::Q5,
                                      AArch64::Q6, AArch64::Q7};
+static const MCPhysReg ZRegList[] = {AArch64::Z0, AArch64::Z1, AArch64::Z2,
+                                     AArch64::Z3, AArch64::Z4, AArch64::Z5,
+                                     AArch64::Z6, AArch64::Z7};
 
 static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
                              MVT LocVT, ISD::ArgFlagsTy &ArgFlags,
@@ -97,6 +100,8 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     RegList = DRegList;
   else if (LocVT.SimpleTy == MVT::f128 || LocVT.is128BitVector())
     RegList = QRegList;
+  else if (LocVT.isScalableVector())
+    RegList = ZRegList;
   else {
     // Not an array we want to split up after all.
     return false;
@@ -140,6 +145,10 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     PendingMembers.clear();
     return true;
   }
+
+  if (LocVT.isScalableVector())
+    report_fatal_error(
+        "Passing consecutive scalable vector registers unsupported");
 
   // Mark all regs in the class as unavailable
   for (auto Reg : RegList)
