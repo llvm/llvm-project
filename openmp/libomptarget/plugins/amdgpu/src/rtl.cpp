@@ -36,6 +36,7 @@
 #include "internal.h"
 
 #include "Debug.h"
+#include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -92,14 +93,6 @@ uint32_t TgtStackItemSize = 0;
 
 #include "../../common/elf_common.c"
 
-static bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
-  const uint16_t amdgcnMachineID = 224;
-  int32_t r = elf_check_machine(image, amdgcnMachineID);
-  if (!r) {
-    DP("Supported machine ID not found\n");
-  }
-  return r;
-}
 
 /// Keep entries table per device
 struct FuncOrGblEntryTy {
@@ -319,6 +312,7 @@ public:
   std::vector<int> GroupsPerDevice;
   std::vector<int> ThreadsPerGroup;
   std::vector<int> WarpSize;
+  std::vector<std::string> GPUName;
 
   // OpenMP properties
   std::vector<int> NumTeams;
@@ -472,6 +466,7 @@ public:
     FuncGblEntries.resize(NumberOfDevices);
     ThreadsPerGroup.resize(NumberOfDevices);
     ComputeUnits.resize(NumberOfDevices);
+    GPUName.resize(NumberOfDevices);
     GroupsPerDevice.resize(NumberOfDevices);
     WarpSize.resize(NumberOfDevices);
     NumTeams.resize(NumberOfDevices);
@@ -642,6 +637,40 @@ void finiAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
   assert(async_info_ptr->Queue);
   async_info_ptr->Queue = 0;
 }
+
+bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
+  const uint16_t amdgcnMachineID = EM_AMDGPU;
+  int32_t r = elf_check_machine(image, amdgcnMachineID);
+  if (!r) {
+    DP("Supported machine ID not found\n");
+  }
+  return r;
+}
+
+uint32_t elf_e_flags(__tgt_device_image *image) {
+  char *img_begin = (char *)image->ImageStart;
+  size_t img_size = (char *)image->ImageEnd - img_begin;
+
+  Elf *e = elf_memory(img_begin, img_size);
+  if (!e) {
+    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+    return 0;
+  }
+
+  Elf64_Ehdr *eh64 = elf64_getehdr(e);
+
+  if (!eh64) {
+    DP("Unable to get machine ID from ELF file!\n");
+    elf_end(e);
+    return 0;
+  }
+
+  uint32_t Flags = eh64->e_flags;
+
+  elf_end(e);
+  DP("ELF Flags: 0x%x\n", Flags);
+  return Flags;
+}
 } // namespace
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
@@ -676,9 +705,20 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DeviceInfo.ComputeUnits[device_id] = compute_units;
     DP("Using %d compute unis per grid\n", DeviceInfo.ComputeUnits[device_id]);
   }
+
+  char GetInfoName[64]; // 64 max size returned by get info
+  err = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
+                          (void *) GetInfoName);
+  if (err)
+    DeviceInfo.GPUName[device_id] = "--unknown gpu--";
+  else {
+    DeviceInfo.GPUName[device_id] = GetInfoName;
+  }
+
   if (print_kernel_trace == 4)
-    fprintf(stderr, "Device#%-2d CU's: %2d\n", device_id,
-            DeviceInfo.ComputeUnits[device_id]);
+    fprintf(stderr, "Device#%-2d CU's: %2d %s\n", device_id,
+            DeviceInfo.ComputeUnits[device_id],
+	    DeviceInfo.GPUName[device_id].c_str());
 
   // Query attributes to determine number of threads/block and blocks/grid.
   uint16_t workgroup_max_dim[3];
@@ -1038,22 +1078,18 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     return ATMI_STATUS_SUCCESS;
   };
 
-  atmi_status_t err;
   {
-    err = module_register_from_memory_to_place(
+    atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
         on_deserialized_data);
 
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {
-      char GPUName[64] = "--unknown gpu--";
-      hsa_agent_t agent = DeviceInfo.HSAAgents[device_id];
-      (void)hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
-                               (void *)GPUName);
       fprintf(stderr,
-              "Possible gpu arch mismatch: %s, please check"
-              " compiler: -march=<gpu> flag\n",
-              GPUName);
+              "Possible gpu arch mismatch: device:%s, image:%s please check"
+              " compiler flag: -march=<gpu>\n",
+              DeviceInfo.GPUName[device_id].c_str(),
+	      get_elf_mach_gfx_name(elf_e_flags(image)));
       return NULL;
     }
   }
@@ -1149,8 +1185,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       void *varptr;
       uint32_t varsize;
 
-      err = atmi_interop_hsa_get_symbol_info(get_gpu_mem_place(device_id),
-                                             e->name, &varptr, &varsize);
+      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+          get_gpu_mem_place(device_id), e->name, &varptr, &varsize);
 
       if (err != ATMI_STATUS_SUCCESS) {
         DP("Loading global '%s' (Failed)\n", e->name);
@@ -1192,7 +1228,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     atmi_mem_place_t place = get_gpu_mem_place(device_id);
     uint32_t kernarg_segment_size;
-    err = atmi_interop_hsa_get_kernel_info(
+    atmi_status_t err = atmi_interop_hsa_get_kernel_info(
         place, e->name, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
 
