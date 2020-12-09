@@ -36,7 +36,7 @@ public:
 };
 
 TEST_F(CommandLineTest, OptIsInitializedWithCustomDefaultValue) {
-  const char *Args[] = {"clang", "-xc++"};
+  const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -44,7 +44,7 @@ TEST_F(CommandLineTest, OptIsInitializedWithCustomDefaultValue) {
 }
 
 TEST_F(CommandLineTest, OptOfNegativeFlagIsPopulatedWithFalse) {
-  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+  const char *Args[] = {"-fno-temp-file"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -52,7 +52,7 @@ TEST_F(CommandLineTest, OptOfNegativeFlagIsPopulatedWithFalse) {
 }
 
 TEST_F(CommandLineTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
+  const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -68,7 +68,7 @@ TEST_F(CommandLineTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
 }
 
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
-  const char *Args[] = {"clang", "-xc++", "-fmodules-strict-context-hash", "-"};
+  const char *Args[] = {"-fmodules-strict-context-hash"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -79,7 +79,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
 
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
   const char *TripleCStr = "i686-apple-darwin9";
-  const char *Args[] = {"clang", "-xc++", "-triple", TripleCStr, "-"};
+  const char *Args[] = {"-triple", TripleCStr};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -91,8 +91,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
 TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
   const std::string DefaultTriple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-  const char *Args[] = {"clang", "-xc++", "-triple", DefaultTriple.c_str(),
-                        "-"};
+  const char *Args[] = {"-triple", DefaultTriple.c_str()};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -105,7 +104,7 @@ TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
   const std::string DefaultTriple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-  const char *Args[] = {"clang", "-xc++", "-"};
+  const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -116,7 +115,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
 }
 
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
-  const char *Args[] = {"clang", "-xc++", "-mrelocation-model", "static", "-"};
+  const char *Args[] = {"-mrelocation-model", "static"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -127,7 +126,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
 }
 
 TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
-  const char *Args[] = {"clang", "-xc++", "-mrelocation-model", "pic", "-"};
+  const char *Args[] = {"-mrelocation-model", "pic"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -138,7 +137,7 @@ TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
 }
 
 TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
-  const char *Args[] = {"clang", "-xc++"};
+  const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -148,7 +147,7 @@ TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
 }
 
 TEST_F(CommandLineTest, PresentNegativeFlagGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+  const char *Args[] = {"-fno-temp-file"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -158,7 +157,7 @@ TEST_F(CommandLineTest, PresentNegativeFlagGenerated) {
 }
 
 TEST_F(CommandLineTest, NotPresentAndNotImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++"};
+  const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -172,7 +171,7 @@ TEST_F(CommandLineTest, NotPresentAndNotImpliedNotGenerated) {
 }
 
 TEST_F(CommandLineTest, NotPresentAndImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
+  const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -185,8 +184,8 @@ TEST_F(CommandLineTest, NotPresentAndImpliedNotGenerated) {
 }
 
 TEST_F(CommandLineTest, PresentAndImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations",
-                        "-cl-mad-enable", "-menable-unsafe-fp-math"};
+  const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
+                        "-menable-unsafe-fp-math"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -199,8 +198,7 @@ TEST_F(CommandLineTest, PresentAndImpliedNotGenerated) {
 }
 
 TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-mad-enable",
-                        "-menable-unsafe-fp-math"};
+  const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
