@@ -1015,7 +1015,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     // `OpaqueExistential` is documented as:
     //     An existential is a three-word buffer followed by value metadata...
     // The buffer is exposed by as children named `payload_data_{0,1,2}`, and
-    // 3 is added to the number of fields.
+    // requires the number of fields to be increased.
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::OpaqueExistential)
       return rti->getNumFields() + 3;
