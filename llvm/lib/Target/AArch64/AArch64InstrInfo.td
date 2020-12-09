@@ -934,6 +934,27 @@ let Predicates = [HasComplxNum, HasNEON] in {
   }
 }
 
+multiclass FCMLA_PATS<ValueType ty, RegisterClass Reg> {
+  def : Pat<(ty (int_aarch64_neon_vcmla_rot0 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
+            (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 0)>;
+  def : Pat<(ty (int_aarch64_neon_vcmla_rot90 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
+            (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 1)>;
+  def : Pat<(ty (int_aarch64_neon_vcmla_rot180 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
+            (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 2)>;
+  def : Pat<(ty (int_aarch64_neon_vcmla_rot270 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
+            (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 3)>;
+}
+
+let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
+  defm : FCMLA_PATS<v4f16, V64>;
+  defm : FCMLA_PATS<v8f16, V128>;
+}
+let Predicates = [HasComplxNum, HasNEON] in {
+  defm : FCMLA_PATS<v2f32, V64>;
+  defm : FCMLA_PATS<v4f32, V128>;
+  defm : FCMLA_PATS<v2f64, V128>;
+}
+
 // v8.3a Pointer Authentication
 // These instructions inhabit part of the hint space and so can be used for
 // armv8 targets. Keeping the old HINT mnemonic when compiling without PA is
