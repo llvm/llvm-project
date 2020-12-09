@@ -92,18 +92,25 @@ static void replaceValue(Value &Old, Value &New) {
 }
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
-  // Match insert into fixed vector of scalar load.
+  // Match insert into fixed vector of scalar value.
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
   if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
       !Scalar->hasOneUse())
     return false;
 
+  // Optionally match an extract from another vector.
+  Value *X;
+  bool HasExtract = match(Scalar, m_ExtractElt(m_Value(X), m_ZeroInt()));
+  if (!HasExtract)
+    X = Scalar;
+
+  // Match source value as load of scalar or vector.
   // Do not vectorize scalar load (widening) if atomic/volatile or under
   // asan/hwasan/memtag/tsan. The widened load may load data from dirty regions
   // or create data races non-existent in the source.
-  auto *Load = dyn_cast<LoadInst>(Scalar);
-  if (!Load || !Load->isSimple() ||
+  auto *Load = dyn_cast<LoadInst>(X);
+  if (!Load || !Load->isSimple() || !Load->hasOneUse() ||
       Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
       mustSuppressSpeculation(*Load))
     return false;
@@ -134,10 +141,12 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     return false;
 
 
-  // Original pattern: insertelt undef, load [free casts of] ScalarPtr, 0
-  int OldCost = TTI.getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, AS);
+  // Original pattern: insertelt undef, load [free casts of] PtrOp, 0
+  Type *LoadTy = Load->getType();
+  int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
-  OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts, true, false);
+  OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
+                                          /* Insert */ true, HasExtract);
 
   // New pattern: load VecPtr
   int NewCost = TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
