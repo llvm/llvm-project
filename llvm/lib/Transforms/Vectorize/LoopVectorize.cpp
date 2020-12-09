@@ -1121,6 +1121,15 @@ static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
   return R;
 }
 
+/// Return a value for Step multiplied by VF.
+static Value *createStepForVF(IRBuilder<> &B, Constant *Step, ElementCount VF) {
+  assert(isa<ConstantInt>(Step) && "Expected an integer step");
+  Constant *StepVal = ConstantInt::get(
+      Step->getType(),
+      cast<ConstantInt>(Step)->getSExtValue() * VF.getKnownMinValue());
+  return VF.isScalable() ? B.CreateVScale(StepVal) : StepVal;
+}
+
 namespace llvm {
 
 void reportVectorizationFailure(const StringRef DebugMsg,
@@ -2277,8 +2286,6 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
                                            const InductionDescriptor &ID) {
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(VF.isVector() && "VF should be greater than one");
-  assert(!VF.isScalable() &&
-         "the code below assumes a fixed number of elements at compile time");
   // Get the value type and ensure it and the step have the same integer type.
   Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
   assert(ScalarIVTy == Step->getType() &&
@@ -2303,11 +2310,24 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
       Cost->isUniformAfterVectorization(cast<Instruction>(EntryVal), VF)
           ? 1
           : VF.getKnownMinValue();
+  assert((!VF.isScalable() || Lanes == 1) &&
+         "Should never scalarize a scalable vector");
   // Compute the scalar steps and save the results in VectorLoopValueMap.
   for (unsigned Part = 0; Part < UF; ++Part) {
     for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-      auto *StartIdx = getSignedIntOrFpConstant(
-          ScalarIVTy, VF.getKnownMinValue() * Part + Lane);
+      auto *IntStepTy = IntegerType::get(ScalarIVTy->getContext(),
+                                         ScalarIVTy->getScalarSizeInBits());
+      Value *StartIdx =
+          createStepForVF(Builder, ConstantInt::get(IntStepTy, Part), VF);
+      if (ScalarIVTy->isFloatingPointTy())
+        StartIdx = Builder.CreateSIToFP(StartIdx, ScalarIVTy);
+      StartIdx = addFastMathFlag(Builder.CreateBinOp(
+          AddOp, StartIdx, getSignedIntOrFpConstant(ScalarIVTy, Lane)));
+      // The step returned by `createStepForVF` is a runtime-evaluated value
+      // when VF is scalable. Otherwise, it should be folded into a Constant.
+      assert((VF.isScalable() || isa<Constant>(StartIdx)) &&
+             "Expected StartIdx to be folded to a constant when VF is not "
+             "scalable");
       auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
       auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
       VectorLoopValueMap.setScalarValue(EntryVal, {Part, Lane}, Add);
@@ -2350,10 +2370,11 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
     // is known to be uniform after vectorization, this corresponds to lane zero
     // of the Part unroll iteration. Otherwise, the last instruction is the one
     // we created for the last vector lane of the Part unroll iteration.
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     unsigned LastLane = Cost->isUniformAfterVectorization(I, VF)
                             ? 0
                             : VF.getKnownMinValue() - 1;
+    assert((!VF.isScalable() || LastLane == 0) &&
+           "Scalable vectorization can't lead to any scalarized values.");
     auto *LastInst = cast<Instruction>(
         VectorLoopValueMap.getScalarValue(V, {Part, LastLane}));
 
@@ -2695,7 +2716,6 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
 
   Type *ScalarDataTy = getMemInstValueType(Instr);
 
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *DataTy = VectorType::get(ScalarDataTy, VF);
   const Align Alignment = getLoadStoreAlignment(Instr);
 
@@ -2728,6 +2748,9 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
       InBounds = gep->isInBounds();
 
     if (Reverse) {
+      assert(!VF.isScalable() &&
+             "Reversing vectors is not yet supported for scalable vectors.");
+
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
       PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
@@ -2739,8 +2762,9 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         BlockInMaskParts[Part] = reverseVector(BlockInMaskParts[Part]);
     } else {
-      PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, Ptr, Builder.getInt32(Part * VF.getKnownMinValue())));
+      Value *Increment = createStepForVF(Builder, Builder.getInt32(Part), VF);
+      PartPtr = cast<GetElementPtrInst>(
+          Builder.CreateGEP(ScalarDataTy, Ptr, Increment));
       PartPtr->setIsInBounds(InBounds);
     }
 
@@ -2945,8 +2969,7 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
 
   Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
-  assert(!VF.isScalable() && "scalable vectorization is not supported yet");
-  Constant *Step = ConstantInt::get(Ty, VF.getKnownMinValue() * UF);
+  Value *Step = createStepForVF(Builder, ConstantInt::get(Ty, UF), VF);
 
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
@@ -2957,6 +2980,8 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   if (Cost->foldTailByMasking()) {
     assert(isPowerOf2_32(VF.getKnownMinValue() * UF) &&
            "VF*UF must be a power of 2 when folding tail by masking");
+    assert(!VF.isScalable() &&
+           "Tail folding not yet supported for scalable vectors");
     TC = Builder.CreateAdd(
         TC, ConstantInt::get(Ty, VF.getKnownMinValue() * UF - 1), "n.rnd.up");
   }
@@ -3035,11 +3060,9 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *CheckMinIters = Builder.getFalse();
   if (!Cost->foldTailByMasking()) {
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
-    CheckMinIters = Builder.CreateICmp(
-        P, Count,
-        ConstantInt::get(Count->getType(), VF.getKnownMinValue() * UF),
-        "min.iters.check");
+    Value *Step =
+        createStepForVF(Builder, ConstantInt::get(Count->getType(), UF), VF);
+    CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
   }
   // Create new preheader for vector loop.
   LoopVectorPreHeader =
@@ -3518,8 +3541,8 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   // The loop step is equal to the vectorization factor (num of SIMD elements)
   // times the unroll factor (num of SIMD instructions).
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
-  Constant *Step = ConstantInt::get(IdxTy, VF.getKnownMinValue() * UF);
+  Builder.SetInsertPoint(&*Lp->getHeader()->getFirstInsertionPt());
+  Value *Step = createStepForVF(Builder, ConstantInt::get(IdxTy, UF), VF);
   Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   Induction =
       createInductionVariable(Lp, StartIdx, CountRoundDown, Step,
@@ -4365,7 +4388,6 @@ void InnerLoopVectorizer::clearReductionWrapFlags(
 }
 
 void InnerLoopVectorizer::fixLCSSAPHIs() {
-  assert(!VF.isScalable() && "the code below assumes fixed width vectors");
   for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
     if (LCSSAPhi.getNumIncomingValues() == 1) {
       auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
@@ -4376,6 +4398,8 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
                        cast<Instruction>(IncomingValue), VF)
                        ? 0
                        : VF.getKnownMinValue() - 1;
+      assert((!VF.isScalable() || LastLane == 0) &&
+             "scalable vectors dont support non-uniform scalars yet");
       // Can be a loop invariant incoming value or the last scalar value to be
       // extracted from the vectorized loop.
       Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
@@ -5528,7 +5552,6 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 ElementCount
 LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
                                                  ElementCount UserVF) {
-  assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -5541,6 +5564,11 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   unsigned MaxSafeVectorWidthInBits = Legal->getMaxSafeVectorWidthInBits();
 
   if (UserVF.isNonZero()) {
+    // For now, don't verify legality of scalable vectors.
+    // This will be addressed properly in https://reviews.llvm.org/D91718.
+    if (UserVF.isScalable())
+      return UserVF;
+
     // If legally unsafe, clamp the user vectorization factor to a safe value.
     unsigned MaxSafeVF = PowerOf2Floor(MaxSafeVectorWidthInBits / WidestType);
     if (UserVF.getFixedValue() <= MaxSafeVF)
@@ -5629,6 +5657,9 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
 
 VectorizationFactor
 LoopVectorizationCostModel::selectVectorizationFactor(ElementCount MaxVF) {
+  // FIXME: This can be fixed for scalable vectors later, because at this stage
+  // the LoopVectorizer will only consider vectorizing a loop with scalable
+  // vectors when the loop has a hint to enable vectorization for a given VF.
   assert(!MaxVF.isScalable() && "scalable vectors not yet supported");
 
   float Cost = expectedCost(ElementCount::getFixed(1)).first;
@@ -5938,7 +5969,6 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // Clamp the interleave ranges to reasonable counts.
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   unsigned MaxInterleaveCount =
       TTI.getMaxInterleaveFactor(VF.getKnownMinValue());
 
@@ -5954,6 +5984,13 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // If trip count is known or estimated compile time constant, limit the
   // interleave count to be less than the trip count divided by VF, provided it
   // is at least 1.
+  //
+  // For scalable vectors we can't know if interleaving is beneficial. It may
+  // not be beneficial for small loops if none of the lanes in the second vector
+  // iterations is enabled. However, for larger loops, there is likely to be a
+  // similar benefit as for fixed-width vectors. For now, we choose to leave
+  // the InterleaveCount as if vscale is '1', although if some information about
+  // the vector is known (e.g. min vector size), we can make a better decision.
   if (BestKnownTC) {
     MaxInterleaveCount =
         std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
@@ -5997,7 +6034,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // potentially expose ILP opportunities.
   LLVM_DEBUG(dbgs() << "LV: Loop cost is " << LoopCost << '\n'
                     << "LV: IC is " << IC << '\n'
-                    << "LV: VF is " << VF.getKnownMinValue() << '\n');
+                    << "LV: VF is " << VF << '\n');
   const bool AggressivelyInterleaveReductions =
       TTI.enableAggressiveInterleaving(HasReductions);
   if (!InterleavingRequiresRuntimePointerCheck && LoopCost < SmallLoopCost) {
@@ -6664,8 +6701,6 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
-  assert(!VF.isScalable() &&
-         "the cost model is not yet implemented for scalable vectorization");
   // If we know that this instruction will remain uniform, check the cost of
   // the scalar version.
   if (isUniformAfterVectorization(I, VF))
@@ -6729,7 +6764,6 @@ unsigned LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   if (VF.isScalar())
     return;
   NumPredStores = 0;
@@ -7316,7 +7350,6 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
-  assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   Optional<ElementCount> MaybeMaxVF = CM.computeMaxVF(UserVF, UserIC);
   if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
@@ -7339,9 +7372,9 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   ElementCount MaxVF = MaybeMaxVF.getValue();
   assert(MaxVF.isNonZero() && "MaxVF is zero.");
 
-  if (!UserVF.isZero() && UserVF.getFixedValue() <= MaxVF.getFixedValue()) {
+  if (!UserVF.isZero() && ElementCount::isKnownLE(UserVF, MaxVF)) {
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-    assert(isPowerOf2_32(UserVF.getFixedValue()) &&
+    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
            "VF needs to be a power of two");
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
@@ -7351,6 +7384,9 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(printPlans(dbgs()));
     return {{UserVF, 0}};
   }
+
+  assert(!MaxVF.isScalable() &&
+         "Scalable vectors not yet supported beyond this point");
 
   for (ElementCount VF = ElementCount::getFixed(1);
        ElementCount::isKnownLE(VF, MaxVF); VF *= 2) {
@@ -8695,6 +8731,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
+    assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
     State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this,
                                     *State.Instance, IsPredicated, State);
     // Insert scalar instance packing it into a vector.
@@ -8717,6 +8754,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   // instruction is uniform inwhich case generate only the first lane for each
   // of the UF parts.
   unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
+  assert((!State.VF.isScalable() || IsUniform) &&
+         "Can't scalarize a scalable vector");
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
       State.ILV->scalarizeInstruction(getUnderlyingInstr(), *this, {Part, Lane},
@@ -8870,12 +8909,6 @@ static bool processLoopInVPlanNativePath(
 
   // Get user vectorization factor.
   ElementCount UserVF = Hints.getWidth();
-  if (UserVF.isScalable()) {
-    // TODO: Use scalable UserVF once we've added initial support for scalable
-    // vectorization. For now we convert it to fixed width, but this will be
-    // removed in a later patch.
-    UserVF = ElementCount::getFixed(UserVF.getKnownMinValue());
-  }
 
   // Plan how to best vectorize, return the best VF and its cost.
   const VectorizationFactor VF = LVP.planInVPlanNativePath(UserVF);
@@ -9041,13 +9074,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
-  if (UserVF.isScalable()) {
-    // TODO: Use scalable UserVF once we've added initial support for scalable
-    // vectorization. For now we convert it to fixed width, but this will be
-    // removed in a later patch.
-    UserVF = ElementCount::getFixed(UserVF.getKnownMinValue());
-  }
-
   unsigned UserIC = Hints.getInterleave();
 
   // Plan how to best vectorize, return the best VF and its cost.

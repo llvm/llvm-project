@@ -13,8 +13,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, i32* %arrayidx, align 4
+  store i32 42, i32* %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -25,7 +24,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; CHECK-LABEL: @test2(
-; CHECK: store <8 x i32>
+; CHECK: store <vscale x 8 x i32>
 ; CHECK: ret void
 define void @test2(i32* nocapture %a, i32 %n) #0 {
 entry:
@@ -35,8 +34,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, i32* %arrayidx, align 4
+  store i32 42, i32* %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
@@ -57,8 +55,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, i32* %arrayidx, align 4
+  store i32 42, i32* %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
