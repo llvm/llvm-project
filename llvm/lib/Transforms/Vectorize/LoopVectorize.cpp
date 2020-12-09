@@ -367,7 +367,6 @@ static Type *getMemInstValueType(Value *I) {
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type at the given vectorization factor.
 static bool hasIrregularType(Type *Ty, const DataLayout &DL, ElementCount VF) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   // Determine if an array of VF elements of type Ty is "bitcast compatible"
   // with a <VF x Ty> vector.
   if (VF.isVector()) {
@@ -1387,9 +1386,7 @@ public:
   /// width \p VF. Return CM_Unknown if this instruction did not pass
   /// through the cost modeling.
   InstWidening getWideningDecision(Instruction *I, ElementCount VF) {
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
-    assert(VF.isVector() && "Expected VF >=2");
-
+    assert(VF.isVector() && "Expected VF to be a vector VF");
     // Cost model is not run in the VPlan-native path - return conservative
     // result until this changes.
     if (EnableVPlanNativePath)
@@ -3902,8 +3899,10 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
   // profile is not inherently precise anyway. Note also possible bypass of
   // vector code caused by legality checks is ignored, assigning all the weight
   // to the vector loop, optimistically.
-  assert(!VF.isScalable() &&
-         "cannot use scalable ElementCount to determine unroll factor");
+  //
+  // For scalable vectorization we can't know at compile time how many iterations
+  // of the loop are handled in one vector iteration, so instead assume a pessimistic
+  // vscale of '1'.
   setProfileInfoAfterUnrolling(
       LI->getLoopFor(LoopScalarBody), LI->getLoopFor(LoopVectorBody),
       LI->getLoopFor(LoopScalarBody), VF.getKnownMinValue() * UF);
@@ -4709,7 +4708,6 @@ static bool mayDivideByZero(Instruction &I) {
 void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
                                            VPUser &User,
                                            VPTransformState &State) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   switch (I.getOpcode()) {
   case Instruction::Call:
   case Instruction::Br:
@@ -4797,7 +4795,6 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
     setDebugLocFromInst(Builder, CI);
 
     /// Vectorize casts.
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     Type *DestTy =
         (VF.isScalar()) ? CI->getType() : VectorType::get(CI->getType(), VF);
 
@@ -5099,7 +5096,6 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   if (!blockNeedsPredication(I->getParent()))
     return false;
   switch(I->getOpcode()) {
@@ -6420,7 +6416,6 @@ int LoopVectorizationCostModel::computePredInstDiscount(
 
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::expectedCost(ElementCount VF) {
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   VectorizationCostTy Cost;
 
   // For each block.
@@ -7935,7 +7930,6 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
          "Must be called with either a load or store");
 
   auto willWiden = [&](ElementCount VF) -> bool {
-    assert(!VF.isScalable() && "unexpected scalable ElementCount");
     if (VF.isScalar())
       return false;
     LoopVectorizationCostModel::InstWidening Decision =
