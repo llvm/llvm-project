@@ -184,6 +184,7 @@ fun:uselocale=discard
 fun:calloc=custom
 fun:clock_gettime=custom
 fun:dlopen=custom
+fun:epoll_wait=custom
 fun:fgets=custom
 fun:fstat=custom
 fun:getcwd=custom
