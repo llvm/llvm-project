@@ -283,6 +283,19 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
     SubSection.done();
   }
+  if (Section.DataSegmentNames.size()) {
+    writeUint8(OS, wasm::WASM_NAMES_DATA_SEGMENT);
+
+    SubSectionWriter SubSection(OS);
+
+    encodeULEB128(Section.DataSegmentNames.size(), SubSection.getStream());
+    for (const WasmYAML::NameEntry &NameEntry : Section.DataSegmentNames) {
+      encodeULEB128(NameEntry.Index, SubSection.getStream());
+      writeStringRef(NameEntry.Name, SubSection.getStream());
+    }
+
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,

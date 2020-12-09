@@ -616,7 +616,7 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
         // best of both worlds.
         if (U->getOpcode() == ISD::AND &&
             Imm->getAPIntValue().getBitWidth() == 64 &&
-            Imm->getAPIntValue().isIntN(32))
+            Imm->getAPIntValue().isSignedIntN(32))
           return false;
 
         // If this really a zext_inreg that can be represented with a movzx

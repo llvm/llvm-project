@@ -31,7 +31,9 @@
 ; MERGE-NEXT:    GlobalNames:
 ; MERGE-NEXT:      - Index:           0
 ; MERGE-NEXT:        Name:            __stack_pointer
-; MERGE-NOT:       - Index:
+; MERGE-NEXT:    DataSegmentNames:
+; MERGE-NEXT:      - Index:           0
+; MERGE-NEXT:        Name:            .rodata
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.o
 ; RUN: obj2yaml %t.separate.wasm | FileCheck %s --check-prefix=SEPARATE
@@ -71,7 +73,9 @@
 ; SEPARATE-NEXT:    GlobalNames:
 ; SEPARATE-NEXT:      - Index:           0
 ; SEPARATE-NEXT:        Name:            __stack_pointer
-; SEPARATE-NOT:       - Index:
+; SEPARATE-NEXT:    DataSegmentNames:
+; SEPARATE-NEXT:      - Index:           0
+; SEPARATE-NEXT:        Name:            .rodata
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.merged.passive.wasm | FileCheck %s --check-prefix=PASSIVE-MERGE

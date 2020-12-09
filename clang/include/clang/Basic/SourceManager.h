@@ -958,6 +958,10 @@ public:
   /// data in the given source file.
   void overrideFileContents(const FileEntry *SourceFile,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  void overrideFileContents(FileEntryRef SourceFile,
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+    overrideFileContents(&SourceFile.getFileEntry(), std::move(Buffer));
+  }
 
   /// Override the given source file with another one.
   ///
@@ -1027,6 +1031,13 @@ public:
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().OrigEntry;
     return nullptr;
+  }
+
+  /// Returns the FileEntryRef for the provided FileID.
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+    if (auto *Entry = getFileEntryForID(FID))
+      return Entry->getLastRef();
+    return None;
   }
 
   /// Returns the filename for the provided FileID, unless it's a built-in

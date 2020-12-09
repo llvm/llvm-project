@@ -212,6 +212,9 @@
 ; CHECK-NEXT:     GlobalNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            __stack_pointer
+; CHECK-NEXT:     DataSegmentNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            .data
 ; CHECK-NEXT: ...
 
 
@@ -546,4 +549,11 @@
 ; RELOC-NEXT:         Name:            get_func2B
 ; RELOC-NEXT:       - Index:           17
 ; RELOC-NEXT:         Name:            get_func3B
+; RELOC-NEXT:     DataSegmentNames:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Name:            .data.colliding_global1
+; RELOC-NEXT:       - Index:           1
+; RELOC-NEXT:         Name:            .data.colliding_global2
+; RELOC-NEXT:       - Index:           2
+; RELOC-NEXT:         Name:            .data.colliding_global3
 ; RELOC-NEXT: ...

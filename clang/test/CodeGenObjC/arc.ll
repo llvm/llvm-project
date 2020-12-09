@@ -1,7 +1,5 @@
 ; RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Os -emit-llvm -fobjc-arc -o - %s | FileCheck %s
 
-target triple = "x86_64-apple-darwin10"
-
 declare i8* @llvm.objc.retain(i8*)
 declare void @llvm.objc.release(i8*)
 
