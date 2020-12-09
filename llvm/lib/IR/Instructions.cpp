@@ -3735,29 +3735,6 @@ ICmpInst::Predicate ICmpInst::getUnsignedPredicate(Predicate pred) {
   }
 }
 
-CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
-  switch (pred) {
-    default: llvm_unreachable("Unknown or unsupported cmp predicate!");
-    case ICMP_SGT: return ICMP_SGE;
-    case ICMP_SLT: return ICMP_SLE;
-    case ICMP_SGE: return ICMP_SGT;
-    case ICMP_SLE: return ICMP_SLT;
-    case ICMP_UGT: return ICMP_UGE;
-    case ICMP_ULT: return ICMP_ULE;
-    case ICMP_UGE: return ICMP_UGT;
-    case ICMP_ULE: return ICMP_ULT;
-
-    case FCMP_OGT: return FCMP_OGE;
-    case FCMP_OLT: return FCMP_OLE;
-    case FCMP_OGE: return FCMP_OGT;
-    case FCMP_OLE: return FCMP_OLT;
-    case FCMP_UGT: return FCMP_UGE;
-    case FCMP_ULT: return FCMP_ULE;
-    case FCMP_UGE: return FCMP_UGT;
-    case FCMP_ULE: return FCMP_ULT;
-  }
-}
-
 CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
   switch (pred) {
     default: llvm_unreachable("Unknown cmp predicate!");
@@ -3788,18 +3765,93 @@ CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
   }
 }
 
+bool CmpInst::isNonStrictPredicate(Predicate pred) {
+  switch (pred) {
+  case ICMP_SGE:
+  case ICMP_SLE:
+  case ICMP_UGE:
+  case ICMP_ULE:
+  case FCMP_OGE:
+  case FCMP_OLE:
+  case FCMP_UGE:
+  case FCMP_ULE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool CmpInst::isStrictPredicate(Predicate pred) {
+  switch (pred) {
+  case ICMP_SGT:
+  case ICMP_SLT:
+  case ICMP_UGT:
+  case ICMP_ULT:
+  case FCMP_OGT:
+  case FCMP_OLT:
+  case FCMP_UGT:
+  case FCMP_ULT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+CmpInst::Predicate CmpInst::getStrictPredicate(Predicate pred) {
+  switch (pred) {
+  case ICMP_SGE:
+    return ICMP_SGT;
+  case ICMP_SLE:
+    return ICMP_SLT;
+  case ICMP_UGE:
+    return ICMP_UGT;
+  case ICMP_ULE:
+    return ICMP_ULT;
+  case FCMP_OGE:
+    return FCMP_OGT;
+  case FCMP_OLE:
+    return FCMP_OLT;
+  case FCMP_UGE:
+    return FCMP_UGT;
+  case FCMP_ULE:
+    return FCMP_ULT;
+  default:
+    return pred;
+  }
+}
+
 CmpInst::Predicate CmpInst::getNonStrictPredicate(Predicate pred) {
   switch (pred) {
-  case ICMP_SGT: return ICMP_SGE;
-  case ICMP_SLT: return ICMP_SLE;
-  case ICMP_UGT: return ICMP_UGE;
-  case ICMP_ULT: return ICMP_ULE;
-  case FCMP_OGT: return FCMP_OGE;
-  case FCMP_OLT: return FCMP_OLE;
-  case FCMP_UGT: return FCMP_UGE;
-  case FCMP_ULT: return FCMP_ULE;
-  default: return pred;
+  case ICMP_SGT:
+    return ICMP_SGE;
+  case ICMP_SLT:
+    return ICMP_SLE;
+  case ICMP_UGT:
+    return ICMP_UGE;
+  case ICMP_ULT:
+    return ICMP_ULE;
+  case FCMP_OGT:
+    return FCMP_OGE;
+  case FCMP_OLT:
+    return FCMP_OLE;
+  case FCMP_UGT:
+    return FCMP_UGE;
+  case FCMP_ULT:
+    return FCMP_ULE;
+  default:
+    return pred;
   }
+}
+
+CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
+  assert(CmpInst::isRelational(pred) && "Call only with relational predicate!");
+
+  if (isStrictPredicate(pred))
+    return getNonStrictPredicate(pred);
+  if (isNonStrictPredicate(pred))
+    return getStrictPredicate(pred);
+
+  llvm_unreachable("Unknown predicate!");
 }
 
 CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
