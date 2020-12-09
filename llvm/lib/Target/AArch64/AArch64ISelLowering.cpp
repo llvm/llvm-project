@@ -3836,6 +3836,26 @@ unsigned getScatterVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
   return AddrModes.find(Key)->second;
 }
 
+unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("unimplemented opcode");
+    return Opcode;
+  case AArch64ISD::GLD1_MERGE_ZERO:
+    return AArch64ISD::GLD1S_MERGE_ZERO;
+  case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
+    return AArch64ISD::GLD1S_UXTW_MERGE_ZERO;
+  case AArch64ISD::GLD1_SXTW_MERGE_ZERO:
+    return AArch64ISD::GLD1S_SXTW_MERGE_ZERO;
+  case AArch64ISD::GLD1_SCALED_MERGE_ZERO:
+    return AArch64ISD::GLD1S_SCALED_MERGE_ZERO;
+  case AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO:
+    return AArch64ISD::GLD1S_UXTW_SCALED_MERGE_ZERO;
+  case AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO:
+    return AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO;
+  }
+}
+
 bool getGatherScatterIndexIsExtended(SDValue Index) {
   unsigned Opcode = Index.getOpcode();
   if (Opcode == ISD::SIGN_EXTEND_INREG)
@@ -3865,6 +3885,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   SDValue PassThru = MGT->getPassThru();
   SDValue Mask = MGT->getMask();
   SDValue BasePtr = MGT->getBasePtr();
+  ISD::LoadExtType ExtTy = MGT->getExtensionType();
 
   ISD::MemIndexType IndexType = MGT->getIndexType();
   bool IsScaled =
@@ -3874,6 +3895,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   bool IdxNeedsExtend =
       getGatherScatterIndexIsExtended(Index) ||
       Index.getSimpleValueType().getVectorElementType() == MVT::i32;
+  bool ResNeedsSignExtend = ExtTy == ISD::EXTLOAD || ExtTy == ISD::SEXTLOAD;
 
   EVT VT = PassThru.getSimpleValueType();
   EVT MemVT = MGT->getMemoryVT();
@@ -3900,9 +3922,12 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   if (getGatherScatterIndexIsExtended(Index))
     Index = Index.getOperand(0);
 
+  unsigned Opcode = getGatherVecOpcode(IsScaled, IsSigned, IdxNeedsExtend);
+  if (ResNeedsSignExtend)
+    Opcode = getSignExtendedGatherOpcode(Opcode);
+
   SDValue Ops[] = {Chain, Mask, BasePtr, Index, InputVT, PassThru};
-  return DAG.getNode(getGatherVecOpcode(IsScaled, IsSigned, IdxNeedsExtend), DL,
-                     VTs, Ops);
+  return DAG.getNode(Opcode, DL, VTs, Ops);
 }
 
 SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,

@@ -932,6 +932,33 @@ bool DAGCombiner::isOneUseSetCC(SDValue N) const {
   return false;
 }
 
+static bool isConstantSplatVectorMaskForType(SDNode *N, EVT ScalarTy) {
+  if (!ScalarTy.isSimple())
+    return false;
+
+  uint64_t MaskForTy = 0ULL;
+  switch (ScalarTy.getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    MaskForTy = 0xFFULL;
+    break;
+  case MVT::i16:
+    MaskForTy = 0xFFFFULL;
+    break;
+  case MVT::i32:
+    MaskForTy = 0xFFFFFFFFULL;
+    break;
+  default:
+    return false;
+    break;
+  }
+
+  APInt Val;
+  if (ISD::isConstantSplatVector(N, Val))
+    return Val.getLimitedValue() == MaskForTy;
+
+  return false;
+}
+
 // Returns the SDNode if it is a constant float BuildVector
 // or constant float.
 static SDNode *isConstantFPBuildVectorOrConstantFP(SDValue N) {
@@ -5619,6 +5646,28 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       }
 
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    }
+  }
+
+  // fold (and (masked_gather x)) -> (zext_masked_gather x)
+  if (auto *GN0 = dyn_cast<MaskedGatherSDNode>(N0)) {
+    EVT MemVT = GN0->getMemoryVT();
+    EVT ScalarVT = MemVT.getScalarType();
+
+    if (SDValue(GN0, 0).hasOneUse() &&
+        isConstantSplatVectorMaskForType(N1.getNode(), ScalarVT) &&
+        TLI.isVectorLoadExtDesirable(SDValue(SDValue(GN0, 0)))) {
+      SDValue Ops[] = {GN0->getChain(),   GN0->getPassThru(), GN0->getMask(),
+                       GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
+
+      SDValue ZExtLoad = DAG.getMaskedGather(
+          DAG.getVTList(VT, MVT::Other), MemVT, SDLoc(N), Ops,
+          GN0->getMemOperand(), GN0->getIndexType(), ISD::ZEXTLOAD);
+
+      CombineTo(N, ZExtLoad);
+      AddToWorklist(ZExtLoad.getNode());
+      // Avoid recheck of N.
+      return SDValue(N, 0);
     }
   }
 
@@ -11593,6 +11642,25 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
           Ld->getAddressingMode(), ISD::SEXTLOAD, Ld->isExpandingLoad());
       CombineTo(N, ExtMaskedLoad);
       CombineTo(N0.getNode(), ExtMaskedLoad, ExtMaskedLoad.getValue(1));
+      return SDValue(N, 0); // Return N so it doesn't get rechecked!
+    }
+  }
+
+  // fold (sext_inreg (masked_gather x)) -> (sext_masked_gather x)
+  if (auto *GN0 = dyn_cast<MaskedGatherSDNode>(N0)) {
+    if (SDValue(GN0, 0).hasOneUse() &&
+        ExtVT == GN0->getMemoryVT() &&
+        TLI.isVectorLoadExtDesirable(SDValue(SDValue(GN0, 0)))) {
+      SDValue Ops[] = {GN0->getChain(),   GN0->getPassThru(), GN0->getMask(),
+                       GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
+
+      SDValue ExtLoad = DAG.getMaskedGather(
+          DAG.getVTList(VT, MVT::Other), ExtVT, SDLoc(N), Ops,
+          GN0->getMemOperand(), GN0->getIndexType(), ISD::SEXTLOAD);
+
+      CombineTo(N, ExtLoad);
+      CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
+      AddToWorklist(ExtLoad.getNode());
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
