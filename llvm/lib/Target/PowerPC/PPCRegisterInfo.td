@@ -17,9 +17,9 @@ def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
 def sub_64 : SubRegIndex<64>;
 def sub_vsx0 : SubRegIndex<128>;
-def sub_vsx1 : SubRegIndex<128>;
+def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_pair0 : SubRegIndex<256>;
-def sub_pair1 : SubRegIndex<256>;
+def sub_pair1 : SubRegIndex<256, 256>;
 }
 
 

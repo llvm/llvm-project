@@ -279,7 +279,7 @@ struct RISCVOperand : public MCParsedAsmOperand {
     RISCVVSEW Sew;
     RISCVVLMUL Lmul;
     bool TailAgnostic;
-    bool MaskedoffAgnostic;
+    bool MaskAgnostic;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -846,7 +846,7 @@ public:
 
   static std::unique_ptr<RISCVOperand>
   createVType(unsigned Sew, unsigned Lmul, bool Fractional, bool TailAgnostic,
-              bool MaskedoffAgnostic, SMLoc S, bool IsRV64) {
+              bool MaskAgnostic, SMLoc S, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     unsigned SewLog2 = Log2_32(Sew / 8);
     unsigned LmulLog2 = Log2_32(Lmul);
@@ -858,7 +858,7 @@ public:
       Op->VType.Lmul = static_cast<RISCVVLMUL>(LmulLog2);
     }
     Op->VType.TailAgnostic = TailAgnostic;
-    Op->VType.MaskedoffAgnostic = MaskedoffAgnostic;
+    Op->VType.MaskAgnostic = MaskAgnostic;
     Op->StartLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
@@ -924,7 +924,7 @@ public:
   void addVTypeIOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned VTypeI = RISCVVType::encodeVTYPE(
-        VType.Lmul, VType.Sew, VType.TailAgnostic, VType.MaskedoffAgnostic);
+        VType.Lmul, VType.Sew, VType.TailAgnostic, VType.MaskAgnostic);
     Inst.addOperand(MCOperand::createImm(VTypeI));
   }
 
@@ -1612,11 +1612,11 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
   Name = getLexer().getTok().getIdentifier();
   // ma or mu
-  bool MaskedoffAgnostic;
+  bool MaskAgnostic;
   if (Name == "ma")
-    MaskedoffAgnostic = true;
+    MaskAgnostic = true;
   else if (Name == "mu")
-    MaskedoffAgnostic = false;
+    MaskAgnostic = false;
   else
     return MatchOperand_NoMatch;
   getLexer().Lex();
@@ -1625,7 +1625,7 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     return MatchOperand_NoMatch;
 
   Operands.push_back(RISCVOperand::createVType(
-      Sew, Lmul, Fractional, TailAgnostic, MaskedoffAgnostic, S, isRV64()));
+      Sew, Lmul, Fractional, TailAgnostic, MaskAgnostic, S, isRV64()));
 
   return MatchOperand_Success;
 }

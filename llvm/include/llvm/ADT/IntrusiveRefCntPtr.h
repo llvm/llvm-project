@@ -58,6 +58,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <memory>
 
 namespace llvm {
 
@@ -173,6 +174,11 @@ public:
   template <class X>
   IntrusiveRefCntPtr(IntrusiveRefCntPtr<X> &&S) : Obj(S.get()) {
     S.Obj = nullptr;
+  }
+
+  template <class X>
+  IntrusiveRefCntPtr(std::unique_ptr<X> S) : Obj(S.release()) {
+    retain();
   }
 
   template <class X>
