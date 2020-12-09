@@ -1639,7 +1639,7 @@ public:
   }
 };
 
-RedirectingFileSystem *
+std::unique_ptr<RedirectingFileSystem>
 RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
                               SourceMgr::DiagHandlerTy DiagHandler,
                               StringRef YAMLFilePath, void *DiagContext,
@@ -1679,7 +1679,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (!P.parse(Root, FS.get()))
     return nullptr;
 
-  return FS.release();
+  return FS;
 }
 
 ErrorOr<RedirectingFileSystem::Entry *>
@@ -1861,7 +1861,7 @@ RedirectingFileSystem::getRealPath(const Twine &Path,
                                : llvm::errc::invalid_argument;
 }
 
-IntrusiveRefCntPtr<FileSystem>
+std::unique_ptr<FileSystem>
 vfs::getVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                     SourceMgr::DiagHandlerTy DiagHandler,
                     StringRef YAMLFilePath, void *DiagContext,
@@ -1902,7 +1902,7 @@ void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                              SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
                              void *DiagContext,
                              IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  RedirectingFileSystem *VFS = RedirectingFileSystem::create(
+  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
       std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
       std::move(ExternalFS));
   ErrorOr<RedirectingFileSystem::Entry *> RootE = VFS->lookupPath("/");
