@@ -87,8 +87,7 @@ RealThreadsafeFS::viewImpl() const {
   // Avoid using memory-mapped files.
   // FIXME: Try to use a similar approach in Sema instead of relying on
   //        propagation of the 'isVolatile' flag through all layers.
-  return new VolatileFileSystem(
-      llvm::vfs::createPhysicalFileSystem().release());
+  return new VolatileFileSystem(llvm::vfs::createPhysicalFileSystem());
 }
 } // namespace clangd
 } // namespace clang
