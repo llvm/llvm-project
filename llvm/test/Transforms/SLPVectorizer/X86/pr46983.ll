@@ -51,41 +51,18 @@ define void @store_i32(i32* nocapture %0, i32 %1, i32 %2) {
 
 define void @store_i8(i8* nocapture %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: @store_i8(
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[TMP0:%.*]], align 1, [[TBAA4:!tbaa !.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 15
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], 255
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP7]], i32 255
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; CHECK-NEXT:    store i8 [[TMP10]], i8* [[TMP0]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP11]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP12]] to i32
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP1]]
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP14]], 15
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult i32 [[TMP15]], 255
-; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i32 [[TMP15]], i32 255
-; CHECK-NEXT:    [[TMP18:%.*]] = trunc i32 [[TMP17]] to i8
-; CHECK-NEXT:    store i8 [[TMP18]], i8* [[TMP11]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP20:%.*]] = load i8, i8* [[TMP19]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = mul i32 [[TMP21]], [[TMP1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = lshr i32 [[TMP22]], 15
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp ult i32 [[TMP23]], 255
-; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i32 [[TMP23]], i32 255
-; CHECK-NEXT:    [[TMP26:%.*]] = trunc i32 [[TMP25]] to i8
-; CHECK-NEXT:    store i8 [[TMP26]], i8* [[TMP19]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP28:%.*]] = load i8, i8* [[TMP27]], align 1, [[TBAA4]]
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i8 [[TMP28]] to i32
-; CHECK-NEXT:    [[TMP30:%.*]] = mul i32 [[TMP29]], [[TMP1]]
-; CHECK-NEXT:    [[TMP31:%.*]] = lshr i32 [[TMP30]], 15
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp ult i32 [[TMP31]], 255
-; CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i32 [[TMP31]], i32 255
-; CHECK-NEXT:    [[TMP34:%.*]] = trunc i32 [[TMP33]] to i8
-; CHECK-NEXT:    store i8 [[TMP34]], i8* [[TMP27]], align 1, [[TBAA4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0:%.*]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1, [[TBAA4:!tbaa !.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr <4 x i32> [[TMP9]], <i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <4 x i32> [[TMP10]], <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP10]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP12]] to <4 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[TMP0]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP13]], <4 x i8>* [[TMP14]], align 1, [[TBAA4]]
 ; CHECK-NEXT:    ret void
 ;
   %4 = load i8, i8* %0, align 1, !tbaa !6
