@@ -1703,6 +1703,7 @@ class RecordKeeper {
 
   std::string InputFilename;
   RecordMap Classes, Defs;
+  mutable StringMap<std::vector<Record *>> ClassRecordsMap;
   FoldingSet<RecordRecTy> RecordTypePool;
   std::map<std::string, Init *, std::less<>> ExtraGlobals;
   unsigned AnonCounter = 0;
@@ -1801,17 +1802,14 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
+  /// Get all the concrete records that inherit from the one specified
+  /// class. The class must be defined.
+  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
   std::vector<Record *> getAllDerivedDefinitions(
-      const ArrayRef<StringRef> ClassNames) const;
-
-  /// Get all the concrete records that inherit from the one specified
-  /// class. The class must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const {
-
-    return getAllDerivedDefinitions(makeArrayRef(ClassName));
-  }
+      ArrayRef<StringRef> ClassNames) const;
 
   void dump() const;
 };
