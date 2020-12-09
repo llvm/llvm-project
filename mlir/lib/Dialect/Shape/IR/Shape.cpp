@@ -31,10 +31,9 @@ RankedTensorType shape::getExtentTensorType(MLIRContext *ctx) {
 }
 
 static bool isErrorPropagationPossible(TypeRange operandTypes) {
-  for (Type ty : operandTypes)
-    if (ty.isa<SizeType>() || ty.isa<ShapeType>() || ty.isa<ValueShapeType>())
-      return true;
-  return false;
+  return llvm::any_of(operandTypes, [](Type ty) {
+    return ty.isa<SizeType, ShapeType, ValueShapeType>();
+  });
 }
 
 static LogicalResult verifySizeOrIndexOp(Operation *op) {
@@ -92,8 +91,7 @@ void ShapeDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
       >();
-  addTypes<ComponentType, ElementType, ShapeType, SizeType, ValueShapeType,
-           WitnessType>();
+  addTypes<ShapeType, SizeType, ValueShapeType, WitnessType>();
   addInterfaces<ShapeInlinerInterface>();
   // Allow unknown operations during prototyping and testing. As the dialect is
   // still evolving it makes it simple to start with an unregistered ops and
@@ -123,10 +121,6 @@ Type ShapeDialect::parseType(DialectAsmParser &parser) const {
   if (parser.parseKeyword(&keyword))
     return Type();
 
-  if (keyword == "component")
-    return ComponentType::get(getContext());
-  if (keyword == "element")
-    return ElementType::get(getContext());
   if (keyword == "shape")
     return ShapeType::get(getContext());
   if (keyword == "size")
@@ -143,8 +137,6 @@ Type ShapeDialect::parseType(DialectAsmParser &parser) const {
 /// Print a type registered to this dialect.
 void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
-      .Case<ComponentType>([&](Type) { os << "component"; })
-      .Case<ElementType>([&](Type) { os << "element"; })
       .Case<ShapeType>([&](Type) { os << "shape"; })
       .Case<SizeType>([&](Type) { os << "size"; })
       .Case<ValueShapeType>([&](Type) { os << "value_shape"; })
