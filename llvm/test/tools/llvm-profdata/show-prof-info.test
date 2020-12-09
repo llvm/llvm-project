@@ -7,6 +7,6 @@ REQUIRES: zlib
 ; To check llvm-profdata shows the correct flags for ProfileSummarySection.
 ; CHECK: ProfileSummarySection {{.*}} Flags: {compressed,partial}
 ; To check llvm-profdata shows the correct flags for NameTableSection.
-; CHECK: NameTableSection {{.*}} Flags: {compressed,md5}
+; CHECK: NameTableSection {{.*}} Flags: {compressed,fixlenmd5}
 ; To check llvm-profdata shows the correct file size.
 ; CHECK: [[FILESIZE]]

@@ -158,6 +158,9 @@ public:
   virtual void setUseMD5() override {
     UseMD5 = true;
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
+    // MD5 will be stored as plain uint64_t instead of variable-length
+    // quantity format in NameTable section.
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagFixedLengthMD5);
   }
 
   // Set the profile to be partial. It means the profile is for

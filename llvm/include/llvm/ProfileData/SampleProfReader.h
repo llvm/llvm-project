@@ -618,6 +618,7 @@ protected:
                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
+  virtual ErrorOr<StringRef> readStringFromTable() override;
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
@@ -628,6 +629,12 @@ protected:
   DenseSet<StringRef> FuncsToUse;
   /// Use all functions from the input profile.
   bool UseAllFuncs = true;
+
+  /// Use fixed length MD5 instead of ULEB128 encoding so NameTable doesn't
+  /// need to be read in up front and can be directly accessed using index.
+  bool FixedLengthMD5 = false;
+  /// The starting address of NameTable containing fixed length MD5.
+  const uint8_t *MD5NameMemStart = nullptr;
 
   /// If MD5 is used in NameTable section, the section saves uint64_t data.
   /// The uint64_t data has to be converted to a string and then the string
@@ -656,10 +663,7 @@ public:
   void collectFuncsFrom(const Module &M) override;
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() override {
-    assert(!NameTable.empty() && "NameTable should have been initialized");
-    return MD5StringBuf && !MD5StringBuf->empty();
-  }
+  virtual bool useMD5() override { return MD5StringBuf.get(); }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
