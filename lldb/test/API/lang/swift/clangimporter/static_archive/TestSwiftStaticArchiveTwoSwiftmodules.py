@@ -27,6 +27,7 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
+    @skipIf # Makefile uses system dsymutil (which might not work): rdar://72148156
     @swiftTest
     def test(self):
         self.build()

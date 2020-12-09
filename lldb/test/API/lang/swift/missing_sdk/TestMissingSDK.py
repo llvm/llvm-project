@@ -19,6 +19,7 @@ class TestMissingSDK(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @skipIf # Makefile uses system dsymutil (which might not work): rdar://72148156
     @swiftTest
     @skipIf(oslist=['windows'])
     @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
