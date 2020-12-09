@@ -1307,3 +1307,13 @@ def : Pat<(int_ve_vl_pvfmksgenan_Mvl v256f64:$vz, i32:$vl), (VFMKSyvl CC_GENAN, 
 def : Pat<(int_ve_vl_pvfmksgenan_MvMl v256f64:$vz, v512i1:$vm, i32:$vl), (VFMKSyvyl CC_GENAN, v256f64:$vz, v512i1:$vm, i32:$vl)>;
 def : Pat<(int_ve_vl_pvfmkslenan_Mvl v256f64:$vz, i32:$vl), (VFMKSyvl CC_LENAN, v256f64:$vz, i32:$vl)>;
 def : Pat<(int_ve_vl_pvfmkslenan_MvMl v256f64:$vz, v512i1:$vm, i32:$vl), (VFMKSyvyl CC_LENAN, v256f64:$vz, v512i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vsumwsx_vvl v256f64:$vy, i32:$vl), (VSUMWSXvl v256f64:$vy, i32:$vl)>;
+def : Pat<(int_ve_vl_vsumwsx_vvml v256f64:$vy, v256i1:$vm, i32:$vl), (VSUMWSXvml v256f64:$vy, v256i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vsumwzx_vvl v256f64:$vy, i32:$vl), (VSUMWZXvl v256f64:$vy, i32:$vl)>;
+def : Pat<(int_ve_vl_vsumwzx_vvml v256f64:$vy, v256i1:$vm, i32:$vl), (VSUMWZXvml v256f64:$vy, v256i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vsuml_vvl v256f64:$vy, i32:$vl), (VSUMLvl v256f64:$vy, i32:$vl)>;
+def : Pat<(int_ve_vl_vsuml_vvml v256f64:$vy, v256i1:$vm, i32:$vl), (VSUMLvml v256f64:$vy, v256i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vfsumd_vvl v256f64:$vy, i32:$vl), (VFSUMDvl v256f64:$vy, i32:$vl)>;
+def : Pat<(int_ve_vl_vfsumd_vvml v256f64:$vy, v256i1:$vm, i32:$vl), (VFSUMDvml v256f64:$vy, v256i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vfsums_vvl v256f64:$vy, i32:$vl), (VFSUMSvl v256f64:$vy, i32:$vl)>;
+def : Pat<(int_ve_vl_vfsums_vvml v256f64:$vy, v256i1:$vm, i32:$vl), (VFSUMSvml v256f64:$vy, v256i1:$vm, i32:$vl)>;
