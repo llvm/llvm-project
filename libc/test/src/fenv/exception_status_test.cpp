@@ -10,11 +10,18 @@
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
 
+#include "utils/FPUtil/FEnv.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
 
 TEST(ExceptionStatusTest, RaiseAndTest) {
+  // This test raises a set of exceptions and checks that the exception
+  // status flags are updated. The intention is really not to invoke the
+  // exception handler. Hence, we will disable all exceptions at the
+  // beginning.
+  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
   for (int e : excepts) {
