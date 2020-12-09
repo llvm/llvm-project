@@ -317,10 +317,10 @@ static void checkOptions() {
     error("--fix-cortex-a8 is only supported on ARM targets");
 
   if (config->tocOptimize && config->emachine != EM_PPC64)
-    error("--toc-optimize is only supported on the PowerPC64 target");
+    error("--toc-optimize is only supported on PowerPC64 targets");
 
   if (config->pcRelOptimize && config->emachine != EM_PPC64)
-    error("--pcrel--optimize is only supported on the PowerPC64 target");
+    error("--pcrel-optimize is only supported on PowerPC64 targets");
 
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
