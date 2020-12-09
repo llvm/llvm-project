@@ -34,6 +34,7 @@
 #include "atmi_runtime.h"
 
 #include "internal.h"
+
 #include "Debug.h"
 #include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
@@ -1764,12 +1765,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
             arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
             KernelInfo->Name);
-  if ((print_kernel_trace == 2) || (print_kernel_trace == 1))
-    printf("DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
-           "reqd:(%4dX%4d) n:%s\n",
-           device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
-           arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
-           KernelInfo->Name);
 
   // Run on the device.
   {
@@ -1940,8 +1935,8 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
 }
 
 // This method is only used by hostrpc demo
-atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
-                                    size_t size, bool host2Device) {
+atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src, size_t size,
+                                    bool host2Device) {
   hsa_signal_t sig;
   hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
   if (err != HSA_STATUS_SUCCESS) {
