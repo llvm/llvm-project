@@ -47,6 +47,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
@@ -990,8 +991,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
-  config->ltoNewPassManager = args.hasFlag(OPT_lto_new_pass_manager,
-                                           OPT_no_lto_new_pass_manager, false);
+  config->ltoNewPassManager =
+      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+                   LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,
