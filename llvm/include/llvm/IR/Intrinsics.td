@@ -1667,6 +1667,15 @@ def int_ptrauth_sign_generic : Intrinsic<[llvm_anyint_ty],
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
+//===---------- Intrinsics to perform subvector insertion/extraction ------===//
+def int_experimental_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                           [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i64_ty],
+                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_experimental_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                            [llvm_anyvector_ty, llvm_i64_ty],
+                                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
