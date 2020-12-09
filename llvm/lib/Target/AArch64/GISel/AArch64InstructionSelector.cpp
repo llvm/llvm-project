@@ -1033,8 +1033,11 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
   // By default, we'll try and emit a CSEL.
   unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
   bool Optimized = false;
-  auto TryFoldBinOpIntoSelect = [&Opc, Is32Bit, &CC, &MRI](Register &Reg,
-                                                           bool Invert) {
+  auto TryFoldBinOpIntoSelect = [&Opc, Is32Bit, &CC, &MRI,
+                                 &Optimized](Register &Reg, bool Invert) {
+    if (Optimized)
+      return false;
+
     // Attempt to fold:
     //
     // %sub = G_SUB 0, %x
