@@ -52,7 +52,7 @@ GlobList::GlobList(StringRef Globs) {
   } while (!Globs.empty());
 }
 
-bool GlobList::contains(StringRef S) {
+bool GlobList::contains(StringRef S) const {
   // Iterating the container backwards as the last match determins if S is in
   // the list.
   for (const GlobListItem &Item : llvm::reverse(Items)) {
