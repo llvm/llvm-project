@@ -715,7 +715,7 @@ AsmToken AsmLexer::LexToken() {
   if (CurChar == EOF && !IsAtStartOfStatement && EndStatementAtEOF) {
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
-    return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 1));
+    return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 0));
   }
   IsAtStartOfLine = false;
   bool OldIsAtStartOfStatement = IsAtStartOfStatement;
