@@ -883,8 +883,10 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
              tok.startswith_lower("-include:"))
       result.includes.push_back(tok.substr(strlen("/include:")));
     else {
-      // Save non-null-terminated strings to make proper C strings.
-      bool HasNul = tok.data()[tok.size()] == '\0';
+      // Copy substrings that are not valid C strings. The tokenizer may have
+      // already copied quoted arguments for us, so those do not need to be
+      // copied again.
+      bool HasNul = tok.end() != s.end() && tok.data()[tok.size()] == '\0';
       rest.push_back(HasNul ? tok.data() : saver.save(tok).data());
     }
   }
