@@ -2915,20 +2915,11 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type,
-                                     bool *is_variadic_ptr) {
+bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
     if (qual_type->isFunctionType()) {
-      if (is_variadic_ptr) {
-        const clang::FunctionProtoType *function_proto_type =
-            llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
-        if (function_proto_type)
-          *is_variadic_ptr = function_proto_type->isVariadic();
-        else
-          *is_variadic_ptr = false;
-      }
       return true;
     }
 
@@ -2941,8 +2932,8 @@ bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type,
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
       if (reference_type)
-        return IsFunctionType(reference_type->getPointeeType().getAsOpaquePtr(),
-                              nullptr);
+        return IsFunctionType(
+            reference_type->getPointeeType().getAsOpaquePtr());
     } break;
     }
   }
