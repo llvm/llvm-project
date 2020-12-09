@@ -6,27 +6,15 @@ define arm_aapcs_vfpcc void @reg(<8 x i16> %acc0, <8 x i16> %acc1, i32* nocaptur
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    movw r1, #52428
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    movw r1, #13107
-; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpstete
 ; CHECK-NEXT:    vaddvt.s16 r12, q1
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvt.s16 r2, q1
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddve.s16 r2, q1
 ; CHECK-NEXT:    vaddvt.s16 r4, q0
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvt.s16 r6, q0
+; CHECK-NEXT:    vaddve.s16 r6, q0
 ; CHECK-NEXT:    strd r6, r4, [r0]
 ; CHECK-NEXT:    strd r2, r12, [r0, #8]
-; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
 entry:
   %0 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 13107)
@@ -152,14 +140,11 @@ define arm_aapcs_vfpcc i32 @const_mask_1(<4 x i32> %0, <4 x i32> %1, i32 %2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #1
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vpsttee
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #65534
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvae.s32 r0, q0
+; CHECK-NEXT:    vaddvae.s32 r0, q1
 ; CHECK-NEXT:    bx lr
   %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1)
   %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
@@ -206,14 +191,11 @@ define arm_aapcs_vfpcc i32 @const_mask_1234(<4 x i32> %0, <4 x i32> %1, i32 %2) 
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movw r1, #1234
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vpsttee
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #64301
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvae.s32 r0, q0
+; CHECK-NEXT:    vaddvae.s32 r0, q1
 ; CHECK-NEXT:    bx lr
   %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
   %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
@@ -231,25 +213,13 @@ define arm_aapcs_vfpcc i32 @const_mask_1234(<4 x i32> %0, <4 x i32> %1, i32 %2) 
 define arm_aapcs_vfpcc i32 @const_mask_abab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
 ; CHECK-LABEL: const_mask_abab:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    movw r1, #1234
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    movw r1, #64301
-; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpstete
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvae.s32 r0, q1
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    vaddvae.s32 r0, q0
 ; CHECK-NEXT:    bx lr
   %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
   %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
@@ -267,26 +237,16 @@ define arm_aapcs_vfpcc i32 @const_mask_abab(<4 x i32> %0, <4 x i32> %1, i32 %2) 
 define arm_aapcs_vfpcc i32 @const_mask_abbreakab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
 ; CHECK-LABEL: const_mask_abbreakab:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    movw r1, #1234
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    movw r1, #64301
-; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpste
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvae.s32 r0, q1
 ; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpste
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    vaddvae.s32 r0, q0
 ; CHECK-NEXT:    bx lr
   %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
   %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
@@ -312,9 +272,8 @@ define arm_aapcs_vfpcc i32 @const_mask_break(<4 x i32> %0, <4 x i32> %1, i32 %2)
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #64301
 ; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
@@ -372,27 +331,24 @@ define arm_aapcs_vfpcc i32 @const_mask_threepred(<4 x i32> %0, <4 x i32> %1, i32
 define arm_aapcs_vfpcc i32 @const_mask_threepredabab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
 ; CHECK-LABEL: const_mask_threepredabab:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    movw r1, #1234
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    movw r1, #64301
-; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
 ; CHECK-NEXT:    vpt.s32 gt, q1, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q1
 ; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r0, q0
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    vpste
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvae.s32 r0, q0
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
   %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
   %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
