@@ -820,7 +820,7 @@ def CallOp : Std_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return getAttrOfType<SymbolRefAttr>("callee");
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
     }
   }];
 
@@ -1040,8 +1040,8 @@ def CmpFOp : Std_Op<"cmpf",
     static CmpFPredicate getPredicateByName(StringRef name);
 
     CmpFPredicate getPredicate() {
-      return (CmpFPredicate)getAttrOfType<IntegerAttr>(getPredicateAttrName())
-          .getInt();
+      return (CmpFPredicate)(*this)->getAttrOfType<IntegerAttr>(
+          getPredicateAttrName()).getInt();
     }
   }];
 
@@ -1162,8 +1162,8 @@ def CmpIOp : Std_Op<"cmpi",
     static CmpIPredicate getPredicateByName(StringRef name);
 
     CmpIPredicate getPredicate() {
-      return (CmpIPredicate)getAttrOfType<IntegerAttr>(getPredicateAttrName())
-          .getInt();
+      return (CmpIPredicate)(*this)->getAttrOfType<IntegerAttr>(
+          getPredicateAttrName()).getInt();
     }
   }];
 

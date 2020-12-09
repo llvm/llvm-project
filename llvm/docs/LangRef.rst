@@ -16095,6 +16095,81 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+'``llvm.experimental.vector.insert``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. You can use ``llvm.experimental.vector.insert``
+to insert a fixed-width vector into a scalable vector, but not the other way
+around.
+
+::
+
+      declare <vscale x 4 x float> @llvm.experimental.vector.insert.v4f32(<vscale x 4 x float> %vec, <4 x float> %subvec, i64 %idx)
+      declare <vscale x 2 x double> @llvm.experimental.vector.insert.v2f64(<vscale x 2 x double> %vec, <2 x double> %subvec, i64 %idx)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vector.insert.*``' intrinsics insert a vector into another vector
+starting from a given index. The return type matches the type of the vector we
+insert into. Conceptually, this can be used to build a scalable vector out of
+non-scalable vectors.
+
+Arguments:
+""""""""""
+
+The ``vec`` is the vector which ``subvec`` will be inserted into.
+The ``subvec`` is the vector that will be inserted.
+
+``idx`` represents the starting element number at which ``subvec`` will be
+inserted. ``idx`` must be a constant multiple of ``subvec``'s known minimum
+vector length. If ``subvec`` is a scalable vector, ``idx`` is first scaled by
+the runtime scaling factor of ``subvec``. The elements of ``vec`` starting at
+``idx`` are overwritten with ``subvec``. Elements ``idx`` through (``idx`` +
+num_elements(``subvec``) - 1) must be valid ``vec`` indices. If this condition
+cannot be determined statically but is false at runtime, then the result vector
+is undefined.
+
+
+'``llvm.experimental.vector.extract``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. You can use
+``llvm.experimental.vector.extract`` to extract a fixed-width vector from a
+scalable vector, but not the other way around.
+
+::
+
+      declare <4 x float> @llvm.experimental.vector.extract.v4f32(<vscale x 4 x float> %vec, i64 %idx)
+      declare <2 x double> @llvm.experimental.vector.extract.v2f64(<vscale x 2 x double> %vec, i64 %idx)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vector.extract.*``' intrinsics extract a vector from
+within another vector starting from a given index. The return type must be
+explicitly specified. Conceptually, this can be used to decompose a scalable
+vector into non-scalable parts.
+
+Arguments:
+""""""""""
+
+The ``vec`` is the vector from which we will extract a subvector.
+
+The ``idx`` specifies the starting element number within ``vec`` from which a
+subvector is extracted. ``idx`` must be a constant multiple of the known-minimum
+vector length of the result type. If the result type is a scalable vector,
+``idx`` is first scaled by the result type's runtime scaling factor. Elements
+``idx`` through (``idx`` + num_elements(result_type) - 1) must be valid vector
+indices. If this condition cannot be determined statically but is false at
+runtime, then the result vector is undefined. The ``idx`` parameter must be a
+vector index constant type (for most targets this will be an integer pointer
+type).
+
 Matrix Intrinsics
 -----------------
 

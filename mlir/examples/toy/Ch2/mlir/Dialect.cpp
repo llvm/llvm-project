@@ -191,7 +191,7 @@ void MulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 static mlir::LogicalResult verify(ReturnOp op) {
   // We know that the parent operation is a function, because of the 'HasParent'
   // trait attached to the operation definition.
-  auto function = cast<FuncOp>(op.getParentOp());
+  auto function = cast<FuncOp>(op->getParentOp());
 
   /// ReturnOps can only have a single optional operand.
   if (op.getNumOperands() > 1)

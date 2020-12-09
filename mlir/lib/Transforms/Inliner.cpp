@@ -414,7 +414,7 @@ static bool shouldInline(ResolvedCall &resolvedCall) {
   // Don't allow inlining if the target is an ancestor of the call. This
   // prevents inlining recursively.
   if (resolvedCall.targetNode->getCallableRegion()->isAncestor(
-          resolvedCall.call.getParentRegion()))
+          resolvedCall.call->getParentRegion()))
     return false;
 
   // Otherwise, inline.

@@ -90,7 +90,8 @@ const char *adapterSegmentSizeAttrInitCode = R"(
   auto sizeAttr = odsAttrs.get("{0}").cast<::mlir::DenseIntElementsAttr>();
 )";
 const char *opSegmentSizeAttrInitCode = R"(
-  auto sizeAttr = getAttrOfType<::mlir::DenseIntElementsAttr>("{0}");
+  auto sizeAttr =
+      getOperation()->getAttrOfType<::mlir::DenseIntElementsAttr>("{0}");
 )";
 const char *attrSizedSegmentValueRangeCalcCode = R"(
   unsigned start = 0;
@@ -614,7 +615,7 @@ void OpEmitter::genAttrSetters() {
     if (!method)
       return;
     auto &body = method->body();
-    body << "  this->getOperation()->setAttr(\"" << name << "\", attr);";
+    body << "  (*this)->setAttr(\"" << name << "\", attr);";
   };
 
   for (auto &namedAttr : op.getAttributes()) {

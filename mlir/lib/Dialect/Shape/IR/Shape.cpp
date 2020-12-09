@@ -832,7 +832,7 @@ void SizeToIndexOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(shape::YieldOp op) {
-  auto *parentOp = op.getParentOp();
+  auto *parentOp = op->getParentOp();
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 

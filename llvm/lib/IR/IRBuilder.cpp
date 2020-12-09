@@ -80,6 +80,17 @@ static CallInst *createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
+Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
+  Module *M = GetInsertBlock()->getParent()->getParent();
+  assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
+  Function *TheFn =
+      Intrinsic::getDeclaration(M, Intrinsic::vscale, {Scaling->getType()});
+  CallInst *CI = createCallHelper(TheFn, {}, this, Name);
+  return cast<ConstantInt>(Scaling)->getSExtValue() == 1
+             ? CI
+             : CreateMul(CI, Scaling);
+}
+
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MaybeAlign Align, bool isVolatile,
                                       MDNode *TBAATag, MDNode *ScopeTag,

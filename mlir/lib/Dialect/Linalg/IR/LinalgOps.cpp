@@ -1139,7 +1139,7 @@ static LogicalResult verifyYield(linalg::YieldOp op,
 }
 
 static LogicalResult verify(linalg::YieldOp op) {
-  auto *parentOp = op.getParentOp();
+  auto *parentOp = op->getParentOp();
   if (parentOp->getNumRegions() != 1 || parentOp->getRegion(0).empty())
     return op.emitOpError("expected single non-empty parent region");
 

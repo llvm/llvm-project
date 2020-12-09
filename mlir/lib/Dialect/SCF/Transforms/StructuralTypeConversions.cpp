@@ -144,7 +144,7 @@ void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
   target.addDynamicallyLegalOp<scf::YieldOp>([&](scf::YieldOp op) {
     // We only have conversions for a subset of ops that use scf.yield
     // terminators.
-    if (!isa<ForOp, IfOp>(op.getParentOp()))
+    if (!isa<ForOp, IfOp>(op->getParentOp()))
       return true;
     return typeConverter.isLegal(op.getOperandTypes());
   });

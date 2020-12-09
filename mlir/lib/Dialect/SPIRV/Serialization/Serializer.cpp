@@ -638,8 +638,8 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  uint32_t mm = module.getAttrOfType<IntegerAttr>("memory_model").getInt();
-  uint32_t am = module.getAttrOfType<IntegerAttr>("addressing_model").getInt();
+  uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
+  uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -656,7 +656,7 @@ LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.default_value(),
                                             /*isSpec=*/true)) {
     // Emit the OpDecorate instruction for SpecId.
-    if (auto specID = op.getAttrOfType<IntegerAttr>("spec_id")) {
+    if (auto specID = op->getAttrOfType<IntegerAttr>("spec_id")) {
       auto val = static_cast<uint32_t>(specID.getInt());
       emitDecoration(resultID, spirv::Decoration::SpecId, {val});
     }
@@ -1973,7 +1973,7 @@ Serializer::processOp<spirv::ControlBarrierOp>(spirv::ControlBarrierOp op) {
   SmallVector<uint32_t, 3> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();
@@ -2020,7 +2020,7 @@ Serializer::processOp<spirv::MemoryBarrierOp>(spirv::MemoryBarrierOp op) {
   SmallVector<uint32_t, 2> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();

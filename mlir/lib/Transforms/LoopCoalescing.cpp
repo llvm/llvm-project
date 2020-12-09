@@ -25,7 +25,7 @@ struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
 
     func.walk([](scf::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentOfType<scf::ForOp>())
+      if (op->getParentOfType<scf::ForOp>())
         return;
 
       SmallVector<scf::ForOp, 4> loops;

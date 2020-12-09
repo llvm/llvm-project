@@ -744,6 +744,25 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << ", compressing";
 
     OS << ">";
+  } else if (const auto *MGather = dyn_cast<MaskedGatherSDNode>(this)) {
+    OS << "<";
+    printMemOperand(OS, *MGather->getMemOperand(), G);
+
+    bool doExt = true;
+    switch (MGather->getExtensionType()) {
+    default: doExt = false; break;
+    case ISD::EXTLOAD:  OS << ", anyext"; break;
+    case ISD::SEXTLOAD: OS << ", sext"; break;
+    case ISD::ZEXTLOAD: OS << ", zext"; break;
+    }
+    if (doExt)
+      OS << " from " << MGather->getMemoryVT().getEVTString();
+
+    auto Signed = MGather->isIndexSigned() ? "signed" : "unsigned";
+    auto Scaled = MGather->isIndexScaled() ? "scaled" : "unscaled";
+    OS << ", " << Signed << " " << Scaled << " offset";
+
+    OS << ">";
   } else if (const auto *MScatter = dyn_cast<MaskedScatterSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *MScatter->getMemOperand(), G);

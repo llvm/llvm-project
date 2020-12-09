@@ -89,8 +89,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
     func.walk([&](vector::TransferReadOp transferRead) {
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<scf::ForOp>(transferRead.getParentOp());
-      LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead.getParentOp()
+      auto loop = dyn_cast<scf::ForOp>(transferRead->getParentOp());
+      LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
                         << "\n");
       if (!loop)
         return WalkResult::advance();

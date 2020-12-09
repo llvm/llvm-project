@@ -221,7 +221,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // Canonicalize to remove dead else blocks (happens whenever an 'if' moves up
   // a sequence of affine.fors that are all perfectly nested).
   applyPatternsAndFoldGreedily(
-      hoistedIfOp.getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
+      hoistedIfOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
       frozenPatterns);
 
   return success();

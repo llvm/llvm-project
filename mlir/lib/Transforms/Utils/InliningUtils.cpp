@@ -329,7 +329,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   // Builder used for any conversion operations that need to be materialized.
   OpBuilder castBuilder(call);
   Location castLoc = call.getLoc();
-  auto *callInterface = interface.getInterfaceFor(call.getDialect());
+  const auto *callInterface = interface.getInterfaceFor(call->getDialect());
 
   // Map the provided call operands to the arguments of the region.
   BlockAndValueMapping mapper;

@@ -466,7 +466,7 @@ static void addSuspensionPoint(CoroMachinery coro, Value coroState,
 // Note that this is not reversible transformation.
 static std::pair<FuncOp, CoroMachinery>
 outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
-  ModuleOp module = execute.getParentOfType<ModuleOp>();
+  ModuleOp module = execute->getParentOfType<ModuleOp>();
 
   MLIRContext *ctx = module.getContext();
   Location loc = execute.getLoc();
@@ -727,7 +727,7 @@ public:
       return failure();
 
     // Check if await operation is inside the outlined coroutine function.
-    auto func = await.template getParentOfType<FuncOp>();
+    auto func = await->template getParentOfType<FuncOp>();
     auto outlined = outlinedFunctions.find(func);
     const bool isInCoroutine = outlined != outlinedFunctions.end();
 
