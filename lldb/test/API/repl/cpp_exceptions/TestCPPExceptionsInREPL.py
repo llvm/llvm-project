@@ -46,7 +46,10 @@ class TestREPLExceptions(TestBase):
 
     @decorators.skipIfRemote
     def do_repl_test(self):
-        sdk_root = swift.getSwiftSDKRoot()
+        sdk_root = ""
+        with open(self.getBuildArtifact("sdkroot.txt"), 'r') as f:
+            sdk_root = f.readlines()[0]
+        self.assertGreater(len(sdk_root), 0)
         build_dir = self.getBuildDir()
         repl_args = [lldbtest_config.lldbExec, "-x", "--repl=-enable-objc-interop -sdk %s -L%s -I%s"%(sdk_root, build_dir, build_dir)]
         repl_proc = subprocess.Popen(repl_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=build_dir)
