@@ -787,6 +787,16 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     (void)InsertedReg;
   }
 
+  // Do not emit CSInfo for undef forwarding registers.
+  for (auto &MO : CallMI->uses()) {
+    if (!MO.isReg() || !MO.isUndef())
+      continue;
+    auto It = ForwardedRegWorklist.find(MO.getReg());
+    if (It == ForwardedRegWorklist.end())
+      continue;
+    ForwardedRegWorklist.erase(It);
+  }
+
   // We erase, from the ForwardedRegWorklist, those forwarding registers for
   // which we successfully describe a loaded value (by using
   // the describeLoadedValue()). For those remaining arguments in the working
