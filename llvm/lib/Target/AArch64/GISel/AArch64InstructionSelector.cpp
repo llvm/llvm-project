@@ -4879,7 +4879,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     break;
   case Intrinsic::ubsantrap:
     MIRBuilder.buildInstr(AArch64::BRK, {}, {})
-        .addImm(I.getOperand(0).getImm() | ('U' << 8));
+        .addImm(I.getOperand(1).getImm() | ('U' << 8));
     break;
   }
 
