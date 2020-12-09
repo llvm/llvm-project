@@ -599,4 +599,21 @@ TEST(OptionalTest, UseInUnitTests) {
   EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, Comparable::get()), "object");
 }
 
+TEST(OptionalTest, HashValue) {
+  // Check that None, false, and true all hash differently.
+  Optional<bool> B, B0 = false, B1 = true;
+  EXPECT_NE(hash_value(B0), hash_value(B));
+  EXPECT_NE(hash_value(B1), hash_value(B));
+  EXPECT_NE(hash_value(B1), hash_value(B0));
+
+  // Check that None, 0, and 1 all hash differently.
+  Optional<int> I, I0 = 0, I1 = 1;
+  EXPECT_NE(hash_value(I0), hash_value(I));
+  EXPECT_NE(hash_value(I1), hash_value(I));
+  EXPECT_NE(hash_value(I1), hash_value(I0));
+
+  // Check None hash the same way regardless of type.
+  EXPECT_EQ(hash_value(B), hash_value(I));
+}
+
 } // end anonymous namespace
