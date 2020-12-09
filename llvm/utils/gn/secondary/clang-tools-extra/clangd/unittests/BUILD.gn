@@ -100,7 +100,6 @@ unittest("ClangdTests") {
     "TestIndex.cpp",
     "TestTU.cpp",
     "TestWorkspace.cpp",
-    "TweakTesting.cpp",
     "TweakTests.cpp",
     "TypeHierarchyTests.cpp",
     "URITests.cpp",
