@@ -102,7 +102,7 @@ Type ValueType::getValueType() { return getImpl()->valueType; }
 static LogicalResult verify(YieldOp op) {
   // Get the underlying value types from async values returned from the
   // parent `async.execute` operation.
-  auto executeOp = op.getParentOfType<ExecuteOp>();
+  auto executeOp = op->getParentOfType<ExecuteOp>();
   auto types = llvm::map_range(executeOp.results(), [](const OpResult &result) {
     return result.getType().cast<ValueType>().getValueType();
   });

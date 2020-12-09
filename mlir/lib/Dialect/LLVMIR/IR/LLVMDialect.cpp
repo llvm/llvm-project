@@ -457,7 +457,7 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
 
 static LogicalResult verify(LandingpadOp op) {
   Value value;
-  if (LLVMFuncOp func = op.getParentOfType<LLVMFuncOp>()) {
+  if (LLVMFuncOp func = op->getParentOfType<LLVMFuncOp>()) {
     if (!func.personality().hasValue())
       return op.emitError(
           "llvm.landingpad needs to be in a function with a personality");
@@ -985,11 +985,13 @@ static OpTy lookupSymbolInModule(Operation *parent, StringRef name) {
 }
 
 GlobalOp AddressOfOp::getGlobal() {
-  return lookupSymbolInModule<LLVM::GlobalOp>(getParentOp(), global_name());
+  return lookupSymbolInModule<LLVM::GlobalOp>((*this)->getParentOp(),
+                                              global_name());
 }
 
 LLVMFuncOp AddressOfOp::getFunction() {
-  return lookupSymbolInModule<LLVM::LLVMFuncOp>(getParentOp(), global_name());
+  return lookupSymbolInModule<LLVM::LLVMFuncOp>((*this)->getParentOp(),
+                                                global_name());
 }
 
 static LogicalResult verify(AddressOfOp op) {
@@ -1203,7 +1205,7 @@ static LogicalResult verify(GlobalOp op) {
   if (!LLVMPointerType::isValidElementType(op.getType()))
     return op.emitOpError(
         "expects type to be a valid element type for an LLVM pointer");
-  if (op.getParentOp() && !satisfiesLLVMModule(op.getParentOp()))
+  if (op->getParentOp() && !satisfiesLLVMModule(op->getParentOp()))
     return op.emitOpError("must appear at the module level");
 
   if (auto strAttr = op.getValueOrNull().dyn_cast_or_null<StringAttr>()) {

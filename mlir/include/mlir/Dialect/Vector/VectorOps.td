@@ -1937,7 +1937,8 @@ def Vector_TupleGetOp :
       return getResult().getType().cast<VectorType>();
     }
     int64_t getIndex() {
-      return getAttrOfType<IntegerAttr>("index").getValue().getSExtValue();
+      auto index = (*this)->getAttrOfType<IntegerAttr>("index");
+      return index.getValue().getSExtValue();
     }
     static StringRef getIndexAttrName() { return "index"; }
   }];
