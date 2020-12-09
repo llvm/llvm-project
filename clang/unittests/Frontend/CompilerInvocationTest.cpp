@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "llvm/Support/Host.h"
 
 #include "gmock/gmock.h"
@@ -32,13 +33,17 @@ public:
   }
 
   CommandLineTest()
-      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
+      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions(),
+                                                  new TextDiagnosticBuffer())) {
+  }
 };
 
 TEST_F(CommandLineTest, OptIsInitializedWithCustomDefaultValue) {
   const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
 }
@@ -48,6 +53,8 @@ TEST_F(CommandLineTest, OptOfNegativeFlagIsPopulatedWithFalse) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   ASSERT_FALSE(Invocation.getFrontendOpts().UseTemporary);
 }
 
@@ -55,6 +62,8 @@ TEST_F(CommandLineTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
   const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   // Explicitly provided flag.
   ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
@@ -72,6 +81,8 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fmodules-strict-context-hash")));
@@ -82,6 +93,8 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
   const char *Args[] = {"-triple", TripleCStr};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -94,6 +107,8 @@ TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
   const char *Args[] = {"-triple", DefaultTriple.c_str()};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -108,6 +123,8 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Triple should always be emitted even if it is the default
@@ -118,6 +135,8 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
   const char *Args[] = {"-mrelocation-model", "static"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -130,6 +149,8 @@ TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Default relocation model.
@@ -141,6 +162,8 @@ TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
@@ -151,6 +174,8 @@ TEST_F(CommandLineTest, PresentNegativeFlagGenerated) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
@@ -160,6 +185,8 @@ TEST_F(CommandLineTest, NotPresentAndNotImpliedNotGenerated) {
   const char *Args[] = {""};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -175,6 +202,8 @@ TEST_F(CommandLineTest, NotPresentAndImpliedNotGenerated) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Missing options that were implied are not generated.
@@ -189,6 +218,8 @@ TEST_F(CommandLineTest, PresentAndImpliedNotGenerated) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Present options that were also implied are not generated.
@@ -201,6 +232,8 @@ TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
   const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
