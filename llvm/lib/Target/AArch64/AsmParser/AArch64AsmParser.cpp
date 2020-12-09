@@ -181,6 +181,8 @@ private:
   bool parseDirectiveCFINegateRAState();
   bool parseDirectiveCFIBKeyFrame();
 
+  bool parseDirectiveVariantPCS(SMLoc L);
+
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -5081,6 +5083,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".arch_extension")
     parseDirectiveArchExtension(Loc);
+  else if (IDVal == ".variant_pcs")
+    parseDirectiveVariantPCS(Loc);
   else if (IsMachO) {
     if (IDVal == MCLOHDirectiveName())
       parseDirectiveLOH(IDVal, Loc);
@@ -5614,6 +5618,32 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 
   Res = AArch64AuthMCExpr::create(Res, Discriminator, *KeyIDOrNone,
                                   UseAddressDiversity, Ctx);
+
+  return false;
+}
+
+/// parseDirectiveVariantPCS
+/// ::= .variant_pcs symbolname
+bool AArch64AsmParser::parseDirectiveVariantPCS(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+
+  const AsmToken &Tok = Parser.getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("expected symbol name");
+
+  StringRef SymbolName = Tok.getIdentifier();
+
+  MCSymbol *Sym = getContext().lookupSymbol(SymbolName);
+  if (!Sym)
+    return TokError("unknown symbol in '.variant_pcs' directive");
+
+  Parser.Lex(); // Eat the symbol
+
+  // Shouldn't be any more tokens
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.variant_pcs' directive");
+
+  getTargetStreamer().emitDirectiveVariantPCS(Sym);
 
   return false;
 }
