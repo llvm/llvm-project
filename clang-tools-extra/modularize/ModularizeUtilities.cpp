@@ -258,22 +258,22 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
 std::error_code ModularizeUtilities::loadModuleMap(
     llvm::StringRef InputPath) {
   // Get file entry for module.modulemap file.
-  auto ModuleMapEntryOrErr =
-    SourceMgr->getFileManager().getFile(InputPath);
+  auto ExpectedModuleMapEntry =
+    SourceMgr->getFileManager().getFileRef(InputPath);
 
   // return error if not found.
-  if (!ModuleMapEntryOrErr) {
+  if (!ExpectedModuleMapEntry) {
     llvm::errs() << "error: File \"" << InputPath << "\" not found.\n";
-    return ModuleMapEntryOrErr.getError();
+    return errorToErrorCode(ExpectedModuleMapEntry.takeError());
   }
-  const FileEntry *ModuleMapEntry = *ModuleMapEntryOrErr;
+  FileEntryRef ModuleMapEntry = *ExpectedModuleMapEntry;
 
   // Because the module map parser uses a ForwardingDiagnosticConsumer,
   // which doesn't forward the BeginSourceFile call, we do it explicitly here.
   DC.BeginSourceFile(*LangOpts, nullptr);
 
   // Figure out the home directory for the module map file.
-  const DirectoryEntry *Dir = ModuleMapEntry->getDir();
+  const DirectoryEntry *Dir = ModuleMapEntry.getDir();
   StringRef DirName(Dir->getName());
   if (llvm::sys::path::filename(DirName) == "Modules") {
     DirName = llvm::sys::path::parent_path(DirName);
