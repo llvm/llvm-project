@@ -1942,13 +1942,13 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
 
   if (VLIndex >= 0) {
     // Set VL (rs1 != X0).
-    unsigned DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    Register DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     MIB.addReg(DestReg, RegState::Define | RegState::Dead)
-       .addReg(MI.getOperand(VLIndex).getReg());
+        .addReg(MI.getOperand(VLIndex).getReg());
   } else
     // With no VL operator in the pseudo, do not modify VL (rd = X0, rs1 = X0).
-    MIB.addReg(RISCV::X0, RegState::Dead)
-       .addReg(RISCV::X0, RegState::Kill);
+    MIB.addReg(RISCV::X0, RegState::Define | RegState::Dead)
+        .addReg(RISCV::X0, RegState::Kill);
 
   // For simplicity we reuse the vtype representation here.
   MIB.addImm(RISCVVType::encodeVTYPE(Multiplier, ElementWidth,
