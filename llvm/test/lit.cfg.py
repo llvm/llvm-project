@@ -82,6 +82,10 @@ def get_asan_rtlib():
         return ''
     return found_dylibs[0]
 
+# Define this first. Afterwards, use_default_substitutions will add the rule for
+# expanding FileCheck to the full path.
+config.substitutions.append(('%FileCheckWithUnusedPrefixes%', 
+    'FileCheck --allow-unused-prefixes=true'))
 
 llvm_config.use_default_substitutions()
 
