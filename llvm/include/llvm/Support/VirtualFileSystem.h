@@ -731,6 +731,11 @@ public:
          SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
          void *DiagContext, IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
+  /// Redirect each of the remapped files from first to second.
+  static std::unique_ptr<RedirectingFileSystem>
+  create(ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
+         bool UseExternalNames, FileSystem &ExternalFS);
+
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
 
