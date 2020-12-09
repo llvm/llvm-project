@@ -1010,14 +1010,20 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   // Structs and Tuples.
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
-    // `OpaqueExistential` is documented as:
-    //     An existential is a three-word buffer followed by value metadata...
-    // The buffer is exposed by as children named `payload_data_{0,1,2}`, and
-    // requires the number of fields to be increased.
-    if (rti->getRecordKind() ==
-        swift::reflection::RecordKind::OpaqueExistential)
+    switch (rti->getRecordKind()) {
+    case swift::reflection::RecordKind::ThickFunction:
+      // There are two fields, `function` and `context`, but they're not exposed
+      // by lldb.
+      return 0;
+    case swift::reflection::RecordKind::OpaqueExistential:
+      // `OpaqueExistential` is documented as:
+      //     An existential is a three-word buffer followed by value metadata...
+      // The buffer is exposed as children named `payload_data_{0,1,2}`, and
+      // the number of fields are increased to match.
       return rti->getNumFields() + 3;
-    return rti->getNumFields();
+    default:
+      return rti->getNumFields();
+    }
   }
   if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
     return eti->getNumPayloadCases();
