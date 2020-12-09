@@ -467,18 +467,25 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",   "thumb2-", "arm-",
       "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-"};
   std::vector<StringRef> PassNameContain = {"ehprepare"};
-  std::vector<StringRef> PassNameExact = {
-      "safe-stack",           "cost-model",
-      "codegenprepare",       "interleaved-load-combine",
-      "unreachableblockelim", "scalarize-masked-mem-intrin",
-      "verify-safepoint-ir",  "divergence",
-      "infer-address-spaces", "atomic-expand",
-      "hardware-loops",       "type-promotion",
-      "mve-tail-predication", "interleaved-access",
-      "global-merge",         "pre-isel-intrinsic-lowering",
-      "expand-reductions",    "indirectbr-expand",
-      "generic-to-nvvm",      "expandmemcmp",
-      "loop-reduce"};
+  std::vector<StringRef> PassNameExact = {"safe-stack",
+                                          "cost-model",
+                                          "codegenprepare",
+                                          "interleaved-load-combine",
+                                          "unreachableblockelim",
+                                          "verify-safepoint-ir",
+                                          "divergence",
+                                          "infer-address-spaces",
+                                          "atomic-expand",
+                                          "hardware-loops",
+                                          "type-promotion",
+                                          "mve-tail-predication",
+                                          "interleaved-access",
+                                          "global-merge",
+                                          "pre-isel-intrinsic-lowering",
+                                          "expand-reductions",
+                                          "indirectbr-expand",
+                                          "generic-to-nvvm",
+                                          "expandmemcmp"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -534,7 +541,7 @@ int main(int argc, char **argv) {
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandMemCmpPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinPass(Registry);
+  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
   initializeRewriteSymbolsLegacyPassPass(Registry);
