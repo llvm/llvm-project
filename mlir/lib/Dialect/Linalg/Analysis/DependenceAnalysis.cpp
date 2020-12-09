@@ -43,6 +43,10 @@ Value Aliases::find(Value v) {
     if (!defOp)
       return v;
 
+    // Treat RegionBranchOpInterfaces like an allocate and don't try to follow
+    // the aliasing further.
+    if (isa<RegionBranchOpInterface>(defOp))
+      return v;
     if (isa<TensorToMemrefOp>(defOp))
       return v;
 
