@@ -2287,3 +2287,89 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   EXPECT_FALSE(FS->exists(_b.path("b")));
   EXPECT_FALSE(FS->exists(_c.path("c")));
 }
+
+TEST(VFSFromRemappedFilesTest, Basic) {
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> BaseFS =
+      new vfs::InMemoryFileSystem;
+  BaseFS->addFile("//root/b", 0, MemoryBuffer::getMemBuffer("contents of b"));
+  BaseFS->addFile("//root/c", 0, MemoryBuffer::getMemBuffer("contents of c"));
+
+  std::vector<std::pair<std::string, std::string>> RemappedFiles = {
+      {"//root/a/a", "//root/b"},
+      {"//root/a/b/c", "//root/c"},
+  };
+  auto RemappedFS = vfs::RedirectingFileSystem::create(
+      RemappedFiles, /*UseExternalNames=*/false, *BaseFS);
+
+  auto StatA = RemappedFS->status("//root/a/a");
+  auto StatB = RemappedFS->status("//root/a/b/c");
+  ASSERT_TRUE(StatA);
+  ASSERT_TRUE(StatB);
+  EXPECT_EQ("//root/a/a", StatA->getName());
+  EXPECT_EQ("//root/a/b/c", StatB->getName());
+
+  auto BufferA = RemappedFS->getBufferForFile("//root/a/a");
+  auto BufferB = RemappedFS->getBufferForFile("//root/a/b/c");
+  ASSERT_TRUE(BufferA);
+  ASSERT_TRUE(BufferB);
+  EXPECT_EQ("contents of b", (*BufferA)->getBuffer());
+  EXPECT_EQ("contents of c", (*BufferB)->getBuffer());
+}
+
+TEST(VFSFromRemappedFilesTest, UseExternalNames) {
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> BaseFS =
+      new vfs::InMemoryFileSystem;
+  BaseFS->addFile("//root/b", 0, MemoryBuffer::getMemBuffer("contents of b"));
+  BaseFS->addFile("//root/c", 0, MemoryBuffer::getMemBuffer("contents of c"));
+
+  std::vector<std::pair<std::string, std::string>> RemappedFiles = {
+      {"//root/a/a", "//root/b"},
+      {"//root/a/b/c", "//root/c"},
+  };
+  auto RemappedFS = vfs::RedirectingFileSystem::create(
+      RemappedFiles, /*UseExternalNames=*/true, *BaseFS);
+
+  auto StatA = RemappedFS->status("//root/a/a");
+  auto StatB = RemappedFS->status("//root/a/b/c");
+  ASSERT_TRUE(StatA);
+  ASSERT_TRUE(StatB);
+  EXPECT_EQ("//root/b", StatA->getName());
+  EXPECT_EQ("//root/c", StatB->getName());
+
+  auto BufferA = RemappedFS->getBufferForFile("//root/a/a");
+  auto BufferB = RemappedFS->getBufferForFile("//root/a/b/c");
+  ASSERT_TRUE(BufferA);
+  ASSERT_TRUE(BufferB);
+  EXPECT_EQ("contents of b", (*BufferA)->getBuffer());
+  EXPECT_EQ("contents of c", (*BufferB)->getBuffer());
+}
+
+TEST(VFSFromRemappedFilesTest, LastMappingWins) {
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> BaseFS =
+      new vfs::InMemoryFileSystem;
+  BaseFS->addFile("//root/b", 0, MemoryBuffer::getMemBuffer("contents of b"));
+  BaseFS->addFile("//root/c", 0, MemoryBuffer::getMemBuffer("contents of c"));
+
+  std::vector<std::pair<std::string, std::string>> RemappedFiles = {
+      {"//root/a", "//root/b"},
+      {"//root/a", "//root/c"},
+  };
+  auto RemappedFSKeepName = vfs::RedirectingFileSystem::create(
+      RemappedFiles, /*UseExternalNames=*/false, *BaseFS);
+  auto RemappedFSExternalName = vfs::RedirectingFileSystem::create(
+      RemappedFiles, /*UseExternalNames=*/true, *BaseFS);
+
+  auto StatKeepA = RemappedFSKeepName->status("//root/a");
+  auto StatExternalA = RemappedFSExternalName->status("//root/a");
+  ASSERT_TRUE(StatKeepA);
+  ASSERT_TRUE(StatExternalA);
+  EXPECT_EQ("//root/a", StatKeepA->getName());
+  EXPECT_EQ("//root/c", StatExternalA->getName());
+
+  auto BufferKeepA = RemappedFSKeepName->getBufferForFile("//root/a");
+  auto BufferExternalA = RemappedFSExternalName->getBufferForFile("//root/a");
+  ASSERT_TRUE(BufferKeepA);
+  ASSERT_TRUE(BufferExternalA);
+  EXPECT_EQ("contents of c", (*BufferKeepA)->getBuffer());
+  EXPECT_EQ("contents of c", (*BufferExternalA)->getBuffer());
+}
