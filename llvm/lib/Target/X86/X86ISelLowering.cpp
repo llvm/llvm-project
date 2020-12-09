@@ -48813,6 +48813,38 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getBitcast(VT, Res);
       }
       break;
+    case X86ISD::VPERMV3:
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector()) {
+        MVT OpVT = Op0.getSimpleValueType();
+        int NumSrcElts = OpVT.getVectorNumElements();
+        SmallVector<int, 64> ConcatMask;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          bool IsUnary;
+          SmallVector<int, 64> SubMask;
+          SmallVector<SDValue, 2> SubOps;
+          if (!getTargetShuffleMask(Ops[i].getNode(), OpVT, false, SubOps,
+                                    SubMask, IsUnary))
+            break;
+          for (int M : SubMask) {
+            if (0 <= M) {
+              M += M < NumSrcElts ? 0 : NumSrcElts;
+              M += i * NumSrcElts;
+            }
+            ConcatMask.push_back(M);
+          }
+        }
+        if (ConcatMask.size() == (NumOps * NumSrcElts)) {
+          SDValue Src0 = concatSubVectors(Ops[0].getOperand(0),
+                                          Ops[1].getOperand(0), DAG, DL);
+          SDValue Src1 = concatSubVectors(Ops[0].getOperand(2),
+                                          Ops[1].getOperand(2), DAG, DL);
+          MVT IntMaskSVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+          MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
+          SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);
+          return DAG.getNode(X86ISD::VPERMV3, DL, VT, Src0, Mask, Src1);
+        }
+      }
+      break;
     case X86ISD::VSHLI:
     case X86ISD::VSRAI:
     case X86ISD::VSRLI:
