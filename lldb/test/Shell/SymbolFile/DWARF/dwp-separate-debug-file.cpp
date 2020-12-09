@@ -1,6 +1,6 @@
 // REQUIRES: lld
 
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -c %s -o %t.o
+// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -g -c %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-dwp %t.dwo -o %t.dwp
 // RUN: rm %t.dwo
