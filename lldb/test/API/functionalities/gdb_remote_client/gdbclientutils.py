@@ -178,6 +178,8 @@ class MockGDBServerResponder:
             return self.qsProcessInfo()
         if packet.startswith("qfProcessInfo"):
             return self.qfProcessInfo(packet)
+        if packet.startswith("qPathComplete:"):
+            return self.qPathComplete()
 
         return self.other(packet)
 
@@ -280,6 +282,9 @@ class MockGDBServerResponder:
         return ""
 
     def qMemoryRegionInfo(self):
+        return ""
+
+    def qPathComplete(self):
         return ""
 
     """

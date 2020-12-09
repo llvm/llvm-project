@@ -238,6 +238,27 @@ incompatible with the flags that gdb specifies.
 //  have been sent, Exx is returned to indicate end of matches.
 
 //----------------------------------------------------------------------
+// qPathComplete
+//
+// BRIEF
+//   Get a list of matched disk files/directories by passing a boolean flag
+//   and a partial path.
+//
+// EXAMPLE
+//
+//   receive: qPathComplete:0,6d61696e
+//   send:    M6d61696e2e637070
+//   receive: qPathComplete:1,746573
+//   send:    M746573742f,74657374732f
+//
+//   If the first argument is zero, the result should contain all
+//   files (including directories) starting with the given path. If the
+//   argument is one, the result should contain only directories.
+//
+//   The result should be a comma-separated list of hex-encoded paths.
+//   Paths denoting a directory should end with a directory separator ('/' or '\').
+
+//----------------------------------------------------------------------
 // vFile:size:
 //
 // BRIEF
