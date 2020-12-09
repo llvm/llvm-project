@@ -1857,7 +1857,7 @@ public:
   /// \returns true if the name is a valid swift name for \p D, false otherwise.
   bool DiagnoseSwiftName(Decl *D, StringRef Name,
                          SourceLocation ArgLoc,
-                         const IdentifierInfo *AttrName);
+                         const IdentifierInfo *AttrName, bool IsAsync);
 
   /// A derivative of BoundTypeDiagnoser for which the diagnostic's type
   /// parameter is preceded by a 0/1 enum that is 1 if the type is sizeless.
@@ -12421,6 +12421,7 @@ private:
   /// Nullability type specifiers.
   IdentifierInfo *Ident__Nonnull = nullptr;
   IdentifierInfo *Ident__Nullable = nullptr;
+  IdentifierInfo *Ident__Nullable_result = nullptr;
   IdentifierInfo *Ident__Null_unspecified = nullptr;
 
   IdentifierInfo *Ident_NSError = nullptr;

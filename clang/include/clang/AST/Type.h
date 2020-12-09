@@ -4874,6 +4874,9 @@ public:
     case NullabilityKind::Nullable:
       return attr::TypeNullable;
 
+    case NullabilityKind::NullableResult:
+      return attr::TypeNullableResult;
+
     case NullabilityKind::Unspecified:
       return attr::TypeNullUnspecified;
     }

@@ -1761,6 +1761,11 @@ def TypeNullable : TypeAttr {
   let Documentation = [TypeNullableDocs];
 }
 
+def TypeNullableResult : TypeAttr {
+  let Spellings = [Keyword<"_Nullable_result">];
+  let Documentation = [TypeNullableResultDocs];
+}
+
 def TypeNullUnspecified : TypeAttr {
   let Spellings = [Keyword<"_Null_unspecified">];
   let Documentation = [TypeNullUnspecifiedDocs];
@@ -2106,6 +2111,19 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftAsyncName : InheritableAttr {
+  let Spellings = [GNU<"swift_async_name">];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[ObjCMethod, Function], ErrorDiag>;
+  let Documentation = [SwiftAsyncNameDocs];
+}
+
+def SwiftAttr : InheritableAttr {
+  let Spellings = [GNU<"swift_attr">];
+  let Args = [StringArgument<"Attribute">];
+  let Documentation = [SwiftAttrDocs];
+}
+
 def SwiftBridge : Attr {
   let Spellings = [GNU<"swift_bridge">];
   let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
@@ -2168,7 +2186,7 @@ def SwiftImportAsNonGeneric : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def SwiftImportPropertyAsAccessors : InheritableAttr { 
+def SwiftImportPropertyAsAccessors : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];

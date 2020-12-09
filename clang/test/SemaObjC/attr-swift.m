@@ -51,22 +51,22 @@ __attribute__((swift_name("SNFooClass")))
 + (SNFoo *)fooWithConvertingValue:(int)value value:(int)value2 __attribute__((swift_name("init(_:extra:)")));
 
 + (SNFoo *)fooWithOtherValue:(int)value __attribute__((swift_name("init"))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (SNFoo *)fooWithAnotherValue:(int)value __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
-+ (SNFoo *)fooWithYetAnotherValue:(int)value __attribute__((swift_name("foo(value:extra:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 1; got 2)}}
++ (SNFoo *)fooWithAnotherValue:(int)value __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in the signature specified by the 'swift_name' attribute (expected 1; got 0)}}
++ (SNFoo *)fooWithYetAnotherValue:(int)value __attribute__((swift_name("foo(value:extra:)"))); // expected-warning {{too many parameters in the signature specified by the 'swift_name' attribute (expected 1; got 2)}}
 
 + (SNFoo *)fooAndReturnErrorCode:(int *)errorCode __attribute__((swift_name("foo()"))); // no-warning
 + (SNFoo *)fooWithValue:(int)value andReturnErrorCode:(int *)errorCode __attribute__((swift_name("foo(value:)"))); // no-warning
-+ (SNFoo *)fooFromErrorCode:(const int *)errorCode __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
-+ (SNFoo *)fooWithValue:(int)value fromErrorCode:(const int *)errorCode __attribute__((swift_name("foo(value:)"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 2; got 1)}}
++ (SNFoo *)fooFromErrorCode:(const int *)errorCode __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in the signature specified by the 'swift_name' attribute (expected 1; got 0)}}
++ (SNFoo *)fooWithValue:(int)value fromErrorCode:(const int *)errorCode __attribute__((swift_name("foo(value:)"))); // expected-warning {{too few parameters in the signature specified by the 'swift_name' attribute (expected 2; got 1)}}
 + (SNFoo *)fooWithPointerA:(int *)value andReturnErrorCode:(int *)errorCode __attribute__((swift_name("foo()"))); // no-warning
 + (SNFoo *)fooWithPointerB:(int *)value andReturnErrorCode:(int *)errorCode __attribute__((swift_name("foo(pointer:)"))); // no-warning
 + (SNFoo *)fooWithPointerC:(int *)value andReturnErrorCode:(int *)errorCode __attribute__((swift_name("foo(pointer:errorCode:)"))); // no-warning
-+ (SNFoo *)fooWithOtherFoo:(SNFoo *)other __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
++ (SNFoo *)fooWithOtherFoo:(SNFoo *)other __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in the signature specified by the 'swift_name' attribute (expected 1; got 0)}}
 
 + (instancetype)specialFoo __attribute__((swift_name("init(options:)")));
-+ (instancetype)specialBar __attribute__((swift_name("init(options:extra:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 0; got 2)}}
-+ (instancetype)specialBaz __attribute__((swift_name("init(_:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 0; got 1)}}
-+ (instancetype)specialGarply __attribute__((swift_name("foo(options:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 0; got 1)}}
++ (instancetype)specialBar __attribute__((swift_name("init(options:extra:)"))); // expected-warning {{too many parameters in the signature specified by the 'swift_name' attribute (expected 0; got 2)}}
++ (instancetype)specialBaz __attribute__((swift_name("init(_:)"))); // expected-warning {{too many parameters in the signature specified by the 'swift_name' attribute (expected 0; got 1)}}
++ (instancetype)specialGarply __attribute__((swift_name("foo(options:)"))); // expected-warning {{too many parameters in the signature specified by the 'swift_name' attribute (expected 0; got 1)}}
 
 + (instancetype)trailingParen __attribute__((swift_name("foo("))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
 + (instancetype)trailingColon:(int)value __attribute__((swift_name("foo(value)"))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
@@ -90,8 +90,8 @@ struct __attribute__((swift_name("FooStruct"))) BarStruct {
 int global_int __attribute__((swift_name("GlobalInt")));
 
 void foo1(int i) __attribute__((swift_name("foo"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
-void foo2(int i) __attribute__((swift_name("foo()"))); // expected-warning{{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
-void foo2(int i) __attribute__((swift_name("foo(a:b:)"))); // expected-warning{{too many parameters in 'swift_name' attribute (expected 1; got 2)}}
+void foo2(int i) __attribute__((swift_name("foo()"))); // expected-warning{{too few parameters in the signature specified by the 'swift_name' attribute (expected 1; got 0)}}
+void foo2(int i) __attribute__((swift_name("foo(a:b:)"))); // expected-warning{{too many parameters in the signature specified by the 'swift_name' attribute (expected 1; got 2)}}
 void foo3(int i, int j) __attribute__((swift_name("fooWithX(_:y:)"))); // okay
 void foo4(int i, int *error) __attribute__((swift_name("fooWithA(_:)"))); // okay
 
@@ -99,7 +99,7 @@ typedef int some_int_type __attribute__((swift_name("SomeInt")));
 
 struct Point3D createPoint3D(float x, float y, float z) __attribute__((swift_name("Point3D.init(x:y:z:)")));
 struct Point3D rotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(self:radians:)")));
-struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(radians:)"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 2; got 1)}}
+struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(radians:)"))); // expected-warning {{too few parameters in the signature specified by the 'swift_name' attribute (expected 2; got 1)}}
 
 extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity")));
 

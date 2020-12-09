@@ -499,7 +499,8 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
                                                QualType SrcType,
                                                SourceLocation Loc) {
   Optional<NullabilityKind> ExprNullability = SrcType->getNullability(Context);
-  if (!ExprNullability || *ExprNullability != NullabilityKind::Nullable)
+  if (!ExprNullability || (*ExprNullability != NullabilityKind::Nullable &&
+                           *ExprNullability != NullabilityKind::NullableResult))
     return;
 
   Optional<NullabilityKind> TypeNullability = DstType->getNullability(Context);
