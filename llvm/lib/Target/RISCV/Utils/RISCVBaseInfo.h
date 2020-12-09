@@ -330,30 +330,54 @@ constexpr MVT vbool64_t = MVT::nxv1i1;
 
 } // namespace RISCVVMVTs
 
-namespace RISCVVLengthMultiplier {
-
-enum LengthMultiplier {
-  LMul1 = 0,
-  LMul2 = 1,
-  LMul4 = 2,
-  LMul8 = 3,
-  LMulF8 = 5,
-  LMulF4 = 6,
-  LMulF2 = 7
+enum class RISCVVSEW {
+  SEW_8 = 0,
+  SEW_16,
+  SEW_32,
+  SEW_64,
+  SEW_128,
+  SEW_256,
+  SEW_512,
+  SEW_1024,
 };
 
-}
-
-namespace RISCVVStandardElementWidth {
-
-enum StandardElementWidth {
-  ElementWidth8 = 0,
-  ElementWidth16 = 1,
-  ElementWidth32 = 2,
-  ElementWidth64 = 3
+enum class RISCVVLMUL {
+  LMUL_1 = 0,
+  LMUL_2,
+  LMUL_4,
+  LMUL_8,
+  LMUL_F8 = 5,
+  LMUL_F4,
+  LMUL_F2
 };
 
+namespace RISCVVType {
+// Is this a SEW value that can be encoded into the VTYPE format.
+inline static bool isValidSEW(unsigned SEW) {
+  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
 }
+
+// Is this a LMUL value that can be encoded into the VTYPE format.
+inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
+  return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
+}
+
+// Encode VTYPE into the binary format used by the the VSETVLI instruction which
+// is used by our MC layer representation.
+inline static unsigned encodeVTYPE(RISCVVLMUL VLMUL, RISCVVSEW VSEW,
+                                   bool TailAgnostic, bool MaskedoffAgnostic) {
+  unsigned VLMULBits = static_cast<unsigned>(VLMUL);
+  unsigned VSEWBits = static_cast<unsigned>(VSEW);
+  unsigned VTypeI =
+      ((VLMULBits & 0x4) << 3) | (VSEWBits << 2) | (VLMULBits & 0x3);
+  if (TailAgnostic)
+    VTypeI |= 0x40;
+  if (MaskedoffAgnostic)
+    VTypeI |= 0x80;
+
+  return VTypeI;
+}
+} // namespace RISCVVType
 
 namespace RISCVVPseudosTable {
 

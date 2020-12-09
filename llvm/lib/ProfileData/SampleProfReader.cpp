@@ -367,6 +367,34 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readStringFromTable() {
   return NameTable[*Idx];
 }
 
+ErrorOr<StringRef> SampleProfileReaderExtBinaryBase::readStringFromTable() {
+  if (!FixedLengthMD5)
+    return SampleProfileReaderBinary::readStringFromTable();
+
+  // read NameTable index.
+  auto Idx = readStringIndex(NameTable);
+  if (std::error_code EC = Idx.getError())
+    return EC;
+
+  // Check whether the name to be accessed has been accessed before,
+  // if not, read it from memory directly.
+  StringRef &SR = NameTable[*Idx];
+  if (SR.empty()) {
+    const uint8_t *SavedData = Data;
+    Data = MD5NameMemStart + ((*Idx) * sizeof(uint64_t));
+    auto FID = readUnencodedNumber<uint64_t>();
+    if (std::error_code EC = FID.getError())
+      return EC;
+    // Save the string converted from uint64_t in MD5StringBuf. All the
+    // references to the name are all StringRefs refering to the string
+    // in MD5StringBuf.
+    MD5StringBuf->push_back(std::to_string(*FID));
+    SR = MD5StringBuf->back();
+    Data = SavedData;
+  }
+  return SR;
+}
+
 ErrorOr<StringRef> SampleProfileReaderCompactBinary::readStringFromTable() {
   auto Idx = readStringIndex(NameTable);
   if (std::error_code EC = Idx.getError())
@@ -494,11 +522,16 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
     break;
-  case SecNameTable:
-    if (std::error_code EC = readNameTableSec(
-            hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name)))
+  case SecNameTable: {
+    FixedLengthMD5 =
+        hasSecFlag(Entry, SecNameTableFlags::SecFlagFixedLengthMD5);
+    bool UseMD5 = hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name);
+    assert((!FixedLengthMD5 || UseMD5) &&
+           "If FixedLengthMD5 is true, UseMD5 has to be true");
+    if (std::error_code EC = readNameTableSec(UseMD5))
       return EC;
     break;
+  }
   case SecLBRProfile:
     if (std::error_code EC = readFuncProfiles())
       return EC;
@@ -739,9 +772,20 @@ std::error_code SampleProfileReaderExtBinaryBase::readMD5NameTable() {
   auto Size = readNumber<uint64_t>();
   if (std::error_code EC = Size.getError())
     return EC;
-  NameTable.reserve(*Size);
   MD5StringBuf = std::make_unique<std::vector<std::string>>();
   MD5StringBuf->reserve(*Size);
+  if (FixedLengthMD5) {
+    // Preallocate and initialize NameTable so we can check whether a name
+    // index has been read before by checking whether the element in the
+    // NameTable is empty, meanwhile readStringIndex can do the boundary
+    // check using the size of NameTable.
+    NameTable.resize(*Size + NameTable.size());
+
+    MD5NameMemStart = Data;
+    Data = Data + (*Size) * sizeof(uint64_t);
+    return sampleprof_error::success;
+  }
+  NameTable.reserve(*Size);
   for (uint32_t I = 0; I < *Size; ++I) {
     auto FID = readNumber<uint64_t>();
     if (std::error_code EC = FID.getError())
@@ -857,7 +901,9 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
 
   switch (Entry.Type) {
   case SecNameTable:
-    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))
+    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagFixedLengthMD5))
+      Flags.append("fixlenmd5,");
+    else if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))
       Flags.append("md5,");
     break;
   case SecProfSummary:

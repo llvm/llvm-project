@@ -1929,39 +1929,11 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   unsigned SEW = MI.getOperand(SEWIndex).getImm();
-  RISCVVLengthMultiplier::LengthMultiplier Multiplier;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+  RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2_32(SEW / 8));
 
-  switch (VLMul) {
-  default:
-    llvm_unreachable("Unexpected LMUL for instruction");
-  case 0:
-  case 1:
-  case 2:
-  case 3:
-  case 5:
-  case 6:
-  case 7:
-    Multiplier = static_cast<RISCVVLengthMultiplier::LengthMultiplier>(VLMul);
-    break;
-  }
-
-  RISCVVStandardElementWidth::StandardElementWidth ElementWidth;
-  switch (SEW) {
-  default:
-    llvm_unreachable("Unexpected SEW for instruction");
-  case 8:
-    ElementWidth = RISCVVStandardElementWidth::ElementWidth8;
-    break;
-  case 16:
-    ElementWidth = RISCVVStandardElementWidth::ElementWidth16;
-    break;
-  case 32:
-    ElementWidth = RISCVVStandardElementWidth::ElementWidth32;
-    break;
-  case 64:
-    ElementWidth = RISCVVStandardElementWidth::ElementWidth64;
-    break;
-  }
+  // LMUL should already be encoded correctly.
+  RISCVVLMUL Multiplier = static_cast<RISCVVLMUL>(VLMul);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -1979,13 +1951,9 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
        .addReg(RISCV::X0, RegState::Kill);
 
   // For simplicity we reuse the vtype representation here.
-  // Bits | Name       | Description
-  // -----+------------+------------------------------------------------
-  // 5    | vlmul[2]   | Fractional lmul?
-  // 4:2  | vsew[2:0]  | Standard element width (SEW) setting
-  // 1:0  | vlmul[1:0] | Vector register group multiplier (LMUL) setting
-  MIB.addImm(((Multiplier & 0x4) << 3) | ((ElementWidth & 0x3) << 2) |
-             (Multiplier & 0x3));
+  MIB.addImm(RISCVVType::encodeVTYPE(Multiplier, ElementWidth,
+                                     /*TailAgnostic*/ false,
+                                     /*MaskedOffAgnostic*/ false));
 
   // Remove (now) redundant operands from pseudo
   MI.getOperand(SEWIndex).setImm(-1);

@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_OPTIONAL_H
 #define LLVM_ADT_OPTIONAL_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
@@ -298,6 +299,10 @@ public:
   }
 #endif
 };
+
+template <class T> llvm::hash_code hash_value(const Optional<T> &O) {
+  return O ? hash_combine(true, *O) : hash_value(false);
+}
 
 template <typename T, typename U>
 constexpr bool operator==(const Optional<T> &X, const Optional<U> &Y) {
