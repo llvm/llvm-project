@@ -499,9 +499,8 @@ define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr
 
 define <4 x float> @load_v2f32_extract_insert_v4f32(<2 x float>* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v2f32_extract_insert_v4f32(
-; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, <2 x float>* [[P:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float>* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %l = load <2 x float>, <2 x float>* %p, align 4
@@ -512,9 +511,8 @@ define <4 x float> @load_v2f32_extract_insert_v4f32(<2 x float>* align 16 derefe
 
 define <4 x float> @load_v8f32_extract_insert_v4f32(<8 x float>* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v8f32_extract_insert_v4f32(
-; CHECK-NEXT:    [[L:%.*]] = load <8 x float>, <8 x float>* [[P:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = extractelement <8 x float> [[L]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x float>* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %l = load <8 x float>, <8 x float>* %p, align 4

@@ -93,8 +93,6 @@ add_unittest(ClangdUnitTests ClangdTests
   TestTU.cpp
   TestWorkspace.cpp
   TypeHierarchyTests.cpp
-  TweakTests.cpp
-  TweakTesting.cpp
   URITests.cpp
   XRefsTests.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DecisionForestRuntimeTest.cpp
@@ -107,6 +105,26 @@ add_unittest(ClangdUnitTests ClangdTests
   support/ThreadingTests.cpp
   support/TestTracer.cpp
   support/TraceTests.cpp
+
+  tweaks/AddUsingTests.cpp
+  tweaks/AnnotateHighlightingsTests.cpp
+  tweaks/DefineInlineTests.cpp
+  tweaks/DefineOutlineTests.cpp
+  tweaks/DumpASTTests.cpp
+  tweaks/DumpRecordLayoutTests.cpp
+  tweaks/DumpSymbolTests.cpp
+  tweaks/ExpandAutoTypeTests.cpp
+  tweaks/ExpandMacroTests.cpp
+  tweaks/ExtractFunctionTests.cpp
+  tweaks/ExtractVariableTests.cpp
+  tweaks/ObjCLocalizeStringLiteralTests.cpp
+  tweaks/PopulateSwitchTests.cpp
+  tweaks/RawStringLiteralTests.cpp
+  tweaks/RemoveUsingNamespaceTests.cpp
+  tweaks/ShowSelectionTreeTests.cpp
+  tweaks/SwapIfBranchesTests.cpp
+  tweaks/TweakTesting.cpp
+  tweaks/TweakTests.cpp
 
   ${REMOTE_TEST_SOURCES}
 
