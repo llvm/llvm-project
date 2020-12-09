@@ -93,7 +93,6 @@ uint32_t TgtStackItemSize = 0;
 
 #include "../../common/elf_common.c"
 
-
 /// Keep entries table per device
 struct FuncOrGblEntryTy {
   __tgt_target_table Table;
@@ -708,7 +707,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
 
   char GetInfoName[64]; // 64 max size returned by get info
   err = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
-                          (void *) GetInfoName);
+                           (void *)GetInfoName);
   if (err)
     DeviceInfo.GPUName[device_id] = "--unknown gpu--";
   else {
@@ -718,7 +717,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
   if (print_kernel_trace == 4)
     fprintf(stderr, "Device#%-2d CU's: %2d %s\n", device_id,
             DeviceInfo.ComputeUnits[device_id],
-	    DeviceInfo.GPUName[device_id].c_str());
+            DeviceInfo.GPUName[device_id].c_str());
 
   // Query attributes to determine number of threads/block and blocks/grid.
   uint16_t workgroup_max_dim[3];
@@ -794,12 +793,11 @@ int32_t __tgt_rtl_init_device(int device_id) {
     if (TeamsPerCUEnvStr) {
       TeamsPerCU = std::stoi(TeamsPerCUEnvStr);
     }
-   
+
     DeviceInfo.NumTeams[device_id] =
-      TeamsPerCU * DeviceInfo.ComputeUnits[device_id];
+        TeamsPerCU * DeviceInfo.ComputeUnits[device_id];
     DP("Default number of teams = %d * number of compute units %d\n",
-       TeamsPerCU,
-       DeviceInfo.ComputeUnits[device_id]);
+       TeamsPerCU, DeviceInfo.ComputeUnits[device_id]);
   }
 
   if (DeviceInfo.NumTeams[device_id] > DeviceInfo.GroupsPerDevice[device_id]) {
@@ -1183,7 +1181,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
               "Possible gpu arch mismatch: device:%s, image:%s please check"
               " compiler flag: -march=<gpu>\n",
               DeviceInfo.GPUName[device_id].c_str(),
-	      get_elf_mach_gfx_name(elf_e_flags(image)));
+              get_elf_mach_gfx_name(elf_e_flags(image)));
       return NULL;
     }
 
@@ -1759,11 +1757,10 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   getLaunchVals(threadsPerGroup, num_groups, KernelInfo->ConstWGSize,
                 KernelInfo->ExecutionMode, DeviceInfo.EnvTeamLimit,
                 DeviceInfo.EnvNumTeams,
-                num_teams,     // From run_region arg
-                thread_limit,  // From run_region arg
+                num_teams,      // From run_region arg
+                thread_limit,   // From run_region arg
                 loop_tripcount, // From run_region arg
-                KernelInfo->device_id
-  );
+                KernelInfo->device_id);
 
   if (print_kernel_trace == 4)
     // enum modes are SPMD, GENERIC, NONE 0,1,2
