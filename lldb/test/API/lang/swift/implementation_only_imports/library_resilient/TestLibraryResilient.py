@@ -82,7 +82,7 @@ class TestLibraryResilient(TestBase):
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
         self.expect("fr var", substrs=[
-            "(SomeLibrary.ContainsTwoInts) container = (other = 10)",
+            "(SomeLibrary.ContainsTwoInts) container = {", "other = 10",
             "(Int) simple = 1"])
         self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
         self.expect("e container.wrapped", error=True, substrs=["value of type 'ContainsTwoInts' has no member 'wrapped'"])
