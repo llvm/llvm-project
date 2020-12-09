@@ -32,7 +32,7 @@ class GdbRemoteTestCaseBase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # Default time out in seconds. The timeout is increased tenfold under Asan.
-    DEFAULT_TIMEOUT =  10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     # Default sleep time in seconds. The sleep time is doubled under Asan.
     DEFAULT_SLEEP   =  5  * (2  if ('ASAN_OPTIONS' in os.environ) else 1)
 
