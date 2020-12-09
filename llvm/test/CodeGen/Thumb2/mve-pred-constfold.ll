@@ -147,6 +147,271 @@ entry:
 
 
 
+define arm_aapcs_vfpcc i32 @const_mask_1(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_1:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #65534
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %8 = add i32 %6, %7
+  %9 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 65534)
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %9)
+  %11 = add i32 %8, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %9)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_not1(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_not1:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #65533
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %8 = add i32 %6, %7
+  %9 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 65533)
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %9)
+  %11 = add i32 %8, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %9)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_1234(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_1234:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %8 = add i32 %6, %7
+  %9 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %9)
+  %11 = add i32 %8, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %9)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_abab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_abab:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %7)
+  %9 = add i32 %6, %8
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %11 = add i32 %9, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %7)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_abbreakab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_abbreakab:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %7)
+  %9 = add i32 %6, %8
+  %si = insertelement <4 x i32> undef, i32 %9, i32 0
+  %s = shufflevector <4 x i32> %si, <4 x i32> undef, <4 x i32> zeroinitializer
+  %nadd = add <4 x i32> %0, %s
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %nadd, i32 0, <4 x i1> %4)
+  %11 = add i32 %9, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %7)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_break(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_break:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %9 = add i32 %6, %8
+  %si = insertelement <4 x i32> undef, i32 %9, i32 0
+  %s = shufflevector <4 x i32> %si, <4 x i32> undef, <4 x i32> zeroinitializer
+  %nadd = add <4 x i32> %0, %s
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %nadd, i32 0, <4 x i1> %7)
+  %11 = add i32 %9, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %7)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_threepred(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_threepred:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #64300
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %9 = add i32 %6, %8
+  %n7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64300)
+  %n8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %n7)
+  %n9 = add i32 %9, %n8
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %7)
+  %11 = add i32 %n9, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %7)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+define arm_aapcs_vfpcc i32 @const_mask_threepredabab(<4 x i32> %0, <4 x i32> %1, i32 %2) {
+; CHECK-LABEL: const_mask_threepredabab:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    movw r1, #1234
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #64301
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vpt.s32 gt, q1, q0
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q1
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddvat.s32 r0, q0
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    bx lr
+  %4 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 1234)
+  %5 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %4)
+  %6 = add i32 %5, %2
+  %7 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 64301)
+  %8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %7)
+  %9 = add i32 %6, %8
+  %n7 = icmp slt <4 x i32> %0, %1
+  %n8 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %n7)
+  %n9 = add i32 %9, %n8
+  %10 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %4)
+  %11 = add i32 %n9, %10
+  %12 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %0, i32 0, <4 x i1> %7)
+  %13 = add i32 %11, %12
+  ret i32 %13
+}
+
+
+
 declare i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
