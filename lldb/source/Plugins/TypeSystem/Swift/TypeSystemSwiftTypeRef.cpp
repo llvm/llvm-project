@@ -2071,22 +2071,22 @@ uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
-  auto impl = [&]() -> uint32_t {
-    // TODO: which of these should be logged on failure?
-    if (exe_ctx)
-      if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
-        if (auto *runtime =
-                SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-          if (auto num_children =
-                  runtime->GetNumChildren(GetCanonicalType(type), nullptr))
-            return *num_children;
 
-    return m_swift_ast_context->GetNumChildren(
+  // TODO: which of these should be logged on failure?
+  if (exe_ctx)
+    if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+      if (auto *runtime =
+              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+        if (auto num_children =
+                runtime->GetNumChildren(GetCanonicalType(type), nullptr)) {
+          auto impl = [&]() -> uint32_t { return *num_children; };
+          VALIDATE_AND_RETURN(
+              impl, GetNumChildren, type,
+              (ReconstructType(type), omit_empty_base_classes, exe_ctx));
+        }
+
+  return m_swift_ast_context->GetNumChildren(
         ReconstructType(type), omit_empty_base_classes, exe_ctx);
-  };
-  VALIDATE_AND_RETURN(
-      impl, GetNumChildren, type,
-      (ReconstructType(type), omit_empty_base_classes, exe_ctx));
 }
 
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type) {
