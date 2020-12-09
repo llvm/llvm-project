@@ -731,6 +731,74 @@ static Register getVM512Upper(Register reg) {
 
 static Register getVM512Lower(Register reg) { return getVM512Upper(reg) + 1; }
 
+static void addOperandsForVFMK(MachineInstrBuilder &MIB, MachineInstr &MI,
+                               bool Upper) {
+  // VM512
+  MIB.addReg(Upper ? getVM512Upper(MI.getOperand(0).getReg())
+                   : getVM512Lower(MI.getOperand(0).getReg()));
+
+  switch (MI.getNumExplicitOperands()) {
+  default:
+    report_fatal_error("unexpected number of operands for pvfmk");
+  case 2: // _Ml: VM512, VL
+    // VL
+    MIB.addReg(MI.getOperand(1).getReg());
+    break;
+  case 4: // _Mvl: VM512, CC, VR, VL
+    // CC
+    MIB.addImm(MI.getOperand(1).getImm());
+    // VR
+    MIB.addReg(MI.getOperand(2).getReg());
+    // VL
+    MIB.addReg(MI.getOperand(3).getReg());
+    break;
+  case 5: // _MvMl: VM512, CC, VR, VM512, VL
+    // CC
+    MIB.addImm(MI.getOperand(1).getImm());
+    // VR
+    MIB.addReg(MI.getOperand(2).getReg());
+    // VM512
+    MIB.addReg(Upper ? getVM512Upper(MI.getOperand(3).getReg())
+                     : getVM512Lower(MI.getOperand(3).getReg()));
+    // VL
+    MIB.addReg(MI.getOperand(4).getReg());
+    break;
+  }
+}
+
+static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
+  // replace to pvfmk.w.up and pvfmk.w.lo
+  // replace to pvfmk.s.up and pvfmk.s.lo
+
+  static std::map<unsigned, std::pair<unsigned, unsigned>> VFMKMap = {
+      {VE::VFMKyal, {VE::VFMKLal, VE::VFMKLal}},
+      {VE::VFMKynal, {VE::VFMKLnal, VE::VFMKLnal}},
+      {VE::VFMKWyvl, {VE::PVFMKWUPvl, VE::PVFMKWLOvl}},
+      {VE::VFMKWyvyl, {VE::PVFMKWUPvml, VE::PVFMKWLOvml}},
+      {VE::VFMKSyvl, {VE::PVFMKSUPvl, VE::PVFMKSLOvl}},
+      {VE::VFMKSyvyl, {VE::PVFMKSUPvml, VE::PVFMKSLOvml}},
+  };
+
+  unsigned Opcode = MI.getOpcode();
+
+  auto Found = VFMKMap.find(Opcode);
+  if (Found == VFMKMap.end())
+    report_fatal_error("unexpected opcode for pseudo vfmk");
+
+  unsigned OpcodeUpper = (*Found).second.first;
+  unsigned OpcodeLower = (*Found).second.second;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineInstrBuilder Bu = BuildMI(*MBB, MI, DL, TI.get(OpcodeUpper));
+  addOperandsForVFMK(Bu, MI, /* Upper */ true);
+  MachineInstrBuilder Bl = BuildMI(*MBB, MI, DL, TI.get(OpcodeLower));
+  addOperandsForVFMK(Bl, MI, /* Upper */ false);
+
+  MI.eraseFromParent();
+}
+
 bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case VE::EXTEND_STACK: {
@@ -821,6 +889,13 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     return true;
   }
+  case VE::VFMKyal:
+  case VE::VFMKynal:
+  case VE::VFMKWyvl:
+  case VE::VFMKWyvyl:
+  case VE::VFMKSyvl:
+  case VE::VFMKSyvyl:
+    expandPseudoVFMK(*this, MI);
   }
   return false;
 }

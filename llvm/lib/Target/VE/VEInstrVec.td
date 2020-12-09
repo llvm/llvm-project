@@ -2,11 +2,12 @@
 // Vector Instructions
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
 // Pseudo instructions for VM512 modifications
-//
-// Specifies hasSideEffects = 0 to disable UnmodeledSideEffects.
+//===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0 in {
+// LVM/SVM instructions using VM512
+let hasSideEffects = 0, isCodeGenOnly = 1 in {
   let Constraints = "$vx = $vd", DisableEncoding = "$vd" in {
     def LVMyir_y : Pseudo<(outs VM512:$vx), (ins uimm3:$sy, I64:$sz, VM512:$vd),
                           "# pseudo LVM $vx, $sy, $sz, $vd">;
@@ -20,6 +21,26 @@ let hasSideEffects = 0 in {
                       "# pseudo LVM $vx, $sy, $sz">;
   def SVMyi : Pseudo<(outs I64:$sx), (ins VM512:$vz, uimm3:$sy),
                      "# pseudo SVM $sx, $vz, $sy">;
+}
+
+// VFMK/VFMKW/VFMKS instructions using VM512
+let hasSideEffects = 0, isCodeGenOnly = 1, DisableEncoding = "$vl" in {
+  def VFMKyal : Pseudo<(outs VM512:$vmx), (ins I32:$vl),
+                       "# pseudo-vfmk.at $vmx">;
+  def VFMKynal : Pseudo<(outs VM512:$vmx), (ins I32:$vl),
+                        "# pseudo-vfmk.af $vmx">;
+  def VFMKWyvl  : Pseudo<(outs VM512:$vmx),
+                         (ins CCOp:$cf, V64:$vz, I32:$vl),
+                         "# pseudo-vfmk.w.$cf $vmx, $vz">;
+  def VFMKWyvyl : Pseudo<(outs VM512:$vmx),
+                         (ins CCOp:$cf, V64:$vz, VM512:$vm, I32:$vl),
+                         "# pseudo-vfmk.w.$cf $vmx, $vz, $vm">;
+  def VFMKSyvl  : Pseudo<(outs VM512:$vmx),
+                         (ins CCOp:$cf, V64:$vz, I32:$vl),
+                         "# pseudo-vfmk.s.$cf $vmx, $vz">;
+  def VFMKSyvyl : Pseudo<(outs VM512:$vmx),
+                         (ins CCOp:$cf, V64:$vz, VM512:$vm, I32:$vl),
+                         "# pseudo-vfmk.s.$cf $vmx, $vz, $vm">;
 }
 
 //===----------------------------------------------------------------------===//
