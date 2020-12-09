@@ -34,6 +34,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"

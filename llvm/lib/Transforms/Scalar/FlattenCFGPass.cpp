@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"

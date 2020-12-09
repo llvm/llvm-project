@@ -647,6 +647,43 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
   return ModRefInfo::ModRef;
 }
 
+ModRefInfo AAResults::getModRefInfo(const Instruction *I,
+                                    const Optional<MemoryLocation> &OptLoc,
+                                    AAQueryInfo &AAQIP) {
+  if (OptLoc == None) {
+    if (const auto *Call = dyn_cast<CallBase>(I)) {
+      return createModRefInfo(getModRefBehavior(Call));
+    }
+  }
+
+  const MemoryLocation &Loc = OptLoc.getValueOr(MemoryLocation());
+
+  switch (I->getOpcode()) {
+  case Instruction::VAArg:
+    return getModRefInfo((const VAArgInst *)I, Loc, AAQIP);
+  case Instruction::Load:
+    return getModRefInfo((const LoadInst *)I, Loc, AAQIP);
+  case Instruction::Store:
+    return getModRefInfo((const StoreInst *)I, Loc, AAQIP);
+  case Instruction::Fence:
+    return getModRefInfo((const FenceInst *)I, Loc, AAQIP);
+  case Instruction::AtomicCmpXchg:
+    return getModRefInfo((const AtomicCmpXchgInst *)I, Loc, AAQIP);
+  case Instruction::AtomicRMW:
+    return getModRefInfo((const AtomicRMWInst *)I, Loc, AAQIP);
+  case Instruction::Call:
+    return getModRefInfo((const CallInst *)I, Loc, AAQIP);
+  case Instruction::Invoke:
+    return getModRefInfo((const InvokeInst *)I, Loc, AAQIP);
+  case Instruction::CatchPad:
+    return getModRefInfo((const CatchPadInst *)I, Loc, AAQIP);
+  case Instruction::CatchRet:
+    return getModRefInfo((const CatchReturnInst *)I, Loc, AAQIP);
+  default:
+    return ModRefInfo::NoModRef;
+  }
+}
+
 /// Return information about whether a particular call site modifies
 /// or reads the specified memory location \p MemLoc before instruction \p I
 /// in a BasicBlock.

@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
