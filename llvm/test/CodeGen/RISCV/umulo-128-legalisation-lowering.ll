@@ -5,16 +5,16 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-LABEL: muloti_test:
 ; RISCV32:       # %bb.0: # %start
 ; RISCV32-NEXT:    addi sp, sp, -96
-; RISCV32-NEXT:    sw ra, 92(sp)
-; RISCV32-NEXT:    sw s0, 88(sp)
-; RISCV32-NEXT:    sw s1, 84(sp)
-; RISCV32-NEXT:    sw s2, 80(sp)
-; RISCV32-NEXT:    sw s3, 76(sp)
-; RISCV32-NEXT:    sw s4, 72(sp)
-; RISCV32-NEXT:    sw s5, 68(sp)
-; RISCV32-NEXT:    sw s6, 64(sp)
-; RISCV32-NEXT:    sw s7, 60(sp)
-; RISCV32-NEXT:    sw s8, 56(sp)
+; RISCV32-NEXT:    sw ra, 92(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s0, 88(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s1, 84(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s2, 80(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s3, 76(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s4, 72(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s5, 68(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s6, 64(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s7, 60(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s8, 56(sp) # 4-byte Folded Spill
 ; RISCV32-NEXT:    lw s2, 12(a1)
 ; RISCV32-NEXT:    lw s6, 8(a1)
 ; RISCV32-NEXT:    lw s3, 12(a2)
@@ -35,7 +35,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    addi a1, sp, 24
 ; RISCV32-NEXT:    addi a2, sp, 8
 ; RISCV32-NEXT:    sw s0, 24(sp)
-; RISCV32-NEXT:    call __multi3
+; RISCV32-NEXT:    call __multi3@plt
 ; RISCV32-NEXT:    mul a0, s8, s7
 ; RISCV32-NEXT:    mul a1, s3, s0
 ; RISCV32-NEXT:    add a0, a1, a0
@@ -100,16 +100,16 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    sw a6, 8(s4)
 ; RISCV32-NEXT:    sw a7, 12(s4)
 ; RISCV32-NEXT:    sb a0, 16(s4)
-; RISCV32-NEXT:    lw s8, 56(sp)
-; RISCV32-NEXT:    lw s7, 60(sp)
-; RISCV32-NEXT:    lw s6, 64(sp)
-; RISCV32-NEXT:    lw s5, 68(sp)
-; RISCV32-NEXT:    lw s4, 72(sp)
-; RISCV32-NEXT:    lw s3, 76(sp)
-; RISCV32-NEXT:    lw s2, 80(sp)
-; RISCV32-NEXT:    lw s1, 84(sp)
-; RISCV32-NEXT:    lw s0, 88(sp)
-; RISCV32-NEXT:    lw ra, 92(sp)
+; RISCV32-NEXT:    lw s8, 56(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s7, 60(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s6, 64(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s5, 68(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s4, 72(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s3, 76(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s2, 80(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s1, 84(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
 ; RISCV32-NEXT:    addi sp, sp, 96
 ; RISCV32-NEXT:    ret
 start:

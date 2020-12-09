@@ -12,10 +12,10 @@ define signext i32 @square(i32 %a) nounwind {
 ; RV32I-LABEL: square:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    call __mulsi3
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -27,11 +27,11 @@ define signext i32 @square(i32 %a) nounwind {
 ; RV64I-LABEL: square:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp)
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -47,9 +47,9 @@ define signext i32 @mul(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: mul:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    call __mulsi3
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -61,10 +61,10 @@ define signext i32 @mul(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: mul:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp)
-; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -132,9 +132,9 @@ define i64 @mul64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: mul64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    call __muldi3
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call __muldi3@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -151,9 +151,9 @@ define i64 @mul64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: mul64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp)
-; RV64I-NEXT:    call __muldi3
-; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call __muldi3@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -207,13 +207,13 @@ define i32 @mulhs(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: mulhs:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv a2, a1
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    srai a3, a2, 31
-; RV32I-NEXT:    call __muldi3
+; RV32I-NEXT:    call __muldi3@plt
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -225,12 +225,12 @@ define i32 @mulhs(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: mulhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp)
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -253,13 +253,13 @@ define zeroext i32 @mulhu(i32 zeroext %a, i32 zeroext %b) nounwind {
 ; RV32I-LABEL: mulhu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv a2, a1
 ; RV32I-NEXT:    mv a1, zero
 ; RV32I-NEXT:    mv a3, zero
-; RV32I-NEXT:    call __muldi3
+; RV32I-NEXT:    call __muldi3@plt
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -271,10 +271,10 @@ define zeroext i32 @mulhu(i32 zeroext %a, i32 zeroext %b) nounwind {
 ; RV64I-LABEL: mulhu:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp)
-; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call __muldi3@plt
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;

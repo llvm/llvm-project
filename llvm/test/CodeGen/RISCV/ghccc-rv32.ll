@@ -78,7 +78,7 @@ define ghccc void @foo() nounwind {
 ; CHECK-NEXT:    lw s2, %lo(sp)(a0)
 ; CHECK-NEXT:    lui a0, %hi(base)
 ; CHECK-NEXT:    lw s1, %lo(base)(a0)
-; CHECK-NEXT:    tail bar
+; CHECK-NEXT:    tail bar@plt
 entry:
   %0  = load double, double* @d6
   %1  = load double, double* @d5
