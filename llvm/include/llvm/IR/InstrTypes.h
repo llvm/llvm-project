@@ -845,20 +845,38 @@ public:
   /// Return the predicate as if the operands were swapped.
   static Predicate getSwappedPredicate(Predicate pred);
 
-  /// For predicate of kind "is X or equal to 0" returns the predicate "is X".
-  /// For predicate of kind "is X" returns the predicate "is X or equal to 0".
-  /// does not support other kind of predicates.
-  /// @returns the predicate that does not contains is equal to zero if
-  /// it had and vice versa.
-  /// Return the flipped strictness of predicate
-  Predicate getFlippedStrictnessPredicate() const {
-    return getFlippedStrictnessPredicate(getPredicate());
+  /// This is a static version that you can use without an instruction
+  /// available.
+  /// @returns true if the comparison predicate is strict, false otherwise.
+  static bool isStrictPredicate(Predicate predicate);
+
+  /// @returns true if the comparison predicate is strict, false otherwise.
+  /// Determine if this instruction is using an strict comparison predicate.
+  bool isStrictPredicate() const { return isStrictPredicate(getPredicate()); }
+
+  /// This is a static version that you can use without an instruction
+  /// available.
+  /// @returns true if the comparison predicate is non-strict, false otherwise.
+  static bool isNonStrictPredicate(Predicate predicate);
+
+  /// @returns true if the comparison predicate is non-strict, false otherwise.
+  /// Determine if this instruction is using an non-strict comparison predicate.
+  bool isNonStrictPredicate() const {
+    return isNonStrictPredicate(getPredicate());
+  }
+
+  /// For example, SGE -> SGT, SLE -> SLT, ULE -> ULT, UGE -> UGT.
+  /// Returns the strict version of non-strict comparisons.
+  Predicate getStrictPredicate() const {
+    return getStrictPredicate(getPredicate());
   }
 
   /// This is a static version that you can use without an instruction
   /// available.
-  /// Return the flipped strictness of predicate
-  static Predicate getFlippedStrictnessPredicate(Predicate pred);
+  /// @returns the strict version of comparison provided in \p pred.
+  /// If \p pred is not a strict comparison predicate, returns \p pred.
+  /// Returns the strict version of non-strict comparisons.
+  static Predicate getStrictPredicate(Predicate pred);
 
   /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
   /// Returns the non-strict version of strict comparisons.
@@ -872,6 +890,21 @@ public:
   /// If \p pred is not a strict comparison predicate, returns \p pred.
   /// Returns the non-strict version of strict comparisons.
   static Predicate getNonStrictPredicate(Predicate pred);
+
+  /// This is a static version that you can use without an instruction
+  /// available.
+  /// Return the flipped strictness of predicate
+  static Predicate getFlippedStrictnessPredicate(Predicate pred);
+
+  /// For predicate of kind "is X or equal to 0" returns the predicate "is X".
+  /// For predicate of kind "is X" returns the predicate "is X or equal to 0".
+  /// does not support other kind of predicates.
+  /// @returns the predicate that does not contains is equal to zero if
+  /// it had and vice versa.
+  /// Return the flipped strictness of predicate
+  Predicate getFlippedStrictnessPredicate() const {
+    return getFlippedStrictnessPredicate(getPredicate());
+  }
 
   /// Provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
