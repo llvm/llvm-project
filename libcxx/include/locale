@@ -873,8 +873,8 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__iob.getloc());
     typedef typename numpunct<_CharT>::string_type string_type;
     const string_type __names[2] = {__np.truename(), __np.falsename()};
-    const string_type* __i = __scan_keyword(__b, __e, __names, __names+2,
-                                            __ct, __err);
+    const string_type* __i = _VSTD::__scan_keyword(__b, __e, __names, __names+2,
+                                                   __ct, __err);
     __v = __i == __names;
     return __b;
 }
@@ -1912,7 +1912,7 @@ time_get<_CharT, _InputIterator>::__get_weekdayname(int& __w,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __wk = this->__weeks();
-    ptrdiff_t __i = __scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
+    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
     if (__i < 14)
         __w = __i % 7;
 }
@@ -1926,7 +1926,7 @@ time_get<_CharT, _InputIterator>::__get_monthname(int& __m,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __month = this->__months();
-    ptrdiff_t __i = __scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
+    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
     if (__i < 24)
         __m = __i % 12;
 }
@@ -1938,7 +1938,7 @@ time_get<_CharT, _InputIterator>::__get_day(int& __d,
                                             ios_base::iostate& __err,
                                             const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = _VSTD::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && 1 <= __t && __t <= 31)
         __d = __t;
     else
@@ -2098,7 +2098,7 @@ time_get<_CharT, _InputIterator>::__get_am_pm(int& __h,
         __err |= ios_base::failbit;
         return;
     }
-    ptrdiff_t __i = __scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
+    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
     if (__i == 0 && __h == 12)
         __h = 0;
     else if (__i == 1 && __h < 12)
