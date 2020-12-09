@@ -4084,6 +4084,14 @@ def err_attr_swift_error_return_type : Error<
 def warn_swift_newtype_attribute_non_typedef : Warning<
   "'swift_newtype' attribute may be put on a typedef only; "
   "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
+
+def err_swift_async_no_access : Error<
+  "first argument to 'swift_async' must be either 'none', 'swift_private', or "
+  "'not_swift_private'">;
+def err_swift_async_bad_block_type : Error<
+  "'swift_async' completion handler parameter must have block type returning"
+  " 'void', type here is %0">;
+
 def warn_ignored_objc_externally_retained : Warning<
   "'objc_externally_retained' can only be applied to local variables "
   "%select{of retainable type|with strong ownership}0">,
