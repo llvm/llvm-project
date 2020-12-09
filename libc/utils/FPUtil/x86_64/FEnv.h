@@ -48,6 +48,12 @@ struct ExceptionFlags {
   static constexpr uint16_t Inexact = 0x20;
 };
 
+// The exception control bits occupy six bits, one bit for each exception.
+// In the x87 control word, they occupy the first 6 bits. In the MXCSR
+// register, they occupy bits 7 to 12.
+static constexpr uint16_t X87ExceptionControlBitPosition = 0;
+static constexpr uint16_t MXCSRExceptionContolBitPoistion = 7;
+
 // Exception flags are individual bits in the corresponding registers.
 // So, we just OR the bit values to get the full set of exceptions.
 static inline uint16_t getStatusValueForExcept(int excepts) {
@@ -67,6 +73,15 @@ static inline int exceptionStatusToMacro(uint16_t status) {
          (status & ExceptionFlags::Underflow ? FE_UNDERFLOW : 0) |
          (status & ExceptionFlags::Inexact ? FE_INEXACT : 0);
 }
+
+struct X87State {
+  uint16_t ControlWord;
+  uint16_t Unused1;
+  uint16_t StatusWord;
+  uint16_t Unused2;
+  // TODO: Elaborate the remaining 20 bytes as required.
+  uint32_t _[5];
+};
 
 static inline uint16_t getX87ControlWord() {
   uint16_t w;
@@ -98,7 +113,64 @@ static inline void writeMXCSR(uint32_t w) {
   __asm__ __volatile__("ldmxcsr %0" : : "m"(w) :);
 }
 
+static inline void getX87State(X87State &s) {
+  __asm__ __volatile__("fnstenv %0" : "=m"(s));
+}
+
+static inline void writeX87State(const X87State &s) {
+  __asm__ __volatile__("fldenv %0" : : "m"(s) :);
+}
+
+static inline void fwait() { __asm__ __volatile__("fwait"); }
+
 } // namespace internal
+
+static inline int enableExcept(int excepts) {
+  // In the x87 control word and in MXCSR, an exception is blocked
+  // if the corresponding bit is set. That is the reason for all the
+  // bit-flip operations below as we need to turn the bits to zero
+  // to enable them.
+
+  uint16_t bitMask = internal::getStatusValueForExcept(excepts);
+
+  uint16_t x87CW = internal::getX87ControlWord();
+  uint16_t oldExcepts = ~x87CW & 0x3F; // Save previously enabled exceptions.
+  x87CW &= ~bitMask;
+  internal::writeX87ControlWord(x87CW);
+
+  // Enabling SSE exceptions via MXCSR is a nice thing to do but
+  // might not be of much use practically as SSE exceptions and the x87
+  // exceptions are independent of each other.
+  uint32_t mxcsr = internal::getMXCSR();
+  mxcsr &= ~(bitMask << internal::MXCSRExceptionContolBitPoistion);
+  internal::writeMXCSR(mxcsr);
+
+  // Since the x87 exceptions and SSE exceptions are independent of each,
+  // it doesn't make much sence to report both in the return value. Most
+  // often, the standard floating point functions deal with FPU operations
+  // so we will retrun only the old x87 exceptions.
+  return internal::exceptionStatusToMacro(oldExcepts);
+}
+
+static inline int disableExcept(int excepts) {
+  // In the x87 control word and in MXCSR, an exception is blocked
+  // if the corresponding bit is set.
+
+  uint16_t bitMask = internal::getStatusValueForExcept(excepts);
+
+  uint16_t x87CW = internal::getX87ControlWord();
+  uint16_t oldExcepts = ~x87CW & 0x3F; // Save previously enabled exceptions.
+  x87CW |= bitMask;
+  internal::writeX87ControlWord(x87CW);
+
+  // Just like in enableExcept, it is not clear if disabling SSE exceptions
+  // is required. But, we will still do it only as a "nice thing to do".
+  uint32_t mxcsr = internal::getMXCSR();
+  mxcsr |= (bitMask << internal::MXCSRExceptionContolBitPoistion);
+  internal::writeMXCSR(mxcsr);
+
+  return internal::exceptionStatusToMacro(oldExcepts);
+}
 
 static inline int clearExcept(int excepts) {
   // An instruction to write to x87 status word ins't available. So, we
@@ -123,14 +195,62 @@ static inline int testExcept(int excepts) {
 }
 
 static inline int raiseExcept(int excepts) {
-  // It is enough to set the exception flags in MXCSR.
-  // TODO: Investigate if each exception has to be raised one at a time
-  // followed with an fwait instruction before writing the flag for the
-  // next exception.
   uint16_t statusValue = internal::getStatusValueForExcept(excepts);
-  uint32_t mxcsr = internal::getMXCSR();
-  mxcsr = mxcsr | statusValue;
-  internal::writeMXCSR(mxcsr);
+
+  // We set the status flag for exception one at a time and call the
+  // fwait instruction to actually get the processor to raise the
+  // exception by calling the exception handler. This scheme is per
+  // the description in in "8.6 X87 FPU EXCEPTION SYNCHRONIZATION"
+  // of the "Intel 64 and IA-32 Architectures Software Developer's
+  // Manual, Vol 1".
+
+  // FPU status word is read for each exception seperately as the
+  // exception handler can potentially write to it (typically to clear
+  // the corresponding exception flag). By reading it separately, we
+  // ensure that the writes by the exception handler are maintained
+  // when raising the next exception.
+
+  if (statusValue & internal::ExceptionFlags::Invalid) {
+    internal::X87State state;
+    internal::getX87State(state);
+    state.StatusWord |= internal::ExceptionFlags::Invalid;
+    internal::writeX87State(state);
+    internal::fwait();
+  }
+  if (statusValue & internal::ExceptionFlags::DivByZero) {
+    internal::X87State state;
+    internal::getX87State(state);
+    state.StatusWord |= internal::ExceptionFlags::DivByZero;
+    internal::writeX87State(state);
+    internal::fwait();
+  }
+  if (statusValue & internal::ExceptionFlags::Overflow) {
+    internal::X87State state;
+    internal::getX87State(state);
+    state.StatusWord |= internal::ExceptionFlags::Overflow;
+    internal::writeX87State(state);
+    internal::fwait();
+  }
+  if (statusValue & internal::ExceptionFlags::Underflow) {
+    internal::X87State state;
+    internal::getX87State(state);
+    state.StatusWord |= internal::ExceptionFlags::Underflow;
+    internal::writeX87State(state);
+    internal::fwait();
+  }
+  if (statusValue & internal::ExceptionFlags::Inexact) {
+    internal::X87State state;
+    internal::getX87State(state);
+    state.StatusWord |= internal::ExceptionFlags::Inexact;
+    internal::writeX87State(state);
+    internal::fwait();
+  }
+
+  // There is no special synchronization scheme available to
+  // raise SEE exceptions. So, we will ignore that for now.
+  // Just plain writing to the MXCSR register does not guarantee
+  // the exception handler will be called.
+
   return 0;
 }
 
