@@ -4449,15 +4449,15 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
 
 /// getTypedefType - Return the unique reference to the type for the
 /// specified typedef name decl.
-QualType
-ASTContext::getTypedefType(const TypedefNameDecl *Decl,
-                           QualType Canonical) const {
+QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
+                                    QualType Underlying) const {
   if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
 
-  if (Canonical.isNull())
-    Canonical = getCanonicalType(Decl->getUnderlyingType());
+  if (Underlying.isNull())
+    Underlying = Decl->getUnderlyingType();
+  QualType Canonical = getCanonicalType(Underlying);
   auto *newType = new (*this, TypeAlignment)
-    TypedefType(Type::Typedef, Decl, Canonical);
+      TypedefType(Type::Typedef, Decl, Underlying, Canonical);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);

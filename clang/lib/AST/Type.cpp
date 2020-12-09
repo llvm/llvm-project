@@ -3369,8 +3369,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
 }
 
-TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can)
-    : Type(tc, can, D->getUnderlyingType()->getDependence()),
+TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
+                         QualType underlying, QualType can)
+    : Type(tc, can, underlying->getDependence()),
       Decl(const_cast<TypedefNameDecl *>(D)) {
   assert(!isa<TypedefType>(can) && "Invalid canonical type");
 }
