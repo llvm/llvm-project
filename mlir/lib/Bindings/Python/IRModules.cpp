@@ -1571,7 +1571,7 @@ public:
         "get",
         [](std::string value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
-              mlirStringAttrGet(context->get(), value.size(), &value[0]);
+              mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
         py::arg("value"), py::arg("context") = py::none(),
@@ -1580,7 +1580,7 @@ public:
         "get_typed",
         [](PyType &type, std::string value) {
           MlirAttribute attr =
-              mlirStringAttrTypedGet(type, value.size(), &value[0]);
+              mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
 
