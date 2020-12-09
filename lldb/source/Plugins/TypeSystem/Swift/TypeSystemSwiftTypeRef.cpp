@@ -2073,7 +2073,6 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
   if (IsFunctionType(type, nullptr))
     return 0;
 
-  // TODO: which of these should be logged on failure?
   if (exe_ctx)
     if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
       if (auto *runtime =
@@ -2085,6 +2084,10 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
               impl, GetNumChildren, type,
               (ReconstructType(type), omit_empty_base_classes, exe_ctx));
         }
+
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Using SwiftASTContext::GetNumChildren fallback for type %s",
+            AsMangledName(type));
 
   return m_swift_ast_context->GetNumChildren(
         ReconstructType(type), omit_empty_base_classes, exe_ctx);
