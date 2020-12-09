@@ -26,6 +26,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -1518,7 +1519,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   unsigned icfLevel =
       args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
   unsigned tailMerge = 1;
-  bool ltoNewPM = false;
+  bool ltoNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
   bool ltoDebugPM = false;
   for (auto *arg : args.filtered(OPT_opt)) {
     std::string str = StringRef(arg->getValue()).lower();
