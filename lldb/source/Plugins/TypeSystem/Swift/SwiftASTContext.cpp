@@ -5044,8 +5044,7 @@ bool SwiftASTContext::IsAggregateType(opaque_compiler_type_t type) {
   return false;
 }
 
-bool SwiftASTContext::IsFunctionType(opaque_compiler_type_t type,
-                                     bool *is_variadic_ptr) {
+bool SwiftASTContext::IsFunctionType(opaque_compiler_type_t type) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     const swift::TypeKind type_kind = swift_can_type->getKind();
@@ -5094,7 +5093,7 @@ SwiftASTContext::GetFunctionArgumentAtIndex(opaque_compiler_type_t type,
 }
 
 bool SwiftASTContext::IsFunctionPointerType(opaque_compiler_type_t type) {
-  return IsFunctionType(type, nullptr); // FIXME: think about this
+  return IsFunctionType(type); // FIXME: think about this
 }
 
 bool SwiftASTContext::IsPointerType(opaque_compiler_type_t type,

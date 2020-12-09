@@ -98,8 +98,7 @@ public:
                    bool *is_incomplete) override;
   bool IsAggregateType(lldb::opaque_compiler_type_t type) override;
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
-  bool IsFunctionType(lldb::opaque_compiler_type_t type,
-                      bool *is_variadic_ptr) override;
+  bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
   size_t
   GetNumberOfFunctionArguments(lldb::opaque_compiler_type_t type) override;
   CompilerType GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
