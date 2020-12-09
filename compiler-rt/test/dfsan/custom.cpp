@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -638,6 +639,46 @@ void test_getpwuid_r() {
   ASSERT_READ_ZERO_LABEL(&pwd, 4);
 }
 
+void test_epoll_wait() {
+  // Set up a pipe to monitor with epoll.
+  int pipe_fds[2];
+  int ret = pipe(pipe_fds);
+  assert(ret != -1);
+
+  // Configure epoll to monitor the pipe.
+  int epfd = epoll_create1(0);
+  assert(epfd != -1);
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.fd = pipe_fds[0];
+  ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_fds[0], &event);
+  assert(ret != -1);
+
+  // Test epoll_wait when no events have occurred.
+  event = {};
+  dfsan_set_label(i_label, &event, sizeof(event));
+  ret = epoll_wait(epfd, &event, /*maxevents=*/1, /*timeout=*/0);
+  assert(ret == 0);
+  assert(event.events == 0);
+  assert(event.data.fd == 0);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_LABEL(&event, sizeof(event), i_label);
+
+  // Test epoll_wait when an event occurs.
+  write(pipe_fds[1], "x", 1);
+  ret = epoll_wait(epfd, &event, /*maxevents=*/1, /*timeout=*/0);
+  assert(ret == 1);
+  assert(event.events == EPOLLIN);
+  assert(event.data.fd == pipe_fds[0]);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_ZERO_LABEL(&event, sizeof(event));
+
+  // Clean up.
+  close(epfd);
+  close(pipe_fds[0]);
+  close(pipe_fds[1]);
+}
+
 void test_poll() {
   struct pollfd fd;
   fd.fd = 0;
@@ -1027,6 +1068,7 @@ int main(void) {
   test_dfsan_set_write_callback();
   test_dl_iterate_phdr();
   test_dlopen();
+  test_epoll_wait();
   test_fgets();
   test_fstat();
   test_get_current_dir_name();
