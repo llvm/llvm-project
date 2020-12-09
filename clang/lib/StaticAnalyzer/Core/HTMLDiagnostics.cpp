@@ -27,6 +27,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -57,6 +58,8 @@ using namespace ento;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+class ArrowMap;
 
 class HTMLDiagnostics : public PathDiagnosticConsumer {
   PathDiagnosticConsumerOptions DiagOpts;
@@ -119,7 +122,8 @@ public:
   }
 
 private:
-  void addArrowSVGs(Rewriter &R, FileID BugFileID, unsigned NumberOfArrows);
+  void addArrowSVGs(Rewriter &R, FileID BugFileID,
+                    const ArrowMap &ArrowIndices);
 
   /// \return Javascript for displaying shortcuts help;
   StringRef showHelpJavascript();
@@ -148,6 +152,20 @@ unsigned getPathSizeWithoutArrows(const PathPieces &Path) {
   unsigned TotalArrowPieces = llvm::count_if(
       Path, [](const PathDiagnosticPieceRef &P) { return isArrowPiece(*P); });
   return TotalPieces - TotalArrowPieces;
+}
+
+class ArrowMap : public std::vector<unsigned> {
+  using Base = std::vector<unsigned>;
+
+public:
+  ArrowMap(unsigned Size) : Base(Size, 0) {}
+  unsigned getTotalNumberOfArrows() const { return at(0); }
+};
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ArrowMap &Indices) {
+  OS << "[ ";
+  llvm::interleave(Indices, OS, ",");
+  return OS << " ]";
 }
 
 } // namespace
@@ -761,6 +779,7 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   unsigned NumberOfArrows = 0;
   // Stores the count of the regular piece indices.
   std::map<int, int> IndexMap;
+  ArrowMap ArrowIndices(TotalRegularPieces + 1);
 
   // Stores the different ranges where we have reported something.
   std::vector<SourceRange> PopUpRanges;
@@ -779,13 +798,30 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
     } else if (isArrowPiece(Piece)) {
       NumberOfArrows = ProcessControlFlowPiece(
           R, FID, cast<PathDiagnosticControlFlowPiece>(Piece), NumberOfArrows);
+      ArrowIndices[NumRegularPieces] = NumberOfArrows;
 
     } else {
       HandlePiece(R, FID, Piece, PopUpRanges, NumRegularPieces,
                   TotalRegularPieces);
       --NumRegularPieces;
+      ArrowIndices[NumRegularPieces] = ArrowIndices[NumRegularPieces + 1];
     }
   }
+  ArrowIndices[0] = NumberOfArrows;
+
+  // At this point ArrowIndices represent the following data structure:
+  //   [a_0, a_1, ..., a_N]
+  // where N is the number of events in the path.
+  //
+  // Then for every event with index i \in [0, N - 1], we can say that
+  // arrows with indices \in [a_(i+1), a_i) correspond to that event.
+  // We can say that because arrows with these indices appeared in the
+  // path in between the i-th and the (i+1)-th events.
+  assert(ArrowIndices.back() == 0 &&
+         "No arrows should be after the last event");
+  // This assertion also guarantees that all indices in are <= NumberOfArrows.
+  assert(llvm::is_sorted(ArrowIndices, std::greater<unsigned>()) &&
+         "Incorrect arrow indices map");
 
   // Secondary indexing if we are having multiple pop-ups between two notes.
   // (e.g. [(13) 'a' is 'true'];  [(13.1) 'b' is 'false'];  [(13.2) 'c' is...)
@@ -819,7 +855,7 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   html::EscapeText(R, FID);
   html::AddLineNumbers(R, FID);
 
-  addArrowSVGs(R, FID, NumberOfArrows);
+  addArrowSVGs(R, FID, ArrowIndices);
 
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
@@ -1088,7 +1124,7 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
 }
 
 void HTMLDiagnostics::addArrowSVGs(Rewriter &R, FileID BugFileID,
-                                   unsigned NumberOfArrows) {
+                                   const ArrowMap &ArrowIndices) {
   std::string S;
   llvm::raw_string_ostream OS(S);
 
@@ -1103,27 +1139,52 @@ void HTMLDiagnostics::addArrowSVGs(Rewriter &R, FileID BugFileID,
       pointer-events: none;
       overflow: visible
   }
+  .arrow {
+      stroke-opacity: 0.2;
+      stroke-width: 1;
+      marker-end: url(#arrowhead);
+  }
+
+  .arrow.selected {
+      stroke-opacity: 0.6;
+      stroke-width: 2;
+      marker-end: url(#arrowheadSelected);
+  }
+
+  .arrowhead {
+      orient: auto;
+      stroke: none;
+      opacity: 0.6;
+      fill: blue;
+  }
 </style>
 <svg xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arrowhead" viewBox="0 0 10 10" refX="3" refY="5"
-            markerWidth="4" markerHeight="4" orient="auto" stroke="none" opacity="0.6" fill="blue">
+    <marker id="arrowheadSelected" class="arrowhead" opacity="0.6"
+            viewBox="0 0 10 10" refX="3" refY="5"
+            markerWidth="4" markerHeight="4">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+    <marker id="arrowhead" class="arrowhead" opacity="0.2"
+            viewBox="0 0 10 10" refX="3" refY="5"
+            markerWidth="4" markerHeight="4">
       <path d="M 0 0 L 10 5 L 0 10 z" />
     </marker>
   </defs>
-  <g id="arrows" fill="none" stroke="blue"
-     visibility="hidden" stroke-width="2"
-     stroke-opacity="0.6" marker-end="url(#arrowhead)">
+  <g id="arrows" fill="none" stroke="blue" visibility="hidden">
 )<<<";
 
-  for (unsigned Index : llvm::seq(0u, NumberOfArrows)) {
-    OS << "    <path id=\"arrow" << Index << "\"/>\n";
+  for (unsigned Index : llvm::seq(0u, ArrowIndices.getTotalNumberOfArrows())) {
+    OS << "    <path class=\"arrow\" id=\"arrow" << Index << "\"/>\n";
   }
 
   OS << R"<<<(
   </g>
 </svg>
-)<<<";
+<script type='text/javascript'>
+const arrowIndices = )<<<";
+
+  OS << ArrowIndices << "\n</script>\n";
 
   R.InsertTextBefore(R.getSourceMgr().getLocForStartOfFile(BugFileID),
                      OS.str());
@@ -1220,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 var findNum = function() {
-    var s = document.querySelector(".selected");
+    var s = document.querySelector(".msg.selected");
     if (!s || s.id == "EndPath") {
         return 0;
     }
@@ -1235,6 +1296,7 @@ var scrollTo = function(el) {
     el.classList.add("selected");
     window.scrollBy(0, el.getBoundingClientRect().top -
         (window.innerHeight / 2));
+    highlightArrowsForSelectedEvent();
 }
 
 var move = function(num, up, numItems) {
@@ -1286,6 +1348,33 @@ window.addEventListener("keydown", function (event) {
 StringRef HTMLDiagnostics::generateArrowDrawingJavascript() {
   return R"<<<(
 <script type='text/javascript'>
+// Return range of numbers from a range [lower, upper).
+function range(lower, upper) {
+  const size = upper - lower;
+  return Array.from(new Array(size), (x, i) => i + lower);
+}
+
+var getRelatedArrowIndices = function(pathId) {
+  // HTML numeration of events is a bit different than it is in the path.
+  // Everything is rotated one step to the right, so the last element
+  // (error diagnostic) has index 0.
+  if (pathId == 0) {
+    // arrowIndices has at least 2 elements
+    pathId = arrowIndices.length - 1;
+  }
+
+  return range(arrowIndices[pathId], arrowIndices[pathId - 1]);
+}
+
+var highlightArrowsForSelectedEvent = function() {
+  const selectedNum = findNum();
+  const arrowIndicesToHighlight = getRelatedArrowIndices(selectedNum);
+  arrowIndicesToHighlight.forEach((index) => {
+    var arrow = document.querySelector("#arrow" + index);
+    arrow.classList.add("selected");
+  });
+}
+
 var getAbsoluteBoundingRect = function(element) {
   const relative = element.getBoundingClientRect();
   return {
@@ -1499,6 +1588,8 @@ document.addEventListener("DOMContentLoaded", function() {
     .querySelector('input[name="showArrows"]')
     .addEventListener("change", toggleArrows);
   drawArrows();
+  // Default highlighting for the last event.
+  highlightArrowsForSelectedEvent();
 });
 </script>
   )<<<";
