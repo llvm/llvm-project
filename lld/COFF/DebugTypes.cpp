@@ -202,6 +202,9 @@ Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
   BinaryStreamReader reader(file->debugTypes, support::little);
   cantFail(reader.readArray(types, reader.getLength()));
 
+  // When dealing with PCH.OBJ, some indices were already merged.
+  unsigned nbHeadIndices = indexMap->tpiMap.size();
+
   if (config->debugGHashes) {
     ArrayRef<GloballyHashedType> hashes;
     std::vector<GloballyHashedType> ownedHashes;
@@ -232,7 +235,7 @@ Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
     // collecting statistics.
     m->tpiCounts.resize(m->getTypeTable().size());
     m->ipiCounts.resize(m->getIDTable().size());
-    uint32_t srcIdx = 0;
+    uint32_t srcIdx = nbHeadIndices;
     for (CVType &ty : types) {
       TypeIndex dstIdx = indexMap->tpiMap[srcIdx++];
       // Type merging may fail, so a complex source type may become the simple
