@@ -7,7 +7,7 @@ declare double @foo()
 define double @bar() {
 ; ALL-LABEL: bar:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    jmp foo # TAILCALL
+; ALL-NEXT:    jmp foo@PLT # TAILCALL
 entry:
 	%tmp5 = tail call double @foo()
 	ret double %tmp5

@@ -258,7 +258,7 @@ body:             |
   ; CHECK:   renamable $r4 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load 4 from %stack.2)
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r9, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i38)
-  ; CHECK:   dead $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK:   dead renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL killed renamable $r8, killed renamable $r4, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load 4 from %stack.3)
   ; CHECK:   $r8 = tMOVr $r5, 14 /* CC::al */, $noreg

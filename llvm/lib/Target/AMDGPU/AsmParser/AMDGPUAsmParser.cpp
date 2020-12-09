@@ -1415,7 +1415,7 @@ private:
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
-  bool validateMovrels(const MCInst &Inst);
+  bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
@@ -1452,7 +1452,7 @@ private:
 
   void peekTokens(MutableArrayRef<AsmToken> Tokens);
   AsmToken::TokenKind getTokenKind() const;
-  bool parseExpr(int64_t &Imm);
+  bool parseExpr(int64_t &Imm, StringRef Expected = "");
   bool parseExpr(OperandVector &Operands);
   StringRef getTokenStr() const;
   AsmToken peekToken();
@@ -3358,7 +3358,8 @@ static bool IsMovrelsSDWAOpcode(const unsigned Opcode)
 // movrels* opcodes should only allow VGPRS as src0.
 // This is specified in .td description for vop1/vop3,
 // but sdwa is handled differently. See isSDWAOperand.
-bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst,
+                                      const OperandVector &Operands) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
@@ -3369,13 +3370,20 @@ bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
   const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   assert(Src0Idx != -1);
 
+  SMLoc ErrLoc;
   const MCOperand &Src0 = Inst.getOperand(Src0Idx);
-  if (!Src0.isReg())
-    return false;
+  if (Src0.isReg()) {
+    auto Reg = mc2PseudoReg(Src0.getReg());
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+    if (!isSGPR(Reg, TRI))
+      return true;
+    ErrLoc = getRegLoc(Reg, Operands);
+  } else {
+    ErrLoc = getConstLoc(Operands);
+  }
 
-  auto Reg = Src0.getReg();
-  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  return !isSGPR(mc2PseudoReg(Reg), TRI);
+  Error(ErrLoc, "source operand must be a VGPR");
+  return false;
 }
 
 bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
@@ -3920,8 +3928,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
       "invalid image_gather dmask: only one bit must be set");
     return false;
   }
-  if (!validateMovrels(Inst)) {
-    Error(IDLoc, "source operand must be a VGPR");
+  if (!validateMovrels(Inst, Operands)) {
     return false;
   }
   if (!validateFlatOffset(Inst, Operands)) {
@@ -4054,7 +4061,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size()) {
-        return Error(IDLoc, "too few operands for instruction");
+        return Error(getLoc(), "too few operands for instruction");
       }
       ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
       if (ErrorLoc == SMLoc())
@@ -5791,8 +5798,8 @@ AMDGPUAsmParser::parseHwregBody(OperandInfoTy &HwReg,
   if (isToken(AsmToken::Identifier) &&
       (HwReg.Id = getHwregId(getTokenStr())) >= 0) {
     HwReg.IsSymbolic = true;
-    lex(); // skip message name
-  } else if (!parseExpr(HwReg.Id)) {
+    lex(); // skip register name
+  } else if (!parseExpr(HwReg.Id, "a register name")) {
     return false;
   }
 
@@ -5861,7 +5868,7 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     } else {
       return MatchOperand_ParseFail;
     }
-  } else if (parseExpr(ImmVal)) {
+  } else if (parseExpr(ImmVal, "a hwreg macro")) {
     if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
       return MatchOperand_ParseFail;
@@ -5892,7 +5899,7 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
   if (isToken(AsmToken::Identifier) && (Msg.Id = getMsgId(getTokenStr())) >= 0) {
     Msg.IsSymbolic = true;
     lex(); // skip message name
-  } else if (!parseExpr(Msg.Id)) {
+  } else if (!parseExpr(Msg.Id, "a message name")) {
     return false;
   }
 
@@ -5902,7 +5909,7 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
     if (isToken(AsmToken::Identifier) &&
         (Op.Id = getMsgOpId(Msg.Id, getTokenStr())) >= 0) {
       lex(); // skip operation name
-    } else if (!parseExpr(Op.Id)) {
+    } else if (!parseExpr(Op.Id, "an operation name")) {
       return false;
     }
 
@@ -5972,7 +5979,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
     } else {
       return MatchOperand_ParseFail;
     }
-  } else if (parseExpr(ImmVal)) {
+  } else if (parseExpr(ImmVal, "a sendmsg macro")) {
     if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
       return MatchOperand_ParseFail;
@@ -6202,8 +6209,23 @@ AMDGPUAsmParser::skipToken(const AsmToken::TokenKind Kind,
 }
 
 bool
-AMDGPUAsmParser::parseExpr(int64_t &Imm) {
-  return !getParser().parseAbsoluteExpression(Imm);
+AMDGPUAsmParser::parseExpr(int64_t &Imm, StringRef Expected) {
+  SMLoc S = getLoc();
+
+  const MCExpr *Expr;
+  if (Parser.parseExpression(Expr))
+    return false;
+
+  if (Expr->evaluateAsAbsolute(Imm))
+    return true;
+
+  if (Expected.empty()) {
+    Error(S, "expected absolute expression");
+  } else {
+    Error(S, Twine("expected ", Expected) +
+             Twine(" or an absolute expression"));
+  }
+  return false;
 }
 
 bool
@@ -6520,7 +6542,7 @@ AMDGPUAsmParser::parseSwizzleOffset(int64_t &Imm) {
 
   SMLoc OffsetLoc = Parser.getTok().getLoc();
 
-  if (!parseExpr(Imm)) {
+  if (!parseExpr(Imm, "a swizzle macro")) {
     return false;
   }
   if (!isUInt<16>(Imm)) {
@@ -6796,7 +6818,8 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
   if (!IsAtomic || IsAtomicReturn) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC,
+                          IsAtomicReturn ? -1 : 0);
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
 

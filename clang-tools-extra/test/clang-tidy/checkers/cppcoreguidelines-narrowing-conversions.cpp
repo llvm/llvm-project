@@ -343,4 +343,17 @@ void macro_context() {
   DERP(i, .5l);
 }
 
+// We understand typedefs.
+void typedef_context() {
+  typedef long long myint64_t;
+  int i;
+  myint64_t i64;
+
+  i64 = i64; // Okay, no conversion.
+  i64 = i;   // Okay, no narrowing.
+
+  i = i64;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: narrowing conversion from 'myint64_t' (aka 'long long') to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+}
+
 } // namespace floats

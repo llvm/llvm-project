@@ -1083,9 +1083,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // operation in that block.  However, if this is a critical edge, we would be
   // inserting the computation on some other paths (e.g. inside a loop).  Only
   // do this if the pred block is unconditionally branching into the phi block.
+  // Also, make sure that the pred block is not dead code.
   if (NonConstBB != nullptr) {
     BranchInst *BI = dyn_cast<BranchInst>(NonConstBB->getTerminator());
-    if (!BI || !BI->isUnconditional()) return nullptr;
+    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(NonConstBB))
+      return nullptr;
   }
 
   // Okay, we can do the transformation: create the new PHI node.

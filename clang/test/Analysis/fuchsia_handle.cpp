@@ -315,6 +315,45 @@ void checkHandlePtrInStructureLeak() {
   // expected-note@-1 {{Potential leak of handle}}
 }
 
+// Assume this function's declaration that has the release annotation is in one
+// header file while its implementation is in another file. We have to annotate
+// the declaration because it might be used outside the TU.
+// We also want to make sure it is okay to call the function within the same TU.
+zx_status_t test_release_handle(zx_handle_t handle ZX_HANDLE_RELEASE) {
+  return zx_handle_close(handle);
+}
+
+void checkReleaseImplementedFunc() {
+  zx_handle_t a, b;
+  zx_channel_create(0, &a, &b);
+  zx_handle_close(a);
+  test_release_handle(b);
+}
+
+void use_handle(zx_handle_t handle) {
+  // Do nothing.
+}
+
+void test_call_by_value() {
+  zx_handle_t a, b;
+  zx_channel_create(0, &a, &b);
+  zx_handle_close(a);
+  use_handle(b);
+  zx_handle_close(b);
+}
+
+void test_call_by_value_leak() {
+  zx_handle_t a, b;
+  zx_channel_create(0, &a, &b); // expected-note {{Handle allocated through 3rd parameter}}
+  zx_handle_close(a);
+  // Here we are passing handle b as integer value to a function that could be
+  // analyzed by the analyzer, thus the handle should not be considered escaped.
+  // After the function 'use_handle', handle b is still tracked and should be
+  // reported leaked.
+  use_handle(b);
+} // expected-warning {{Potential leak of handle}}
+// expected-note@-1 {{Potential leak of handle}}
+
 // RAII
 
 template <typename T>

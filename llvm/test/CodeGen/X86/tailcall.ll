@@ -15,7 +15,7 @@ define fastcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    jmp tailcallee # TAILCALL
+; CHECK-NEXT:    jmp tailcallee@PLT # TAILCALL
 entry:
   %tmp11 = tail call fastcc i32 @tailcallee(i32 %in1, i32 %in2, i32 %in1, i32 %in2)
   ret i32 %tmp11
@@ -26,7 +26,7 @@ declare fastcc i8* @alias_callee()
 define fastcc noalias i8* @noalias_caller() nounwind {
 ; CHECK-LABEL: noalias_caller:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp alias_callee # TAILCALL
+; CHECK-NEXT:    jmp alias_callee@PLT # TAILCALL
   %p = tail call fastcc i8* @alias_callee()
   ret i8* %p
 }
@@ -36,7 +36,7 @@ declare fastcc noalias i8* @noalias_callee()
 define fastcc i8* @alias_caller() nounwind {
 ; CHECK-LABEL: alias_caller:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp noalias_callee # TAILCALL
+; CHECK-NEXT:    jmp noalias_callee@PLT # TAILCALL
   %p = tail call fastcc noalias i8* @noalias_callee()
   ret i8* %p
 }
@@ -46,7 +46,7 @@ declare fastcc i32 @i32_callee()
 define fastcc i32 @ret_undef() nounwind {
 ; CHECK-LABEL: ret_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp i32_callee # TAILCALL
+; CHECK-NEXT:    jmp i32_callee@PLT # TAILCALL
   %p = tail call fastcc i32 @i32_callee()
   ret i32 undef
 }
@@ -56,7 +56,7 @@ declare fastcc void @does_not_return()
 define fastcc i32 @noret() nounwind {
 ; CHECK-LABEL: noret:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp does_not_return # TAILCALL
+; CHECK-NEXT:    jmp does_not_return@PLT # TAILCALL
   tail call fastcc void @does_not_return()
   unreachable
 }

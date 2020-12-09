@@ -32,15 +32,15 @@ Options
 
 .. option:: WarnOnFloatingPointNarrowingConversion
 
-    When non-zero, the check will warn on narrowing floating point conversion
-    (e.g. ``double`` to ``float``). `1` by default.
+    When `true`, the check will warn on narrowing floating point conversion
+    (e.g. ``double`` to ``float``). `true` by default.
 
 .. option:: PedanticMode
 
-    When non-zero, the check will warn on assigning a floating point constant
+    When `true`, the check will warn on assigning a floating point constant
     to an integer value even if the floating point value is exactly
     representable in the destination type (e.g. ``int i = 1.0;``).
-    `0` by default.
+    `false` by default.
 
 FAQ
 ---

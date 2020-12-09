@@ -184,12 +184,18 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
   if (MI->getOpcode() == PPC::DCBF) {
     unsigned char L = MI->getOperand(0).getImm();
-    if (!L || L == 1 || L == 3) {
-      O << "\tdcbf";
-      if (L == 1 || L == 3)
+    if (!L || L == 1 || L == 3 || L == 4 || L == 6) {
+      O << "\tdcb";
+      if (L != 6)
+        O << "f";
+      if (L == 1)
         O << "l";
       if (L == 3)
-        O << "p";
+        O << "lp";
+      if (L == 4)
+        O << "ps";
+      if (L == 6)
+        O << "stps";
       O << " ";
 
       printOperand(MI, 1, O);

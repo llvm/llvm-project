@@ -22,11 +22,11 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-NEXT:  .LBB0_2: # %if.then
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq callVoid
+; CHECK-NEXT:    callq callVoid@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    jmp callNonVoid # TAILCALL
+; CHECK-NEXT:    jmp callNonVoid@PLT # TAILCALL
 ;
 ; CHECK-32BIT-LABEL: test1:
 ; CHECK-32BIT:       # %bb.0: # %entry
@@ -41,10 +41,10 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-32BIT-NEXT:    retl
 ; CHECK-32BIT-NEXT:  .LBB0_2: # %if.then
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-32BIT-NEXT:    calll callVoid
+; CHECK-32BIT-NEXT:    calll callVoid@PLT
 ; CHECK-32BIT-NEXT:    addl $12, %esp
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-32BIT-NEXT:    jmp callNonVoid # TAILCALL
+; CHECK-32BIT-NEXT:    jmp callNonVoid@PLT # TAILCALL
 entry:
   %0 = load i32, i32* @a, align 4, !tbaa !2
   %conv = sext i32 %0 to i64
@@ -86,11 +86,11 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_3: # %if.then2
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq callVoid
+; CHECK-NEXT:    callq callVoid@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    jmp callNonVoid # TAILCALL
+; CHECK-NEXT:    jmp callNonVoid@PLT # TAILCALL
 ;
 ; CHECK-32BIT-LABEL: test2:
 ; CHECK-32BIT:       # %bb.0: # %entry
@@ -109,10 +109,10 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-32BIT-NEXT:    retl
 ; CHECK-32BIT-NEXT:  .LBB1_3: # %if.then2
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-32BIT-NEXT:    calll callVoid
+; CHECK-32BIT-NEXT:    calll callVoid@PLT
 ; CHECK-32BIT-NEXT:    addl $12, %esp
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-32BIT-NEXT:    jmp callNonVoid # TAILCALL
+; CHECK-32BIT-NEXT:    jmp callNonVoid@PLT # TAILCALL
 entry:
   %tobool = icmp eq i32* %p1, null
   br i1 %tobool, label %return, label %if.end
@@ -153,7 +153,7 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movzbl %sil, %esi
 ; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %rax, (%r14)
 ; CHECK-NEXT:  .LBB2_2: # %land.end
 ; CHECK-NEXT:    movq %rbx, %rax
@@ -187,7 +187,7 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-32BIT-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-32BIT-NEXT:    pushl %esi
 ; CHECK-32BIT-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-32BIT-NEXT:    calll bar
+; CHECK-32BIT-NEXT:    calll bar@PLT
 ; CHECK-32BIT-NEXT:    addl $16, %esp
 ; CHECK-32BIT-NEXT:    .cfi_adjust_cfa_offset -16
 ; CHECK-32BIT-NEXT:    movl %eax, (%edi)

@@ -1,14 +1,14 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=core-avx2 -loop-unroll --debug-only=loop-unroll -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
+; RUN: opt -mcpu=core-avx2 -passes=loop-unroll -debug-only=loop-unroll -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: Loop Unroll: F[foo] Loop %loop.2.header
-; CHECK: Loop Size = 27
-; CHECK-NOT: UNROLLING loop %loop.2.header
 ; CHECK: Loop Unroll: F[foo] Loop %loop.header
 ; CHECK:   Loop Size = 25
 ; CHECK: UNROLLING loop %loop.header by 2 
+; CHECK: Loop Unroll: F[foo] Loop %loop.2.header
+; CHECK: Loop Size = 27
+; CHECK-NOT: UNROLLING loop %loop.2.header
 
 define void @foo(i32 * %out) {
 entry:

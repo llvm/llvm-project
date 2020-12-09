@@ -638,6 +638,11 @@ BUILTIN(__builtin_cfuged, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cntlzdm, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cnttzdm, "ULLiULLiULLi", "")
 
+// Generate random number
+BUILTIN(__builtin_darn, "LLi", "")
+BUILTIN(__builtin_darn_raw, "LLi", "")
+BUILTIN(__builtin_darn_32, "i", "")
+
 // Vector int128 (un)pack
 BUILTIN(__builtin_unpack_vector_int128, "ULLiV1LLLii", "")
 BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")

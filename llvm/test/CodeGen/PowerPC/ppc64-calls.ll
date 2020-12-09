@@ -23,18 +23,14 @@ define void @test_direct() nounwind readnone {
   ret void
 }
 
-; Calls to weak function requires a TOC restore 'nop' with the small codemodel
+; Calls to weak function requires a TOC restore 'nop' with all code models
 ; because the definition that gets choosen at link time may come from a
-; different section even though we have seen a weak definition in the same
-; section at compile time.
-; With large and medium codemodels no TOC restore is needed, since we know
-; whichever definition is choosen it resides within the same DSO boundaries and
-; therefore shares the same TOC.
+; different compilation unit that was compiled with PC Relative and has no TOC.
 define void @test_weak() nounwind readnone {
   tail call void @foo_weak() nounwind
 ; CHECK-LABEL: test_weak:
-; CHECK: b foo_weak
-; CHECK-NOT: nop
+; CHECK:       bl foo_weak
+; CHECK-NEXT:  nop
 
 ; SCM-LABEL: test_weak:
 ; SCM:       bl foo_weak

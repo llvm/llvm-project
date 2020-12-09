@@ -137,7 +137,7 @@ function(add_libc_unittest target_name)
   )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
-      ${target_name}
+      ${fq_target_name}
       PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
     )
   endif()

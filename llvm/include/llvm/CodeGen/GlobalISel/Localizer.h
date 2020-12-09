@@ -52,9 +52,6 @@ private:
   /// TTI used for getting remat costs for instructions.
   TargetTransformInfo *TTI;
 
-  /// Check whether or not \p MI needs to be moved close to its uses.
-  bool shouldLocalize(const MachineInstr &MI);
-
   /// Check if \p MOUse is used in the same basic block as \p Def.
   /// If the use is in the same block, we say it is local.
   /// When the use is not local, \p InsertMBB will contain the basic

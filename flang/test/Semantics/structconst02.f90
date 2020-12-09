@@ -14,6 +14,7 @@ module module1
     integer(kind=ik) :: ix = 0
     real(kind=rk) :: rx = 0.
     complex(kind=zk) :: zx = (0.,0.)
+    !ERROR: An automatic variable or component must not be initialized
     character(kind=ck,len=len) :: cx = ' '
     logical(kind=lk) :: lx = .false.
     real(kind=rk), pointer :: rp => NULL()

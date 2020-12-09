@@ -1071,8 +1071,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 }
 
 static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
-                         int64_t &EarlierSize, int64_t LaterOffset,
-                         int64_t LaterSize, bool IsOverwriteEnd) {
+                         uint64_t &EarlierSize, int64_t LaterOffset,
+                         uint64_t LaterSize, bool IsOverwriteEnd) {
   // TODO: base this on the target vector size so that if the earlier
   // store was too small to get vector writes anyway then its likely
   // a good idea to shorten it
@@ -1127,16 +1127,23 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
 
 static bool tryToShortenEnd(Instruction *EarlierWrite,
                             OverlapIntervalsTy &IntervalMap,
-                            int64_t &EarlierStart, int64_t &EarlierSize) {
+                            int64_t &EarlierStart, uint64_t &EarlierSize) {
   if (IntervalMap.empty() || !isShortenableAtTheEnd(EarlierWrite))
     return false;
 
   OverlapIntervalsTy::iterator OII = --IntervalMap.end();
   int64_t LaterStart = OII->second;
-  int64_t LaterSize = OII->first - LaterStart;
+  uint64_t LaterSize = OII->first - LaterStart;
 
-  if (LaterStart > EarlierStart && LaterStart < EarlierStart + EarlierSize &&
-      LaterStart + LaterSize >= EarlierStart + EarlierSize) {
+  assert(OII->first - LaterStart >= 0 && "Size expected to be positive");
+
+  if (LaterStart > EarlierStart &&
+      // Note: "LaterStart - EarlierStart" is known to be positive due to
+      // preceding check.
+      (uint64_t)(LaterStart - EarlierStart) < EarlierSize &&
+      // Note: "EarlierSize - (uint64_t)(LaterStart - EarlierStart)" is known to
+      // be non negative due to preceding checks.
+      LaterSize >= EarlierSize - (uint64_t)(LaterStart - EarlierStart)) {
     if (tryToShorten(EarlierWrite, EarlierStart, EarlierSize, LaterStart,
                      LaterSize, true)) {
       IntervalMap.erase(OII);
@@ -1148,16 +1155,23 @@ static bool tryToShortenEnd(Instruction *EarlierWrite,
 
 static bool tryToShortenBegin(Instruction *EarlierWrite,
                               OverlapIntervalsTy &IntervalMap,
-                              int64_t &EarlierStart, int64_t &EarlierSize) {
+                              int64_t &EarlierStart, uint64_t &EarlierSize) {
   if (IntervalMap.empty() || !isShortenableAtTheBeginning(EarlierWrite))
     return false;
 
   OverlapIntervalsTy::iterator OII = IntervalMap.begin();
   int64_t LaterStart = OII->second;
-  int64_t LaterSize = OII->first - LaterStart;
+  uint64_t LaterSize = OII->first - LaterStart;
 
-  if (LaterStart <= EarlierStart && LaterStart + LaterSize > EarlierStart) {
-    assert(LaterStart + LaterSize < EarlierStart + EarlierSize &&
+  assert(OII->first - LaterStart >= 0 && "Size expected to be positive");
+
+  if (LaterStart <= EarlierStart &&
+      // Note: "EarlierStart - LaterStart" is known to be non negative due to
+      // preceding check.
+      LaterSize > (uint64_t)(EarlierStart - LaterStart)) {
+    // Note: "LaterSize - (uint64_t)(EarlierStart - LaterStart)" is known to be
+    // positive due to preceding checks.
+    assert(LaterSize - (uint64_t)(EarlierStart - LaterStart) < EarlierSize &&
            "Should have been handled as OW_Complete");
     if (tryToShorten(EarlierWrite, EarlierStart, EarlierSize, LaterStart,
                      LaterSize, false)) {
@@ -1179,7 +1193,7 @@ static bool removePartiallyOverlappedStores(const DataLayout &DL,
 
     const Value *Ptr = Loc.Ptr->stripPointerCasts();
     int64_t EarlierStart = 0;
-    int64_t EarlierSize = int64_t(Loc.Size.getValue());
+    uint64_t EarlierSize = Loc.Size.getValue();
     GetPointerBaseWithConstantOffset(Ptr, EarlierStart, DL);
     OverlapIntervalsTy &IntervalMap = OI.second;
     Changed |=
@@ -1428,8 +1442,8 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                                                     "when partial-overwrite "
                                                     "tracking is enabled");
           // The overwrite result is known, so these must be known, too.
-          int64_t EarlierSize = DepLoc.Size.getValue();
-          int64_t LaterSize = Loc.Size.getValue();
+          uint64_t EarlierSize = DepLoc.Size.getValue();
+          uint64_t LaterSize = Loc.Size.getValue();
           bool IsOverwriteEnd = (OR == OW_End);
           MadeChange |= tryToShorten(DepWrite, DepWriteOffset, EarlierSize,
                                     InstWriteOffset, LaterSize, IsOverwriteEnd);

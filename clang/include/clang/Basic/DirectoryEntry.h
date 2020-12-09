@@ -15,6 +15,8 @@
 #define LLVM_CLANG_BASIC_DIRECTORYENTRY_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
@@ -46,9 +48,18 @@ public:
 
   StringRef getName() const { return ME->getKey(); }
 
+  /// Hash code is based on the DirectoryEntry, not the specific named
+  /// reference.
+  friend llvm::hash_code hash_value(DirectoryEntryRef Ref) {
+    return llvm::hash_value(&Ref.getDirEntry());
+  }
+
   using MapEntry = llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>>;
 
   const MapEntry &getMapEntry() const { return *ME; }
+
+  /// Check if RHS referenced the file in exactly the same way.
+  bool isSameRef(DirectoryEntryRef RHS) const { return ME == RHS.ME; }
 
   DirectoryEntryRef() = delete;
   DirectoryEntryRef(const MapEntry &ME) : ME(&ME) {}
@@ -79,6 +90,20 @@ private:
   // Private constructor for use by OptionalStorage.
   DirectoryEntryRef(optional_none_tag) : ME(nullptr) {}
   bool hasOptionalValue() const { return ME; }
+
+  friend struct llvm::DenseMapInfo<DirectoryEntryRef>;
+  struct dense_map_empty_tag {};
+  struct dense_map_tombstone_tag {};
+
+  // Private constructors for use by DenseMapInfo.
+  DirectoryEntryRef(dense_map_empty_tag)
+      : ME(llvm::DenseMapInfo<const MapEntry *>::getEmptyKey()) {}
+  DirectoryEntryRef(dense_map_tombstone_tag)
+      : ME(llvm::DenseMapInfo<const MapEntry *>::getTombstoneKey()) {}
+  bool isSpecialDenseMapKey() const {
+    return isSameRef(DirectoryEntryRef(dense_map_empty_tag())) ||
+           isSameRef(DirectoryEntryRef(dense_map_tombstone_tag()));
+  }
 
   const MapEntry *ME;
 };
@@ -164,6 +189,38 @@ static_assert(
     "Optional<DirectoryEntryRef> should be trivially copyable");
 
 } // end namespace optional_detail
+
+/// Specialisation of DenseMapInfo for DirectoryEntryRef.
+template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
+  static inline clang::DirectoryEntryRef getEmptyKey() {
+    return clang::DirectoryEntryRef(
+        clang::DirectoryEntryRef::dense_map_empty_tag());
+  }
+
+  static inline clang::DirectoryEntryRef getTombstoneKey() {
+    return clang::DirectoryEntryRef(
+        clang::DirectoryEntryRef::dense_map_tombstone_tag());
+  }
+
+  static unsigned getHashValue(clang::DirectoryEntryRef Val) {
+    return hash_value(Val);
+  }
+
+  static bool isEqual(clang::DirectoryEntryRef LHS,
+                      clang::DirectoryEntryRef RHS) {
+    // Catch the easy cases: both empty, both tombstone, or the same ref.
+    if (LHS.isSameRef(RHS))
+      return true;
+
+    // Confirm LHS and RHS are valid.
+    if (LHS.isSpecialDenseMapKey() || RHS.isSpecialDenseMapKey())
+      return false;
+
+    // It's safe to use operator==.
+    return LHS == RHS;
+  }
+};
+
 } // end namespace llvm
 
 namespace clang {

@@ -4212,7 +4212,7 @@ define void @foo(float %0, float %1) #0 {
 5:                                                ; preds = %4, %2
   ret void
 }
-declare void @bar()
+declare dso_local void @bar()
 
 attributes #0 = { strictfp }
 

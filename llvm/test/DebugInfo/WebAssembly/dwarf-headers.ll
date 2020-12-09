@@ -8,17 +8,15 @@
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-4
 ; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-4
 
-; TODO: enable testing for dwarf v5 with type units
-; (See the FIXME in MCObjectFileInfo::getDwarfComdatSection)
-; RU N: llc -dwarf-version=5 -generate-type-units \
-; RU N:     -filetype=obj -O0 -mtriple= < %s \
-; RU N:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
+; RUN: llc -dwarf-version=5 -generate-type-units \
+; RUN:     -filetype=obj -O0 -mtriple= < %s \
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
 
-; RU N: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
-; RU N:     -dwarf-version=5 -generate-type-units \
-; RU N:     -filetype=obj -O0 -mtriple= < %s \
-; RU N:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-5
-; RU N: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-5
+; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN:     -dwarf-version=5 -generate-type-units \
+; RUN:     -filetype=obj -O0 -mtriple= < %s \
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-5
+; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-5
 
 ; This test is derived from test/CodeGen/X86/dwarf-headers.ll
 

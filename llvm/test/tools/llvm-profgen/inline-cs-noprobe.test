@@ -1,0 +1,48 @@
+; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --show-unwinder-output | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:[main:1 @ foo]:44:0
+; CHECK: 2.2: 14
+; CHECK: 3: 15
+; CHECK: 3.2: 14 bar:14
+; CHECK: 3.4: 1
+; CHECK:[main:1 @ foo:3.2 @ bar]:14:0
+; CHECK: 1: 14
+
+; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Range Counter:
+; CHECK-UNWINDER: main:1 @ foo
+; CHECK-UNWINDER:   (670, 6ad): 1
+; CHECK-UNWINDER:   (67e, 69b): 1
+; CHECK-UNWINDER:   (67e, 6ad): 13
+; CHECK-UNWINDER:   (6bd, 6c8): 14
+; CHECK-UNWINDER: main:1 @ foo:3.2 @ bar
+; CHECK-UNWINDER:   (6af, 6bb): 14
+
+
+; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Branch Counter:
+; CHECK-UNWINDER: main:1 @ foo
+; CHECK-UNWINDER:   (69b, 670): 1
+; CHECK-UNWINDER:   (6c8, 67e): 15
+
+; original code:
+; clang -O3 -g test.c -o a.out
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

@@ -24,12 +24,9 @@ namespace Fortran::evaluate {
 
 bool IsImpliedShape(const Symbol &symbol0) {
   const Symbol &symbol{ResolveAssociations(symbol0)};
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    if (symbol.attrs().test(semantics::Attr::PARAMETER) && details->init()) {
-      return details->shape().IsImpliedShape();
-    }
-  }
-  return false;
+  const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return symbol.attrs().test(semantics::Attr::PARAMETER) && details &&
+      details->shape().IsImpliedShape();
 }
 
 bool IsExplicitShape(const Symbol &symbol0) {
@@ -685,28 +682,32 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
 // Check conformance of the passed shapes.  Only return true if we can verify
 // that they conform
 bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
-    const Shape &right, const char *leftIs, const char *rightIs) {
+    const Shape &right, const char *leftIs, const char *rightIs,
+    bool leftScalarExpandable, bool rightScalarExpandable) {
   int n{GetRank(left)};
+  if (n == 0 && leftScalarExpandable) {
+    return true;
+  }
   int rn{GetRank(right)};
-  if (n != 0 && rn != 0) {
-    if (n != rn) {
-      messages.Say("Rank of %1$s is %2$d, but %3$s has rank %4$d"_err_en_US,
-          leftIs, n, rightIs, rn);
+  if (rn == 0 && rightScalarExpandable) {
+    return true;
+  }
+  if (n != rn) {
+    messages.Say("Rank of %1$s is %2$d, but %3$s has rank %4$d"_err_en_US,
+        leftIs, n, rightIs, rn);
+    return false;
+  }
+  for (int j{0}; j < n; ++j) {
+    auto leftDim{ToInt64(left[j])};
+    auto rightDim{ToInt64(right[j])};
+    if (!leftDim || !rightDim) {
       return false;
-    } else {
-      for (int j{0}; j < n; ++j) {
-        auto leftDim{ToInt64(left[j])};
-        auto rightDim{ToInt64(right[j])};
-        if (!leftDim || !rightDim) {
-          return false;
-        }
-        if (*leftDim != *rightDim) {
-          messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
-                       "but %4$s has extent %5$jd"_err_en_US,
-              j + 1, leftIs, *leftDim, rightIs, *rightDim);
-          return false;
-        }
-      }
+    }
+    if (*leftDim != *rightDim) {
+      messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
+                   "but %4$s has extent %5$jd"_err_en_US,
+          j + 1, leftIs, *leftDim, rightIs, *rightDim);
+      return false;
     }
   }
   return true;

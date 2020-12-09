@@ -24,7 +24,6 @@ class Scope;
 }
 
 namespace Fortran::evaluate {
-class IntrinsicProcTable;
 
 // Predicate: true when an expression is a constant expression (in the
 // strict sense of the Fortran standard); it may not (yet) be a hard
@@ -34,6 +33,12 @@ extern template bool IsConstantExpr(const Expr<SomeType> &);
 extern template bool IsConstantExpr(const Expr<SomeInteger> &);
 extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 extern template bool IsConstantExpr(const StructureConstructor &);
+
+// Predicate: true when an expression actually is a typed Constant<T>,
+// perhaps with parentheses and wrapping around it.  False for all typeless
+// expressions, including BOZ literals.
+template <typename A> bool IsActuallyConstant(const A &);
+extern template bool IsActuallyConstant(const Expr<SomeType> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
@@ -46,38 +51,44 @@ bool IsInitialProcedureTarget(const Symbol &);
 bool IsInitialProcedureTarget(const ProcedureDesignator &);
 bool IsInitialProcedureTarget(const Expr<SomeType> &);
 
+// Validate the value of a named constant, the static initial
+// value of a non-pointer non-allocatable non-dummy variable, or the
+// default initializer of a component of a derived type (or instantiation
+// of a derived type).  Converts type and expands scalars as necessary.
+std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &,
+    Expr<SomeType> &&, FoldingContext &,
+    const semantics::Scope *instantiation = nullptr);
+
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid
 // specification expressions.
 
 template <typename A>
-void CheckSpecificationExpr(const A &, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &);
-extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
-extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
+void CheckSpecificationExpr(
+    const A &, const semantics::Scope &, FoldingContext &);
+extern template void CheckSpecificationExpr(
+    const Expr<SomeType> &x, const semantics::Scope &, FoldingContext &);
+extern template void CheckSpecificationExpr(
+    const Expr<SomeInteger> &x, const semantics::Scope &, FoldingContext &);
 extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
+    const semantics::Scope &, FoldingContext &);
 extern template void CheckSpecificationExpr(
-    const std::optional<Expr<SomeType>> &x, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &);
+    const std::optional<Expr<SomeType>> &x, const semantics::Scope &,
+    FoldingContext &);
 extern template void CheckSpecificationExpr(
-    const std::optional<Expr<SomeInteger>> &x, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &);
+    const std::optional<Expr<SomeInteger>> &x, const semantics::Scope &,
+    FoldingContext &);
 extern template void CheckSpecificationExpr(
-    const std::optional<Expr<SubscriptInteger>> &x,
-    parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &);
+    const std::optional<Expr<SubscriptInteger>> &x, const semantics::Scope &,
+    FoldingContext &);
 
 // Simple contiguity (9.5.4)
-template <typename A>
-bool IsSimplyContiguous(const A &, const IntrinsicProcTable &);
+template <typename A> bool IsSimplyContiguous(const A &, FoldingContext &);
 extern template bool IsSimplyContiguous(
-    const Expr<SomeType> &, const IntrinsicProcTable &);
+    const Expr<SomeType> &, FoldingContext &);
+
+template <typename A> bool IsErrorExpr(const A &);
+extern template bool IsErrorExpr(const Expr<SomeType> &);
 
 } // namespace Fortran::evaluate
 #endif

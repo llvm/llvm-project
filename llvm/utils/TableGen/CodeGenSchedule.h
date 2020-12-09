@@ -96,7 +96,7 @@ struct CodeGenSchedRW {
 /// Represent a transition between SchedClasses induced by SchedVariant.
 struct CodeGenSchedTransition {
   unsigned ToClassIdx;
-  IdxVec ProcIndices;
+  unsigned ProcIndex;
   RecVec PredTerm;
 };
 

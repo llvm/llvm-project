@@ -60,7 +60,7 @@ define float @test2(i16* nocapture %src) {
 ; LIBCALL-LABEL: test2:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; F16C-LABEL: test2:
 ; F16C:       # %bb.0:
@@ -92,7 +92,7 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; LIBCALL-NEXT:    movzwl %ax, %edi
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; F16C-LABEL: test3:
 ; F16C:       # %bb.0:
@@ -154,11 +154,11 @@ define double @test4(i16* nocapture %src) {
 define i16 @test5(double %src) {
 ; LIBCALL-LABEL: test5:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    jmp __truncdfhf2 # TAILCALL
+; LIBCALL-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
 ;
 ; F16C-LABEL: test5:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    jmp __truncdfhf2 # TAILCALL
+; F16C-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
 ;
 ; SOFTFLOAT-LABEL: test5:
 ; SOFTFLOAT:       # %bb.0:

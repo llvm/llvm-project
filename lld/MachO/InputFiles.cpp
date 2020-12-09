@@ -155,7 +155,7 @@ const load_command *macho::findCommand(const mach_header_64 *hdr,
   return nullptr;
 }
 
-void InputFile::parseSections(ArrayRef<section_64> sections) {
+void ObjFile::parseSections(ArrayRef<section_64> sections) {
   subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
 
@@ -192,8 +192,8 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
   return it->second;
 }
 
-void InputFile::parseRelocations(const section_64 &sec,
-                                 SubsectionMap &subsecMap) {
+void ObjFile::parseRelocations(const section_64 &sec,
+                               SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<any_relocation_info> anyRelInfos(
       reinterpret_cast<const any_relocation_info *>(buf + sec.reloff),
@@ -266,8 +266,8 @@ static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
                        /*isExternal=*/false);
 }
 
-macho::Symbol *InputFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
-                                                StringRef name) {
+macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
+                                              StringRef name) {
   uint8_t type = sym.n_type & N_TYPE;
   switch (type) {
   case N_UNDF:
@@ -289,8 +289,8 @@ macho::Symbol *InputFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
   }
 }
 
-void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
-                             const char *strtab, bool subsectionsViaSymbols) {
+void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
+                           const char *strtab, bool subsectionsViaSymbols) {
   // resize(), not reserve(), because we are going to create N_ALT_ENTRY symbols
   // out-of-sequence.
   symbols.resize(nList.size());
@@ -631,15 +631,26 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   // to it later.
   const object::Archive::Symbol sym_copy = sym;
 
-  auto file = make<ObjFile>(mb, modTime, getName());
+  InputFile *file;
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    file = make<ObjFile>(mb, modTime, getName());
+    break;
+  case file_magic::bitcode:
+    file = make<BitcodeFile>(mb);
+    break;
+  default:
+    StringRef bufname =
+        CHECK(c.getName(), toString(this) + ": could not get buffer name");
+    error(toString(this) + ": archive member " + bufname +
+          " has unhandled file type");
+    return;
+  }
+  inputFiles.push_back(file);
 
   // ld64 doesn't demangle sym here even with -demangle. Match that, so
   // intentionally no call to toMachOString() here.
   printArchiveMemberLoad(sym_copy.getName(), file);
-
-  symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
-  subsections.insert(subsections.end(), file->subsections.begin(),
-                     file->subsections.end());
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)

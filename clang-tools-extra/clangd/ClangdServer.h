@@ -363,6 +363,8 @@ private:
   config::Provider *ConfigProvider = nullptr;
 
   const ThreadsafeFS &TFS;
+  Callbacks *ServerCallbacks = nullptr;
+  mutable std::mutex ConfigDiagnosticsMu;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:

@@ -55,11 +55,7 @@ bool llvm::shouldPrintAfterSomePass() {
 
 static bool shouldPrintBeforeOrAfterPass(StringRef PassID,
                                          ArrayRef<std::string> PassesToPrint) {
-  for (auto &Pass : PassesToPrint) {
-    if (Pass == PassID)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(PassesToPrint, PassID);
 }
 
 bool llvm::shouldPrintBeforeAll() { return PrintBeforeAll; }

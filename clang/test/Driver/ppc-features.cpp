@@ -69,12 +69,6 @@
 // RUN: %clang -### -c -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec 2>&1 | FileCheck --check-prefix=NO_ALTIVEC %s
 // NO_ALTIVEC: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-qpx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOQPX %s
-// CHECK-NOQPX: "-target-feature" "-qpx"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-qpx -mqpx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-QPX %s
-// CHECK-QPX-NOT: "-target-feature" "-qpx"
-
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-mfcrf -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOMFCRF %s
 // CHECK-NOMFCRF: "-target-feature" "-mfocrf"
 

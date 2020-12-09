@@ -65,6 +65,7 @@ public:
           << Context << " in " << text(Tokens) << " at " << File << ":" << Line;
     }
   }
+
 protected:
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;

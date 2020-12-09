@@ -720,6 +720,12 @@ into the preheader block, or by sinking code to the exit blocks if it is safe.
 This pass also promotes must-aliased memory locations in the loop to live in
 registers, thus hoisting and sinking "invariant" loads and stores.
 
+Hoisting operations out of loops is a canonicalization transform. It enables
+and simplifies subsequent optimizations in the middle-end. Rematerialization
+of hoisted instructions to reduce register pressure is the responsibility of
+the back-end, which has more accurate information about register pressure and
+also handles other optimizations than LICM that increase live-ranges.
+
 This pass uses alias analysis for two purposes:
 
 #. Moving loop invariant loads and calls out of loops.  If we can determine

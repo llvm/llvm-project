@@ -295,7 +295,54 @@ int __kmp_str_fname_match(kmp_str_fname_t const *fname, char const *pattern) {
   return dir_match && base_match;
 } // __kmp_str_fname_match
 
-kmp_str_loc_t __kmp_str_loc_init(char const *psource, int init_fname) {
+// Get the numeric fields from source location string.
+// For clang these fields are Line/Col of the start of the construct.
+// For icc these are LineBegin/LineEnd of the construct.
+// Function is fast as it does not duplicate string (which involves memory
+// allocation), and parses the string in place.
+void __kmp_str_loc_numbers(char const *Psource, int *LineBeg,
+                           int *LineEndOrCol) {
+  char *Str;
+  KMP_DEBUG_ASSERT(LineBeg);
+  KMP_DEBUG_ASSERT(LineEndOrCol);
+  // Parse Psource string ";file;func;line;line_end_or_column;;" to get
+  // numbers only, skipping string fields "file" and "func".
+
+  // Find 1-st semicolon.
+  KMP_DEBUG_ASSERT(Psource);
+#ifdef __cplusplus
+  Str = strchr(CCAST(char *, Psource), ';');
+#else
+  Str = strchr(Psource, ';');
+#endif
+  // Check returned pointer to see if the format of Psource is broken.
+  if (Str) {
+    // Find 2-nd semicolon.
+    Str = strchr(Str + 1, ';');
+  }
+  if (Str) {
+    // Find 3-rd semicolon.
+    Str = strchr(Str + 1, ';');
+  }
+  if (Str) {
+    // Read begin line number.
+    *LineBeg = atoi(Str + 1);
+    // Find 4-th semicolon.
+    Str = strchr(Str + 1, ';');
+  } else {
+    // Broken format of input string, cannot read the number.
+    *LineBeg = 0;
+  }
+  if (Str) {
+    // Read end line or column number.
+    *LineEndOrCol = atoi(Str + 1);
+  } else {
+    // Broken format of input string, cannot read the number.
+    *LineEndOrCol = 0;
+  }
+}
+
+kmp_str_loc_t __kmp_str_loc_init(char const *psource, bool init_fname) {
   kmp_str_loc_t loc;
 
   loc._bulk = NULL;

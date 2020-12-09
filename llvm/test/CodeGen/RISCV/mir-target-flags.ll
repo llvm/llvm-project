@@ -35,7 +35,7 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-SMALL:      target-flags(riscv-tprel-hi) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-add) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-lo) @t_le
-; RV32-SMALL:      target-flags(riscv-call) @callee
+; RV32-SMALL:      target-flags(riscv-plt) @callee
 ;
 ; RV32-MED-LABEL: name: caller
 ; RV32-MED:      target-flags(riscv-got-hi) @g_e

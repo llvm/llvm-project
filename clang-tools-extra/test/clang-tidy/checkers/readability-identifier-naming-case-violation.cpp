@@ -5,11 +5,11 @@
 // RUN:   {key: readability-identifier-naming.ClassCase, value: UUPER_CASE}, \
 // RUN:   {key: readability-identifier-naming.StructCase, value: CAMEL}, \
 // RUN:   {key: readability-identifier-naming.EnumCase, value: AnY_cASe}, \
-// RUN:   ]}" 2>&1 | FileCheck %s --implicit-check-not warning
+// RUN:   ]}" 2>&1 | FileCheck %s --implicit-check-not="{{warning|error}}:"
 
-// CHECK-DAG: warning: invalid configuration value 'camelback' for option 'readability-identifier-naming.FunctionCase'; did you mean 'camelBack'?{{$}}
-// CHECK-DAG: warning: invalid configuration value 'UUPER_CASE' for option 'readability-identifier-naming.ClassCase'; did you mean 'UPPER_CASE'?{{$}}
+// CHECK-DAG: warning: invalid configuration value 'camelback' for option 'readability-identifier-naming.FunctionCase'; did you mean 'camelBack'? [clang-tidy-config]
+// CHECK-DAG: warning: invalid configuration value 'UUPER_CASE' for option 'readability-identifier-naming.ClassCase'; did you mean 'UPPER_CASE'? [clang-tidy-config]
 // Don't try to suggest an alternative for 'CAMEL'
-// CHECK-DAG: warning: invalid configuration value 'CAMEL' for option 'readability-identifier-naming.StructCase'{{$}}
+// CHECK-DAG: warning: invalid configuration value 'CAMEL' for option 'readability-identifier-naming.StructCase' [clang-tidy-config]
 // This fails on the EditDistance, but as it matches ignoring case suggest the correct value
-// CHECK-DAG: warning: invalid configuration value 'AnY_cASe' for option 'readability-identifier-naming.EnumCase'; did you mean 'aNy_CasE'?{{$}}
+// CHECK-DAG: warning: invalid configuration value 'AnY_cASe' for option 'readability-identifier-naming.EnumCase'; did you mean 'aNy_CasE'? [clang-tidy-config]

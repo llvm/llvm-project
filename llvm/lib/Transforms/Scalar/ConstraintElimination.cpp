@@ -346,8 +346,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (CB.Not)
       R = ConstraintSystem::negate(R);
 
-    CS.addVariableRowFill(R);
-    DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
+    // If R has been added to the system, queue it for removal once it goes
+    // out-of-scope.
+    if (CS.addVariableRowFill(R))
+      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
   }
 
   return Changed;

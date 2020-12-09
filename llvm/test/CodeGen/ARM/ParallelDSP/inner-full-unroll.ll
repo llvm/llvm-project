@@ -72,7 +72,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: full_unroll_sub
-; CHEC: [[IV:%[^ ]+]] = phi i32
+; CHECK: [[IV:%[^ ]+]] = phi i32
 ; CHECK: [[AI:%[^ ]+]] = getelementptr inbounds i32, i32* %a, i32 [[IV]]
 ; CHECK: [[BI:%[^ ]+]] = getelementptr inbounds i16*, i16** %b, i32 [[IV]]
 ; CHECK: [[BIJ:%[^ ]+]] = load i16*, i16** [[BI]], align 4

@@ -370,12 +370,12 @@ declare void @func(...)
 define i8* @externfuncaddr() {
 ; CHECK-LABEL: externfuncaddr:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x0, func
+; CHECK-NEXT:    ldr x0, :got:func
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GLOBISEL-LABEL: externfuncaddr:
 ; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x0, func
+; CHECK-GLOBISEL-NEXT:    ldr x0, :got:func
 ; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: externfuncaddr:

@@ -2274,6 +2274,11 @@ bool ShuffleVectorInst::isConcat() const {
       isa<UndefValue>(Op<2>()))
     return false;
 
+  // FIXME: Not currently possible to express a shuffle mask for a scalable
+  // vector for this case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+
   int NumOpElts = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
   int NumMaskElts = cast<FixedVectorType>(getType())->getNumElements();
   if (NumMaskElts != NumOpElts * 2)
@@ -3137,64 +3142,6 @@ CastInst *CastInst::CreateFPCast(Value *C, Type *Ty,
   return Create(opcode, C, Ty, Name, InsertAtEnd);
 }
 
-// Check whether it is valid to call getCastOpcode for these types.
-// This routine must be kept in sync with getCastOpcode.
-bool CastInst::isCastable(Type *SrcTy, Type *DestTy) {
-  if (!SrcTy->isFirstClassType() || !DestTy->isFirstClassType())
-    return false;
-
-  if (SrcTy == DestTy)
-    return true;
-
-  if (VectorType *SrcVecTy = dyn_cast<VectorType>(SrcTy))
-    if (VectorType *DestVecTy = dyn_cast<VectorType>(DestTy))
-      if (cast<FixedVectorType>(SrcVecTy)->getNumElements() ==
-          cast<FixedVectorType>(DestVecTy)->getNumElements()) {
-        // An element by element cast.  Valid if casting the elements is valid.
-        SrcTy = SrcVecTy->getElementType();
-        DestTy = DestVecTy->getElementType();
-      }
-
-  // Get the bit sizes, we'll need these
-  TypeSize SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
-  TypeSize DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
-
-  // Run through the possibilities ...
-  if (DestTy->isIntegerTy()) {               // Casting to integral
-    if (SrcTy->isIntegerTy())                // Casting from integral
-        return true;
-    if (SrcTy->isFloatingPointTy())   // Casting from floating pt
-      return true;
-    if (SrcTy->isVectorTy())          // Casting from vector
-      return DestBits == SrcBits;
-                                      // Casting from something else
-    return SrcTy->isPointerTy();
-  }
-  if (DestTy->isFloatingPointTy()) {  // Casting to floating pt
-    if (SrcTy->isIntegerTy())                // Casting from integral
-      return true;
-    if (SrcTy->isFloatingPointTy())   // Casting from floating pt
-      return true;
-    if (SrcTy->isVectorTy())          // Casting from vector
-      return DestBits == SrcBits;
-                                    // Casting from something else
-    return false;
-  }
-  if (DestTy->isVectorTy())         // Casting to vector
-    return DestBits == SrcBits;
-  if (DestTy->isPointerTy()) {        // Casting to pointer
-    if (SrcTy->isPointerTy())                // Casting from pointer
-      return true;
-    return SrcTy->isIntegerTy();             // Casting from integral
-  }
-  if (DestTy->isX86_MMXTy()) {
-    if (SrcTy->isVectorTy())
-      return DestBits == SrcBits;       // 64-bit vector to MMX
-    return false;
-  }                                    // Casting to something else
-  return false;
-}
-
 bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
   if (!SrcTy->isFirstClassType() || !DestTy->isFirstClassType())
     return false;
@@ -3256,7 +3203,6 @@ bool CastInst::isBitOrNoopPointerCastable(Type *SrcTy, Type *DestTy,
 //   castIsValid( getCastOpcode(Val, Ty), Val, Ty)
 // should not assert in castIsValid. In other words, this produces a "correct"
 // casting opcode for the arguments passed to it.
-// This routine must be kept in sync with isCastable.
 Instruction::CastOps
 CastInst::getCastOpcode(
   const Value *Src, bool SrcIsSigned, Type *DestTy, bool DestIsSigned) {

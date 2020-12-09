@@ -83,7 +83,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
     const ThreadsafeFS &FS;
 
     mutable std::mutex Mu;
-    // Keys are the ancestor directory, not the actual config path within it.
+    // Keys are the (posix-style) ancestor directory, not the config within it.
     // We only insert into this map, so pointers to values are stable forever.
     // Mutex guards the map itself, not the values (which are threadsafe).
     mutable llvm::StringMap<FileConfigCache> Cache;
@@ -117,6 +117,8 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
           if (It == Cache.end()) {
             llvm::SmallString<256> ConfigPath = Ancestor;
             path::append(ConfigPath, RelPath);
+            // Use native slashes for reading the file, affects diagnostics.
+            llvm::sys::path::native(ConfigPath);
             It = Cache.try_emplace(Ancestor, ConfigPath.str(), Ancestor).first;
           }
           Caches.push_back(&It->second);
@@ -142,7 +144,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 
 std::unique_ptr<Provider>
 Provider::combine(std::vector<const Provider *> Providers) {
-  struct CombinedProvider : Provider {
+  class CombinedProvider : public Provider {
     std::vector<const Provider *> Providers;
 
     std::vector<CompiledFragment>
@@ -154,14 +156,13 @@ Provider::combine(std::vector<const Provider *> Providers) {
       }
       return Result;
     }
+
+  public:
+    CombinedProvider(std::vector<const Provider *> Providers)
+        : Providers(std::move(Providers)) {}
   };
-  auto Result = std::make_unique<CombinedProvider>();
-  Result->Providers = std::move(Providers);
-  // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
-  //   The constructor that is supposed to allow for Derived to Base
-  //   conversion does not work. Remove this if we drop support for such
-  //   configurations.
-  return std::unique_ptr<Provider>(Result.release());
+
+  return std::make_unique<CombinedProvider>(std::move(Providers));
 }
 
 Config Provider::getConfig(const Params &P, DiagnosticCallback DC) const {

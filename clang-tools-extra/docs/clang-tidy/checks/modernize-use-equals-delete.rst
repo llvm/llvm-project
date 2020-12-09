@@ -26,5 +26,5 @@ all other member functions implemented.
 
 .. option:: IgnoreMacros
 
-   If this option is set to non-zero (default is `1`), the check will not warn
+   If this option is set to `true` (default is `true`), the check will not warn
    about functions declared inside macros.

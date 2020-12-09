@@ -906,11 +906,31 @@ py::object PyOperation::create(
   if (attributes) {
     mlirAttributes.reserve(attributes->size());
     for (auto &it : *attributes) {
-
-      auto name = it.first.cast<std::string>();
-      auto &attribute = it.second.cast<PyAttribute &>();
-      // TODO: Verify attribute originates from the same context.
-      mlirAttributes.emplace_back(std::move(name), attribute);
+      std::string key;
+      try {
+        key = it.first.cast<std::string>();
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute key (not a string) when "
+                          "attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
+      try {
+        auto &attribute = it.second.cast<PyAttribute &>();
+        // TODO: Verify attribute originates from the same context.
+        mlirAttributes.emplace_back(std::move(key), attribute);
+      } catch (py::reference_cast_error &) {
+        // This exception seems thrown when the value is "None".
+        std::string msg =
+            "Found an invalid (`None`?) attribute value for the key \"" + key +
+            "\" when attempting to create the operation \"" + name + "\"";
+        throw py::cast_error(msg);
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute value for the key \"" + key +
+                          "\" when attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
     }
   }
   // Unpack/validate successors.
@@ -1551,7 +1571,7 @@ public:
         "get",
         [](std::string value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
-              mlirStringAttrGet(context->get(), value.size(), &value[0]);
+              mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
         py::arg("value"), py::arg("context") = py::none(),
@@ -1560,7 +1580,7 @@ public:
         "get_typed",
         [](PyType &type, std::string value) {
           MlirAttribute attr =
-              mlirStringAttrTypedGet(type, value.size(), &value[0]);
+              mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
 
@@ -1899,6 +1919,28 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def("__getitem__", &PyDenseFPElementsAttribute::dunderGetItem);
+  }
+};
+
+class PyTypeAttribute : public PyConcreteAttribute<PyTypeAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAType;
+  static constexpr const char *pyClassName = "TypeAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType value, DefaultingPyMlirContext context) {
+          MlirAttribute attr = mlirTypeAttrGet(value.get());
+          return PyTypeAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets a uniqued Type attribute");
+    c.def_property_readonly("value", [](PyTypeAttribute &self) {
+      return PyType(self.getContext()->getRef(),
+                    mlirTypeAttrGetValue(self.get()));
+    });
   }
 };
 
@@ -3053,6 +3095,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyDenseElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
   PyDenseFPElementsAttribute::bind(m);
+  PyTypeAttribute::bind(m);
   PyUnitAttribute::bind(m);
 
   //----------------------------------------------------------------------------

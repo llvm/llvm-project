@@ -124,7 +124,6 @@ class WasmEHPrepare : public FunctionPass {
   void setupEHPadFunctions(Function &F);
   void prepareEHPad(BasicBlock *BB, bool NeedPersonality, bool NeedLSDA = false,
                     unsigned Index = 0);
-  void prepareTerminateCleanupPad(BasicBlock *BB);
 
 public:
   static char ID; // Pass identification, replacement for typeid

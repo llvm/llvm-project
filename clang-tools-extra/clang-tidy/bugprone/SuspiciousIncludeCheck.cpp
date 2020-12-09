@@ -46,15 +46,15 @@ SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
   if (!utils::parseFileExtensions(RawStringImplementationFileExtensions,
                                   ImplementationFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    llvm::errs() << "Invalid implementation file extension: "
-                 << RawStringImplementationFileExtensions << "\n";
+    this->configurationDiag("Invalid implementation file extension: '%0'")
+        << RawStringImplementationFileExtensions;
   }
 
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
                                   HeaderFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    llvm::errs() << "Invalid header file extension: "
-                 << RawStringHeaderFileExtensions << "\n";
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
   }
 }
 

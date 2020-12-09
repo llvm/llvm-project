@@ -213,5 +213,5 @@ define void @g(i32 %a) {
   ret void
 }
 
-declare void @f(i64)
+declare dso_local void @f(i64)
 

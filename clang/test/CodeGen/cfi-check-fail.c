@@ -16,7 +16,7 @@ void caller(void (*f)()) {
 // CHECK: br i1 %[[ICMP_NOT_NULL]], label %[[CONT0:.*]], label %[[TRAP:.*]],
 
 // CHECK: [[TRAP]]:
-// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
 // CHECK-NEXT:   unreachable
 
 // CHECK: [[CONT0]]:
@@ -39,7 +39,7 @@ void caller(void (*f)()) {
 // CHECK:   br i1 %[[NOT_1]], label %[[CONT2:.*]], label %[[HANDLE1:.*]], !nosanitize
 
 // CHECK: [[HANDLE1]]:
-// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
 // CHECK-NEXT:   unreachable
 
 // CHECK: [[CONT2]]:
@@ -67,7 +67,7 @@ void caller(void (*f)()) {
 // CHECK:   br i1 %[[NOT_4]], label %[[CONT5:.*]], label %[[HANDLE4:.*]], !nosanitize
 
 // CHECK: [[HANDLE4]]:
-// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   call void @llvm.ubsantrap(i8 2)
 // CHECK-NEXT:   unreachable
 
 // CHECK: [[CONT5]]:

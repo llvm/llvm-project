@@ -1246,7 +1246,8 @@ define void @qux01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: qux01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+64, ptr
+; LINUX-32-STATIC-NEXT:    leal dst+64, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: qux01:
@@ -1334,7 +1335,8 @@ define void @qxx01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: qxx01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+64, ptr
+; LINUX-32-STATIC-NEXT:    leal xdst+64, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: qxx01:
@@ -4519,7 +4521,8 @@ define void @moo01(i64 %i) nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: moo01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+262144, ptr
+; LINUX-32-STATIC-NEXT:    leal dst+262144, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: moo01:
@@ -7448,7 +7451,7 @@ define i8* @bat00() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bat00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $src+64, %eax
+; LINUX-32-STATIC-NEXT:    leal src+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bat00:
@@ -7519,7 +7522,7 @@ define i8* @bxt00() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bxt00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xsrc+64, %eax
+; LINUX-32-STATIC-NEXT:    leal xsrc+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxt00:
@@ -7590,7 +7593,7 @@ define i8* @bat01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bat01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+64, %eax
+; LINUX-32-STATIC-NEXT:    leal dst+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bat01:
@@ -7661,7 +7664,7 @@ define i8* @bxt01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bxt01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+64, %eax
+; LINUX-32-STATIC-NEXT:    leal xdst+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxt01:
@@ -8226,7 +8229,7 @@ define i8* @bam00() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bam00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $src+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal src+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bam00:
@@ -8297,7 +8300,7 @@ define i8* @bam01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bam01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal dst+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bam01:
@@ -8368,7 +8371,7 @@ define i8* @bxm01() nounwind {
 ;
 ; LINUX-32-STATIC-LABEL: bxm01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal xdst+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxm01:
@@ -10676,26 +10679,26 @@ define void @lcallee() nounwind {
 ; LINUX-64-STATIC-LABEL: lcallee:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: lcallee:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -10827,26 +10830,26 @@ define internal void @dcallee() nounwind {
 ; LINUX-64-STATIC-LABEL: dcallee:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: dcallee:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -10977,7 +10980,7 @@ declare void @y()
 define void ()* @address() nounwind {
 ; LINUX-64-STATIC-LABEL: address:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $callee, %eax
+; LINUX-64-STATIC-NEXT:    movq callee@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: address:
@@ -11169,16 +11172,16 @@ define void @caller() nounwind {
 ; LINUX-64-STATIC-LABEL: caller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq callee
-; LINUX-64-STATIC-NEXT:    callq callee
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: caller:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll callee
-; LINUX-32-STATIC-NEXT:    calll callee
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -11451,14 +11454,14 @@ define void @tailcaller() nounwind {
 ; LINUX-64-STATIC-LABEL: tailcaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq callee
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: tailcaller:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll callee
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;

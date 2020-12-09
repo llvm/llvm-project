@@ -54,6 +54,7 @@ define void @test(%6* %arg, %7* %arg1, %12* %arg2) unnamed_addr personality i32 
 ; CHECK-NEXT:  # %bb.2: # %bb12
 ; CHECK-NEXT:    clrldi r4, r3, 32
 ; CHECK-NEXT:    bl test3
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0

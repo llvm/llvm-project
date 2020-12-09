@@ -3781,7 +3781,7 @@ struct OpenMPConstruct {
       u;
 };
 
-// Parse tree nodes for OpenACC 3.0 directives and clauses
+// Parse tree nodes for OpenACC 3.1 directives and clauses
 
 struct AccObject {
   UNION_CLASS_BOILERPLATE(AccObject);
@@ -3871,6 +3871,12 @@ struct AccSizeExpr {
 
 struct AccSizeExprList {
   WRAPPER_CLASS_BOILERPLATE(AccSizeExprList, std::list<AccSizeExpr>);
+};
+
+struct AccSelfClause {
+  UNION_CLASS_BOILERPLATE(AccSelfClause);
+  std::variant<std::optional<ScalarLogicalExpr>, AccObjectList> u;
+  CharBlock source;
 };
 
 struct AccGangArgument {

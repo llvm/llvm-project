@@ -8,7 +8,7 @@
 
 @ CHECK: error: expected identifier after '.thumb_set'
 @ CHECK: 	.thumb_set
-@ CHECL:                  ^
+@ CHECK:                  ^
 
 	.thumb_set ., 0x0b5e55ed
 

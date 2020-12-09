@@ -190,7 +190,8 @@ protected:
 /// OpRewritePattern is a wrapper around RewritePattern that allows for
 /// matching and rewriting against an instance of a derived operation class as
 /// opposed to a raw Operation.
-template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
+template <typename SourceOp>
+struct OpRewritePattern : public RewritePattern {
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching.
   OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)

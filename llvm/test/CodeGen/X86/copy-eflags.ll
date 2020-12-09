@@ -10,7 +10,7 @@
 @d = common global i8 0, align 1
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
-declare void @external(i32)
+declare dso_local void @external(i32)
 
 ; A test that re-uses flags in interesting ways due to volatile accesses.
 ; Specifically, the first increment's flags are reused for the branch despite
@@ -142,8 +142,8 @@ else:
   ret i32 0
 }
 
-declare void @external_a()
-declare void @external_b()
+declare dso_local void @external_a()
+declare dso_local void @external_b()
 
 ; This lowers to a conditional tail call instead of a conditional branch. This
 ; is tricky because we can only do this from a leaf function, and so we have to

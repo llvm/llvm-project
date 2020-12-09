@@ -8,9 +8,9 @@ define i32 @func_f(i32 %X) {
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    jns .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond_true
-; CHECK-NEXT:    calll bar
+; CHECK-NEXT:    calll bar@PLT
 ; CHECK-NEXT:  .LBB0_2: # %cond_next
-; CHECK-NEXT:    jmp baz # TAILCALL
+; CHECK-NEXT:    jmp baz@PLT # TAILCALL
 entry:
 	%tmp1 = add i32 %X, 1
 	%tmp = icmp slt i32 %tmp1, 0

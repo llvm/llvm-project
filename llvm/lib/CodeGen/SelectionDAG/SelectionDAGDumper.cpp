@@ -394,6 +394,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STACKRESTORE:               return "stackrestore";
   case ISD::TRAP:                       return "trap";
   case ISD::DEBUGTRAP:                  return "debugtrap";
+  case ISD::UBSANTRAP:                  return "ubsantrap";
   case ISD::LIFETIME_START:             return "lifetime.start";
   case ISD::LIFETIME_END:               return "lifetime.end";
   case ISD::PSEUDO_PROBE:

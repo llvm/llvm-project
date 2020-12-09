@@ -197,6 +197,7 @@ static_library("builtins") {
     sources += [
       "comparetf2.c",
       "extenddftf2.c",
+      "extendhftf2.c",
       "extendsftf2.c",
       "fixtfdi.c",
       "fixtfsi.c",
@@ -212,6 +213,7 @@ static_library("builtins") {
       "floatuntitf.c",
       "multc3.c",
       "trunctfdf2.c",
+      "trunctfhf2.c",
       "trunctfsf2.c",
     ]
   }

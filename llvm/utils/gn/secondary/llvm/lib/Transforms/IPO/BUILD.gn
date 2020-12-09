@@ -52,6 +52,7 @@ static_library("IPO") {
     "PassManagerBuilder.cpp",
     "PruneEH.cpp",
     "SCCP.cpp",
+    "SampleContextTracker.cpp",
     "SampleProfile.cpp",
     "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",

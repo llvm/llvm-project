@@ -1289,7 +1289,9 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
       // that control flow can be later changed by other passes.
       auto *DI = cast<DbgDeclareInst>(FirstDbgDecl);
       BasicBlock *CurrentBlock = I->getParent();
-      DIB.insertDbgValueIntrinsic(G, DI->getVariable(), DI->getExpression(),
+      auto *DerefExpr =
+          DIExpression::append(DI->getExpression(), dwarf::DW_OP_deref);
+      DIB.insertDbgValueIntrinsic(G, DI->getVariable(), DerefExpr,
                                   DI->getDebugLoc(),
                                   &*CurrentBlock->getFirstInsertionPt());
       SeenDbgBBs.insert(CurrentBlock);

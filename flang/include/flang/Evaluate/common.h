@@ -236,7 +236,7 @@ public:
   bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
   bool bigEndian() const { return bigEndian_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
-  const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;

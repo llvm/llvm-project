@@ -56,6 +56,7 @@
 #include "ARMBaseRegisterInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
+#include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1310,33 +1311,16 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
 // another low register.
 void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp: " << *MI);
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                                    TII->get(ARM::t2CMPri));
-  MIB.add(MI->getOperand(0));
-  MIB.addImm(0);
-  MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
-
   MachineBasicBlock *DestBB = MI->getOperand(1).getMBB();
   unsigned BrOpc = BBUtils->isBBInRange(MI, DestBB, 254) ?
     ARM::tBcc : ARM::t2Bcc;
 
-  MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
-  MIB.add(MI->getOperand(1));   // branch target
-  MIB.addImm(ARMCC::EQ);        // condition code
-  MIB.addReg(ARM::CPSR);
-  MI->eraseFromParent();
+  RevertWhileLoopStart(MI, TII, BrOpc);
 }
 
 void ARMLowOverheadLoops::RevertDo(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to mov: " << *MI);
-  MachineBasicBlock *MBB = MI->getParent();
-  BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::tMOVr))
-      .add(MI->getOperand(0))
-      .add(MI->getOperand(1))
-      .add(predOps(ARMCC::AL));
-  MI->eraseFromParent();
+  RevertDoLoopStart(MI, TII);
 }
 
 bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
@@ -1354,21 +1338,7 @@ bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
   bool SetFlags =
       RDA->isSafeToDefRegAt(MI, MCRegister::from(ARM::CPSR), Ignore);
 
-  MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                                    TII->get(ARM::t2SUBri));
-  MIB.addDef(ARM::LR);
-  MIB.add(MI->getOperand(1));
-  MIB.add(MI->getOperand(2));
-  MIB.addImm(ARMCC::AL);
-  MIB.addReg(0);
-
-  if (SetFlags) {
-    MIB.addReg(ARM::CPSR);
-    MIB->getOperand(5).setIsDef(true);
-  } else
-    MIB.addReg(0);
-
-  MI->eraseFromParent();
+  llvm::RevertLoopDec(MI, TII, SetFlags);
   return SetFlags;
 }
 
@@ -1376,28 +1346,11 @@ bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
 void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI, bool SkipCmp) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp, br: " << *MI);
 
-  MachineBasicBlock *MBB = MI->getParent();
-  // Create cmp
-  if (!SkipCmp) {
-    MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                                      TII->get(ARM::t2CMPri));
-    MIB.addReg(ARM::LR);
-    MIB.addImm(0);
-    MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::NoRegister);
-  }
-
   MachineBasicBlock *DestBB = MI->getOperand(1).getMBB();
   unsigned BrOpc = BBUtils->isBBInRange(MI, DestBB, 254) ?
     ARM::tBcc : ARM::t2Bcc;
 
-  // Create bne
-  MachineInstrBuilder MIB =
-    BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
-  MIB.add(MI->getOperand(1));   // branch target
-  MIB.addImm(ARMCC::NE);        // condition code
-  MIB.addReg(ARM::CPSR);
-  MI->eraseFromParent();
+  llvm::RevertLoopEnd(MI, TII, BrOpc, SkipCmp);
 }
 
 // Perform dead code elimation on the loop iteration count setup expression.

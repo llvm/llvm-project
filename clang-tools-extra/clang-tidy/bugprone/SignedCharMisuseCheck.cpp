@@ -84,14 +84,14 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
   const auto UnSignedCharCastExpr =
       charCastExpression(false, IntegerType, "unsignedCastExpression");
 
-  // Catch assignments with singed char -> integer conversion.
+  // Catch assignments with signed char -> integer conversion.
   const auto AssignmentOperatorExpr =
       expr(binaryOperator(hasOperatorName("="), hasLHS(hasType(IntegerType)),
                           hasRHS(SignedCharCastExpr)));
 
   Finder->addMatcher(AssignmentOperatorExpr, this);
 
-  // Catch declarations with singed char -> integer conversion.
+  // Catch declarations with signed char -> integer conversion.
   const auto Declaration = varDecl(isDefinition(), hasType(IntegerType),
                                    hasInitializer(SignedCharCastExpr));
 

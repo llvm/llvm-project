@@ -260,6 +260,32 @@ public:
                                          Value *Start, Value *Stop, Value *Step,
                                          bool IsSigned, bool InclusiveStop);
 
+  /// Modifies the canonical loop to be a statically-scheduled workshare loop.
+  ///
+  /// This takes a \p LoopInfo representing a canonical loop, such as the one
+  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to obtain the loop bounds to be used in
+  /// the current thread, updates the relevant instructions in the canonical
+  /// loop and calls to an OpenMP runtime finalization function after the loop.
+  ///
+  /// \param Loc      The source location description, the insertion location
+  ///                 is not used.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  ///                     the loop.
+  /// \param Chunk    The size of loop chunk considered as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  ///
+  /// \returns Updated CanonicalLoopInfo.
+  CanonicalLoopInfo *createStaticWorkshareLoop(const LocationDescription &Loc,
+                                               CanonicalLoopInfo *CLI,
+                                               InsertPointTy AllocaIP,
+                                               bool NeedsBarrier,
+                                               Value *Chunk = nullptr);
+
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
@@ -636,7 +662,9 @@ private:
 ///  |    Cond---\
 ///  |     |     |
 ///  |    Body   |
-///  |     |     |
+///  |    | |    |
+///  |   <...>   |
+///  |    | |    |
 ///   \--Latch   |
 ///              |
 ///             Exit
@@ -644,7 +672,9 @@ private:
 ///            After
 ///
 /// Code in the header, condition block, latch and exit block must not have any
-/// side-effect.
+/// side-effect. The body block is the single entry point into the loop body,
+/// which may contain arbitrary control flow as long as all control paths
+/// eventually branch to the latch block.
 ///
 /// Defined outside OpenMPIRBuilder because one cannot forward-declare nested
 /// classes.
@@ -701,7 +731,7 @@ public:
   /// statements/cancellations).
   BasicBlock *getAfter() const { return After; }
 
-  /// Returns the llvm::Value containing the number of loop iterations. I must
+  /// Returns the llvm::Value containing the number of loop iterations. It must
   /// be valid in the preheader and always interpreted as an unsigned integer of
   /// any bit-width.
   Value *getTripCount() const {

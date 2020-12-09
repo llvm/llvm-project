@@ -727,8 +727,7 @@ private:
   }
 
   template <typename T> void CheckForImpureCall(const T &x) {
-    const auto &intrinsics{context_.foldingContext().intrinsics()};
-    if (auto bad{FindImpureCall(intrinsics, x)}) {
+    if (auto bad{FindImpureCall(context_.foldingContext(), x)}) {
       context_.Say(
           "Impure procedure '%s' may not be referenced in a %s"_err_en_US, *bad,
           LoopKindName());

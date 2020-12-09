@@ -231,7 +231,7 @@ define double @fdiv_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @frem_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X64-LABEL: frem_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp fmodf # TAILCALL
+; X64-NEXT:    jmp fmodf@PLT # TAILCALL
 ;
 ; X86-LABEL: frem_v4f32:
 ; X86:       # %bb.0:
@@ -252,7 +252,7 @@ define double @frem_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    jmp fmod # TAILCALL
+; X64-NEXT:    jmp fmod@PLT # TAILCALL
 ;
 ; X86-LABEL: frem_v4f64:
 ; X86:       # %bb.0:
@@ -443,7 +443,7 @@ define double @fsqrt_v4f64(<4 x double> %x) nounwind {
 define float @fsin_v4f32(<4 x float> %x) nounwind {
 ; X64-LABEL: fsin_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp sinf # TAILCALL
+; X64-NEXT:    jmp sinf@PLT # TAILCALL
 ;
 ; X86-LABEL: fsin_v4f32:
 ; X86:       # %bb.0:
@@ -462,7 +462,7 @@ define double @fsin_v4f64(<4 x double> %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    jmp sin # TAILCALL
+; X64-NEXT:    jmp sin@PLT # TAILCALL
 ;
 ; X86-LABEL: fsin_v4f64:
 ; X86:       # %bb.0:

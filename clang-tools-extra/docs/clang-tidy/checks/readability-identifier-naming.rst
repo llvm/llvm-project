@@ -138,9 +138,9 @@ After:
 
 .. option:: AggressiveDependentMemberLookup
 
-    When set to `1` the check will look in dependent base classes for dependent
+    When set to `true` the check will look in dependent base classes for dependent
     member references that need changing. This can lead to errors with template
-    specializations so the default value is `0`.
+    specializations so the default value is `false`.
 
 For example using values of:
 
@@ -162,7 +162,7 @@ Before:
       }
     };
 
-After if AggressiveDependentMemberLookup is ``0``:
+After if AggressiveDependentMemberLookup is `false`:
 
 .. code-block:: c++
 
@@ -178,7 +178,7 @@ After if AggressiveDependentMemberLookup is ``0``:
       }
     };
 
-After if AggressiveDependentMemberLookup is ``1``:
+After if AggressiveDependentMemberLookup is `true`:
 
 .. code-block:: c++
 
@@ -999,9 +999,9 @@ After:
 
 .. option:: IgnoreMainLikeFunctions
 
-    When set to `1` functions that have a similar signature to ``main`` or 
+    When set to `true` functions that have a similar signature to ``main`` or 
     ``wmain`` won't enforce checks on the names of their parameters.
-    Default value is `0`.
+    Default value is `false`.
 
 .. option:: InlineNamespaceCase
 

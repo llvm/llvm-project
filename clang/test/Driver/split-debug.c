@@ -1,127 +1,92 @@
-// Check that we split debug output properly
-//
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
-//
-// CHECK-ACTIONS: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
+/// Test -gsplit-dwarf and -gsplit-dwarf={split,single}.
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+/// Interaction with -g (-g2).
+// RUN: %clang -### -c -target x86_64 -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
+// RUN: %clang -### -c -target x86_64 -g2 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
+/// -gsplit-dwarf=split is equivalent to -gsplit-dwarf.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
 
-// RUN: %clang -target wasm32-unknown-unknown -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
-// RUN: %clang -target wasm32-unknown-unknown -gsplit-dwarf=split -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+// INLINE-NOT: "-fno-split-dwarf-inlining"
+// NOINLINE:   "-fno-split-dwarf-inlining"
+// SPLIT:      "-debug-info-kind=limited"
+// SPLIT-SAME: "-ggnu-pubnames"
+// SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=single -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ACTIONS-SINGLE-SPLIT < %t %s
-//
-// CHECK-ACTIONS-SINGLE-SPLIT: "-split-dwarf-file" "split-debug.o"
-// CHECK-ACTIONS-SINGLE-SPLIT-NOT: "-split-dwarf-output"
+// RUN: %clang -### -c -target wasm32 -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
+// RUN: %clang -### -c -target amdgcn-amd-amdhsa -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=single -c -### -o %tfoo.o %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SINGLE-SPLIT-FILENAME < %t %s
-//
-// CHECK-SINGLE-SPLIT-FILENAME: "-split-dwarf-file" "{{.*}}foo.o"
-// CHECK-SINGLE-SPLIT-FILENAME-NOT: "-split-dwarf-output"
+/// -gsplit-dwarf is a no-op on a non-ELF platform.
+// RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=DARWIN
+// DARWIN:     "-debug-info-kind=standalone"
+// DARWIN-NOT: "-split-dwarf
 
-// RUN: %clang -target x86_64-macosx -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-NO-ACTIONS < %t %s
-//
-// CHECK-NO-ACTIONS-NOT: -split-dwarf
+/// -gsplit-dwarf is a no-op if no -g is specified.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=G0
 
+/// -gno-split-dwarf disables debug fission.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gno-split-dwarf -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -o Bad.x -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-BAD < %t %s
-//
-// CHECK-BAD-NOT: "Bad.dwo"
+// NOSPLIT:     "-debug-info-kind=limited"
+// NOSPLIT-NOT: "-ggnu-pubnames"
+// NOSPLIT-NOT: "-split-dwarf
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
-//
-// RUN: %clang -target x86_64-pc-freebsd12 -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
-//
-// RUN: %clang -target amdgcn-amd-amdhsa -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-OPTION < %t %s
-//
-// CHECK-OPTION: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
+/// Test -gsplit-dwarf=single.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g %s 2>&1 | FileCheck %s --check-prefix=SINGLE
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-ASM < %t %s
-//
-// CHECK-ASM-NOT: objcopy
+// SINGLE: "-debug-info-kind=limited"
+// SINGLE: "-split-dwarf-file" "split-debug.o"
+// SINGLE-NOT: "-split-dwarf-output"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -no-integrated-as -gsplit-dwarf -c -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-IAS < %t %s
-//
-// CHECK-IAS: objcopy
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -o %tfoo.o %s 2>&1 | FileCheck %s --check-prefix=SINGLE_WITH_FILENAME
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -gmlt -fno-split-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-GMLT-WITH-SPLIT < %t %s
-//
-// CHECK-GMLT-WITH-SPLIT: "-debug-info-kind=line-tables-only"
-// CHECK-GMLT-WITH-SPLIT: "-split-dwarf-file"
-// CHECK-GMLT-WITH-SPLIT: "-split-dwarf-output"
+// SINGLE_WITH_FILENAME: "-split-dwarf-file" "{{.*}}foo.o"
+// SINGLE_WITH_FILENAME-NOT: "-split-dwarf-output"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -g -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-NOINLINE-WITHOUT-SPLIT < %t %s
-//
-// RUN: %clang -target x86_64-unknown-linux-gnu -g -fno-split-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-NOINLINE-WITHOUT-SPLIT < %t %s
-//
-// CHECK-NOINLINE-WITHOUT-SPLIT: "-fno-split-dwarf-inlining"
-// CHECK-NOINLINE-WITHOUT-SPLIT: "-debug-info-kind=limited"
+/// Without -c, clang performs linking as well. The output is unchanged.
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o ignore.d 2>&1 | FileCheck %s --check-prefix=SPLIT
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gmlt -gsplit-dwarf -fno-split-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SPLIT-WITH-GMLT < %t %s
-//
-// CHECK-SPLIT-WITH-GMLT: "-debug-info-kind=limited"
-// CHECK-SPLIT-WITH-GMLT: "-split-dwarf-output"
+/// -fsplit-dwarf-inlining
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -fsplit-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefixes=INLINE,SPLIT
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -fno-split-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SPLIT-WITH-NOINL < %t %s
-//
-// CHECK-SPLIT-WITH-NOINL: "-debug-info-kind=limited"
-// CHECK-SPLIT-WITH-NOINL: "-split-dwarf-output"
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -gno-pubnames %s 2>&1 | FileCheck %s --check-prefixes=NOPUBNAMES
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -gno-gnu-pubnames %s 2>&1 | FileCheck %s --check-prefixes=NOPUBNAMES
+// NOPUBNAMES:      "-debug-info-kind=limited"
+// NOPUBNAMES-NOT:  "-ggnu-pubnames"
+// NOPUBNAMES-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -gmlt -fsplit-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-GMLT-OVER-SPLIT < %t %s
-//
-// CHECK-GMLT-OVER-SPLIT: "-debug-info-kind=line-tables-only"
-// CHECK-GMLT-OVER-SPLIT-NOT: "-split-dwarf-file"
-// CHECK-GMLT-OVER-SPLIT-NOT: "-split-dwarf-output"
+/// Invoke objcopy if not using the integrated assembler.
+// RUN: %clang -### -c -target x86_64-unknown-linux-gnu -fno-integrated-as -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=OBJCOPY
+// OBJCOPY:      objcopy" "--extract-dwo"
+// OBJCOPY-NEXT: objcopy" "--strip-dwo"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gmlt -gsplit-dwarf -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-GMLT < %t %s
-//
-// CHECK-SPLIT-OVER-GMLT: "-debug-info-kind=limited"
-// CHECK-SPLIT-OVER-GMLT: "-split-dwarf-file"
-// CHECK-SPLIT-OVER-GMLT: "-split-dwarf-output"
+/// ... but not for assembly output.
+// RUN: %clang -### -S -target x86_64-unknown-linux-gnu -fno-integrated-as -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=NOOBJCOPY
+// NOOBJCOPY-NOT: objcopy"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -fno-split-dwarf-inlining -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
-//
-// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
-// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
-// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-output"
+/// Interaction with -g0.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g0 -### %s 2>&1 | FileCheck %s --check-prefix=G0
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g0 %s 2>&1 | FileCheck %s --check-prefix=G0
+// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=G0
+// RUN: %clang -### -c -target x86_64 -g0 -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=G0
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g0 -fsplit-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G0
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -g0 -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
-//
-// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
-// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
-// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-output"
+// G0-NOT: "-debug-info-kind=
+// G0-NOT: "-split-dwarf-
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-G0 < %t %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf=split -S -### %s 2> %t
-// RUN: FileCheck -check-prefix=CHECK-SPLIT-OVER-G0 < %t %s
-//
-// CHECK-SPLIT-OVER-G0: "-debug-info-kind=limited"
-// CHECK-SPLIT-OVER-G0: "-split-dwarf-file"
-// CHECK-SPLIT-OVER-G0: "-split-dwarf-output"
+/// Interaction with -g1 (-gmlt).
+// RUN: %clang -### -S -target x86_64 -gsplit-dwarf -g1 %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
+// RUN: %clang -### -S -target x86_64 -gsplit-dwarf -g1 -fno-split-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
+// RUN: %clang -### -S -target x86_64 -gmlt -gsplit-dwarf -fno-split-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G1_WITH_SPLIT
+
+// G1_WITH_SPLIT: "-debug-info-kind=line-tables-only"
+// G1_WITH_SPLIT: "-split-dwarf-file"
+// G1_WITH_SPLIT: "-split-dwarf-output"
+
+// RUN: %clang -### -S -target x86_64 -gsplit-dwarf -g1 -fsplit-dwarf-inlining %s 2>&1 | FileCheck %s --check-prefix=G1_NOSPLIT
+
+// G1_NOSPLIT: "-debug-info-kind=line-tables-only"
+// G1_NOSPLIT-NOT: "-split-dwarf-file"
+// G1_NOSPLIT-NOT: "-split-dwarf-output"

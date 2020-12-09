@@ -52,9 +52,8 @@ static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
 
 static void validateLength(MemoryBufferRef mb, const section_64 &sec,
                            const relocation_info &rel,
-                           const std::vector<uint8_t> &validLengths) {
-  if (std::find(validLengths.begin(), validLengths.end(), rel.r_length) !=
-      validLengths.end())
+                           ArrayRef<uint8_t> validLengths) {
+  if (find(validLengths, rel.r_length) != validLengths.end())
     return;
 
   std::string msg = getErrorLocation(mb, sec, rel) + ": relocations of type " +

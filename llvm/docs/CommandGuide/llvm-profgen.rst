@@ -36,6 +36,12 @@ OPTIONS
 -------
 :program:`llvm-profgen` supports the following options:
 
+.. option:: --format=[text|binary|extbinary|compbinary|gcc]
+
+  Specify the format of the generated profile. Supported <format>  are `text`,
+  `binary`, `extbinary`, `compbinary`, `gcc`, see `llvm-profdata` for more
+  descriptions of the format.
+
 .. option:: --show-mmap-events
 
   Print mmap events.

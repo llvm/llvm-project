@@ -16,6 +16,8 @@
 
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -88,6 +90,12 @@ public:
     return !(LHS == RHS);
   }
 
+  /// Hash code is based on the FileEntry, not the specific named reference,
+  /// just like operator==.
+  friend llvm::hash_code hash_value(FileEntryRef Ref) {
+    return llvm::hash_value(&Ref.getFileEntry());
+  }
+
   struct MapValue;
 
   /// Type used in the StringMap.
@@ -154,6 +162,20 @@ private:
   FileEntryRef(optional_none_tag) : ME(nullptr) {}
   bool hasOptionalValue() const { return ME; }
 
+  friend struct llvm::DenseMapInfo<FileEntryRef>;
+  struct dense_map_empty_tag {};
+  struct dense_map_tombstone_tag {};
+
+  // Private constructors for use by DenseMapInfo.
+  FileEntryRef(dense_map_empty_tag)
+      : ME(llvm::DenseMapInfo<const MapEntry *>::getEmptyKey()) {}
+  FileEntryRef(dense_map_tombstone_tag)
+      : ME(llvm::DenseMapInfo<const MapEntry *>::getTombstoneKey()) {}
+  bool isSpecialDenseMapKey() const {
+    return isSameRef(FileEntryRef(dense_map_empty_tag())) ||
+           isSameRef(FileEntryRef(dense_map_tombstone_tag()));
+  }
+
   const MapEntry *ME;
 };
 
@@ -197,6 +219,35 @@ static_assert(std::is_trivially_copyable<Optional<clang::FileEntryRef>>::value,
               "Optional<FileEntryRef> should be trivially copyable");
 
 } // end namespace optional_detail
+
+/// Specialisation of DenseMapInfo for FileEntryRef.
+template <> struct DenseMapInfo<clang::FileEntryRef> {
+  static inline clang::FileEntryRef getEmptyKey() {
+    return clang::FileEntryRef(clang::FileEntryRef::dense_map_empty_tag());
+  }
+
+  static inline clang::FileEntryRef getTombstoneKey() {
+    return clang::FileEntryRef(clang::FileEntryRef::dense_map_tombstone_tag());
+  }
+
+  static unsigned getHashValue(clang::FileEntryRef Val) {
+    return hash_value(Val);
+  }
+
+  static bool isEqual(clang::FileEntryRef LHS, clang::FileEntryRef RHS) {
+    // Catch the easy cases: both empty, both tombstone, or the same ref.
+    if (LHS.isSameRef(RHS))
+      return true;
+
+    // Confirm LHS and RHS are valid.
+    if (LHS.isSpecialDenseMapKey() || RHS.isSpecialDenseMapKey())
+      return false;
+
+    // It's safe to use operator==.
+    return LHS == RHS;
+  }
+};
+
 } // end namespace llvm
 
 namespace clang {

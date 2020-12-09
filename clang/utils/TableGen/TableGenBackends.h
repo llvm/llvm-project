@@ -93,9 +93,6 @@ void EmitFP16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitBF16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeon2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonSema2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitNeonTest2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitSveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
