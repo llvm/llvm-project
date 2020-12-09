@@ -841,6 +841,10 @@ public:
 
   bool ShouldCapture() { return m_local_boundary; }
 
+  /// Mark the current thread as a private thread and pretend that everything
+  /// on this thread is behind happening behind the API boundary.
+  static void PrivateThread() { g_global_boundary = true; }
+
 private:
   template <typename T> friend struct replay;
   void UpdateBoundary() {
@@ -868,7 +872,7 @@ private:
   bool m_result_recorded;
 
   /// Whether we're currently across the API boundary.
-  static bool g_global_boundary;
+  static thread_local bool g_global_boundary;
 };
 
 /// To be used as the "Runtime ID" of a constructor. It also invokes the
