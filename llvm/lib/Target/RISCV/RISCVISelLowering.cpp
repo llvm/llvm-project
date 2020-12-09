@@ -1953,7 +1953,7 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   // For simplicity we reuse the vtype representation here.
   MIB.addImm(RISCVVType::encodeVTYPE(Multiplier, ElementWidth,
                                      /*TailAgnostic*/ false,
-                                     /*MaskedOffAgnostic*/ false));
+                                     /*MaskAgnostic*/ false));
 
   // Remove (now) redundant operands from pseudo
   MI.getOperand(SEWIndex).setImm(-1);
