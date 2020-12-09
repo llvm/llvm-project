@@ -17,11 +17,21 @@
 // RUN: %clang -### -c -target amdgcn-amd-amdhsa -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=SPLIT
 
 /// -gsplit-dwarf is a no-op on a non-ELF platform.
-// RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
-// NOSPLIT-NOT: "-split-dwarf
+// RUN: %clang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=DARWIN
+// DARWIN:     "-debug-info-kind=standalone"
+// DARWIN-NOT: "-split-dwarf
 
 /// -gsplit-dwarf is a no-op if no -g is specified.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=G0
+
+/// -gno-split-dwarf disables debug fission.
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
+// RUN: %clang -### -c -target x86_64 -gno-split-dwarf -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
+
+// NOSPLIT:     "-debug-info-kind=limited"
+// NOSPLIT-NOT: "-ggnu-pubnames"
+// NOSPLIT-NOT: "-split-dwarf
 
 /// Test -gsplit-dwarf=single.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g %s 2>&1 | FileCheck %s --check-prefix=SINGLE
