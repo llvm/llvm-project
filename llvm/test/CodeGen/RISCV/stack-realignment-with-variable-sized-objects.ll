@@ -11,9 +11,9 @@ define void @caller(i32 %n) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -128
 ; RV32I-NEXT:    .cfi_def_cfa_offset 128
-; RV32I-NEXT:    sw ra, 124(sp)
-; RV32I-NEXT:    sw s0, 120(sp)
-; RV32I-NEXT:    sw s1, 116(sp)
+; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    .cfi_offset s1, -12
@@ -26,11 +26,11 @@ define void @caller(i32 %n) {
 ; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    addi a1, s1, 64
-; RV32I-NEXT:    call callee
+; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -128
-; RV32I-NEXT:    lw s1, 116(sp)
-; RV32I-NEXT:    lw s0, 120(sp)
-; RV32I-NEXT:    lw ra, 124(sp)
+; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 128
 ; RV32I-NEXT:    ret
 ;
@@ -38,9 +38,9 @@ define void @caller(i32 %n) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -128
 ; RV64I-NEXT:    .cfi_def_cfa_offset 128
-; RV64I-NEXT:    sd ra, 120(sp)
-; RV64I-NEXT:    sd s0, 112(sp)
-; RV64I-NEXT:    sd s1, 104(sp)
+; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
@@ -58,11 +58,11 @@ define void @caller(i32 %n) {
 ; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    addi a1, s1, 64
-; RV64I-NEXT:    call callee
+; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -128
-; RV64I-NEXT:    ld s1, 104(sp)
-; RV64I-NEXT:    ld s0, 112(sp)
-; RV64I-NEXT:    ld ra, 120(sp)
+; RV64I-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    ret
   %1 = alloca i8, i32 %n

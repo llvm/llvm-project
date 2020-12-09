@@ -118,30 +118,30 @@ define half @flh_stack(half %a) nounwind {
 ; RV32IZFH-LABEL: flh_stack:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    addi sp, sp, -16
-; RV32IZFH-NEXT:    sw ra, 12(sp)
-; RV32IZFH-NEXT:    fsw fs0, 8(sp)
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
 ; RV32IZFH-NEXT:    fmv.h fs0, fa0
 ; RV32IZFH-NEXT:    addi a0, sp, 4
-; RV32IZFH-NEXT:    call notdead
+; RV32IZFH-NEXT:    call notdead@plt
 ; RV32IZFH-NEXT:    flh ft0, 4(sp)
 ; RV32IZFH-NEXT:    fadd.h fa0, ft0, fs0
-; RV32IZFH-NEXT:    flw fs0, 8(sp)
-; RV32IZFH-NEXT:    lw ra, 12(sp)
+; RV32IZFH-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    addi sp, sp, 16
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: flh_stack:
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp)
-; RV64IZFH-NEXT:    fsw fs0, 4(sp)
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
 ; RV64IZFH-NEXT:    fmv.h fs0, fa0
 ; RV64IZFH-NEXT:    mv a0, sp
-; RV64IZFH-NEXT:    call notdead
+; RV64IZFH-NEXT:    call notdead@plt
 ; RV64IZFH-NEXT:    flh ft0, 0(sp)
 ; RV64IZFH-NEXT:    fadd.h fa0, ft0, fs0
-; RV64IZFH-NEXT:    flw fs0, 4(sp)
-; RV64IZFH-NEXT:    ld ra, 8(sp)
+; RV64IZFH-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
   %1 = alloca half, align 4
@@ -156,24 +156,24 @@ define void @fsh_stack(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fsh_stack:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    addi sp, sp, -16
-; RV32IZFH-NEXT:    sw ra, 12(sp)
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFH-NEXT:    fadd.h ft0, fa0, fa1
 ; RV32IZFH-NEXT:    fsh ft0, 8(sp)
 ; RV32IZFH-NEXT:    addi a0, sp, 8
-; RV32IZFH-NEXT:    call notdead
-; RV32IZFH-NEXT:    lw ra, 12(sp)
+; RV32IZFH-NEXT:    call notdead@plt
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    addi sp, sp, 16
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fsh_stack:
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp)
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFH-NEXT:    fadd.h ft0, fa0, fa1
 ; RV64IZFH-NEXT:    fsh ft0, 4(sp)
 ; RV64IZFH-NEXT:    addi a0, sp, 4
-; RV64IZFH-NEXT:    call notdead
-; RV64IZFH-NEXT:    ld ra, 8(sp)
+; RV64IZFH-NEXT:    call notdead@plt
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
   %1 = fadd half %a, %b ; force store from FPR16

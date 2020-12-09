@@ -9,25 +9,25 @@ define i64 @complex_float_add(i64 %a.coerce, i64 %b.coerce) nounwind {
 ; CHECK-LABEL: complex_float_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp)
-; CHECK-NEXT:    sd s0, 16(sp)
-; CHECK-NEXT:    sd s1, 8(sp)
-; CHECK-NEXT:    sd s2, 0(sp)
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    srli s2, a0, 32
 ; CHECK-NEXT:    srli s1, a1, 32
-; CHECK-NEXT:    call __addsf3
+; CHECK-NEXT:    call __addsf3@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    call __addsf3
+; CHECK-NEXT:    call __addsf3@plt
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    slli a1, s0, 32
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ld s2, 0(sp)
-; CHECK-NEXT:    ld s1, 8(sp)
-; CHECK-NEXT:    ld s0, 16(sp)
-; CHECK-NEXT:    ld ra, 24(sp)
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:

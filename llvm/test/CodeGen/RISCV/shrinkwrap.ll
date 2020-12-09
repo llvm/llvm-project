@@ -11,15 +11,15 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; RV32I-NOSW-LABEL: eliminate_restore:
 ; RV32I-NOSW:       # %bb.0:
 ; RV32I-NOSW-NEXT:    addi sp, sp, -16
-; RV32I-NOSW-NEXT:    sw ra, 12(sp)
+; RV32I-NOSW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NOSW-NEXT:    addi a1, zero, 32
 ; RV32I-NOSW-NEXT:    bgeu a1, a0, .LBB0_2
 ; RV32I-NOSW-NEXT:  # %bb.1: # %if.end
-; RV32I-NOSW-NEXT:    lw ra, 12(sp)
+; RV32I-NOSW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NOSW-NEXT:    addi sp, sp, 16
 ; RV32I-NOSW-NEXT:    ret
 ; RV32I-NOSW-NEXT:  .LBB0_2: # %if.then
-; RV32I-NOSW-NEXT:    call abort
+; RV32I-NOSW-NEXT:    call abort@plt
 ;
 ; RV32I-SW-LABEL: eliminate_restore:
 ; RV32I-SW:       # %bb.0:
@@ -29,8 +29,8 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; RV32I-SW-NEXT:    ret
 ; RV32I-SW-NEXT:  .LBB0_2: # %if.then
 ; RV32I-SW-NEXT:    addi sp, sp, -16
-; RV32I-SW-NEXT:    sw ra, 12(sp)
-; RV32I-SW-NEXT:    call abort
+; RV32I-SW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-SW-NEXT:    call abort@plt
 ;
 ; RV32I-SW-SR-LABEL: eliminate_restore:
 ; RV32I-SW-SR:       # %bb.0:
@@ -40,7 +40,7 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; RV32I-SW-SR-NEXT:    ret
 ; RV32I-SW-SR-NEXT:  .LBB0_2: # %if.then
 ; RV32I-SW-SR-NEXT:    call t0, __riscv_save_0
-; RV32I-SW-SR-NEXT:    call abort
+; RV32I-SW-SR-NEXT:    call abort@plt
   %cmp = icmp ule i32 %n, 32
   br i1 %cmp, label %if.then, label %if.end
 
@@ -58,8 +58,8 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; RV32I-NOSW-LABEL: conditional_alloca:
 ; RV32I-NOSW:       # %bb.0:
 ; RV32I-NOSW-NEXT:    addi sp, sp, -16
-; RV32I-NOSW-NEXT:    sw ra, 12(sp)
-; RV32I-NOSW-NEXT:    sw s0, 8(sp)
+; RV32I-NOSW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NOSW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NOSW-NEXT:    addi s0, sp, 16
 ; RV32I-NOSW-NEXT:    addi a1, zero, 32
 ; RV32I-NOSW-NEXT:    bltu a1, a0, .LBB1_2
@@ -68,11 +68,11 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; RV32I-NOSW-NEXT:    andi a0, a0, -16
 ; RV32I-NOSW-NEXT:    sub a0, sp, a0
 ; RV32I-NOSW-NEXT:    mv sp, a0
-; RV32I-NOSW-NEXT:    call notdead
+; RV32I-NOSW-NEXT:    call notdead@plt
 ; RV32I-NOSW-NEXT:  .LBB1_2: # %if.end
 ; RV32I-NOSW-NEXT:    addi sp, s0, -16
-; RV32I-NOSW-NEXT:    lw s0, 8(sp)
-; RV32I-NOSW-NEXT:    lw ra, 12(sp)
+; RV32I-NOSW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NOSW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NOSW-NEXT:    addi sp, sp, 16
 ; RV32I-NOSW-NEXT:    ret
 ;
@@ -82,17 +82,17 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; RV32I-SW-NEXT:    bltu a1, a0, .LBB1_2
 ; RV32I-SW-NEXT:  # %bb.1: # %if.then
 ; RV32I-SW-NEXT:    addi sp, sp, -16
-; RV32I-SW-NEXT:    sw ra, 12(sp)
-; RV32I-SW-NEXT:    sw s0, 8(sp)
+; RV32I-SW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-SW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-SW-NEXT:    addi s0, sp, 16
 ; RV32I-SW-NEXT:    addi a0, a0, 15
 ; RV32I-SW-NEXT:    andi a0, a0, -16
 ; RV32I-SW-NEXT:    sub a0, sp, a0
 ; RV32I-SW-NEXT:    mv sp, a0
-; RV32I-SW-NEXT:    call notdead
+; RV32I-SW-NEXT:    call notdead@plt
 ; RV32I-SW-NEXT:    addi sp, s0, -16
-; RV32I-SW-NEXT:    lw s0, 8(sp)
-; RV32I-SW-NEXT:    lw ra, 12(sp)
+; RV32I-SW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-SW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-SW-NEXT:    addi sp, sp, 16
 ; RV32I-SW-NEXT:  .LBB1_2: # %if.end
 ; RV32I-SW-NEXT:    ret
@@ -108,7 +108,7 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; RV32I-SW-SR-NEXT:    andi a0, a0, -16
 ; RV32I-SW-SR-NEXT:    sub a0, sp, a0
 ; RV32I-SW-SR-NEXT:    mv sp, a0
-; RV32I-SW-SR-NEXT:    call notdead
+; RV32I-SW-SR-NEXT:    call notdead@plt
 ; RV32I-SW-SR-NEXT:    addi sp, s0, -16
 ; RV32I-SW-SR-NEXT:    tail __riscv_restore_1
 ; RV32I-SW-SR-NEXT:  .LBB1_2: # %if.end
