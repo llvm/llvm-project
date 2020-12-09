@@ -6932,6 +6932,27 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              SetCC));
     return;
   }
+  case Intrinsic::experimental_vector_insert: {
+    auto DL = getCurSDLoc();
+
+    SDValue Vec = getValue(I.getOperand(0));
+    SDValue SubVec = getValue(I.getOperand(1));
+    SDValue Index = getValue(I.getOperand(2));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ResultVT, Vec, SubVec,
+                             Index));
+    return;
+  }
+  case Intrinsic::experimental_vector_extract: {
+    auto DL = getCurSDLoc();
+
+    SDValue Vec = getValue(I.getOperand(0));
+    SDValue Index = getValue(I.getOperand(1));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+    setValue(&I, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, Index));
+    return;
+  }
   }
 }
 
