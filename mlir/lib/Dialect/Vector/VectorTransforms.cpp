@@ -2417,7 +2417,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   // Top of the function `alloc` for transient storage.
   Value alloc;
   {
-    FuncOp funcOp = xferOp.getParentOfType<FuncOp>();
+    FuncOp funcOp = xferOp->getParentOfType<FuncOp>();
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointToStart(&funcOp.getRegion().front());
     auto shape = xferOp.getVectorType().getShape();

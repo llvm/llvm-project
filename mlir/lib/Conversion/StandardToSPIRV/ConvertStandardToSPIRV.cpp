@@ -280,7 +280,7 @@ public:
 
     // Insert spv.globalVariable for this allocation.
     Operation *parent =
-        SymbolTable::getNearestSymbolTable(operation.getParentOp());
+        SymbolTable::getNearestSymbolTable(operation->getParentOp());
     if (!parent)
       return failure();
     Location loc = operation.getLoc();
@@ -868,9 +868,9 @@ IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                                    srcBits, dstBits, rewriter);
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(
       loc, dstType, adjustedPtr,
-      loadOp.getAttrOfType<IntegerAttr>(
+      loadOp->getAttrOfType<IntegerAttr>(
           spirv::attributeName<spirv::MemoryAccess>()),
-      loadOp.getAttrOfType<IntegerAttr>("alignment"));
+      loadOp->getAttrOfType<IntegerAttr>("alignment"));
 
   // Shift the bits to the rightmost.
   // ____XXXX________ -> ____________XXXX

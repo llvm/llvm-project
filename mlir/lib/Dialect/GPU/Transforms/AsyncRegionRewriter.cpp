@@ -140,7 +140,7 @@ struct GpuAsyncRegionPass::DeferWaitCallback {
   ~DeferWaitCallback() {
     for (size_t i = 0; i < worklist.size(); ++i) {
       auto waitOp = worklist[i];
-      auto executeOp = waitOp.getParentOfType<async::ExecuteOp>();
+      auto executeOp = waitOp->getParentOfType<async::ExecuteOp>();
       auto numDependencies = waitOp.asyncDependencies().size();
 
       // Erase `gpu.wait` and return async dependencies from region instead.

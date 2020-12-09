@@ -647,7 +647,7 @@ public:
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info
-    ModuleOp module = op.getParentOfType<ModuleOp>();
+    ModuleOp module = op->getParentOfType<ModuleOp>();
     std::string moduleName;
     if (module.getName().hasValue())
       moduleName = "_" + module.getName().getValue().str();
@@ -1530,8 +1530,9 @@ void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
-      IntegerAttr descriptorSet = op.getAttrOfType<IntegerAttr>(kDescriptorSet);
-      IntegerAttr binding = op.getAttrOfType<IntegerAttr>(kBinding);
+      IntegerAttr descriptorSet =
+          op->getAttrOfType<IntegerAttr>(kDescriptorSet);
+      IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {

@@ -766,7 +766,7 @@ def LLVM_LLVMFuncOp
     Block *addEntryBlock();
 
     LLVMType getType() {
-      return getAttrOfType<TypeAttr>(getTypeAttrName())
+      return (*this)->getAttrOfType<TypeAttr>(getTypeAttrName())
           .getValue().cast<LLVMType>();
     }
     bool isVarArg() {

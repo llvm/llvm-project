@@ -33,7 +33,7 @@ static void checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
   assert(!band.empty() && "no loops in input band");
   AffineForOp topLoop = band[0];
 
-  if (FuncOp funcOp = dyn_cast<FuncOp>(topLoop.getParentOp()))
+  if (FuncOp funcOp = dyn_cast<FuncOp>(topLoop->getParentOp()))
     assert(funcOp.getNumArguments() >= band.size() && "Too few tile sizes");
 }
 
@@ -44,7 +44,7 @@ static void checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
 static void getTilingParameters(ArrayRef<AffineForOp> band,
                                 SmallVectorImpl<Value> &tilingParameters) {
   AffineForOp topLoop = band[0];
-  Region *funcOpRegion = topLoop.getParentRegion();
+  Region *funcOpRegion = topLoop->getParentRegion();
   unsigned nestDepth = band.size();
 
   for (BlockArgument blockArgument :
