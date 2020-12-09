@@ -4058,9 +4058,9 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   if (CalleeDecl->getBuiltinID() != 0 || CalleeDecl->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
-  if (const auto *Id = CalleeDecl->getIdentifier())
-    if (Id->isReservedName())
-      return;
+  if (CalleeDecl->isReserved(CGM.getLangOpts()) !=
+      ReservedIdentifierStatus::NotReserved)
+    return;
 
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete

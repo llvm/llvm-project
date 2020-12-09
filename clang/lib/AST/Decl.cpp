@@ -1078,6 +1078,29 @@ bool NamedDecl::isLinkageValid() const {
   return L == getCachedLinkage();
 }
 
+ReservedIdentifierStatus
+NamedDecl::isReserved(const LangOptions &LangOpts) const {
+  const IdentifierInfo *II = getIdentifier();
+  if (!II)
+    if (const auto *FD = dyn_cast<FunctionDecl>(this))
+      II = FD->getLiteralIdentifier();
+
+  if (!II)
+    return ReservedIdentifierStatus::NotReserved;
+
+  ReservedIdentifierStatus Status = II->isReserved(LangOpts);
+  if (Status == ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope) {
+    // Check if we're at TU level or not.
+    if (isa<ParmVarDecl>(this) || isTemplateParameter())
+      return ReservedIdentifierStatus::NotReserved;
+    const DeclContext *DC = getDeclContext()->getRedeclContext();
+    if (!DC->isTranslationUnit())
+      return ReservedIdentifierStatus::NotReserved;
+  }
+
+  return Status;
+}
+
 ObjCStringFormatFamily NamedDecl::getObjCFStringFormattingFamily() const {
   StringRef name = getName();
   if (name.empty()) return SFF_None;
