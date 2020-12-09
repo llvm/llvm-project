@@ -9499,14 +9499,16 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
                                PassThru.getValueType(), DL, Ops,
-                               MGT->getMemOperand(), MGT->getIndexType());
+                               MGT->getMemOperand(), MGT->getIndexType(),
+                               MGT->getExtensionType());
   }
 
   if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
                                PassThru.getValueType(), DL, Ops,
-                               MGT->getMemOperand(), MGT->getIndexType());
+                               MGT->getMemOperand(), MGT->getIndexType(),
+                               MGT->getExtensionType());
   }
 
   return SDValue();
