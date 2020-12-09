@@ -3022,8 +3022,8 @@ CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
          "Invalid cast");
   assert(Ty->isVectorTy() == S->getType()->isVectorTy() && "Invalid cast");
   assert((!Ty->isVectorTy() ||
-          cast<FixedVectorType>(Ty)->getNumElements() ==
-              cast<FixedVectorType>(S->getType())->getNumElements()) &&
+          cast<VectorType>(Ty)->getElementCount() ==
+              cast<VectorType>(S->getType())->getElementCount()) &&
          "Invalid cast");
 
   if (Ty->isIntOrIntVectorTy())
@@ -3041,8 +3041,8 @@ CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
          "Invalid cast");
   assert(Ty->isVectorTy() == S->getType()->isVectorTy() && "Invalid cast");
   assert((!Ty->isVectorTy() ||
-          cast<FixedVectorType>(Ty)->getNumElements() ==
-              cast<FixedVectorType>(S->getType())->getNumElements()) &&
+          cast<VectorType>(Ty)->getElementCount() ==
+              cast<VectorType>(S->getType())->getElementCount()) &&
          "Invalid cast");
 
   if (Ty->isIntOrIntVectorTy())
