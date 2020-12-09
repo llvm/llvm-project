@@ -237,6 +237,8 @@ getMPFRMatcher(InputType input, OutputType outputUnused, double t) {
   return internal::MPFRMatcher<op, InputType, OutputType>(input, t);
 }
 
+template <typename T> bool RoundToLong(T x, long &result);
+
 } // namespace mpfr
 } // namespace testing
 } // namespace __llvm_libc

@@ -236,6 +236,78 @@ add_entrypoint_object(
     -O2
 )
 
+add_entrypoint_object(
+  lround
+  SRCS
+    lround.cpp
+  HDRS
+    lround.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  lroundf
+  SRCS
+    lroundf.cpp
+  HDRS
+    lroundf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  lroundl
+  SRCS
+    lroundl.cpp
+  HDRS
+    lroundl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llround
+  SRCS
+    llround.cpp
+  HDRS
+    llround.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llroundf
+  SRCS
+    llroundf.cpp
+  HDRS
+    llroundf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llroundl
+  SRCS
+    llroundl.cpp
+  HDRS
+    llroundl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
 add_object_library(
   exp_utils
   HDRS
