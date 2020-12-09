@@ -830,11 +830,20 @@ def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
 
-def _get_bool_config_skip_if_decorator(key):
+def _get_bool_config(key, fail_value = True):
+    """
+    Returns the current LLDB's build config value.
+    :param key The key to lookup in LLDB's build configuration.
+    :param fail_value The error value to return when the key can't be found.
+           Defaults to true so that if an unknown key is lookup up we rather
+           enable more tests (that then fail) than silently skipping them.
+    """
     config = lldb.SBDebugger.GetBuildConfiguration()
     value_node = config.GetValueForKey(key)
-    fail_value = True # More likely to notice if something goes wrong
-    have = value_node.GetValueForKey("value").GetBooleanValue(fail_value)
+    return value_node.GetValueForKey("value").GetBooleanValue(fail_value)
+
+def _get_bool_config_skip_if_decorator(key):
+    have = _get_bool_config(key)
     return unittest2.skipIf(not have, "requires " + key)
 
 def skipIfCursesSupportMissing(func):
