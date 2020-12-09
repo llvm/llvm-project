@@ -1,0 +1,27 @@
+## This is a test case to check how obj2yaml dumps symbols.
+
+## Check that we only dump Size and Value keys when
+## their values are not 0.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=FIELDS-DEF
+
+# FIELDS-DEF:      Symbols:
+# FIELDS-DEF-NEXT:   - Name:  foo
+# FIELDS-DEF-NEXT:   - Name:  bar
+# FIELDS-DEF-NEXT:     Value: 0x1
+# FIELDS-DEF-NEXT:     Size:  0x1
+# FIELDS-DEF-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name:  foo
+    Size:  0x0
+    Value: 0x0
+  - Name:  bar
+    Size:  0x1
+    Value: 0x1

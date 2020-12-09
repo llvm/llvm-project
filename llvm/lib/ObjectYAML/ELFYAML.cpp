@@ -1089,8 +1089,8 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Section", Symbol.Section);
   IO.mapOptional("Index", Symbol.Index);
   IO.mapOptional("Binding", Symbol.Binding, ELFYAML::ELF_STB(0));
-  IO.mapOptional("Value", Symbol.Value, Hex64(0));
-  IO.mapOptional("Size", Symbol.Size, Hex64(0));
+  IO.mapOptional("Value", Symbol.Value);
+  IO.mapOptional("Size", Symbol.Size);
 
   // Symbol's Other field is a bit special. It is usually a field that
   // represents st_other and holds the symbol visibility. However, on some
