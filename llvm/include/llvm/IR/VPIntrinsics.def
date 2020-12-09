@@ -17,68 +17,140 @@
 // Provide definitions of macros so that users of this file do not have to
 // define everything to use it...
 //
-#ifndef REGISTER_VP_INTRINSIC
-#define REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)
+// Register a VP intrinsic and begin its property scope.
+// All VP intrinsic scopes are top level, ie it is illegal to place a
+// BEGIN_REGISTER_VP_INTRINSIC within a VP intrinsic scope.
+// \p VPID     The VP intrinsic id.
+// \p MASKPOS  The mask operand position.
+// \p EVLPOS   The explicit vector length operand position.
+#ifndef BEGIN_REGISTER_VP_INTRINSIC
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, EVLPOS)
 #endif
 
-// Map this VP intrinsic to its functional Opcode
+// End the property scope of a VP intrinsic.
+#ifndef END_REGISTER_VP_INTRINSIC
+#define END_REGISTER_VP_INTRINSIC(VPID)
+#endif
+
+// Register a new VP SDNode and begin its property scope.
+// When the SDNode scope is nested within a VP intrinsic scope, it is implicitly registered as the canonical SDNode for this VP intrinsic.
+// There is one VP intrinsic that maps directly to one SDNode that goes by the
+// same name.  Since the operands are also the same, we open the property
+// scopes for both the VPIntrinsic and the SDNode at once.
+// \p SDOPC     The SelectionDAG Node id (eg VP_ADD).
+// \p LEGALPOS The operand position of the SDNode that is used for legalizing
+//             this SDNode. This can be `-1`, in which case the return type of
+//             the SDNode is used.
+// \p TDNAME   The name of the TableGen definition of this SDNode.
+// \p MASKPOS  The mask operand position.
+// \p EVLPOS   The explicit vector length operand position.
+#ifndef BEGIN_REGISTER_VP_SDNODE
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, LEGALPOS, TDNAME, MASKPOS, EVLPOS)
+#endif
+
+// End the property scope of a new VP SDNode.
+#ifndef END_REGISTER_VP_SDNODE
+#define END_REGISTER_VP_SDNODE(SDOPC)
+#endif
+
+// Helper macros for the common "1:1 - Intrinsic : SDNode" case.
+//
+// There is one VP intrinsic that maps directly to one SDNode that goes by the
+// same name.  Since the operands are also the same, we open the property
+// scopes for both the VPIntrinsic and the SDNode at once.
+//
+// \p INTRIN   The canonical name (eg `vp_add`, which at the same time is the
+//             name of the intrinsic and the TableGen def of the SDNode).
+// \p MASKPOS  The mask operand position.
+// \p EVLPOS   The explicit vector length operand position.
+// \p SDOPC    The SelectionDAG Node id (eg VP_ADD).
+// \p LEGALPOS The operand position of the SDNode that is used for legalizing
+//             this SDNode. This can be `-1`, in which case the return type of
+//             the SDNode is used.
+#define BEGIN_REGISTER_VP(INTRIN, MASKPOS, EVLPOS, SDOPC, LEGALPOS) \
+BEGIN_REGISTER_VP_INTRINSIC(INTRIN, MASKPOS, EVLPOS) \
+BEGIN_REGISTER_VP_SDNODE(SDOPC, LEGALPOS, INTRIN, MASKPOS, EVLPOS)
+
+#define END_REGISTER_VP(INTRIN, SDOPC) \
+END_REGISTER_VP_INTRINSIC(INTRIN) \
+END_REGISTER_VP_SDNODE(SDOPC)
+
+
+// The following macros attach properties to the scope they are placed in. This
+// assigns the property to the VP Intrinsic and/or SDNode that belongs to the
+// scope.
+//
+// Property Macros {
+
+// The intrinsic and/or SDNode has the same function as this LLVM IR Opcode.
+// \p OPC  The standard IR opcode.
 #ifndef HANDLE_VP_TO_OPC
-#define HANDLE_VP_TO_OPC(VPID, OC)
+#define HANDLE_VP_TO_OPC(OPC)
 #endif
 
-///// Integer Arithmetic /////
+/// } Property Macros
+
+///// Integer Arithmetic {
+
+// Specialized helper macro for integer binary operators (%x, %y, %mask, %evl).
+#ifdef HELPER_REGISTER_BINARY_INT_VP
+#error "The internal helper macro HELPER_REGISTER_BINARY_INT_VP is already defined!"
+#endif
+#define HELPER_REGISTER_BINARY_INT_VP(INTRIN, SDOPC, OPC) \
+BEGIN_REGISTER_VP(INTRIN, 2, 3, SDOPC, -1) \
+HANDLE_VP_TO_OPC(OPC) \
+END_REGISTER_VP(INTRIN, SDOPC)
+
+
 
 // llvm.vp.add(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_add, 2, 3)
-HANDLE_VP_TO_OPC(vp_add, Add)
+HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add)
 
 // llvm.vp.and(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_and, 2, 3)
-HANDLE_VP_TO_OPC(vp_and, And)
+HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And)
 
 // llvm.vp.ashr(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_ashr, 2, 3)
-HANDLE_VP_TO_OPC(vp_ashr, AShr)
+HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr)
 
 // llvm.vp.lshr(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_lshr, 2, 3)
-HANDLE_VP_TO_OPC(vp_lshr, LShr)
+HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr)
 
 // llvm.vp.mul(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_mul, 2, 3)
-HANDLE_VP_TO_OPC(vp_mul, Mul)
+HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul)
 
 // llvm.vp.or(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_or, 2, 3)
-HANDLE_VP_TO_OPC(vp_or, Or)
+HELPER_REGISTER_BINARY_INT_VP(vp_or, VP_OR, Or)
 
 // llvm.vp.sdiv(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_sdiv, 2, 3)
-HANDLE_VP_TO_OPC(vp_sdiv, SDiv)
+HELPER_REGISTER_BINARY_INT_VP(vp_sdiv, VP_SDIV, SDiv)
 
 // llvm.vp.shl(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_shl, 2, 3)
-HANDLE_VP_TO_OPC(vp_shl, Shl)
+HELPER_REGISTER_BINARY_INT_VP(vp_shl, VP_SHL, Shl)
 
 // llvm.vp.srem(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_srem, 2, 3)
-HANDLE_VP_TO_OPC(vp_srem, SRem)
+HELPER_REGISTER_BINARY_INT_VP(vp_srem, VP_SREM, SRem)
 
 // llvm.vp.sub(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_sub, 2, 3)
-HANDLE_VP_TO_OPC(vp_sub, Sub)
+HELPER_REGISTER_BINARY_INT_VP(vp_sub, VP_Sub, Sub)
 
 // llvm.vp.udiv(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_udiv, 2, 3)
-HANDLE_VP_TO_OPC(vp_udiv, UDiv)
+HELPER_REGISTER_BINARY_INT_VP(vp_udiv, VP_UDIV, UDiv)
 
 // llvm.vp.urem(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_urem, 2, 3)
-HANDLE_VP_TO_OPC(vp_urem, URem)
+HELPER_REGISTER_BINARY_INT_VP(vp_urem, VP_UREM, URem)
 
 // llvm.vp.xor(x,y,mask,vlen)
-REGISTER_VP_INTRINSIC(vp_xor, 2, 3)
-HANDLE_VP_TO_OPC(vp_xor, Xor)
+HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor)
 
-#undef REGISTER_VP_INTRINSIC
+#undef HELPER_REGISTER_BINARY_INT_VP
+
+///// } Integer Arithmetic
+
+
+#undef BEGIN_REGISTER_VP
+#undef BEGIN_REGISTER_VP_INTRINSIC
+#undef BEGIN_REGISTER_VP_SDNODE
+#undef END_REGISTER_VP
+#undef END_REGISTER_VP_INTRINSIC
+#undef END_REGISTER_VP_SDNODE
 #undef HANDLE_VP_TO_OPC

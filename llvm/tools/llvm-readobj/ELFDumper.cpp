@@ -5333,19 +5333,20 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
   const int Bytes = Desc.getAddressSize();
 
   if (!Desc.isValidOffsetForAddress(2))
-    return createStringError(object_error::parse_failed,
-                             "malformed note: header too short");
+    return createError("the note of size 0x" + Twine::utohexstr(Desc.size()) +
+                       " is too short, expected at least 0x" +
+                       Twine::utohexstr(Bytes * 2));
   if (Desc.getData().back() != 0)
-    return createStringError(object_error::parse_failed,
-                             "malformed note: not NUL terminated");
+    return createError("the note is not NUL terminated");
 
   uint64_t DescOffset = 0;
   uint64_t FileCount = Desc.getAddress(&DescOffset);
   Ret.PageSize = Desc.getAddress(&DescOffset);
 
   if (!Desc.isValidOffsetForAddress(3 * FileCount * Bytes))
-    return createStringError(object_error::parse_failed,
-                             "malformed note: too short for number of files");
+    return createError("unable to read file mappings (found " +
+                       Twine(FileCount) + "): the note of size 0x" +
+                       Twine::utohexstr(Desc.size()) + " is too short");
 
   uint64_t FilenamesOffset = 0;
   DataExtractor Filenames(
@@ -5353,10 +5354,14 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
       Desc.isLittleEndian(), Desc.getAddressSize());
 
   Ret.Mappings.resize(FileCount);
+  size_t I = 0;
   for (CoreFileMapping &Mapping : Ret.Mappings) {
+    ++I;
     if (!Filenames.isValidOffsetForDataOfSize(FilenamesOffset, 1))
-      return createStringError(object_error::parse_failed,
-                               "malformed note: too few filenames");
+      return createError(
+          "unable to read the file name for the mapping with index " +
+          Twine(I) + ": the note of size 0x" + Twine::utohexstr(Desc.size()) +
+          " is truncated");
     Mapping.Start = Desc.getAddress(&DescOffset);
     Mapping.End = Desc.getAddress(&DescOffset);
     Mapping.Offset = Desc.getAddress(&DescOffset);
@@ -5521,7 +5526,7 @@ static void printNotesHelper(
     llvm::function_ref<void(Optional<StringRef>, typename ELFT::Off,
                             typename ELFT::Addr)>
         StartNotesFn,
-    llvm::function_ref<void(const typename ELFT::Note &)> ProcessNoteFn,
+    llvm::function_ref<Error(const typename ELFT::Note &)> ProcessNoteFn,
     llvm::function_ref<void()> FinishNotesFn) {
   const ELFFile<ELFT> &Obj = Dumper.getElfObject().getELFFile();
 
@@ -5533,8 +5538,14 @@ static void printNotesHelper(
       StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size);
       Error Err = Error::success();
-      for (const typename ELFT::Note Note : Obj.notes(S, Err))
-        ProcessNoteFn(Note);
+      size_t I = 0;
+      for (const typename ELFT::Note Note : Obj.notes(S, Err)) {
+        if (Error E = ProcessNoteFn(Note))
+          Dumper.reportUniqueWarning(
+              "unable to read note with index " + Twine(I) + " from the " +
+              describe(Obj, S) + ": " + toString(std::move(E)));
+        ++I;
+      }
       if (Err)
         Dumper.reportUniqueWarning("unable to read notes from the " +
                                    describe(Obj, S) + ": " +
@@ -5559,8 +5570,15 @@ static void printNotesHelper(
       continue;
     StartNotesFn(/*SecName=*/None, P.p_offset, P.p_filesz);
     Error Err = Error::success();
-    for (const typename ELFT::Note Note : Obj.notes(P, Err))
-      ProcessNoteFn(Note);
+    size_t Index = 0;
+    for (const typename ELFT::Note Note : Obj.notes(P, Err)) {
+      if (Error E = ProcessNoteFn(Note))
+        Dumper.reportUniqueWarning("unable to read note with index " +
+                                   Twine(Index) +
+                                   " from the PT_NOTE segment with index " +
+                                   Twine(I) + ": " + toString(std::move(E)));
+      ++Index;
+    }
     if (Err)
       Dumper.reportUniqueWarning(
           "unable to read notes from the PT_NOTE segment with index " +
@@ -5584,7 +5602,7 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
     OS << "  Owner                Data size \tDescription\n";
   };
 
-  auto ProcessNote = [&](const Elf_Note &Note) {
+  auto ProcessNote = [&](const Elf_Note &Note) -> Error {
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc();
     Elf_Word Type = Note.getType();
@@ -5617,11 +5635,10 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        Expected<CoreNote> Note = readCoreNote(DescExtractor);
-        if (Note)
-          printCoreNote<ELFT>(OS, *Note);
+        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor))
+          printCoreNote<ELFT>(OS, *NoteOrErr);
         else
-          reportWarning(Note.takeError(), this->FileName);
+          return NoteOrErr.takeError();
       }
     } else if (!Descriptor.empty()) {
       OS << "   description data:";
@@ -5629,6 +5646,7 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
         OS << " " << format("%02x", B);
       OS << '\n';
     }
+    return Error::success();
   };
 
   printNotesHelper(this->dumper(), PrintHeader, ProcessNote, []() {});
@@ -6836,7 +6854,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printNotes() {
 
   auto EndNotes = [&] { NoteScope.reset(); };
 
-  auto ProcessNote = [&](const Elf_Note &Note) {
+  auto ProcessNote = [&](const Elf_Note &Note) -> Error {
     DictScope D2(W, "Note");
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc();
@@ -6871,15 +6889,15 @@ template <class ELFT> void LLVMStyle<ELFT>::printNotes() {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        Expected<CoreNote> Note = readCoreNote(DescExtractor);
-        if (Note)
+        if (Expected<CoreNote> Note = readCoreNote(DescExtractor))
           printCoreNoteLLVMStyle(*Note, W);
         else
-          reportWarning(Note.takeError(), this->FileName);
+          return Note.takeError();
       }
     } else if (!Descriptor.empty()) {
       W.printBinaryBlock("Description data", Descriptor);
     }
+    return Error::success();
   };
 
   printNotesHelper(this->dumper(), StartNotes, ProcessNote, EndNotes);

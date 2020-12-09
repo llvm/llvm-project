@@ -53,7 +53,8 @@ class ELFDumper {
 
   const object::ELFFile<ELFT> &Obj;
   std::unique_ptr<DWARFContext> DWARFCtx;
-  ArrayRef<Elf_Word> ShndxTable;
+
+  DenseMap<const Elf_Shdr *, ArrayRef<Elf_Word>> ShndxTables;
 
   Expected<std::vector<ELFYAML::ProgramHeader>>
   dumpProgramHeaders(ArrayRef<std::unique_ptr<ELFYAML::Chunk>> Sections);
@@ -157,7 +158,7 @@ ELFDumper<ELFT>::getUniquedSymbolName(const Elf_Sym *Sym, StringRef StrTable,
     return SymbolNameOrErr;
   StringRef Name = *SymbolNameOrErr;
   if (Name.empty() && Sym->getType() == ELF::STT_SECTION) {
-    auto ShdrOrErr = Obj.getSection(*Sym, SymTab, ShndxTable);
+    auto ShdrOrErr = Obj.getSection(*Sym, SymTab, ShndxTables.lookup(SymTab));
     if (!ShdrOrErr)
       return ShdrOrErr.takeError();
     return getUniquedSectionName(*ShdrOrErr);
@@ -303,7 +304,6 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   // Dump symbols. We need to do this early because other sections might want
   // to access the deduplicated symbol names that we also create here.
   const Elf_Shdr *SymTab = nullptr;
-  const Elf_Shdr *SymTabShndx = nullptr;
   const Elf_Shdr *DynSymTab = nullptr;
 
   for (const Elf_Shdr &Sec : Sections) {
@@ -312,29 +312,24 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     } else if (Sec.sh_type == ELF::SHT_DYNSYM) {
       DynSymTab = &Sec;
     } else if (Sec.sh_type == ELF::SHT_SYMTAB_SHNDX) {
-      // ABI allows us to have one SHT_SYMTAB_SHNDX for each symbol table.
-      // We only support having the SHT_SYMTAB_SHNDX for SHT_SYMTAB now.
-      if (SymTabShndx)
-        return createStringError(
-            errc::not_supported,
-            "multiple SHT_SYMTAB_SHNDX sections are not supported");
-      SymTabShndx = &Sec;
+      // We need to locate SHT_SYMTAB_SHNDX sections early, because they
+      // might be needed for dumping symbols.
+      if (Expected<ArrayRef<Elf_Word>> TableOrErr = Obj.getSHNDXTable(Sec)) {
+        // The `getSHNDXTable` calls the `getSection` internally when validates
+        // the symbol table section linked to the SHT_SYMTAB_SHNDX section.
+        const Elf_Shdr *LinkedSymTab = cantFail(Obj.getSection(Sec.sh_link));
+        if (!ShndxTables.insert({LinkedSymTab, *TableOrErr}).second)
+          return createStringError(
+              errc::invalid_argument,
+              "multiple SHT_SYMTAB_SHNDX sections are "
+              "linked to the same symbol table with index " +
+                  Twine(Sec.sh_link));
+      } else {
+        return createStringError(errc::invalid_argument,
+                                 "unable to read extended section indexes: " +
+                                     toString(TableOrErr.takeError()));
+      }
     }
-  }
-
-  // We need to locate the SHT_SYMTAB_SHNDX section early, because it might be
-  // needed for dumping symbols.
-  if (SymTabShndx) {
-    if (!SymTab ||
-        SymTabShndx->sh_link != (unsigned)(SymTab - Sections.begin()))
-      return createStringError(
-          errc::not_supported,
-          "only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported");
-
-    auto TableOrErr = Obj.getSHNDXTable(*SymTabShndx);
-    if (!TableOrErr)
-      return TableOrErr.takeError();
-    ShndxTable = *TableOrErr;
   }
 
   if (SymTab) {
@@ -682,7 +677,7 @@ Error ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
     return Error::success();
   }
 
-  auto ShdrOrErr = Obj.getSection(*Sym, SymTab, ShndxTable);
+  auto ShdrOrErr = Obj.getSection(*Sym, SymTab, ShndxTables.lookup(SymTab));
   if (!ShdrOrErr)
     return ShdrOrErr.takeError();
   const Elf_Shdr *Shdr = *ShdrOrErr;
