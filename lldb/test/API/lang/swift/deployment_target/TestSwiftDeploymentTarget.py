@@ -23,6 +23,7 @@ class TestSwiftDeploymentTarget(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIf # Makefile uses system dsymutil (which might not work): rdar://72148156
     @skipIf(bugnumber="rdar://60396797", # should work but crashes.
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
@@ -37,6 +38,7 @@ class TestSwiftDeploymentTarget(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("p f", substrs=['i = 23'])
 
+    @skipIf # Makefile uses system dsymutil (which might not work): rdar://72148156
     @skipIf(bugnumber="rdar://60396797", # should work but crashes.
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
