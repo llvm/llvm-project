@@ -25,12 +25,12 @@ using Context = TweakTest::CodeContext;
 
 std::pair<llvm::StringRef, llvm::StringRef> wrapping(Context Ctx) {
   switch (Ctx) {
-    case TweakTest::File:
-      return {"",""};
-    case TweakTest::Function:
-      return {"void wrapperFunction(){\n", "\n}"};
-    case TweakTest::Expression:
-      return {"auto expressionWrapper(){return\n", "\n;}"};
+  case TweakTest::File:
+    return {"", ""};
+  case TweakTest::Function:
+    return {"void wrapperFunction(){\n", "\n}"};
+  case TweakTest::Expression:
+    return {"auto expressionWrapper(){return\n", "\n;}"};
   }
   llvm_unreachable("Unknown TweakTest::CodeContext enum");
 }
@@ -46,7 +46,8 @@ llvm::StringRef unwrap(Context Ctx, llvm::StringRef Outer) {
   // Don't allow the begin/end wrapping to overlap!
   if (Outer.startswith(Wrapping.first) && Outer.endswith(Wrapping.second) &&
       Outer.size() >= Wrapping.first.size() + Wrapping.second.size())
-    return Outer.drop_front(Wrapping.first.size()).drop_back(Wrapping.second.size());
+    return Outer.drop_front(Wrapping.first.size())
+        .drop_back(Wrapping.second.size());
   return Outer;
 }
 
@@ -157,11 +158,11 @@ std::vector<std::string> TweakTest::expandCases(llvm::StringRef MarkedCode) {
   Annotations Test(MarkedCode);
   llvm::StringRef Code = Test.code();
   std::vector<std::string> Cases;
-  for (const auto& Point : Test.points()) {
+  for (const auto &Point : Test.points()) {
     size_t Offset = llvm::cantFail(positionToOffset(Code, Point));
     Cases.push_back((Code.substr(0, Offset) + "^" + Code.substr(Offset)).str());
   }
-  for (const auto& Range : Test.ranges()) {
+  for (const auto &Range : Test.ranges()) {
     size_t Begin = llvm::cantFail(positionToOffset(Code, Range.start));
     size_t End = llvm::cantFail(positionToOffset(Code, Range.end));
     Cases.push_back((Code.substr(0, Begin) + "[[" +

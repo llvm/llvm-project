@@ -100,6 +100,10 @@ protected:
   ::testing::Matcher<llvm::StringRef> isAvailable() const;
 };
 
+MATCHER_P2(FileWithContents, FileName, Contents, "") {
+  return arg.first() == FileName && arg.second == Contents;
+}
+
 #define TWEAK_TEST(TweakID)                                                    \
   class TweakID##Test : public ::clang::clangd::TweakTest {                    \
   protected:                                                                   \
