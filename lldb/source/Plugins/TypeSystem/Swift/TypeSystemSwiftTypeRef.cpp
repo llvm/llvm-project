@@ -1422,11 +1422,6 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();
-  if (lhs != rhs) {
-    // Failure. Dump it for easier debugging.
-    llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
-                 << lhs.GetStringRef() << " != " << rhs.GetStringRef() << "\n";
-  }
   if (lhs == ConstString("$sSiD") && rhs == ConstString("$sSuD"))
     return true;
   // Ignore missing sugar.
@@ -1454,7 +1449,13 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
           llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(l.GetTypeSystem()))
     if (ts->IsImportedType(l.GetOpaqueQualType(), nullptr))
       return true;
-  return lhs == rhs;
+  if (lhs == rhs)
+    return true;
+
+  // Failure. Dump it for easier debugging.
+  llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
+               << lhs.GetStringRef() << " != " << rhs.GetStringRef() << "\n";
+  return false;
 }
 /// This one is particularly taylored for GetTypeName() and
 /// GetDisplayTypeName().
