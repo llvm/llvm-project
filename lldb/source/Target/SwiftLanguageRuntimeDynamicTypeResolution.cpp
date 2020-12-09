@@ -256,7 +256,7 @@ const CompilerType &SwiftLanguageRuntimeImpl::GetBoxMetadataType() {
   static ConstString g_type_name("__lldb_autogen_boxmetadata");
   const bool is_packed = false;
   if (TypeSystemClang *ast_ctx =
-          TypeSystemClang::GetScratch(m_process.GetTarget())) {
+          ScratchTypeSystemClang::GetForTarget(m_process.GetTarget())) {
     CompilerType voidstar =
         ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
     CompilerType uint32 = ast_ctx->GetIntTypeFromBitSize(32, false);
