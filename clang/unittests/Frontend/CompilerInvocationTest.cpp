@@ -22,29 +22,22 @@ using ::testing::StrEq;
 using ::testing::StrNe;
 
 namespace {
-struct OptsPopulationTest : public ::testing::Test {
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
-  CompilerInvocation CInvok;
-
-  OptsPopulationTest()
-      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
-};
-
-class CC1CommandLineGenerationTest : public ::testing::Test {
+class CommandLineTest : public ::testing::Test {
 public:
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   SmallVector<const char *, 32> GeneratedArgs;
   SmallVector<std::string, 32> GeneratedArgsStorage;
+  CompilerInvocation CInvok;
 
   const char *operator()(const Twine &Arg) {
     return GeneratedArgsStorage.emplace_back(Arg.str()).c_str();
   }
 
-  CC1CommandLineGenerationTest()
+  CommandLineTest()
       : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
 };
 
-TEST_F(OptsPopulationTest, OptIsInitializedWithCustomDefaultValue) {
+TEST_F(CommandLineTest, OptIsInitializedWithCustomDefaultValue) {
   const char *Args[] = {"clang", "-xc++"};
 
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
@@ -52,7 +45,7 @@ TEST_F(OptsPopulationTest, OptIsInitializedWithCustomDefaultValue) {
   ASSERT_TRUE(CInvok.getFrontendOpts().UseTemporary);
 }
 
-TEST_F(OptsPopulationTest, OptOfNegativeFlagIsPopulatedWithFalse) {
+TEST_F(CommandLineTest, OptOfNegativeFlagIsPopulatedWithFalse) {
   const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
 
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
@@ -60,7 +53,7 @@ TEST_F(OptsPopulationTest, OptOfNegativeFlagIsPopulatedWithFalse) {
   ASSERT_FALSE(CInvok.getFrontendOpts().UseTemporary);
 }
 
-TEST_F(OptsPopulationTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
+TEST_F(CommandLineTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
   const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
 
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
@@ -76,10 +69,9 @@ TEST_F(OptsPopulationTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
   ASSERT_TRUE(CInvok.getLangOpts()->AllowRecip);
 }
 
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineFlag) {
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
   const char *Args[] = {"clang", "-xc++", "-fmodules-strict-context-hash", "-"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -87,11 +79,10 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineFlag) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fmodules-strict-context-hash")));
 }
 
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparate) {
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
   const char *TripleCStr = "i686-apple-darwin9";
   const char *Args[] = {"clang", "-xc++", "-triple", TripleCStr, "-"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -99,14 +90,12 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparate) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq(TripleCStr)));
 }
 
-TEST_F(CC1CommandLineGenerationTest,
-       CanGenerateCC1CommandLineSeparateRequiredPresent) {
+TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
   const std::string DefaultTriple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
   const char *Args[] = {"clang", "-xc++", "-triple", DefaultTriple.c_str(),
                         "-"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -115,13 +104,11 @@ TEST_F(CC1CommandLineGenerationTest,
   ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
 }
 
-TEST_F(CC1CommandLineGenerationTest,
-       CanGenerateCC1CommandLineSeparateRequiredAbsent) {
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
   const std::string DefaultTriple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
   const char *Args[] = {"clang", "-xc++", "-"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -130,12 +117,11 @@ TEST_F(CC1CommandLineGenerationTest,
   ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
 }
 
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnum) {
   const char *RelocationModelCStr = "static";
   const char *Args[] = {"clang", "-xc++", "-mrelocation-model",
                         RelocationModelCStr, "-"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -154,10 +140,9 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
   ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
 }
 
-TEST_F(CC1CommandLineGenerationTest, NotPresentNegativeFlagNotGenerated) {
+TEST_F(CommandLineTest, NotPresentNegativeFlagNotGenerated) {
   const char *Args[] = {"clang", "-xc++"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -165,10 +150,9 @@ TEST_F(CC1CommandLineGenerationTest, NotPresentNegativeFlagNotGenerated) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentNegativeFlagGenerated) {
+TEST_F(CommandLineTest, PresentNegativeFlagGenerated) {
   const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -176,10 +160,9 @@ TEST_F(CC1CommandLineGenerationTest, PresentNegativeFlagGenerated) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
 }
 
-TEST_F(CC1CommandLineGenerationTest, NotPresentAndNotImpliedNotGenerated) {
+TEST_F(CommandLineTest, NotPresentAndNotImpliedNotGenerated) {
   const char *Args[] = {"clang", "-xc++"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -191,10 +174,9 @@ TEST_F(CC1CommandLineGenerationTest, NotPresentAndNotImpliedNotGenerated) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, NotPresentAndImpliedNotGenerated) {
+TEST_F(CommandLineTest, NotPresentAndImpliedNotGenerated) {
   const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -205,11 +187,10 @@ TEST_F(CC1CommandLineGenerationTest, NotPresentAndImpliedNotGenerated) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentAndImpliedNotGenerated) {
+TEST_F(CommandLineTest, PresentAndImpliedNotGenerated) {
   const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations",
                         "-cl-mad-enable", "-menable-unsafe-fp-math"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
@@ -220,11 +201,10 @@ TEST_F(CC1CommandLineGenerationTest, PresentAndImpliedNotGenerated) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentAndNotImpliedGenerated) {
+TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
   const char *Args[] = {"clang", "-xc++", "-cl-mad-enable",
                         "-menable-unsafe-fp-math"};
 
-  CompilerInvocation CInvok;
   CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
