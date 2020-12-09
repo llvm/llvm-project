@@ -36,6 +36,7 @@ struct Configuration {
   bool allLoad = false;
   bool forceLoadObjC = false;
   bool staticLink = false;
+  bool implicitDylibs = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
   bool printEachFile = false;

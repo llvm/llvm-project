@@ -479,7 +479,8 @@ const InterfaceFile *currentTopLevelTapi = nullptr;
 
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
+static Optional<DylibFile *> loadReexportHelper(StringRef path,
+                                                DylibFile *umbrella) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
@@ -504,6 +505,26 @@ static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
   return {};
 }
 
+// If a re-exported dylib is public (lives in /usr/lib or
+// /System/Library/Frameworks), then it is considered implicitly linked: we
+// should bind to its symbols directly instead of via the re-exporting umbrella
+// library.
+static bool isImplicitlyLinked(StringRef path) {
+  if (!config->implicitDylibs)
+    return false;
+
+  return path::parent_path(path) == "/usr/lib";
+  // TODO: check for public frameworks too. We'll need to implement
+  // -sub_umbrella first to write a test case.
+}
+
+static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
+  Optional<DylibFile *> reexport = loadReexportHelper(path, umbrella);
+  if (reexport && isImplicitlyLinked(path))
+    inputFiles.push_back(*reexport);
+  return reexport;
+}
+
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     : InputFile(DylibKind, mb) {
   if (umbrella == nullptr)
@@ -522,17 +543,15 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
   }
 
   // Initialize symbols.
-  // TODO: if a re-exported dylib is public (lives in /usr/lib or
-  // /System/Library/Frameworks), we should bind to its symbols directly
-  // instead of the re-exporting umbrella library.
+  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
                 bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
                 bool isTlv = flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
-                symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
-                                                   isWeakDef, isTlv));
+                symbols.push_back(symtab->addDylib(
+                    saver.save(name), exportingFile, isWeakDef, isTlv));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
@@ -564,8 +583,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
     umbrella = this;
 
   dylibName = saver.save(interface.getInstallName());
+  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
-    symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
+    symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
                                        /*isTlv=*/false));
   };
