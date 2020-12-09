@@ -364,15 +364,25 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 
 // Encode VTYPE into the binary format used by the the VSETVLI instruction which
 // is used by our MC layer representation.
+//
+// Bits | Name       | Description
+// -----+------------+------------------------------------------------
+// 7    | vma        | Vector mask agnostic
+// 6    | vta        | Vector tail agnostic
+// 5    | vlmul[2]   | Fractional lmul?
+// 4:2  | vsew[2:0]  | Standard element width (SEW) setting
+// 1:0  | vlmul[1:0] | Vector register group multiplier (LMUL) setting
+//
+// TODO: This format will change for the V extensions spec v1.0.
 inline static unsigned encodeVTYPE(RISCVVLMUL VLMUL, RISCVVSEW VSEW,
-                                   bool TailAgnostic, bool MaskedoffAgnostic) {
+                                   bool TailAgnostic, bool MaskAgnostic) {
   unsigned VLMULBits = static_cast<unsigned>(VLMUL);
   unsigned VSEWBits = static_cast<unsigned>(VSEW);
   unsigned VTypeI =
       ((VLMULBits & 0x4) << 3) | (VSEWBits << 2) | (VLMULBits & 0x3);
   if (TailAgnostic)
     VTypeI |= 0x40;
-  if (MaskedoffAgnostic)
+  if (MaskAgnostic)
     VTypeI |= 0x80;
 
   return VTypeI;
