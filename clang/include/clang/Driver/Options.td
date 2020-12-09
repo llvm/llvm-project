@@ -338,7 +338,7 @@ class BoolOptionFlag<FlagDefExpanded flag, FlagDefExpanded other,
   : Flag<["-"], flag.Spelling>, Flags<flag.OptionFlags>, HelpText<flag.Help>,
     MarshallingInfoBooleanFlag<keypath, default.Value, flag.ValueAsCode,
                                flag.RecordName, other.ValueAsCode,
-                               other.RecordName, other.Spelling>,
+                               other.RecordName>,
     ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode> {}
 
 // Generates TableGen records for two command line flags that control the same
