@@ -5998,6 +5998,22 @@ TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
   EXPECT_TRUE(ToD->isExplicit());
 }
 
+TEST_P(ImportFunctions, CTADWithLocalTypedef) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        typedef T U;
+        A(U);
+      };
+      A a{(int)0};
+      )",
+      Lang_CXX17, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl());
+  auto *ToD = Import(FromD, Lang_CXX17);
+  ASSERT_TRUE(ToD);
+}
+
 // FIXME Move these tests out of ASTImporterTest. For that we need to factor
 // out the ASTImporter specific pars from ASTImporterOptionSpecificTestBase
 // into a new test Fixture. Then we should lift up this Fixture to its own
