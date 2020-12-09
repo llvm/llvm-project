@@ -120,6 +120,9 @@ void Writer::calculateCustomSections() {
   bool stripDebug = config->stripDebug || config->stripAll;
   for (ObjFile *file : symtab->objectFiles) {
     for (InputSection *section : file->customSections) {
+      // Exclude COMDAT sections that are not selected for inclusion
+      if (section->discarded)
+        continue;
       StringRef name = section->getName();
       // These custom sections are known the linker and synthesized rather than
       // blindly copied.

@@ -341,6 +341,12 @@ void ObjFile::parse(bool ignoreComdats) {
     }
   }
 
+  ArrayRef<StringRef> comdats = wasmObj->linkingData().Comdats;
+  for (StringRef comdat : comdats) {
+    bool isNew = ignoreComdats || symtab->addComdat(comdat);
+    keptComdats.push_back(isNew);
+  }
+
   uint32_t sectionIndex = 0;
 
   // Bool for each symbol, true if called directly.  This allows us to implement
@@ -360,7 +366,9 @@ void ObjFile::parse(bool ignoreComdats) {
       assert(!dataSection);
       dataSection = &section;
     } else if (section.Type == WASM_SEC_CUSTOM) {
-      customSections.emplace_back(make<InputSection>(section, this));
+      auto *customSec = make<InputSection>(section, this);
+      customSec->discarded = isExcludedByComdat(customSec);
+      customSections.emplace_back(customSec);
       customSections.back()->setRelocations(section.Relocations);
       customSectionsByIndex[sectionIndex] = customSections.back();
     }
@@ -374,11 +382,6 @@ void ObjFile::parse(bool ignoreComdats) {
   typeMap.resize(getWasmObj()->types().size());
   typeIsUsed.resize(getWasmObj()->types().size(), false);
 
-  ArrayRef<StringRef> comdats = wasmObj->linkingData().Comdats;
-  for (StringRef comdat : comdats) {
-    bool isNew = ignoreComdats || symtab->addComdat(comdat);
-    keptComdats.push_back(isNew);
-  }
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
@@ -487,6 +490,10 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
   case WASM_SYMBOL_TYPE_SECTION: {
     InputSection *section = customSectionsByIndex[sym.Info.ElementIndex];
     assert(sym.isBindingLocal());
+    // Need to return null if discarded here? data and func only do that when
+    // binding is not local.
+    if (section->discarded)
+      return nullptr;
     return make<SectionSymbol>(flags, section, this);
   }
   case WASM_SYMBOL_TYPE_EVENT: {
