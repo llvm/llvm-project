@@ -1508,10 +1508,9 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   return l == r;
 }
 
-/// Version taylored to GetBitSize & friends.
-template <>
-bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
-                                          llvm::Optional<uint64_t> r) {
+/// Version tailored to GetBitSize & friends.
+template <typename T>
+bool Equivalent(llvm::Optional<T> l, llvm::Optional<T> r) {
   if (l == r)
     return true;
   // There are situations where SwiftASTContext incorrectly returns
@@ -1524,6 +1523,12 @@ bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
     return true;
   llvm::dbgs() << l << " != " << r << "\n";
   return false;
+}
+
+// Introduced for `GetNumChildren`.
+template <typename T>
+bool Equivalent(llvm::Optional<T> l, T r) {
+  return Equivalent(l, llvm::Optional<T>(r));
 }
 
 } // namespace
@@ -2067,13 +2072,34 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
 lldb::Format TypeSystemSwiftTypeRef::GetFormat(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetFormat(ReconstructType(type));
 }
+
 uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
-  return m_swift_ast_context->GetNumChildren(ReconstructType(type),
-                                             omit_empty_base_classes, exe_ctx);
+  if (exe_ctx)
+    if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+      if (auto *runtime =
+              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+        if (auto num_children =
+                runtime->GetNumChildren(GetCanonicalType(type), nullptr)) {
+          // Use a lambda to intercept and unwrap the `Optional` return value.
+          return [&]() {
+            auto impl = [&]() { return num_children; };
+            VALIDATE_AND_RETURN(
+                impl, GetNumChildren, type,
+                (ReconstructType(type), omit_empty_base_classes, exe_ctx));
+          }().getValue();
+        }
+
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Using SwiftASTContext::GetNumChildren fallback for type %s",
+            AsMangledName(type));
+
+  return m_swift_ast_context->GetNumChildren(
+        ReconstructType(type), omit_empty_base_classes, exe_ctx);
 }
+
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumFields(ReconstructType(type));
 }
