@@ -1292,7 +1292,7 @@ public:
     ++Test->NumDiagnostics;
   }
 
-  IntrusiveRefCntPtr<vfs::FileSystem>
+  std::unique_ptr<vfs::FileSystem>
   getFromYAMLRawString(StringRef Content,
                        IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS) {
     std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(Content);
@@ -1300,7 +1300,7 @@ public:
                           ExternalFS);
   }
 
-  IntrusiveRefCntPtr<vfs::FileSystem> getFromYAMLString(
+  std::unique_ptr<vfs::FileSystem> getFromYAMLString(
       StringRef Content,
       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem()) {
     std::string VersionPlusContent("{\n  'version':0,\n");
