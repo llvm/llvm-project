@@ -868,8 +868,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
           FileMgr.getBufferForFile(&File.getFileEntry(), /*isVolatile=*/true);
       if (MB) {
         // Create a new virtual file that will have the correct size.
-        const FileEntry *FE =
-            FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
+        FileEntryRef FE =
+            FileMgr.getVirtualFileRef(InputFile, (*MB)->getBufferSize(), 0);
         SourceMgr.overrideFileContents(FE, std::move(*MB));
         SourceMgr.setMainFileID(
             SourceMgr.createFileID(FE, SourceLocation(), Kind));
