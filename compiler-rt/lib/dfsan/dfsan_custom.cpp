@@ -800,6 +800,16 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
+                       dfsan_label old_ss_label, dfsan_label *ret_label) {
+  int ret = sigaltstack(ss, old_ss);
+  if (ret != -1 && old_ss)
+    dfsan_set_label(0, old_ss, sizeof(*old_ss));
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_gettimeofday(struct timeval *tv, struct timezone *tz,
                         dfsan_label tv_label, dfsan_label tz_label,
                         dfsan_label *ret_label) {
