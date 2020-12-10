@@ -1078,7 +1078,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       break;
     }
 
-    if (tr)
+    if (!tr)
       return {};
 
     auto *reflection_ctx = GetReflectionContext();
