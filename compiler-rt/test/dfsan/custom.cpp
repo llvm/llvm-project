@@ -931,6 +931,27 @@ void test_socketpair() {
   ASSERT_READ_ZERO_LABEL(fd, sizeof(fd));
 }
 
+void test_getsockopt() {
+  int sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+  assert(sockfd != -1);
+
+  int optval[2] = {-1, -1};
+  socklen_t optlen = sizeof(optval);
+  dfsan_set_label(i_label, &optval, sizeof(optval));
+  dfsan_set_label(i_label, &optlen, sizeof(optlen));
+  int ret = getsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &optval, &optlen);
+  assert(ret != -1);
+  assert(optlen == sizeof(int));
+  assert(optval[0] == 0);
+  assert(optval[1] == -1);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(optlen);
+  ASSERT_ZERO_LABEL(optval[0]);
+  ASSERT_LABEL(optval[1], i_label);
+
+  close(sockfd);
+}
+
 void test_write() {
   int fd = open("/dev/null", O_WRONLY);
 
@@ -1113,6 +1134,7 @@ int main(void) {
   test_getpwuid_r();
   test_getrlimit();
   test_getrusage();
+  test_getsockopt();
   test_gettimeofday();
   test_inet_pton();
   test_localtime_r();
