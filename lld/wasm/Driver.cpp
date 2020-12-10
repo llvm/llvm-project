@@ -646,15 +646,6 @@ static void createSyntheticSymbols() {
   }
 
   if (config->sharedMemory) {
-    // Passive segments are used to avoid memory being reinitialized on each
-    // thread's instantiation. These passive segments are initialized and
-    // dropped in __wasm_init_memory, which is registered as the start function
-    WasmSym::initMemory = symtab->addSyntheticFunction(
-        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
-    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
-        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    assert(WasmSym::initMemoryFlag);
     WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
     WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);

@@ -239,14 +239,9 @@ public:
 
 class StartSection : public SyntheticSection {
 public:
-  StartSection(bool hasInitializedSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_START),
-        hasInitializedSegments(hasInitializedSegments) {}
+  StartSection() : SyntheticSection(llvm::wasm::WASM_SEC_START) {}
   bool isNeeded() const override;
   void writeBody() override;
-
-protected:
-  bool hasInitializedSegments;
 };
 
 class ElemSection : public SyntheticSection {

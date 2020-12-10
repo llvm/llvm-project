@@ -98,9 +98,9 @@
 ; PASSIVE-MERGE-NEXT:      - Index:           0
 ; PASSIVE-MERGE-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-MERGE-NEXT:      - Index:           1
-; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-MERGE-NEXT:      - Index:           2
 ; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_tls
+; PASSIVE-MERGE-NEXT:      - Index:           2
+; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_memory
 
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.separate.passive.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
@@ -135,6 +135,6 @@
 ; PASSIVE-SEPARATE-NEXT:        - Index:           0
 ; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_call_ctors
 ; PASSIVE-SEPARATE-NEXT:        - Index:           1
-; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_memory
-; PASSIVE-SEPARATE-NEXT:        - Index:           2
 ; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_tls
+; PASSIVE-SEPARATE-NEXT:        - Index:           2
+; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_memory
