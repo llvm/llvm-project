@@ -66,3 +66,6 @@ template<int x> constexpr int f(int y) { // expected-note {{candidate template i
 constexpr int test9(int x) {
   return f<1>(f<x>(1)); // expected-error {{no matching function for call to 'f'}}
 }
+
+constexpr int test10() { return undef(); } // expected-error {{use of undeclared identifier 'undef'}}
+static_assert(test10() <= 1, "should not crash"); // expected-error {{static_assert expression is not an integral constant expression}}

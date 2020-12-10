@@ -8,6 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare i32 @use32(i32)
 declare <2 x i32> @use32_vec(<2 x i32>)
+declare <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; These tests check cases where expression dag post-dominated by TruncInst
@@ -106,5 +107,37 @@ define void @const_expression_trunc_vec() {
 ;
   %T = trunc <2 x i64> <i64 551, i64 552> to <2 x i32>
   call <2 x i32> @use32_vec(<2 x i32> %T)
+  ret void
+}
+
+define void @const_expression_mul_scale_vec() {
+; CHECK-LABEL: @const_expression_mul_scale_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  %A = mul <vscale x 2 x i64> zeroinitializer, zeroinitializer
+  %T = trunc <vscale x 2 x i64> %A to <vscale x 2 x i32>
+  call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> %T)
+  ret void
+}
+
+define void @const_expression_zext_scale_vec() {
+; CHECK-LABEL: @const_expression_zext_scale_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  %A = zext <vscale x 2 x i32> zeroinitializer to <vscale x 2 x i64>
+  %T = trunc <vscale x 2 x i64> %A to <vscale x 2 x i32>
+  call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> %T)
+  ret void
+}
+
+define void @const_expression_trunc_scale_vec() {
+; CHECK-LABEL: @const_expression_trunc_scale_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  %T = trunc <vscale x 2 x i64> zeroinitializer to <vscale x 2 x i32>
+  call <vscale x 2 x i32> @use32_scale_vec(<vscale x 2 x i32> %T)
   ret void
 }
