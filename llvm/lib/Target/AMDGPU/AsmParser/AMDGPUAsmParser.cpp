@@ -5020,9 +5020,11 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       while (!getLexer().is(AsmToken::EndOfStatement)) {
         Parser.Lex();
       }
+      Parser.Lex();
       return true;
     }
   }
+  Parser.Lex();
 
   return false;
 }
