@@ -173,9 +173,10 @@ public:
 /// returns the same options for all files.
 class DefaultOptionsProvider : public ClangTidyOptionsProvider {
 public:
-  DefaultOptionsProvider(const ClangTidyGlobalOptions &GlobalOptions,
-                         const ClangTidyOptions &Options)
-      : GlobalOptions(GlobalOptions), DefaultOptions(Options) {}
+  DefaultOptionsProvider(ClangTidyGlobalOptions GlobalOptions,
+                         ClangTidyOptions Options)
+      : GlobalOptions(std::move(GlobalOptions)),
+        DefaultOptions(std::move(Options)) {}
   const ClangTidyGlobalOptions &getGlobalOptions() override {
     return GlobalOptions;
   }
@@ -187,7 +188,7 @@ private:
 };
 
 class FileOptionsBaseProvider : public DefaultOptionsProvider {
-public:
+protected:
   // A pair of configuration file base name and a function parsing
   // configuration from text in the corresponding format.
   typedef std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions>(
@@ -213,16 +214,15 @@ public:
   /// take precedence over ".clang-tidy" if both reside in the same directory.
   typedef std::vector<ConfigFileHandler> ConfigFileHandlers;
 
-  FileOptionsBaseProvider(
-      const ClangTidyGlobalOptions &GlobalOptions,
-      const ClangTidyOptions &DefaultOptions,
-      const ClangTidyOptions &OverrideOptions,
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
+  FileOptionsBaseProvider(ClangTidyGlobalOptions GlobalOptions,
+                          ClangTidyOptions DefaultOptions,
+                          ClangTidyOptions OverrideOptions,
+                          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
-  FileOptionsBaseProvider(const ClangTidyGlobalOptions &GlobalOptions,
-                          const ClangTidyOptions &DefaultOptions,
-                          const ClangTidyOptions &OverrideOptions,
-                          const ConfigFileHandlers &ConfigHandlers);
+  FileOptionsBaseProvider(ClangTidyGlobalOptions GlobalOptions,
+                          ClangTidyOptions DefaultOptions,
+                          ClangTidyOptions OverrideOptions,
+                          ConfigFileHandlers ConfigHandlers);
 
 protected:
   void addRawFileOptions(llvm::StringRef AbsolutePath,
@@ -243,10 +243,8 @@ protected:
 class ConfigOptionsProvider : public FileOptionsBaseProvider {
 public:
   ConfigOptionsProvider(
-      const ClangTidyGlobalOptions &GlobalOptions,
-      const ClangTidyOptions &DefaultOptions,
-      const ClangTidyOptions &ConfigOptions,
-      const ClangTidyOptions &OverrideOptions,
+      ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+      ClangTidyOptions ConfigOptions, ClangTidyOptions OverrideOptions,
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
   std::vector<OptionsSource> getRawOptions(llvm::StringRef FileName) override;
 
@@ -275,9 +273,8 @@ public:
   /// If any of the \param OverrideOptions fields are set, they will override
   /// whatever options are read from the configuration file.
   FileOptionsProvider(
-      const ClangTidyGlobalOptions &GlobalOptions,
-      const ClangTidyOptions &DefaultOptions,
-      const ClangTidyOptions &OverrideOptions,
+      ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+      ClangTidyOptions OverrideOptions,
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
 
   /// Initializes the \c FileOptionsProvider instance with a custom set
@@ -297,10 +294,10 @@ public:
   /// that can parse configuration from this file type. The configuration files
   /// in each directory are searched for in the order of appearance in
   /// \p ConfigHandlers.
-  FileOptionsProvider(const ClangTidyGlobalOptions &GlobalOptions,
-                      const ClangTidyOptions &DefaultOptions,
-                      const ClangTidyOptions &OverrideOptions,
-                      const ConfigFileHandlers &ConfigHandlers);
+  FileOptionsProvider(ClangTidyGlobalOptions GlobalOptions,
+                      ClangTidyOptions DefaultOptions,
+                      ClangTidyOptions OverrideOptions,
+                      ConfigFileHandlers ConfigHandlers);
 
   std::vector<OptionsSource> getRawOptions(llvm::StringRef FileName) override;
 };
