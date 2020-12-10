@@ -1,22 +1,22 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK,VERIFY,VERIFY-O0
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK,VERIFY,VERIFY-O0
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=1 \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix NOFALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,NOFALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=2  \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix FALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
