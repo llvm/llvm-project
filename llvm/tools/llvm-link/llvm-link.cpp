@@ -142,11 +142,9 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
   return Result;
 }
 
-static std::unique_ptr<Module> loadArFile(const char *Argv0,
-                                          std::unique_ptr<MemoryBuffer> Buffer,
-                                          LLVMContext &Context, Linker &L,
-                                          unsigned OrigFlags,
-                                          unsigned ApplicableFlags) {
+static std::unique_ptr<Module>
+loadArFile(const char *Argv0, std::unique_ptr<MemoryBuffer> Buffer,
+           LLVMContext &Context, unsigned OrigFlags, unsigned ApplicableFlags) {
   std::unique_ptr<Module> Result(new Module("ArchiveModule", Context));
   StringRef ArchiveName = Buffer->getBufferIdentifier();
   if (Verbose)
@@ -163,7 +161,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
           << " failed to read name of archive member"
           << ArchiveName << "'\n";
       return nullptr;
-    };
+    }
     std::string ChildName = Ename.get().str();
     if (Verbose)
       errs() << "Parsing member '" << ChildName
@@ -199,7 +197,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
     }
     if (Verbose)
       errs() << "Linking member '" << ChildName << "' of archive library.\n";
-    if (L.linkModules(*Result, std::move(M), ApplicableFlags))
+    if (Linker::linkModules(*Result, std::move(M), ApplicableFlags))
       return nullptr;
     ApplicableFlags = OrigFlags;
   } // end for each child
@@ -356,7 +354,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 
     std::unique_ptr<Module> M =
         identify_magic(Buffer->getBuffer()) == file_magic::archive
-            ? loadArFile(argv0, std::move(Buffer), Context, L, Flags,
+            ? loadArFile(argv0, std::move(Buffer), Context, Flags,
                          ApplicableFlags)
             : loadFile(argv0, std::move(Buffer), Context);
     if (!M.get()) {
