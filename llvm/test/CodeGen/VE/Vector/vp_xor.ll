@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: not --crash llc %s -march=ve -mattr=+vpu -o /dev/null |& FileCheck %s
 
 ; CHECK:  t{{[0-9]+}}: v256i32 = vp_xor [[A:t[0-9]+]], [[B:t[0-9]+]], [[MASK:t[0-9]+]], [[EVL:t[0-9]+]] 
