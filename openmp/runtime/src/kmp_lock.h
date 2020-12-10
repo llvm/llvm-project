@@ -587,7 +587,8 @@ enum kmp_lock_kind {
 #endif
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
   lk_hle,
-  lk_rtm,
+  lk_rtm_queuing,
+  lk_rtm_spin,
 #endif
   lk_ticket,
   lk_queuing,
@@ -1041,19 +1042,19 @@ extern void __kmp_cleanup_user_locks();
 // All nested locks are indirect lock types.
 #if KMP_USE_TSX
 #if KMP_USE_FUTEX
-#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a) m(hle, a)
+#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a) m(hle, a) m(rtm_spin, a)
 #define KMP_FOREACH_I_LOCK(m, a)                                               \
-  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm, a)              \
+  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm_queuing, a)      \
       m(nested_tas, a) m(nested_futex, a) m(nested_ticket, a)                  \
           m(nested_queuing, a) m(nested_drdpa, a)
 #else
-#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(hle, a)
+#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(hle, a) m(rtm_spin, a)
 #define KMP_FOREACH_I_LOCK(m, a)                                               \
-  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm, a)              \
+  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm_queuing, a)      \
       m(nested_tas, a) m(nested_ticket, a) m(nested_queuing, a)                \
           m(nested_drdpa, a)
 #endif // KMP_USE_FUTEX
-#define KMP_LAST_D_LOCK lockseq_hle
+#define KMP_LAST_D_LOCK lockseq_rtm_spin
 #else
 #if KMP_USE_FUTEX
 #define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a)

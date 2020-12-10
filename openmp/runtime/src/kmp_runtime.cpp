@@ -1630,7 +1630,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       }
 #endif
 
-#if USE_ITT_BUILD
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
       if (((__itt_frame_submit_v3_ptr && __itt_get_timestamp_ptr) ||
            KMP_ITT_DEBUG) &&
           __kmp_forkjoin_frames_mode == 3 &&
@@ -1644,7 +1644,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         // create new stack stitching id before entering fork barrier
         parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
       }
-#endif /* USE_ITT_BUILD */
+#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
 
       KF_TRACE(10, ("__kmp_fork_call: before internal fork: root=%p, team=%p, "
                     "master_th=%p, gtid=%d\n",
