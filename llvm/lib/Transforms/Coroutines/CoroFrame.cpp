@@ -804,6 +804,7 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
                                     CurrentValue->getName() + Twine(".reload"));
   };
 
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
   Value *GEP = nullptr, *CurrentGEP = nullptr;
   for (auto const &E : Spills) {
     // If we have not seen the value, generate a spill.
@@ -896,12 +897,21 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
     if (CurrentGEP != GEP) {
       CurrentGEP = GEP;
       TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(CurrentValue);
-      if (!DIs.empty())
-        DIBuilder(*CurrentBlock->getParent()->getParent(),
-                  /*AllowUnresolved*/ false)
-            .insertDeclare(CurrentGEP, DIs.front()->getVariable(),
-                           DIs.front()->getExpression(),
-                           DIs.front()->getDebugLoc(), DIs.front());
+      if (!DIs.empty()) {
+        auto *DDI = DIs.front();
+        bool AllowUnresolved = false;
+        // This dbg.declare is preserved for all coro-split function
+        // fragments. It will be unreachable in the main function, and
+        // processed by coro::salvageDebugInfo() by CoroCloner.
+        DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
+            .insertDeclare(CurrentGEP, DDI->getVariable(),
+                           DDI->getExpression(),
+                           DDI->getDebugLoc(),
+                           &*Builder.GetInsertPoint());
+        // This dbg.declare is for the main function entry point.  It
+        // will be deleted in all coro-split functions.
+        coro::salvageDebugInfo(DbgPtrAllocaCache, DDI);
+      }
     }
 
     // Replace all uses of CurrentValue in the current instruction with reload.
@@ -1631,6 +1641,55 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       }
     }
   }
+}
+
+void coro::salvageDebugInfo(
+    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
+    DbgDeclareInst *DDI, bool LoadFromFramePtr) {
+  Function *F = DDI->getFunction();
+  IRBuilder<> Builder(F->getContext());
+  auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
+  while (isa<IntrinsicInst>(InsertPt))
+    ++InsertPt;
+  Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
+  DIExpression *Expr = DDI->getExpression();
+  // Follow the pointer arithmetic all the way to the incoming
+  // function argument and convert into a DIExpression.
+  Value *Storage = DDI->getAddress();
+  while (Storage) {
+    if (auto *LdInst = dyn_cast<LoadInst>(Storage)) {
+      Storage = LdInst->getOperand(0);
+    } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
+      Expr = llvm::salvageDebugInfoImpl(*GEPInst, Expr,
+                                        /*WithStackValue=*/false);
+      Storage = GEPInst->getOperand(0);
+    } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
+      Storage = BCInst->getOperand(0);
+    else
+      break;
+  }
+  // Store a pointer to the coroutine frame object in an alloca so it
+  // is available throughout the function when producing unoptimized
+  // code. Extending the lifetime this way is correct because the
+  // variable has been declared by a dbg.declare intrinsic.
+  if (auto Arg = dyn_cast_or_null<llvm::Argument>(Storage)) {
+    auto &Cached = DbgPtrAllocaCache[Storage];
+    if (!Cached) {
+      Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
+                                    Arg->getName() + ".debug");
+      Builder.CreateStore(Storage, Cached);
+    }
+    Storage = Cached;
+    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  }
+  // The FramePtr object adds one extra layer of indirection that
+  // needs to be unwrapped.
+  if (LoadFromFramePtr)
+    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  auto &VMContext = DDI->getFunction()->getContext();
+  DDI->setOperand(
+      0, MetadataAsValue::get(VMContext, ValueAsMetadata::get(Storage)));
+  DDI->setOperand(2, MetadataAsValue::get(VMContext, Expr));
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {

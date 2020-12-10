@@ -33,12 +33,12 @@
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP]], metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
+; CHECK: %[[DBG_PTR:.*]] = alloca %f.Frame*
+; CHECK: store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
 ; CHECK:       init.ready:
-; CHECK:         [[IGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_deref, DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       await.ready:
-; CHECK:         [[JGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP_RESUME]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
+; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_deref, DW_OP_plus_uconst, 24)), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ;
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"
 ; CHECK: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
