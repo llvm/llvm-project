@@ -694,6 +694,9 @@ public:
     virtual int begin() const { return 0; }
     virtual int end() const { return 0; }
     virtual int next(int previous) const { return 0; }
+#if KMP_OS_WINDOWS
+    virtual int set_process_affinity(bool abort_on_error) const { return -1; }
+#endif
     // Set the system's affinity to this affinity mask's value
     virtual int set_system_affinity(bool abort_on_error) const { return -1; }
     // Set this affinity mask to the current system affinity
