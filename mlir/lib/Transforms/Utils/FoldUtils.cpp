@@ -13,7 +13,6 @@
 
 #include "mlir/Transforms/FoldUtils.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -60,11 +59,6 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
     assert(matchPattern(constOp, m_Constant()));
     return constOp;
   }
-
-  // If the dialect is unable to materialize a constant, check to see if the
-  // standard constant can be used.
-  if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type, value);
   return nullptr;
 }
 
