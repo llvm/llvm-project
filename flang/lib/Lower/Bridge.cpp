@@ -28,6 +28,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/BoxValue.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"

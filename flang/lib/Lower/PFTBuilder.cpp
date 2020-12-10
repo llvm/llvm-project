@@ -8,7 +8,7 @@
 
 #include "flang/Lower/PFTBuilder.h"
 #include "IntervalSet.h"
-#include "flang/Lower/Utils.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"

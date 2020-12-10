@@ -151,6 +151,13 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                  [](const auto &) { return mlir::Value{}; });
   }
 
+  mlir::Value getExtent(unsigned dim) const {
+    return match([&](const FullDim &box) { return box.getExtents()[dim]; },
+                 [&](const CharFullDim &box) { return box.getExtents()[dim]; },
+                 [&](const Derived &box) { return box.getExtents()[dim]; },
+                 [](const auto &) { return mlir::Value{}; });
+  }
+
   /// Apply the lambda `func` to this box value.
   template <typename ON, typename RT>
   constexpr RT apply(RT(&&func)(const ON &)) const {

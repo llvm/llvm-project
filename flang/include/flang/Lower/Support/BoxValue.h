@@ -111,6 +111,7 @@ public:
   }
 
   bool lboundsAllOne() const { return lbounds.empty(); }
+  std::size_t rank() const { return extents.size(); }
 
 protected:
   llvm::SmallVector<mlir::Value, 4> extents;

@@ -15,6 +15,7 @@
 #include "flang/Lower/Support/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -238,10 +239,50 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
       [&](const fir::ArrayBoxValue &box) { return consShape(loc, box); },
       [&](const fir::CharArrayBoxValue &box) { return consShape(loc, box); },
       [&](const fir::BoxValue &box) { return consShape(loc, box); },
-      [&](auto) -> mlir::Value {
-        mlir::emitError(loc, "not an array");
-        return {};
-      });
+      [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+}
+
+mlir::Value Fortran::lower::FirOpBuilder::createSlice(
+    mlir::Location loc, const fir::ExtendedValue &exv, mlir::ValueRange triples,
+    mlir::ValueRange path) {
+  if (triples.empty()) {
+    // If there is no slicing by triple notation, then take the whole array.
+    llvm::SmallVector<mlir::Value, 8> trips;
+    auto fullShape = [&](const fir::AbstractArrayBox &arr) -> mlir::Value {
+      auto idxTy = getIndexType();
+      auto one = createIntegerConstant(loc, idxTy, 1);
+      auto sliceTy = fir::SliceType::get(getContext(), arr.rank());
+      if (arr.lboundsAllOne()) {
+        for (auto v : arr.getExtents()) {
+          trips.push_back(one);
+          trips.push_back(v);
+          trips.push_back(one);
+        }
+        return create<fir::SliceOp>(loc, sliceTy, trips, path);
+      }
+      for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+        auto lb = createConvert(loc, idxTy, lbnd);
+        trips.push_back(lb);
+        trips.push_back(ext);
+        trips.push_back(one);
+      }
+      return create<fir::SliceOp>(loc, sliceTy, trips, path);
+    };
+    return exv.match(
+        [&](const fir::ArrayBoxValue &box) { return fullShape(box); },
+        [&](const fir::CharArrayBoxValue &box) { return fullShape(box); },
+        [&](const fir::BoxValue &box) { return fullShape(box); },
+        [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+  }
+  auto sf = [&](const fir::AbstractArrayBox &arr) -> mlir::Value {
+    auto sliceTy = fir::SliceType::get(getContext(), arr.rank());
+    return create<fir::SliceOp>(loc, sliceTy, triples, path);
+  };
+  return exv.match(
+      [&](const fir::ArrayBoxValue &box) { return sf(box); },
+      [&](const fir::CharArrayBoxValue &box) { return sf(box); },
+      [&](const fir::BoxValue &box) { return sf(box); },
+      [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
 }
 
 mlir::Value
