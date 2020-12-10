@@ -4572,6 +4572,49 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, Res);
       return;
     }
+    case Intrinsic::x86_tileloadd64_internal: {
+      if (!Subtarget->hasAMXTILE())
+        break;
+      unsigned Opc = X86::PTILELOADDV;
+      // _tile_loadd_internal(row, col, buf, STRIDE)
+      SDValue Base = Node->getOperand(4);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(5);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      SDValue Ops[] = {Node->getOperand(2),
+                       Node->getOperand(3),
+                       Base,
+                       Scale,
+                       Index,
+                       Disp,
+                       Segment,
+                       CFG,
+                       Chain};
+      CNode = CurDAG->getMachineNode(Opc, dl, {MVT::v256i32, MVT::Other}, Ops);
+      ReplaceNode(Node, CNode);
+      return;
+    }
+    case Intrinsic::x86_tdpbssd_internal: {
+      if (!Subtarget->hasAMXTILE())
+        break;
+      unsigned Opc = X86::PTDPBSSDV;
+      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
+      SDValue Ops[] = {Node->getOperand(2),
+                       Node->getOperand(3),
+                       Node->getOperand(4),
+                       Node->getOperand(5),
+                       Node->getOperand(6),
+                       Node->getOperand(7),
+                       CFG};
+      MachineSDNode *CNode =
+          CurDAG->getMachineNode(Opc, dl, {MVT::v256i32, MVT::Other}, Ops);
+      ReplaceNode(Node, CNode);
+      return;
+    }
     }
     break;
   }
@@ -4628,6 +4671,31 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       break;
+    }
+    case Intrinsic::x86_tilestored64_internal: {
+      unsigned Opc = X86::PTILESTOREDV;
+      // _tile_stored_internal(row, col, buf, STRIDE, c)
+      SDValue Base = Node->getOperand(4);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(5);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      SDValue Ops[] = {Node->getOperand(2),
+                       Node->getOperand(3),
+                       Base,
+                       Scale,
+                       Index,
+                       Disp,
+                       Segment,
+                       Node->getOperand(6),
+                       CFG,
+                       Chain};
+      CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      ReplaceNode(Node, CNode);
+      return;
     }
     case Intrinsic::x86_tileloadd64:
     case Intrinsic::x86_tileloaddt164:
