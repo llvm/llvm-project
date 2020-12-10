@@ -913,6 +913,20 @@ __dfsw_socketpair(int domain, int type, int protocol, int sv[2],
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getsockopt(
+    int sockfd, int level, int optname, void *optval, socklen_t *optlen,
+    dfsan_label sockfd_label, dfsan_label level_label,
+    dfsan_label optname_label, dfsan_label optval_label,
+    dfsan_label optlen_label, dfsan_label *ret_label) {
+  int ret = getsockopt(sockfd, level, optname, optval, optlen);
+  if (ret != -1 && optval && optlen) {
+    dfsan_set_label(0, optlen, sizeof(*optlen));
+    dfsan_set_label(0, optval, *optlen);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
 // Type of the trampoline function passed to the custom version of
 // dfsan_set_write_callback.
 typedef void (*write_trampoline_t)(
