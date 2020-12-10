@@ -1264,6 +1264,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
 
+def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
+  AssemblerPredicate<(all_of FeatureSMemRealTime)>;
+
 def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
   AssemblerPredicate<(all_of FeatureSMemTimeInst)>;
 
