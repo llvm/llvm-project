@@ -140,7 +140,7 @@ func @unknown_terminator() -> i32 {
 /// Check that return values are overdefined when the constant conflicts.
 
 func private @callable(%arg0 : i32) -> i32 {
-  "unknown.return"(%arg0) : (i32) -> ()
+  return %arg0 : i32
 }
 
 // CHECK-LABEL: func @conflicting_constant(
@@ -254,4 +254,19 @@ func @non_symbol_defining_callable() -> i32 {
   }) : () -> (() -> i32)
   %res = call_indirect %fn() : () -> (i32)
   return %res : i32
+}
+
+// -----
+
+/// Check that private callables don't get processed if they have no uses.
+
+// CHECK-LABEL: func private @unreferenced_private_function
+func private @unreferenced_private_function() -> i32 {
+  // CHECK: %[[RES:.*]] = select
+  // CHECK: return %[[RES]] : i32
+  %true = constant true
+  %cst0 = constant 0 : i32
+  %cst1 = constant 1 : i32
+  %result = select %true, %cst0, %cst1 : i32
+  return %result : i32
 }
