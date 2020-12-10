@@ -123,6 +123,10 @@ public:
   /// Tuning option to enable/disable call graph profile. Its default value is
   /// that of the flag: `-enable-npm-call-graph-profile`.
   bool CallGraphProfile;
+
+  /// Tuning option to enable/disable function merging. Its default value is
+  /// false.
+  bool MergeFunctions;
 };
 
 /// This class provides access to building LLVM's passes.
