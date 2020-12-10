@@ -9,7 +9,7 @@ class TestCase(TestBase):
 
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         # Member access
         self.expect_expr("C.Base1::m_base", result_type="int", result_value="11")
