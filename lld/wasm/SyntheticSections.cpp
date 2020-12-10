@@ -566,7 +566,7 @@ unsigned NameSection::numNamedDataSegments() const {
   unsigned numNames = 0;
 
   for (const OutputSegment *s : segments)
-    if (!s->name.empty())
+    if (!s->name.empty() && !s->isBss)
       ++numNames;
 
   return numNames;
@@ -636,8 +636,10 @@ void NameSection::writeBody() {
     writeUleb128(sub.os, count, "name count");
 
     for (OutputSegment *s : segments) {
-      writeUleb128(sub.os, s->index, "global index");
-      writeStr(sub.os, s->name, "segment name");
+      if (!s->name.empty() && !s->isBss) {
+        writeUleb128(sub.os, s->index, "global index");
+        writeStr(sub.os, s->name, "segment name");
+      }
     }
 
     sub.writeTo(bodyOutputStream);
