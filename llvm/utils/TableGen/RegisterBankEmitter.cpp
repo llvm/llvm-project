@@ -71,10 +71,7 @@ public:
 
   /// Add a register class to the bank without duplicates.
   void addRegisterClass(const CodeGenRegisterClass *RC) {
-    if (std::find_if(RCs.begin(), RCs.end(),
-                     [&RC](const CodeGenRegisterClass *X) {
-                       return X == RC;
-                     }) != RCs.end())
+    if (llvm::is_contained(RCs, RC))
       return;
 
     // FIXME? We really want the register size rather than the spill size
