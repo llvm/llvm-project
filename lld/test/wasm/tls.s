@@ -83,7 +83,7 @@ tls3:
 # CHECK-NEXT:       Mutable:         true
 # CHECK-NEXT:       InitExpr:
 # CHECK-NEXT:         Opcode:          I32_CONST
-# CHECK-NEXT:         Value:           66592
+# CHECK-NEXT:         Value:           66576
 
 # __tls_base
 # CHECK-NEXT:     - Index:           1
@@ -112,8 +112,8 @@ tls3:
 
 # CHECK:      - Type:            CODE
 # CHECK-NEXT:   Functions:
-# Skip __wasm_call_ctors and __wasm_init_memory
-# CHECK:          - Index:           2
+# Skip __wasm_call_ctors
+# CHECK:          - Index:           1
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2000240120004100410CFC0800000B
 
@@ -126,7 +126,7 @@ tls3:
 #   memory.init 1, 0
 #   end
 
-# CHECK-NEXT:     - Index:           3
+# CHECK-NEXT:     - Index:           2
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2381808080004180808080006A0B
 
@@ -136,7 +136,7 @@ tls3:
 #   i32.add
 #   end
 
-# CHECK-NEXT:     - Index:           4
+# CHECK-NEXT:     - Index:           3
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2381808080004184808080006A0B
 
@@ -146,7 +146,7 @@ tls3:
 #   i32.add
 #   end
 
-# CHECK-NEXT:     - Index:           5
+# CHECK-NEXT:     - Index:           4
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2381808080004188808080006A0B
 
@@ -156,7 +156,7 @@ tls3:
 #   i32.add
 #   end
 
-# CHECK-NEXT:     - Index:           6
+# CHECK-NEXT:     - Index:           5
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2383808080000B
 
