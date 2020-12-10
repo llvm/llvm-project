@@ -557,6 +557,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
+    IO.mapOptional("IndentPragmas", Style.IndentPragmas);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
     IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentRequires", Style.IndentRequires);
@@ -924,6 +925,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentGotoLabels = true;
+  LLVMStyle.IndentPragmas = false;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequires = false;
   LLVMStyle.IndentWrappedFunctionNames = false;
