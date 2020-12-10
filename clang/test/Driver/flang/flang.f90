@@ -23,7 +23,6 @@
 ! CHECK-E-DAG: "-o" "-"
 
 ! RUN: %clang --driver-mode=flang -### -emit-ast           %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-AST %s
-! CHECK-EMIT-AST-DAG: "-triple"
 ! CHECK-EMIT-AST-DAG: "-emit-ast"
 ! CHECK-EMIT-AST-DAG: "-o" "{{[^"]*}}.ast"
 
