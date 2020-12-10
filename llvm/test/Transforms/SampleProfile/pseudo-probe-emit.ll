@@ -1,8 +1,14 @@
-; REQUIRES: x86-registered-target
+; REQUIRES: x86_64-linux
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
 ; RUN: llc %t -pseudo-probe-for-profiling -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
-;
+; RUN: llc %t -pseudo-probe-for-profiling -function-sections -filetype=asm -o %t1
+; RUN: FileCheck %s < %t1 --check-prefix=CHECK-ASM
+; RUN: llc %t -pseudo-probe-for-profiling -function-sections -filetype=obj -o %t2
+; RUN: llvm-objdump --section-headers  %t2 | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llvm-mc %t1 -filetype=obj -o %t3
+; RUN: llvm-objdump --section-headers  %t3 | FileCheck %s --check-prefix=CHECK-OBJ
+
 ;; Check the generation of pseudoprobe intrinsic call.
 
 define void @foo(i32 %x) !dbg !3 {
@@ -10,18 +16,23 @@ bb0:
   %cmp = icmp eq i32 %x, 0
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0), !dbg ![[#FAKELINE:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID:]] 1 0 0
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 3, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 3 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
   br label %bb3
 
 bb2:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 2, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 2 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
   br label %bb3
 
 bb3:
@@ -35,13 +46,16 @@ define internal void @foo2(void (i32)* %f) !dbg !4 {
 entry:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0)
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2:]], 1, 0, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0
 ; Check pseudo_probe metadata attached to the indirect call instruction.
 ; CHECK-IL: call void %f(i32 1), !dbg ![[#PROBE0:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2]], 2, 1, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2]] 2 1 0
   call void %f(i32 1), !dbg !13
 ; Check pseudo_probe metadata attached to the direct call instruction.
 ; CHECK-IL: call void @bar(i32 1), !dbg ![[#PROBE1:]]
 ; CHECK-MIR: PSEUDO_PROBE	[[#GUID2]], 3, 2, 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2]] 3 2 0
   call void @bar(i32 1)
   ret void
 }
@@ -58,6 +72,20 @@ entry:
 ;; with an index of 3.
 ; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 134217759)
 
+; Check the generation of .pseudo_probe_desc section
+; CHECK-ASM: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK-ASM-NEXT: .quad [[#GUID]]
+; CHECK-ASM-NEXT: .quad [[#HASH:]]
+; CHECK-ASM-NEXT: .byte  3
+; CHECK-ASM-NEXT: .ascii	"foo"
+; CHECK-ASM-NEXT: .section  .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
+; CHECK-ASM-NEXT: .quad [[#GUID2]]
+; CHECK-ASM-NEXT: .quad [[#HASH2:]]
+; CHECK-ASM-NEXT: .byte 4
+; CHECK-ASM-NEXT: .ascii	"foo2"
+
+; CHECK-OBJ-COUNT-2: .pseudo_probe_desc
+; CHECK-OBJ-COUNT-2: .pseudo_probe
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
