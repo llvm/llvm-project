@@ -24,9 +24,9 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/xxhash.h"
 
 #include <algorithm>
 
@@ -368,8 +368,23 @@ public:
     uuidBuf = c->uuid;
   }
 
-  void writeUuid(const std::array<uint8_t, 16> &uuid) const {
-    memcpy(uuidBuf, uuid.data(), uuid.size());
+  void writeUuid(uint64_t digest) const {
+    // xxhash only gives us 8 bytes, so put some fixed data in the other half.
+    static_assert(sizeof(uuid_command::uuid) == 16, "unexpected uuid size");
+    memcpy(uuidBuf, "LLD\xa1UU1D", 8);
+    memcpy(uuidBuf + 8, &digest, 8);
+
+    // RFC 4122 conformance. We need to fix 4 bits in byte 6 and 2 bits in
+    // byte 8. Byte 6 is already fine due to the fixed data we put in. We don't
+    // want to lose bits of the digest in byte 8, so swap that with a byte of
+    // fixed data that happens to have the right bits set.
+    std::swap(uuidBuf[3], uuidBuf[8]);
+
+    // Claim that this is an MD5-based hash. It isn't, but this signals that
+    // this is not a time-based and not a random hash. MD5 seems like the least
+    // bad lie we can put here.
+    assert((uuidBuf[6] & 0xf0) == 0x30 && "See RFC 4122 Sections 4.2.2, 4.1.3");
+    assert((uuidBuf[8] & 0xc0) == 0x80 && "See RFC 4122 Section 4.2.2");
   }
 
   mutable uint8_t *uuidBuf;
@@ -662,18 +677,9 @@ void Writer::writeSections() {
 }
 
 void Writer::writeUuid() {
-  MD5 hash;
-  const auto *bufStart = reinterpret_cast<char *>(buffer->getBufferStart());
-  const auto *bufEnd = reinterpret_cast<char *>(buffer->getBufferEnd());
-  hash.update(StringRef(bufStart, bufEnd - bufStart));
-  MD5::MD5Result result;
-  hash.final(result);
-  // Conform to UUID version 4 & 5 as specified in RFC 4122:
-  // 1. Set the version field to indicate that this is an MD5-based UUID.
-  result.Bytes[6] = (result.Bytes[6] & 0xf) | 0x30;
-  // 2. Set the two MSBs of uuid_t::clock_seq_hi_and_reserved to zero and one.
-  result.Bytes[8] = (result.Bytes[8] & 0x3f) | 0x80;
-  uuidCommand->writeUuid(result.Bytes);
+  uint64_t digest =
+      xxHash64({buffer->getBufferStart(), buffer->getBufferEnd()});
+  uuidCommand->writeUuid(digest);
 }
 
 void Writer::run() {
