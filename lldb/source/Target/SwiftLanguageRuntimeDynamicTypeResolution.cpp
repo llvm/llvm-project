@@ -1082,11 +1082,16 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       return {};
 
     auto *reflection_ctx = GetReflectionContext();
-    auto tc = swift::reflection::TypeConverter(reflection_ctx->getBuilder());
+    auto &builder = reflection_ctx->getBuilder();
+    auto tc = swift::reflection::TypeConverter(builder);
     LLDBTypeInfoProvider tip(*this, *ts);
     auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
+      // The superclass, if any, is an extra child.
+      if (builder.lookupSuperclass(tr)) {
+        return rti->getNumFields() + 1;
+      }
       return rti->getNumFields();
     }
 
