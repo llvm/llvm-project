@@ -187,9 +187,6 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
 }
 
 const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
-  llvm::SmallVector<llvm::StringRef> Components;
-  QName.split(Components, "::");
-
   auto &Ctx = AST.getASTContext();
   auto LookupDecl = [&Ctx](const DeclContext &Scope,
                            llvm::StringRef Name) -> const NamedDecl & {
@@ -200,11 +197,13 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
   };
 
   const DeclContext *Scope = Ctx.getTranslationUnitDecl();
-  for (auto NameIt = Components.begin(), End = Components.end() - 1;
-       NameIt != End; ++NameIt) {
-    Scope = &cast<DeclContext>(LookupDecl(*Scope, *NameIt));
+
+  StringRef Cur, Rest;
+  for (std::tie(Cur, Rest) = QName.split("::"); !Rest.empty();
+       std::tie(Cur, Rest) = Rest.split("::")) {
+    Scope = &cast<DeclContext>(LookupDecl(*Scope, Cur));
   }
-  return LookupDecl(*Scope, Components.back());
+  return LookupDecl(*Scope, Cur);
 }
 
 const NamedDecl &findDecl(ParsedAST &AST,
