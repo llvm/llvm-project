@@ -762,6 +762,15 @@ void test_sigaction() {
   ASSERT_READ_ZERO_LABEL(&oldact, sizeof(oldact));
 }
 
+void test_sigaltstack() {
+  stack_t old_altstack = {};
+  dfsan_set_label(j_label, &old_altstack, sizeof(old_altstack));
+  int ret = sigaltstack(NULL, &old_altstack);
+  assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_ZERO_LABEL(&old_altstack, sizeof(old_altstack));
+}
+
 void test_gettimeofday() {
   struct timeval tv;
   struct timezone tz;
@@ -1172,6 +1181,7 @@ int main(void) {
   test_sched_getaffinity();
   test_select();
   test_sigaction();
+  test_sigaltstack();
   test_sigemptyset();
   test_snprintf();
   test_socketpair();
