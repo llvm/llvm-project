@@ -19,28 +19,13 @@
 
 #include "flang/Common/reference.h"
 #include "flang/Common/template.h"
-#include "flang/Lower/Utils.h"
+#include "flang/Lower/PFTDefs.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace mlir {
-class Block;
-}
-
-namespace Fortran {
-namespace semantics {
-class SemanticsContext;
-class Scope;
-} // namespace semantics
-
-namespace lower {
-
-bool definedInCommonBlock(const semantics::Symbol &sym);
-bool defaultRecursiveFunctionSetting();
-
-namespace pft {
+namespace Fortran::lower::pft {
 
 struct Evaluation;
 struct Program;
@@ -733,8 +718,9 @@ private:
   std::list<Units> units;
 };
 
-} // namespace pft
+} // namespace Fortran::lower::pft
 
+namespace Fortran::lower {
 /// Create a PFT (Pre-FIR Tree) from the parse tree.
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
@@ -750,7 +736,6 @@ createPFT(const parser::Program &root,
 /// Dumper for displaying a PFT.
 void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);
 
-} // namespace lower
-} // namespace Fortran
+} // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_PFTBUILDER_H

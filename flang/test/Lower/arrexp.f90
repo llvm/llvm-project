@@ -221,4 +221,29 @@ subroutine test12(a,b,c,d,n,m)
   ! CHECK: fir.freemem %[[tmp]] : !fir.heap<!fir.array<?xf32>>
 end subroutine test12
 
+! CHECK-LINE: func @_QPtest12
+subroutine test13(a,b,c,d,n,m,i)
+  real :: a(n), b(m)
+  complex :: c(n), d(m)
+  ! CHECK: %[[A_shape:.*]] = fir.shape %
+  ! CHECK: %[[A:.*]] = fir.array_load %arg0(%[[A_shape]])
+  ! CHECK: %[[B_shape:.*]] = fir.shape %
+  ! CHECK: %[[B_slice:.*]] = fir.slice %
+  ! CHECK: %[[B:.*]] = fir.array_load %arg1(%[[B_shape]]) [%[[B_slice]]]
+  ! CHECK: %[[C_shape:.*]] = fir.shape %
+  ! CHECK: %[[C_slice:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}} path %
+  ! CHECK: %[[C:.*]] = fir.array_load %arg2(%[[C_shape]]) [%[[C_slice]]]
+  ! CHECK: %[[D_shape:.*]] = fir.shape %
+  ! CHECK: %[[D_slice:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}} path %
+  ! CHECK: %[[D:.*]] = fir.array_load %arg3(%[[D_shape]]) [%[[D_slice]]]
+  ! CHECK: = constant -6.2598534E+18 : f32
+  ! CHECK: %[[A_result:.*]] = fir.do_loop %{{.*}} = %{{.*}} iter_args(%[[A_in:.*]] = %[[A]]) ->
+  ! CHECK: fir.array_fetch %[[B]],
+  ! CHECK: fir.array_fetch %[[C]],
+  ! CHECK: fir.array_fetch %[[D]],
+  ! CHECK: fir.array_update %[[A_in]],
+  a = b(i:i+2*n-2:2) + c%im - d(i:i+2*n-2:2)%re + x'deadbeef'
+  ! CHECK: fir.array_merge_store %[[A]], %[[A_result]] to %arg0
+end subroutine test13
+
 ! CHECK: func private @_QPbar(

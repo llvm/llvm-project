@@ -15,7 +15,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/Support/BoxValue.h"
-#include "flang/Lower/Utils.h"
+#include "flang/Lower/PFTDefs.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 

@@ -149,11 +149,10 @@ public:
     parts.push_back(getDescFieldTypeModel<5>()(&getContext()));
     parts.push_back(getDescFieldTypeModel<6>()(&getContext()));
     if (rank == unknownRank()) {
-      if (auto seqTy = ele.dyn_cast<SequenceType>()) {
+      if (auto seqTy = ele.dyn_cast<SequenceType>())
         rank = seqTy.getDimension();
-      } else {
+      else
         rank = 0;
-      }
     }
     if (rank > 0) {
       auto rowTy = getDescFieldTypeModel<7>()(&getContext());

@@ -222,6 +222,11 @@ public:
   /// Create one of the shape ops given an extended value.
   mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
 
+  /// Create a slice op extended value. The value to be sliced, `exv`, must be
+  /// an array.
+  mlir::Value createSlice(mlir::Location loc, const fir::ExtendedValue &exv,
+                          mlir::ValueRange triples, mlir::ValueRange path);
+
   /// Create a boxed value (Fortran descriptor) to be passed to the runtime.
   /// \p exv is an extended value holding a memory reference to the object that
   /// must be boxed. This function will crash if provided something that is not

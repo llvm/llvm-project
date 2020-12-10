@@ -75,21 +75,9 @@ public:
       auto extVal = rewriter.create<mlir::ConstantOp>(loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
-    mlir::NamedAttrList attrs;
-    auto rank = seqTy.getDimension();
-    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
-    auto zeroAttr = rewriter.getIntegerAttr(idxTy, 0);
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::lenParamAttrName(), zeroAttr));
-    auto shapeAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::shapeAttrName(), shapeAttr));
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), zeroAttr));
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), zeroAttr));
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, llvm::None, llvm::None,
-                                          llvm::None, attrs);
+                                          llvm::None, embox.lenParams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -102,40 +90,23 @@ public:
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
-    unsigned rank;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
-      rank = shapeOp.getType().cast<ShapeType>().getRank();
     } else {
       auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
-      rank = shiftOp.getType().cast<ShapeShiftType>().getRank();
     }
-    mlir::NamedAttrList attrs;
-    auto idxTy = rewriter.getIndexType();
-    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
-    auto lenParamSize = embox.lenParams().size();
-    auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::lenParamAttrName(), lenParamAttr));
-    auto shapeAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::shapeAttrName(), shapeAttr));
-    auto shiftAttr = rewriter.getIntegerAttr(idxTy, shiftOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), shiftAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
+    llvm::SmallVector<mlir::Value, 8> subcompOpers;
     if (auto s = embox.getSlice())
-      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
-    auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), sliceAttr));
+        subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
+      }
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, shiftOpers, sliceOpers,
-                                          embox.lenParams(), attrs);
+                                          subcompOpers, embox.lenParams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -155,46 +126,24 @@ public:
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
-    unsigned rank;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
-      rank = shapeOp.getType().cast<ShapeType>().getRank();
     } else if (auto shiftOp =
                    dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp())) {
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
-      rank = shiftOp.getType().cast<ShapeShiftType>().getRank();
     } else {
       return mlir::failure();
     }
-    mlir::NamedAttrList attrs;
-    auto idxTy = rewriter.getIndexType();
-    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::rankAttrName(), rankAttr));
-    auto lenParamSize = arrCoor.lenParams().size();
-    auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::lenParamAttrName(), lenParamAttr));
-    auto indexSize = arrCoor.indices().size();
-    auto idxAttr = rewriter.getIntegerAttr(idxTy, indexSize);
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::indexAttrName(), idxAttr));
-    auto dimAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
-    auto shiftAttr = rewriter.getIntegerAttr(idxTy, shiftOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::shiftAttrName(), shiftAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
+    llvm::SmallVector<mlir::Value, 8> subcompOpers;
     if (auto s = arrCoor.slice())
-      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
-    auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::sliceAttrName(), sliceAttr));
+        subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
+      }
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
-        sliceOpers, arrCoor.indices(), arrCoor.lenParams(), attrs);
+        sliceOpers, subcompOpers, arrCoor.indices(), arrCoor.lenParams());
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());

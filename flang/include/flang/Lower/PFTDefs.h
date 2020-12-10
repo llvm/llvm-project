@@ -1,4 +1,4 @@
-//===-- Lower/Utils.h -- utilities ------------------------------*- C++ -*-===//
+//===-- Lower/PFTDefs.h -- shared PFT info ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,19 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_UTILS_H
-#define FORTRAN_LOWER_UTILS_H
+#ifndef FORTRAN_LOWER_PFTDEFS_H
+#define FORTRAN_LOWER_PFTDEFS_H
 
-#include "flang/Common/indirection.h"
-#include "flang/Parser/char-block.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace mlir {
+class Block;
+}
+
 namespace Fortran {
 namespace semantics {
 class Symbol;
-}
+class SemanticsContext;
+class Scope;
+} // namespace semantics
 
 namespace evaluate {
 template <typename A>
@@ -35,7 +39,13 @@ template <typename A>
 class Reference;
 }
 
-namespace lower::pft {
+namespace lower {
+
+bool definedInCommonBlock(const semantics::Symbol &sym);
+bool defaultRecursiveFunctionSetting();
+
+namespace pft {
+
 struct Evaluation;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
@@ -44,22 +54,9 @@ using Label = std::uint64_t;
 using LabelSet = llvm::SmallSet<Label, 4>;
 using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
 using LabelEvalMap = llvm::DenseMap<Label, Evaluation *>;
-} // namespace lower::pft
+
+} // namespace pft
+} // namespace lower
 } // namespace Fortran
 
-/// Convert an F18 CharBlock to an LLVM StringRef
-inline llvm::StringRef toStringRef(const Fortran::parser::CharBlock &cb) {
-  return {cb.begin(), cb.size()};
-}
-
-/// Template helper to remove Fortran::common::Indirection wrappers.
-template <typename A>
-const A &removeIndirection(const A &a) {
-  return a;
-}
-template <typename A>
-const A &removeIndirection(const Fortran::common::Indirection<A> &a) {
-  return a.value();
-}
-
-#endif // FORTRAN_LOWER_UTILS_H
+#endif // FORTRAN_LOWER_PFTDEFS_H
