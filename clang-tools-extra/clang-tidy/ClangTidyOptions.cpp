@@ -195,14 +195,13 @@ DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
 }
 
 ConfigOptionsProvider::ConfigOptionsProvider(
-    const ClangTidyGlobalOptions &GlobalOptions,
-    const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &ConfigOptions,
-    const ClangTidyOptions &OverrideOptions,
+    ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+    ClangTidyOptions ConfigOptions, ClangTidyOptions OverrideOptions,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : FileOptionsBaseProvider(GlobalOptions, DefaultOptions, OverrideOptions,
-                              FS),
-      ConfigOptions(ConfigOptions) {}
+    : FileOptionsBaseProvider(std::move(GlobalOptions),
+                              std::move(DefaultOptions),
+                              std::move(OverrideOptions), std::move(FS)),
+      ConfigOptions(std::move(ConfigOptions)) {}
 
 std::vector<OptionsSource>
 ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
@@ -227,24 +226,25 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
 }
 
 FileOptionsBaseProvider::FileOptionsBaseProvider(
-    const ClangTidyGlobalOptions &GlobalOptions,
-    const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &OverrideOptions,
+    ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+    ClangTidyOptions OverrideOptions,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-    : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
-      OverrideOptions(OverrideOptions), FS(std::move(VFS)) {
+    : DefaultOptionsProvider(std::move(GlobalOptions),
+                             std::move(DefaultOptions)),
+      OverrideOptions(std::move(OverrideOptions)), FS(std::move(VFS)) {
   if (!FS)
     FS = llvm::vfs::getRealFileSystem();
   ConfigHandlers.emplace_back(".clang-tidy", parseConfiguration);
 }
 
 FileOptionsBaseProvider::FileOptionsBaseProvider(
-    const ClangTidyGlobalOptions &GlobalOptions,
-    const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &OverrideOptions,
-    const FileOptionsBaseProvider::ConfigFileHandlers &ConfigHandlers)
-    : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
-      OverrideOptions(OverrideOptions), ConfigHandlers(ConfigHandlers) {}
+    ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+    ClangTidyOptions OverrideOptions,
+    FileOptionsBaseProvider::ConfigFileHandlers ConfigHandlers)
+    : DefaultOptionsProvider(std::move(GlobalOptions),
+                             std::move(DefaultOptions)),
+      OverrideOptions(std::move(OverrideOptions)),
+      ConfigHandlers(std::move(ConfigHandlers)) {}
 
 void FileOptionsBaseProvider::addRawFileOptions(
     llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
@@ -286,20 +286,20 @@ void FileOptionsBaseProvider::addRawFileOptions(
 }
 
 FileOptionsProvider::FileOptionsProvider(
-    const ClangTidyGlobalOptions &GlobalOptions,
-    const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &OverrideOptions,
+    ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+    ClangTidyOptions OverrideOptions,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-    : FileOptionsBaseProvider(GlobalOptions, DefaultOptions, OverrideOptions,
-                              VFS){}
+    : FileOptionsBaseProvider(std::move(GlobalOptions),
+                              std::move(DefaultOptions),
+                              std::move(OverrideOptions), std::move(VFS)) {}
 
 FileOptionsProvider::FileOptionsProvider(
-    const ClangTidyGlobalOptions &GlobalOptions,
-    const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &OverrideOptions,
-    const FileOptionsBaseProvider::ConfigFileHandlers &ConfigHandlers)
-    : FileOptionsBaseProvider(GlobalOptions, DefaultOptions, OverrideOptions,
-                              ConfigHandlers) {}
+    ClangTidyGlobalOptions GlobalOptions, ClangTidyOptions DefaultOptions,
+    ClangTidyOptions OverrideOptions,
+    FileOptionsBaseProvider::ConfigFileHandlers ConfigHandlers)
+    : FileOptionsBaseProvider(
+          std::move(GlobalOptions), std::move(DefaultOptions),
+          std::move(OverrideOptions), std::move(ConfigHandlers)) {}
 
 // FIXME: This method has some common logic with clang::format::getStyle().
 // Consider pulling out common bits to a findParentFileWithName function or
