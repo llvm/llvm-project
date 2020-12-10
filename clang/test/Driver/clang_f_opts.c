@@ -466,14 +466,6 @@
 // CHECK-WCHAR2-NOT: -fwchar-type=int
 // DELIMITERS: {{^ *"}}
 
-// RUN: %clang -### -fno-experimental-new-pass-manager -fexperimental-new-pass-manager %s 2>&1 | FileCheck --check-prefix=CHECK-PM --check-prefix=CHECK-NEW-PM %s
-// RUN: %clang -### -fexperimental-new-pass-manager -fno-experimental-new-pass-manager %s 2>&1 | FileCheck --check-prefix=CHECK-PM --check-prefix=CHECK-NO-NEW-PM %s
-// CHECK-PM-NOT: argument unused
-// CHECK-NEW-PM: -fexperimental-new-pass-manager
-// CHECK-NEW-PM-NOT: -fno-experimental-new-pass-manager
-// CHECK-NO-NEW-PM: -fno-experimental-new-pass-manager
-// CHECK-NO-NEW-PM-NOT: -fexperimental-new-pass-manager
-
 // RUN: %clang -### -S -fstrict-return %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-RETURN %s
 // RUN: %clang -### -S -fno-strict-return %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-RETURN %s
 // CHECK-STRICT-RETURN-NOT: "-fno-strict-return"

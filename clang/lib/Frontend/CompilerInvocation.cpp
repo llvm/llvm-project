@@ -1006,10 +1006,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
   Opts.ProfileRemappingFile =
       std::string(Args.getLastArgValue(OPT_fprofile_remapping_file_EQ));
-  if (!Opts.ProfileRemappingFile.empty() && !Opts.ExperimentalNewPassManager) {
+  if (!Opts.ProfileRemappingFile.empty() && Opts.LegacyPassManager) {
     Diags.Report(diag::err_drv_argument_only_allowed_with)
-      << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
-      << "-fexperimental-new-pass-manager";
+        << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
+        << "-fno-legacy-pass-manager";
   }
 
   Opts.CoverageMapping =
@@ -1051,9 +1051,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
     // -ftime-report= is only for new pass manager.
     if (A->getOption().getID() == OPT_ftime_report_EQ) {
-      if (!Opts.ExperimentalNewPassManager)
+      if (Opts.LegacyPassManager)
         Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-fexperimental-new-pass-manager";
+            << A->getAsString(Args) << "-fno-legacy-pass-manager";
 
       StringRef Val = A->getValue();
       if (Val == "per-pass")
