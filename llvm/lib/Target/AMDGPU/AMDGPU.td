@@ -757,7 +757,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureSMemRealTime, FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureVOP3P,
@@ -1333,6 +1333,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
+
+def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
+  AssemblerPredicate<(all_of FeatureSMemRealTime)>;
 
 def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
   AssemblerPredicate<(all_of FeatureSMemTimeInst)>;
