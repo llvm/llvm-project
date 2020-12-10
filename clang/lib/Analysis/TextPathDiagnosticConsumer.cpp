@@ -14,7 +14,6 @@
 #include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -28,8 +27,12 @@ using namespace clang;
 using namespace ento;
 using namespace tooling;
 
+namespace clang {
+class CrossTUAnalysisHelper;
+}
+
 namespace {
-/// Emitsd minimal diagnostics (report message + notes) for the 'none' output
+/// Emits minimal diagnostics (report message + notes) for the 'none' output
 /// type to the standard error, or to to compliment many others. Emits detailed
 /// diagnostics in textual format for the 'text' output type.
 class TextPathDiagnosticConsumer : public PathDiagnosticConsumer {
@@ -138,7 +141,7 @@ public:
 void ento::createTextPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
   C.emplace_back(new TextPathDiagnosticConsumer(
       std::move(DiagOpts), PP.getDiagnostics(), PP.getLangOpts(),
       /*ShouldDisplayPathNotes=*/true));
@@ -147,7 +150,7 @@ void ento::createTextPathDiagnosticConsumer(
 void ento::createTextMinimalPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
   C.emplace_back(new TextPathDiagnosticConsumer(
       std::move(DiagOpts), PP.getDiagnostics(), PP.getLangOpts(),
       /*ShouldDisplayPathNotes=*/false));

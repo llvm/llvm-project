@@ -25,6 +25,10 @@ using namespace llvm;
 using namespace clang;
 using namespace ento;
 
+namespace clang {
+class CrossTUAnalysisHelper;
+}
+
 namespace {
 class SarifPathDiagnosticConsumer : public PathDiagnosticConsumer {
   std::string OutputFile;
@@ -48,7 +52,7 @@ public:
 void ento::createSarifDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Output, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // TODO: Emit an error here.
   if (Output.empty())

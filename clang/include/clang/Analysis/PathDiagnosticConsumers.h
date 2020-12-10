@@ -24,9 +24,7 @@ namespace clang {
 
 class AnalyzerOptions;
 class Preprocessor;
-namespace cross_tu {
-class CrossTranslationUnitContext;
-}
+class CrossTUAnalysisHelper;
 
 namespace ento {
 
@@ -36,8 +34,7 @@ typedef std::vector<PathDiagnosticConsumer *> PathDiagnosticConsumers;
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   void CREATEFN(PathDiagnosticConsumerOptions Diagopts,                        \
                 PathDiagnosticConsumers &C, const std::string &Prefix,         \
-                const Preprocessor &PP,                                        \
-                const cross_tu::CrossTranslationUnitContext &CTU);
+                const Preprocessor &PP, const CrossTUAnalysisHelper &CTU);
 #include "clang/Analysis/PathDiagnosticConsumers.def"
 
 } // end 'ento' namespace

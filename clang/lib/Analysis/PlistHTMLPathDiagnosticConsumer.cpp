@@ -19,10 +19,14 @@
 using namespace clang;
 using namespace ento;
 
+namespace clang {
+class CrossTUAnalysisHelper;
+}
+
 void ento::createPlistHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
   createHTMLDiagnosticConsumer(
       DiagOpts, C, std::string(llvm::sys::path::parent_path(Prefix)), PP, CTU);
   createPlistMultiFileDiagnosticConsumer(DiagOpts, C, Prefix, PP, CTU);
