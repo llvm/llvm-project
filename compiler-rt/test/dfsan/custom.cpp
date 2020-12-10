@@ -956,6 +956,28 @@ void test_socketpair() {
   ASSERT_READ_ZERO_LABEL(fd, sizeof(fd));
 }
 
+void test_getpeername() {
+  int sockfds[2];
+  int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
+  assert(ret != -1);
+
+  struct sockaddr addr = {};
+  socklen_t addrlen = sizeof(addr);
+  dfsan_set_label(i_label, &addr, addrlen);
+  dfsan_set_label(i_label, &addrlen, sizeof(addrlen));
+
+  ret = getpeername(sockfds[0], &addr, &addrlen);
+  assert(ret != -1);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(addrlen);
+  assert(addrlen < sizeof(addr));
+  ASSERT_READ_ZERO_LABEL(&addr, addrlen);
+  ASSERT_READ_LABEL(((char *)&addr) + addrlen, 1, i_label);
+
+  close(sockfds[0]);
+  close(sockfds[1]);
+}
+
 void test_getsockname() {
   int sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
   assert(sockfd != -1);
@@ -1177,6 +1199,7 @@ int main(void) {
   test_get_current_dir_name();
   test_getcwd();
   test_gethostname();
+  test_getpeername();
   test_getpwuid_r();
   test_getrlimit();
   test_getrusage();

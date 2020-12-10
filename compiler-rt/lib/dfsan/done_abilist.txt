@@ -193,6 +193,7 @@ fun:fstat=custom
 fun:getcwd=custom
 fun:get_current_dir_name=custom
 fun:gethostname=custom
+fun:getpeername=custom
 fun:getrlimit=custom
 fun:getrusage=custom
 fun:getsockname=custom
