@@ -52,9 +52,11 @@ let Definition = "target" in {
   def AutoImportClangModules: Property<"auto-import-clang-modules", "Boolean">,
     DefaultTrue,
     Desc<"Automatically load Clang modules referred to by the program.">;
-  def ImportStdModule: Property<"import-std-module", "Boolean">,
-    DefaultFalse,
-    Desc<"Import the C++ std module to improve debugging STL containers.">;
+  def ImportStdModule: Property<"import-std-module", "Enum">,
+    DefaultEnumValue<"eImportStdModuleFalse">,
+    EnumValues<"OptionEnumValues(g_import_std_module_value_types)">,
+    Desc<"Import the 'std' C++ module to improve expression parsing involving "
+         " C++ standard library types.">;
   def AutoApplyFixIts: Property<"auto-apply-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Automatically apply fix-it hints to expressions.">;
