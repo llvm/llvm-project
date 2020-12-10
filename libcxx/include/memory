@@ -3305,57 +3305,47 @@ __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
 }
 
 template <class _Tp, class _Alloc>
-class __shared_ptr_emplace
-    : public __shared_weak_count
+struct __shared_ptr_emplace
+    : __shared_weak_count
 {
-    __compressed_pair<_Alloc, _Tp> __data_;
-public:
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __shared_ptr_emplace(_Alloc __a)
+        :  __data_(_VSTD::move(__a), __value_init_tag())
+    { }
 
-    _LIBCPP_INLINE_VISIBILITY
-    __shared_ptr_emplace(_Alloc __a)
-        :  __data_(_VSTD::move(__a), __value_init_tag()) {}
-
+    template <class ..._Args>
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
 #ifndef _LIBCPP_CXX03_LANG
-    template <class ..._Args>
-        _LIBCPP_INLINE_VISIBILITY
-        __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
-            :  __data_(piecewise_construct, _VSTD::forward_as_tuple(__a),
-                   _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)) {}
+        : __data_(piecewise_construct, _VSTD::forward_as_tuple(__a),
+                  _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...))
 #else
-    template <class ..._Args>
-        _LIBCPP_INLINE_VISIBILITY
-        __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
-            :  __data_(__a, _Tp(_VSTD::forward<_Args>(__args)...)) {}
+        : __data_(__a, _Tp(_VSTD::forward<_Args>(__args)...))
 #endif
+    { }
+
+    _LIBCPP_HIDE_FROM_ABI
+    _Tp* __get_elem() _NOEXCEPT { return _VSTD::addressof(__data_.second()); }
+
+    _LIBCPP_HIDE_FROM_ABI
+    _Alloc& __get_alloc() _NOEXCEPT { return __data_.first(); }
 
 private:
-    virtual void __on_zero_shared() _NOEXCEPT;
-    virtual void __on_zero_shared_weak() _NOEXCEPT;
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    _Alloc& __get_alloc() _NOEXCEPT {return __data_.first();}
-    _LIBCPP_INLINE_VISIBILITY
-    _Tp* __get_elem() _NOEXCEPT {return _VSTD::addressof(__data_.second());}
+    virtual void __on_zero_shared() _NOEXCEPT {
+        __get_elem()->~_Tp();
+    }
+
+    virtual void __on_zero_shared_weak() _NOEXCEPT {
+        using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
+        using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
+        _ControlBlockAlloc __tmp(__get_alloc());
+        __get_alloc().~_Alloc();
+        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp,
+            pointer_traits<_ControlBlockPointer>::pointer_to(*this), 1);
+    }
+
+    __compressed_pair<_Alloc, _Tp> __data_;
 };
-
-template <class _Tp, class _Alloc>
-void
-__shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared() _NOEXCEPT
-{
-    __get_elem()->~_Tp();
-}
-
-template <class _Tp, class _Alloc>
-void
-__shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
-{
-    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type _Al;
-    typedef allocator_traits<_Al> _ATraits;
-    typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _Al __a(__get_alloc());
-    __get_alloc().~_Alloc();
-    __a.deallocate(_PTraits::pointer_to(*this), 1);
-}
 
 struct __shared_ptr_dummy_rebind_allocator_type;
 template <>
