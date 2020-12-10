@@ -792,8 +792,12 @@ void test_pthread_create() {
   pthread_t pt;
   pthread_create(&pt, 0, pthread_create_test_cb, (void *)1);
   void *cbrv;
-  pthread_join(pt, &cbrv);
+  dfsan_set_label(i_label, &cbrv, sizeof(cbrv));
+  int ret = pthread_join(pt, &cbrv);
+  assert(ret == 0);
   assert(cbrv == (void *)2);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(cbrv);
 }
 
 int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
