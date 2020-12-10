@@ -257,6 +257,7 @@ bool MVEVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
               TII->get(ARM::t2LoopEndDec), DecReg)
           .addReg(PhiReg)
           .add(LoopEnd->getOperand(1));
+  (void)MI;
   LLVM_DEBUG(dbgs() << "Merged LoopDec and End into: " << *MI.getInstr());
 
   LoopDec->eraseFromParent();
