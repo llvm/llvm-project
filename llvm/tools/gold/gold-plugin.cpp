@@ -288,6 +288,8 @@ namespace options {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
       new_pass_manager = true;
+    } else if (opt == "no-new-pass-manager") {
+      new_pass_manager = false;
     } else if (opt == "debug-pass-manager") {
       debug_pass_manager = true;
     } else if (opt == "whole-program-visibility") {

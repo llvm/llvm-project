@@ -598,6 +598,8 @@ def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 def: F<"plugin-opt=new-pass-manager">,
   Alias<lto_new_pass_manager>, HelpText<"Alias for --lto-new-pass-manager">;
+def: F<"plugin-opt=no-new-pass-manager">,
+  Alias<no_lto_new_pass_manager>, HelpText<"Alias for --no-lto-new-pass-manager">;
 def: F<"plugin-opt=cs-profile-generate">,
   Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
 def: J<"plugin-opt=cs-profile-path=">,
