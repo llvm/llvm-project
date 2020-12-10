@@ -360,7 +360,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
     if ((*Text)->getBuffer().empty())
       continue;
     llvm::ErrorOr<ClangTidyOptions> ParsedOptions =
-        ConfigHandler.second((*Text)->getBuffer());
+        ConfigHandler.second({(*Text)->getBuffer(), ConfigFile});
     if (!ParsedOptions) {
       if (ParsedOptions.getError())
         llvm::errs() << "Error parsing " << ConfigFile << ": "
@@ -380,7 +380,8 @@ std::error_code parseLineFilter(StringRef LineFilter,
   return Input.error();
 }
 
-llvm::ErrorOr<ClangTidyOptions> parseConfiguration(StringRef Config) {
+llvm::ErrorOr<ClangTidyOptions>
+parseConfiguration(llvm::MemoryBufferRef Config) {
   llvm::yaml::Input Input(Config);
   ClangTidyOptions Options;
   Input >> Options;

@@ -41,7 +41,8 @@ public:
         [this](llvm::Optional<llvm::StringRef> Data) {
           Value.reset();
           if (Data && !Data->empty()) {
-            if (auto Parsed = tidy::parseConfiguration(*Data))
+            if (auto Parsed = tidy::parseConfiguration(
+                    llvm::MemoryBufferRef(*Data, path())))
               Value = std::make_shared<const tidy::ClangTidyOptions>(
                   std::move(*Parsed));
             else
