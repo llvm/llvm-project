@@ -147,8 +147,9 @@ private:
 #define TYPE(DERIVED, BASE) NKI_##DERIVED##Type,
 #include "clang/AST/TypeNodes.inc"
     NKI_OMPClause,
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) NKI_##Class,
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) NKI_##Class,
+#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
     NKI_NumberOfKinds
   };
 
@@ -205,8 +206,9 @@ KIND_TO_KIND_ID(CXXBaseSpecifier)
 #include "clang/AST/StmtNodes.inc"
 #define TYPE(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Type)
 #include "clang/AST/TypeNodes.inc"
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) KIND_TO_KIND_ID(Class)
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) KIND_TO_KIND_ID(Class)
+#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
 #undef KIND_TO_KIND_ID
 
 inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
