@@ -200,6 +200,7 @@ fun:nanosleep=custom
 fun:pread=custom
 fun:read=custom
 fun:recvmsg=custom
+fun:sigaltstack=custom
 fun:socketpair=custom
 fun:stat=custom
 fun:time=custom
