@@ -155,6 +155,9 @@ class GenericTester(TestBase):
         # Inherit TCC permissions. We can leave this set.
         self.runCmd('settings set target.inherit-tcc true')
 
+        # Kill rather than detach from the inferior if something goes wrong.
+        self.runCmd('settings set target.detach-on-error false')
+
         # And add hooks to restore the settings during tearDown().
         self.addTearDownHook(lambda: self.runCmd(
             "settings set target.inline-breakpoint-strategy headers"))
