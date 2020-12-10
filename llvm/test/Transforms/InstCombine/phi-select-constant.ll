@@ -137,3 +137,24 @@ deadbb:
 end:
   ret void
 }
+
+define i16 @sink_to_unreachable_crash(i1 %a)  {
+; CHECK-LABEL: @sink_to_unreachable_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[A:%.*]], i16 0, i16 5
+; CHECK-NEXT:    br label [[INF_LOOP:%.*]]
+; CHECK:       inf_loop:
+; CHECK-NEXT:    br label [[INF_LOOP]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret i16 [[S]]
+;
+entry:
+  %s = select i1 %a, i16 0, i16 5
+  br label %inf_loop
+
+inf_loop:
+  br label %inf_loop
+
+unreachable:   ; No predecessors!
+  ret i16 %s
+}
