@@ -1528,6 +1528,29 @@ struct FormatStyle {
   /// \endcode
   bool IndentGotoLabels;
 
+  /// Indent pragmas
+  ///
+  /// When ``false``, pragmas are flushed left or follow IndentPPDirectives.
+  /// When ``true``, pragmas are indented to the current scope level.
+  /// \code
+  ///   false:                                  true:
+  ///   #pragma once                   vs       #pragma once
+  ///   void foo() {                            void foo() {
+  ///   #pragma omp simd                          #pragma omp simd
+  ///     for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+  ///   #pragma omp simd                            #pragma omp simd
+  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+  ///       }                                       }
+  ///   #if 1                                   #if 1
+  ///   #pragma omp simd                            #pragma omp simd
+  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+  ///       }                                       }
+  ///   #endif                                  #endif
+  ///     }                                       }
+  ///   }                                       }
+  /// \endcode
+  bool IndentPragmas;
+
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle {
     /// Does not indent any directives.
@@ -2494,6 +2517,7 @@ struct FormatStyle {
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentGotoLabels == R.IndentGotoLabels &&
+           IndentPragmas == R.IndentPragmas &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentRequires == R.IndentRequires && IndentWidth == R.IndentWidth &&
