@@ -199,3 +199,23 @@ lwu x10, (x11)
 ld x10, (x11)
 # CHECK-EXPAND: sd a0, 0(a1)
 sd x10, (x11)
+
+# CHECK-EXPAND: slli a0, a1, 56
+# CHECK-EXPAND: srai a0, a0, 56
+sext.b x10, x11
+
+# CHECK-EXPAND: slli a0, a1, 48
+# CHECK-EXPAND: srai a0, a0, 48
+sext.h x10, x11
+
+# CHECK-INST: andi a0, a1, 255
+# CHECK-ALIAS: zext.b a0, a1
+zext.b x10, x11
+
+# CHECK-EXPAND: slli a0, a1, 48
+# CHECK-EXPAND: srli a0, a0, 48
+zext.h x10, x11
+
+# CHECK-EXPAND: slli a0, a1, 32
+# CHECK-EXPAND: srli a0, a0, 32
+zext.w x10, x11

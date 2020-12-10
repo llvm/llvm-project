@@ -341,4 +341,3 @@ define signext i32 @ret_callresult_anyint32_as_anyint32() nounwind {
   %1 = call signext i32 @return_anyint32()
   ret i32 %1
 }
-
