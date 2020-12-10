@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// This test requires the dylib support introduced in D92769.
+// XFAIL: with_system_cxx_lib=macosx10.15
+
 // <filesystem>
 
 // bool create_directory(const path& p);
@@ -95,8 +98,40 @@ TEST_CASE(dest_is_file)
     const path file = env.create_file("file", 42);
     std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(file, ec) == false);
-    TEST_CHECK(!ec);
+    TEST_CHECK(ec);
     TEST_CHECK(is_regular_file(file));
+}
+
+TEST_CASE(dest_part_is_file)
+{
+    scoped_test_env env;
+    const path file = env.create_file("file");
+    const path dir = env.make_env_path("file/dir1");
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(fs::create_directory(dir, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(is_regular_file(file));
+    TEST_CHECK(!exists(dir));
+}
+
+TEST_CASE(dest_is_symlink_to_dir)
+{
+    scoped_test_env env;
+    const path dir = env.create_dir("dir");
+    const path sym = env.create_symlink(dir, "sym_name");
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, ec) == false);
+    TEST_CHECK(!ec);
+}
+
+TEST_CASE(dest_is_symlink_to_file)
+{
+    scoped_test_env env;
+    const path file = env.create_file("file");
+    const path sym = env.create_symlink(file, "sym_name");
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, ec) == false);
+    TEST_CHECK(ec);
 }
 
 TEST_SUITE_END()
