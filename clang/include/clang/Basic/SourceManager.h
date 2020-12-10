@@ -958,6 +958,10 @@ public:
   /// data in the given source file.
   void overrideFileContents(const FileEntry *SourceFile,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  void overrideFileContents(FileEntryRef SourceFile,
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+    overrideFileContents(&SourceFile.getFileEntry(), std::move(Buffer));
+  }
 
   /// Override the given source file with another one.
   ///
