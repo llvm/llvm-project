@@ -26,8 +26,6 @@
 #include "llvm/CodeGen/Register.h"
 #include <utility>
 
-using namespace llvm;
-
 namespace llvm {
 
 class ShapeT {
@@ -56,14 +54,6 @@ public:
   }
 
   bool operator!=(const ShapeT &Shape) { return !(*this == Shape); }
-
-  ShapeT &operator=(const ShapeT &RHS) {
-    Row = RHS.Row;
-    Col = RHS.Col;
-    RowImm = RHS.RowImm;
-    ColImm = RHS.ColImm;
-    return *this;
-  }
 
   MachineOperand *getRow() const { return Row; }
 
