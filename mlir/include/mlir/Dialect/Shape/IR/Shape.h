@@ -31,18 +31,6 @@ namespace shape {
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx);
 
-/// The component type corresponding to shape, element type and attribute.
-class ComponentType : public Type::TypeBase<ComponentType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The element type of the shaped type.
-class ElementType : public Type::TypeBase<ElementType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
 /// The shape descriptor type represents rank and dimension sizes.
 class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {
 public:
