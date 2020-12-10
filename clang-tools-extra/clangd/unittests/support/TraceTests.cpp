@@ -154,7 +154,7 @@ protected:
   std::vector<std::string> outputLines() {
     // Deliberately don't flush output stream, the tracer should do that.
     // This is important when clangd crashes.
-    llvm::SmallVector<llvm::StringRef, 4> Lines;
+    llvm::SmallVector<llvm::StringRef> Lines;
     llvm::StringRef(Output).split(Lines, "\r\n");
     return {Lines.begin(), Lines.end()};
   }

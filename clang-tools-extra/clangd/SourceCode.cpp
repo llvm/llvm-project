@@ -779,8 +779,8 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
 }
 
 // Returns the prefix namespaces of NS: {"" ... NS}.
-llvm::SmallVector<llvm::StringRef, 8> ancestorNamespaces(llvm::StringRef NS) {
-  llvm::SmallVector<llvm::StringRef, 8> Results;
+llvm::SmallVector<llvm::StringRef> ancestorNamespaces(llvm::StringRef NS) {
+  llvm::SmallVector<llvm::StringRef> Results;
   Results.push_back(NS.take_front(0));
   NS.split(Results, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (llvm::StringRef &R : Results)

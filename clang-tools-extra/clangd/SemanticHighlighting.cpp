@@ -605,7 +605,7 @@ toTheiaSemanticHighlightingInformation(
   std::vector<TheiaSemanticHighlightingInformation> Lines;
   Lines.reserve(Tokens.size());
   for (const auto &Line : Tokens) {
-    llvm::SmallVector<char, 128> LineByteTokens;
+    llvm::SmallVector<char> LineByteTokens;
     llvm::raw_svector_ostream OS(LineByteTokens);
     for (const auto &Token : Line.Tokens) {
       // Writes the token to LineByteTokens in the byte format specified by the
