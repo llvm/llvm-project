@@ -15,6 +15,7 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -42,10 +43,13 @@ class IndexClient : public clangd::SymbolIndex {
     SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
     grpc::ClientContext Context;
     Context.AddMetadata("version", clang::getClangToolFullVersion("clangd"));
-    std::chrono::system_clock::time_point Deadline =
-        std::chrono::system_clock::now() + DeadlineWaitingTime;
+    std::chrono::system_clock::time_point StartTime =
+        std::chrono::system_clock::now();
+    auto Deadline = StartTime + DeadlineWaitingTime;
     Context.set_deadline(Deadline);
     auto Reader = (Stub.get()->*RPCCall)(&Context, RPCRequest);
+    dlog("Sending {0}: {1}", RequestT::descriptor()->name(),
+         RPCRequest.DebugString());
     ReplyT Reply;
     unsigned Successful = 0;
     unsigned FailedToParse = 0;
@@ -65,6 +69,11 @@ class IndexClient : public clangd::SymbolIndex {
       Callback(*Response);
       ++Successful;
     }
+    auto Millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::system_clock::now() - StartTime)
+                      .count();
+    vlog("Remote index [{0}]: {1} => {2} results in {3}ms.", ServerAddress,
+         RequestT::descriptor()->name(), Successful, Millis);
     SPAN_ATTACH(Tracer, "Status", Reader->Finish().ok());
     SPAN_ATTACH(Tracer, "Successful", Successful);
     SPAN_ATTACH(Tracer, "Failed to parse", FailedToParse);
@@ -74,11 +83,12 @@ class IndexClient : public clangd::SymbolIndex {
 public:
   IndexClient(
       std::shared_ptr<grpc::Channel> Channel, llvm::StringRef ProjectRoot,
+      llvm::StringRef Address,
       std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
       : Stub(remote::v1::SymbolIndex::NewStub(Channel)),
         ProtobufMarshaller(new Marshaller(/*RemoteIndexRoot=*/"",
                                           /*LocalIndexRoot=*/ProjectRoot)),
-        DeadlineWaitingTime(DeadlineTime) {
+        ServerAddress(Address), DeadlineWaitingTime(DeadlineTime) {
     assert(!ProjectRoot.empty());
   }
 
@@ -118,6 +128,7 @@ public:
 
 private:
   std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;
+  llvm::SmallString<256> ServerAddress;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
   // Each request will be terminated if it takes too long.
   std::chrono::milliseconds DeadlineWaitingTime;
@@ -131,7 +142,7 @@ std::unique_ptr<clangd::SymbolIndex> getClient(llvm::StringRef Address,
       grpc::CreateChannel(Address.str(), grpc::InsecureChannelCredentials());
   Channel->GetState(true);
   return std::unique_ptr<clangd::SymbolIndex>(
-      new IndexClient(Channel, ProjectRoot));
+      new IndexClient(Channel, ProjectRoot, Address));
 }
 
 } // namespace remote
