@@ -151,7 +151,6 @@ static void InitializeFlags() {
     // FIXME: test and enable.
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
-    cf.exitcode = 77;
     OverrideCommonFlags(cf);
   }
 
