@@ -872,13 +872,24 @@ func @fold_assuming_all_single_element(%arg: tensor<?xindex>) {
 
 // -----
 
-// Fold tensor_cast of a const_shape to const_shape
-// CHECK-LABEL: @fold_tensor_cast_of_const_shape
-func @fold_tensor_cast_of_const_shape(%arg: tensor<?xindex>) {
+// Verify that tensor_cast folding uses the correct type
+// CHECK-LABEL: @fold_tensor_cast_of_const_shape_returned
+func @fold_tensor_cast_of_const_shape_returned(%arg: i1) -> tensor<1xindex> {
+  // CHECK: constant dense<2> : tensor<1xindex>
   // CHECK-NOT: tensor_cast
   %0 = shape.const_shape [2] : tensor<?xindex>
   %1 = tensor_cast %0 : tensor<?xindex> to tensor<1xindex>
-  %2 = shape.cstr_broadcastable %1, %0 : tensor<1xindex>, tensor<?xindex>
-  "consume.witness"(%2) : (!shape.witness) -> ()
-  return
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Verify that tensor_cast folding uses the correct type
+// CHECK-LABEL: @fold_tensor_cast_of_const_shape_returned_dynamic
+func @fold_tensor_cast_of_const_shape_returned_dynamic(%arg: i1) -> tensor<?xindex> {
+  // CHECK: shape.const_shape [2] : tensor<?xindex>
+  // CHECK-NOT: tensor_cast
+  %0 = shape.const_shape [2] : tensor<1xindex>
+  %1 = tensor_cast %0 : tensor<1xindex> to tensor<?xindex>
+  return %1 : tensor<?xindex>
 }
