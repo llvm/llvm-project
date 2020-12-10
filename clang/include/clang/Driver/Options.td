@@ -1352,7 +1352,7 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
 defm legacy_pass_manager : BooleanMarshalledFFlag<"legacy-pass-manager", "CodeGenOpts.LegacyPassManager",
-  "static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER)", "Use the legacy pass manager in LLVM",
+  "!static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER)", "Use the legacy pass manager in LLVM",
   "Use the new pass manager in LLVM">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
