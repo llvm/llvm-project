@@ -323,15 +323,16 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define arm_aapcs_vfpcc void @fmss2(float* nocapture readonly %x, float* nocapture readonly %y, float* noalias nocapture %z, float %a, i32 %n) {
 ; CHECK-LABEL: fmss2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    blt .LBB5_3
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    vmov r6, s0
-; CHECK-NEXT:    vdup.32 q0, r6
-; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB5_1: @ %vector.ph
+; CHECK-NEXT:    vmov lr, s0
+; CHECK-NEXT:    vdup.32 q0, lr
 ; CHECK-NEXT:    vneg.f32 q0, q0
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -342,8 +343,8 @@ define arm_aapcs_vfpcc void @fmss2(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vfma.f32 q3, q2, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB5_2
-; CHECK-NEXT:  .LBB5_3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
