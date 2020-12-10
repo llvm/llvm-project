@@ -8979,6 +8979,46 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::aarch64_fjcvtzs), Arg);
   }
 
+  if (BuiltinID == AArch64::BI__builtin_arm_ld64b ||
+      BuiltinID == AArch64::BI__builtin_arm_st64b ||
+      BuiltinID == AArch64::BI__builtin_arm_st64bv ||
+      BuiltinID == AArch64::BI__builtin_arm_st64bv0) {
+    llvm::Value *MemAddr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *ValPtr = EmitScalarExpr(E->getArg(1));
+
+    if (BuiltinID == AArch64::BI__builtin_arm_ld64b) {
+      // Load from the address via an LLVM intrinsic, receiving a
+      // tuple of 8 i64 words, and store each one to ValPtr.
+      Function *F = CGM.getIntrinsic(Intrinsic::aarch64_ld64b);
+      llvm::Value *Val = Builder.CreateCall(F, MemAddr);
+      llvm::Value *ToRet;
+      for (size_t i = 0; i < 8; i++) {
+        llvm::Value *ValOffsetPtr = Builder.CreateGEP(ValPtr, Builder.getInt32(i));
+        Address Addr(ValOffsetPtr, CharUnits::fromQuantity(8));
+        ToRet = Builder.CreateStore(Builder.CreateExtractValue(Val, i), Addr);
+      }
+      return ToRet;
+    } else {
+      // Load 8 i64 words from ValPtr, and store them to the address
+      // via an LLVM intrinsic.
+      SmallVector<llvm::Value *, 9> Args;
+      Args.push_back(MemAddr);
+      for (size_t i = 0; i < 8; i++) {
+        llvm::Value *ValOffsetPtr = Builder.CreateGEP(ValPtr, Builder.getInt32(i));
+        Address Addr(ValOffsetPtr, CharUnits::fromQuantity(8));
+        Args.push_back(Builder.CreateLoad(Addr));
+      }
+
+      auto Intr = (BuiltinID == AArch64::BI__builtin_arm_st64b
+                       ? Intrinsic::aarch64_st64b
+                       : BuiltinID == AArch64::BI__builtin_arm_st64bv
+                             ? Intrinsic::aarch64_st64bv
+                             : Intrinsic::aarch64_st64bv0);
+      Function *F = CGM.getIntrinsic(Intr);
+      return Builder.CreateCall(F, Args);
+    }
+  }
+
   if (BuiltinID == AArch64::BI__clear_cache) {
     assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
     const FunctionDecl *FD = E->getDirectCallee();

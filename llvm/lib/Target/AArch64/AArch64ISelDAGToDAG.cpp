@@ -1377,9 +1377,12 @@ void AArch64DAGToDAGISel::SelectLoad(SDNode *N, unsigned NumVecs, unsigned Opc,
 
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
 
-  // Transfer memoperands.
-  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+  // Transfer memoperands. In the case of AArch64::LD64B, there won't be one,
+  // because it's too simple to have needed special treatment during lowering.
+  if (auto *MemIntr = dyn_cast<MemIntrinsicSDNode>(N)) {
+    MachineMemOperand *MemOp = MemIntr->getMemOperand();
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+  }
 
   CurDAG->RemoveDeadNode(N);
 }
@@ -3830,6 +3833,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       break;
+    case Intrinsic::aarch64_ld64b:
+      SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
+      return;
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
