@@ -342,13 +342,6 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
       }
     }
 
-    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
-                                               CFSTR("DBGArchitecture"));
-    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
-      if (CFCString::FileSystemRepresentation(cf_str, str))
-        module_spec.GetArchitecture().SetTriple(str.c_str());
-    }
-
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
