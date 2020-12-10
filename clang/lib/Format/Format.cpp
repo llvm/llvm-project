@@ -2032,6 +2032,10 @@ private:
     };
 
     for (auto Line : AnnotatedLines) {
+      if (Line->First && (Line->First->TokenText.startswith("#") ||
+                          Line->First->TokenText == "__pragma" ||
+                          Line->First->TokenText == "_Pragma"))
+        continue;
       for (const FormatToken *FormatTok = Line->First; FormatTok;
            FormatTok = FormatTok->Next) {
         if ((FormatTok->Previous && FormatTok->Previous->is(tok::at) &&

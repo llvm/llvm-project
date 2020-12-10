@@ -16713,6 +16713,15 @@ TEST_F(FormatTest, GuessLanguageWithCaret) {
       guessLanguage("foo.h", "int(^foo[(kNumEntries + 10)])(char, float);"));
 }
 
+TEST_F(FormatTest, GuessLanguageWithPragmas) {
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "__pragma(warning(disable:))"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "#pragma(warning(disable:))"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "_Pragma(warning(disable:))"));
+}
+
 TEST_F(FormatTest, FormatsInlineAsmSymbolicNames) {
   // ASM symbolic names are identifiers that must be surrounded by [] without
   // space in between:
