@@ -23,12 +23,13 @@ template void f<B{nullptr, 1}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BEEEvv(
 // MSABI: define {{.*}} @"??$f@$2UB@@PEBH0A@H0A@@@@YAXXZ"
 template void f<B{nullptr}>();
-#ifndef _WIN32
-// FIXME: MSVC crashes on the first of these and mangles the second the same as
-// the nullptr version. Check the output is correct once we have a reference to
-// compare against.
+// These are extensions, but they seem like the obvious manglings.
 // CHECK: define weak_odr void @_Z1fIXtl1BLPKi32EEEEvv(
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBH0CA@H0A@@@@YAXXZ"
 template void f<B{fold((int*)32)}>();
+#ifndef _WIN32
+// FIXME: On MS ABI, we mangle this the same as nullptr, despite considering a
+// null pointer and zero bitcast to a pointer to be distinct pointer values.
 // CHECK: define weak_odr void @_Z1fIXtl1BrcPKiLi0EEEEvv(
 template void f<B{fold(reinterpret_cast<int*>(0))}>();
 #endif
@@ -36,12 +37,14 @@ template void f<B{fold(reinterpret_cast<int*>(0))}>();
 // Pointers to subobjects.
 struct Nested { union { int k; int arr[2]; }; } nested[2];
 struct Derived : A, Nested { int z; } extern derived;
+// CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z7derivedE16EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UB@@PEBH56E?derived@@3UDerived@@Az@@@H0A@@@@YAXXZ"
+template void f<B{&derived.z}>();
+// FIXME: We don't know the MS ABI mangling for array subscripting and
+// past-the-end pointers yet.
 #ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z6nestedE_EEEEvv
-// FIXME: MSVC generates the garbage mangling ??$f@$2UB@@PEAH0A@H0A@@@@YAXXZ
-// for this.
 template void f<B{&nested[0].k}>();
-// FIXME: MSVC crashes on these.
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z6nestedE16_0pEEEEvv
 template void f<B{&nested[1].arr[2]}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z7derivedE8pEEEEvv
@@ -53,15 +56,17 @@ template void f<B{fold(&derived.b + 3)}>();
 // References to subobjects.
 struct BR { const int &r; };
 template<BR> void f() {}
+// CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z7derivedE16EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UBR@@AEBH6E?derived@@3UDerived@@Az@@@@@YAXXZ"
+template void f<BR{derived.z}>();
+// FIXME: We don't know the MS ABI mangling for array subscripting yet.
 #ifndef _WIN32
-// FIXME: MSVC produces garbage manglings for these.
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z6nestedE_EEEEvv
 template void f<BR{nested[0].k}>();
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z6nestedE12_0EEEEvv
 template void f<BR{nested[1].arr[1]}>();
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z7derivedE4EEEEvv
 template void f<BR{derived.b}>();
-// FIXME: Crashes MSVC.
 // CHECK: define weak_odr void @_Z1fIXtl2BRdecvPKiplcvPcadL_Z7derivedELl16EEEEvv
 template void f<BR{fold(*(&derived.b + 3))}>();
 #endif
@@ -69,8 +74,10 @@ template void f<BR{fold(*(&derived.b + 3))}>();
 // Qualification conversions.
 struct C { const int *p; };
 template<C> void f() {}
+// CHECK: define weak_odr void @_Z1fIXtl1CadsoKiL_Z7derivedE16EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UC@@PEBH56E?derived@@3UDerived@@Az@@@@@@YAXXZ"
+template void f<C{&derived.z}>();
 #ifndef _WIN32
-// FIXME: MSVC produces a garbage mangling for this.
 // CHECK: define weak_odr void @_Z1fIXtl1CadsoKiL_Z7derivedE4EEEEvv
 template void f<C{&derived.b}>();
 #endif
@@ -118,8 +125,6 @@ template<E> void f() {}
 
 // Union members.
 // CHECK: define weak_odr void @_Z1fIXL1EEEEvv(
-// FIXME: MSVC rejects this; check this is the mangling MSVC uses when they
-// start accepting.
 // MSABI: define {{.*}} @"??$f@$7TE@@@@@YAXXZ"
 template void f<E{}>();
 // CHECK: define weak_odr void @_Z1fIXtl1EEEEvv(
