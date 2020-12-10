@@ -75,7 +75,6 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(pid)
 
         # Launch debug monitor attaching to the simulated process
-        self.init_debugserver_test()
         server = self.connect_to_debug_monitor(attach_pid=pid)
 
         # Setup packet sequences

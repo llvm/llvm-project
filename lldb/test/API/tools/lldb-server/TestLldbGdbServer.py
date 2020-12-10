@@ -27,12 +27,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_exe_starts_debugserver(self):
-        self.init_debugserver_test()
         server = self.connect_to_debug_monitor()
 
     @llgs_test
     def test_exe_starts_llgs(self):
-        self.init_llgs_test()
         server = self.connect_to_debug_monitor()
 
     def thread_suffix_supported(self):
@@ -50,12 +48,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_thread_suffix_supported_debugserver(self):
-        self.init_debugserver_test()
         self.thread_suffix_supported()
 
     @llgs_test
     def test_thread_suffix_supported_llgs(self):
-        self.init_llgs_test()
         self.thread_suffix_supported()
 
     def list_threads_in_stop_reply_supported(self):
@@ -72,12 +68,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_list_threads_in_stop_reply_supported_debugserver(self):
-        self.init_debugserver_test()
         self.list_threads_in_stop_reply_supported()
 
     @llgs_test
     def test_list_threads_in_stop_reply_supported_llgs(self):
-        self.init_llgs_test()
         self.list_threads_in_stop_reply_supported()
 
     def c_packet_works(self):
@@ -92,13 +86,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_c_packet_works_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.c_packet_works()
 
     @llgs_test
     def test_c_packet_works_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.c_packet_works()
 
@@ -117,7 +109,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_print_exit_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.inferior_print_exit()
 
@@ -125,7 +116,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_inferior_print_exit_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.inferior_print_exit()
 
@@ -145,13 +135,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_first_launch_stop_reply_thread_matches_first_qC_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.first_launch_stop_reply_thread_matches_first_qC()
 
     @llgs_test
     def test_first_launch_stop_reply_thread_matches_first_qC_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.first_launch_stop_reply_thread_matches_first_qC()
 
@@ -181,14 +169,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_attach_commandline_continue_app_exits_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_continue_app_exits()
 
     @llgs_test
     def test_attach_commandline_continue_app_exits_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_continue_app_exits()
@@ -212,13 +198,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_returns_one_valid_result_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.qRegisterInfo_returns_one_valid_result()
 
     @llgs_test
     def test_qRegisterInfo_returns_one_valid_result_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qRegisterInfo_returns_one_valid_result()
 
@@ -237,13 +221,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_returns_all_valid_results_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.qRegisterInfo_returns_all_valid_results()
 
     @llgs_test
     def test_qRegisterInfo_returns_all_valid_results_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qRegisterInfo_returns_all_valid_results()
 
@@ -278,13 +260,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_contains_required_generics_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.qRegisterInfo_contains_required_generics()
 
     @llgs_test
     def test_qRegisterInfo_contains_required_generics_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qRegisterInfo_contains_required_generics()
 
@@ -308,13 +288,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qRegisterInfo_contains_at_least_one_register_set_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.qRegisterInfo_contains_at_least_one_register_set()
 
     @llgs_test
     def test_qRegisterInfo_contains_at_least_one_register_set_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qRegisterInfo_contains_at_least_one_register_set()
 
@@ -360,7 +338,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["netbsd"])
     @llgs_test
     def test_qRegisterInfo_contains_avx_registers_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qRegisterInfo_contains_avx_registers()
 
@@ -382,14 +359,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qThreadInfo_contains_thread_launch_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_contains_thread()
 
     @llgs_test
     def test_qThreadInfo_contains_thread_launch_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_contains_thread()
@@ -397,7 +372,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qThreadInfo_contains_thread_attach_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_contains_thread()
@@ -405,7 +379,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
     @llgs_test
     def test_qThreadInfo_contains_thread_attach_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_contains_thread()
@@ -441,14 +414,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qThreadInfo_matches_qC_launch_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_matches_qC()
 
     @llgs_test
     def test_qThreadInfo_matches_qC_launch_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_matches_qC()
@@ -456,7 +427,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qThreadInfo_matches_qC_attach_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
@@ -464,7 +434,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
     @llgs_test
     def test_qThreadInfo_matches_qC_attach_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
@@ -526,7 +495,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
@@ -535,7 +503,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
             self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
@@ -544,7 +511,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
@@ -553,7 +519,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
             self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
@@ -593,7 +558,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_Hg_switches_to_3_threads_launch_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_switches_to_3_threads()
@@ -601,7 +565,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @llgs_test
     def test_Hg_switches_to_3_threads_launch_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_switches_to_3_threads()
@@ -609,7 +572,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_Hg_switches_to_3_threads_attach_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
@@ -617,7 +579,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # expecting one more thread
     @llgs_test
     def test_Hg_switches_to_3_threads_attach_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
@@ -737,7 +698,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_Hc_then_Csignal_signals_correct_thread_launch_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         # Darwin debugserver translates some signals like SIGSEGV into some gdb
@@ -749,7 +709,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureNetBSD
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.Hc_then_Csignal_signals_correct_thread(
@@ -810,7 +769,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_m_packet_reads_memory_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.m_packet_reads_memory()
@@ -818,7 +776,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_m_packet_reads_memory_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.m_packet_reads_memory()
@@ -837,14 +794,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qMemoryRegionInfo_is_supported_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_is_supported()
 
     @llgs_test
     def test_qMemoryRegionInfo_is_supported_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_is_supported()
@@ -901,7 +856,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qMemoryRegionInfo_reports_code_address_as_executable_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_code_address_as_executable()
@@ -909,7 +863,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_qMemoryRegionInfo_reports_code_address_as_executable_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_code_address_as_executable()
@@ -967,7 +920,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
@@ -976,7 +928,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_llgs(
             self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
@@ -1033,7 +984,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
@@ -1042,7 +992,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_llgs(
             self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
@@ -1182,7 +1131,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_software_breakpoint_set_and_remove_work_debugserver(self):
-        self.init_debugserver_test()
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1195,7 +1143,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_software_breakpoint_set_and_remove_work_llgs(self):
-        self.init_llgs_test()
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1210,7 +1157,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIf(archs=no_match(['arm', 'aarch64']))
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_hardware_breakpoint_set_and_remove_work_debugserver(self):
-        self.init_debugserver_test()
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1223,7 +1169,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipUnlessPlatform(oslist=['linux'])
     @skipIf(archs=no_match(['arm', 'aarch64']))
     def test_hardware_breakpoint_set_and_remove_work_llgs(self):
-        self.init_llgs_test()
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1249,14 +1194,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qSupported_returns_known_stub_features_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qSupported_returns_known_stub_features()
 
     @llgs_test
     def test_qSupported_returns_known_stub_features_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.qSupported_returns_known_stub_features()
@@ -1323,7 +1266,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_written_M_content_reads_back_correctly_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.written_M_content_reads_back_correctly()
@@ -1332,7 +1274,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_written_M_content_reads_back_correctly_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.written_M_content_reads_back_correctly()
@@ -1374,14 +1315,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_P_writes_all_gpr_registers_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.P_writes_all_gpr_registers()
 
     @llgs_test
     def test_P_writes_all_gpr_registers_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.P_writes_all_gpr_registers()
@@ -1499,7 +1438,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_P_and_p_thread_suffix_work_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.P_and_p_thread_suffix_work()
@@ -1507,7 +1445,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows
     @llgs_test
     def test_P_and_p_thread_suffix_work_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.P_and_p_thread_suffix_work()
