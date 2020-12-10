@@ -8,13 +8,13 @@ define zeroext i1 @double_is_nan(double %a) nounwind {
 ; RV32IFD-LABEL: double_is_nan:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    seqz a0, a0
+; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: double_is_nan:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    seqz a0, a0
+; RV64IFD-NEXT:    xori a0, a0, 1
 ; RV64IFD-NEXT:    ret
   %1 = fcmp uno double %a, 0.000000e+00
   ret i1 %1
