@@ -83,8 +83,8 @@ public:
   // Removes the elements of Claim from the set, modifying or removing ranges
   // that overlap it.
   // Returns the continuous subranges of Claim that were actually removed.
-  llvm::SmallVector<llvm::ArrayRef<T>, 4> erase(llvm::ArrayRef<T> Claim) {
-    llvm::SmallVector<llvm::ArrayRef<T>, 4> Out;
+  llvm::SmallVector<llvm::ArrayRef<T>> erase(llvm::ArrayRef<T> Claim) {
+    llvm::SmallVector<llvm::ArrayRef<T>> Out;
     if (Claim.empty())
       return Out;
 

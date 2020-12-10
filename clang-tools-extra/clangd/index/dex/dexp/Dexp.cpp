@@ -153,7 +153,7 @@ class FuzzyFind : public Command {
     Request.Limit = Limit;
     Request.Query = Query;
     if (Scopes.getNumOccurrences() > 0) {
-      llvm::SmallVector<llvm::StringRef, 8> Scopes;
+      llvm::SmallVector<llvm::StringRef> Scopes;
       llvm::StringRef(this->Scopes).split(Scopes, ',');
       Request.Scopes = {Scopes.begin(), Scopes.end()};
     }
@@ -339,7 +339,7 @@ std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
 bool runCommand(std::string Request, const SymbolIndex &Index) {
   // Split on spaces and add required null-termination.
   std::replace(Request.begin(), Request.end(), ' ', '\0');
-  llvm::SmallVector<llvm::StringRef, 8> Args;
+  llvm::SmallVector<llvm::StringRef> Args;
   llvm::StringRef(Request).split(Args, '\0', /*MaxSplit=*/-1,
                                  /*KeepEmpty=*/false);
   if (Args.empty())
@@ -351,7 +351,7 @@ bool runCommand(std::string Request, const SymbolIndex &Index) {
     llvm::outs() << "Get detailed command help with e.g. `find -help`.\n";
     return true;
   }
-  llvm::SmallVector<const char *, 8> FakeArgv;
+  llvm::SmallVector<const char *> FakeArgv;
   for (llvm::StringRef S : Args)
     FakeArgv.push_back(S.data()); // Terminated by separator or end of string.
 

@@ -750,9 +750,9 @@ explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask) {
 }
 
 namespace {
-llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
+llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D) {
   struct Visitor : ConstDeclVisitor<Visitor> {
-    llvm::SmallVector<ReferenceLoc, 2> Refs;
+    llvm::SmallVector<ReferenceLoc> Refs;
 
     void VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
       // We want to keep it as non-declaration references, as the
@@ -819,10 +819,10 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
   return V.Refs;
 }
 
-llvm::SmallVector<ReferenceLoc, 2> refInStmt(const Stmt *S) {
+llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S) {
   struct Visitor : ConstStmtVisitor<Visitor> {
     // FIXME: handle more complicated cases: more ObjC, designated initializers.
-    llvm::SmallVector<ReferenceLoc, 2> Refs;
+    llvm::SmallVector<ReferenceLoc> Refs;
 
     void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
       Refs.push_back(ReferenceLoc{E->getNestedNameSpecifierLoc(),
@@ -920,7 +920,7 @@ llvm::SmallVector<ReferenceLoc, 2> refInStmt(const Stmt *S) {
   return V.Refs;
 }
 
-llvm::SmallVector<ReferenceLoc, 2> refInTypeLoc(TypeLoc L) {
+llvm::SmallVector<ReferenceLoc> refInTypeLoc(TypeLoc L) {
   struct Visitor : TypeLocVisitor<Visitor> {
     llvm::Optional<ReferenceLoc> Ref;
 
@@ -1114,7 +1114,7 @@ private:
   ///     be references. However, declarations can have references inside them,
   ///     e.g. 'namespace foo = std' references namespace 'std' and this
   ///     function will return the corresponding reference.
-  llvm::SmallVector<ReferenceLoc, 2> explicitReference(DynTypedNode N) {
+  llvm::SmallVector<ReferenceLoc> explicitReference(DynTypedNode N) {
     if (auto *D = N.get<Decl>())
       return refInDecl(D);
     if (auto *S = N.get<Stmt>())
