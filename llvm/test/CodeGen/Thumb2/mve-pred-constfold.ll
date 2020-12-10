@@ -367,7 +367,6 @@ define arm_aapcs_vfpcc i32 @const_mask_threepredabab(<4 x i32> %0, <4 x i32> %1,
 }
 
 
-
 declare i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
