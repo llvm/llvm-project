@@ -67,7 +67,7 @@ public:
     }
     int set_system_affinity(bool abort_on_error) const override {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
-                  "Illegal get affinity operation when not capable");
+                  "Illegal set affinity operation when not capable");
       int retval =
           hwloc_set_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
       if (retval >= 0) {
@@ -79,6 +79,26 @@ public:
       }
       return error;
     }
+#if KMP_OS_WINDOWS
+    int set_process_affinity(bool abort_on_error) const override {
+      KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+                  "Illegal set process affinity operation when not capable");
+      int error = 0;
+      const hwloc_topology_support *support =
+          hwloc_topology_get_support(__kmp_hwloc_topology);
+      if (support->cpubind->set_proc_cpubind) {
+        int retval;
+        retval = hwloc_set_cpubind(__kmp_hwloc_topology, mask,
+                                   HWLOC_CPUBIND_PROCESS);
+        if (retval >= 0)
+          return 0;
+        error = errno;
+        if (abort_on_error)
+          __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+      }
+      return error;
+    }
+#endif
     int get_proc_group() const override {
       int group = -1;
 #if KMP_OS_WINDOWS
@@ -318,7 +338,7 @@ class KMPNativeAffinity : public KMPAffinity {
     }
     int set_system_affinity(bool abort_on_error) const override {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
-                  "Illegal get affinity operation when not capable");
+                  "Illegal set affinity operation when not capable");
 #if KMP_OS_LINUX
       int retval =
           syscall(__NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask);
@@ -425,6 +445,19 @@ class KMPNativeAffinity : public KMPAffinity {
       while (retval < end() && !is_set(retval))
         ++retval;
       return retval;
+    }
+    int set_process_affinity(bool abort_on_error) const override {
+      if (__kmp_num_proc_groups <= 1) {
+        if (!SetProcessAffinityMask(GetCurrentProcess(), *mask)) {
+          DWORD error = GetLastError();
+          if (abort_on_error) {
+            __kmp_fatal(KMP_MSG(CantSetThreadAffMask), KMP_ERR(error),
+                        __kmp_msg_null);
+          }
+          return error;
+        }
+      }
+      return 0;
     }
     int set_system_affinity(bool abort_on_error) const override {
       if (__kmp_num_proc_groups > 1) {
