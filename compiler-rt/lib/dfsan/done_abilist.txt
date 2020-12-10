@@ -319,6 +319,10 @@ fun:pthread_setspecific=discard
 # Functions that take a callback (wrap the callback manually).
 fun:pthread_create=custom
 
+# Functions that produce output does not depend on the input (need to zero the
+# shadow manually).
+fun:pthread_join=custom
+
 ###############################################################################
 # libffi/libgo
 ###############################################################################
