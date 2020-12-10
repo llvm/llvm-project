@@ -88,7 +88,7 @@ private:
   void parseBlock(bool MustBeDeclaration, bool AddLevel = true,
                   bool MunchSemi = true);
   void parseChildBlock();
-  void parsePPDirective();
+  void parsePPDirective(unsigned Level);
   void parsePPDefine();
   void parsePPIf(bool IfDef);
   void parsePPElIf();

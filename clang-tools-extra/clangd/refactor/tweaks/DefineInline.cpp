@@ -480,7 +480,7 @@ public:
     const tooling::Replacement DeleteFuncBody(SM, DefRange->getBegin(),
                                               SourceLen, "");
 
-    llvm::SmallVector<std::pair<std::string, Edit>, 2> Edits;
+    llvm::SmallVector<std::pair<std::string, Edit>> Edits;
     // Edit for Target.
     auto FE = Effect::fileEdit(SM, SM.getFileID(*Semicolon),
                                std::move(TargetFileReplacements));

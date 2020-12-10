@@ -714,7 +714,7 @@ void UnwrappedLineParser::parseChildBlock() {
   nextToken();
 }
 
-void UnwrappedLineParser::parsePPDirective() {
+void UnwrappedLineParser::parsePPDirective(unsigned Level) {
   assert(FormatTok->Tok.is(tok::hash) && "'#' expected");
   ScopedMacroState MacroState(*Line, Tokens, FormatTok);
 
@@ -745,6 +745,17 @@ void UnwrappedLineParser::parsePPDirective() {
   case tok::pp_endif:
     parsePPEndIf();
     break;
+  case tok::pp_pragma: {
+    bool IndentPPDirectives =
+        Style.IndentPPDirectives != FormatStyle::PPDIS_None;
+    unsigned CurrentLevel = Line->Level;
+    Line->Level =
+        Style.IndentPragmas
+            ? (IndentPPDirectives ? (Level - (PPBranchLevel + 1)) : Level)
+            : CurrentLevel;
+    parsePPUnknown();
+    Line->Level = CurrentLevel;
+  } break;
   default:
     parsePPUnknown();
     break;
@@ -3157,7 +3168,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           PPBranchLevel > 0)
         Line->Level += PPBranchLevel;
       flushComments(isOnNewLine(*FormatTok));
-      parsePPDirective();
+      parsePPDirective(Line->Level);
     }
     while (FormatTok->getType() == TT_ConflictStart ||
            FormatTok->getType() == TT_ConflictEnd ||

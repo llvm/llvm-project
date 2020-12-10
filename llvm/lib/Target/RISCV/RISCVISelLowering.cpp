@@ -246,7 +246,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
-      ISD::SETGE,  ISD::SETNE};
+      ISD::SETGE,  ISD::SETNE,  ISD::SETO,   ISD::SETUO};
 
   ISD::NodeType FPOpToExpand[] = {
       ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FP16_TO_FP,

@@ -34,6 +34,7 @@ def OpenMP : DirectiveLanguage {
 
 def OMPC_Allocator : Clause<"allocator"> {
   let clangClass = "OMPAllocatorClause";
+  let flangClassValue = "ScalarIntExpr";
 }
 def OMPC_If : Clause<"if"> {
   let clangClass = "OMPIfClause";

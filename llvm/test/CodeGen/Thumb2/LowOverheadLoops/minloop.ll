@@ -6,88 +6,78 @@ define void @arm_min_q31(i32* nocapture readonly %pSrc, i32 %blockSize, i32* noc
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    ldr.w r12, [r0]
 ; CHECK-NEXT:    subs.w r9, r1, #1
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    subs r6, r1, #2
-; CHECK-NEXT:    and r7, r9, #3
-; CHECK-NEXT:    cmp r6, #3
-; CHECK-NEXT:    str r7, [sp] @ 4-byte Spill
+; CHECK-NEXT:    subs r7, r1, #2
+; CHECK-NEXT:    and r8, r9, #3
+; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    b .LBB0_10
 ; CHECK-NEXT:  .LBB0_4: @ %while.body.preheader.new
-; CHECK-NEXT:    bic r6, r9, #3
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    add.w lr, r4, r6, lsr #2
-; CHECK-NEXT:    movs r6, #4
-; CHECK-NEXT:    mov lr, lr
-; CHECK-NEXT:    mov r11, lr
+; CHECK-NEXT:    bic r7, r9, #3
+; CHECK-NEXT:    movs r6, #1
+; CHECK-NEXT:    subs r7, #4
+; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
+; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    movs r7, #4
 ; CHECK-NEXT:  .LBB0_5: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r10, [r0, #16]!
-; CHECK-NEXT:    mov lr, r11
-; CHECK-NEXT:    sub.w lr, lr, #1
 ; CHECK-NEXT:    sub.w r9, r9, #4
-; CHECK-NEXT:    ldrd r7, r5, [r0, #-12]
-; CHECK-NEXT:    mov r11, lr
-; CHECK-NEXT:    ldr r4, [r0, #-4]
-; CHECK-NEXT:    cmp r12, r7
+; CHECK-NEXT:    ldrd r5, r4, [r0, #-12]
+; CHECK-NEXT:    ldr r11, [r0, #-4]
+; CHECK-NEXT:    cmp r12, r5
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    subgt.w r8, r6, #3
-; CHECK-NEXT:    csel r7, r7, r12, gt
-; CHECK-NEXT:    cmp r7, r5
+; CHECK-NEXT:    subgt r6, r7, #3
+; CHECK-NEXT:    csel r5, r5, r12, gt
+; CHECK-NEXT:    cmp r5, r4
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    subgt.w r8, r6, #2
-; CHECK-NEXT:    csel r7, r5, r7, gt
-; CHECK-NEXT:    cmp r7, r4
+; CHECK-NEXT:    subgt r6, r7, #2
+; CHECK-NEXT:    csel r5, r4, r5, gt
+; CHECK-NEXT:    cmp r5, r11
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    subgt.w r8, r6, #1
-; CHECK-NEXT:    csel r7, r4, r7, gt
-; CHECK-NEXT:    cmp r7, r10
-; CHECK-NEXT:    csel r8, r6, r8, gt
-; CHECK-NEXT:    add.w r6, r6, #4
-; CHECK-NEXT:    csel r12, r10, r7, gt
-; CHECK-NEXT:    cmp.w lr, #0
-; CHECK-NEXT:    bne .LBB0_5
-; CHECK-NEXT:    b .LBB0_6
+; CHECK-NEXT:    subgt r6, r7, #1
+; CHECK-NEXT:    csel r5, r11, r5, gt
+; CHECK-NEXT:    cmp r5, r10
+; CHECK-NEXT:    csel r6, r7, r6, gt
+; CHECK-NEXT:    add.w r7, r7, #4
+; CHECK-NEXT:    csel r12, r10, r5, gt
+; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: @ %while.end.loopexit.unr-lcssa
-; CHECK-NEXT:    ldr r7, [sp] @ 4-byte Reload
-; CHECK-NEXT:    cbz r7, .LBB0_10
+; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.7: @ %while.body.epil
-; CHECK-NEXT:    ldr r4, [r0, #4]
+; CHECK-NEXT:    ldr r7, [r0, #4]
 ; CHECK-NEXT:    sub.w r1, r1, r9
-; CHECK-NEXT:    cmp r12, r4
-; CHECK-NEXT:    csel r8, r1, r8, gt
-; CHECK-NEXT:    csel r12, r4, r12, gt
-; CHECK-NEXT:    cmp r7, #1
+; CHECK-NEXT:    cmp r12, r7
+; CHECK-NEXT:    csel r6, r1, r6, gt
+; CHECK-NEXT:    csel r12, r7, r12, gt
+; CHECK-NEXT:    cmp.w r8, #1
 ; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.8: @ %while.body.epil.1
-; CHECK-NEXT:    ldr r4, [r0, #8]
-; CHECK-NEXT:    cmp r12, r4
-; CHECK-NEXT:    csinc r8, r8, r1, le
-; CHECK-NEXT:    csel r12, r4, r12, gt
-; CHECK-NEXT:    cmp r7, #2
+; CHECK-NEXT:    ldr r7, [r0, #8]
+; CHECK-NEXT:    cmp r12, r7
+; CHECK-NEXT:    csinc r6, r6, r1, le
+; CHECK-NEXT:    csel r12, r7, r12, gt
+; CHECK-NEXT:    cmp.w r8, #2
 ; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.9: @ %while.body.epil.2
 ; CHECK-NEXT:    ldr r0, [r0, #12]
 ; CHECK-NEXT:    cmp r12, r0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    addgt.w r8, r1, #2
+; CHECK-NEXT:    addgt r6, r1, #2
 ; CHECK-NEXT:    csel r12, r0, r12, gt
 ; CHECK-NEXT:  .LBB0_10: @ %while.end
 ; CHECK-NEXT:    str.w r12, [r2]
-; CHECK-NEXT:    str.w r8, [r3]
-; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    str r6, [r3]
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %0 = load i32, i32* %pSrc, align 4

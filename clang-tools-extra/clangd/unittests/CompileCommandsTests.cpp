@@ -208,7 +208,7 @@ TEST(CommandMangler, ConfigEdits) {
 }
 
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
-  llvm::SmallVector<llvm::StringRef, 8> Parts;
+  llvm::SmallVector<llvm::StringRef> Parts;
   llvm::SplitString(Argv, Parts);
   std::vector<std::string> Args = {Parts.begin(), Parts.end()};
   ArgStripper S;

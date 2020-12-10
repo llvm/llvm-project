@@ -159,6 +159,8 @@ TYPE_PARSER(
         construct<OmpClause>(parenthesized(Parser<OmpAlignedClause>{})) ||
     "ALLOCATE" >>
         construct<OmpClause>(parenthesized(Parser<OmpAllocateClause>{})) ||
+    "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
+                       parenthesized(scalarIntExpr))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
     "COPYIN" >> construct<OmpClause>(construct<OmpClause::Copyin>(
@@ -454,6 +456,13 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
+// 2.11.3 Executable Allocate directive
+TYPE_PARSER(
+    sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
+        maybe(parenthesized(Parser<OmpObjectList>{})), Parser<OmpClauseList>{},
+        maybe(nonemptyList(Parser<OpenMPDeclarativeAllocate>{})) / endOmpLine,
+        statement(allocateStmt))))
+
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(
     sourced(construct<OpenMPDeclareSimdConstruct>(verbatim("DECLARE SIMD"_tok),
@@ -463,6 +472,12 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(
     verbatim("THREADPRIVATE"_tok), parenthesized(Parser<OmpObjectList>{}))))
 
+// 2.11.3 Declarative Allocate directive
+TYPE_PARSER(
+    sourced(construct<OpenMPDeclarativeAllocate>(verbatim("ALLOCATE"_tok),
+        parenthesized(Parser<OmpObjectList>{}), Parser<OmpClauseList>{})) /
+    lookAhead(endOmpLine / !statement(allocateStmt)))
+
 // Declarative constructs
 TYPE_PARSER(startOmpLine >>
     sourced(construct<OpenMPDeclarativeConstruct>(
@@ -471,6 +486,8 @@ TYPE_PARSER(startOmpLine >>
             Parser<OpenMPDeclareSimdConstruct>{}) ||
         construct<OpenMPDeclarativeConstruct>(
             Parser<OpenMPDeclareTargetConstruct>{}) ||
+        construct<OpenMPDeclarativeConstruct>(
+            Parser<OpenMPDeclarativeAllocate>{}) ||
         construct<OpenMPDeclarativeConstruct>(Parser<OpenMPThreadprivate>{})) /
         endOmpLine)
 
@@ -511,6 +528,8 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
             // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
             construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
             construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
+            construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
+            construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
             construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{})))
 
 // END OMP Block directives

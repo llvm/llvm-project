@@ -65,6 +65,12 @@ enum LoadDependentFiles {
   eLoadDependentsNo,
 };
 
+enum ImportStdModule {
+  eImportStdModuleFalse,
+  eImportStdModuleFallback,
+  eImportStdModuleTrue,
+};
+
 class TargetExperimentalProperties : public Properties {
 public:
   TargetExperimentalProperties();
@@ -135,7 +141,7 @@ public:
 
   bool GetEnableAutoImportClangModules() const;
 
-  bool GetEnableImportStdModule() const;
+  ImportStdModule GetImportStdModule() const;
 
   bool GetEnableAutoApplyFixIts() const;
 

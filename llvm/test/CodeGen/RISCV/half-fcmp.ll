@@ -145,7 +145,7 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind {
 ; RV32IZFH-NEXT:    feq.h a1, fa1, fa1
 ; RV32IZFH-NEXT:    feq.h a2, fa0, fa0
 ; RV32IZFH-NEXT:    and a1, a2, a1
-; RV32IZFH-NEXT:    seqz a1, a1
+; RV32IZFH-NEXT:    xori a1, a1, 1
 ; RV32IZFH-NEXT:    or a0, a0, a1
 ; RV32IZFH-NEXT:    ret
 ;
@@ -155,7 +155,7 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a1, fa1, fa1
 ; RV64IZFH-NEXT:    feq.h a2, fa0, fa0
 ; RV64IZFH-NEXT:    and a1, a2, a1
-; RV64IZFH-NEXT:    seqz a1, a1
+; RV64IZFH-NEXT:    xori a1, a1, 1
 ; RV64IZFH-NEXT:    or a0, a0, a1
 ; RV64IZFH-NEXT:    ret
   %1 = fcmp ueq half %a, %b
@@ -254,7 +254,7 @@ define i32 @fcmp_uno(half %a, half %b) nounwind {
 ; RV32IZFH-NEXT:    feq.h a0, fa1, fa1
 ; RV32IZFH-NEXT:    feq.h a1, fa0, fa0
 ; RV32IZFH-NEXT:    and a0, a1, a0
-; RV32IZFH-NEXT:    seqz a0, a0
+; RV32IZFH-NEXT:    xori a0, a0, 1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_uno:
@@ -262,7 +262,7 @@ define i32 @fcmp_uno(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a0, fa1, fa1
 ; RV64IZFH-NEXT:    feq.h a1, fa0, fa0
 ; RV64IZFH-NEXT:    and a0, a1, a0
-; RV64IZFH-NEXT:    seqz a0, a0
+; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
   %1 = fcmp uno half %a, %b
   %2 = zext i1 %1 to i32

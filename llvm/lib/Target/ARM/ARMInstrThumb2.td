@@ -5448,6 +5448,10 @@ def t2LoopEnd :
   t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
   8, IIC_Br, []>, Sched<[WriteBr]>;
 
+def t2LoopEndDec :
+  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$elts, brtarget:$target),
+  8, IIC_Br, []>, Sched<[WriteBr]>;
+
 } // end isBranch, isTerminator, hasSideEffects
 
 }

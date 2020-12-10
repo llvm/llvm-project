@@ -137,7 +137,7 @@ struct FragmentCompiler {
     llvm::StringRef EnumName;
     const Located<std::string> &Input;
     llvm::Optional<T> Result;
-    llvm::SmallVector<llvm::StringLiteral, 8> ValidValues;
+    llvm::SmallVector<llvm::StringLiteral> ValidValues;
 
   public:
     EnumSwitch(llvm::StringRef EnumName, const Located<std::string> &In,

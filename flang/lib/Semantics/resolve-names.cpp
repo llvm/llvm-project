@@ -4927,17 +4927,21 @@ void ConstructVisitor::ResolveIndexName(
     // type came from explicit type-spec
   } else if (!prev) {
     ApplyImplicitRules(symbol);
-  } else if (!prev->has<ObjectEntityDetails>() && !prev->has<EntityDetails>()) {
-    Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
-        *prev, "Previous declaration of '%s'"_en_US);
-    return;
-  } else {
-    if (const auto *type{prev->GetType()}) {
-      symbol.SetType(*type);
-    }
-    if (prev->IsObjectArray()) {
-      SayWithDecl(name, *prev, "Index variable '%s' is not scalar"_err_en_US);
+  } else if (const Symbol * prevRoot{GetAssociationRoot(*prev)}) {
+    // prev could be host- use- or construct-associated with another symbol
+    if (!prevRoot->has<ObjectEntityDetails>() &&
+        !prevRoot->has<EntityDetails>()) {
+      Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
+          *prev, "Previous declaration of '%s'"_en_US);
       return;
+    } else {
+      if (const auto *type{prevRoot->GetType()}) {
+        symbol.SetType(*type);
+      }
+      if (prevRoot->IsObjectArray()) {
+        SayWithDecl(name, *prev, "Index variable '%s' is not scalar"_err_en_US);
+        return;
+      }
     }
   }
   EvaluateExpr(parser::Scalar{parser::Integer{common::Clone(name)}});

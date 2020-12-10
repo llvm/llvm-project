@@ -79,7 +79,7 @@ llvm::Optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
   const char SIS[] = "#include <...> search starts here:";
   const char SIE[] = "End of search list.";
   const char TS[] = "Target: ";
-  llvm::SmallVector<llvm::StringRef, 8> Lines;
+  llvm::SmallVector<llvm::StringRef> Lines;
   Output.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
   enum {
@@ -171,8 +171,8 @@ extractSystemIncludesAndTarget(PathRef Driver, llvm::StringRef Lang,
   llvm::Optional<llvm::StringRef> Redirects[] = {
       {""}, {""}, llvm::StringRef(StdErrPath)};
 
-  llvm::SmallVector<llvm::StringRef, 12> Args = {Driver, "-E", "-x",
-                                                 Lang,   "-",  "-v"};
+  llvm::SmallVector<llvm::StringRef> Args = {Driver, "-E", "-x",
+                                             Lang,   "-",  "-v"};
 
   // These flags will be preserved
   const llvm::StringRef FlagsToPreserve[] = {

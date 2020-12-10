@@ -7799,7 +7799,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   // not to need a separate attribute)
   if (!S.Context.getTargetInfo().hasFeature("neon") &&
       !S.Context.getTargetInfo().hasFeature("mve")) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr;
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'neon' or 'mve'";
     Attr.setInvalid();
     return;
   }
@@ -7842,7 +7843,7 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
                                            Sema &S) {
   // Target must have SVE.
   if (!S.Context.getTargetInfo().hasFeature("sve")) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr;
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr << "'sve'";
     Attr.setInvalid();
     return;
   }

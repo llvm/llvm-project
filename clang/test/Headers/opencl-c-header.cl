@@ -84,7 +84,11 @@ void test_atomics(__generic volatile unsigned int* a) {
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
+// CHECK-MOD: Reading modules
 
+// Check that extension macros are defined correctly.
+
+// FIXME: this should not be defined for all targets
 // Verify that non-builtin cl_intel_planar_yuv extension is defined from
 // OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
@@ -94,4 +98,57 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 
-// CHECK-MOD: Reading modules
+// For SPIR all extensions are supported.
+#if defined(__SPIR__)
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
+#if cl_khr_subgroup_extended_types != 1
+#error "Incorrectly defined cl_khr_subgroup_extended_types"
+#endif
+#if cl_khr_subgroup_non_uniform_vote != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_vote"
+#endif
+#if cl_khr_subgroup_ballot != 1
+#error "Incorrectly defined cl_khr_subgroup_ballot"
+#endif
+#if cl_khr_subgroup_non_uniform_arithmetic != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_arithmetic"
+#endif
+#if cl_khr_subgroup_shuffle != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle"
+#endif
+#if cl_khr_subgroup_shuffle_relative != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle_relative"
+#endif
+#if cl_khr_subgroup_clustered_reduce != 1
+#error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
+#endif
+
+#else
+
+#ifdef cl_khr_subgroup_extended_types
+#error "Incorrect cl_khr_subgroup_extended_types define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_vote
+#error "Incorrect cl_khr_subgroup_non_uniform_vote define"
+#endif
+#ifdef cl_khr_subgroup_ballot
+#error "Incorrect cl_khr_subgroup_ballot define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_arithmetic
+#error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
+#endif
+#ifdef cl_khr_subgroup_shuffle
+#error "Incorrect cl_khr_subgroup_shuffle define"
+#endif
+#ifdef cl_khr_subgroup_shuffle_relative
+#error "Incorrect cl_khr_subgroup_shuffle_relative define"
+#endif
+#ifdef cl_khr_subgroup_clustered_reduce
+#error "Incorrect cl_khr_subgroup_clustered_reduce define"
+#endif
+
+#endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
+#endif // defined(__SPIR__)

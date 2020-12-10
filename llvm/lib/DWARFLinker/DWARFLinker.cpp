@@ -421,32 +421,11 @@ void DWARFLinker::cleanupAuxiliarryData(LinkContext &Context) {
   DIEAlloc.Reset();
 }
 
-/// Get the starting and ending (exclusive) offset for the
-/// attribute with index \p Idx descibed by \p Abbrev. \p Offset is
-/// supposed to point to the position of the first attribute described
-/// by \p Abbrev.
-/// \return [StartOffset, EndOffset) as a pair.
-static std::pair<uint64_t, uint64_t>
-getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
-                    uint64_t Offset, const DWARFUnit &Unit) {
-  DataExtractor Data = Unit.getDebugInfoExtractor();
-
-  for (unsigned I = 0; I < Idx; ++I)
-    DWARFFormValue::skipValue(Abbrev->getFormByIndex(I), Data, &Offset,
-                              Unit.getFormParams());
-
-  uint64_t End = Offset;
-  DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End,
-                            Unit.getFormParams());
-
-  return std::make_pair(Offset, End);
-}
 
 /// Check if a variable describing DIE should be kept.
 /// \returns updated TraversalFlags.
 unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
                                             const DWARFDie &DIE,
-                                            CompileUnit &Unit,
                                             CompileUnit::DIEInfo &MyInfo,
                                             unsigned Flags) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
@@ -458,24 +437,12 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
     return Flags | TF_Keep;
   }
 
-  Optional<uint32_t> LocationIdx =
-      Abbrev->findAttributeIndex(dwarf::DW_AT_location);
-  if (!LocationIdx)
-    return Flags;
-
-  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
-  const DWARFUnit &OrigUnit = Unit.getOrigUnit();
-  uint64_t LocationOffset, LocationEndOffset;
-  std::tie(LocationOffset, LocationEndOffset) =
-      getAttributeOffsets(Abbrev, *LocationIdx, Offset, OrigUnit);
-
   // See if there is a relocation to a valid debug map entry inside
   // this variable's location. The order is important here. We want to
   // always check if the variable has a valid relocation, so that the
   // DIEInfo is filled. However, we don't want a static variable in a
   // function to force us to keep the enclosing function.
-  if (!RelocMgr.hasValidRelocationAt(LocationOffset, LocationEndOffset,
-                                     MyInfo) ||
+  if (!RelocMgr.hasLiveMemoryLocation(DIE, MyInfo) ||
       (Flags & TF_InFunctionScope))
     return Flags;
 
@@ -496,24 +463,14 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     AddressesMap &RelocMgr, RangesTy &Ranges, const DWARFDie &DIE,
     const DWARFFile &File, CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
     unsigned Flags) {
-  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
-
   Flags |= TF_InFunctionScope;
 
-  Optional<uint32_t> LowPcIdx = Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
-  if (!LowPcIdx)
+  auto LowPc = dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc));
+  if (!LowPc)
     return Flags;
 
-  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
-  DWARFUnit &OrigUnit = Unit.getOrigUnit();
-  uint64_t LowPcOffset, LowPcEndOffset;
-  std::tie(LowPcOffset, LowPcEndOffset) =
-      getAttributeOffsets(Abbrev, *LowPcIdx, Offset, OrigUnit);
-
-  auto LowPc = dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc));
   assert(LowPc.hasValue() && "low_pc attribute is not an address.");
-  if (!LowPc ||
-      !RelocMgr.hasValidRelocationAt(LowPcOffset, LowPcEndOffset, MyInfo))
+  if (!RelocMgr.hasLiveAddressRange(DIE, MyInfo))
     return Flags;
 
   if (Options.Verbose) {
@@ -527,6 +484,8 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   if (DIE.getTag() == dwarf::DW_TAG_label) {
     if (Unit.hasLabelAt(*LowPc))
       return Flags;
+
+    DWARFUnit &OrigUnit = Unit.getOrigUnit();
     // FIXME: dsymutil-classic compat. dsymutil-classic doesn't consider labels
     // that don't fall into the CU's aranges. This is wrong IMO. Debug info
     // generation bugs aside, this is really wrong in the case of labels, where
@@ -563,7 +522,7 @@ unsigned DWARFLinker::shouldKeepDIE(AddressesMap &RelocMgr, RangesTy &Ranges,
   switch (DIE.getTag()) {
   case dwarf::DW_TAG_constant:
   case dwarf::DW_TAG_variable:
-    return shouldKeepVariableDIE(RelocMgr, DIE, Unit, MyInfo, Flags);
+    return shouldKeepVariableDIE(RelocMgr, DIE, MyInfo, Flags);
   case dwarf::DW_TAG_subprogram:
   case dwarf::DW_TAG_label:
     return shouldKeepSubprogramDIE(RelocMgr, Ranges, DIE, File, Unit, MyInfo,

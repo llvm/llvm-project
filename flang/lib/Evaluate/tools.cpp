@@ -931,6 +931,11 @@ const Symbol *GetAssociationRoot(const Symbol &symbol) {
   return details ? GetAssociatedVariable(*details) : &ultimate;
 }
 
+Symbol *GetAssociationRoot(Symbol &symbol) {
+  return const_cast<Symbol *>(
+      GetAssociationRoot(const_cast<const Symbol &>(symbol)));
+}
+
 bool IsVariableName(const Symbol &symbol) {
   const Symbol *root{GetAssociationRoot(symbol)};
   return root && root->has<ObjectEntityDetails>() && !IsNamedConstant(*root);

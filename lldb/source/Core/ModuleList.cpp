@@ -82,8 +82,9 @@ ModuleListProperties::ModuleListProperties() {
                                            [this] { UpdateSymlinkMappings(); });
 
   llvm::SmallString<128> path;
-  clang::driver::Driver::getDefaultModuleCachePath(path);
-  SetClangModulesCachePath(path);
+  if (clang::driver::Driver::getDefaultModuleCachePath(path)) {
+    lldbassert(SetClangModulesCachePath(FileSpec(path)));
+  }
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -104,8 +105,8 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
       ->GetCurrentValue();
 }
 
-bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
-  return m_collection_sp->SetPropertyAtIndexAsString(
+bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
+  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
       nullptr, ePropertyClangModulesCachePath, path);
 }
 

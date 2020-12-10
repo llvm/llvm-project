@@ -680,7 +680,7 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
 }
 
-let SubtargetPredicate = isGFX7GFX8 in {
+let SubtargetPredicate = isGFX7Plus in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
@@ -690,9 +690,7 @@ foreach vt = VReg_128.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
 }
 
-}
-
-let SubtargetPredicate = isGFX9Plus in {
+let SubtargetPredicate = HasUnalignedAccessMode in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
@@ -702,7 +700,9 @@ foreach vt = VReg_128.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B128, vt, "load_local">;
 }
 
-}
+} // End SubtargetPredicate = HasUnalignedAccessMode
+
+} // End SubtargetPredicate = isGFX7Plus
 
 } // End AddedComplexity = 100
 
@@ -835,7 +835,7 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
 }
 
-let SubtargetPredicate = isGFX7GFX8 in {
+let SubtargetPredicate = isGFX7Plus in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_align16_local">;
@@ -845,9 +845,7 @@ foreach vt = VReg_128.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 }
 
-}
-
-let SubtargetPredicate = isGFX9Plus in {
+let SubtargetPredicate = HasUnalignedAccessMode in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
@@ -857,9 +855,12 @@ foreach vt = VReg_128.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_local">;
 }
 
-}
+} // End SubtargetPredicate = HasUnalignedAccessMode
+
+} // End SubtargetPredicate = isGFX7Plus
 
 } // End AddedComplexity = 100
+
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))

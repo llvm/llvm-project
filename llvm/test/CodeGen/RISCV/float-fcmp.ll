@@ -175,7 +175,7 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    feq.s a1, ft0, ft0
 ; RV32IF-NEXT:    feq.s a2, ft1, ft1
 ; RV32IF-NEXT:    and a1, a2, a1
-; RV32IF-NEXT:    seqz a1, a1
+; RV32IF-NEXT:    xori a1, a1, 1
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    ret
 ;
@@ -187,7 +187,7 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    feq.s a1, ft0, ft0
 ; RV64IF-NEXT:    feq.s a2, ft1, ft1
 ; RV64IF-NEXT:    and a1, a2, a1
-; RV64IF-NEXT:    seqz a1, a1
+; RV64IF-NEXT:    xori a1, a1, 1
 ; RV64IF-NEXT:    or a0, a0, a1
 ; RV64IF-NEXT:    ret
   %1 = fcmp ueq float %a, %b
@@ -308,7 +308,7 @@ define i32 @fcmp_uno(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    feq.s a0, ft1, ft1
 ; RV32IF-NEXT:    feq.s a1, ft0, ft0
 ; RV32IF-NEXT:    and a0, a1, a0
-; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:    xori a0, a0, 1
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcmp_uno:
@@ -318,7 +318,7 @@ define i32 @fcmp_uno(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    feq.s a0, ft1, ft1
 ; RV64IF-NEXT:    feq.s a1, ft0, ft0
 ; RV64IF-NEXT:    and a0, a1, a0
-; RV64IF-NEXT:    seqz a0, a0
+; RV64IF-NEXT:    xori a0, a0, 1
 ; RV64IF-NEXT:    ret
   %1 = fcmp uno float %a, %b
   %2 = zext i1 %1 to i32

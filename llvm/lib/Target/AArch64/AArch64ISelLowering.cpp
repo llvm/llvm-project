@@ -849,6 +849,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
 
+  setTargetDAGCombine(ISD::MGATHER);
   setTargetDAGCombine(ISD::MSCATTER);
 
   setTargetDAGCombine(ISD::MUL);
@@ -14063,20 +14064,19 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performMSCATTERCombine(SDNode *N,
+static SDValue performMaskedGatherScatterCombine(SDNode *N,
                                       TargetLowering::DAGCombinerInfo &DCI,
                                       SelectionDAG &DAG) {
-  MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
-  assert(MSC && "Can only combine scatter store nodes");
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
+  assert(MGS && "Can only combine gather load or scatter store nodes");
 
-  SDLoc DL(MSC);
-  SDValue Chain = MSC->getChain();
-  SDValue Scale = MSC->getScale();
-  SDValue Index = MSC->getIndex();
-  SDValue Data = MSC->getValue();
-  SDValue Mask = MSC->getMask();
-  SDValue BasePtr = MSC->getBasePtr();
-  ISD::MemIndexType IndexType = MSC->getIndexType();
+  SDLoc DL(MGS);
+  SDValue Chain = MGS->getChain();
+  SDValue Scale = MGS->getScale();
+  SDValue Index = MGS->getIndex();
+  SDValue Mask = MGS->getMask();
+  SDValue BasePtr = MGS->getBasePtr();
+  ISD::MemIndexType IndexType = MGS->getIndexType();
 
   EVT IdxVT = Index.getValueType();
 
@@ -14086,16 +14086,27 @@ static SDValue performMSCATTERCombine(SDNode *N,
     if ((IdxVT.getVectorElementType() == MVT::i8) ||
         (IdxVT.getVectorElementType() == MVT::i16)) {
       EVT NewIdxVT = IdxVT.changeVectorElementType(MVT::i32);
-      if (MSC->isIndexSigned())
+      if (MGS->isIndexSigned())
         Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
       else
         Index = DAG.getNode(ISD::ZERO_EXTEND, DL, NewIdxVT, Index);
 
-      SDValue Ops[] = { Chain, Data, Mask, BasePtr, Index, Scale };
-      return DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
-                                  MSC->getMemoryVT(), DL, Ops,
-                                  MSC->getMemOperand(), IndexType,
-                                  MSC->isTruncatingStore());
+      if (auto *MGT = dyn_cast<MaskedGatherSDNode>(MGS)) {
+        SDValue PassThru = MGT->getPassThru();
+        SDValue Ops[] = { Chain, PassThru, Mask, BasePtr, Index, Scale };
+        return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
+                                   PassThru.getValueType(), DL, Ops,
+                                   MGT->getMemOperand(),
+                                   MGT->getIndexType(), MGT->getExtensionType());
+      } else {
+        auto *MSC = cast<MaskedScatterSDNode>(MGS);
+        SDValue Data = MSC->getValue();
+        SDValue Ops[] = { Chain, Data, Mask, BasePtr, Index, Scale };
+        return DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
+                                    MSC->getMemoryVT(), DL, Ops,
+                                    MSC->getMemOperand(), IndexType,
+                                    MSC->isTruncatingStore());
+      }
     }
   }
 
@@ -15072,9 +15083,6 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue
 performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               SelectionDAG &DAG) {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
   SDLoc DL(N);
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
@@ -15108,6 +15116,9 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
     return DAG.getNode(SOpc, DL, N->getValueType(0), Ext);
   }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   if (!EnableCombineMGatherIntrinsics)
     return SDValue();
@@ -15296,8 +15307,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::MGATHER:
   case ISD::MSCATTER:
-    return performMSCATTERCombine(N, DCI, DAG);
+    return performMaskedGatherScatterCombine(N, DCI, DAG);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:

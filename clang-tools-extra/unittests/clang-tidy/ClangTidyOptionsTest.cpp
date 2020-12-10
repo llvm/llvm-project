@@ -72,10 +72,11 @@ TEST(ParseLineFilter, ValidFilter) {
 
 TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
-      parseConfiguration("Checks: \"-*,misc-*\"\n"
-                         "HeaderFilterRegex: \".*\"\n"
-                         "AnalyzeTemporaryDtors: true\n"
-                         "User: some.user");
+      parseConfiguration(llvm::MemoryBufferRef("Checks: \"-*,misc-*\"\n"
+                                               "HeaderFilterRegex: \".*\"\n"
+                                               "AnalyzeTemporaryDtors: true\n"
+                                               "User: some.user",
+                                               "Options"));
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
   EXPECT_EQ(".*", *Options->HeaderFilterRegex);
@@ -83,7 +84,8 @@ TEST(ParseConfiguration, ValidConfiguration) {
 }
 
 TEST(ParseConfiguration, MergeConfigurations) {
-  llvm::ErrorOr<ClangTidyOptions> Options1 = parseConfiguration(R"(
+  llvm::ErrorOr<ClangTidyOptions> Options1 =
+      parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check1,check2"
       HeaderFilterRegex: "filter1"
       AnalyzeTemporaryDtors: true
@@ -91,9 +93,11 @@ TEST(ParseConfiguration, MergeConfigurations) {
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
       UseColor: false
-  )");
+  )",
+                                               "Options1"));
   ASSERT_TRUE(!!Options1);
-  llvm::ErrorOr<ClangTidyOptions> Options2 = parseConfiguration(R"(
+  llvm::ErrorOr<ClangTidyOptions> Options2 =
+      parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check3,check4"
       HeaderFilterRegex: "filter2"
       AnalyzeTemporaryDtors: false
@@ -101,7 +105,8 @@ TEST(ParseConfiguration, MergeConfigurations) {
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
       UseColor: true
-  )");
+  )",
+                                               "Options2"));
   ASSERT_TRUE(!!Options2);
   ClangTidyOptions Options = Options1->merge(*Options2, 0);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
