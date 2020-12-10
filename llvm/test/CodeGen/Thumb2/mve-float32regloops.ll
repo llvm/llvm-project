@@ -1080,7 +1080,7 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, float* noc
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    add.w r0, r5, r0, lsl #2
 ; CHECK-NEXT:    add.w r5, r0, #16
-; CHECK-NEXT:    beq.w .LBB16_12
+; CHECK-NEXT:    beq .LBB16_12
 ; CHECK-NEXT:  .LBB16_4: @ %while.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB16_6 Depth 2

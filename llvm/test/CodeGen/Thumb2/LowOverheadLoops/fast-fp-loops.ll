@@ -352,9 +352,9 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vcvtb.f32.f16 s22, s1
 ; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vcvtt.f32.f16 s21, s0
-; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    vcvtb.f32.f16 s20, s0
 ; CHECK-NEXT:    vadd.f32 q5, q3, q5
+; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:    b .LBB2_21
 ; CHECK-NEXT:  .LBB2_4: @ %vector.body

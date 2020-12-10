@@ -1421,12 +1421,11 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vldrwt.u32 q0, [r12], #16
 ; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
 ; CHECK-NEXT:    vfmat.f32 q6, q1, q0
-; CHECK-NEXT:    add.w r6, r11, r5
+; CHECK-NEXT:    vstrw.32 q6, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r11]
 ; CHECK-NEXT:    vfmat.f32 q7, q1, q0
-; CHECK-NEXT:    vstrw.32 q7, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    vmov q7, q6
+; CHECK-NEXT:    add.w r6, r11, r5
 ; CHECK-NEXT:    vmov q6, q5
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vmov q3, q4
@@ -1434,23 +1433,22 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
 ; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #64] @ 16-byte Reload
-; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r7]
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #80] @ 16-byte Reload
+; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
-; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q2, q4
 ; CHECK-NEXT:    vmov q4, q3
 ; CHECK-NEXT:    vmov q3, q5
 ; CHECK-NEXT:    vmov q5, q6
-; CHECK-NEXT:    vmov q6, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #48] @ 16-byte Reload
 ; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]

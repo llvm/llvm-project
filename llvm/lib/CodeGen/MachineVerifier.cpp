@@ -1550,6 +1550,16 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   if (MI->isInlineAsm())
     verifyInlineAsm(MI);
 
+  // Check that unspillable terminators define a reg and have at most one use.
+  if (TII->isUnspillableTerminator(MI)) {
+    if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
+      report("Unspillable Terminator does not define a reg", MI);
+    Register Def = MI->getOperand(0).getReg();
+    if (Def.isVirtual() &&
+        std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
+      report("Unspillable Terminator expected to have at most one use!", MI);
+  }
+
   // A fully-formed DBG_VALUE must have a location. Ignore partially formed
   // DBG_VALUEs: these are convenient to use in tests, but should never get
   // generated.
