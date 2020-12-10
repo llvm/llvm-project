@@ -239,9 +239,8 @@ template <> struct ArgTypeTraits<OpenMPClauseKind> {
 private:
   static Optional<OpenMPClauseKind> getClauseKind(llvm::StringRef ClauseKind) {
     return llvm::StringSwitch<Optional<OpenMPClauseKind>>(ClauseKind)
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class) .Case(#Enum, llvm::omp::Clause::Enum)
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) .Case(#Enum, llvm::omp::Clause::Enum)
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
         .Default(llvm::None);
   }
 
