@@ -1249,7 +1249,7 @@ static __forceinline kmp_dyna_lockseq_t __kmp_map_hint_to_lock(uintptr_t hint) {
   if (hint & kmp_lock_hint_hle)
     return KMP_TSX_LOCK(hle);
   if (hint & kmp_lock_hint_rtm)
-    return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(rtm) : __kmp_user_lock_seq;
+    return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(rtm_queuing) : __kmp_user_lock_seq;
   if (hint & kmp_lock_hint_adaptive)
     return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(adaptive) : __kmp_user_lock_seq;
 
@@ -1268,9 +1268,9 @@ static __forceinline kmp_dyna_lockseq_t __kmp_map_hint_to_lock(uintptr_t hint) {
   if ((hint & omp_lock_hint_uncontended) && !(hint & omp_lock_hint_speculative))
     return lockseq_tas;
 
-  // HLE lock for speculation
+  // Use RTM lock for speculation
   if (hint & omp_lock_hint_speculative)
-    return KMP_TSX_LOCK(hle);
+    return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(rtm_spin) : __kmp_user_lock_seq;
 
   return __kmp_user_lock_seq;
 }
@@ -1291,6 +1291,7 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
       return kmp_mutex_impl_spin;
 #if KMP_USE_TSX
     case locktag_hle:
+    case locktag_rtm_spin:
       return kmp_mutex_impl_speculative;
 #endif
     default:
@@ -1302,7 +1303,7 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
   switch (ilock->type) {
 #if KMP_USE_TSX
   case locktag_adaptive:
-  case locktag_rtm:
+  case locktag_rtm_queuing:
     return kmp_mutex_impl_speculative;
 #endif
   case locktag_nested_tas:
@@ -1336,7 +1337,8 @@ static kmp_mutex_impl_t __ompt_get_mutex_impl_type() {
     return kmp_mutex_impl_queuing;
 #if KMP_USE_TSX
   case lk_hle:
-  case lk_rtm:
+  case lk_rtm_queuing:
+  case lk_rtm_spin:
   case lk_adaptive:
     return kmp_mutex_impl_speculative;
 #endif
@@ -2144,7 +2146,8 @@ __kmp_init_nest_lock_with_hint(ident_t *loc, void **lock,
                                kmp_dyna_lockseq_t seq) {
 #if KMP_USE_TSX
   // Don't have nested lock implementation for speculative locks
-  if (seq == lockseq_hle || seq == lockseq_rtm || seq == lockseq_adaptive)
+  if (seq == lockseq_hle || seq == lockseq_rtm_queuing ||
+      seq == lockseq_rtm_spin || seq == lockseq_adaptive)
     seq = __kmp_user_lock_seq;
 #endif
   switch (seq) {

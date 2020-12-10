@@ -8,12 +8,6 @@
 // DWARF_VER: "-dwarf-version=4"
 
 ///-----------------------------------------------------------------------------
-/// Checking dynamic-linker
-
-// RUN: %clangxx -### -target ve %s 2>&1 | FileCheck -check-prefix=DYNLINKER %s
-// DYNLINKER: nld{{.*}} "-dynamic-linker" "/opt/nec/ve/lib/ld-linux-ve.so.1"
-
-///-----------------------------------------------------------------------------
 /// Checking VE specific option
 
 // RUN: %clangxx -### -target ve %s 2>&1 | FileCheck -check-prefix=VENLDOPT %s
@@ -128,5 +122,6 @@
 // RUN: %clangxx -### -target ve --stdlib=c++ %s 2>&1 | \
 // RUN:    FileCheck -check-prefix=LINK %s
 
-// LINK: clang{{.*}} "-cc1"
-// LINK: nld{{.*}} "{{.*}}/crt1.o" "{{.*}}/crti.o"{{.*}}"crtbegin.o"{{.*}}"-lc++" "-lc++abi" "-lunwind" "-lpthread" "-ldl"
+// LINK:      nld"
+// LINK-SAME: "-dynamic-linker" "/opt/nec/ve/lib/ld-linux-ve.so.1"
+// LINK-SAME: "{{[^"]*}}crt1.o" "{{[^"]*}}crti.o"{{.*}}"crtbegin.o"{{.*}}"-lc++" "-lc++abi" "-lunwind" "-lpthread" "-ldl"

@@ -992,7 +992,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
   config->ltoNewPassManager =
-      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+      args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
                    LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =

@@ -394,7 +394,7 @@ private:
   void mangleTemplateArg(const TemplateDecl *TD, const TemplateArgument &TA,
                          const NamedDecl *Parm);
   void mangleTemplateArgValue(QualType T, const APValue &V,
-                              bool WithScalarType = true);
+                              bool WithScalarType = false);
 
   void mangleObjCProtocol(const ObjCProtocolDecl *PD);
   void mangleObjCLifetime(const QualType T, Qualifiers Quals,
@@ -1473,11 +1473,34 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   //                ::= <integer-literal>
   //                ::= <member-data-pointer>
   //                ::= <member-function-pointer>
-  //                ::= $E? <name> <type-encoding>
-  //                ::= $1? <name> <type-encoding>
-  //                ::= $2  <type> <value>  # class NTTP
-  //                ::= $0A@
+  //                ::= $ <constant-value>
   //                ::= <template-args>
+  //
+  // <constant-value> ::= 0 <number>                   # integer
+  //                  ::= 1 <mangled-name>             # address of D
+  //                  ::= 2 <type> <typed-constant-value>* @ # struct
+  //                  ::= 3 <type> <constant-value>* @ # array
+  //                  ::= 4 ???                        # string
+  //                  ::= 5 <constant-value> @         # address of subobject
+  //                  ::= 6 <constant-value> <unqualified-name> @ # a.b
+  //                  ::= 7 <type> [<unqualified-name> <constant-value>] @
+  //                      # union, with or without an active member
+  //                  # pointer to member, symbolically
+  //                  ::= 8 <class> <unqualified-name> @
+  //                  ::= A <type> <non-negative integer>  # float
+  //                  ::= B <type> <non-negative integer>  # double
+  //                  ::= E <mangled-name>             # reference to D
+  //                  # pointer to member, by component value
+  //                  ::= F <number> <number>
+  //                  ::= G <number> <number> <number>
+  //                  ::= H <mangled-name> <number>
+  //                  ::= I <mangled-name> <number> <number>
+  //                  ::= J <mangled-name> <number> <number> <number>
+  //
+  // <typed-constant-value> ::= [<type>] <constant-value>
+  //
+  // The <type> appears to be included in a <typed-constant-value> only in the
+  // '0', '1', '8', 'A', 'B', and 'E' cases.
 
   switch (TA.getKind()) {
   case TemplateArgument::Null:
@@ -1622,22 +1645,66 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     if (WithScalarType)
       mangleType(T, SourceRange(), QMM_Escape);
 
-    APValue::LValueBase Base = V.getLValueBase();
-    if (Base.isNull())
-      Out << "0A@";
-    else if (auto *VD = Base.dyn_cast<const ValueDecl*>())
-      mangle(VD, T->isReferenceType() ? "E?" : "1?");
-    else
+    // We don't know how to mangle past-the-end pointers yet.
+    if (V.isLValueOnePastTheEnd())
       break;
 
-    // FIXME: MSVC doesn't support template arguments referring to subobjects
-    // yet (it either mangles such template arguments as null pointers or
-    // small integers or crashes). It's probably the intent to mangle the
-    // declaration followed by an offset, but that's not what actually happens.
-    // For now just bail.
-    if (!V.hasLValuePath() || !V.getLValuePath().empty() ||
-        V.isLValueOnePastTheEnd())
-      break;
+    APValue::LValueBase Base = V.getLValueBase();
+    if (!V.hasLValuePath() || V.getLValuePath().empty()) {
+      // Taking the address of a complete object has a special-case mangling.
+      if (Base.isNull()) {
+        // MSVC emits 0A@ for null pointers. Generalize this for arbitrary
+        // integers cast to pointers.
+        // FIXME: This mangles 0 cast to a pointer the same as a null pointer,
+        // even in cases where the two are different values.
+        Out << "0";
+        mangleNumber(V.getLValueOffset().getQuantity());
+      } else if (!V.hasLValuePath()) {
+        // FIXME: This can only happen as an extension. Invent a mangling.
+        break;
+      } else if (auto *VD = Base.dyn_cast<const ValueDecl*>()) {
+        Out << (T->isReferenceType() ? "E" : "1");
+        mangle(VD);
+      } else {
+        break;
+      }
+    } else {
+      unsigned NumAts = 0;
+      if (T->isPointerType()) {
+        Out << "5";
+        ++NumAts;
+      }
+
+      QualType T = Base.getType();
+      for (APValue::LValuePathEntry E : V.getLValuePath()) {
+        // We don't know how to mangle array subscripting yet.
+        if (T->isArrayType())
+          goto mangling_unknown;
+
+        const Decl *D = E.getAsBaseOrMember().getPointer();
+        auto *FD = dyn_cast<FieldDecl>(D);
+        // We don't know how to mangle derived-to-base conversions yet.
+        if (!FD)
+          goto mangling_unknown;
+
+        Out << "6";
+        ++NumAts;
+        T = FD->getType();
+      }
+
+      auto *VD = Base.dyn_cast<const ValueDecl*>();
+      if (!VD)
+        break;
+      Out << "E";
+      mangle(VD);
+
+      for (APValue::LValuePathEntry E : V.getLValuePath()) {
+        const Decl *D = E.getAsBaseOrMember().getPointer();
+        mangleUnqualifiedName(cast<FieldDecl>(D));
+      }
+      for (unsigned I = 0; I != NumAts; ++I)
+        Out << '@';
+    }
 
     return;
   }
@@ -1675,7 +1742,8 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     for (const FieldDecl *FD : RD->fields())
       if (!FD->isUnnamedBitfield())
         mangleTemplateArgValue(FD->getType(),
-                               V.getStructField(FD->getFieldIndex()));
+                               V.getStructField(FD->getFieldIndex()),
+                               /*WithScalarType*/ true);
     Out << '@';
     return;
   }
@@ -1685,8 +1753,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     mangleType(T, SourceRange(), QMM_Escape);
     if (const FieldDecl *FD = V.getUnionField()) {
       mangleUnqualifiedName(FD);
-      mangleTemplateArgValue(FD->getType(), V.getUnionValue(),
-                             /*WithType*/false);
+      mangleTemplateArgValue(FD->getType(), V.getUnionValue());
     }
     Out << '@';
     return;
@@ -1718,7 +1785,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
       const APValue &ElemV = I < V.getArrayInitializedElts()
                                  ? V.getArrayInitializedElt(I)
                                  : V.getArrayFiller();
-      mangleTemplateArgValue(ElemT, ElemV, /*WithType*/false);
+      mangleTemplateArgValue(ElemT, ElemV);
       Out << '@';
     }
     Out << '@';
@@ -1735,7 +1802,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     mangleType(ElemT, SourceRange(), QMM_Escape);
     for (unsigned I = 0, N = V.getVectorLength(); I != N; ++I) {
       const APValue &ElemV = V.getVectorElt(I);
-      mangleTemplateArgValue(ElemT, ElemV, /*WithType*/false);
+      mangleTemplateArgValue(ElemT, ElemV);
       Out << '@';
     }
     Out << "@@";
@@ -1747,6 +1814,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     break;
   }
 
+mangling_unknown:
   DiagnosticsEngine &Diags = Context.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(
       DiagnosticsEngine::Error, "cannot mangle this template argument yet");
