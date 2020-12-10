@@ -127,6 +127,9 @@ public:
 
   lldb::user_id_t GetFileSize(const FileSpec &file_spec) override;
 
+  void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
+                                       bool only_dir) override;
+
   Status PutFile(const FileSpec &source, const FileSpec &destination,
                  uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX) override;
 

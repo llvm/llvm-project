@@ -4566,26 +4566,6 @@ private:
                                        Address Loc);
 
 public:
-#ifndef NDEBUG
-  // Determine whether the given argument is an Objective-C method
-  // that may have type parameters in its signature.
-  static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
-    const DeclContext *dc = method->getDeclContext();
-    if (const ObjCInterfaceDecl *classDecl= dyn_cast<ObjCInterfaceDecl>(dc)) {
-      return classDecl->getTypeParamListAsWritten();
-    }
-
-    if (const ObjCCategoryDecl *catDecl = dyn_cast<ObjCCategoryDecl>(dc)) {
-      return catDecl->getTypeParamList();
-    }
-
-    return false;
-  }
-
-  template<typename T>
-  static bool isObjCMethodWithTypeParams(const T *) { return false; }
-#endif
-
   enum class EvaluationOrder {
     ///! No language constraints on evaluation order.
     Default,
@@ -4595,56 +4575,16 @@ public:
     ForceRightToLeft
   };
 
-  /// EmitCallArgs - Emit call arguments for a function.
-  template <typename T>
-  void EmitCallArgs(CallArgList &Args, const T *CallArgTypeInfo,
-                    llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-                    AbstractCallee AC = AbstractCallee(),
-                    unsigned ParamsToSkip = 0,
-                    EvaluationOrder Order = EvaluationOrder::Default) {
-    SmallVector<QualType, 16> ArgTypes;
-    CallExpr::const_arg_iterator Arg = ArgRange.begin();
+  // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
+  // an ObjCMethodDecl.
+  struct PrototypeWrapper {
+    llvm::PointerUnion<const FunctionProtoType *, const ObjCMethodDecl *> P;
 
-    assert((ParamsToSkip == 0 || CallArgTypeInfo) &&
-           "Can't skip parameters if type info is not provided");
-    if (CallArgTypeInfo) {
-#ifndef NDEBUG
-      bool isGenericMethod = isObjCMethodWithTypeParams(CallArgTypeInfo);
-#endif
+    PrototypeWrapper(const FunctionProtoType *FT) : P(FT) {}
+    PrototypeWrapper(const ObjCMethodDecl *MD) : P(MD) {}
+  };
 
-      // First, use the argument types that the type info knows about
-      for (auto I = CallArgTypeInfo->param_type_begin() + ParamsToSkip,
-                E = CallArgTypeInfo->param_type_end();
-           I != E; ++I, ++Arg) {
-        assert(Arg != ArgRange.end() && "Running over edge of argument list!");
-        assert((isGenericMethod ||
-                ((*I)->isVariablyModifiedType() ||
-                 (*I).getNonReferenceType()->isObjCRetainableType() ||
-                 getContext()
-                         .getCanonicalType((*I).getNonReferenceType())
-                         .getTypePtr() ==
-                     getContext()
-                         .getCanonicalType((*Arg)->getType())
-                         .getTypePtr())) &&
-               "type mismatch in call argument!");
-        ArgTypes.push_back(*I);
-      }
-    }
-
-    // Either we've emitted all the call args, or we have a call to variadic
-    // function.
-    assert((Arg == ArgRange.end() || !CallArgTypeInfo ||
-            CallArgTypeInfo->isVariadic()) &&
-           "Extra arguments in non-variadic function!");
-
-    // If we still have any arguments, emit them using the type of the argument.
-    for (auto *A : llvm::make_range(Arg, ArgRange.end()))
-      ArgTypes.push_back(CallArgTypeInfo ? getVarArgType(A) : A->getType());
-
-    EmitCallArgs(Args, ArgTypes, ArgRange, AC, ParamsToSkip, Order);
-  }
-
-  void EmitCallArgs(CallArgList &Args, ArrayRef<QualType> ArgTypes,
+  void EmitCallArgs(CallArgList &Args, PrototypeWrapper Prototype,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
                     AbstractCallee AC = AbstractCallee(),
                     unsigned ParamsToSkip = 0,

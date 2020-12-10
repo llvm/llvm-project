@@ -618,6 +618,17 @@ public:
 
   ~CommandObjectCommandsUnalias() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_interpreter.HasCommands() || request.GetCursorIndex() != 0)
+      return;
+
+    for (const auto &ent : m_interpreter.GetAliases()) {
+      request.TryCompleteCurrentArg(ent.first, ent.second->GetHelp());
+    }
+  }
+
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     CommandObject::CommandMap::iterator pos;
@@ -698,6 +709,18 @@ public:
   }
 
   ~CommandObjectCommandsDelete() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_interpreter.HasCommands() || request.GetCursorIndex() != 0)
+      return;
+
+    for (const auto &ent : m_interpreter.GetCommands()) {
+      if (ent.second->IsRemovable())
+        request.TryCompleteCurrentArg(ent.first, ent.second->GetHelp());
+    }
+  }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {

@@ -47,6 +47,10 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
   void emitInst(uint32_t Inst) override;
 
+  void emitDirectiveVariantPCS(MCSymbol *Symbol) override {
+    OS << "\t.variant_pcs " << Symbol->getName() << "\n";
+  }
+
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };
@@ -192,6 +196,10 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
   getStreamer().emitInst(Inst);
+}
+
+void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
+  cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 
 MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
