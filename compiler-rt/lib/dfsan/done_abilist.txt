@@ -183,6 +183,7 @@ fun:uselocale=discard
 
 # Functions that produce output does not depend on the input (need to zero the
 # shadow manually).
+fun:_dl_get_tls_static_info=custom
 fun:calloc=custom
 fun:clock_gettime=custom
 fun:dlopen=custom
