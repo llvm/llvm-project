@@ -21,7 +21,7 @@ namespace mlir {
 // `indexBitwidth`, sign-extend or truncate the resulting value to match the
 // bitwidth expected by the consumers of the value.
 template <typename Op, typename XOp, typename YOp, typename ZOp>
-struct GPUIndexIntrinsicOpLowering : public ConvertToLLVMPattern {
+struct GPUIndexIntrinsicOpLowering : public ConvertOpToLLVMPattern<Op> {
 private:
   enum dimension { X = 0, Y = 1, Z = 2, invalid };
   unsigned indexBitwidth;
@@ -36,19 +36,17 @@ private:
 
 public:
   explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter)
-      : ConvertToLLVMPattern(Op::getOperationName(),
-                             typeConverter.getDialect()->getContext(),
-                             typeConverter),
+      : ConvertOpToLLVMPattern<Op>(typeConverter),
         indexBitwidth(typeConverter.getIndexTypeBitwidth()) {}
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Op op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
     Value newOp;
-    switch (dimensionToIndex(cast<Op>(op))) {
+    switch (dimensionToIndex(op)) {
     case X:
       newOp = rewriter.create<XOp>(loc, LLVM::LLVMType::getInt32Ty(context));
       break;
