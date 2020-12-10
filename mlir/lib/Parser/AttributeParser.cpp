@@ -531,6 +531,13 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
     return nullptr;
   }
 
+  // Handle the case where no elements were parsed.
+  if (!hexStorage.hasValue() && storage.empty() && type.getNumElements()) {
+    p.emitError(loc) << "parsed zero elements, but type (" << type
+                     << ") expected at least 1";
+    return nullptr;
+  }
+
   // Handle complex types in the specific element type cases below.
   bool isComplex = false;
   if (ComplexType complexTy = eltType.dyn_cast<ComplexType>()) {
