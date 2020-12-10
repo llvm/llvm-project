@@ -1582,6 +1582,9 @@ public:
   /// If the source file is included multiple times, the FileID will be the
   /// first inclusion.
   FileID translateFile(const FileEntry *SourceFile) const;
+  FileID translateFile(FileEntryRef SourceFile) const {
+    return translateFile(&SourceFile.getFileEntry());
+  }
 
   /// Get the source location in \p FID for the given line:col.
   /// Returns null location if \p FID is not a file SLocEntry.
