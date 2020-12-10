@@ -17,6 +17,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <map>
+#include <thread>
 #include <type_traits>
 
 template <typename T,
@@ -77,6 +78,13 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 // infrastructure. This is useful when you need to see traces before the logger
 // is initialized or enabled.
 // #define LLDB_REPRO_INSTR_TRACE
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+inline llvm::raw_ostream &this_thread_id() {
+  size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+  return llvm::errs().write_hex(tid) << " :: ";
+}
+#endif
 
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
   R.Register<Class * Signature>(&construct<Class Signature>::record, "",       \
@@ -325,6 +333,7 @@ public:
   }
 
   template <typename T> const T &HandleReplayResult(const T &t) {
+    CheckSequence(Deserialize<unsigned>());
     unsigned result = Deserialize<unsigned>();
     if (is_trivially_serializable<T>::value)
       return t;
@@ -334,6 +343,7 @@ public:
 
   /// Store the returned value in the index-to-object mapping.
   template <typename T> T &HandleReplayResult(T &t) {
+    CheckSequence(Deserialize<unsigned>());
     unsigned result = Deserialize<unsigned>();
     if (is_trivially_serializable<T>::value)
       return t;
@@ -343,6 +353,7 @@ public:
 
   /// Store the returned value in the index-to-object mapping.
   template <typename T> T *HandleReplayResult(T *t) {
+    CheckSequence(Deserialize<unsigned>());
     unsigned result = Deserialize<unsigned>();
     if (is_trivially_serializable<T>::value)
       return t;
@@ -352,6 +363,7 @@ public:
   /// All returned types are recorded, even when the function returns a void.
   /// The latter requires special handling.
   void HandleReplayResultVoid() {
+    CheckSequence(Deserialize<unsigned>());
     unsigned result = Deserialize<unsigned>();
     assert(result == 0);
     (void)result;
@@ -359,6 +371,10 @@ public:
 
   std::vector<void *> GetAllObjects() const {
     return m_index_to_object.GetAllObjects();
+  }
+
+  void SetExpectedSequence(unsigned sequence) {
+    m_expected_sequence = sequence;
   }
 
 private:
@@ -402,11 +418,17 @@ private:
     return *(new UnderlyingT(Deserialize<UnderlyingT>()));
   }
 
+  /// Verify that the given sequence number matches what we expect.
+  void CheckSequence(unsigned sequence);
+
   /// Mapping of indices to objects.
   IndexToObject m_index_to_object;
 
   /// Buffer containing the serialized data.
   llvm::StringRef m_buffer;
+
+  /// The result's expected sequence number.
+  llvm::Optional<unsigned> m_expected_sequence;
 };
 
 /// Partial specialization for C-style strings. We read the string value
@@ -600,8 +622,8 @@ private:
   /// objects (in which case we serialize their index).
   template <typename T> void Serialize(T *t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     if (std::is_fundamental<T>::value) {
       Serialize(*t);
@@ -616,8 +638,8 @@ private:
   /// to objects (in which case we serialize their index).
   template <typename T> void Serialize(T &t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     if (is_trivially_serializable<T>::value) {
       m_stream.write(reinterpret_cast<const char *>(&t), sizeof(T));
@@ -637,8 +659,8 @@ private:
 
   void Serialize(const char *t) {
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
-                 << stringify_args(t) << "\n";
+    this_thread_id() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                     << stringify_args(t) << "\n";
 #endif
     const size_t size = t ? strlen(t) : std::numeric_limits<size_t>::max();
     Serialize(size);
@@ -737,12 +759,15 @@ public:
     if (!ShouldCapture())
       return;
 
+    std::lock_guard<std::mutex> lock(g_mutex);
+    unsigned sequence = GetSequenceNumber();
     unsigned id = registry.GetID(uintptr_t(f));
 
 #ifdef LLDB_REPRO_INSTR_TRACE
     Log(id);
 #endif
 
+    serializer.SerializeAll(sequence);
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
@@ -750,6 +775,7 @@ public:
             typename std::remove_reference<Result>::type>::type>::value) {
       m_result_recorded = false;
     } else {
+      serializer.SerializeAll(sequence);
       serializer.SerializeAll(0);
       m_result_recorded = true;
     }
@@ -763,16 +789,20 @@ public:
     if (!ShouldCapture())
       return;
 
+    std::lock_guard<std::mutex> lock(g_mutex);
+    unsigned sequence = GetSequenceNumber();
     unsigned id = registry.GetID(uintptr_t(f));
 
 #ifdef LLDB_REPRO_INSTR_TRACE
     Log(id);
 #endif
 
+    serializer.SerializeAll(sequence);
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
     // Record result.
+    serializer.SerializeAll(sequence);
     serializer.SerializeAll(0);
     m_result_recorded = true;
   }
@@ -798,7 +828,9 @@ public:
     if (update_boundary)
       UpdateBoundary();
     if (m_serializer && ShouldCapture()) {
+      std::lock_guard<std::mutex> lock(g_mutex);
       assert(!m_result_recorded);
+      m_serializer->SerializeAll(GetSequenceNumber());
       m_serializer->SerializeAll(r);
       m_result_recorded = true;
     }
@@ -808,6 +840,7 @@ public:
   template <typename Result, typename T>
   Result Replay(Deserializer &deserializer, Registry &registry, uintptr_t addr,
                 bool update_boundary) {
+    deserializer.SetExpectedSequence(deserializer.Deserialize<unsigned>());
     unsigned actual_id = registry.GetID(addr);
     unsigned id = deserializer.Deserialize<unsigned>();
     registry.CheckID(id, actual_id);
@@ -818,6 +851,7 @@ public:
   }
 
   void Replay(Deserializer &deserializer, Registry &registry, uintptr_t addr) {
+    deserializer.SetExpectedSequence(deserializer.Deserialize<unsigned>());
     unsigned actual_id = registry.GetID(addr);
     unsigned id = deserializer.Deserialize<unsigned>();
     registry.CheckID(id, actual_id);
@@ -833,7 +867,14 @@ public:
 
   bool ShouldCapture() { return m_local_boundary; }
 
+  /// Mark the current thread as a private thread and pretend that everything
+  /// on this thread is behind happening behind the API boundary.
+  static void PrivateThread() { g_global_boundary = true; }
+
 private:
+  static unsigned GetNextSequenceNumber() { return g_sequence++; }
+  unsigned GetSequenceNumber() const;
+
   template <typename T> friend struct replay;
   void UpdateBoundary() {
     if (m_local_boundary)
@@ -842,8 +883,8 @@ private:
 
 #ifdef LLDB_REPRO_INSTR_TRACE
   void Log(unsigned id) {
-    llvm::errs() << "Recording " << id << ": " << m_pretty_func << " ("
-                 << m_pretty_args << ")\n";
+    this_thread_id() << "Recording " << id << ": " << m_pretty_func << " ("
+                     << m_pretty_args << ")\n";
   }
 #endif
 
@@ -859,8 +900,17 @@ private:
   /// Whether the return value was recorded explicitly.
   bool m_result_recorded;
 
+  /// The sequence number for this pair of function and result.
+  unsigned m_sequence;
+
   /// Whether we're currently across the API boundary.
-  static bool g_global_boundary;
+  static thread_local bool g_global_boundary;
+
+  /// Global mutex to protect concurrent access.
+  static std::mutex g_mutex;
+
+  /// Unique, monotonically increasing sequence number.
+  static std::atomic<unsigned> g_sequence;
 };
 
 /// To be used as the "Runtime ID" of a constructor. It also invokes the
@@ -1002,6 +1052,7 @@ struct invoke_char_ptr<Result (Class::*)(Args...) const> {
 
     static Result replay(Recorder &recorder, Deserializer &deserializer,
                          Registry &registry, char *str) {
+      deserializer.SetExpectedSequence(deserializer.Deserialize<unsigned>());
       deserializer.Deserialize<unsigned>();
       Class *c = deserializer.Deserialize<Class *>();
       deserializer.Deserialize<const char *>();
@@ -1023,6 +1074,7 @@ struct invoke_char_ptr<Result (Class::*)(Args...)> {
 
     static Result replay(Recorder &recorder, Deserializer &deserializer,
                          Registry &registry, char *str) {
+      deserializer.SetExpectedSequence(deserializer.Deserialize<unsigned>());
       deserializer.Deserialize<unsigned>();
       Class *c = deserializer.Deserialize<Class *>();
       deserializer.Deserialize<const char *>();
@@ -1043,6 +1095,7 @@ struct invoke_char_ptr<Result (*)(Args...)> {
 
     static Result replay(Recorder &recorder, Deserializer &deserializer,
                          Registry &registry, char *str) {
+      deserializer.SetExpectedSequence(deserializer.Deserialize<unsigned>());
       deserializer.Deserialize<unsigned>();
       deserializer.Deserialize<const char *>();
       size_t l = deserializer.Deserialize<size_t>();
