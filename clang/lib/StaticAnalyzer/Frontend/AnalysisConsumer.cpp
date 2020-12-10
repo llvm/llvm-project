@@ -21,6 +21,7 @@
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -30,7 +31,6 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -152,7 +152,7 @@ public:
   case PD_##NAME:                                                              \
     CREATEFN(Opts->getDiagOpts(), PathConsumers, OutDir, PP, CTU);             \
     break;
-#include "clang/StaticAnalyzer/Core/Analyses.def"
+#include "clang/Analysis/PathDiagnosticConsumers.def"
     default:
       llvm_unreachable("Unknown analyzer output type!");
     }
