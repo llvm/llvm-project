@@ -12,6 +12,18 @@ namespace preferred_name {
   Y y;
 }
 
+namespace aligned {
+  // PR48434: ensure attributes don't introduce deserialization cycles.
+  template<typename T> struct X1;
+  using Y1 = X1<int>;
+  template<typename T> struct alignas(Y1*) X1 {};
+  Y1 y1;
+
+  template<typename T> struct X2;
+  using Y2 = X2<int>;
+  template<typename T> struct alignas(Y2*) X2 {};
+}
+
 #else
 
 namespace preferred_name {
@@ -22,6 +34,13 @@ namespace preferred_name {
     forget(y).foo(); // expected-error {{no member named 'foo' in 'preferred_name::Y'}}
     forget(z).foo(); // expected-error {{no member named 'foo' in 'preferred_name::Z'}}
   }
+}
+
+namespace aligned {
+  extern Y1 y1;
+  extern Y2 y2;
+  static_assert(alignof(Y1) == alignof(Y1*), "");
+  static_assert(alignof(Y2) == alignof(Y2*), "");
 }
 
 #endif
