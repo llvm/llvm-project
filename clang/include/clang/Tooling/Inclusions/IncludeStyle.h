@@ -89,12 +89,11 @@ struct IncludeStyle {
   /// always need to be first.
   ///
   /// There is a third and optional field ``SortPriority`` which can used while
-  /// ``IncludeBloks = IBS_Regroup`` to define the priority in which
-  /// ``#includes`` should be ordered, and value of ``Priority`` defines the
-  /// order of
-  /// ``#include blocks`` and also enables to group ``#includes`` of different
-  /// priority for order.``SortPriority`` is set to the value of ``Priority``
-  /// as default if it is not assigned.
+  /// ``IncludeBlocks = IBS_Regroup`` to define the priority in which
+  /// ``#includes`` should be ordered. The value of ``Priority`` defines the
+  /// order of ``#include blocks`` and also allows the grouping of ``#includes``
+  /// of different priority. ``SortPriority`` is set to the value of
+  /// ``Priority`` as default if it is not assigned.
   ///
   /// Each regular expression can be marked as case sensitive with the field
   /// ``CaseSensitive``, per default it is not.
