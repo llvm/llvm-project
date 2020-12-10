@@ -98,6 +98,12 @@ public:
       Header.State = Chunk::State::Allocated;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
+      // Reset tag to 0 as this chunk may have been previously used for a tagged
+      // user allocation.
+      if (UNLIKELY(Allocator.useMemoryTagging()))
+        storeTags(reinterpret_cast<uptr>(Ptr),
+                  reinterpret_cast<uptr>(Ptr) + sizeof(QuarantineBatch));
+
       return Ptr;
     }
 
