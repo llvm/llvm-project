@@ -809,6 +809,8 @@ def : MnemonicAlias<"move", "mv">;
 def : MnemonicAlias<"scall", "ecall">;
 def : MnemonicAlias<"sbreak", "ebreak">;
 
+def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
+
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //
@@ -1054,6 +1056,25 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
+
+
+/// Sign/Zero Extends
+
+// There are single-instruction versions of these in Zbb, so disable these
+// Pseudos if that extension is present.
+let Predicates = [NotHasStdExtZbb], hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
+def PseudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.h", "$rd, $rs">;
+// rv64's sext.w is defined above, using InstAlias<"sext.w ...
+// zext.b is defined above, using InstAlias<"zext.b ...
+def PseudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.h", "$rd, $rs">;
+} // Predicates = [NotHasStdExtZbb], ...
+
+let Predicates = [NotHasStdExtZbb, IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+  isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
+} // Predicates = [NotHasStdExtZbb, IsRV64], ...
 
 /// Loads
 

@@ -225,12 +225,12 @@ define i64 @zext_i1_to_i64(i1 %a) nounwind {
 define i16 @zext_i8_to_i16(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_i8_to_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
   %1 = zext i8 %a to i16
   ret i16 %1
@@ -239,12 +239,12 @@ define i16 @zext_i8_to_i16(i8 %a) nounwind {
 define i32 @zext_i8_to_i32(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_i8_to_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
   %1 = zext i8 %a to i32
   ret i32 %1
@@ -253,13 +253,13 @@ define i32 @zext_i8_to_i32(i8 %a) nounwind {
 define i64 @zext_i8_to_i64(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    mv a1, zero
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_i8_to_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
   %1 = zext i8 %a to i64
   ret i64 %1
