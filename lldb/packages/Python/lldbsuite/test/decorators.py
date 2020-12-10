@@ -373,20 +373,12 @@ def apple_simulator_test(platform):
 
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
-    def should_skip_debugserver_test():
-        return ("debugserver tests"
-                if not configuration.debugserver_platform
-                else None)
-    return skipTestIfFn(should_skip_debugserver_test)(func)
+    return add_test_categories(["debugserver"])(func)
 
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
-    def should_skip_llgs_tests():
-        return ("llgs tests"
-                if not configuration.llgs_platform
-                else None)
-    return skipTestIfFn(should_skip_llgs_tests)(func)
+    return add_test_categories(["llgs"])(func)
 
 
 def expectedFailureOS(
