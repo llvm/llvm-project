@@ -37,8 +37,13 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   MachineFunction *MF;
   SmallVector<int, 8> BlockInfo;
 
-  int computeBlockSize(MachineBasicBlock &MBB);
-  void scanFunction();
+  /// Returns the size in instructions of the block \p MBB, or None if we
+  /// couldn't get a safe upper bound.
+  Optional<int> computeBlockSize(MachineBasicBlock &MBB);
+
+  /// Gather information about the function, returns false if we can't perform
+  /// this optimization for some reason.
+  bool scanFunction();
 
   bool compressJumpTable(MachineInstr &MI, int Offset);
 
@@ -64,14 +69,22 @@ char AArch64CompressJumpTables::ID = 0;
 INITIALIZE_PASS(AArch64CompressJumpTables, DEBUG_TYPE,
                 "AArch64 compress jump tables pass", false, false)
 
-int AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
+Optional<int>
+AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
   int Size = 0;
-  for (const MachineInstr &MI : MBB)
+  for (const MachineInstr &MI : MBB) {
+    // Inline asm may contain some directives like .bytes which we don't
+    // currently have the ability to parse accurately. To be safe, just avoid
+    // computing a size and bail out.
+    if (MI.getOpcode() == AArch64::INLINEASM ||
+        MI.getOpcode() == AArch64::INLINEASM_BR)
+      return None;
     Size += TII->getInstSizeInBytes(MI);
+  }
   return Size;
 }
 
-void AArch64CompressJumpTables::scanFunction() {
+bool AArch64CompressJumpTables::scanFunction() {
   BlockInfo.clear();
   BlockInfo.resize(MF->getNumBlockIDs());
 
@@ -84,8 +97,12 @@ void AArch64CompressJumpTables::scanFunction() {
     else
       AlignedOffset = alignTo(Offset, Alignment);
     BlockInfo[MBB.getNumber()] = AlignedOffset;
-    Offset = AlignedOffset + computeBlockSize(MBB);
+    auto BlockSize = computeBlockSize(MBB);
+    if (!BlockSize)
+      return false;
+    Offset = AlignedOffset + *BlockSize;
   }
+  return true;
 }
 
 bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
@@ -152,7 +169,8 @@ bool AArch64CompressJumpTables::runOnMachineFunction(MachineFunction &MFIn) {
   if (ST.force32BitJumpTables() && !MF->getFunction().hasMinSize())
     return false;
 
-  scanFunction();
+  if (!scanFunction())
+    return false;
 
   for (MachineBasicBlock &MBB : *MF) {
     int Offset = BlockInfo[MBB.getNumber()];
