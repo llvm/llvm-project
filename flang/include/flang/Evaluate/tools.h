@@ -919,6 +919,7 @@ bool IsLenTypeParameter(const Symbol &);
 
 // Follow use, host, and construct assocations to a variable, if any.
 const Symbol *GetAssociationRoot(const Symbol &);
+Symbol *GetAssociationRoot(Symbol &);
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
