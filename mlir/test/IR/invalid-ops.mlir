@@ -541,61 +541,6 @@ func @cmpf_canonical_type_mismatch(%a : f32, %b : f64) { // expected-note {{prio
 
 // -----
 
-func @extract_element_no_operands() {
-  // expected-error@+1 {{op expected 1 or more operands}}
-  %0 = "std.extract_element"() : () -> f32
-  return
-}
-
-// -----
-
-func @extract_element_no_indices(%v : vector<3xf32>) {
-  // expected-error@+1 {{incorrect number of indices for extract_element}}
-  %0 = "std.extract_element"(%v) : (vector<3xf32>) -> f32
-  return
-}
-
-// -----
-
-func @extract_element_invalid_index_type(%v : vector<3xf32>, %i : i32) {
-  // expected-error@+1 {{operand #1 must be index}}
-  %0 = "std.extract_element"(%v, %i) : (vector<3xf32>, i32) -> f32
-  return
-}
-
-// -----
-
-func @extract_element_element_result_type_mismatch(%v : vector<3xf32>, %i : index) {
-  // expected-error@+1 {{result type matches element type of aggregate}}
-  %0 = "std.extract_element"(%v, %i) : (vector<3xf32>, index) -> f64
-  return
-}
-
-// -----
-
-func @extract_element_vector_too_many_indices(%v : vector<3xf32>, %i : index) {
-  // expected-error@+1 {{incorrect number of indices for extract_element}}
-  %0 = "std.extract_element"(%v, %i, %i) : (vector<3xf32>, index, index) -> f32
-  return
-}
-
-// -----
-
-func @extract_element_tensor_too_many_indices(%t : tensor<2x3xf32>, %i : index) {
-  // expected-error@+1 {{incorrect number of indices for extract_element}}
-  %0 = "std.extract_element"(%t, %i, %i, %i) : (tensor<2x3xf32>, index, index, index) -> f32
-  return
-}
-
-// -----
-
-func @extract_element_tensor_too_few_indices(%t : tensor<2x3xf32>, %i : index) {
-  // expected-error@+1 {{incorrect number of indices for extract_element}}
-  %0 = "std.extract_element"(%t, %i) : (tensor<2x3xf32>, index) -> f32 return
-}
-
-// -----
-
 func @tensor_from_elements_wrong_result_type() {
   // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
   %c0 = constant 0 : i32
