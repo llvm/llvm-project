@@ -182,7 +182,7 @@ public:
     return Def->getValueAsString("defaultValue");
   }
 
-  bool isImplicit() const { return Def->getValueAsBit("isImplicit"); }
+  bool isImplict() const { return Def->getValueAsBit("isImplicit"); }
 };
 
 // Wrapper class that contains VersionedClause's information defined in
