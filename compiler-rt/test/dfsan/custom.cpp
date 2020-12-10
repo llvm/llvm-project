@@ -809,6 +809,22 @@ void test_dl_iterate_phdr() {
   dl_iterate_phdr(dl_iterate_phdr_test_cb, (void *)3);
 }
 
+// On glibc < 2.27, this symbol is not available.  Mark it weak so we can skip
+// testing in this case.
+__attribute__((weak)) extern "C" void _dl_get_tls_static_info(size_t *sizep,
+                                                              size_t *alignp);
+
+void test__dl_get_tls_static_info() {
+  if (!_dl_get_tls_static_info)
+    return;
+  size_t sizep = 0, alignp = 0;
+  dfsan_set_label(i_label, &sizep, sizeof(sizep));
+  dfsan_set_label(i_label, &alignp, sizeof(alignp));
+  _dl_get_tls_static_info(&sizep, &alignp);
+  ASSERT_ZERO_LABEL(sizep);
+  ASSERT_ZERO_LABEL(alignp);
+}
+
 void test_strrchr() {
   char str1[] = "str1str1";
   dfsan_set_label(i_label, &str1[7], 1);
@@ -1147,6 +1163,7 @@ int main(void) {
   assert(i_j_label != j_label);
   assert(i_j_label != k_label);
 
+  test__dl_get_tls_static_info();
   test_bcmp();
   test_calloc();
   test_clock_gettime();
