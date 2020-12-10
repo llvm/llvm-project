@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "index/Index.h"
+#include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/dex/Dex.h"
 #include "index/remote/Client.h"
@@ -267,6 +269,43 @@ class Refs : public Command {
   }
 };
 
+class Relations : public Command {
+  llvm::cl::opt<std::string> ID{
+      "id",
+      llvm::cl::Positional,
+      llvm::cl::desc("Symbol ID of the symbol being queried (hex)."),
+  };
+  llvm::cl::opt<RelationKind> Relation{
+      "relation",
+      llvm::cl::desc("Relation kind for the predicate."),
+      values(clEnumValN(RelationKind::BaseOf, "base_of",
+                        "Find subclasses of a class."),
+             clEnumValN(RelationKind::OverriddenBy, "overridden_by",
+                        "Find methods that overrides a virtual method.")),
+  };
+
+  void run() override {
+    if (ID.getNumOccurrences() == 0 || Relation.getNumOccurrences() == 0) {
+      llvm::errs()
+          << "Missing required argument: please provide id and -relation.\n";
+      return;
+    }
+    RelationsRequest Req;
+    if (ID.getNumOccurrences()) {
+      auto SID = SymbolID::fromStr(ID);
+      if (!SID) {
+        llvm::errs() << llvm::toString(SID.takeError()) << "\n";
+        return;
+      }
+      Req.Subjects.insert(*SID);
+    }
+    Req.Predicate = Relation.getValue();
+    Index->relations(Req, [](const SymbolID &SID, const Symbol &S) {
+      llvm::outs() << toYAML(S);
+    });
+  }
+};
+
 class Export : public Command {
   llvm::cl::opt<IndexFileFormat> Format{
       "format",
@@ -326,6 +365,8 @@ struct {
     {"lookup", "Dump symbol details by ID or qualified name",
      std::make_unique<Lookup>},
     {"refs", "Find references by ID or qualified name", std::make_unique<Refs>},
+    {"relations", "Find relations by ID and relation kind",
+     std::make_unique<Relations>},
     {"export", "Export index", std::make_unique<Export>},
 };
 
