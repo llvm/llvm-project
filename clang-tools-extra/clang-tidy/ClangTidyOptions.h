@@ -192,7 +192,7 @@ protected:
   // A pair of configuration file base name and a function parsing
   // configuration from text in the corresponding format.
   typedef std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions>(
-                                     llvm::StringRef)>>
+                                     llvm::MemoryBufferRef)>>
       ConfigFileHandler;
 
   /// Configuration file handlers listed in the order of priority.
@@ -308,7 +308,8 @@ std::error_code parseLineFilter(llvm::StringRef LineFilter,
 
 /// Parses configuration from JSON and returns \c ClangTidyOptions or an
 /// error.
-llvm::ErrorOr<ClangTidyOptions> parseConfiguration(llvm::StringRef Config);
+llvm::ErrorOr<ClangTidyOptions>
+parseConfiguration(llvm::MemoryBufferRef Config);
 
 /// Serializes configuration to a YAML-encoded string.
 std::string configurationAsText(const ClangTidyOptions &Options);
