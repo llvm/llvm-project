@@ -64,7 +64,7 @@ struct PGOOptions {
     assert(this->Action != NoAction || this->CSAction != NoCSAction ||
            this->DebugInfoForProfiling || this->PseudoProbeForProfiling);
 
-    // Pseudo probe emission does not work with -fdebug-info-for-profiling since
+    // Pseudo probe emission does work with -fdebug-info-for-profiling since
     // they both use the discriminator field of debug lines but for different
     // purposes.
     if (this->DebugInfoForProfiling && this->PseudoProbeForProfiling) {

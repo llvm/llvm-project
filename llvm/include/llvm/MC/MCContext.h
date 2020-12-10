@@ -22,7 +22,6 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
@@ -199,9 +198,6 @@ namespace llvm {
 
     /// The Compile Unit ID that we are currently processing.
     unsigned DwarfCompileUnitID = 0;
-
-    /// A collection of MCPseudoProbe in the current module
-    MCPseudoProbeTable PseudoProbeTable;
 
     // Sections are differentiated by the quadruple (section_name, group_name,
     // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
@@ -753,8 +749,6 @@ namespace llvm {
     }
 
     void undefineMacro(StringRef Name) { MacroMap.erase(Name); }
-
-    MCPseudoProbeTable &getMCPseudoProbeTable() { return PseudoProbeTable; }
   };
 
 } // end namespace llvm
