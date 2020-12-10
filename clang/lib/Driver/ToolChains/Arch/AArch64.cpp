@@ -317,8 +317,7 @@ fp16_fml_fallthrough:
       NoCrypto = true;
   }
 
-  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd ||
-      std::find(ItBegin, ItEnd, "+v8r") != ItEnd) {
+  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
     if (HasCrypto && !NoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
