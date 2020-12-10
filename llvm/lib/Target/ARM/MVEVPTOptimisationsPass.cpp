@@ -35,6 +35,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arm-mve-vpt-opts"
 
+static cl::opt<bool>
+MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
+    cl::desc("Enable merging Loop End and Dec instructions."),
+    cl::init(true));
+
 namespace {
 class MVEVPTOptimisations : public MachineFunctionPass {
 public:
@@ -111,6 +116,11 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
       LoopEnd = &T;
       break;
     }
+    if (T.getOpcode() == ARM::t2LoopEndDec &&
+        T.getOperand(2).getMBB() == Header) {
+      LoopEnd = &T;
+      break;
+    }
   }
   if (!LoopEnd) {
     LLVM_DEBUG(dbgs() << "  no LoopEnd\n");
@@ -127,11 +137,15 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
   //   $vd = t2LoopDec $vp
   //   ...
   //   t2LoopEnd $vd, loop
-  LoopDec =
-      LookThroughCOPY(MRI->getVRegDef(LoopEnd->getOperand(0).getReg()), MRI);
-  if (!LoopDec || LoopDec->getOpcode() != ARM::t2LoopDec) {
-    LLVM_DEBUG(dbgs() << "  didn't find LoopDec where we expected!\n");
-    return false;
+  if (LoopEnd->getOpcode() == ARM::t2LoopEndDec)
+    LoopDec = LoopEnd;
+  else {
+    LoopDec =
+        LookThroughCOPY(MRI->getVRegDef(LoopEnd->getOperand(0).getReg()), MRI);
+    if (!LoopDec || LoopDec->getOpcode() != ARM::t2LoopDec) {
+      LLVM_DEBUG(dbgs() << "  didn't find LoopDec where we expected!\n");
+      return false;
+    }
   }
   LLVM_DEBUG(dbgs() << "  found loop dec: " << *LoopDec);
 
@@ -167,6 +181,9 @@ static bool findLoopComponents(MachineLoop *ML, MachineRegisterInfo *MRI,
 // decrement) around the loop edge, which means we need to be careful that they
 // will be valid to allocate without any spilling.
 bool MVEVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
+  if (!MergeEndDec)
+    return false;
+
   LLVM_DEBUG(dbgs() << "MergeLoopEnd on loop " << ML->getHeader()->getName()
                     << "\n");
 
@@ -234,9 +251,16 @@ bool MVEVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
     LoopPhi->getOperand(3).setReg(DecReg);
   }
 
-  LoopDec->getOperand(1).setReg(PhiReg);
-  LoopEnd->getOperand(0).setReg(DecReg);
+  // Replace the loop dec and loop end as a single instruction.
+  MachineInstrBuilder MI =
+      BuildMI(*LoopEnd->getParent(), *LoopEnd, LoopEnd->getDebugLoc(),
+              TII->get(ARM::t2LoopEndDec), DecReg)
+          .addReg(PhiReg)
+          .add(LoopEnd->getOperand(1));
+  LLVM_DEBUG(dbgs() << "Merged LoopDec and End into: " << *MI.getInstr());
 
+  LoopDec->eraseFromParent();
+  LoopEnd->eraseFromParent();
   for (auto *MI : Copies)
     MI->eraseFromParent();
   return true;
@@ -255,6 +279,8 @@ bool MVEVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
   // in the loop.
   MachineInstr *LoopEnd, *LoopPhi, *LoopStart, *LoopDec;
   if (!findLoopComponents(ML, MRI, LoopStart, LoopPhi, LoopDec, LoopEnd))
+    return false;
+  if (LoopDec != LoopEnd)
     return false;
 
   SmallVector<MachineInstr *, 4> VCTPs;

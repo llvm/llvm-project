@@ -1068,7 +1068,7 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    vstr s0, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    blo.w .LBB7_9
+; CHECK-NEXT:    blo .LBB7_9
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    movs r3, #1
