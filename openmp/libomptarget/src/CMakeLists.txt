@@ -21,11 +21,23 @@ set(src_files
   omptarget.cpp
 )
 
-# Build libomptarget library with libdl dependency.
-add_library(omptarget SHARED ${src_files})
-target_link_libraries(omptarget
-  ${CMAKE_DL_LIBS}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+# Build libomptarget library with libdl dependency. Add LLVMSupport
+# dependency if building in-tree with profiling enabled.
+if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMPTARGET_PROFILING))
+  add_library(omptarget SHARED ${src_files})
+  target_link_libraries(omptarget
+    ${CMAKE_DL_LIBS}
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+else()
+  set(LLVM_LINK_COMPONENTS
+    Support
+    )
+  add_llvm_library(omptarget SHARED ${src_files}
+      LINK_LIBS ${CMAKE_DL_LIBS}
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports"
+      )
+  target_compile_definitions(omptarget PUBLIC OMPTARGET_PROFILE_ENABLED)
+endif()
 
 # Install libomptarget under the lib destination folder.
 install(TARGETS omptarget LIBRARY COMPONENT omptarget
