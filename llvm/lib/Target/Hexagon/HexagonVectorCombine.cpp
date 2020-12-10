@@ -71,8 +71,6 @@ public:
   Type *getBoolTy(int ElemCount = 0) const;
   // Create a ConstantInt of type returned by getIntTy with the value Val.
   ConstantInt *getConstInt(int Val) const;
-  // Create a 'true' or 'false' value of type getBoolTy.
-  ConstantInt *getConstBool(bool Val) const;
   // Get the integer value of V, if it exists.
   Optional<APInt> getIntValue(const Value *Val) const;
   // Is V a constant 0, or a vector of 0s?
@@ -903,12 +901,6 @@ auto HexagonVectorCombine::getConstInt(int Val) const -> ConstantInt * {
   return ConstantInt::getSigned(getIntTy(), Val);
 }
 
-auto HexagonVectorCombine::getConstBool(bool Val) const -> ConstantInt * {
-  Constant *C = Val ? ConstantInt::getTrue(getBoolTy())
-                    : ConstantInt::getFalse(getBoolTy());
-  return cast<ConstantInt>(C);
-}
-
 auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
   if (auto *C = dyn_cast<Constant>(Val))
     return C->isZeroValue();
@@ -1153,7 +1145,7 @@ auto HexagonVectorCombine::vlsb(IRBuilder<> &Builder, Value *Val) const
 
   Value *Bytes = vbytes(Builder, Val);
   if (auto *VecTy = dyn_cast<VectorType>(Bytes->getType()))
-    return Builder.CreateTrunc(Bytes, getBoolTy(getSizeOf(Bytes)));
+    return Builder.CreateTrunc(Bytes, getBoolTy(getSizeOf(VecTy)));
   // If Bytes is a scalar (i.e. Val was a scalar byte), return i1, not
   // <1 x i1>.
   return Builder.CreateTrunc(Bytes, getBoolTy());
