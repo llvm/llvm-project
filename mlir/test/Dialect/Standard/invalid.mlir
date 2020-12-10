@@ -298,3 +298,18 @@ func @mismatched_types() {
   return
 }
 
+// -----
+
+func @non_signless_constant() {
+  // expected-error @+1 {{requires integer result types to be signless}}
+  %0 = constant 0 : ui32
+  return
+}
+
+// -----
+
+func @non_signless_constant() {
+  // expected-error @+1 {{requires integer result types to be signless}}
+  %0 = constant 0 : si32
+  return
+}
