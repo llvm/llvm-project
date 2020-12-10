@@ -184,7 +184,7 @@ ClangExpressionDeclMap::TargetInfo ClangExpressionDeclMap::GetTargetInfo() {
 TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
                                                 TypeSystemClang &source,
                                                 TypeFromParser parser_type) {
-  assert(&target == ScratchTypeSystemClang::GetForTarget(*m_target));
+  assert(&target == GetScratchContext(*m_target));
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(&source.getASTContext() == m_ast_context);
 
@@ -222,7 +222,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     if (target == nullptr)
       return false;
 
-    auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(*target);
+    auto *clang_ast_context = GetScratchContext(*target);
     if (!clang_ast_context)
       return false;
 
@@ -260,7 +260,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   if (target == nullptr)
     return false;
 
-  TypeSystemClang *context = ScratchTypeSystemClang::GetForTarget(*target);
+  TypeSystemClang *context = GetScratchContext(*target);
   if (!context)
     return false;
 
@@ -1638,8 +1638,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   if (target == nullptr)
     return;
 
-  TypeSystemClang *scratch_ast_context =
-      ScratchTypeSystemClang::GetForTarget(*target);
+  TypeSystemClang *scratch_ast_context = GetScratchContext(*target);
   if (!scratch_ast_context)
     return;
 
