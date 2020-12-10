@@ -334,7 +334,19 @@ public:
 
   LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
+    if (isa<scf::ParallelOp>(op.getParentOp())) {
+      // This could happen while lowering affine.parallel to scf.parallel.
+      // scf.parallel in all cases expect scf.yield to have no operands.
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
+      return success();
+    }
+    SmallVector<Value, 4> yieldOperands(op.operands().begin(),
+                                        op.operands().end());
+    if (yieldOperands.size() > 0) {
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(op, yieldOperands);
+    } else {
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
+    }
     return success();
   }
 };
@@ -349,13 +361,61 @@ public:
     Value lowerBound = lowerAffineLowerBound(op, rewriter);
     Value upperBound = lowerAffineUpperBound(op, rewriter);
     Value step = rewriter.create<ConstantIndexOp>(loc, op.getStep());
-    auto f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    SmallVector<Value, 4> iterArgs(op.getIterOperands().begin(),
+                                   op.getIterOperands().end());
+    scf::ForOp f;
+    if (iterArgs.size() > 0) {
+      f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step,
+                                      iterArgs);
+    } else {
+      f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    }
     rewriter.eraseBlock(f.getBody());
     rewriter.inlineRegionBefore(op.region(), f.region(), f.region().end());
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, f.results());
     return success();
   }
 };
+
+/// This function returns the value of identity value associated with a
+/// AtomicRMWKind op.
+Value getIdentityValue(llvm::Optional<mlir::AtomicRMWKind> op,
+                       OpBuilder &builder, Location loc) {
+  switch (op.getValue()) {
+  case AtomicRMWKind::addf:
+    return builder.create<ConstantOp>(loc, builder.getF32FloatAttr(0));
+  case AtomicRMWKind::addi:
+    return builder.create<ConstantOp>(loc, builder.getI32IntegerAttr(0));
+  case AtomicRMWKind::mulf:
+    return builder.create<ConstantOp>(loc, builder.getF32FloatAttr(1));
+  case AtomicRMWKind::muli:
+    return builder.create<ConstantOp>(loc, builder.getI32IntegerAttr(1));
+  // TODO: Add remaining reduction operations
+  default:
+    emitOptionalError(loc, "Reduction operation type not supported");
+  }
+  return nullptr;
+}
+
+/// This function returns the value of reduction operation associated with a
+/// AtomicRMWKind op.
+Value getReductionOp(llvm::Optional<mlir::AtomicRMWKind> op, OpBuilder &builder,
+                     Location loc, Value lhs, Value rhs) {
+  switch (op.getValue()) {
+  case AtomicRMWKind::addf:
+    return builder.create<AddFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::addi:
+    return builder.create<AddIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::mulf:
+    return builder.create<MulFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::muli:
+    return builder.create<MulIOp>(loc, lhs, rhs);
+  // TODO: Add remaining reduction operations
+  default:
+    emitOptionalError(loc, "Reduction operation type not supported");
+  }
+  return nullptr;
+}
 
 /// Convert an `affine.parallel` (loop nest) operation into a `scf.parallel`
 /// operation.
@@ -369,12 +429,13 @@ public:
     SmallVector<Value, 8> steps;
     SmallVector<Value, 8> upperBoundTuple;
     SmallVector<Value, 8> lowerBoundTuple;
+    SmallVector<Value, 8> identityVals;
     // Finding lower and upper bound by expanding the map expression.
     // Checking if expandAffineMap is not giving NULL.
-    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
-        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
     Optional<SmallVector<Value, 8>> lowerBound = expandAffineMap(
         rewriter, loc, op.lowerBoundsMap(), op.getLowerBoundsOperands());
+    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
+        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
     if (!lowerBound || !upperBound)
       return failure();
     upperBoundTuple = *upperBound;
@@ -383,13 +444,55 @@ public:
     for (Attribute step : op.steps())
       steps.push_back(rewriter.create<ConstantIndexOp>(
           loc, step.cast<IntegerAttr>().getInt()));
-    // Creating empty scf.parallel op body with appropriate bounds.
-    auto parallelOp = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
-                                                       upperBoundTuple, steps);
-    rewriter.eraseBlock(parallelOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), parallelOp.region(),
-                                parallelOp.region().end());
-    rewriter.eraseOp(op);
+     // Get the terminator operands.
+    Operation *affineParOpTerm = op.region().front().getTerminator();
+    SmallVector<Value, 4> terminatorOperands(
+        affineParOpTerm->getOperands().begin(),
+        affineParOpTerm->getOperands().end());
+    scf::ParallelOp par;
+    if (op.results().size() == 0) {
+      // Case with no reduction operations/return values.
+      par = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
+                                             upperBoundTuple, steps, nullptr);
+      rewriter.eraseBlock(par.getBody());
+      rewriter.inlineRegionBefore(op.region(), par.region(),
+                                  par.region().end());
+    } else {
+      // Case with multiple reduction operations/return values.
+      ArrayRef<Attribute> reductions = op.reductions().getValue();
+      for (Attribute reduction : reductions) {
+        // For each of the reduction operations get the identity values for
+        // initialization of the result values.
+        llvm::Optional<mlir::AtomicRMWKind> reductionOp =
+            symbolizeAtomicRMWKind(
+                static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+        identityVals.push_back(getIdentityValue(reductionOp, rewriter, loc));
+      }
+      par = rewriter.create<scf::ParallelOp>(
+          loc, lowerBoundTuple, upperBoundTuple, steps, identityVals, nullptr);
+
+      // Copy the same body as of the AffineParallel operation.
+      rewriter.eraseBlock(par.getBody());
+      rewriter.inlineRegionBefore(op.region(), par.region(),
+                                  par.region().end());
+      assert(reductions.size() == terminatorOperands.size() &&
+             "Unequal number of reductions and operands.");
+      for (unsigned i = 0; i < reductions.size(); i++) {
+        // For each of the reduction operations get the respective mlir::Value.
+        llvm::Optional<mlir::AtomicRMWKind> reductionOp =
+            symbolizeAtomicRMWKind(reductions[i].cast<IntegerAttr>().getInt());
+        rewriter.setInsertionPoint(&par.region().front().back());
+        auto reduceOp =
+            rewriter.create<scf::ReduceOp>(loc, terminatorOperands[i]);
+        rewriter.setInsertionPointToEnd(&reduceOp.reductionOperator().front());
+        Value resultReduction =
+            getReductionOp(reductionOp, rewriter, loc,
+                           reduceOp.reductionOperator().front().getArgument(0),
+                           reduceOp.reductionOperator().front().getArgument(1));
+        rewriter.create<scf::ReduceReturnOp>(loc, resultReduction);
+      }
+    }
+    rewriter.replaceOp(op, par.results());
     return success();
   }
 };
