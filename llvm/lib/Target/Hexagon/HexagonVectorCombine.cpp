@@ -1088,8 +1088,7 @@ auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,
                                    int NewSize, Value *Pad) const -> Value * {
   assert(isa<VectorType>(Val->getType()));
   auto *ValTy = cast<VectorType>(Val->getType());
-  auto *PadTy = Pad->getType();
-  assert(ValTy->getElementType() == PadTy);
+  assert(ValTy->getElementType() == Pad->getType());
 
   int CurSize = ValTy->getElementCount().getFixedValue();
   if (CurSize == NewSize)
@@ -1173,7 +1172,6 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
   int HwLen = HST.getVectorLength();
   Type *BoolTy = Type::getInt1Ty(F.getContext());
   Type *Int32Ty = Type::getInt32Ty(F.getContext());
-  Type *Int64Ty = Type::getInt64Ty(F.getContext());
   // HVX vector -> v16i32/v32i32
   // HVX vector predicate -> v512i1/v1024i1
   auto getTypeForIntrin = [&](Type *Ty) -> Type * {
@@ -1186,7 +1184,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
       return VectorType::get(Int32Ty, HwLen / 4, /*Scalable*/ false);
     }
     // Non-HVX type. It should be a scalar.
-    assert(Ty == Int32Ty || Ty == Int64Ty);
+    assert(Ty == Int32Ty || Ty->isIntegerTy(64));
     return Ty;
   };
 
