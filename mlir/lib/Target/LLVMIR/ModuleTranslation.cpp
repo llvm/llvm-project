@@ -323,19 +323,31 @@ static Value getPHISourceValue(Block *current, Block *pred,
   if (isa<LLVM::BrOp>(terminator))
     return terminator.getOperand(index);
 
-  // For conditional branches, we need to check if the current block is reached
-  // through the "true" or the "false" branch and take the relevant operands.
-  auto condBranchOp = dyn_cast<LLVM::CondBrOp>(terminator);
-  assert(condBranchOp &&
-         "only branch operations can be terminators of a block that "
-         "has successors");
-  assert((condBranchOp.getSuccessor(0) != condBranchOp.getSuccessor(1)) &&
-         "successors with arguments in LLVM conditional branches must be "
-         "different blocks");
+  SuccessorRange successors = terminator.getSuccessors();
+  assert(std::adjacent_find(successors.begin(), successors.end()) ==
+             successors.end() &&
+         "successors with arguments in LLVM branches must be different blocks");
 
-  return condBranchOp.getSuccessor(0) == current
-             ? condBranchOp.trueDestOperands()[index]
-             : condBranchOp.falseDestOperands()[index];
+  // For instructions that branch based on a condition value, we need to take
+  // the operands for the branch that was taken.
+  if (auto condBranchOp = dyn_cast<LLVM::CondBrOp>(terminator)) {
+    // For conditional branches, we take the operands from either the "true" or
+    // the "false" branch.
+    return condBranchOp.getSuccessor(0) == current
+               ? condBranchOp.trueDestOperands()[index]
+               : condBranchOp.falseDestOperands()[index];
+  } else if (auto switchOp = dyn_cast<LLVM::SwitchOp>(terminator)) {
+    // For switches, we take the operands from either the default case, or from
+    // the case branch that was taken.
+    if (switchOp.defaultDestination() == current)
+      return switchOp.defaultOperands()[index];
+    for (auto i : llvm::enumerate(switchOp.caseDestinations()))
+      if (i.value() == current)
+        return switchOp.getCaseOperands(i.index())[index];
+  }
+
+  llvm_unreachable("only branch or switch operations can be terminators of a "
+                   "block that has successors");
 }
 
 /// Connect the PHI nodes to the results of preceding blocks.
@@ -715,6 +727,34 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
         blockMapping[condbrOp.getSuccessor(0)],
         blockMapping[condbrOp.getSuccessor(1)], branchWeights);
     branchMapping.try_emplace(&opInst, branch);
+    return success();
+  }
+  if (auto switchOp = dyn_cast<LLVM::SwitchOp>(opInst)) {
+    llvm::MDNode *branchWeights = nullptr;
+    if (auto weights = switchOp.branch_weights()) {
+      llvm::SmallVector<uint32_t> weightValues;
+      weightValues.reserve(weights->size());
+      for (llvm::APInt weight : weights->cast<DenseIntElementsAttr>())
+        weightValues.push_back(weight.getLimitedValue());
+      branchWeights = llvm::MDBuilder(llvmModule->getContext())
+                          .createBranchWeights(weightValues);
+    }
+
+    llvm::SwitchInst *switchInst =
+        builder.CreateSwitch(valueMapping[switchOp.value()],
+                             blockMapping[switchOp.defaultDestination()],
+                             switchOp.caseDestinations().size(), branchWeights);
+
+    auto *ty = llvm::cast<llvm::IntegerType>(
+        convertType(switchOp.value().getType().cast<LLVMType>()));
+    for (auto i :
+         llvm::zip(switchOp.case_values()->cast<DenseIntElementsAttr>(),
+                   switchOp.caseDestinations()))
+      switchInst->addCase(
+          llvm::ConstantInt::get(ty, std::get<0>(i).getLimitedValue()),
+          blockMapping[std::get<1>(i)]);
+
+    branchMapping.try_emplace(&opInst, switchInst);
     return success();
   }
 
