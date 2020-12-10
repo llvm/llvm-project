@@ -81,7 +81,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    andi a1, a0, 255
+; RV32I-NEXT:    zext.b a1, a0
 ; RV32I-NEXT:    beqz a1, .LBB3_2
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    addi a1, a0, -1
