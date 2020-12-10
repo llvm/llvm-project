@@ -53,7 +53,7 @@ TEST(FileEdits, AbsolutePath) {
   SourceManager SM(DE, FM);
 
   for (const auto *Path : RelPaths) {
-    auto FID = SM.createFileID(*FM.getFile(Path), SourceLocation(),
+    auto FID = SM.createFileID(*FM.getOptionalFileRef(Path), SourceLocation(),
                                clang::SrcMgr::C_User);
     auto Res = Tweak::Effect::fileEdit(SM, FID, tooling::Replacements());
     ASSERT_THAT_EXPECTED(Res, llvm::Succeeded());
