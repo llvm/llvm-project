@@ -312,10 +312,11 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   if (UseColor.getNumOccurrences() > 0)
     OverrideOptions.UseColor = UseColor;
 
-  auto LoadConfig = [&](StringRef Configuration)
-      -> std::unique_ptr<ClangTidyOptionsProvider> {
+  auto LoadConfig =
+      [&](StringRef Configuration,
+          StringRef Source) -> std::unique_ptr<ClangTidyOptionsProvider> {
     llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
-        parseConfiguration(Configuration);
+        parseConfiguration(MemoryBufferRef(Configuration, Source));
     if (ParsedConfig)
       return std::make_unique<ConfigOptionsProvider>(
           std::move(GlobalOptions),
@@ -334,18 +335,18 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     }
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        llvm::MemoryBuffer::getFile(ConfigFile.c_str());
+        llvm::MemoryBuffer::getFile(ConfigFile);
     if (std::error_code EC = Text.getError()) {
       llvm::errs() << "Error: can't read config-file '" << ConfigFile
                    << "': " << EC.message() << "\n";
       return nullptr;
     }
 
-    return LoadConfig((*Text)->getBuffer());
+    return LoadConfig((*Text)->getBuffer(), ConfigFile);
   }
 
   if (Config.getNumOccurrences() > 0)
-    return LoadConfig(Config);
+    return LoadConfig(Config, "<command-line-config>");
 
   return std::make_unique<FileOptionsProvider>(
       std::move(GlobalOptions), std::move(DefaultOptions),
