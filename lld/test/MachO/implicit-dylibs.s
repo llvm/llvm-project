@@ -31,6 +31,11 @@
 
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s \
 # RUN:   --check-prefix=LOAD -DDIR=%t --implicit-check-not LC_LOAD_DYLIB
+## Check that we don't create duplicate LC_LOAD_DYLIBs.
+# RUN: %lld -syslibroot %t -o %t/test -lSystem -L%t -lreexporter -ltoplevel %t/test.o
+# RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s \
+# RUN:   --check-prefix=LOAD -DDIR=%t --implicit-check-not LC_LOAD_DYLIB
+
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name /usr/lib/libSystem.B.dylib
