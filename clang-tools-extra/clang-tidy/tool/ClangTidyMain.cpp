@@ -318,9 +318,9 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
         parseConfiguration(Configuration);
     if (ParsedConfig)
       return std::make_unique<ConfigOptionsProvider>(
-          GlobalOptions,
+          std::move(GlobalOptions),
           ClangTidyOptions::getDefaults().merge(DefaultOptions, 0),
-          *ParsedConfig, OverrideOptions, std::move(FS));
+          std::move(*ParsedConfig), std::move(OverrideOptions), std::move(FS));
     llvm::errs() << "Error: invalid configuration specified.\n"
                  << ParsedConfig.getError().message() << "\n";
     return nullptr;
@@ -347,8 +347,9 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   if (Config.getNumOccurrences() > 0)
     return LoadConfig(Config);
 
-  return std::make_unique<FileOptionsProvider>(GlobalOptions, DefaultOptions,
-                                                OverrideOptions, std::move(FS));
+  return std::make_unique<FileOptionsProvider>(
+      std::move(GlobalOptions), std::move(DefaultOptions),
+      std::move(OverrideOptions), std::move(FS));
 }
 
 llvm::IntrusiveRefCntPtr<vfs::FileSystem>
