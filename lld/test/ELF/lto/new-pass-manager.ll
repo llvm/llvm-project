@@ -4,9 +4,9 @@
 ; Test new-pass-manager and debug-pass-manager option
 ; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
 ; RUN: ld.lld --plugin-opt=new-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --lto-new-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --lto-new-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --lto-new-pass-manager --no-lto-new-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s --check-prefix=LEGACY
+; RUN: ld.lld --no-lto-legacy-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
+; RUN: ld.lld --no-lto-legacy-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
+; RUN: ld.lld --no-lto-legacy-pass-manager --lto-legacy-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s --check-prefix=LEGACY
 ; RUN: ld.lld --plugin-opt=legacy-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s --check-prefix=LEGACY
 
 ; CHECK: Starting llvm::Module pass manager run
