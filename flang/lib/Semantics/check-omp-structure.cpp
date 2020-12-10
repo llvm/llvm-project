@@ -179,6 +179,15 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAllocate &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
@@ -189,6 +198,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &) {
   dirContext_.pop_back();
 }
 
@@ -382,6 +400,7 @@ CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 
+CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
