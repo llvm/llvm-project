@@ -2802,6 +2802,7 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     return false;
 
   assert(ShufMask.size() == 2);
+  // TODO-GFX11: This assertion is no longer true:
   assert(STI.hasSDWA() && "no target has VOP3P but not SDWA");
 
   MachineBasicBlock *MBB = MI.getParent();
