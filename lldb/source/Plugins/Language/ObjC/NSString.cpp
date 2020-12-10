@@ -34,7 +34,7 @@ NSString_Additionals::GetAdditionalSummaries() {
 static CompilerType GetNSPathStore2Type(Target &target) {
   static ConstString g_type_name("__lldb_autogen_nspathstore2");
 
-  TypeSystemClang *ast_ctx = TypeSystemClang::GetScratch(target);
+  TypeSystemClang *ast_ctx = ScratchTypeSystemClang::GetForTarget(target);
 
   if (!ast_ctx)
     return CompilerType();

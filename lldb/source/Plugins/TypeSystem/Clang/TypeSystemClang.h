@@ -157,18 +157,6 @@ public:
 
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
-  static TypeSystemClang *GetScratch(Target &target,
-                                     bool create_on_demand = true) {
-    auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
-        lldb::eLanguageTypeC, create_on_demand);
-    if (auto err = type_system_or_err.takeError()) {
-      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                     std::move(err), "Couldn't get scratch TypeSystemClang");
-      return nullptr;
-    }
-    return llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
-  }
-
   /// Returns the display name of this TypeSystemClang that indicates what
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }
@@ -1077,6 +1065,13 @@ public:
   }
 
 private:
+  /// Returns the PrintingPolicy used when generating the internal type names.
+  /// These type names are mostly used for the formatter selection.
+  clang::PrintingPolicy GetTypePrintingPolicy();
+  /// Returns the internal type name for the given NamedDecl using the
+  /// type printing policy.
+  std::string GetTypeNameForDecl(const clang::NamedDecl *named_decl);
+
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
 
@@ -1128,13 +1123,70 @@ private:
 
 /// The TypeSystemClang instance used for the scratch ASTContext in a
 /// lldb::Target.
-class TypeSystemClangForExpressions : public TypeSystemClang {
-public:
-  TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
+class ScratchTypeSystemClang : public TypeSystemClang {
+  /// LLVM RTTI support
+  static char ID;
 
-  ~TypeSystemClangForExpressions() override = default;
+public:
+  ScratchTypeSystemClang(Target &target, llvm::Triple triple);
+
+  ~ScratchTypeSystemClang() override = default;
 
   void Finalize() override;
+
+  /// The different kinds of isolated ASTs within the scratch TypeSystem.
+  ///
+  /// These ASTs are isolated from the main scratch AST and are each
+  /// dedicated to a special language option/feature that makes the contained
+  /// AST nodes incompatible with other AST nodes.
+  enum class IsolatedASTKind {
+    /// The isolated AST for declarations/types from expressions that imported
+    /// type information from a C++ module. The templates from a C++ module
+    /// often conflict with the templates we generate from debug information,
+    /// so we put these types in their own AST.
+    CppModules
+  };
+
+  /// Alias for requesting the default scratch TypeSystemClang in GetForTarget.
+  // This isn't constexpr as gtest/llvm::Optional comparison logic is trying
+  // to get the address of this for pretty-printing.
+  static const llvm::NoneType DefaultAST;
+
+  /// Infers the appropriate sub-AST from Clang's LangOptions.
+  static llvm::Optional<IsolatedASTKind>
+  InferIsolatedASTKindFromLangOpts(const clang::LangOptions &l) {
+    // If modules are activated we want the dedicated C++ module AST.
+    // See IsolatedASTKind::CppModules for more info.
+    if (l.Modules)
+      return IsolatedASTKind::CppModules;
+    return DefaultAST;
+  }
+
+  /// Returns the scratch TypeSystemClang for the given target.
+  /// \param target The Target which scratch TypeSystemClang should be returned.
+  /// \param ast_kind Allows requesting a specific sub-AST instead of the
+  ///                 default scratch AST. See also `IsolatedASTKind`.
+  /// \param create_on_demand If the scratch TypeSystemClang instance can be
+  /// created by this call if it doesn't exist yet. If it doesn't exist yet and
+  /// this parameter is false, this function returns a nullptr.
+  /// \return The scratch type system of the target or a nullptr in case an
+  ///         error occurred.
+  static TypeSystemClang *
+  GetForTarget(Target &target,
+               llvm::Optional<IsolatedASTKind> ast_kind = DefaultAST,
+               bool create_on_demand = true);
+
+  /// Returns the scratch TypeSystemClang for the given target. The returned
+  /// TypeSystemClang will be the scratch AST or a sub-AST, depending on which
+  /// fits best to the passed LangOptions.
+  /// \param target The Target which scratch TypeSystemClang should be returned.
+  /// \param lang_opts The LangOptions of a clang ASTContext that the caller
+  ///                  wants to export type information from. This is used to
+  ///                  find the best matching sub-AST that will be returned.
+  static TypeSystemClang *GetForTarget(Target &target,
+                                       const clang::LangOptions &lang_opts) {
+    return GetForTarget(target, InferIsolatedASTKindFromLangOpts(lang_opts));
+  }
 
   UserExpression *
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
@@ -1152,12 +1204,41 @@ public:
                                       const char *name) override;
 
   PersistentExpressionState *GetPersistentExpressionState() override;
+
+  /// Unregisters the given ASTContext as a source from the scratch AST (and
+  /// all sub-ASTs).
+  /// \see ClangASTImporter::ForgetSource
+  void ForgetSource(clang::ASTContext *src_ctx, ClangASTImporter &importer);
+
+  // llvm casting support
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || TypeSystemClang::isA(ClassID);
+  }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
+
 private:
+  std::unique_ptr<ClangASTSource> CreateASTSource();
+  /// Returns the requested sub-AST.
+  /// Will lazily create the sub-AST if it hasn't been created before.
+  TypeSystemClang &GetIsolatedAST(IsolatedASTKind feature);
+
+  /// The target triple.
+  /// This was potentially adjusted and might not be identical to the triple
+  /// of `m_target_wp`.
+  llvm::Triple m_triple;
   lldb::TargetWP m_target_wp;
-  std::unique_ptr<ClangPersistentVariables>
-      m_persistent_variables; // These are the persistent variables associated
-                              // with this process for the expression parser
+  /// The persistent variables associated with this process for the expression
+  /// parser.
+  std::unique_ptr<ClangPersistentVariables> m_persistent_variables;
+  /// The ExternalASTSource that performs lookups and completes minimally
+  /// imported types.
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
+
+  /// Map from IsolatedASTKind to their actual TypeSystemClang instance.
+  /// This map is lazily filled with sub-ASTs and should be accessed via
+  /// `GetSubAST` (which lazily fills this map).
+  std::unordered_map<IsolatedASTKind, std::unique_ptr<TypeSystemClang>>
+      m_isolated_asts;
 };
 
 } // namespace lldb_private

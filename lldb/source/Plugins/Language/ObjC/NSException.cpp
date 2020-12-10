@@ -69,7 +69,8 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
   InferiorSizedWord userinfo_isw(userinfo, *process_sp);
   InferiorSizedWord reserved_isw(reserved, *process_sp);
 
-  auto *clang_ast_context = TypeSystemClang::GetScratch(process_sp->GetTarget());
+  auto *clang_ast_context =
+      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
   if (!clang_ast_context)
     return false;
 

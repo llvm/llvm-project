@@ -50,11 +50,7 @@ public:
     }
 
     TypeSystemClang *clang_ast_context =
-        llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
-
-    if (!clang_ast_context) {
-      return;
-    }
+        llvm::cast<TypeSystemClang>(block_pointer_type.GetTypeSystem());
 
     std::shared_ptr<ClangASTImporter> clang_ast_importer;
     auto *state = target_sp->GetPersistentExpressionStateForLanguage(
