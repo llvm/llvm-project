@@ -10,6 +10,7 @@
 #include "gwp_asan/stack_trace_compressor.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
 
 using AllocationMetadata = gwp_asan::AllocationMetadata;
