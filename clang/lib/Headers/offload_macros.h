@@ -7,7 +7,7 @@
  *===-----------------------------------------------------------------------===
 
  offload_macros.h: Create 2 Universal _DEVICE Offloading Macros.
- 
+
    This header creates macros  _DEVICE_ARCH and _DEVICE_GPU with values.
    This header exists because compiler macros are inconsistent in specifying if
    a compiliation is a device pass or a host pass. There is also inconsistency
@@ -19,7 +19,7 @@
    So "#ifndef _DEVICE_ARCH" can be used by users to imply a host compilation.
    Updates to this header to cover other architectures or other
    compilation environments are very welcome. This header must remain
-   a preprocessing header only because it is intended to be used by 
+   a preprocessing header only because it is intended to be used by
    different languages.
 
 */
@@ -42,7 +42,7 @@
       #define _DEVICE_GPU __CUDA_ARCH__
     #endif
   #endif
-#elif defined(__CUDA_ARCH__) 
+#elif defined(__CUDA_ARCH__)
   // CUDA sets macros __NVPTX__ on host pass. So use __CUDA_ARCH__
   // to determine if this is device pass.
   #define _DEVICE_ARCH nvptx64
@@ -63,7 +63,7 @@
   #endif
 #elif defined(__OPENCL_C_VERSION__) || defined(__OPENCL_CPP_VERSION__)
   // FIXME: check that these macros are not set on OpenCL host pass
-  #if defined(__AMDGCN__) 
+  #if defined(__AMDGCN__)
     #define _DEVICE_ARCH amdgcn
     // _DEVICE_GPU set below
   #endif
@@ -73,50 +73,66 @@
     #define _DEVICE_GPU __CUDA_ARCH__
   #endif
 #endif
- 
+
 #if defined(_DEVICE_ARCH) && ( _DEVICE_ARCH == amdgcn )
   // AMD uses binary macros only, so create a value for _DEVICE_GPU
-  #if defined(__gfx906__)
-    #define _DEVICE_GPU 906
-  #elif defined(__gfx900__) 
-    #define _DEVICE_GPU 900
-  #elif defined(__gfx601__) 
+  #if defined(__gfx600__)
+    #define _DEVICE_GPU 600
+  #elif defined(__gfx601__)
     #define _DEVICE_GPU 601
-  #elif defined(__gfx700__) 
+  #elif defined(__gfx602__)
+    #define _DEVICE_GPU 602
+  #elif defined(__gfx700__)
     #define _DEVICE_GPU 700
-  #elif defined(__gfx701__) 
+  #elif defined(__gfx701__)
     #define _DEVICE_GPU 701
-  #elif defined(__gfx702__) 
+  #elif defined(__gfx702__)
     #define _DEVICE_GPU 702
-  #elif defined(__gfx703__) 
+  #elif defined(__gfx703__)
     #define _DEVICE_GPU 703
-  #elif defined(__gfx801__) 
+  #elif defined(__gfx704__)
+    #define _DEVICE_GPU 704
+  #elif defined(__gfx705__)
+    #define _DEVICE_GPU 705
+  #elif defined(__gfx801__)
     #define _DEVICE_GPU 801
-  #elif defined(__gfx802__) 
+  #elif defined(__gfx802__)
     #define _DEVICE_GPU 802
-  #elif defined(__gfx803__) 
+  #elif defined(__gfx803__)
     #define _DEVICE_GPU 803
-  #elif defined(__gfx810__) 
+  #elif defined(__gfx805__)
+    #define _DEVICE_GPU 805
+  #elif defined(__gfx810__)
     #define _DEVICE_GPU 810
-  #elif defined(__gfx900__) 
-    #define _DEVICE_GPU 900 
-  #elif defined(__gfx902__) 
-    #define _DEVICE_GPU 902 
-  #elif defined(__gfx904__) 
-    #define _DEVICE_GPU 904 
-  #elif defined(__gfx906__) 
-    #define _DEVICE_GPU 906 
+  #elif defined(__gfx900__)
+    #define _DEVICE_GPU 900
+  #elif defined(__gfx902__)
+    #define _DEVICE_GPU 902
+  #elif defined(__gfx904__)
+    #define _DEVICE_GPU 904
+  #elif defined(__gfx906__)
+    #define _DEVICE_GPU 906
   #elif defined(__gfx908__)
     #define _DEVICE_GPU 908
-  #elif defined(__gfx909__) 
-    #define _DEVICE_GPU 909 
-  #elif defined(__gfx1010__) 
+  #elif defined(__gfx909__)
+    #define _DEVICE_GPU 909
+  #elif defined(__gfx90c__)
+    #define _DEVICE_GPU 90c
+  #elif defined(__gfx1010__)
     #define _DEVICE_GPU 1010
-  #elif defined(__gfx1011__) 
+  #elif defined(__gfx1011__)
     #define _DEVICE_GPU 1011
-  #elif defined(__gfx1012__) 
+  #elif defined(__gfx1012__)
     #define _DEVICE_GPU 1012
-  #else 
+  #elif defined(__gfx1030__)
+    #define _DEVICE_GPU 1030
+  #elif defined(__gfx1031__)
+    #define _DEVICE_GPU 1031
+  #elif defined(__gfx1032__)
+    #define _DEVICE_GPU 1032
+  #elif defined(__gfx1033__)
+    #define _DEVICE_GPU 1033
+  #else
     #define _DEVICE_GPU UNKNOWN
   #endif
 #endif
