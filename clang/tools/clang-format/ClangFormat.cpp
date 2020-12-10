@@ -178,7 +178,7 @@ static FileID createInMemoryFile(StringRef FileName, MemoryBufferRef Source,
                                  SourceManager &Sources, FileManager &Files,
                                  llvm::vfs::InMemoryFileSystem *MemFS) {
   MemFS->addFileNoOwn(FileName, 0, Source);
-  auto File = Files.getFile(FileName);
+  auto File = Files.getOptionalFileRef(FileName);
   assert(File && "File not added to MemFS?");
   return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
 }
