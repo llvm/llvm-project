@@ -1089,9 +1089,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
       // The superclass, if any, is an extra child.
-      if (builder.lookupSuperclass(tr)) {
+      if (builder.lookupSuperclass(tr))
         return rti->getNumFields() + 1;
-      }
       return rti->getNumFields();
     }
 
