@@ -21,29 +21,28 @@
 using namespace clang;
 
 const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
-    {NKI_None, "<None>"},
-    {NKI_None, "TemplateArgument"},
-    {NKI_None, "TemplateArgumentLoc"},
-    {NKI_None, "TemplateName"},
-    {NKI_None, "NestedNameSpecifierLoc"},
-    {NKI_None, "QualType"},
-    {NKI_None, "TypeLoc"},
-    {NKI_None, "CXXBaseSpecifier"},
-    {NKI_None, "CXXCtorInitializer"},
-    {NKI_None, "NestedNameSpecifier"},
-    {NKI_None, "Decl"},
+  { NKI_None, "<None>" },
+  { NKI_None, "TemplateArgument" },
+  { NKI_None, "TemplateArgumentLoc" },
+  { NKI_None, "TemplateName" },
+  { NKI_None, "NestedNameSpecifierLoc" },
+  { NKI_None, "QualType" },
+  { NKI_None, "TypeLoc" },
+  { NKI_None, "CXXBaseSpecifier" },
+  { NKI_None, "CXXCtorInitializer" },
+  { NKI_None, "NestedNameSpecifier" },
+  { NKI_None, "Decl" },
 #define DECL(DERIVED, BASE) { NKI_##BASE, #DERIVED "Decl" },
 #include "clang/AST/DeclNodes.inc"
-    {NKI_None, "Stmt"},
+  { NKI_None, "Stmt" },
 #define STMT(DERIVED, BASE) { NKI_##BASE, #DERIVED },
 #include "clang/AST/StmtNodes.inc"
-    {NKI_None, "Type"},
+  { NKI_None, "Type" },
 #define TYPE(DERIVED, BASE) { NKI_##BASE, #DERIVED "Type" },
 #include "clang/AST/TypeNodes.inc"
-    {NKI_None, "OMPClause"},
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+  { NKI_None, "OMPClause" },
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
@@ -114,16 +113,15 @@ ASTNodeKind ASTNodeKind::getFromNode(const Type &T) {
 
 ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
   switch (C.getClauseKind()) {
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class)                                         \
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
   case llvm::omp::Clause::Enum:                                                \
     return ASTNodeKind(NKI_##Class);
-#define CLAUSE_NO_CLASS(Enum, Str)                                             \
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Clause::Enum:                                                \
     llvm_unreachable("unexpected OpenMP clause kind");
   default:
     break;
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   llvm_unreachable("invalid stmt kind");
 }

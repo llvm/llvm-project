@@ -7,15 +7,129 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the list of supported OpenMP runtime
+/// This file defines the list of supported OpenMP directives, clauses, runtime
 /// calls, and other things that need to be listed in enums.
 ///
 /// This file is under transition to OMP.td with TableGen code generation.
 ///
 //===----------------------------------------------------------------------===//
 
-/// OpenMP Directives, combined directives and Clauses
+/// OpenMP Directives and combined directives
 /// - Moved to OMP.td
+
+/// OpenMP Clauses
+///
+///{
+
+#ifndef OMP_CLAUSE
+#define OMP_CLAUSE(Enum, Str, Implicit)
+#endif
+#ifndef OMP_CLAUSE_CLASS
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)
+#endif
+#ifndef OMP_CLAUSE_NO_CLASS
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)
+#endif
+
+#define __OMP_CLAUSE(Name, Class)                                              \
+  OMP_CLAUSE(OMPC_##Name, #Name, /* Implicit */ false)                         \
+  OMP_CLAUSE_CLASS(OMPC_##Name, #Name, Class)
+#define __OMP_CLAUSE_NO_CLASS(Name)                                            \
+  OMP_CLAUSE(OMPC_##Name, #Name, /* Implicit */ false)                         \
+  OMP_CLAUSE_NO_CLASS(OMPC_##Name, #Name)
+#define __OMP_IMPLICIT_CLAUSE_CLASS(Name, Str, Class)                          \
+  OMP_CLAUSE(OMPC_##Name, Str, /* Implicit */ true)                            \
+  OMP_CLAUSE_CLASS(OMPC_##Name, Str, Class)
+#define __OMP_IMPLICIT_CLAUSE_NO_CLASS(Name, Str)                              \
+  OMP_CLAUSE(OMPC_##Name, Str, /* Implicit */ true)                            \
+  OMP_CLAUSE_NO_CLASS(OMPC_##Name, Str)
+
+__OMP_CLAUSE(allocator, OMPAllocatorClause)
+__OMP_CLAUSE(if, OMPIfClause)
+__OMP_CLAUSE(final, OMPFinalClause)
+__OMP_CLAUSE(num_threads, OMPNumThreadsClause)
+__OMP_CLAUSE(safelen, OMPSafelenClause)
+__OMP_CLAUSE(simdlen, OMPSimdlenClause)
+__OMP_CLAUSE(collapse, OMPCollapseClause)
+__OMP_CLAUSE(default, OMPDefaultClause)
+__OMP_CLAUSE(private, OMPPrivateClause)
+__OMP_CLAUSE(firstprivate, OMPFirstprivateClause)
+__OMP_CLAUSE(lastprivate, OMPLastprivateClause)
+__OMP_CLAUSE(shared, OMPSharedClause)
+__OMP_CLAUSE(reduction, OMPReductionClause)
+__OMP_CLAUSE(linear, OMPLinearClause)
+__OMP_CLAUSE(aligned, OMPAlignedClause)
+__OMP_CLAUSE(copyin, OMPCopyinClause)
+__OMP_CLAUSE(copyprivate, OMPCopyprivateClause)
+__OMP_CLAUSE(proc_bind, OMPProcBindClause)
+__OMP_CLAUSE(schedule, OMPScheduleClause)
+__OMP_CLAUSE(ordered, OMPOrderedClause)
+__OMP_CLAUSE(nowait, OMPNowaitClause)
+__OMP_CLAUSE(untied, OMPUntiedClause)
+__OMP_CLAUSE(mergeable, OMPMergeableClause)
+__OMP_CLAUSE(read, OMPReadClause)
+__OMP_CLAUSE(write, OMPWriteClause)
+__OMP_CLAUSE(update, OMPUpdateClause)
+__OMP_CLAUSE(capture, OMPCaptureClause)
+__OMP_CLAUSE(seq_cst, OMPSeqCstClause)
+__OMP_CLAUSE(acq_rel, OMPAcqRelClause)
+__OMP_CLAUSE(acquire, OMPAcquireClause)
+__OMP_CLAUSE(release, OMPReleaseClause)
+__OMP_CLAUSE(relaxed, OMPRelaxedClause)
+__OMP_CLAUSE(depend, OMPDependClause)
+__OMP_CLAUSE(device, OMPDeviceClause)
+__OMP_CLAUSE(threads, OMPThreadsClause)
+__OMP_CLAUSE(simd, OMPSIMDClause)
+__OMP_CLAUSE(map, OMPMapClause)
+__OMP_CLAUSE(num_teams, OMPNumTeamsClause)
+__OMP_CLAUSE(thread_limit, OMPThreadLimitClause)
+__OMP_CLAUSE(priority, OMPPriorityClause)
+__OMP_CLAUSE(grainsize, OMPGrainsizeClause)
+__OMP_CLAUSE(nogroup, OMPNogroupClause)
+__OMP_CLAUSE(num_tasks, OMPNumTasksClause)
+__OMP_CLAUSE(hint, OMPHintClause)
+__OMP_CLAUSE(dist_schedule, OMPDistScheduleClause)
+__OMP_CLAUSE(defaultmap, OMPDefaultmapClause)
+__OMP_CLAUSE(to, OMPToClause)
+__OMP_CLAUSE(from, OMPFromClause)
+__OMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
+__OMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
+__OMP_CLAUSE(task_reduction, OMPTaskReductionClause)
+__OMP_CLAUSE(in_reduction, OMPInReductionClause)
+__OMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
+__OMP_CLAUSE(unified_shared_memory, OMPUnifiedSharedMemoryClause)
+__OMP_CLAUSE(reverse_offload, OMPReverseOffloadClause)
+__OMP_CLAUSE(dynamic_allocators, OMPDynamicAllocatorsClause)
+__OMP_CLAUSE(atomic_default_mem_order, OMPAtomicDefaultMemOrderClause)
+__OMP_CLAUSE(allocate, OMPAllocateClause)
+__OMP_CLAUSE(nontemporal, OMPNontemporalClause)
+__OMP_CLAUSE(order, OMPOrderClause)
+__OMP_CLAUSE(destroy, OMPDestroyClause)
+__OMP_CLAUSE(detach, OMPDetachClause)
+__OMP_CLAUSE(inclusive, OMPInclusiveClause)
+__OMP_CLAUSE(exclusive, OMPExclusiveClause)
+__OMP_CLAUSE(uses_allocators, OMPUsesAllocatorsClause)
+__OMP_CLAUSE(affinity, OMPAffinityClause)
+__OMP_CLAUSE(use_device_addr, OMPUseDeviceAddrClause)
+
+__OMP_CLAUSE_NO_CLASS(uniform)
+__OMP_CLAUSE_NO_CLASS(device_type)
+__OMP_CLAUSE_NO_CLASS(match)
+
+__OMP_IMPLICIT_CLAUSE_CLASS(depobj, "depobj", OMPDepobjClause)
+__OMP_IMPLICIT_CLAUSE_CLASS(flush, "flush", OMPFlushClause)
+
+__OMP_IMPLICIT_CLAUSE_NO_CLASS(threadprivate, "threadprivate or thread local")
+__OMP_IMPLICIT_CLAUSE_NO_CLASS(unknown, "unknown")
+
+#undef __OMP_IMPLICIT_CLAUSE_NO_CLASS
+#undef __OMP_IMPLICIT_CLAUSE_CLASS
+#undef __OMP_CLAUSE
+#undef OMP_CLAUSE_NO_CLASS
+#undef OMP_CLAUSE_CLASS
+#undef OMP_CLAUSE
+
+///}
 
 /// Types used in runtime structs or runtime functions
 ///

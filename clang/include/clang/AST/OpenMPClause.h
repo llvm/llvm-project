@@ -7758,22 +7758,20 @@ public:
 #define DISPATCH(CLASS) \
   return static_cast<ImplClass*>(this)->Visit##CLASS(static_cast<PTR(CLASS)>(S))
 
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class)                                         \
-  RetTy Visit##Class(PTR(Class) S) { DISPATCH(Class); }
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) \
+  RetTy Visit ## Class (PTR(Class) S) { DISPATCH(Class); }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 
   RetTy Visit(PTR(OMPClause) S) {
     // Top switch clause: visit each OMPClause.
     switch (S->getClauseKind()) {
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class)                                         \
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
   case llvm::omp::Clause::Enum:                                                \
     return Visit##Class(static_cast<PTR(Class)>(S));
-#define CLAUSE_NO_CLASS(Enum, Str)                                             \
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Clause::Enum:                                                \
     break;
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
     default:
       break;
     }
@@ -7806,9 +7804,9 @@ public:
   OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
       : OS(OS), Policy(Policy) {}
 
-#define GEN_CLANG_CLAUSE_CLASS
-#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
+  void Visit##Class(Class *S);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
 struct OMPTraitProperty {
