@@ -31,10 +31,8 @@ using namespace mlir;
 
 namespace {
 
-struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
-  explicit GPUShuffleOpLowering(LLVMTypeConverter &lowering_)
-      : ConvertToLLVMPattern(gpu::ShuffleOp::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_) {}
+struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
+  using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
   /// Lowers a shuffle to the corresponding NVVM op.
   ///
@@ -53,7 +51,7 @@ struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ShuffleOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     gpu::ShuffleOpAdaptor adaptor(operands);
