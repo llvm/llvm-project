@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 #define LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 
+#include "clang/Analysis/CrossTUAnalysisHelper.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -120,10 +121,10 @@ bool containsConst(const VarDecl *VD, const ASTContext &ACtx);
 /// the locations of the AST files for each definition.
 ///
 /// Note that this class also implements caching.
-class CrossTranslationUnitContext {
+class CrossTranslationUnitContext : public CrossTUAnalysisHelper {
 public:
   CrossTranslationUnitContext(CompilerInstance &CI);
-  ~CrossTranslationUnitContext();
+  ~CrossTranslationUnitContext() override;
 
   /// This function loads a function or variable definition from an
   ///        external AST file and merges it into the original AST.
@@ -191,7 +192,7 @@ public:
   /// If any error happens (ToLoc is a non-imported source location) empty is
   /// returned.
   llvm::Optional<std::pair<SourceLocation /*FromLoc*/, ASTUnit *>>
-  getImportedFromSourceLocation(const clang::SourceLocation &ToLoc) const;
+  getImportedFromSourceLocation(SourceLocation ToLoc) const override;
 
 private:
   using ImportedFileIDMap =

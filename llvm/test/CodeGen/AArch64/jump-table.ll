@@ -101,22 +101,7 @@ lbl1:
   ret i32 1
 
 lbl2:
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
-  call void asm sideeffect "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16", ""()
+  call i64 @llvm.aarch64.space(i32 1024, i64 undef)
   ret i32 2
 
 lbl3:

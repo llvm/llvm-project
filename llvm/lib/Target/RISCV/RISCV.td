@@ -126,6 +126,7 @@ def HasStdExtZbbOrZbp
                 AssemblerPredicate<(any_of FeatureExtZbb, FeatureExtZbp)>;
 def NotHasStdExtZbbOrZbp
     : Predicate<"!(Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())">;
+def NotHasStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">;
 
 def FeatureExtZbproposedc
     : SubtargetFeature<"experimental-zbproposedc", "HasStdExtZbproposedc", "true",

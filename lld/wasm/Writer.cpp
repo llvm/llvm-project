@@ -58,6 +58,7 @@ private:
   bool needsPassiveInitialization(const OutputSegment *segment);
   bool hasPassiveInitializedSegments();
 
+  void createSyntheticInitFunctions();
   void createInitMemoryFunction();
   void createApplyRelocationsFunction();
   void createCallCtorsFunction();
@@ -865,14 +866,81 @@ bool Writer::hasPassiveInitializedSegments() {
                       }) != segments.end();
 }
 
+void Writer::createSyntheticInitFunctions() {
+  // Passive segments are used to avoid memory being reinitialized on each
+  // thread's instantiation. These passive segments are initialized and
+  // dropped in __wasm_init_memory, which is registered as the start function
+
+  if (config->sharedMemory && hasPassiveInitializedSegments()) {
+    static WasmSignature nullSignature = {{}, {}};
+    WasmSym::initMemory = symtab->addSyntheticFunction(
+        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
+    WasmSym::initMemory->markLive();
+    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
+        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
+    WasmSym::initMemoryFlag->markLive();
+  }
+}
+
 void Writer::createInitMemoryFunction() {
   LLVM_DEBUG(dbgs() << "createInitMemoryFunction\n");
+  assert(WasmSym::initMemory);
   assert(WasmSym::initMemoryFlag);
+  assert(hasPassiveInitializedSegments());
   uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
   bool is64 = config->is64.getValueOr(false);
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
+    // Initialize memory in a thread-safe manner. The thread that successfully
+    // increments the flag from 0 to 1 is is responsible for performing the
+    // memory initialization. Other threads go sleep on the flag until the
+    // first thread finishing initializing memory, increments the flag to 2,
+    // and wakes all the other threads. Once the flag has been set to 2,
+    // subsequently started threads will skip the sleep. All threads
+    // unconditionally drop their passive data segments once memory has been
+    // initialized. The generated code is as follows:
+    //
+    // (func $__wasm_init_memory
+    //  (if
+    //   (i32.atomic.rmw.cmpxchg align=2 offset=0
+    //    (i32.const $__init_memory_flag)
+    //    (i32.const 0)
+    //    (i32.const 1)
+    //   )
+    //   (then
+    //    (drop
+    //     (i32.atomic.wait align=2 offset=0
+    //      (i32.const $__init_memory_flag)
+    //      (i32.const 1)
+    //      (i32.const -1)
+    //     )
+    //    )
+    //   )
+    //   (else
+    //    ( ... initialize data segments ... )
+    //    (i32.atomic.store align=2 offset=0
+    //     (i32.const $__init_memory_flag)
+    //     (i32.const 2)
+    //    )
+    //    (drop
+    //     (i32.atomic.notify align=2 offset=0
+    //      (i32.const $__init_memory_flag)
+    //      (i32.const -1u)
+    //     )
+    //    )
+    //   )
+    //  )
+    //  ( ... drop data segments ... )
+    // )
+    //
+    // When we are building with PIC, calculate the flag location using:
+    //
+    //    (global.get $__memory_base)
+    //    (i32.const $__init_memory_flag)
+    //    (i32.const 1)
+
     // With PIC code we cache the flag address in local 0
     if (config->isPic) {
       writeUleb128(os, 1, "num local decls");
@@ -888,134 +956,84 @@ void Writer::createInitMemoryFunction() {
       writeUleb128(os, 0, "num locals");
     }
 
-    if (hasPassiveInitializedSegments()) {
-      // Initialize memory in a thread-safe manner. The thread that successfully
-      // increments the flag from 0 to 1 is is responsible for performing the
-      // memory initialization. Other threads go sleep on the flag until the
-      // first thread finishing initializing memory, increments the flag to 2,
-      // and wakes all the other threads. Once the flag has been set to 2,
-      // subsequently started threads will skip the sleep. All threads
-      // unconditionally drop their passive data segments once memory has been
-      // initialized. The generated code is as follows:
-      //
-      // (func $__wasm_init_memory
-      //  (if
-      //   (i32.atomic.rmw.cmpxchg align=2 offset=0
-      //    (i32.const $__init_memory_flag)
-      //    (i32.const 0)
-      //    (i32.const 1)
-      //   )
-      //   (then
-      //    (drop
-      //     (i32.atomic.wait align=2 offset=0
-      //      (i32.const $__init_memory_flag)
-      //      (i32.const 1)
-      //      (i32.const -1)
-      //     )
-      //    )
-      //   )
-      //   (else
-      //    ( ... initialize data segments ... )
-      //    (i32.atomic.store align=2 offset=0
-      //     (i32.const $__init_memory_flag)
-      //     (i32.const 2)
-      //    )
-      //    (drop
-      //     (i32.atomic.notify align=2 offset=0
-      //      (i32.const $__init_memory_flag)
-      //      (i32.const -1u)
-      //     )
-      //    )
-      //   )
-      //  )
-      //  ( ... drop data segments ... )
-      // )
-      //
-      // When we are building with PIC, calculate the flag location using:
-      //
-      //    (global.get $__memory_base)
-      //    (i32.const $__init_memory_flag)
-      //    (i32.const 1)
-
-      auto writeGetFlagAddress = [&]() {
-        if (config->isPic) {
-          writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
-          writeUleb128(os, 0, "local 0");
-        } else {
-          writePtrConst(os, flagAddress, is64, "flag address");
-        }
-      };
-
-      // Atomically check whether this is the main thread.
-      writeGetFlagAddress();
-      writeI32Const(os, 0, "expected flag value");
-      writeI32Const(os, 1, "flag value");
-      writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-      writeUleb128(os, WASM_OPCODE_I32_RMW_CMPXCHG, "i32.atomic.rmw.cmpxchg");
-      writeMemArg(os, 2, 0);
-      writeU8(os, WASM_OPCODE_IF, "IF");
-      writeU8(os, WASM_TYPE_NORESULT, "blocktype");
-
-      // Did not increment 0, so wait for main thread to initialize memory
-      writeGetFlagAddress();
-      writeI32Const(os, 1, "expected flag value");
-      writeI64Const(os, -1, "timeout");
-
-      writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-      writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
-      writeMemArg(os, 2, 0);
-      writeU8(os, WASM_OPCODE_DROP, "drop");
-
-      writeU8(os, WASM_OPCODE_ELSE, "ELSE");
-
-      // Did increment 0, so conditionally initialize passive data segments
-      for (const OutputSegment *s : segments) {
-        if (needsPassiveInitialization(s)) {
-          // destination address
-          writePtrConst(os, s->startVA, is64, "destination address");
-          if (config->isPic) {
-            writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-            writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
-                         "memory_base");
-            writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
-          }
-          // source segment offset
-          writeI32Const(os, 0, "segment offset");
-          // memory region size
-          writeI32Const(os, s->size, "memory region size");
-          // memory.init instruction
-          writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
-          writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "memory.init");
-          writeUleb128(os, s->index, "segment index immediate");
-          writeU8(os, 0, "memory index immediate");
-        }
+    auto writeGetFlagAddress = [&]() {
+      if (config->isPic) {
+        writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+        writeUleb128(os, 0, "local 0");
+      } else {
+        writePtrConst(os, flagAddress, is64, "flag address");
       }
+    };
 
-      // Set flag to 2 to mark end of initialization
-      writeGetFlagAddress();
-      writeI32Const(os, 2, "flag value");
-      writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-      writeUleb128(os, WASM_OPCODE_I32_ATOMIC_STORE, "i32.atomic.store");
-      writeMemArg(os, 2, 0);
+    // Atomically check whether this is the main thread.
+    writeGetFlagAddress();
+    writeI32Const(os, 0, "expected flag value");
+    writeI32Const(os, 1, "flag value");
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_I32_RMW_CMPXCHG, "i32.atomic.rmw.cmpxchg");
+    writeMemArg(os, 2, 0);
+    writeU8(os, WASM_OPCODE_IF, "IF");
+    writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
-      // Notify any waiters that memory initialization is complete
-      writeGetFlagAddress();
-      writeI32Const(os, -1, "number of waiters");
-      writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
-      writeUleb128(os, WASM_OPCODE_ATOMIC_NOTIFY, "atomic.notify");
-      writeMemArg(os, 2, 0);
-      writeU8(os, WASM_OPCODE_DROP, "drop");
+    // Did not increment 0, so wait for main thread to initialize memory
+    writeGetFlagAddress();
+    writeI32Const(os, 1, "expected flag value");
+    writeI64Const(os, -1, "timeout");
 
-      writeU8(os, WASM_OPCODE_END, "END");
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
+    writeMemArg(os, 2, 0);
+    writeU8(os, WASM_OPCODE_DROP, "drop");
 
-      // Unconditionally drop passive data segments
-      for (const OutputSegment *s : segments) {
-        if (needsPassiveInitialization(s)) {
-          // data.drop instruction
-          writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
-          writeUleb128(os, WASM_OPCODE_DATA_DROP, "data.drop");
-          writeUleb128(os, s->index, "segment index immediate");
+    writeU8(os, WASM_OPCODE_ELSE, "ELSE");
+
+    // Did increment 0, so conditionally initialize passive data segments
+    for (const OutputSegment *s : segments) {
+      if (needsPassiveInitialization(s)) {
+        // destination address
+        writePtrConst(os, s->startVA, is64, "destination address");
+        if (config->isPic) {
+          writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+          writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                       "memory_base");
+          writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
         }
+        // source segment offset
+        writeI32Const(os, 0, "segment offset");
+        // memory region size
+        writeI32Const(os, s->size, "memory region size");
+        // memory.init instruction
+        writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
+        writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "memory.init");
+        writeUleb128(os, s->index, "segment index immediate");
+        writeU8(os, 0, "memory index immediate");
+      }
+    }
+
+    // Set flag to 2 to mark end of initialization
+    writeGetFlagAddress();
+    writeI32Const(os, 2, "flag value");
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_I32_ATOMIC_STORE, "i32.atomic.store");
+    writeMemArg(os, 2, 0);
+
+    // Notify any waiters that memory initialization is complete
+    writeGetFlagAddress();
+    writeI32Const(os, -1, "number of waiters");
+    writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
+    writeUleb128(os, WASM_OPCODE_ATOMIC_NOTIFY, "atomic.notify");
+    writeMemArg(os, 2, 0);
+    writeU8(os, WASM_OPCODE_DROP, "drop");
+
+    writeU8(os, WASM_OPCODE_END, "END");
+
+    // Unconditionally drop passive data segments
+    for (const OutputSegment *s : segments) {
+      if (needsPassiveInitialization(s)) {
+        // data.drop instruction
+        writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
+        writeUleb128(os, WASM_OPCODE_DATA_DROP, "data.drop");
+        writeUleb128(os, s->index, "segment index immediate");
       }
     }
     writeU8(os, WASM_OPCODE_END, "END");
@@ -1206,7 +1224,7 @@ void Writer::createSyntheticSections() {
   out.eventSec = make<EventSection>();
   out.globalSec = make<GlobalSection>();
   out.exportSec = make<ExportSection>();
-  out.startSec = make<StartSection>(hasPassiveInitializedSegments());
+  out.startSec = make<StartSection>();
   out.elemSec = make<ElemSection>();
   out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
@@ -1235,6 +1253,8 @@ void Writer::run() {
   populateProducers();
   log("-- calculateImports");
   calculateImports();
+  log("-- createSyntheticInitFunctions");
+  createSyntheticInitFunctions();
   log("-- layoutMemory");
   layoutMemory();
 

@@ -40,8 +40,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("-E");
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
-    CmdArgs.push_back("-triple");
-    CmdArgs.push_back(Args.MakeArgString(TripleStr));
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
     } else if (JA.getType() == types::TY_AST) {

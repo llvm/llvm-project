@@ -461,6 +461,20 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_dl_iterate_phdr(
   return dl_iterate_phdr(dl_iterate_phdr_cb, &dipi);
 }
 
+// This function is only available for glibc 2.27 or newer.  Mark it weak so
+// linking succeeds with older glibcs.
+SANITIZER_WEAK_ATTRIBUTE void _dl_get_tls_static_info(size_t *sizep,
+                                                      size_t *alignp);
+
+SANITIZER_INTERFACE_ATTRIBUTE void __dfsw__dl_get_tls_static_info(
+    size_t *sizep, size_t *alignp, dfsan_label sizep_label,
+    dfsan_label alignp_label) {
+  assert(_dl_get_tls_static_info);
+  _dl_get_tls_static_info(sizep, alignp);
+  dfsan_set_label(0, sizep, sizeof(*sizep));
+  dfsan_set_label(0, alignp, sizeof(*alignp));
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_ctime_r(const time_t *timep, char *buf, dfsan_label timep_label,
                      dfsan_label buf_label, dfsan_label *ret_label) {
@@ -800,6 +814,16 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
+                       dfsan_label old_ss_label, dfsan_label *ret_label) {
+  int ret = sigaltstack(ss, old_ss);
+  if (ret != -1 && old_ss)
+    dfsan_set_label(0, old_ss, sizeof(*old_ss));
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_gettimeofday(struct timeval *tv, struct timezone *tz,
                         dfsan_label tv_label, dfsan_label tz_label,
                         dfsan_label *ret_label) {
@@ -933,6 +957,21 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getsockname(
     dfsan_label *ret_label) {
   socklen_t origlen = addrlen ? *addrlen : 0;
   int ret = getsockname(sockfd, addr, addrlen);
+  if (ret != -1 && addr && addrlen) {
+    socklen_t written_bytes = origlen < *addrlen ? origlen : *addrlen;
+    dfsan_set_label(0, addrlen, sizeof(*addrlen));
+    dfsan_set_label(0, addr, written_bytes);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getpeername(
+    int sockfd, struct sockaddr *addr, socklen_t *addrlen,
+    dfsan_label sockfd_label, dfsan_label addr_label, dfsan_label addrlen_label,
+    dfsan_label *ret_label) {
+  socklen_t origlen = addrlen ? *addrlen : 0;
+  int ret = getpeername(sockfd, addr, addrlen);
   if (ret != -1 && addr && addrlen) {
     socklen_t written_bytes = origlen < *addrlen ? origlen : *addrlen;
     dfsan_set_label(0, addrlen, sizeof(*addrlen));

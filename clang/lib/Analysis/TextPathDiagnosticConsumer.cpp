@@ -1,4 +1,4 @@
-//===--- TextDiagnostics.cpp - Text Diagnostics for Paths -------*- C++ -*-===//
+//===--- TextPathDiagnosticConsumer.cpp - Text Diagnostics ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the TextDiagnostics object.
+//  This file defines the TextPathDiagnosticConsumer object.
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -29,25 +27,29 @@ using namespace clang;
 using namespace ento;
 using namespace tooling;
 
+namespace clang {
+class CrossTUAnalysisHelper;
+}
+
 namespace {
-/// Emitsd minimal diagnostics (report message + notes) for the 'none' output
+/// Emits minimal diagnostics (report message + notes) for the 'none' output
 /// type to the standard error, or to to compliment many others. Emits detailed
 /// diagnostics in textual format for the 'text' output type.
-class TextDiagnostics : public PathDiagnosticConsumer {
+class TextPathDiagnosticConsumer : public PathDiagnosticConsumer {
   PathDiagnosticConsumerOptions DiagOpts;
   DiagnosticsEngine &DiagEng;
   const LangOptions &LO;
   bool ShouldDisplayPathNotes;
 
 public:
-  TextDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
-                  DiagnosticsEngine &DiagEng, const LangOptions &LO,
-                  bool ShouldDisplayPathNotes)
+  TextPathDiagnosticConsumer(PathDiagnosticConsumerOptions DiagOpts,
+                             DiagnosticsEngine &DiagEng, const LangOptions &LO,
+                             bool ShouldDisplayPathNotes)
       : DiagOpts(std::move(DiagOpts)), DiagEng(DiagEng), LO(LO),
         ShouldDisplayPathNotes(ShouldDisplayPathNotes) {}
-  ~TextDiagnostics() override {}
+  ~TextPathDiagnosticConsumer() override {}
 
-  StringRef getName() const override { return "TextDiagnostics"; }
+  StringRef getName() const override { return "TextPathDiagnosticConsumer"; }
 
   bool supportsLogicalOpControlFlow() const override { return true; }
   bool supportsCrossFileDiagnostics() const override { return true; }
@@ -139,17 +141,17 @@ public:
 void ento::createTextPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  C.emplace_back(new TextDiagnostics(std::move(DiagOpts), PP.getDiagnostics(),
-                                     PP.getLangOpts(),
-                                     /*ShouldDisplayPathNotes=*/true));
+    const CrossTUAnalysisHelper &CTU) {
+  C.emplace_back(new TextPathDiagnosticConsumer(
+      std::move(DiagOpts), PP.getDiagnostics(), PP.getLangOpts(),
+      /*ShouldDisplayPathNotes=*/true));
 }
 
 void ento::createTextMinimalPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  C.emplace_back(new TextDiagnostics(std::move(DiagOpts), PP.getDiagnostics(),
-                                     PP.getLangOpts(),
-                                     /*ShouldDisplayPathNotes=*/false));
+    const CrossTUAnalysisHelper &CTU) {
+  C.emplace_back(new TextPathDiagnosticConsumer(
+      std::move(DiagOpts), PP.getDiagnostics(), PP.getLangOpts(),
+      /*ShouldDisplayPathNotes=*/false));
 }

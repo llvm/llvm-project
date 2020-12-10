@@ -3640,7 +3640,9 @@ bool InstCombinerImpl::run() {
         else
           UserParent = UserInst->getParent();
 
-        if (UserParent != BB) {
+        // Try sinking to another block. If that block is unreachable, then do
+        // not bother. SimplifyCFG should handle it.
+        if (UserParent != BB && DT.isReachableFromEntry(UserParent)) {
           // See if the user is one of our successors that has only one
           // predecessor, so that we don't have to split the critical edge.
           bool ShouldSink = UserParent->getUniquePredecessor() == BB;

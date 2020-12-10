@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gwp_asan/common.h"
 #include "gwp_asan/guarded_pool_allocator.h"
+#include "gwp_asan/platform_specific/guarded_pool_allocator_tls.h"
 #include "gwp_asan/utilities.h"
 
 #include <assert.h>
-#include <errno.h>
-#include <signal.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
-#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 

@@ -8,23 +8,10 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 
-#include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
 #include "gwp_asan/utilities.h"
 
-// RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
-// macro is defined before including <inttypes.h>.
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS 1
-#endif
-
 #include <assert.h>
-#include <inttypes.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 using AllocationMetadata = gwp_asan::AllocationMetadata;
 using Error = gwp_asan::Error;

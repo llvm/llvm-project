@@ -37,17 +37,26 @@ enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
 class SampleProfileProber {
 public:
   // Give an empty module id when the prober is not used for instrumentation.
-  SampleProfileProber(Function &F);
+  SampleProfileProber(Function &F, const std::string &CurModuleUniqueId);
   void instrumentOneFunc(Function &F, TargetMachine *TM);
 
 private:
   Function *getFunction() const { return F; }
+  uint64_t getFunctionHash() const { return FunctionHash; }
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
+  void computeCFGHash();
   void computeProbeIdForBlocks();
   void computeProbeIdForCallsites();
 
   Function *F;
+
+  /// The current module ID that is used to name a static object as a comdat
+  /// group.
+  std::string CurModuleUniqueId;
+
+  /// A CFG hash code used to identify a function code changes.
+  uint64_t FunctionHash;
 
   /// Map basic blocks to the their pseudo probe ids.
   BlockIdMap BlockProbeIds;

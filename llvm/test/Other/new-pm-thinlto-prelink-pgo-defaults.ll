@@ -5,27 +5,27 @@
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-O123
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-O123SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O3>' -S -passes-ep-pipeline-start='no-op-module' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-O123,CHECK-EP-PIPELINE-START
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-O123SZ,CHECK-EP-PIPELINE-START
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123SZ,CHECK-Os,CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O123SZ,CHECK-Oz,CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager -new-pm-debug-info-for-profiling \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123SZ
 ;
 ; CHECK-O: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: Annotation2Metadata
@@ -57,22 +57,22 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
-; CHECK-O123-NEXT: Running pass: ModuleInlinerWrapperPass
-; CHECK-O123-NEXT: Running analysis: InlineAdvisorAnalysis
-; CHECK-O123-NEXT: Starting {{.*}}Module pass manager run.
-; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
-; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-O123-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
-; CHECK-O123-NEXT: Running analysis: OuterAnalysisManagerProxy
-; CHECK-O123-NEXT: Starting CGSCC pass manager run.
-; CHECK-O123-NEXT: Running pass: InlinerPass on (foo)
-; CHECK-O123-NEXT: Running pass: SROA on foo
-; CHECK-O123-NEXT: Running pass: EarlyCSEPass on foo
-; CHECK-O123-NEXT: Running pass: SimplifyCFGPass on foo
-; CHECK-O123-NEXT: Running pass: InstCombinePass on foo
-; CHECK-O123-NEXT: Finished CGSCC pass manager run.
-; CHECK-O123-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O123-NEXT: Running pass: GlobalDCEPass
+; CHECK-O123SZ-NEXT: Running pass: ModuleInlinerWrapperPass
+; CHECK-O123SZ-NEXT: Running analysis: InlineAdvisorAnalysis
+; CHECK-O123SZ-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O123SZ-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O123SZ-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O123SZ-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
+; CHECK-O123SZ-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-O123SZ-NEXT: Starting CGSCC pass manager run.
+; CHECK-O123SZ-NEXT: Running pass: InlinerPass on (foo)
+; CHECK-O123SZ-NEXT: Running pass: SROA on foo
+; CHECK-O123SZ-NEXT: Running pass: EarlyCSEPass on foo
+; CHECK-O123SZ-NEXT: Running pass: SimplifyCFGPass on foo
+; CHECK-O123SZ-NEXT: Running pass: InstCombinePass on foo
+; CHECK-O123SZ-NEXT: Finished CGSCC pass manager run.
+; CHECK-O123SZ-NEXT: Finished {{.*}}Module pass manager run.
+; CHECK-O123SZ-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
@@ -81,15 +81,13 @@
 ; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
-; CHECK-O123-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
-; CHECK-O123-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
+; CHECK-O123SZ-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
+; CHECK-O123SZ-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion on
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
-; CHECK-Os-NEXT: Running analysis: InlineAdvisorAnalysis
-; CHECK-Oz-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis

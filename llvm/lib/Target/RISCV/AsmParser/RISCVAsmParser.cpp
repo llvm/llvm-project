@@ -124,6 +124,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                            MCStreamer &Out, bool HasTmpReg);
 
+  // Helper to emit pseudo sign/zero extend instruction.
+  void emitPseudoExtend(MCInst &Inst, bool SignExtend, int64_t Width,
+                        SMLoc IDLoc, MCStreamer &Out);
+
   // Checks that a PseudoAddTPRel is using x4/tp in its second input operand.
   // Enforcing this using a restricted register class for the second input
   // operand of PseudoAddTPRel results in a poor diagnostic due to the fact
@@ -2269,6 +2273,35 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
                     Opcode, IDLoc, Out);
 }
 
+void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
+                                      int64_t Width, SMLoc IDLoc,
+                                      MCStreamer &Out) {
+  // The sign/zero extend pseudo-instruction does two shifts, with the shift
+  // amounts dependent on the XLEN.
+  //
+  // The expansion looks like this
+  //
+  //    SLLI rd, rs, XLEN - Width
+  //    SR[A|R]I rd, rd, XLEN - Width
+  MCOperand DestReg = Inst.getOperand(0);
+  MCOperand SourceReg = Inst.getOperand(1);
+
+  unsigned SecondOpcode = SignExtend ? RISCV::SRAI : RISCV::SRLI;
+  int64_t ShAmt = (isRV64() ? 64 : 32) - Width;
+
+  assert(ShAmt > 0 && "Shift amount must be non-zero.");
+
+  emitToStreamer(Out, MCInstBuilder(RISCV::SLLI)
+                          .addOperand(DestReg)
+                          .addOperand(SourceReg)
+                          .addImm(ShAmt));
+
+  emitToStreamer(Out, MCInstBuilder(SecondOpcode)
+                          .addOperand(DestReg)
+                          .addOperand(DestReg)
+                          .addImm(ShAmt));
+}
+
 bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
                                          OperandVector &Operands) {
   assert(Inst.getOpcode() == RISCV::PseudoAddTPRel && "Invalid instruction");
@@ -2431,6 +2464,18 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (checkPseudoAddTPRel(Inst, Operands))
       return true;
     break;
+  case RISCV::PseudoSEXT_B:
+    emitPseudoExtend(Inst, /*SignExtend=*/true, /*Width=*/8, IDLoc, Out);
+    return false;
+  case RISCV::PseudoSEXT_H:
+    emitPseudoExtend(Inst, /*SignExtend=*/true, /*Width=*/16, IDLoc, Out);
+    return false;
+  case RISCV::PseudoZEXT_H:
+    emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/16, IDLoc, Out);
+    return false;
+  case RISCV::PseudoZEXT_W:
+    emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
+    return false;
   }
 
   emitToStreamer(Out, Inst);

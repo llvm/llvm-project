@@ -13,10 +13,9 @@
 #include "gwp_asan/definitions.h"
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
-#include "gwp_asan/platform_specific/guarded_pool_allocator_fuchsia.h"
-#include "gwp_asan/platform_specific/guarded_pool_allocator_posix.h"
+#include "gwp_asan/platform_specific/guarded_pool_allocator_fuchsia.h" // IWYU pragma: keep
+#include "gwp_asan/platform_specific/guarded_pool_allocator_posix.h" // IWYU pragma: keep
 #include "gwp_asan/platform_specific/guarded_pool_allocator_tls.h"
-#include "gwp_asan/stack_trace_compressor.h"
 
 #include <stddef.h>
 #include <stdint.h>
