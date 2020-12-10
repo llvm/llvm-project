@@ -156,7 +156,7 @@ protected:
     return WhiteListFilenames.find(llvm::sys::path::filename(Path))
         != WhiteListFilenames.end();
   }
-  bool canModifyFile(const FileEntry *FE) {
+  bool canModifyFile(Optional<FileEntryRef> FE) {
     if (!FE)
       return false;
     return canModifyFile(FE->getName());
@@ -164,7 +164,7 @@ protected:
   bool canModifyFile(FileID FID) {
     if (FID.isInvalid())
       return false;
-    return canModifyFile(PP.getSourceManager().getFileEntryForID(FID));
+    return canModifyFile(PP.getSourceManager().getFileEntryRefForID(FID));
   }
 
   bool canModify(const Decl *D) {
@@ -1964,7 +1964,7 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
         I = rewriter.buffer_begin(), E = rewriter.buffer_end(); I != E; ++I) {
     FileID FID = I->first;
     RewriteBuffer &buf = I->second;
-    const FileEntry *file = Ctx.getSourceManager().getFileEntryForID(FID);
+    Optional<FileEntryRef> file = Ctx.getSourceManager().getFileEntryRefForID(FID);
     assert(file);
     SmallString<512> newText;
     llvm::raw_svector_ostream vecOS(newText);
@@ -2034,7 +2034,7 @@ MigrateSourceAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 namespace {
 struct EditEntry {
-  const FileEntry *File = nullptr;
+  Optional<FileEntryRef> File;
   unsigned Offset = 0;
   unsigned RemoveLen = 0;
   std::string Text;
@@ -2127,9 +2127,8 @@ private:
       StringRef Val = ValueString->getValue(ValueStorage);
 
       if (Key == "file") {
-        auto FE = FileMgr.getFile(Val);
-        if (FE)
-          Entry.File = *FE;
+        if (auto File = FileMgr.getOptionalFileRef(Val))
+          Entry.File = File;
         else
           Ignore = true;
       } else if (Key == "offset") {
@@ -2155,7 +2154,7 @@ static bool reportDiag(const Twine &Err, DiagnosticsEngine &Diag) {
   return true;
 }
 
-static std::string applyEditsToTemp(const FileEntry *FE,
+static std::string applyEditsToTemp(FileEntryRef FE,
                                     ArrayRef<EditEntry> Edits,
                                     FileManager &FileMgr,
                                     DiagnosticsEngine &Diag) {
@@ -2199,8 +2198,8 @@ static std::string applyEditsToTemp(const FileEntry *FE,
 
   SmallString<64> TempPath;
   int FD;
-  if (fs::createTemporaryFile(path::filename(FE->getName()),
-                              path::extension(FE->getName()).drop_front(), FD,
+  if (fs::createTemporaryFile(path::filename(FE.getName()),
+                              path::extension(FE.getName()).drop_front(), FD,
                               TempPath)) {
     reportDiag("Could not create file: " + TempPath.str(), Diag);
     return std::string();
@@ -2228,7 +2227,7 @@ bool arcmt::getFileRemappingsFromFileList(
       new DiagnosticsEngine(DiagID, new DiagnosticOptions,
                             DiagClient, /*ShouldOwnClient=*/false));
 
-  typedef llvm::DenseMap<const FileEntry *, std::vector<EditEntry> >
+  typedef llvm::DenseMap<FileEntryRef, std::vector<EditEntry> >
       FileEditEntriesTy;
   FileEditEntriesTy FileEditEntries;
 
@@ -2250,7 +2249,7 @@ bool arcmt::getFileRemappingsFromFileList(
       if (!Insert.second)
         continue;
 
-      FileEditEntries[Entry.File].push_back(Entry);
+      FileEditEntries[*Entry.File].push_back(Entry);
     }
   }
 
@@ -2263,7 +2262,7 @@ bool arcmt::getFileRemappingsFromFileList(
       continue;
     }
 
-    remap.emplace_back(std::string(I->first->getName()), TempFile);
+    remap.emplace_back(std::string(I->first.getName()), TempFile);
   }
 
   return hasErrorOccurred;
