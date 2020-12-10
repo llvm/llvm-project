@@ -483,7 +483,7 @@ auto AlignVectors::createAddressGroups() -> bool {
   auto traverseBlock = [&](DomTreeNode *DomN, auto Visit) -> void {
     BasicBlock &Block = *DomN->getBlock();
     for (Instruction &I : Block) {
-      auto AI = getAddrInfo(I);
+      auto AI = this->getAddrInfo(I); // Use this-> for gcc6.
       if (!AI)
         continue;
       auto F = findBaseAndOffset(*AI);
