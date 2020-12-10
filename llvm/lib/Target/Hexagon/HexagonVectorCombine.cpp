@@ -212,19 +212,6 @@ private:
     const_iterator end() const { return Blocks.end(); }
   };
 
-  template <typename T> static T *getIfUnordered(T *MaybeT) {
-    return MaybeT && MaybeT->isUnordered() ? MaybeT : nullptr;
-  }
-  template <typename T> static T *isCandidate(Instruction *In) {
-    return dyn_cast<T>(In);
-  }
-  template <> LoadInst *isCandidate<LoadInst>(Instruction *In) {
-    return getIfUnordered(dyn_cast<LoadInst>(In));
-  }
-  template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
-    return getIfUnordered(dyn_cast<StoreInst>(In));
-  }
-
   Align getAlignFromValue(const Value *V) const;
   Optional<MemoryLocation> getLocation(const Instruction &In) const;
   Optional<AddrInfo> getAddrInfo(Instruction &In) const;
@@ -293,6 +280,19 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
 } // namespace
 
 namespace {
+
+template <typename T> T *getIfUnordered(T *MaybeT) {
+  return MaybeT && MaybeT->isUnordered() ? MaybeT : nullptr;
+}
+template <typename T> T *isCandidate(Instruction *In) {
+  return dyn_cast<T>(In);
+}
+template <> LoadInst *isCandidate<LoadInst>(Instruction *In) {
+  return getIfUnordered(dyn_cast<LoadInst>(In));
+}
+template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
+  return getIfUnordered(dyn_cast<StoreInst>(In));
+}
 
 template <typename Pred, typename... Ts>
 void erase_if(std::map<Ts...> &map, Pred p) {
