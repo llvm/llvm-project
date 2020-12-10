@@ -144,7 +144,12 @@ private:
     /// @}
 
     bool hasValidRelocationAt(uint64_t StartOffset, uint64_t EndOffset,
-                              CompileUnit::DIEInfo &Info) override;
+                              CompileUnit::DIEInfo &Info);
+
+    bool hasLiveMemoryLocation(const DWARFDie &DIE,
+                               CompileUnit::DIEInfo &Info) override;
+    bool hasLiveAddressRange(const DWARFDie &DIE,
+                             CompileUnit::DIEInfo &Info) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
