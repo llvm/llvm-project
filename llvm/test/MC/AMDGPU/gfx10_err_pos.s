@@ -992,12 +992,12 @@ s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
 // CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
-// CHECK-NEXT:{{^}}                                                ^
+// CHECK-NEXT:{{^}}^
 
 v_add_f32_e64 v0, v1
 // CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}v_add_f32_e64 v0, v1
-// CHECK-NEXT:{{^}}                    ^
+// CHECK-NEXT:{{^}}^
 
 //==============================================================================
 // too large value for expcnt
