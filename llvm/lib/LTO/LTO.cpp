@@ -983,7 +983,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
-      Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness);
+      Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness,
+      Conf.RemarksHotnessThreshold);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
 
@@ -1488,7 +1489,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 
 Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
-    StringRef RemarksFormat, bool RemarksWithHotness, int Count) {
+    StringRef RemarksFormat, bool RemarksWithHotness,
+    Optional<uint64_t> RemarksHotnessThreshold, int Count) {
   std::string Filename = std::string(RemarksFilename);
   // For ThinLTO, file.opt.<format> becomes
   // file.opt.<format>.thin.<num>.<format>.
@@ -1498,7 +1500,8 @@ Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
             .str();
 
   auto ResultOrErr = llvm::setupLLVMOptimizationRemarks(
-      Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);
+      Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness,
+      RemarksHotnessThreshold);
   if (Error E = ResultOrErr.takeError())
     return std::move(E);
 

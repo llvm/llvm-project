@@ -10,11 +10,20 @@
 #define liblldb_ScriptInterpreterLua_h_
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
 class Lua;
 class ScriptInterpreterLua : public ScriptInterpreter {
 public:
+  class CommandDataLua : public BreakpointOptions::CommandData {
+  public:
+    CommandDataLua() : BreakpointOptions::CommandData() {
+      interpreter = lldb::eScriptLanguageLua;
+    }
+  };
+
   ScriptInterpreterLua(Debugger &debugger);
 
   ~ScriptInterpreterLua() override;
@@ -41,6 +50,11 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
+  static bool BreakpointCallbackFunction(void *baton,
+                                         StoppointCallbackContext *context,
+                                         lldb::user_id_t break_id,
+                                         lldb::user_id_t break_loc_id);
+
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
@@ -50,6 +64,9 @@ public:
 
   llvm::Error EnterSession(lldb::user_id_t debugger_id);
   llvm::Error LeaveSession();
+
+  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+                                      const char *command_body_text) override;
 
 private:
   std::unique_ptr<Lua> m_lua;

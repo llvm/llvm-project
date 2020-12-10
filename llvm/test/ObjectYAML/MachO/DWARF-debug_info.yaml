@@ -511,67 +511,67 @@ DWARF:
 
 #      DWARF32: DWARF:
 #      DWARF32:   debug_info:
-# DWARF32-NEXT:     - Length:        0x0000000000000075
+# DWARF32-NEXT:     - Length:        0x75
 # DWARF32-NEXT:       Version:       4
 # DWARF32-NEXT:       AbbrevTableID: 0
 # DWARF32-NEXT:       AbbrOffset:    0
 # DWARF32-NEXT:       AddrSize:      8
 # DWARF32-NEXT:       Entries:
-# DWARF32-NEXT:         - AbbrCode: 0x00000001
+# DWARF32-NEXT:         - AbbrCode: 0x1
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:             - Value: 0x000000000000000C
-# DWARF32-NEXT:             - Value: 0x0000000000000038
-# DWARF32-NEXT:             - Value: 0x0000000000000000
-# DWARF32-NEXT:             - Value: 0x0000000000000046
-# DWARF32-NEXT:             - Value: 0x0000000100000F50
-# DWARF32-NEXT:             - Value: 0x0000000000000034
-# DWARF32-NEXT:         - AbbrCode: 0x00000002
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:             - Value: 0xC
+# DWARF32-NEXT:             - Value: 0x38
+# DWARF32-NEXT:             - Value: 0x0
+# DWARF32-NEXT:             - Value: 0x46
+# DWARF32-NEXT:             - Value: 0x100000F50
+# DWARF32-NEXT:             - Value: 0x34
+# DWARF32-NEXT:         - AbbrCode: 0x2
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000100000F50
-# DWARF32-NEXT:             - Value: 0x0000000000000034
-# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:             - Value: 0x100000F50
+# DWARF32-NEXT:             - Value: 0x34
+# DWARF32-NEXT:             - Value: 0x1
 # DWARF32-NEXT:               BlockData: [ 0x56 ]
-# DWARF32-NEXT:             - Value: 0x0000000000000076
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:             - Value: 0x0000000000000003
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:             - Value: 0x0000000000000060
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:         - AbbrCode:        0x00000003
+# DWARF32-NEXT:             - Value: 0x76
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:             - Value: 0x3
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:             - Value: 0x60
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:         - AbbrCode:        0x3
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000002
+# DWARF32-NEXT:             - Value: 0x2
 # DWARF32-NEXT:               BlockData: [ 0x91, 0x78 ]
-# DWARF32-NEXT:             - Value: 0x000000000000007B
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:             - Value: 0x0000000000000003
-# DWARF32-NEXT:             - Value: 0x0000000000000060
-# DWARF32-NEXT:         - AbbrCode: 0x00000003
+# DWARF32-NEXT:             - Value: 0x7B
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:             - Value: 0x3
+# DWARF32-NEXT:             - Value: 0x60
+# DWARF32-NEXT:         - AbbrCode: 0x3
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000002
+# DWARF32-NEXT:             - Value: 0x2
 # DWARF32-NEXT:               BlockData: [ 0x91, 0x70 ]
-# DWARF32-NEXT:             - Value: 0x0000000000000080
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:             - Value: 0x0000000000000003
-# DWARF32-NEXT:             - Value: 0x0000000000000067
-# DWARF32-NEXT:         - AbbrCode: 0x00000000
-# DWARF32-NEXT:         - AbbrCode: 0x00000004
+# DWARF32-NEXT:             - Value: 0x80
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:             - Value: 0x3
+# DWARF32-NEXT:             - Value: 0x67
+# DWARF32-NEXT:         - AbbrCode: 0x0
+# DWARF32-NEXT:         - AbbrCode: 0x4
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000085
-# DWARF32-NEXT:             - Value: 0x0000000000000005
-# DWARF32-NEXT:             - Value: 0x0000000000000004
-# DWARF32-NEXT:         - AbbrCode: 0x00000005
+# DWARF32-NEXT:             - Value: 0x85
+# DWARF32-NEXT:             - Value: 0x5
+# DWARF32-NEXT:             - Value: 0x4
+# DWARF32-NEXT:         - AbbrCode: 0x5
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x000000000000006C
-# DWARF32-NEXT:         - AbbrCode: 0x00000005
+# DWARF32-NEXT:             - Value: 0x6C
+# DWARF32-NEXT:         - AbbrCode: 0x5
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000071
-# DWARF32-NEXT:         - AbbrCode: 0x00000004
+# DWARF32-NEXT:             - Value: 0x71
+# DWARF32-NEXT:         - AbbrCode: 0x4
 # DWARF32-NEXT:           Values:
-# DWARF32-NEXT:             - Value: 0x0000000000000089
-# DWARF32-NEXT:             - Value: 0x0000000000000006
-# DWARF32-NEXT:             - Value: 0x0000000000000001
-# DWARF32-NEXT:         - AbbrCode: 0x00000000
+# DWARF32-NEXT:             - Value: 0x89
+# DWARF32-NEXT:             - Value: 0x6
+# DWARF32-NEXT:             - Value: 0x1
+# DWARF32-NEXT:         - AbbrCode: 0x0
 
 ## b) Test that yaml2obj emits a correct unit header and obj2yaml is able to convert it back.
 
@@ -581,15 +581,15 @@ DWARF:
 # RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF32-YAML
 
 #      DWARF32-YAML: debug_info:
-# DWARF32-YAML-NEXT:   - Length:        0x000000000000000C
+# DWARF32-YAML-NEXT:   - Length:        0xC
 # DWARF32-YAML-NEXT:     Version:       4
 # DWARF32-YAML-NEXT:     AbbrevTableID: 0
 # DWARF32-YAML-NEXT:     AbbrOffset:    0
 # DWARF32-YAML-NEXT:     AddrSize:      8
 # DWARF32-YAML-NEXT:     Entries:
-# DWARF32-YAML-NEXT:       - AbbrCode: 0x00000001
+# DWARF32-YAML-NEXT:       - AbbrCode: 0x1
 # DWARF32-YAML-NEXT:         Values:
-# DWARF32-YAML-NEXT:           - Value: 0x0000000000001234
+# DWARF32-YAML-NEXT:           - Value: 0x1234
 
 --- !mach-o
 FileHeader:
@@ -665,15 +665,15 @@ DWARF:
 
 #      DWARF64-YAML: debug_info:
 # DWARF64-YAML-NEXT:   - Format:        DWARF64
-# DWARF64-YAML-NEXT:     Length:        0x000000000000000C
+# DWARF64-YAML-NEXT:     Length:        0xC
 # DWARF64-YAML-NEXT:     Version:       4
 # DWARF64-YAML-NEXT:     AbbrevTableID: 0
 # DWARF64-YAML-NEXT:     AbbrOffset:    0
 # DWARF64-YAML-NEXT:     AddrSize:      8
 # DWARF64-YAML-NEXT:     Entries:
-# DWARF64-YAML-NEXT:       - AbbrCode: 0x00000001
+# DWARF64-YAML-NEXT:       - AbbrCode: 0x1
 # DWARF64-YAML-NEXT:         Values:
-# DWARF64-YAML-NEXT:           - Value: 0x0000000000001234
+# DWARF64-YAML-NEXT:           - Value: 0x1234
 
 ## c) Test that yaml2obj is able to generate compilation units according to the
 ## associated abbrev table that is referenced by the 'AbbrevTableID' and obj2yaml
@@ -685,7 +685,7 @@ DWARF:
 # MULTI-TABLES-NEXT:   debug_abbrev:
 # MULTI-TABLES-NEXT:     - ID: 0
 # MULTI-TABLES-NEXT:       Table:
-# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:         - Code:     0x1
 # MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
 # MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
 # MULTI-TABLES-NEXT:           Attributes:
@@ -693,13 +693,13 @@ DWARF:
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_addr
 # MULTI-TABLES-NEXT:     - ID: 1
 # MULTI-TABLES-NEXT:       Table:
-# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:         - Code:     0x1
 # MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
 # MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
 # MULTI-TABLES-NEXT:           Attributes:
 # MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_data4
-# MULTI-TABLES-NEXT:         - Code:     0x0000000000000002
+# MULTI-TABLES-NEXT:         - Code:     0x2
 # MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
 # MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
 # MULTI-TABLES-NEXT:           Attributes:
@@ -707,7 +707,7 @@ DWARF:
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_data4
 # MULTI-TABLES-NEXT:     - ID: 2
 # MULTI-TABLES-NEXT:       Table:
-# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:         - Code:     0x1
 # MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
 # MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
 # MULTI-TABLES-NEXT:           Attributes:
@@ -715,42 +715,42 @@ DWARF:
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_udata
 # MULTI-TABLES-NEXT:     - ID: 3
 # MULTI-TABLES-NEXT:   debug_info:
-# MULTI-TABLES-NEXT:     - Length:        0x000000000000000C
+# MULTI-TABLES-NEXT:     - Length:        0xC
 # MULTI-TABLES-NEXT:       Version:       4
 # MULTI-TABLES-NEXT:       AbbrevTableID: 1
-# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000008
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x8
 # MULTI-TABLES-NEXT:       AddrSize:      8
 # MULTI-TABLES-NEXT:       Entries:
-# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x1
 # MULTI-TABLES-NEXT:           Values:
-# MULTI-TABLES-NEXT:             - Value: 0x0000000000001234
-# MULTI-TABLES-NEXT:     - Length:        0x000000000000000C
+# MULTI-TABLES-NEXT:             - Value: 0x1234
+# MULTI-TABLES-NEXT:     - Length:        0xC
 # MULTI-TABLES-NEXT:       Version:       4
 # MULTI-TABLES-NEXT:       AbbrevTableID: 1
-# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000008
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x8
 # MULTI-TABLES-NEXT:       AddrSize:      8
 # MULTI-TABLES-NEXT:       Entries:
-# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x1
 # MULTI-TABLES-NEXT:           Values:
-# MULTI-TABLES-NEXT:             - Value: 0x0000000000004321
-# MULTI-TABLES-NEXT:     - Length:        0x0000000000000010
+# MULTI-TABLES-NEXT:             - Value: 0x4321
+# MULTI-TABLES-NEXT:     - Length:        0x10
 # MULTI-TABLES-NEXT:       Version:       4
 # MULTI-TABLES-NEXT:       AbbrevTableID: 0
-# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000000
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0
 # MULTI-TABLES-NEXT:       AddrSize:      8
 # MULTI-TABLES-NEXT:       Entries:
-# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x1
 # MULTI-TABLES-NEXT:           Values:
-# MULTI-TABLES-NEXT:             - Value: 0x0000000000005678
-# MULTI-TABLES-NEXT:     - Length:        0x000000000000000B
+# MULTI-TABLES-NEXT:             - Value: 0x5678
+# MULTI-TABLES-NEXT:     - Length:        0xB
 # MULTI-TABLES-NEXT:       Version:       4
 # MULTI-TABLES-NEXT:       AbbrevTableID: 2
-# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000017
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x17
 # MULTI-TABLES-NEXT:       AddrSize:      8
 # MULTI-TABLES-NEXT:       Entries:
-# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x1
 # MULTI-TABLES-NEXT:           Values:
-# MULTI-TABLES-NEXT:             - Value: 0x0000000000008765
+# MULTI-TABLES-NEXT:             - Value: 0x8765
 # MULTI-TABLES-NEXT: ...
 
 --- !mach-o

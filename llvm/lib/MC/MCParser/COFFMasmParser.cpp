@@ -118,9 +118,7 @@ class COFFMasmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>("title");
 
     // Macro directives
-    // exitm
     // goto
-    // purge
 
     // Miscellaneous directives
     addDirectiveHandler<&COFFMasmParser::ParseDirectiveAlias>("alias");
@@ -152,9 +150,6 @@ class COFFMasmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".k3d");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".mmx");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".xmm");
-
-    // Repeat blocks directives
-    // goto
 
     // Scope directives
     // comm

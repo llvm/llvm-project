@@ -81,6 +81,20 @@ def Async_ExecuteOp :
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let verifier = [{ return ::verify(*this); }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilderDAG<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
+      "ValueRange":$operands,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
+           "nullptr">:$bodyBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, ValueRange)>;
+
+  }];
 }
 
 def Async_YieldOp :
@@ -93,12 +107,12 @@ def Async_YieldOp :
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+  let assemblyFormat = "($operands^ `:` type($operands))? attr-dict";
 
   let verifier = [{ return ::verify(*this); }];
 }
 
-def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
+def Async_AwaitOp : Async_Op<"await"> {
   let summary = "waits for the argument to become ready";
   let description = [{
     The `async.await` operation waits until the argument becomes ready, and for
@@ -133,12 +147,142 @@ def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
   }];
 
   let assemblyFormat = [{
-    attr-dict $operand `:` custom<AwaitResultType>(
+    $operand `:` custom<AwaitResultType>(
       type($operand), type($result)
-    )
+    ) attr-dict
   }];
 
   let verifier = [{ return ::verify(*this); }];
+}
+
+def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
+  let summary = "creates an empty async group";
+  let description = [{
+    The `async.create_group` allocates an empty async group. Async tokens or
+    values can be added to this group later.
+
+    Example:
+
+    ```mlir
+    %0 = async.create_group
+    ...
+    async.await_all %0
+    ```
+  }];
+
+  let arguments = (ins );
+  let results = (outs Async_GroupType:$result);
+
+  let assemblyFormat = "attr-dict";
+}
+
+def Async_AddToGroupOp : Async_Op<"add_to_group", []> {
+  let summary = "adds and async token or value to the group";
+  let description = [{
+    The `async.add_to_group` adds an async token or value to the async group.
+    Returns the rank of the added element in the group. This rank is fixed
+    for the group lifetime.
+
+    Example:
+
+    ```mlir
+    %0 = async.create_group
+    %1 = ... : !async.token
+    %2 = async.add_to_group %1, %0 : !async.token
+    ```
+  }];
+
+  let arguments = (ins Async_AnyValueOrTokenType:$operand,
+                       Async_GroupType:$group);
+  let results = (outs Index:$rank);
+
+  let assemblyFormat = "$operand `,` $group `:` type($operand) attr-dict";
+}
+
+def Async_AwaitAllOp : Async_Op<"await_all", []> {
+  let summary = "waits for the all async tokens or values in the group to "
+                "become ready";
+  let description = [{
+    The `async.await_all` operation waits until all the tokens or values in the
+    group become ready.
+
+    Example:
+
+    ```mlir
+    %0 = async.create_group
+
+    %1 = ... : !async.token
+    %2 = async.add_to_group %1, %0 : !async.token
+
+    %3 = ... : !async.token
+    %4 = async.add_to_group %2, %0 : !async.token
+
+    async.await_all %0
+    ```
+  }];
+
+  let arguments = (ins Async_GroupType:$operand);
+  let results = (outs);
+
+  let assemblyFormat = "$operand attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// Async Dialect Automatic Reference Counting Operations.
+//===----------------------------------------------------------------------===//
+
+// All async values (values, tokens, groups) are reference counted at runtime
+// and automatically destructed when reference count drops to 0.
+//
+// All values are semantically created with a reference count of +1 and it is
+// the responsibility of the last async value user to drop reference count.
+//
+// Async values created when:
+//   1. Operation returns async result (e.g. the result of an `async.execute`).
+//   2. Async value passed in as a block argument.
+//
+// It is the responsiblity of the async value user to extend the lifetime by
+// adding a +1 reference, if the reference counted value captured by the
+// asynchronously executed region (`async.execute` operation), and drop it after
+// the last nested use.
+//
+// Reference counting operations can be added to the IR using automatic
+// reference count pass, that relies on liveness analysis to find the last uses
+// of all reference counted values and automatically inserts
+// `drop_ref` operations.
+//
+// See `AsyncRefCountingPass` documentation for the implementation details.
+
+def Async_AddRefOp : Async_Op<"add_ref"> {
+  let summary = "adds a reference to async value";
+  let description = [{
+    The `async.add_ref` operation adds a reference(s) to async value (token,
+    value or group).
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand,
+                       Confined<I32Attr, [IntPositive]>:$count);
+  let results = (outs );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand)
+  }];
+}
+
+def Async_DropRefOp : Async_Op<"drop_ref"> {
+  let summary = "drops a reference to async value";
+  let description = [{
+    The `async.drop_ref` operation drops a reference(s) to async value (token,
+    value or group).
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand,
+                       Confined<I32Attr, [IntPositive]>:$count);
+  let results = (outs );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand)
+  }];
 }
 
 #endif // ASYNC_OPS

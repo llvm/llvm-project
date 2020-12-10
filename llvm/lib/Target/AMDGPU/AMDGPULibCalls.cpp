@@ -1288,6 +1288,7 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   BasicBlock * const CBB = CI->getParent();
 
   int const MaxScan = 30;
+  bool Changed = false;
 
   { // fold in load value.
     LoadInst *LI = dyn_cast<LoadInst>(CArgVal);
@@ -1295,6 +1296,7 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
       BasicBlock::iterator BBI = LI->getIterator();
       Value *AvailableVal = FindAvailableLoadedValue(LI, CBB, BBI, MaxScan, AA);
       if (AvailableVal) {
+        Changed = true;
         CArgVal->replaceAllUsesWith(AvailableVal);
         if (CArgVal->getNumUses() == 0)
           LI->eraseFromParent();
@@ -1330,7 +1332,8 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
     if (UI) break;
   }
 
-  if (!UI) return false;
+  if (!UI)
+    return Changed;
 
   // Merge the sin and cos.
 
@@ -1339,7 +1342,8 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
   nf.getLeads()[0].PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
   FunctionCallee Fsincos = getFunction(M, nf);
-  if (!Fsincos) return false;
+  if (!Fsincos)
+    return Changed;
 
   BasicBlock::iterator ItOld = B.GetInsertPoint();
   AllocaInst *Alloc = insertAlloca(UI, B, "__sincos_");

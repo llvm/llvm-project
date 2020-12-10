@@ -177,35 +177,3 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
 
   return emitError("expected location instance");
 }
-
-ParseResult Parser::parseOptionalTrailingLocation(Location &loc) {
-  // If there is a 'loc' we parse a trailing location.
-  if (!consumeIf(Token::kw_loc))
-    return success();
-  if (parseToken(Token::l_paren, "expected '(' in location"))
-    return failure();
-  Token tok = getToken();
-
-  // Check to see if we are parsing a location alias.
-  LocationAttr directLoc;
-  if (tok.is(Token::hash_identifier)) {
-    // TODO: This should be reworked a bit to allow for resolving operation
-    // locations to aliases after the operation has already been parsed(i.e.
-    // allow post parse location fixups).
-    Attribute attr = parseExtendedAttr(Type());
-    if (!attr)
-      return failure();
-    if (!(directLoc = attr.dyn_cast<LocationAttr>()))
-      return emitError(tok.getLoc()) << "expected location, but found " << attr;
-
-    // Otherwise, we parse the location directly.
-  } else if (parseLocationInstance(directLoc)) {
-    return failure();
-  }
-
-  if (parseToken(Token::r_paren, "expected ')' in location"))
-    return failure();
-
-  loc = directLoc;
-  return success();
-}

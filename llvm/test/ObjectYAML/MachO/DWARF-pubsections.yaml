@@ -75,22 +75,22 @@ DWARF:
 
 #      CHECK: DWARF:
 #      CHECK:   debug_pubnames:
-# CHECK-NEXT:     Length:          0x0000000000000017
+# CHECK-NEXT:     Length:          0x17
 # CHECK-NEXT:     Version:         2
 # CHECK-NEXT:     UnitOffset:      0
 # CHECK-NEXT:     UnitSize:        121
 # CHECK-NEXT:     Entries:
-# CHECK-NEXT:       - DieOffset:       0x0000002A
+# CHECK-NEXT:       - DieOffset:       0x2A
 # CHECK-NEXT:         Name:            main
 # CHECK-NEXT:   debug_pubtypes:
-# CHECK-NEXT:     Length:          0x000000000000001F
+# CHECK-NEXT:     Length:          0x1F
 # CHECK-NEXT:     Version:         2
 # CHECK-NEXT:     UnitOffset:      0
 # CHECK-NEXT:     UnitSize:        121
 # CHECK-NEXT:     Entries:
-# CHECK-NEXT:       - DieOffset:       0x00000060
+# CHECK-NEXT:       - DieOffset:       0x60
 # CHECK-NEXT:         Name:            int
-# CHECK-NEXT:       - DieOffset:       0x00000071
+# CHECK-NEXT:       - DieOffset:       0x71
 # CHECK-NEXT:         Name:            char
 # CHECK-NEXT: ...
 
@@ -104,28 +104,28 @@ DWARF:
 #      EMPTY: Sections:
 # EMPTY-NEXT:   - sectname:        __debug_pubnames
 # EMPTY-NEXT:     segname:         __DWARF
-# EMPTY-NEXT:     addr:            0x0000000000000000
+# EMPTY-NEXT:     addr:            0x0
 # EMPTY-NEXT:     size:            0
-# EMPTY-NEXT:     offset:          0x00000000
+# EMPTY-NEXT:     offset:          0x0
 # EMPTY-NEXT:     align:           0
-# EMPTY-NEXT:     reloff:          0x00000000
+# EMPTY-NEXT:     reloff:          0x0
 # EMPTY-NEXT:     nreloc:          0
-# EMPTY-NEXT:     flags:           0x00000000
-# EMPTY-NEXT:     reserved1:       0x00000000
-# EMPTY-NEXT:     reserved2:       0x00000000
-# EMPTY-NEXT:     reserved3:       0x00000000
+# EMPTY-NEXT:     flags:           0x0
+# EMPTY-NEXT:     reserved1:       0x0
+# EMPTY-NEXT:     reserved2:       0x0
+# EMPTY-NEXT:     reserved3:       0x0
 # EMPTY-NEXT:   - sectname:        __debug_pubtypes
 # EMPTY-NEXT:     segname:         __DWARF
-# EMPTY-NEXT:     addr:            0x0000000000000000
+# EMPTY-NEXT:     addr:            0x0
 # EMPTY-NEXT:     size:            0
-# EMPTY-NEXT:     offset:          0x00000720
+# EMPTY-NEXT:     offset:          0x720
 # EMPTY-NEXT:     align:           0
-# EMPTY-NEXT:     reloff:          0x00000000
+# EMPTY-NEXT:     reloff:          0x0
 # EMPTY-NEXT:     nreloc:          0
-# EMPTY-NEXT:     flags:           0x00000000
-# EMPTY-NEXT:     reserved1:       0x00000000
-# EMPTY-NEXT:     reserved2:       0x00000000
-# EMPTY-NEXT:     reserved3:       0x00000000
+# EMPTY-NEXT:     flags:           0x0
+# EMPTY-NEXT:     reserved1:       0x0
+# EMPTY-NEXT:     reserved2:       0x0
+# EMPTY-NEXT:     reserved3:       0x0
 # EMPTY-NEXT: ...
 
 --- !mach-o
@@ -183,12 +183,12 @@ DWARF:
 
 #      INVALID-LENGTH: DWARF:
 # INVALID-LENGTH-NEXT:   debug_pubnames:
-# INVALID-LENGTH-NEXT:     Length:          0x00000000DEADBEEF
+# INVALID-LENGTH-NEXT:     Length:          0xDEADBEEF
 # INVALID-LENGTH-NEXT:     Version:         2
 # INVALID-LENGTH-NEXT:     UnitOffset:      0
 # INVALID-LENGTH-NEXT:     UnitSize:        121
 # INVALID-LENGTH-NEXT:     Entries:
-# INVALID-LENGTH-NEXT:       - DieOffset:       0x0000002A
+# INVALID-LENGTH-NEXT:       - DieOffset:       0x2A
 # INVALID-LENGTH-NEXT:         Name:            main
 
 --- !mach-o

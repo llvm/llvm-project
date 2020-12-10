@@ -10,10 +10,16 @@
 #define LLD_MACHO_DRIVER_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace lld {
 namespace macho {
+
+class DylibFile;
+class InputFile;
 
 class MachOOptTable : public llvm::opt::OptTable {
 public:
@@ -29,6 +35,20 @@ enum {
 #include "Options.inc"
 #undef OPTION
 };
+
+void parseLCLinkerOption(InputFile*, unsigned argc, StringRef data);
+
+std::string createResponseFile(const llvm::opt::InputArgList &args);
+
+// Check for both libfoo.dylib and libfoo.tbd (in that order).
+llvm::Optional<std::string> resolveDylibPath(llvm::StringRef path);
+
+llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
+                                              DylibFile *umbrella = nullptr);
+
+uint32_t getModTime(llvm::StringRef path);
+
+void printArchiveMemberLoad(StringRef reason, const InputFile *);
 
 } // namespace macho
 } // namespace lld

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -199,9 +198,11 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+  std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
       CodeModel, Conf.CGOptLevel));
+  assert(TM && "Failed to create target machine");
+  return TM;
 }
 
 static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
@@ -248,7 +249,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM(Conf.DebugPassManager);
-  // FIXME (davide): verify the input.
+
+  if (!Conf.DisableVerify)
+    MPM.addPass(VerifierPass());
 
   PassBuilder::OptimizationLevel OL;
 
@@ -270,12 +273,14 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   }
 
   if (IsThinLTO)
-    MPM = PB.buildThinLTODefaultPipeline(OL, ImportSummary);
+    MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
   else
-    MPM = PB.buildLTODefaultPipeline(OL, ExportSummary);
-  MPM.run(Mod, MAM);
+    MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
 
-  // FIXME (davide): verify the output.
+  if (!Conf.DisableVerify)
+    MPM.addPass(VerifierPass());
+
+  MPM.run(Mod, MAM);
 }
 
 static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
@@ -572,7 +577,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Mod.getContext(), Conf.RemarksFilename, Conf.RemarksPasses,
-      Conf.RemarksFormat, Conf.RemarksWithHotness, Task);
+      Conf.RemarksFormat, Conf.RemarksWithHotness, Conf.RemarksHotnessThreshold,
+      Task);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
   auto DiagnosticOutputFile = std::move(*DiagFileOrErr);

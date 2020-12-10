@@ -53,6 +53,11 @@ void __memprof_print_accumulated_stats(void);
 /// \returns Default options string.
 const char *__memprof_default_options(void);
 
+/// Prints the memory profile to the current profile file.
+///
+/// \returns 0 on success.
+int __memprof_profile_dump(void);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

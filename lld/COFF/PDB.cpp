@@ -500,6 +500,9 @@ void PDBLinker::mergeSymbolRecords(TpiSource *source,
   cantFail(symData.readBytes(0, symData.getLength(), symsBuffer));
   SmallVector<SymbolScope, 4> scopes;
 
+  if (symsBuffer.empty())
+    warn("empty symbols subsection in " + file->getName());
+
   // Iterate every symbol to check if any need to be realigned, and if so, how
   // much space we need to allocate for them.
   bool needsRealignment = false;

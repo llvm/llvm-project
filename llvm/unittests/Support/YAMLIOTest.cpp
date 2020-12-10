@@ -3101,3 +3101,105 @@ TEST(YAMLIO, TestUnknownDirective) {
   EXPECT_FALSE(yin2.setCurrentDocument());
   EXPECT_TRUE(yin2.error());
 }
+
+TEST(YAMLIO, TestEmptyAlias) {
+  Input yin("&");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestEmptyAnchor) {
+  Input yin("*");
+  EXPECT_FALSE(yin.setCurrentDocument());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmpty) {
+  std::vector<char> str{};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullSequenceOfNull) {
+  std::vector<char> str{'-'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullSimpleSequence) {
+  std::vector<char> str{'-', ' ', 'a'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullUnbalancedMap) {
+  std::vector<char> str{'{'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyMap) {
+  std::vector<char> str{'{', '}'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullUnbalancedSequence) {
+  std::vector<char> str{'['};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptySequence) {
+  std::vector<char> str{'[', ']'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScalarUnbalancedDoubleQuote) {
+  std::vector<char> str{'"'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScalarUnbalancedSingleQuote) {
+  std::vector<char> str{'\''};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyAlias) {
+  std::vector<char> str{'&'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyAnchor) {
+  std::vector<char> str{'*'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullDecodeInvalidUTF8) {
+  std::vector<char> str{'\xef'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScanPlainScalarInFlow) {
+  std::vector<char> str{'{', 'a', ':'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}

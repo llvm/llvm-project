@@ -166,3 +166,12 @@ define i64 @load64(i64* %p) {
   %a = load i64, i64* %p
   ret i64 %a
 }
+
+@X = constant i1 1
+define i1 @load_global() {
+  ; NO_COMBINE_PTR_LABEL: @"dfs$load_global"
+  ; NO_COMBINE_PTR_LABEL: store i16 0, i16* bitcast ([100 x i64]* @__dfsan_retval_tls to i16*), align 2
+
+  %a = load i1, i1* @X
+  ret i1 %a
+}

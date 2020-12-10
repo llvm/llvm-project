@@ -36,21 +36,22 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       which an Operation would be created (e.g., as used in Operation::create)
       and the regions of the op.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypes",
-      /*args=*/(ins "MLIRContext*":$context,
-                    "Optional<Location>":$location,
-                    "ValueRange":$operands,
-                    "DictionaryAttr":$attributes,
-                    "RegionRange":$regions,
-                    "SmallVectorImpl<Type>&":$inferredReturnTypes)
+      /*args=*/(ins "::mlir::MLIRContext *":$context,
+                    "::llvm::Optional<::mlir::Location>":$location,
+                    "::mlir::ValueRange":$operands,
+                    "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::RegionRange":$regions,
+                    "::llvm::SmallVectorImpl<::mlir::Type>&":$inferredReturnTypes)
     >,
     StaticInterfaceMethod<
       /*desc=*/"Returns whether two array of types are compatible result types"
                " for an op.",
       /*retTy=*/"bool",
       /*methodName=*/"isCompatibleReturnTypes",
-      /*args=*/(ins "ArrayRef<Type>":$lhs, "ArrayRef<Type>":$rhs),
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::Type>":$lhs,
+                    "::llvm::ArrayRef<::mlir::Type>":$rhs),
       /*methodBody=*/[{
         return ConcreteOp::isCompatibleReturnTypes(lhs, rhs);
       }],

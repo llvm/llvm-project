@@ -2150,10 +2150,13 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
   if (!DDTy->getName().empty()) {
     Info.Members.push_back({DDTy, 0});
 
-    // Collect static const data members.
+    // Collect static const data members with values.
     if ((DDTy->getFlags() & DINode::FlagStaticMember) ==
-        DINode::FlagStaticMember)
-      StaticConstMembers.push_back(DDTy);
+        DINode::FlagStaticMember) {
+      if (DDTy->getConstant() && (isa<ConstantInt>(DDTy->getConstant()) ||
+                                  isa<ConstantFP>(DDTy->getConstant())))
+        StaticConstMembers.push_back(DDTy);
+    }
 
     return;
   }
@@ -3134,7 +3137,7 @@ void CodeViewDebug::emitStaticConstMemberList() {
                  dyn_cast_or_null<ConstantFP>(DTy->getConstant()))
       Value = APSInt(CFP->getValueAPF().bitcastToAPInt(), true);
     else
-      continue;
+      llvm_unreachable("cannot emit a constant without a value");
 
     std::string QualifiedName = getFullyQualifiedName(Scope, DTy->getName());
 

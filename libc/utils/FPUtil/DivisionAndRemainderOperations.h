@@ -33,9 +33,14 @@ static inline T remquo(T x, T y, int &q) {
   if (xbits.isInf() || ybits.isZero())
     return FPBits<T>::buildNaN(1);
 
-  if (xbits.isZero() || ybits.isInf()) {
+  if (xbits.isZero()) {
     q = 0;
     return __llvm_libc::fputil::copysign(T(0.0), x);
+  }
+
+  if (ybits.isInf()) {
+    q = 0;
+    return x;
   }
 
   bool resultSign = (xbits.sign == ybits.sign ? false : true);
@@ -65,8 +70,10 @@ static inline T remquo(T x, T y, int &q) {
       q |= (1 << exp);
 
     mx = n - my;
-    if (mx == 0)
+    if (mx == 0) {
+      q = resultSign ? -q : q;
       return __llvm_libc::fputil::copysign(T(0.0), x);
+    }
   }
 
   NormalFloat<T> remainder(exp + normaly.exponent, mx, 0);

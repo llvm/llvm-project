@@ -958,6 +958,23 @@ public:
   MachineInstrBuilder buildBuildVectorTrunc(const DstOp &Res,
                                             ArrayRef<Register> Ops);
 
+  /// Build and insert a vector splat of a scalar \p Src using a
+  /// G_INSERT_VECTOR_ELT and G_SHUFFLE_VECTOR idiom.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Src must have the same type as the element type of \p Dst
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildShuffleSplat(const DstOp &Res, const SrcOp &Src);
+
+  /// Build and insert \p Res = G_SHUFFLE_VECTOR \p Src1, \p Src2, \p Mask
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildShuffleVector(const DstOp &Res, const SrcOp &Src1,
+                                         const SrcOp &Src2, ArrayRef<int> Mask);
+
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
   /// G_CONCAT_VECTORS creates a vector from the concatenation of 2 or more

@@ -52,7 +52,13 @@ project(LLVM
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS NO)
+if (CYGWIN)
+  # Cygwin is a bit stricter and lack things like 'strdup', 'stricmp', etc in
+  # c++xx mode.
+  set(CMAKE_CXX_EXTENSIONS YES)
+else()
+  set(CMAKE_CXX_EXTENSIONS NO)
+endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")
@@ -697,6 +703,9 @@ else()
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
+set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
+  "Enable the experimental new pass manager by default.")
+
 include(HandleLLVMOptions)
 
 find_package(Python3 COMPONENTS Interpreter)
@@ -713,67 +722,6 @@ if(NOT Python3_Interpreter_FOUND)
     IMPORTED_LOCATION ${Python2_EXECUTABLE})
   set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
 endif()
-
-######
-# LLVMBuild Integration
-#
-# We use llvm-build to generate all the data required by the CMake based
-# build system in one swoop:
-#
-#  - We generate a file (a CMake fragment) in the object root which contains
-#    all the definitions that are required by CMake.
-#
-#  - We generate the library table used by llvm-config.
-#
-#  - We generate the dependencies for the CMake fragment, so that we will
-#    automatically reconfigure ourselves.
-
-set(LLVMBUILDTOOL "${LLVM_MAIN_SRC_DIR}/utils/llvm-build/llvm-build")
-set(LLVMCONFIGLIBRARYDEPENDENCIESINC
-  "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
-set(LLVMBUILDCMAKEFRAG
-  "${LLVM_BINARY_DIR}/LLVMBuild.cmake")
-
-# Create the list of optional components that are enabled
-if (LLVM_USE_INTEL_JITEVENTS)
-  set(LLVMOPTIONALCOMPONENTS IntelJITEvents)
-endif (LLVM_USE_INTEL_JITEVENTS)
-if (LLVM_USE_OPROFILE)
-  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} OProfileJIT)
-endif (LLVM_USE_OPROFILE)
-if (LLVM_USE_PERF)
-  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} PerfJITEvents)
-endif (LLVM_USE_PERF)
-
-message(STATUS "Constructing LLVMBuild project information")
-execute_process(
-  COMMAND "${Python3_EXECUTABLE}" -B ${LLVMBUILDTOOL}
-            --native-target "${LLVM_NATIVE_ARCH}"
-            --enable-targets "${LLVM_TARGETS_TO_BUILD}"
-            --enable-optional-components "${LLVMOPTIONALCOMPONENTS}"
-            --write-library-table ${LLVMCONFIGLIBRARYDEPENDENCIESINC}
-            --write-cmake-fragment ${LLVMBUILDCMAKEFRAG}
-            OUTPUT_VARIABLE LLVMBUILDOUTPUT
-            ERROR_VARIABLE LLVMBUILDERRORS
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-  RESULT_VARIABLE LLVMBUILDRESULT)
-
-# On Win32, CMake doesn't properly handle piping the default output/error
-# streams into the GUI console. So, we explicitly catch and report them.
-if( NOT "${LLVMBUILDOUTPUT}" STREQUAL "")
-  message(STATUS "llvm-build output: ${LLVMBUILDOUTPUT}")
-endif()
-if( NOT "${LLVMBUILDRESULT}" STREQUAL "0" )
-  message(FATAL_ERROR
-    "Unexpected failure executing llvm-build: ${LLVMBUILDERRORS}")
-endif()
-
-# Include the generated CMake fragment. This will define properties from the
-# LLVMBuild files in a format which is easy to consume from CMake, and will add
-# the dependencies so that CMake will reconfigure properly when the LLVMBuild
-# files change.
-include(${LLVMBUILDCMAKEFRAG})
 
 ######
 
@@ -869,6 +817,10 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
 endif()
+
+# Keep the legacy CMake flag ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER for
+# compatibility.
+set(LLVM_ENABLE_NEW_PASS_MANAGER ${ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER})
 
 # Configure the three LLVM configuration header files.
 configure_file(

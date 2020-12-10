@@ -34,7 +34,7 @@ entry:
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -71,11 +71,11 @@ entry:
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000004
-; CHECK-NEXT:           Maximum:         0x00000004
+; CHECK-NEXT:           Initial:         0x4
+; CHECK-NEXT:           Maximum:         0x4
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:      - Initial:         0x00000001
+; CHECK-NEXT:      - Initial:         0x1
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -88,19 +88,19 @@ entry:
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000004
+; CHECK-NEXT:         Offset:          0x4
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:         Offset:          0x0000000A
+; CHECK-NEXT:         Offset:          0xA
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:         Offset:          0x00000013
+; CHECK-NEXT:         Offset:          0x13
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:         Offset:          0x0000001A
+; CHECK-NEXT:         Offset:          0x1A
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           7
-; CHECK-NEXT:         Offset:          0x00000026
+; CHECK-NEXT:         Offset:          0x26
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:         3
 ; CHECK-NEXT:         Locals:
@@ -115,16 +115,16 @@ entry:
 ; NORMAL-NEXT:    Relocations:
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           3
-; NORMAL-NEXT:        Offset:          0x0000001A
+; NORMAL-NEXT:        Offset:          0x1A
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           4
-; NORMAL-NEXT:        Offset:          0x00000023
+; NORMAL-NEXT:        Offset:          0x23
 ; NORMAL-NEXT:      - Type:            R_WASM_TABLE_INDEX_I32
 ; NORMAL-NEXT:        Index:           5
-; NORMAL-NEXT:        Offset:          0x0000002C
+; NORMAL-NEXT:        Offset:          0x2C
 ; NORMAL-NEXT:      - Type:            R_WASM_MEMORY_ADDR_I32
 ; NORMAL-NEXT:        Index:           12
-; NORMAL-NEXT:        Offset:          0x00000035
+; NORMAL-NEXT:        Offset:          0x35
 ; NORMAL-NEXT:    Segments:
 ; NORMAL-NEXT:      - SectionOffset:   6
 ; NORMAL-NEXT:        InitFlags:       0

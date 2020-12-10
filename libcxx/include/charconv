@@ -207,7 +207,7 @@ __mul_overflowed(unsigned char __a, _Tp __b, unsigned char& __r)
 {
     auto __c = __a * __b;
     __r = __c;
-    return __c > (numeric_limits<unsigned char>::max)();
+    return __c > numeric_limits<unsigned char>::max();
 }
 
 template <typename _Tp>
@@ -216,7 +216,7 @@ __mul_overflowed(unsigned short __a, _Tp __b, unsigned short& __r)
 {
     auto __c = __a * __b;
     __r = __c;
-    return __c > (numeric_limits<unsigned short>::max)();
+    return __c > numeric_limits<unsigned short>::max();
 }
 
 template <typename _Tp>
@@ -227,7 +227,7 @@ __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r)
 #if !defined(_LIBCPP_COMPILER_MSVC)
     return __builtin_mul_overflow(__a, __b, &__r);
 #else
-    bool __did = __b && ((numeric_limits<_Tp>::max)() / __b) < __a;
+    bool __did = __b && (numeric_limits<_Tp>::max() / __b) < __a;
     __r = __a * __b;
     return __did;
 #endif
@@ -435,7 +435,7 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
     }
     else
     {
-        if (__x <= (__tl::max)())
+        if (__x <= __tl::max())
         {
             __value = __x;
             return __r;
@@ -526,7 +526,7 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
             auto __p = __tx::__read(__first, __last, __a, __b);
             if (__p == __last || !__in_pattern(*__p))
             {
-                __output_type __m = (numeric_limits<_Tp>::max)();
+                __output_type __m = numeric_limits<_Tp>::max();
                 if (__m >= __a && __m - __a >= __b)
                 {
                     __value = __a + __b;
@@ -581,7 +581,7 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
 
             if (__p == __last || !__in_pattern(*__p, __base))
             {
-                if ((__tl::max)() - __a >= __b)
+                if (__tl::max() - __a >= __b)
                 {
                     __value = __a + __b;
                     return {__p, {}};

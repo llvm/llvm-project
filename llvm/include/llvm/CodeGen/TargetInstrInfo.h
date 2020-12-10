@@ -348,6 +348,12 @@ public:
                                  unsigned &Size, unsigned &Offset,
                                  const MachineFunction &MF) const;
 
+  /// Return true if the given instruction is terminator that is unspillable,
+  /// according to isUnspillableTerminatorImpl.
+  bool isUnspillableTerminator(const MachineInstr *MI) const {
+    return MI->isTerminator() && isUnspillableTerminatorImpl(MI);
+  }
+
   /// Returns the size in bytes of the specified MachineInstr, or ~0U
   /// when this function is not implemented by a target.
   virtual unsigned getInstSizeInBytes(const MachineInstr &MI) const {
@@ -952,6 +958,17 @@ protected:
   virtual Optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const {
     return None;
+  }
+
+  /// Return true if the given terminator MI is not expected to spill. This
+  /// sets the live interval as not spillable and adjusts phi node lowering to
+  /// not introduce copies after the terminator. Use with care, these are
+  /// currently used for hardware loop intrinsics in very controlled situations,
+  /// created prior to registry allocation in loops that only have single phi
+  /// users for the terminators value. They may run out of registers if not used
+  /// carefully.
+  virtual bool isUnspillableTerminatorImpl(const MachineInstr *MI) const {
+    return false;
   }
 
 public:

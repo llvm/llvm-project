@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -1121,6 +1122,20 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Node->getOperand(1));
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
     .addFrameIndex(FI->getIndex());
+    break;
+  }
+
+  case ISD::PSEUDO_PROBE: {
+    unsigned TarOp = TargetOpcode::PSEUDO_PROBE;
+    auto Guid = cast<PseudoProbeSDNode>(Node)->getGuid();
+    auto Index = cast<PseudoProbeSDNode>(Node)->getIndex();
+    auto Attr = cast<PseudoProbeSDNode>(Node)->getAttributes();
+
+    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
+        .addImm(Guid)
+        .addImm(Index)
+        .addImm((uint8_t)PseudoProbeType::Block)
+        .addImm(Attr);
     break;
   }
 

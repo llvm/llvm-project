@@ -10,7 +10,7 @@
         %crd = type { i64, %cr* }
         %pp = type { %cc }
 
-define fastcc void @foo(%pp* nocapture byval %p_arg) {
+define fastcc void @foo(%pp* nocapture byval(%pp) %p_arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    retl

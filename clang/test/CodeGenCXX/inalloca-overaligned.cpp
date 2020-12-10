@@ -41,11 +41,11 @@ int pass_inalloca_overaligned() {
 // CHECK: alloca inalloca <{ %struct.NonTrivial, %struct.OverAligned* }>
 
 // Construct OverAligned into TMP.
-// CHECK: call x86_thiscallcc %struct.OverAligned* @"??0OverAligned@@QAE@XZ"(%struct.OverAligned* [[TMP]])
+// CHECK: call x86_thiscallcc %struct.OverAligned* @"??0OverAligned@@QAE@XZ"(%struct.OverAligned* {{[^,]*}} [[TMP]])
 
 // Construct NonTrivial into the GEP.
 // CHECK: [[GEP:%[^ ]*]] = getelementptr inbounds <{ %struct.NonTrivial, %struct.OverAligned* }>, <{ %struct.NonTrivial, %struct.OverAligned* }>* %{{.*}}, i32 0, i32 0
-// CHECK: call x86_thiscallcc %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* [[GEP]])
+// CHECK: call x86_thiscallcc %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* {{[^,]*}} [[GEP]])
 
 // Store the address of an OverAligned temporary into the struct.
 // CHECK: getelementptr inbounds <{ %struct.NonTrivial, %struct.OverAligned* }>, <{ %struct.NonTrivial, %struct.OverAligned* }>* %{{.*}}, i32 0, i32 1
@@ -66,7 +66,7 @@ int pass_both() {
 
 // CHECK-LABEL: define dso_local i32 @"?pass_both@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.Both, align 8
-// CHECK: call x86_thiscallcc %struct.Both* @"??0Both@@QAE@XZ"(%struct.Both* [[TMP]])
+// CHECK: call x86_thiscallcc %struct.Both* @"??0Both@@QAE@XZ"(%struct.Both* {{[^,]*}} [[TMP]])
 // CHECK: call i32 @"?receive_both@@Y{{.*}}"(%struct.Both* [[TMP]])
 
 int receive_inalloca_both(NonTrivial nt, Both o) {
@@ -83,7 +83,7 @@ int pass_inalloca_both() {
 
 // CHECK-LABEL: define dso_local i32 @"?pass_inalloca_both@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.Both, align 8
-// CHECK: call x86_thiscallcc %struct.Both* @"??0Both@@QAE@XZ"(%struct.Both* [[TMP]])
+// CHECK: call x86_thiscallcc %struct.Both* @"??0Both@@QAE@XZ"(%struct.Both* {{[^,]*}} [[TMP]])
 // CHECK: call i32 @"?receive_inalloca_both@@Y{{.*}}"(<{ %struct.NonTrivial, %struct.Both* }>* inalloca %argmem)
 
 // Here we have a type that is:
@@ -107,5 +107,5 @@ int passMyPtr() { return receiveMyPtr(MyPtr()); }
 
 // CHECK-LABEL: define dso_local i32 @"?passMyPtr@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.MyPtr, align 8
-// CHECK: call x86_thiscallcc %struct.MyPtr* @"??0MyPtr@@QAE@XZ"(%struct.MyPtr* [[TMP]])
+// CHECK: call x86_thiscallcc %struct.MyPtr* @"??0MyPtr@@QAE@XZ"(%struct.MyPtr* {{[^,]*}} [[TMP]])
 // CHECK: call i32 @"?receiveMyPtr@@Y{{.*}}"(%struct.MyPtr* [[TMP]])

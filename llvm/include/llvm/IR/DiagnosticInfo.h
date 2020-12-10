@@ -76,7 +76,6 @@ enum DiagnosticKind {
   DK_LastMachineRemark = DK_MachineOptimizationRemarkAnalysis,
   DK_MIRParser,
   DK_PGOProfile,
-  DK_MisExpect,
   DK_Unsupported,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
@@ -1012,25 +1011,6 @@ public:
   const Twine &getMessage() const { return Msg; }
 
   void print(DiagnosticPrinter &DP) const override;
-};
-
-/// Diagnostic information for MisExpect analysis.
-class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
-public:
-    DiagnosticInfoMisExpect(const Instruction *Inst, Twine &Msg);
-
-  /// \see DiagnosticInfo::print.
-  void print(DiagnosticPrinter &DP) const override;
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_MisExpect;
-  }
-
-  const Twine &getMsg() const { return Msg; }
-
-private:
-  /// Message to report.
-  const Twine &Msg;
 };
 
 } // end namespace llvm

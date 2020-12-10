@@ -33,9 +33,9 @@ RUN: sed 's/Signature: *545589255/Signature: 0/' < %t.precomp.yaml > precomp-zer
 RUN: yaml2obj precomp-no-objname.yaml -o %t.precomp-no-objname.obj
 RUN: yaml2obj precomp-zero-sig.yaml -o %t.precomp-zero-sig.obj
 
-RUN: not lld-link %t.precomp-no-objname.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-NO-SIGNATURE
+RUN: env LLD_IN_TEST=1 not lld-link %t.precomp-no-objname.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-NO-SIGNATURE
 
-RUN: not lld-link %t.precomp-zero-sig.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-NO-SIGNATURE
+RUN: env LLD_IN_TEST=1 not lld-link %t.precomp-zero-sig.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-NO-SIGNATURE
 
 FAILURE-NO-SIGNATURE: error: {{.*}}.obj claims to be a PCH object, but does not have a valid signature
 
@@ -43,7 +43,7 @@ Check that two PCH objs with duplicate signatures are an error.
 
 RUN: cp %S/Inputs/precomp.obj %t.precomp-dup.obj
 
-RUN: not lld-link %S/Inputs/precomp.obj %t.precomp-dup.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-DUP-SIGNATURE
+RUN: env LLD_IN_TEST=1 not lld-link %S/Inputs/precomp.obj %t.precomp-dup.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe 2>&1 | FileCheck %s -check-prefix FAILURE-DUP-SIGNATURE
 
 FAILURE-DUP-SIGNATURE: error: a PCH object with the same signature has already been provided ({{.*precomp.obj and .*precomp-dup.obj.*}})
 

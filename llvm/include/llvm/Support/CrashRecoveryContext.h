@@ -102,6 +102,10 @@ public:
   LLVM_ATTRIBUTE_NORETURN
   void HandleExit(int RetCode);
 
+  /// Throw again a signal or an exception, after it was catched once by a
+  /// CrashRecoveryContext.
+  static bool throwIfCrash(int RetCode);
+
   /// In case of a crash, this is the crash identifier.
   int RetCode = 0;
 

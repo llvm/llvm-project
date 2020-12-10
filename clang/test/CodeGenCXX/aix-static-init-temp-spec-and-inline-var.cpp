@@ -49,8 +49,8 @@ A<int> A<int>::instance = bar();
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t0E, i32 2)
-// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t0E, i32 signext 2)
+// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t0E, i32 2)
+// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t0E, i32 signext 2)
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor__ZN5test12t0E)
 // CHECK:   ret void
 // CHECK: }
@@ -87,8 +87,8 @@ A<int> A<int>::instance = bar();
 // CHECK:   br i1 %tobool, label %init, label %init.end
 
 // CHECK: init:
-// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t2E, i32 2)
-// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t2E, i32 signext 2)
+// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t2E, i32 2)
+// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t2E, i32 signext 2)
 // CHECK:   %2 = call i32 @atexit(void ()* @__dtor__ZN5test12t2E)
 // CHECK:   call void @__cxa_guard_release(i64* @_ZGVN5test12t2E)
 // CHECK:   br label %init.end
@@ -124,7 +124,7 @@ A<int> A<int>::instance = bar();
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 // CHECK: init.check:
-// CHECK:   call void @_ZN5test21AIvEC1Ev(%"struct.test2::A"* @_ZN5test21AIvE8instanceE)
+// CHECK:   call void @_ZN5test21AIvEC1Ev(%"struct.test2::A"* {{[^,]*}} @_ZN5test21AIvE8instanceE)
 // CHECK:   %1 = call i32 @atexit(void ()* @__dtor__ZN5test21AIvE8instanceE)
 // CHECK:   store i64 1, i64* @_ZGVN5test21AIvE8instanceE
 // CHECK:   br label %init.end
@@ -187,8 +187,8 @@ A<int> A<int>::instance = bar();
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 // CHECK: init.check:
-// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t1IiEE, i32 2)
-// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* @_ZN5test12t1IiEE, i32 signext 2)
+// CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1IiEE, i32 2)
+// CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1IiEE, i32 signext 2)
 // CHECK:   %1 = call i32 @atexit(void ()* @__dtor__ZN5test12t1IiEE)
 // CHECK:   store i64 1, i64* @_ZGVN5test12t1IiEE
 // CHECK:   br label %init.end

@@ -32,35 +32,10 @@ func @single_iteration(%A: memref<?x?x?xi32>) {
 
 // -----
 
-func @no_iteration(%A: memref<?x?xi32>) {
+func @one_unused(%cond: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  scf.parallel (%i0, %i1) = (%c0, %c0) to (%c1, %c0) step (%c1, %c1) {
-    %c42 = constant 42 : i32
-    store %c42, %A[%i0, %i1] : memref<?x?xi32>
-    scf.yield
-  }
-  return
-}
-
-// CHECK-LABEL:   func @no_iteration(
-// CHECK-SAME:                        [[ARG0:%.*]]: memref<?x?xi32>) {
-// CHECK:           [[C0:%.*]] = constant 0 : index
-// CHECK:           [[C1:%.*]] = constant 1 : index
-// CHECK:           [[C42:%.*]] = constant 42 : i32
-// CHECK:           scf.parallel ([[V1:%.*]]) = ([[C0]]) to ([[C0]]) step ([[C1]]) {
-// CHECK:             store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V1]]] : memref<?x?xi32>
-// CHECK:             scf.yield
-// CHECK:           }
-// CHECK:           return
-
-// -----
-
-func @one_unused() -> (index) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %true = constant true
-  %0, %1 = scf.if %true -> (index, index) {
+  %0, %1 = scf.if %cond -> (index, index) {
     scf.yield %c0, %c1 : index, index
   } else {
     scf.yield %c0, %c1 : index, index
@@ -70,8 +45,7 @@ func @one_unused() -> (index) {
 
 // CHECK-LABEL:   func @one_unused
 // CHECK:           [[C0:%.*]] = constant 1 : index
-// CHECK:           [[C1:%.*]] = constant true
-// CHECK:           [[V0:%.*]] = scf.if [[C1]] -> (index) {
+// CHECK:           [[V0:%.*]] = scf.if %{{.*}} -> (index) {
 // CHECK:             scf.yield [[C0]] : index
 // CHECK:           } else
 // CHECK:             scf.yield [[C0]] : index
@@ -80,12 +54,11 @@ func @one_unused() -> (index) {
 
 // -----
 
-func @nested_unused() -> (index) {
+func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %true = constant true
-  %0, %1 = scf.if %true -> (index, index) {
-    %2, %3 = scf.if %true -> (index, index) {
+  %0, %1 = scf.if %cond1 -> (index, index) {
+    %2, %3 = scf.if %cond2 -> (index, index) {
       scf.yield %c0, %c1 : index, index
     } else {
       scf.yield %c0, %c1 : index, index
@@ -99,9 +72,8 @@ func @nested_unused() -> (index) {
 
 // CHECK-LABEL:   func @nested_unused
 // CHECK:           [[C0:%.*]] = constant 1 : index
-// CHECK:           [[C1:%.*]] = constant true
-// CHECK:           [[V0:%.*]] = scf.if [[C1]] -> (index) {
-// CHECK:             [[V1:%.*]] = scf.if [[C1]] -> (index) {
+// CHECK:           [[V0:%.*]] = scf.if {{.*}} -> (index) {
+// CHECK:             [[V1:%.*]] = scf.if {{.*}} -> (index) {
 // CHECK:               scf.yield [[C0]] : index
 // CHECK:             } else
 // CHECK:               scf.yield [[C0]] : index
@@ -114,12 +86,11 @@ func @nested_unused() -> (index) {
 
 // -----
 
-func @side_effect() {}
-func @all_unused() {
+func private @side_effect()
+func @all_unused(%cond: i1) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %true = constant true
-  %0, %1 = scf.if %true -> (index, index) {
+  %0, %1 = scf.if %cond -> (index, index) {
     call @side_effect() : () -> ()
     scf.yield %c0, %c1 : index, index
   } else {
@@ -130,8 +101,7 @@ func @all_unused() {
 }
 
 // CHECK-LABEL:   func @all_unused
-// CHECK:           [[C1:%.*]] = constant true
-// CHECK:           scf.if [[C1]] {
+// CHECK:           scf.if %{{.*}} {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:           } else
 // CHECK:             call @side_effect() : () -> ()
@@ -140,7 +110,7 @@ func @all_unused() {
 
 // -----
 
-func @make_i32() -> i32
+func private @make_i32() -> i32
 
 func @for_yields_2(%lb : index, %ub : index, %step : index) -> i32 {
   %a = call @make_i32() : () -> (i32)
@@ -172,3 +142,152 @@ func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i32) {
 //  CHECK-NEXT:       scf.yield %[[c]] : i32
 //  CHECK-NEXT:     }
 //  CHECK-NEXT:     return %[[a]], %[[r1]], %[[b]] : i32, i32, i32
+
+// CHECK-LABEL: @replace_true_if
+func @replace_true_if() {
+  %true = constant true
+  // CHECK-NOT: scf.if
+  // CHECK: "test.op"
+  scf.if %true {
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @remove_false_if
+func @remove_false_if() {
+  %false = constant false
+  // CHECK-NOT: scf.if
+  // CHECK-NOT: "test.op"
+  scf.if %false {
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @replace_true_if_with_values
+func @replace_true_if_with_values() {
+  %true = constant true
+  // CHECK-NOT: scf.if
+  // CHECK: %[[VAL:.*]] = "test.op"
+  %0 = scf.if %true -> (i32) {
+    %1 = "test.op"() : () -> i32
+    scf.yield %1 : i32
+  } else {
+    %2 = "test.other_op"() : () -> i32
+    scf.yield %2 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @replace_false_if_with_values
+func @replace_false_if_with_values() {
+  %false = constant false
+  // CHECK-NOT: scf.if
+  // CHECK: %[[VAL:.*]] = "test.other_op"
+  %0 = scf.if %false -> (i32) {
+    %1 = "test.op"() : () -> i32
+    scf.yield %1 : i32
+  } else {
+    %2 = "test.other_op"() : () -> i32
+    scf.yield %2 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @remove_zero_iteration_loop
+func @remove_zero_iteration_loop() {
+  %c42 = constant 42 : index
+  %c1 = constant 1 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  %0 = scf.for %i = %c42 to %c1 step %c1 iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[INIT]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @remove_zero_iteration_loop_vals
+func @remove_zero_iteration_loop_vals(%arg0: index) {
+  %c2 = constant 2 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  // CHECK-NOT: test.op
+  %0 = scf.for %i = %arg0 to %arg0 step %c2 iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[INIT]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @replace_single_iteration_loop
+func @replace_single_iteration_loop() {
+  // CHECK: %[[LB:.*]] = constant 42
+  %c42 = constant 42 : index
+  %c43 = constant 43 : index
+  %c1 = constant 1 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  // CHECK: %[[VAL:.*]] = "test.op"(%[[LB]], %[[INIT]])
+  %0 = scf.for %i = %c42 to %c43 step %c1 iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @replace_single_iteration_loop_non_unit_step
+func @replace_single_iteration_loop_non_unit_step() {
+  // CHECK: %[[LB:.*]] = constant 42
+  %c42 = constant 42 : index
+  %c47 = constant 47 : index
+  %c5 = constant 5 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  // CHECK: %[[VAL:.*]] = "test.op"(%[[LB]], %[[INIT]])
+  %0 = scf.for %i = %c42 to %c47 step %c5 iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: @remove_empty_parallel_loop
+func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> f32
+  // CHECK-NOT: scf.parallel
+  // CHECK-NOT: test.produce
+  // CHECK-NOT: test.transform
+  %0 = scf.parallel (%i, %j, %k) = (%lb, %ub, %lb) to (%ub, %ub, %ub) step (%s, %s, %s) init(%init) -> f32 {
+    %1 = "test.produce"() : () -> f32
+    scf.reduce(%1) : f32 {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %2 = "test.transform"(%lhs, %rhs) : (f32, f32) -> f32
+      scf.reduce.return %2 : f32
+    }
+    scf.yield
+  }
+  // CHECK: "test.consume"(%[[INIT]])
+  "test.consume"(%0) : (f32) -> ()
+  return
+}

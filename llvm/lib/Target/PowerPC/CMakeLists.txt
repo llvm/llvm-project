@@ -1,3 +1,5 @@
+add_llvm_component_group(PowerPC HAS_JIT)
+
 set(LLVM_TARGET_DEFINITIONS PPC.td)
 
 tablegen(LLVM PPCGenAsmMatcher.inc -gen-asm-matcher)
@@ -55,6 +57,24 @@ add_llvm_target(PowerPCCodeGen
   GISel/PPCCallLowering.cpp
   GISel/PPCRegisterBankInfo.cpp
   GISel/PPCLegalizerInfo.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  PowerPCDesc
+  PowerPCInfo
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  GlobalISel
+
+  ADD_TO_COMPONENT
+  PowerPC
   )
 
 add_subdirectory(AsmParser)

@@ -37,7 +37,7 @@
 define i32 @test() {
 entry:
   %n = alloca %struct.node_t, align 4
-  call void bitcast (void (%struct.node_t*, ...)* @getnode to void (%struct.node_t*)*)(%struct.node_t* sret %n)
+  call void bitcast (void (%struct.node_t*, ...)* @getnode to void (%struct.node_t*)*)(%struct.node_t* sret(%struct.node_t) %n)
   %array = getelementptr inbounds %struct.node_t, %struct.node_t* %n, i32 0, i32 4
   %0 = load i32*, i32** %array, align 4
   %cmp = icmp eq i32* %0, null
@@ -82,4 +82,4 @@ if.end:
   ret i32 %sum.0
 }
 
-declare void @getnode(%struct.node_t* sret, ...)
+declare void @getnode(%struct.node_t* sret(%struct.node_t), ...)

@@ -10,8 +10,8 @@
 #include "TypeDetail.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MathExtras.h"
@@ -354,3 +354,32 @@ ArrayRef<int64_t> UniformQuantizedPerAxisType::getZeroPoints() const {
 int32_t UniformQuantizedPerAxisType::getQuantizedDimension() const {
   return getImpl()->quantizedDimension;
 }
+
+CalibratedQuantizedType CalibratedQuantizedType::get(Type expressedType,
+                                                     double min, double max) {
+  return Base::get(expressedType.getContext(), expressedType, min, max);
+}
+
+CalibratedQuantizedType CalibratedQuantizedType::getChecked(Type expressedType,
+                                                            double min,
+                                                            double max,
+                                                            Location location) {
+  return Base::getChecked(location, expressedType, min, max);
+}
+
+LogicalResult CalibratedQuantizedType::verifyConstructionInvariants(
+    Location loc, Type expressedType, double min, double max) {
+  // Verify that the expressed type is floating point.
+  // If this restriction is ever eliminated, the parser/printer must be
+  // extended.
+  if (!expressedType.isa<FloatType>())
+    return emitError(loc, "expressed type must be floating point");
+  if (max <= min)
+    return emitError(loc, "illegal min and max: (") << min << ":" << max << ")";
+
+  return success();
+}
+
+double CalibratedQuantizedType::getMin() const { return getImpl()->min; }
+
+double CalibratedQuantizedType::getMax() const { return getImpl()->max; }

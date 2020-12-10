@@ -18,6 +18,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 void func1(std::promise<int> p)
@@ -48,7 +49,7 @@ void test(F func) {
 
     std::promise<T> p;
     std::future<T> f = p.get_future();
-    std::thread(func, std::move(p)).detach();
+    support::make_test_thread(func, std::move(p)).detach();
     assert(f.valid());
     f.wait();
     assert(f.valid());

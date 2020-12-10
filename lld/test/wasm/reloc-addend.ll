@@ -15,5 +15,5 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:         Offset:          0x00000006
+; CHECK-NEXT:         Offset:          0x6
 ; CHECK-NEXT:         Addend:          64

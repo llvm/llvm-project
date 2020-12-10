@@ -64,6 +64,10 @@ defm optimize_bb_jumps: BB<"optimize-bb-jumps",
     "Remove direct jumps at the end to the next basic block",
     "Do not remove any direct jumps at the end to the next basic block (default)">;
 
+defm fortran_common : BB<"fortran-common",
+    "Search archive members for definitions to override COMMON symbols (default)",
+    "Do not search archive members for definitions to override COMMON symbols">;
+
 defm split_stack_adjust_size
     : Eq<"split-stack-adjust-size",
          "Specify adjustment to stack size when a split-stack function calls a "
@@ -113,11 +117,11 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // -chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--", "-"], "chroot">;
 
-def color_diagnostics: F<"color-diagnostics">,
-  HelpText<"Alias for --color-diagnostics=always">;
-
+defm color_diagnostics: B<"color-diagnostics",
+  "Alias for --color-diagnostics=always",
+  "Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics">,
+  HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
 defm cref: B<"cref",
@@ -274,9 +278,6 @@ def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
-def no_color_diagnostics: F<"no-color-diagnostics">,
-  HelpText<"Do not use colors in diagnostics">;
-
 def no_dynamic_linker: F<"no-dynamic-linker">,
   HelpText<"Inhibit output of .interp section">;
 
@@ -343,7 +344,9 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
-defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+defm reproduce:
+  Eq<"reproduce",
+     "Write tar file containing inputs and command to reproduce link">;
 
 defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
@@ -527,8 +530,9 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
-def lto_new_pass_manager: FF<"lto-new-pass-manager">,
-  HelpText<"Use new pass manager">;
+defm lto_legacy_pass_manager: BB<"lto-legacy-pass-manager",
+  "Use the legacy pass manager in LLVM",
+  "Use the new pass manager in LLVM">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -542,12 +546,17 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
-def lto_whole_program_visibility: FF<"lto-whole-program-visibility">,
-  HelpText<"Asserts that the LTO link has whole program visibility">;
+defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
+  "Asserts that the LTO link has whole program visibility",
+  "Asserts that the LTO link does not have whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
+defm opt_remarks_hotness_threshold: EEq<"opt-remarks-hotness-threshold",
+  "Minimum profile count required for an optimization remark to be output."
+  " Use 'auto' to apply the threshold from profile summary.">,
+  MetaVarName<"<value>">;
 def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
 def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
@@ -588,7 +597,9 @@ def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>, HelpText<"Alias for --thinlto-j
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 def: F<"plugin-opt=new-pass-manager">,
-  Alias<lto_new_pass_manager>, HelpText<"Alias for --lto-new-pass-manager">;
+  Alias<no_lto_legacy_pass_manager>, HelpText<"Alias for --no-lto-legacy-pass-manager">;
+def: F<"plugin-opt=legacy-pass-manager">,
+  Alias<lto_legacy_pass_manager>, HelpText<"Alias for --no-legacy-pass-manager">;
 def: F<"plugin-opt=cs-profile-generate">,
   Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
 def: J<"plugin-opt=cs-profile-path=">,
@@ -596,6 +607,21 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
+def: J<"plugin-opt=opt-remarks-filename=">,
+  Alias<opt_remarks_filename>,
+  HelpText<"Alias for --opt-remarks-filename">;
+def: J<"plugin-opt=opt-remarks-passes=">,
+  Alias<opt_remarks_passes>,
+  HelpText<"Alias for --opt-remarks-passes">;
+def: J<"plugin-opt=opt-remarks-format=">,
+  Alias<opt_remarks_format>,
+  HelpText<"Alias for --opt-remarks-format">;
+def: F<"plugin-opt=opt-remarks-with-hotness">,
+  Alias<opt_remarks_with_hotness>,
+  HelpText<"Alias for --opt-remarks-with_hotness">;
+def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
+  Alias<opt_remarks_hotness_threshold>,
+  HelpText<"Alias for --opt-remarks-hotness-threshold">;
 def: J<"plugin-opt=sample-profile=">,
   Alias<lto_sample_profile>, HelpText<"Alias for --lto-sample-profile">;
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;

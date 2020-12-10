@@ -63,6 +63,11 @@ void CCState::MarkAllocated(MCPhysReg Reg) {
     UsedRegs[*AI / 32] |= 1 << (*AI & 31);
 }
 
+void CCState::MarkUnallocated(MCPhysReg Reg) {
+  for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
+    UsedRegs[*AI / 32] &= ~(1 << (*AI & 31));
+}
+
 bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
   if (!isAllocated(Reg))
     return false;

@@ -3,19 +3,19 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@e4 = external global i32
+@e4 = external dso_local global i32
 @d4 = global i32 1
-@e2 = external global i32, align 2
+@e2 = external dso_local global i32, align 2
 @d2 = global i32 1, align 2
-@e1 = external global i32, align 1
+@e1 = external dso_local global i32, align 1
 @d1 = global i32 1, align 1
 
-declare void @ef()
+declare dso_local void @ef()
 define void @df() {
   ret void
 }
 
-declare void @foo(i32 *)
+declare dso_local void @foo(i32 *)
 
 ; Test a load of a fully-aligned external variable.
 define i32 *@f1() {

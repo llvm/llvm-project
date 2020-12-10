@@ -1,7 +1,7 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=VGPR %s
-; RUN: llc -O0 -march=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=VMEM %s
+; RUN: llc -O0 -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VGPR %s
+; RUN: llc -O0 -march=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VMEM %s
 
-; ALL-LABEL: {{^}}spill_sgpr_x2:
+; GCN-LABEL: {{^}}spill_sgpr_x2:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -28,7 +28,7 @@ ret:
   ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x3:
+; GCN-LABEL: {{^}}spill_sgpr_x3:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -57,7 +57,7 @@ ret:
   ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x4:
+; GCN-LABEL: {{^}}spill_sgpr_x4:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -88,7 +88,7 @@ ret:
   ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x5:
+; GCN-LABEL: {{^}}spill_sgpr_x5:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -121,7 +121,7 @@ ret:
   ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x8:
+; GCN-LABEL: {{^}}spill_sgpr_x8:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -159,7 +159,7 @@ ret:
   ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x16:
+; GCN-LABEL: {{^}}spill_sgpr_x16:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
@@ -213,7 +213,7 @@ ret:
  ret void
 }
 
-; ALL-LABEL: {{^}}spill_sgpr_x32:
+; GCN-LABEL: {{^}}spill_sgpr_x32:
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1

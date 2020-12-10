@@ -840,6 +840,9 @@ public:
     /// Perform a qualification conversion, producing an lvalue.
     SK_QualificationConversionLValue,
 
+    /// Perform a function reference conversion, see [dcl.init.ref]p4.
+    SK_FunctionReferenceConversion,
+
     /// Perform a conversion adding _Atomic to a type.
     SK_AtomicConversion,
 
@@ -1223,17 +1226,6 @@ public:
   /// constructor.
   bool isConstructorInitialization() const;
 
-  /// Returns whether the last step in this initialization sequence is a
-  /// narrowing conversion, defined by C++0x [dcl.init.list]p7.
-  ///
-  /// If this function returns true, *isInitializerConstant will be set to
-  /// describe whether *Initializer was a constant expression.  If
-  /// *isInitializerConstant is set to true, *ConstantValue will be set to the
-  /// evaluated value of *Initializer.
-  bool endsWithNarrowing(ASTContext &Ctx, const Expr *Initializer,
-                         bool *isInitializerConstant,
-                         APValue *ConstantValue) const;
-
   /// Add a new step in the initialization that resolves the address
   /// of an overloaded function to a specific function declaration.
   ///
@@ -1287,6 +1279,10 @@ public:
   /// given type.
   void AddQualificationConversionStep(QualType Ty,
                                      ExprValueKind Category);
+
+  /// Add a new step that performs a function reference conversion to the
+  /// given type.
+  void AddFunctionReferenceConversionStep(QualType Ty);
 
   /// Add a new step that performs conversion from non-atomic to atomic
   /// type.
@@ -1354,10 +1350,6 @@ public:
   /// Add a step to initialzie an OpenCL opaque type (event_t, queue_t, etc.)
   /// from a zero constant.
   void AddOCLZeroOpaqueTypeStep(QualType T);
-
-  /// Add a step to initialize by zero types defined in the
-  /// cl_intel_device_side_avc_motion_estimation OpenCL extension
-  void AddOCLIntelSubgroupAVCZeroInitStep(QualType T);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

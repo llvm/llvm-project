@@ -88,10 +88,10 @@ namespace test4 {
   };
 
   class Y : public X { };
-  class Z : protected Y { }; // expected-note 2 {{constrained by protected inheritance here}}
+  class Z : protected Y { }; // expected-note {{constrained by protected inheritance here}}
 
   void X::f(Z *p) {
-    p->field = 0; // expected-error {{cannot cast 'test4::Z' to its protected base class 'test4::X'}} expected-error {{'field' is a private member of 'test4::X'}}
+    p->field = 0; // expected-error {{'field' is a private member of 'test4::X'}}
   }
 }
 

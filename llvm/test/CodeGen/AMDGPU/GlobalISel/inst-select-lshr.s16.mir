@@ -75,7 +75,6 @@ body: |
     ; GFX9: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_LSHRREV_B16_e64_]]
     ; GFX10-LABEL: name: lshr_s16_s16_vs
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
@@ -142,7 +141,6 @@ body: |
     ; GFX9: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_LSHRREV_B16_e64_]]
     ; GFX10-LABEL: name: lshr_s16_s16_vv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
@@ -175,7 +173,6 @@ body: |
     ; GFX9: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_LSHRREV_B16_e64_]]
     ; GFX10-LABEL: name: lshr_s16_s16_vv_zext_to_s32
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
@@ -318,7 +315,6 @@ body: |
     ; GFX9: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_LSHRREV_B16_e64_]]
     ; GFX10-LABEL: name: lshr_s16_s16_sv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec

@@ -24,6 +24,7 @@ public:
       const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
       : ABIListFiles(ABIListFiles) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

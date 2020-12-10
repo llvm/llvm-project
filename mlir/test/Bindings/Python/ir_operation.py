@@ -60,7 +60,7 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 1: return
-  # CHECK:    OP 1: "module_terminator"
+  # CHECK:    OP 1: module_terminator
   walk_operations("", op)
 
 run(testTraverseOpRegionBlockIterators)
@@ -97,7 +97,7 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 1: return
-  # CHECK:    OP 1: "module_terminator"
+  # CHECK:    OP 1: module_terminator
   walk_operations("", module.operation)
 
 run(testTraverseOpRegionBlockIndices)
@@ -320,7 +320,7 @@ def testOperationResultList():
       %0:3 = call @f2() : () -> (i32, f64, index)
       return
     }
-    func @f2() -> (i32, f64, index)
+    func private @f2() -> (i32, f64, index)
   """, ctx)
   caller = module.body.operations[0]
   call = caller.regions[0].blocks[0].operations[0]
@@ -474,6 +474,7 @@ def testOperationPrint():
 run(testOperationPrint)
 
 
+# CHECK-LABEL: TEST: testKnownOpView
 def testKnownOpView():
   with Context(), Location.unknown():
     Context.current.allow_unregistered_dialects = True
@@ -503,3 +504,77 @@ def testKnownOpView():
     print(repr(custom))
 
 run(testKnownOpView)
+
+
+# CHECK-LABEL: TEST: testSingleResultProperty
+def testSingleResultProperty():
+  with Context(), Location.unknown():
+    Context.current.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      "custom.no_result"() : () -> ()
+      %0:2 = "custom.two_result"() : () -> (f32, f32)
+      %1 = "custom.one_result"() : () -> f32
+    """)
+    print(module)
+
+  try:
+    module.body.operations[0].result
+  except ValueError as e:
+    # CHECK: Cannot call .result on operation custom.no_result which has 0 results
+    print(e)
+  else:
+    assert False, "Expected exception"
+
+  try:
+    module.body.operations[1].result
+  except ValueError as e:
+    # CHECK: Cannot call .result on operation custom.two_result which has 2 results
+    print(e)
+  else:
+    assert False, "Expected exception"
+
+  # CHECK: %1 = "custom.one_result"() : () -> f32
+  print(module.body.operations[2])
+
+run(testSingleResultProperty)
+
+# CHECK-LABEL: TEST: testPrintInvalidOperation
+def testPrintInvalidOperation():
+  ctx = Context()
+  with Location.unknown(ctx):
+    module = Operation.create("module", regions=1)
+    # This block does not have a terminator, it may crash the custom printer.
+    # Verify that we fallback to the generic printer for safety.
+    block = module.regions[0].blocks.append()
+    print(module)
+    # CHECK: // Verification failed, printing generic form
+    # CHECK: "module"() ( {
+    # CHECK: }) : () -> ()
+run(testPrintInvalidOperation)
+
+
+# CHECK-LABEL: TEST: testCreateWithInvalidAttributes
+def testCreateWithInvalidAttributes():
+  ctx = Context()
+  with Location.unknown(ctx):
+    try:
+      Operation.create("module", attributes={None:StringAttr.get("name")})
+    except Exception as e:
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module" (Unable to cast Python instance of type <class 'NoneType'> to C++ type
+      print(e)
+    try:
+      Operation.create("module", attributes={42:StringAttr.get("name")})
+    except Exception as e:
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module" (Unable to cast Python instance of type <class 'int'> to C++ type
+      print(e)
+    try:
+      Operation.create("module", attributes={"some_key":ctx})
+    except Exception as e:
+      # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "module" (Unable to cast Python instance of type <class '_mlir.ir.Context'> to C++ type 'mlir::python::PyAttribute')
+      print(e)
+    try:
+      Operation.create("module", attributes={"some_key":None})
+    except Exception as e:
+      # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "module"
+      print(e)
+run(testCreateWithInvalidAttributes)

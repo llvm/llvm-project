@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1277,7 +1279,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
 
   MemoryAccess *LifetimeStartClobber =
       MSSA.getWalker()->getClobberingMemoryAccess(
-          LifetimeStartAccess, MemoryLocation(Foo));
+          LifetimeStartAccess, MemoryLocation::getAfter(Foo));
   EXPECT_EQ(LifetimeStartClobber, LifetimeStartAccess);
 }
 

@@ -46,8 +46,15 @@ int main(int, char**)
     assert(s == value);
   }
   {
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    ASSERT_SAME_TYPE(decltype(p.u8string()), std::u8string);
+    std::u8string s = p.u8string();
+    assert(s == (const char8_t*)MS);
+#else
+    ASSERT_SAME_TYPE(decltype(p.u8string()), std::string);
     std::string s = p.u8string();
     assert(s == (const char*)MS);
+#endif
   }
   {
     std::wstring s = p.wstring();

@@ -1,13 +1,13 @@
 ; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,M2,M2-M3
 ; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
-; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R1
+; RUN:    -check-prefixes=ALL,CMOV,CMOV-32
 ; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
-; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
+; RUN:    -check-prefixes=ALL,CMOV,CMOV-32
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
-; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
+; RUN:    -check-prefixes=ALL,CMOV,CMOV-32
 ; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
-; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
+; RUN:    -check-prefixes=ALL,CMOV,CMOV-32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,SEL,SEL-32
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \

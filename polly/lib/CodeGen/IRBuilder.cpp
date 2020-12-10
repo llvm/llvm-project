@@ -188,6 +188,28 @@ void ScopAnnotator::annotateSecondLevel(llvm::Instruction *Inst,
   Inst->setMetadata("noalias", SecondLevelOtherAliasScopeList);
 }
 
+/// Find the base pointer of an array access.
+///
+/// This should be equivalent to ScalarEvolution::getPointerBase, which we
+/// cannot use here the IR is still under construction which ScalarEvolution
+/// assumes to not be modified.
+static Value *findBasePtr(Value *Val) {
+  while (true) {
+    if (auto *Gep = dyn_cast<GEPOperator>(Val)) {
+      Val = Gep->getPointerOperand();
+      continue;
+    }
+    if (auto *Cast = dyn_cast<BitCastOperator>(Val)) {
+      Val = Cast->getOperand(0);
+      continue;
+    }
+
+    break;
+  }
+
+  return Val;
+}
+
 void ScopAnnotator::annotate(Instruction *Inst) {
   if (!Inst->mayReadOrWriteMemory())
     return;
@@ -209,15 +231,7 @@ void ScopAnnotator::annotate(Instruction *Inst) {
   if (!Ptr)
     return;
 
-  auto *PtrSCEV = SE->getSCEV(Ptr);
-  auto *BaseSCEV = SE->getPointerBase(PtrSCEV);
-  auto *SU = dyn_cast<SCEVUnknown>(BaseSCEV);
-
-  if (!SU)
-    return;
-
-  auto *BasePtr = SU->getValue();
-
+  Value *BasePtr = findBasePtr(Ptr);
   if (!BasePtr)
     return;
 

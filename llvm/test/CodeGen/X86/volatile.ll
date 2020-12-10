@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=sse2 | FileCheck %s
 ; RUN: llc < %s -mtriple=i686-- -mattr=sse2 -O0 | FileCheck %s
 
-@x = external global double
+@x = external dso_local global double
 
 define void @foo() nounwind  {
 ; CHECK-LABEL: foo:

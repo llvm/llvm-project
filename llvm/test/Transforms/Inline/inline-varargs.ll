@@ -24,11 +24,11 @@ define signext i16 @test_callee_2(...) {
 }
 
 define void @test_caller_2(i8* %p, i8* %q, i16 %r) {
-  call signext i16 (...) @test_callee_2(i8* %p, i8* byval %q, i16 signext %r)
+  call signext i16 (...) @test_callee_2(i8* %p, i8* byval(i8) %q, i16 signext %r)
   ret void
 }
 ; CHECK-LABEL: define void @test_caller_2
-; CHECK: call signext i16 (...) @vararg_fn(i8* %p, i8* byval %q, i16 signext %r) [[FN_ATTRS:#[0-9]+]]
+; CHECK: call signext i16 (...) @vararg_fn(i8* %p, i8* byval(i8) %q, i16 signext %r) [[FN_ATTRS:#[0-9]+]]
 
 define void @test_callee_3(i8* %p, ...) {
   call signext i16 (...) @vararg_fn()

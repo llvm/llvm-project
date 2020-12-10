@@ -38,3 +38,16 @@ def testFileLineCol():
 
 run(testFileLineCol)
 
+
+# CHECK-LABEL: TEST: testLocationCapsule
+def testLocationCapsule():
+  with Context() as ctx:
+    loc1 = Location.file("foo.txt", 123, 56)
+  # CHECK: mlir.ir.Location._CAPIPtr
+  loc_capsule = loc1._CAPIPtr
+  print(loc_capsule)
+  loc2 = Location._CAPICreate(loc_capsule)
+  assert loc2 == loc1
+  assert loc2.context is ctx
+
+run(testLocationCapsule)

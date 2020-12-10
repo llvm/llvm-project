@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=i686-- | FileCheck %s
 	%struct._obstack_chunk = type { i8*, %struct._obstack_chunk*, [4 x i8] }
 	%struct.obstack = type { i32, %struct._obstack_chunk*, i8*, i8*, i8*, i32, i32, %struct._obstack_chunk* (...)*, void (...)*, i8*, i8 }
-@stmt_obstack = external global %struct.obstack		; <%struct.obstack*> [#uses=1]
+@stmt_obstack = external dso_local global %struct.obstack		; <%struct.obstack*> [#uses=1]
 
 ; This should just not crash.
 define void @test1() nounwind {

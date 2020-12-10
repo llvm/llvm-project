@@ -11,9 +11,9 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -28,6 +28,7 @@ struct QuantizedTypeStorage;
 struct AnyQuantizedTypeStorage;
 struct UniformQuantizedTypeStorage;
 struct UniformQuantizedPerAxisTypeStorage;
+struct CalibratedQuantizedTypeStorage;
 
 } // namespace detail
 
@@ -369,6 +370,34 @@ public:
     return llvm::all_of(getZeroPoints(),
                         [](int64_t zeroPoint) { return zeroPoint != 0; });
   }
+};
+
+/// A quantized type that infers its range from given min/max values.
+///
+/// Typical syntax:
+///   quant.calibrated<f32<-0.922,0.981>>
+class CalibratedQuantizedType
+    : public Type::TypeBase<CalibratedQuantizedType, QuantizedType,
+                            detail::CalibratedQuantizedTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Gets an instance of the type with all parameters specified but not
+  /// checked.
+  static CalibratedQuantizedType get(Type expressedType, double min,
+                                     double max);
+
+  /// Gets an instance of the type with all specified parameters checked.
+  /// Returns a nullptr convertible type on failure.
+  static CalibratedQuantizedType getChecked(Type expressedType, double min,
+                                            double max, Location location);
+
+  /// Verifies construction invariants and issues errors/warnings.
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    Type expressedType,
+                                                    double min, double max);
+  double getMin() const;
+  double getMax() const;
 };
 
 } // namespace quant

@@ -3,8 +3,8 @@
 ; This tests correct handling of empty aggregate parameters and return values.
 ; An empty parameter passed by value does not consume a protocol register or
 ; a parameter save area doubleword.  An empty parameter passed by reference
-; is treated as any other pointer parameter.  An empty aggregate return value 
-; is treated as any other aggregate return value, passed via address as a 
+; is treated as any other pointer parameter.  An empty aggregate return value
+; is treated as any other aggregate return value, passed via address as a
 ; hidden parameter in GPR3.  In this example, GPR3 contains the return value
 ; address, GPR4 contains the address of e2, and e1 and e3 are not passed or
 ; received.
@@ -14,7 +14,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.empty = type {}
 
-define void @callee(%struct.empty* noalias sret %agg.result, %struct.empty* byval %a1, %struct.empty* %a2, %struct.empty* byval %a3) nounwind {
+define void @callee(%struct.empty* noalias sret(%struct.empty) %agg.result, %struct.empty* byval(%struct.empty) %a1, %struct.empty* %a2, %struct.empty* byval(%struct.empty) %a3) nounwind {
 entry:
   %a2.addr = alloca %struct.empty*, align 8
   store %struct.empty* %a2, %struct.empty** %a2.addr, align 8
@@ -33,12 +33,12 @@ entry:
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
-define void @caller(%struct.empty* noalias sret %agg.result) nounwind {
+define void @caller(%struct.empty* noalias sret(%struct.empty) %agg.result) nounwind {
 entry:
   %e1 = alloca %struct.empty, align 1
   %e2 = alloca %struct.empty, align 1
   %e3 = alloca %struct.empty, align 1
-  call void @callee(%struct.empty* sret %agg.result, %struct.empty* byval %e1, %struct.empty* %e2, %struct.empty* byval %e3)
+  call void @callee(%struct.empty* sret(%struct.empty) %agg.result, %struct.empty* byval(%struct.empty) %e1, %struct.empty* %e2, %struct.empty* byval(%struct.empty) %e3)
   ret void
 }
 

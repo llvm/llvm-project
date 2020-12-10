@@ -48,7 +48,6 @@
 
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -58,6 +57,8 @@
 using namespace llvm;
 
 namespace llvm {
+class AAResults;
+
 void initializeScopDetectionWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
@@ -161,7 +162,7 @@ public:
     MapInsnToMemAcc InsnToMemAcc;
 
     /// Initialize a DetectionContext from scratch.
-    DetectionContext(Region &R, AliasAnalysis &AA, bool Verify)
+    DetectionContext(Region &R, AAResults &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R) {}
 
     /// Initialize a DetectionContext with the data from @p DC.
@@ -197,7 +198,7 @@ private:
   ScalarEvolution &SE;
   LoopInfo &LI;
   RegionInfo &RI;
-  AliasAnalysis &AA;
+  AAResults &AA;
   //@}
 
   /// Map to remember detection contexts for all regions.
@@ -518,7 +519,7 @@ private:
 
 public:
   ScopDetection(Function &F, const DominatorTree &DT, ScalarEvolution &SE,
-                LoopInfo &LI, RegionInfo &RI, AliasAnalysis &AA,
+                LoopInfo &LI, RegionInfo &RI, AAResults &AA,
                 OptimizationRemarkEmitter &ORE);
 
   /// Get the RegionInfo stored in this pass.

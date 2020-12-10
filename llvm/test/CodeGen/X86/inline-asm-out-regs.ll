@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu
 ; PR3391
 
-@pci_indirect = external global { }             ; <{ }*> [#uses=1]
-@pcibios_last_bus = external global i32         ; <i32*> [#uses=2]
+@pci_indirect = external dso_local global { }             ; <{ }*> [#uses=1]
+@pcibios_last_bus = external dso_local global i32         ; <i32*> [#uses=2]
 
 define void @pci_pcbios_init() nounwind section ".init.text" {
 entry:

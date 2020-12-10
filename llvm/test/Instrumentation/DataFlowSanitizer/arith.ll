@@ -4,12 +4,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @add(i8 %a, i8 %b) {
   ; CHECK: @"dfs$add"
-  ; CHECK-DAG: %[[ALABEL:.*]] = load{{.*}}__dfsan_arg_tls, i64 0, i64 0
-  ; CHECK-DAG: %[[BLABEL:.*]] = load{{.*}}__dfsan_arg_tls, i64 0, i64 1
-  ; CHECK: %[[UNION:.*]] = call{{.*}}__dfsan_union(i16 zeroext %[[ALABEL]], i16 zeroext %[[BLABEL]])
-  ; CHECK: %[[ADDLABEL:.*]] = phi i16 [ %[[UNION]], {{.*}} ], [ %[[ALABEL]], {{.*}} ]
+  ; CHECK-DAG: %[[ALABEL:.*]] = load [[SHADOWTYPE:i16]], [[SHADOWTYPE]]* bitcast ([[ARGTLSTYPE:\[100 x i64\]]]* @__dfsan_arg_tls to [[SHADOWTYPE]]*), align [[ALIGN:2]]
+  ; CHECK-DAG: %[[BLABEL:.*]] = load [[SHADOWTYPE]], [[SHADOWTYPE]]* inttoptr (i64 add (i64 ptrtoint ([[ARGTLSTYPE]]* @__dfsan_arg_tls to i64), i64 2) to [[SHADOWTYPE]]*), align [[ALIGN]]
+  ; CHECK: %[[UNION:.*]] = call zeroext [[SHADOWTYPE]] @__dfsan_union([[SHADOWTYPE]] zeroext %[[ALABEL]], [[SHADOWTYPE]] zeroext %[[BLABEL]])
+  ; CHECK: %[[ADDLABEL:.*]] = phi [[SHADOWTYPE]] [ %[[UNION]], {{.*}} ], [ %[[ALABEL]], {{.*}} ]
   ; CHECK: add i8
-  ; CHECK: store i16 %[[ADDLABEL]], i16* @__dfsan_retval_tls
+  ; CHECK: store [[SHADOWTYPE]] %[[ADDLABEL]], [[SHADOWTYPE]]* bitcast ([100 x i64]* @__dfsan_retval_tls to [[SHADOWTYPE]]*), align [[ALIGN]]
   ; CHECK: ret i8
   %c = add i8 %a, %b
   ret i8 %c

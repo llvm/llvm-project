@@ -208,7 +208,7 @@ Optional<int> VPIntrinsic::GetMaskParamPos(Intrinsic::ID IntrinsicID) {
   default:
     return None;
 
-#define REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                          \
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
   case Intrinsic::VPID:                                                        \
     return MASKPOS;
 #include "llvm/IR/VPIntrinsics.def"
@@ -220,7 +220,7 @@ Optional<int> VPIntrinsic::GetVectorLengthParamPos(Intrinsic::ID IntrinsicID) {
   default:
     return None;
 
-#define REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                          \
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
   case Intrinsic::VPID:                                                        \
     return VLENPOS;
 #include "llvm/IR/VPIntrinsics.def"
@@ -232,7 +232,7 @@ bool VPIntrinsic::IsVPIntrinsic(Intrinsic::ID ID) {
   default:
     return false;
 
-#define REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                          \
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
   case Intrinsic::VPID:                                                        \
     break;
 #include "llvm/IR/VPIntrinsics.def"
@@ -242,25 +242,26 @@ bool VPIntrinsic::IsVPIntrinsic(Intrinsic::ID ID) {
 
 // Equivalent non-predicated opcode
 unsigned VPIntrinsic::GetFunctionalOpcodeForVP(Intrinsic::ID ID) {
+  unsigned FunctionalOC = Instruction::Call;
   switch (ID) {
   default:
-    return Instruction::Call;
-
-#define HANDLE_VP_TO_OC(VPID, OC)                                              \
-  case Intrinsic::VPID:                                                        \
-    return Instruction::OC;
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define HANDLE_VP_TO_OPC(OPC) FunctionalOC = Instruction::OPC;
+#define END_REGISTER_VP_INTRINSIC(...) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
+
+  return FunctionalOC;
 }
 
-Intrinsic::ID VPIntrinsic::GetForOpcode(unsigned OC) {
-  switch (OC) {
+Intrinsic::ID VPIntrinsic::GetForOpcode(unsigned IROPC) {
+  switch (IROPC) {
   default:
     return Intrinsic::not_intrinsic;
 
-#define HANDLE_VP_TO_OC(VPID, OC)                                              \
-  case Instruction::OC:                                                        \
-    return Intrinsic::VPID;
+#define HANDLE_VP_TO_OPC(OPC) case Instruction::OPC:
+#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
 #include "llvm/IR/VPIntrinsics.def"
   }
 }

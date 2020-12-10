@@ -425,18 +425,21 @@ int main(int argc, const char **argv) {
         if (!Args.empty()) {
           std::size_t Idx = Args.size() - 1;
           for (auto It = Args.rbegin(); It != Args.rend(); ++It) {
-            if (It != Args.rbegin()) {
-              if (Args[Idx] == "-o")
+            StringRef Arg = Args[Idx];
+            if (LastO.empty()) {
+              if (Arg == "-o" && It != Args.rbegin())
                 LastO = Args[Idx + 1];
-              if (Args[Idx] == "-MT")
-                HasMT = true;
-              if (Args[Idx] == "-MQ")
-                HasMQ = true;
-              if (Args[Idx] == "-MD")
-                HasMD = true;
-              if (Args[Idx] == "-resource-dir")
-                HasResourceDir = true;
+              else if (Arg.startswith("-o"))
+                LastO = Arg.drop_front(2).str();
             }
+            if (Arg == "-MT")
+              HasMT = true;
+            if (Arg == "-MQ")
+              HasMQ = true;
+            if (Arg == "-MD")
+              HasMD = true;
+            if (Arg == "-resource-dir")
+              HasResourceDir = true;
             --Idx;
           }
         }

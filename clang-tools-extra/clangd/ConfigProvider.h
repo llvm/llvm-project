@@ -38,13 +38,16 @@ struct Params {
   llvm::StringRef Path;
   /// Hint that stale data is OK to improve performance (e.g. avoid IO).
   /// FreshTime sets a bound for how old the data can be.
-  /// If not set, providers should validate caches against the data source.
-  llvm::Optional<std::chrono::steady_clock::time_point> FreshTime;
+  /// By default, providers should validate caches against the data source.
+  std::chrono::steady_clock::time_point FreshTime =
+      std::chrono::steady_clock::time_point::max();
 };
 
 /// Used to report problems in parsing or interpreting a config.
 /// Errors reflect structurally invalid config that should be user-visible.
 /// Warnings reflect e.g. unknown properties that are recoverable.
+/// Notes are used to report files and fragments.
+/// (This can be used to track when previous warnings/errors have been "fixed").
 using DiagnosticCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
 
 /// A chunk of configuration that has been fully analyzed and is ready to apply.

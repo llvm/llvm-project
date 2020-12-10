@@ -73,3 +73,8 @@ func @f(%arg0: i64 {test.invalid_attr}) {
 func @f(%arg0: i64) -> (i64 {test.invalid_attr}) {
   return %arg0 : i64
 }
+
+// -----
+
+// expected-error@+1 {{symbol declaration cannot have public visibility}}
+func @invalid_public_declaration()

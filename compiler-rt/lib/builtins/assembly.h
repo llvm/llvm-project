@@ -35,14 +35,14 @@
 #define HIDDEN(name) .hidden name
 #define LOCAL_LABEL(name) .L_##name
 #define FILE_LEVEL_DIRECTIVE
-#if defined(__arm__)
+#if defined(__arm__) || defined(__aarch64__)
 #define SYMBOL_IS_FUNC(name) .type name,%function
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
 #define CONST_SECTION .section .rodata
 
-#if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
+#if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||        \
     defined(__linux__)
 #define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits
 #else
@@ -63,6 +63,66 @@
 
 #define NO_EXEC_STACK_DIRECTIVE
 
+#endif
+
+#if defined(__arm__) || defined(__aarch64__)
+#define FUNC_ALIGN                                                             \
+  .text SEPARATOR                                                              \
+  .balign 16 SEPARATOR
+#else
+#define FUNC_ALIGN
+#endif
+
+// BTI and PAC gnu property note
+#define NT_GNU_PROPERTY_TYPE_0 5
+#define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
+#define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
+#define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+#define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
+#else
+#define BTI_FLAG 0
+#endif
+
+#if __ARM_FEATURE_PAC_DEFAULT & 3
+#define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
+#else
+#define PAC_FLAG 0
+#endif
+
+#define GNU_PROPERTY(type, value)                                              \
+  .pushsection .note.gnu.property, "a" SEPARATOR                               \
+  .p2align 3 SEPARATOR                                                         \
+  .word 4 SEPARATOR                                                            \
+  .word 16 SEPARATOR                                                           \
+  .word NT_GNU_PROPERTY_TYPE_0 SEPARATOR                                       \
+  .asciz "GNU" SEPARATOR                                                       \
+  .word type SEPARATOR                                                         \
+  .word 4 SEPARATOR                                                            \
+  .word value SEPARATOR                                                        \
+  .word 0 SEPARATOR                                                            \
+  .popsection
+
+#if BTI_FLAG != 0
+#define BTI_C bti c
+#else
+#define BTI_C
+#endif
+
+#if (BTI_FLAG | PAC_FLAG) != 0
+#define GNU_PROPERTY_BTI_PAC                                                   \
+  GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+#else
+#define GNU_PROPERTY_BTI_PAC
+#endif
+
+#if defined(__clang__) || defined(__GCC_HAVE_DWARF2_CFI_ASM)
+#define CFI_START .cfi_startproc
+#define CFI_END .cfi_endproc
+#else
+#define CFI_START
+#define CFI_END
 #endif
 
 #if defined(__arm__)
@@ -131,8 +191,14 @@
 #define DEFINE_CODE_STATE
 #endif
 
-#define GLUE2(a, b) a##b
-#define GLUE(a, b) GLUE2(a, b)
+#define GLUE2_(a, b) a##b
+#define GLUE(a, b) GLUE2_(a, b)
+#define GLUE2(a, b) GLUE2_(a, b)
+#define GLUE3_(a, b, c) a##b##c
+#define GLUE3(a, b, c) GLUE3_(a, b, c)
+#define GLUE4_(a, b, c, d) a##b##c##d
+#define GLUE4(a, b, c, d) GLUE4_(a, b, c, d)
+
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
 
 #ifdef VISIBILITY_HIDDEN
@@ -177,6 +243,16 @@
   DECLARE_FUNC_ENCODING                                                        \
   name:
 
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
+  DEFINE_CODE_STATE                                                            \
+  FUNC_ALIGN                                                                   \
+  .globl name SEPARATOR                                                        \
+  SYMBOL_IS_FUNC(name) SEPARATOR                                               \
+  DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
+  CFI_START SEPARATOR                                                          \
+  DECLARE_FUNC_ENCODING                                                        \
+  name: SEPARATOR BTI_C
+
 #define DEFINE_COMPILERRT_FUNCTION_ALIAS(name, target)                         \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
@@ -193,8 +269,13 @@
 #ifdef __ELF__
 #define END_COMPILERRT_FUNCTION(name)                                          \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
+#define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
+  CFI_END SEPARATOR                                                            \
+  .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
 #else
 #define END_COMPILERRT_FUNCTION(name)
+#define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
+  CFI_END
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H

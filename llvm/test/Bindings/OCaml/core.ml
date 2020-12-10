@@ -262,6 +262,14 @@ let test_constants () =
   insist (i1_type = type_of c);
   insist (is_undef c);
 
+  (* CHECK: const_poison{{.*}}poison
+   *)
+  group "poison";
+  let c = poison i1_type in
+  ignore (define_global "const_poison" c m);
+  insist (i1_type = type_of c);
+  insist (is_poison c);
+
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw

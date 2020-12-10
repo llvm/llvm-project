@@ -17,10 +17,10 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -109,8 +109,8 @@ static LogicalResult verify(MmaOp op) {
                           "<halfx2>s or 8 floats");
   }
 
-  auto alayout = op.getAttrOfType<StringAttr>("alayout");
-  auto blayout = op.getAttrOfType<StringAttr>("blayout");
+  auto alayout = op->getAttrOfType<StringAttr>("alayout");
+  auto blayout = op->getAttrOfType<StringAttr>("blayout");
 
   if (!(alayout && blayout) ||
       !(alayout.getValue() == "row" || alayout.getValue() == "col") ||

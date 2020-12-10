@@ -31,7 +31,7 @@ define i32 @test1(%struct.foo* nocapture %foobie) nounwind noinline ssp uwtable 
 }
 
 ; Check that the memcpy is removed.
-define void @test2(i8* sret noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
+define void @test2(i8* sret(i8) noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[IN:%.*]])
 ; CHECK-NEXT:    ret void
@@ -42,7 +42,7 @@ define void @test2(i8* sret noalias nocapture %out, i8* %in) nounwind noinline s
 }
 
 ; Check that the memcpy is not removed.
-define void @test3(i8* sret noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
+define void @test3(i8* sret(i8) noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[IN:%.*]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[OUT:%.*]], i8* [[IN]], i64 8, i1 false)

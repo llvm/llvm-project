@@ -17,6 +17,7 @@ add_mlir_dialect_library(MLIRGPU
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
+  MLIRAsync
   MLIREDSC
   MLIRIR
   MLIRLLVMIR

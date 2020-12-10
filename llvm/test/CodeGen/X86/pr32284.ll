@@ -4,7 +4,7 @@
 ; RUN: llc -fast-isel-sink-local-values -O0 -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=686-O0
 ; RUN: llc -fast-isel-sink-local-values     -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=686
 
-@c = external constant i8, align 1
+@c = external dso_local constant i8, align 1
 
 define void @foo() {
 ; X86-O0-LABEL: foo:
@@ -115,9 +115,9 @@ entry:
   ret void
 }
 
-@var_5 = external global i32, align 4
-@var_57 = external global i64, align 8
-@_ZN8struct_210member_2_0E = external global i64, align 8
+@var_5 = external dso_local global i32, align 4
+@var_57 = external dso_local global i64, align 8
+@_ZN8struct_210member_2_0E = external dso_local global i64, align 8
 
 define void @f1() {
 ; X86-O0-LABEL: f1:
@@ -280,7 +280,7 @@ entry:
 }
 
 
-@var_7 = external global i8, align 1
+@var_7 = external dso_local global i8, align 1
 
 define void @f2() {
 ; X86-O0-LABEL: f2:
@@ -406,9 +406,9 @@ entry:
 }
 
 
-@var_13 = external global i32, align 4
-@var_16 = external global i32, align 4
-@var_46 = external global i32, align 4
+@var_13 = external dso_local global i32, align 4
+@var_16 = external dso_local global i32, align 4
+@var_46 = external dso_local global i32, align 4
 
 define void @f3() #0 {
 ; X86-O0-LABEL: f3:

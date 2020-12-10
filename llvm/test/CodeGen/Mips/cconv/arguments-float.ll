@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -relocation-model=static -mattr=+soft-float < %s | FileCheck --check-prefixes=ALL,SYM32,O32,O32BE %s
-; RUN: llc -march=mipsel -relocation-model=static -mattr=+soft-float < %s | FileCheck --check-prefixes=ALL,SYM32,O32,O32LE %s
+; RUN: llc -march=mips -relocation-model=static -mattr=+soft-float < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s
+; RUN: llc -march=mipsel -relocation-model=static -mattr=+soft-float < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s
 
 ; RUN-TODO: llc -march=mips64 -relocation-model=static -mattr=+soft-float -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s
 ; RUN-TODO: llc -march=mips64el -relocation-model=static -mattr=+soft-float -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s

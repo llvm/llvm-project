@@ -15,7 +15,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_SPAWN_CC1
   ENABLE_BACKTRACES
-  ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
+  LLVM_ENABLE_NEW_PASS_MANAGER
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_PLUGINS
@@ -92,6 +92,7 @@ if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     Attribute
     AnnotateFunctions
+    CallSuperAttr
     clang-interpreter
     PrintFunctionNames
     )
@@ -123,6 +124,8 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-readobj
     llvm-symbolizer
     opt
+    split-file
+    yaml2obj
     )
 
   if(TARGET llvm-lto)

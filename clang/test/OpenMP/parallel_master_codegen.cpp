@@ -208,18 +208,18 @@ void parallel_master_default_firstprivate() {
 // CK32-LABEL: define {{.+}} @{{.+}}parallel_master_default_firstprivate{{.+}}
 // CK32: [[A_VAL:%.+]] = alloca %struct.St{{.+}}
 // CK32: [[Y_CASTED:%.+]] = alloca i64
-// CK32: call void @[[CTOR:.+]](%struct.St* [[A_VAL]])
+// CK32: call void @[[CTOR:.+]](%struct.St* {{[^,]*}} [[A_VAL]])
 // CK32: [[ZERO:%.+]] = load i32, i32* @{{.+}}parallel_master_default_firstprivate{{.+}}
 // CK32: [[CONV:%.+]] = bitcast i64* [[Y_CASTED]] to i32*
 // CK32: store i32 [[ZERO]], i32* [[CONV]]
 // CK32: [[ONE:%.+]] = load i64, i64* [[Y_CASTED]]
 // CK32: call void {{.+}}@{{.+}} %struct.St* [[A_VAL]], i64 [[ONE]])
-// CK32: call void [[DTOR:@.+]](%struct.St* [[A_VAL]])
+// CK32: call void [[DTOR:@.+]](%struct.St* {{[^,]*}} [[A_VAL]])
 
 // CK32: [[THIS_ADDR:%.+]] = alloca %struct.St*
 // CK32: store %struct.St* [[THIS:%.+]], %struct.St** [[THIS_ADDR]]
 // CK32: [[THIS_ONE:%.+]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
-// CK32: call void [[CTOR_2:.+]](%struct.St* [[THIS_ONE]])
+// CK32: call void [[CTOR_2:.+]](%struct.St* {{[^,]*}} [[THIS_ONE]])
 // CK32: ret void
 
 // CK32: [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
@@ -253,11 +253,11 @@ void parallel_master_default_firstprivate() {
 // CK32: call void @{{.+}} i32 [[TWO]])
 // CK32: br label [[IF_END]]
 
-// CK32: [[DTOR]](%struct.St* [[THIS]])
+// CK32: [[DTOR]](%struct.St* {{[^,]*}} [[THIS]])
 // CK32: [[THIS_ADDR]] = alloca %struct.St*
 // CK32: store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]]
 // CK32: [[THIS_ONE]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
-// CK32: call void @_ZN2StD2Ev(%struct.St* [[THIS_ONE]])
+// CK32: call void @_ZN2StD2Ev(%struct.St* {{[^,]*}} [[THIS_ONE]])
 
 // CK32: [[THIS_ADDR]] = alloca %struct.St*
 // CK32: store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]]

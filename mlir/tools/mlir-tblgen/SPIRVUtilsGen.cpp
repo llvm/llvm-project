@@ -562,9 +562,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   if (areOperandsAheadOfAttrs) {
     if (op.getNumOperands() != 0) {
       os << tabs
-         << formatv(
-                "for (Value operand : {0}.getOperation()->getOperands()) {{\n",
-                opVar);
+         << formatv("for (Value operand : {0}->getOperands()) {{\n", opVar);
       os << tabs << "  auto id = getValueID(operand);\n";
       os << tabs << "  assert(id && \"use before def!\");\n";
       os << tabs << formatv("  {0}.push_back(id);\n", operands);

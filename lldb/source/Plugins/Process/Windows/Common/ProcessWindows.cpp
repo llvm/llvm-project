@@ -79,7 +79,8 @@ namespace lldb_private {
 
 ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
                                          lldb::ListenerSP listener_sp,
-                                         const FileSpec *) {
+                                         const FileSpec *,
+                                         bool can_connect) {
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 

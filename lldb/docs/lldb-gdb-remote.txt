@@ -235,7 +235,36 @@ send packet: QListThreadsInStopReply
 read packet: OK
 
 //----------------------------------------------------------------------
+// jLLDBTraceSupportedType
+//
+// BRIEF
+//  Get the processor tracing type supported by the gdb-server for the current
+//  inferior. Responses might be different depending on the architecture and
+//  capabilities of the underlying OS.
+//
+//  The return packet is a JSON object with the following schema
+//
+//  {
+//    "name": <tracing technology name, e.g. intel-pt, arm-coresight>
+//    "description": <description string for this technology>
+//  }
+//
+//  If no tracing technology is supported for the inferior, or no process is
+//  running, then an error should be returned.
+//
+// NOTE
+//  This packet is used by Trace plug-ins (see lldb_private::Trace.h) to
+//  do live tracing. Specifically, the name of the plug-in should match the name
+//  of the tracing technology returned by this packet.
+//----------------------------------------------------------------------
+
+send packet: jLLDBTraceSupportedType
+read packet: {"name": <name>, "description", <description>}/E<error code>;AAAAAAAAA
+
+//----------------------------------------------------------------------
 // jTraceStart:
+//
+// This packet is deprecated.
 //
 // BRIEF
 //  Packet for starting trace of type lldb::TraceType. The following
@@ -286,6 +315,8 @@ read packet: <trace id>/E<error code>;AAAAAAAAA
 //----------------------------------------------------------------------
 // jTraceStop:
 //
+// This packet is deprecated.
+//
 // BRIEF
 //  Stop tracing instance with trace id <trace id>, of course trace
 //  needs to be started before. The following parameters should be
@@ -320,6 +351,8 @@ read packet: <OK response>/E<error code>;AAAAAAAAA
 //----------------------------------------------------------------------
 // jTraceBufferRead:
 //
+// This packet is deprecated.
+//
 // BRIEF
 //  Packet for reading the trace for tracing instance <trace id>, i.e the
 //  id obtained from StartTrace API. The following parameters should be
@@ -353,12 +386,16 @@ read packet: <binary trace data>/E<error code>;AAAAAAAAA
 //----------------------------------------------------------------------
 // jTraceMetaRead:
 //
+// This packet is deprecated.
+//
 // BRIEF
 //  Similar Packet as above except it reads meta data.
 //----------------------------------------------------------------------
 
 /----------------------------------------------------------------------
 // jTraceConfigRead:
+//
+// This packet is deprecated.
 //
 // BRIEF
 //  Request the trace configuration for the tracing instance with id
@@ -1085,6 +1122,11 @@ tuples to return are:
                  // regions backed by a file it have to be the absolute path of
                  // the file while for anonymous regions it have to be the name
                  // associated to the region if that is available.
+
+    flags:<flags-string>; // where <flags-string> is a space separated string
+                          // of flag names. Currently the only supported flag
+                          // is "mt" for AArch64 memory tagging. lldb will
+                          // ignore any other flags in this field.
 
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that

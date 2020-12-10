@@ -1287,8 +1287,41 @@ bb:
 ; GCN: v_accvgpr_read_b32
 ; GCN: v_accvgpr_read_b32
 ; GCN: global_store_dwordx4
-define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat(<4 x float> addrspace(1)* %arg) {
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat(<4 x float> addrspace(1)* %arg, i64 %idx) {
 bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %arg, i32 %tid
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> <float 123.0, float 123.0, float 123.0, float 123.0>, i32 0, i32 0, i32 0)
+  ;store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  store <4 x float> %mai.1, <4 x float> addrspace(1)* %gep
+  ret void
+}
+
+; FIXME: Resulting code for splat is pretty bad. A v_mov_b32 is moved
+; in the middle of the expanded agpr reg_sequence. The broadcast of
+; the individual AGPR->AGPR components should avoid the intermediate AGPR case.
+; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32_lit_splat_bad_code:
+; GCN: v_mov_b32_e32 [[VTMP0:v[0-9]+]], 0x42f60000
+; GCN: v_accvgpr_write_b32 [[AGPR:a[0-9]+]], [[VTMP0]]
+; GCN: s_nop 0
+; GCN: v_accvgpr_read_b32 [[VTMP1:v[0-9]+]], [[AGPR]]
+; GCN: v_accvgpr_read_b32 [[VTMP2:v[0-9]+]], [[AGPR]]
+; GCN: v_accvgpr_read_b32 [[VTMP3:v[0-9]+]], [[AGPR]]
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, [[VTMP1]]
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, [[VTMP2]]
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, [[VTMP3]]
+; GCN: s_nop 0
+; GCN: v_mfma_f32_4x4x1f32 a[{{[0-9]+:[0-9]+}}], {{v[0-9]+}}, {{v[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
+; GCN: v_accvgpr_read_b32
+; GCN: v_accvgpr_read_b32
+; GCN: v_accvgpr_read_b32
+; GCN: v_accvgpr_read_b32
+; GCN: global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f32_4x4x1f32_lit_splat_bad_code(<4 x float> addrspace(1)* %arg) {
+bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %arg, i32 %tid
+
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 2.0, <4 x float> <float 123.0, float 123.0, float 123.0, float 123.0>, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
   ret void

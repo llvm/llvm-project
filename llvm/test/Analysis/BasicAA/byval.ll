@@ -4,7 +4,7 @@ target triple = "i686-apple-darwin8"
 	%struct.x = type { i32, i32, i32, i32 }
 @g = weak global i32 0		; <i32*> [#uses=1]
 
-define i32 @foo(%struct.x* byval  %a) nounwind  {
+define i32 @foo(%struct.x* byval(%struct.x) %a) nounwind  {
 ; CHECK: ret i32 1
   %tmp1 = tail call i32 (...) @bar( %struct.x* %a ) nounwind 		; <i32> [#uses=0]
   %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0		; <i32*> [#uses=2]

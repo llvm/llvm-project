@@ -845,6 +845,103 @@ bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes) {
   return support::endian::read32be(Bytes.data()) == 0;
 }
 
+TBVectorExt::TBVectorExt(StringRef TBvectorStrRef) {
+  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(TBvectorStrRef.data());
+  Data = support::endian::read16be(Ptr);
+  VecParmsInfo = support::endian::read32be(Ptr + 2);
+}
+
+#define GETVALUEWITHMASK(X) (Data & (TracebackTable::X))
+#define GETVALUEWITHMASKSHIFT(X, S)                                            \
+  ((Data & (TracebackTable::X)) >> (TracebackTable::S))
+uint8_t TBVectorExt::getNumberOfVRSaved() const {
+  return GETVALUEWITHMASKSHIFT(NumberOfVRSavedMask, NumberOfVRSavedShift);
+}
+
+bool TBVectorExt::isVRSavedOnStack() const {
+  return GETVALUEWITHMASK(IsVRSavedOnStackMask);
+}
+
+bool TBVectorExt::hasVarArgs() const {
+  return GETVALUEWITHMASK(HasVarArgsMask);
+}
+uint8_t TBVectorExt::getNumberOfVectorParms() const {
+  return GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask,
+                               NumberOfVectorParmsShift);
+}
+
+bool TBVectorExt::hasVMXInstruction() const {
+  return GETVALUEWITHMASK(HasVMXInstructionMask);
+}
+#undef GETVALUEWITHMASK
+#undef GETVALUEWITHMASKSHIFT
+
+SmallString<32> TBVectorExt::getVectorParmsInfoString() const {
+  SmallString<32> ParmsType;
+  uint32_t Value = VecParmsInfo;
+  for (uint8_t I = 0; I < getNumberOfVectorParms(); ++I) {
+    if (I != 0)
+      ParmsType += ", ";
+    switch (Value & TracebackTable::ParmTypeMask) {
+    case TracebackTable::ParmTypeIsVectorCharBit:
+      ParmsType += "vc";
+      break;
+
+    case TracebackTable::ParmTypeIsVectorShortBit:
+      ParmsType += "vs";
+      break;
+
+    case TracebackTable::ParmTypeIsVectorIntBit:
+      ParmsType += "vi";
+      break;
+
+    case TracebackTable::ParmTypeIsVectorFloatBit:
+      ParmsType += "vf";
+      break;
+    }
+    Value <<= 2;
+  }
+  return ParmsType;
+}
+
+static SmallString<32> parseParmsTypeWithVecInfo(uint32_t Value,
+                                                 unsigned int ParmsNum) {
+  SmallString<32> ParmsType;
+  unsigned I = 0;
+  bool Begin = false;
+  while (I < ParmsNum || Value) {
+    if (Begin)
+      ParmsType += ", ";
+    else
+      Begin = true;
+
+    switch (Value & TracebackTable::ParmTypeMask) {
+    case TracebackTable::ParmTypeIsFixedBits:
+      ParmsType += "i";
+      ++I;
+      break;
+    case TracebackTable::ParmTypeIsVectorBits:
+      ParmsType += "v";
+      break;
+    case TracebackTable::ParmTypeIsFloatingBits:
+      ParmsType += "f";
+      ++I;
+      break;
+    case TracebackTable::ParmTypeIsDoubleBits:
+      ParmsType += "d";
+      ++I;
+      break;
+    default:
+      assert(false && "Unrecognized bits in ParmsType.");
+    }
+    Value <<= 2;
+  }
+  assert(I == ParmsNum &&
+         "The total parameters number of fixed-point or floating-point "
+         "parameters not equal to the number in the parameter type!");
+  return ParmsType;
+}
+
 static SmallString<32> parseParmsType(uint32_t Value, unsigned ParmsNum) {
   SmallString<32> ParmsType;
   for (unsigned I = 0; I < ParmsNum; ++I) {
@@ -897,10 +994,10 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
     // indicates the presence of vector parameters.
     if (ParmNum > 0) {
       uint32_t ParamsTypeValue = DE.getU32(Cur);
-      // TODO: when hasVectorInfo() is true, we need to implement a new version
-      // of parsing parameter type for vector info.
-      if (Cur && !hasVectorInfo())
-        ParmsType = parseParmsType(ParamsTypeValue, ParmNum);
+      if (Cur)
+        ParmsType = hasVectorInfo()
+                        ? parseParmsTypeWithVecInfo(ParamsTypeValue, ParmNum)
+                        : parseParmsType(ParamsTypeValue, ParmNum);
     }
   }
 
@@ -931,7 +1028,14 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
   if (Cur && isAllocaUsed())
     AllocaRegister = DE.getU8(Cur);
 
-  // TODO: Need to parse vector info and extension table if there is one.
+  if (Cur && hasVectorInfo()) {
+    StringRef VectorExtRef = DE.getBytes(Cur, 6);
+    if (Cur)
+      VecExt = TBVectorExt(VectorExtRef);
+  }
+
+  if (Cur && hasExtensionTable())
+    ExtensionTable = DE.getU8(Cur);
 
   if (!Cur)
     Err = Cur.takeError();
@@ -1029,7 +1133,7 @@ bool XCOFFTracebackTable::hasVectorInfo() const {
   return GETBITWITHMASK(4, HasVectorInfoMask);
 }
 
-uint8_t XCOFFTracebackTable::getNumofGPRsSaved() const {
+uint8_t XCOFFTracebackTable::getNumOfGPRsSaved() const {
   return GETBITWITHMASKSHIFT(4, GPRSavedMask, GPRSavedShift);
 }
 

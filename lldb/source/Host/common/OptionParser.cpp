@@ -8,6 +8,7 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/HostGetOpt.h"
+#include "lldb/Utility/OptionDefinition.h"
 #include "lldb/lldb-private-types.h"
 
 #include <vector>

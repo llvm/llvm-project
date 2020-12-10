@@ -11,7 +11,6 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE42
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,BTVER2
 
-; CHECK: {{^}}
 define i32 @sdiv() {
 ; CHECK-LABEL: 'sdiv'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sdiv i64 undef, undef

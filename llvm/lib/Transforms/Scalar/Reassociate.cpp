@@ -920,6 +920,60 @@ static Value *NegateValue(Value *V, Instruction *BI,
   return NewNeg;
 }
 
+// See if this `or` looks like an load widening reduction, i.e. that it
+// consists of an `or`/`shl`/`zext`/`load` nodes only. Note that we don't
+// ensure that the pattern is *really* a load widening reduction,
+// we do not ensure that it can really be replaced with a widened load,
+// only that it mostly looks like one.
+static bool isLoadCombineCandidate(Instruction *Or) {
+  SmallVector<Instruction *, 8> Worklist;
+  SmallSet<Instruction *, 8> Visited;
+
+  auto Enqueue = [&](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    // Each node of an `or` reduction must be an instruction,
+    if (!I)
+      return false; // Node is certainly not part of an `or` load reduction.
+    // Only process instructions we have never processed before.
+    if (Visited.insert(I).second)
+      Worklist.emplace_back(I);
+    return true; // Will need to look at parent nodes.
+  };
+
+  if (!Enqueue(Or))
+    return false; // Not an `or` reduction pattern.
+
+  while (!Worklist.empty()) {
+    auto *I = Worklist.pop_back_val();
+
+    // Okay, which instruction is this node?
+    switch (I->getOpcode()) {
+    case Instruction::Or:
+      // Got an `or` node. That's fine, just recurse into it's operands.
+      for (Value *Op : I->operands())
+        if (!Enqueue(Op))
+          return false; // Not an `or` reduction pattern.
+      continue;
+
+    case Instruction::Shl:
+    case Instruction::ZExt:
+      // `shl`/`zext` nodes are fine, just recurse into their base operand.
+      if (!Enqueue(I->getOperand(0)))
+        return false; // Not an `or` reduction pattern.
+      continue;
+
+    case Instruction::Load:
+      // Perfect, `load` node means we've reached an edge of the graph.
+      continue;
+
+    default:        // Unknown node.
+      return false; // Not an `or` reduction pattern.
+    }
+  }
+
+  return true;
+}
+
 /// Return true if it may be profitable to convert this (X|Y) into (X+Y).
 static bool ShouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
   // Don't bother to convert this up unless either the LHS is an associable add
@@ -2159,7 +2213,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // If this is a bitwise or instruction of operands
   // with no common bits set, convert it to X+Y.
   if (I->getOpcode() == Instruction::Or &&
-      ShouldConvertOrWithNoCommonBitsToAdd(I) &&
+      ShouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
                           I->getModule()->getDataLayout(), /*AC=*/nullptr, I,
                           /*DT=*/nullptr)) {

@@ -83,49 +83,60 @@ std::unique_ptr<Base> getPointer() {
   // CHECK-FIXES: return std::make_unique<Base>();
 }
 
+std::unique_ptr<Base> getPointerValue() {
+  return std::unique_ptr<Base>(new Base());
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use std::make_unique instead
+  // CHECK-FIXES: return std::make_unique<Base>();
+}
+
 void basic() {
   std::unique_ptr<int> P1 = std::unique_ptr<int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
   // CHECK-FIXES: std::unique_ptr<int> P1 = std::make_unique<int>();
+  std::unique_ptr<int> P2 = std::unique_ptr<int>(new int);
 
   P1.reset(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
   // CHECK-FIXES: P1 = std::make_unique<int>();
+  P2.reset(new int);
 
   P1 = std::unique_ptr<int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_unique instead [modernize-make-unique]
   // CHECK-FIXES: P1 = std::make_unique<int>();
+  P1 = std::unique_ptr<int>(new int);
 
-  // Without parenthesis.
-  std::unique_ptr<int> P2 = std::unique_ptr<int>(new int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
-  // CHECK-FIXES: std::unique_ptr<int> P2 = std::make_unique<int>();
+  // Without parenthesis, default initialization.
+  std::unique_ptr<int> P3 = std::unique_ptr<int>(new int);
 
   P2.reset(new int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
-  // CHECK-FIXES: P2 = std::make_unique<int>();
 
   P2 = std::unique_ptr<int>(new int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_unique instead [modernize-make-unique]
-  // CHECK-FIXES: P2 = std::make_unique<int>();
 
   // With auto.
-  auto P3 = std::unique_ptr<int>(new int());
+  auto P4 = std::unique_ptr<int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
-  // CHECK-FIXES: auto P3 = std::make_unique<int>();
+  // CHECK-FIXES: auto P4 = std::make_unique<int>();
+  auto P5 = std::unique_ptr<int>(new int);
 
-  std::unique_ptr<int> P4 = std::unique_ptr<int>((new int));
+  std::unique_ptr<int> P6 = std::unique_ptr<int>((new int()));
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
-  // CHECK-FIXES: std::unique_ptr<int> P4 = std::make_unique<int>();
-  P4.reset((new int));
+  // CHECK-FIXES: std::unique_ptr<int> P6 = std::make_unique<int>();
+  std::unique_ptr<int> P7 = std::unique_ptr<int>((new int));
+
+  P4.reset((new int()));
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
   // CHECK-FIXES: P4 = std::make_unique<int>();
-  std::unique_ptr<int> P5 = std::unique_ptr<int>((((new int))));
+  P5.reset((new int));
+
+  std::unique_ptr<int> P8 = std::unique_ptr<int>((((new int()))));
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
-  // CHECK-FIXES: std::unique_ptr<int> P5 = std::make_unique<int>();
-  P5.reset(((((new int)))));
+  // CHECK-FIXES: std::unique_ptr<int> P8 = std::make_unique<int>();
+  std::unique_ptr<int> P9 = std::unique_ptr<int>((((new int))));
+
+  P5.reset(((((new int())))));
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
   // CHECK-FIXES: P5 = std::make_unique<int>();
+  P6.reset(((((new int)))));
 
   {
     // No std.
@@ -133,40 +144,55 @@ void basic() {
     unique_ptr<int> Q = unique_ptr<int>(new int());
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use std::make_unique instead
     // CHECK-FIXES: unique_ptr<int> Q = std::make_unique<int>();
+    unique_ptr<int> P = unique_ptr<int>(new int);
 
     Q = unique_ptr<int>(new int());
     // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_unique instead
     // CHECK-FIXES: Q = std::make_unique<int>();
+
+    P = unique_ptr<int>(new int);
   }
 
   std::unique_ptr<int> R(new int());
+  std::unique_ptr<int> S(new int);
 
   // Create the unique_ptr as a parameter to a function.
   int T = g(std::unique_ptr<int>(new int()));
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
   // CHECK-FIXES: int T = g(std::make_unique<int>());
+  T = g(std::unique_ptr<int>(new int));
 
   // Only replace if the type in the template is the same as the type returned
   // by the new operator.
   auto Pderived = std::unique_ptr<Base>(new Derived());
+  auto PderivedNoparen = std::unique_ptr<Base>(new Derived);
 
   // OK to replace for reset and assign
   Pderived.reset(new Derived());
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::make_unique instead
   // CHECK-FIXES: Pderived = std::make_unique<Derived>();
+  PderivedNoparen.reset(new Derived);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use std::make_unique instead
+  // CHECK-FIXES: PderivedNoparen = std::make_unique<Derived>();
 
   Pderived = std::unique_ptr<Derived>(new Derived());
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use std::make_unique instead
   // CHECK-FIXES: Pderived = std::make_unique<Derived>();
+  PderivedNoparen = std::unique_ptr<Derived>(new Derived);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use std::make_unique instead
+  // CHECK-FIXES: PderivedNoparen = std::make_unique<Derived>();
 
   // FIXME: OK to replace if assigned to unique_ptr<Base>
   Pderived = std::unique_ptr<Base>(new Derived());
+  Pderived = std::unique_ptr<Base>(new Derived);
 
   // FIXME: OK to replace when auto is not used
   std::unique_ptr<Base> PBase = std::unique_ptr<Base>(new Derived());
+  std::unique_ptr<Base> PBaseNoparen = std::unique_ptr<Base>(new Derived);
 
   // The pointer is returned by the function, nothing to do.
   std::unique_ptr<Base> RetPtr = getPointer();
+  RetPtr = getPointerValue();
 
   // This emulates std::move.
   std::unique_ptr<int> Move = static_cast<std::unique_ptr<int> &&>(P1);
@@ -176,6 +202,10 @@ void basic() {
   std::unique_ptr<int> Placement = std::unique_ptr<int>(new (PInt) int{3});
   Placement.reset(new (PInt) int{3});
   Placement = std::unique_ptr<int>(new (PInt) int{3});
+
+  std::unique_ptr<int> PlacementNoparen = std::unique_ptr<int>(new (PInt) int);
+  PlacementNoparen.reset(new (PInt) int);
+  PlacementNoparen = std::unique_ptr<int>(new (PInt) int);
 }
 
 // Calling make_smart_ptr from within a member function of a type with a
@@ -446,12 +476,12 @@ void initialization(int T, Base b) {
   // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num2);
 
   std::unique_ptr<int[]> FI;
-  FI.reset(new int[5]()); // default initialization.
+  FI.reset(new int[5]()); // value initialization.
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
   // CHECK-FIXES: FI = std::make_unique<int[]>(5);
 
   // The check doesn't give warnings and fixes for cases where the original new
-  // expression doesn't do any initialization.
+  // expression does default initialization.
   FI.reset(new int[5]);
   FI.reset(new int[Num]);
   FI.reset(new int[Num2]);
@@ -459,15 +489,17 @@ void initialization(int T, Base b) {
 
 void aliases() {
   typedef std::unique_ptr<int> IntPtr;
-  IntPtr Typedef = IntPtr(new int);
+  IntPtr Typedef = IntPtr(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use std::make_unique instead
   // CHECK-FIXES: IntPtr Typedef = std::make_unique<int>();
+  IntPtr Typedef2 = IntPtr(new int);
 
   // We use 'bool' instead of '_Bool'.
   typedef std::unique_ptr<bool> BoolPtr;
-  BoolPtr BoolType = BoolPtr(new bool);
+  BoolPtr BoolType = BoolPtr(new bool());
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use std::make_unique instead
   // CHECK-FIXES: BoolPtr BoolType = std::make_unique<bool>();
+  BoolPtr BoolType2 = BoolPtr(new bool);
 
   // We use 'Base' instead of 'struct Base'.
   typedef std::unique_ptr<Base> BasePtr;
@@ -476,14 +508,16 @@ void aliases() {
 // CHECK-FIXES: BasePtr StructType = std::make_unique<Base>();
 
 #define PTR unique_ptr<int>
-  std::unique_ptr<int> Macro = std::PTR(new int);
-// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use std::make_unique instead
-// CHECK-FIXES: std::unique_ptr<int> Macro = std::make_unique<int>();
+  std::unique_ptr<int> Macro = std::PTR(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<int> Macro = std::make_unique<int>();
+  std::unique_ptr<int> Macro2 = std::PTR(new int);
 #undef PTR
 
-  std::unique_ptr<int> Using = unique_ptr_<int>(new int);
+  std::unique_ptr<int> Using = unique_ptr_<int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<int> Using = std::make_unique<int>();
+  std::unique_ptr<int> Using2 = unique_ptr_<int>(new int);
 }
 
 void whitespaces() {
@@ -491,10 +525,12 @@ void whitespaces() {
   auto Space = std::unique_ptr <int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use std::make_unique instead
   // CHECK-FIXES: auto Space = std::make_unique<int>();
+  auto Space2 = std::unique_ptr <int>(new int);
 
   auto Spaces = std  ::    unique_ptr  <int>(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use std::make_unique instead
   // CHECK-FIXES: auto Spaces = std::make_unique<int>();
+  auto Spaces2 = std  ::    unique_ptr  <int>(new int);
   // clang-format on
 }
 
@@ -505,7 +541,7 @@ void nesting() {
   Nest.reset(new std::unique_ptr<int>(new int));
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_unique instead
   // CHECK-FIXES: Nest = std::make_unique<std::unique_ptr<int>>(new int);
-  Nest->reset(new int);
+  Nest->reset(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_unique instead
   // CHECK-FIXES: *Nest = std::make_unique<int>();
 }
@@ -517,11 +553,13 @@ void reset() {
   P.reset(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use std::make_unique instead
   // CHECK-FIXES: P = std::make_unique<int>();
+  P.reset(new int);
 
   auto Q = &P;
   Q->reset(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead
   // CHECK-FIXES: *Q = std::make_unique<int>();
+  Q->reset(new int);
 }
 
 #define DEFINE(...) __VA_ARGS__
@@ -542,7 +580,13 @@ class UniqueFoo : public std::unique_ptr<Foo> {
     this->reset(new Foo);
     // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use std::make_unique instead
     // CHECK-FIXES: *this = std::make_unique<Foo>();
+    this->reset(new Foo());
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use std::make_unique instead
+    // CHECK-FIXES: *this = std::make_unique<Foo>();
     (*this).reset(new Foo);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
+    // CHECK-FIXES: (*this) = std::make_unique<Foo>();
+    (*this).reset(new Foo());
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
     // CHECK-FIXES: (*this) = std::make_unique<Foo>();
   }
@@ -552,7 +596,9 @@ class UniqueFoo : public std::unique_ptr<Foo> {
 template<typename T>
 void template_fun(T* t) {
   std::unique_ptr<T> t2 = std::unique_ptr<T>(new T);
+  std::unique_ptr<T> t3 = std::unique_ptr<T>(new T());
   t2.reset(new T);
+  t3.reset(new T());
 }
 
 void invoke_template() {

@@ -31,6 +31,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
             ">=",
             "3.9"],
         archs=["i386"],
+        oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug with dwarf."""
@@ -47,6 +48,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
             ">=",
             "3.9"],
         archs=["i386"],
+        oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
     @expectedFailureAll(archs=["arm64"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
     @expectedFailureAll(archs=["aarch64"], oslist=["linux"],

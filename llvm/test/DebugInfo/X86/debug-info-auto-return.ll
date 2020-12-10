@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK: .debug_info contents:
 

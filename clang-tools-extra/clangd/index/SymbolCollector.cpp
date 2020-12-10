@@ -15,6 +15,7 @@
 #include "SourceCode.h"
 #include "SymbolLocation.h"
 #include "URI.h"
+#include "index/Relation.h"
 #include "index/SymbolID.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
@@ -187,9 +188,12 @@ RefKind toRefKind(index::SymbolRoleSet Roles, bool Spelled = false) {
   return Result;
 }
 
-bool shouldIndexRelation(const index::SymbolRelation &R) {
-  // We currently only index BaseOf relations, for type hierarchy subtypes.
-  return R.Roles & static_cast<unsigned>(index::SymbolRole::RelationBaseOf);
+llvm::Optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
+  if (R.Roles & static_cast<unsigned>(index::SymbolRole::RelationBaseOf))
+    return RelationKind::BaseOf;
+  if (R.Roles & static_cast<unsigned>(index::SymbolRole::RelationOverrideOf))
+    return RelationKind::OverriddenBy;
+  return None;
 }
 
 } // namespace
@@ -486,14 +490,10 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
 void SymbolCollector::processRelations(
     const NamedDecl &ND, const SymbolID &ID,
     ArrayRef<index::SymbolRelation> Relations) {
-  // Store subtype relations.
-  if (!dyn_cast<TagDecl>(&ND))
-    return;
-
   for (const auto &R : Relations) {
-    if (!shouldIndexRelation(R))
+    auto RKind = indexableRelation(R);
+    if (!RKind)
       continue;
-
     const Decl *Object = R.RelatedSymbol;
 
     auto ObjectID = getSymbolID(Object);
@@ -509,7 +509,10 @@ void SymbolCollector::processRelations(
     //       in the index and find nothing, but that's a situation they
     //       probably need to handle for other reasons anyways.
     // We currently do (B) because it's simpler.
-    this->Relations.insert(Relation{ID, RelationKind::BaseOf, ObjectID});
+    if (*RKind == RelationKind::BaseOf)
+      this->Relations.insert({ID, *RKind, ObjectID});
+    else if (*RKind == RelationKind::OverriddenBy)
+      this->Relations.insert({ObjectID, *RKind, ID});
   }
 }
 

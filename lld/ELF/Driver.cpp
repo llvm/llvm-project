@@ -47,7 +47,9 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
@@ -315,10 +317,10 @@ static void checkOptions() {
     error("--fix-cortex-a8 is only supported on ARM targets");
 
   if (config->tocOptimize && config->emachine != EM_PPC64)
-    error("--toc-optimize is only supported on the PowerPC64 target");
+    error("--toc-optimize is only supported on PowerPC64 targets");
 
   if (config->pcRelOptimize && config->emachine != EM_PPC64)
-    error("--pcrel--optimize is only supported on the PowerPC64 target");
+    error("--pcrel-optimize is only supported on PowerPC64 targets");
 
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
@@ -584,40 +586,58 @@ static std::string getRpath(opt::InputArgList &args) {
 
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
-static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
+static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
   UnresolvedPolicy errorOrWarn = args.hasFlag(OPT_error_unresolved_symbols,
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
                                      : UnresolvedPolicy::Warn;
+  // -shared implies -unresolved-symbols=ignore-all because missing
+  // symbols are likely to be resolved at runtime.
+  bool diagRegular = !config->shared, diagShlib = !config->shared;
 
-  // Process the last of -unresolved-symbols, -no-undefined or -z defs.
-  for (auto *arg : llvm::reverse(args)) {
+  for (const opt::Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_unresolved_symbols: {
       StringRef s = arg->getValue();
-      if (s == "ignore-all" || s == "ignore-in-object-files")
-        return UnresolvedPolicy::Ignore;
-      if (s == "ignore-in-shared-libs" || s == "report-all")
-        return errorOrWarn;
-      error("unknown --unresolved-symbols value: " + s);
-      continue;
+      if (s == "ignore-all") {
+        diagRegular = false;
+        diagShlib = false;
+      } else if (s == "ignore-in-object-files") {
+        diagRegular = false;
+        diagShlib = true;
+      } else if (s == "ignore-in-shared-libs") {
+        diagRegular = true;
+        diagShlib = false;
+      } else if (s == "report-all") {
+        diagRegular = true;
+        diagShlib = true;
+      } else {
+        error("unknown --unresolved-symbols value: " + s);
+      }
+      break;
     }
     case OPT_no_undefined:
-      return errorOrWarn;
+      diagRegular = true;
+      break;
     case OPT_z:
       if (StringRef(arg->getValue()) == "defs")
-        return errorOrWarn;
-      if (StringRef(arg->getValue()) == "undefs")
-        return UnresolvedPolicy::Ignore;
-      continue;
+        diagRegular = true;
+      else if (StringRef(arg->getValue()) == "undefs")
+        diagRegular = false;
+      break;
+    case OPT_allow_shlib_undefined:
+      diagShlib = false;
+      break;
+    case OPT_no_allow_shlib_undefined:
+      diagShlib = true;
+      break;
     }
   }
 
-  // -shared implies -unresolved-symbols=ignore-all because missing
-  // symbols are likely to be resolved at runtime using other DSOs.
-  if (config->shared)
-    return UnresolvedPolicy::Ignore;
-  return errorOrWarn;
+  config->unresolvedSymbols =
+      diagRegular ? errorOrWarn : UnresolvedPolicy::Ignore;
+  config->unresolvedSymbolsInShlib =
+      diagShlib ? errorOrWarn : UnresolvedPolicy::Ignore;
 }
 
 static Target2Policy getTarget2(opt::InputArgList &args) {
@@ -913,9 +933,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(args, "muldefs");
-  config->allowShlibUndefined =
-      args.hasFlag(OPT_allow_shlib_undefined, OPT_no_allow_shlib_undefined,
-                   args.hasArg(OPT_shared));
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->bsymbolicFunctions = args.hasArg(OPT_Bsymbolic_functions);
@@ -958,6 +975,8 @@ static void readConfigs(opt::InputArgList &args) {
                                      !args.hasArg(OPT_relocatable);
   config->fixCortexA8 =
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
+  config->fortranCommon =
+      args.hasFlag(OPT_fortran_common, OPT_no_fortran_common, true);
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   config->gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   config->gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -972,10 +991,13 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
-  config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
+  config->ltoNewPassManager =
+      args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
+                   LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
-      args.hasArg(OPT_lto_whole_program_visibility);
+      args.hasFlag(OPT_lto_whole_program_visibility,
+                   OPT_no_lto_whole_program_visibility, false);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
@@ -997,6 +1019,17 @@ static void readConfigs(opt::InputArgList &args) {
   config->oFormatBinary = isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+
+  // Parse remarks hotness threshold. Valid value is either integer or 'auto'.
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      error(arg->getSpelling() + ": invalid argument '" + arg->getValue() +
+            "', only integer or 'auto' is supported");
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
+
   config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
   config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
   config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
@@ -1051,7 +1084,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->unique = args.hasArg(OPT_unique);
   config->useAndroidRelrTags = args.hasFlag(
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
-  config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->warnBackrefs =
       args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
   config->warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
@@ -1086,6 +1118,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
+  setUnresolvedSymbolPolicy(args);
 
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -1891,17 +1924,46 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
   return v;
 }
 
-// Do renaming for -wrap by updating pointers to symbols.
+// Do renaming for -wrap and foo@v1 by updating pointers to symbols.
 //
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
+static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
+  llvm::TimeTraceScope timeScope("Redirect symbols");
   DenseMap<Symbol *, Symbol *> map;
   for (const WrappedSymbol &w : wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
   }
+  for (Symbol *sym : symtab->symbols()) {
+    // Enumerate symbols with a non-default version (foo@v1).
+    StringRef name = sym->getName();
+    const char *suffix1 = sym->getVersionSuffix();
+    if (suffix1[0] != '@' || suffix1[1] == '@')
+      continue;
+
+    // Check whether the default version foo@@v1 exists. If it exists, the
+    // symbol can be found by the name "foo" in the symbol table.
+    Symbol *maybeDefault = symtab->find(name);
+    if (!maybeDefault)
+      continue;
+    const char *suffix2 = maybeDefault->getVersionSuffix();
+    if (suffix2[0] != '@' || suffix2[1] != '@' ||
+        strcmp(suffix1 + 1, suffix2 + 2) != 0)
+      continue;
+
+    // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
+    map.try_emplace(sym, maybeDefault);
+    // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
+    // definition error.
+    maybeDefault->resolve(*sym);
+    // Eliminate foo@v1 from the symbol table.
+    sym->symbolKind = Symbol::PlaceholderKind;
+  }
+
+  if (map.empty())
+    return;
 
   // Update pointers in input files.
   parallelForEach(objectFiles, [&](InputFile *file) {
@@ -2130,9 +2192,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       !config->thinLTOModulesToCompile.empty())
     return;
 
-  // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(wrapped);
+  // Apply symbol renames for -wrap and combine foo@v1 and foo@@v1.
+  redirectSymbols(wrapped);
 
   {
     llvm::TimeTraceScope timeScope("Aggregate sections");

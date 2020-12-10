@@ -238,6 +238,19 @@ void lld::coff::wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   for (const WrappedSymbol &w : wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
+    if (Defined *d = dyn_cast<Defined>(w.wrap)) {
+      Symbol *imp = symtab->find(("__imp_" + w.sym->getName()).str());
+      // Create a new defined local import for the wrap symbol. If
+      // no imp prefixed symbol existed, there's no need for it.
+      // (We can't easily distinguish whether any object file actually
+      // referenced it or not, though.)
+      if (imp) {
+        DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
+            saver.save("__imp_" + w.wrap->getName()), d);
+        symtab->localImportChunks.push_back(wrapimp->getChunk());
+        map[imp] = wrapimp;
+      }
+    }
   }
 
   // Update pointers in input files.

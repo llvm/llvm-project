@@ -126,7 +126,7 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
     return false;
 
   EnumD = EnumT->getDecl();
-  if (!EnumD)
+  if (!EnumD || EnumD->isDependentType())
     return false;
 
   // We trigger if there are any values in the enum that aren't covered by the

@@ -8,6 +8,20 @@
 
 // REQUIRES: locale.fr_FR.UTF-8
 
+// This test relies on P0482 being fixed, which isn't in
+// older Apple dylibs
+//
+// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9 
+
+// This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <locale>
 
 // locale(const locale& other) throw();
@@ -30,6 +44,10 @@ void check(const std::locale& loc)
     assert((std::has_facet<std::codecvt<char, char, std::mbstate_t> >(loc)));
     assert((std::has_facet<std::codecvt<char16_t, char, std::mbstate_t> >(loc)));
     assert((std::has_facet<std::codecvt<char32_t, char, std::mbstate_t> >(loc)));
+#if TEST_STD_VER > 17
+    assert((std::has_facet<std::codecvt<char16_t, char8_t, std::mbstate_t> >(loc)));
+    assert((std::has_facet<std::codecvt<char32_t, char8_t, std::mbstate_t> >(loc)));
+#endif
     assert((std::has_facet<std::codecvt<wchar_t, char, std::mbstate_t> >(loc)));
 
     assert((std::has_facet<std::moneypunct<char> >(loc)));

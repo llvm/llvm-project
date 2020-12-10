@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -arcmt-check -verify -triple x86_64-apple-darwin10 -fsyntax-only -fblocks %s
+// RUN: %clang_cc1 -arcmt-action=check -verify -triple x86_64-apple-darwin10 -fsyntax-only -fblocks %s
 
 // Classes that have an Objective-C object pointer.
 struct HasObjectMember0 {

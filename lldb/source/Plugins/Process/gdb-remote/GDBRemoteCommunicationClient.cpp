@@ -1529,6 +1529,22 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           std::string name;
           name_extractor.GetHexByteString(name);
           region_info.SetName(name.c_str());
+        } else if (name.equals("flags")) {
+          region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+
+          llvm::StringRef flags = value;
+          llvm::StringRef flag;
+          while (flags.size()) {
+            flags = flags.ltrim();
+            std::tie(flag, flags) = flags.split(' ');
+            // To account for trailing whitespace
+            if (flag.size()) {
+              if (flag == "mt") {
+                region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
+                break;
+              }
+            }
+          }
         } else if (name.equals("error")) {
           StringExtractorGDBRemote error_extractor(value);
           std::string error_string;
@@ -3452,6 +3468,35 @@ Status GDBRemoteCommunicationClient::SendGetMetaDataPacket(
   StreamGDBRemote escaped_packet;
   escaped_packet.PutCString("jTraceMetaRead:");
   return SendGetTraceDataPacket(escaped_packet, uid, thread_id, buffer, offset);
+}
+
+llvm::Expected<TraceTypeInfo>
+GDBRemoteCommunicationClient::SendGetSupportedTraceType() {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jLLDBTraceSupportedType");
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (response.IsErrorResponse())
+      return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceSupportedType is unsupported");
+
+    if (llvm::Expected<TraceTypeInfo> type =
+            llvm::json::parse<TraceTypeInfo>(response.Peek()))
+      return *type;
+    else
+      return type.takeError();
+  }
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceSupportedType");
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "failed to send packet: jLLDBTraceSupportedType");
 }
 
 Status

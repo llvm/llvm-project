@@ -84,17 +84,17 @@ struct MyTarget : public ConversionTarget {
     // Marking an operation as Legal:
 
     /// Mark all operations within the LLVM dialect are legal.
-    addLegalDialects<LLVMDialect>();
+    addLegalDialect<LLVMDialect>();
 
     /// Mark `std.constant` op is always legal on this target.
-    addLegalOps<ConstantOp>();
+    addLegalOp<ConstantOp>();
 
     //--------------------------------------------------------------------------
     // Marking an operation as dynamically legal.
 
     /// Mark all operations within Affine dialect have dynamic legality
     /// constraints.
-    addDynamicallyLegalDialects<AffineDialect>();
+    addDynamicallyLegalDialect<AffineDialect>();
 
     /// Mark `std.return` as dynamically legal.
     addDynamicallyLegalOp<ReturnOp>();

@@ -25,7 +25,7 @@ class Location;
 class MLIRContextImpl;
 class StorageUniquer;
 
-/// MLIRContext is the top-level object for a collection of MLIR modules.  It
+/// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
 /// them.
 ///

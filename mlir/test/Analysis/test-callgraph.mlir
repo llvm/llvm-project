@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-callgraph -split-input-file 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -test-print-callgraph -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "simple"
 module attributes {test.name = "simple"} {
@@ -8,7 +8,7 @@ module attributes {test.name = "simple"} {
     return
   }
 
-  func @func_b()
+  func private @func_b()
 
   // CHECK: Node{{.*}}func_c
   // CHECK-NEXT: Call-Edge{{.*}}External-Node

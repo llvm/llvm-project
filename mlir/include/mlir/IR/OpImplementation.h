@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_OPIMPLEMENTATION_H
 #define MLIR_IR_OPIMPLEMENTATION_H
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
@@ -326,8 +327,32 @@ public:
   /// Parse a '<' token.
   virtual ParseResult parseLess() = 0;
 
+  /// Parse a '<' token if present.
+  virtual ParseResult parseOptionalLess() = 0;
+
   /// Parse a '>' token.
   virtual ParseResult parseGreater() = 0;
+
+  /// Parse a '>' token if present.
+  virtual ParseResult parseOptionalGreater() = 0;
+
+  /// Parse a '?' token.
+  virtual ParseResult parseQuestion() = 0;
+
+  /// Parse a '?' token if present.
+  virtual ParseResult parseOptionalQuestion() = 0;
+
+  /// Parse a '+' token.
+  virtual ParseResult parsePlus() = 0;
+
+  /// Parse a '+' token if present.
+  virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '*' token.
+  virtual ParseResult parseStar() = 0;
+
+  /// Parse a '*' token if present.
+  virtual ParseResult parseOptionalStar() = 0;
 
   /// Parse a given keyword.
   ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
@@ -368,9 +393,6 @@ public:
 
   /// Parse a `)` token if present.
   virtual ParseResult parseOptionalRParen() = 0;
-
-  /// Parses a '?' if present.
-  virtual ParseResult parseOptionalQuestion() = 0;
 
   /// Parse a `[` token.
   virtual ParseResult parseLSquare() = 0;
@@ -624,23 +646,23 @@ public:
   // Region Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parses a region. Any parsed blocks are appended to "region" and must be
+  /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes "arguments" of types "argTypes". If "enableNameShadowing" is
+  /// region takes 'arguments' of types 'argTypes'. If 'enableNameShadowing' is
   /// set to true, the argument names are allowed to shadow the names of other
-  /// existing SSA values defined above the region scope. "enableNameShadowing"
+  /// existing SSA values defined above the region scope. 'enableNameShadowing'
   /// can only be set to true for regions attached to operations that are
-  /// "IsolatedFromAbove".
+  /// 'IsolatedFromAbove.
   virtual ParseResult parseRegion(Region &region,
                                   ArrayRef<OperandType> arguments = {},
                                   ArrayRef<Type> argTypes = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
-  virtual ParseResult parseOptionalRegion(Region &region,
-                                          ArrayRef<OperandType> arguments = {},
-                                          ArrayRef<Type> argTypes = {},
-                                          bool enableNameShadowing = false) = 0;
+  virtual OptionalParseResult
+  parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments = {},
+                      ArrayRef<Type> argTypes = {},
+                      bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is
   /// allocated and placed in `region`. If no region is present or on failure,

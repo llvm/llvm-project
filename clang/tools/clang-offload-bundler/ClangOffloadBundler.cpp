@@ -44,6 +44,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <forward_list>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -414,7 +415,7 @@ public:
     if (std::error_code EC =
             sys::fs::createTemporaryFile("clang-offload-bundler", "tmp", File))
       return createFileError(File, EC);
-    Files.push_back(File);
+    Files.push_front(File);
 
     if (Contents) {
       std::error_code EC;
@@ -423,11 +424,11 @@ public:
         return createFileError(File, EC);
       OS.write(Contents->data(), Contents->size());
     }
-    return Files.back();
+    return Files.front();
   }
 
 private:
-  SmallVector<SmallString<128u>, 4u> Files;
+  std::forward_list<SmallString<128u>> Files;
 };
 
 } // end anonymous namespace

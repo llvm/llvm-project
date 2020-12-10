@@ -69,9 +69,9 @@ namespace dr603 { // dr603: yes
 namespace dr606 { // dr606: yes
 #if __cplusplus >= 201103L
   template<typename T> struct S {};
-  template<typename T> void f(S<T> &&); // expected-note {{no known conversion from 'S<int>' to 'S<int> &&'}}
+  template<typename T> void f(S<T> &&); // expected-note {{expects an rvalue}}
   template<typename T> void g(T &&);
-  template<typename T> void h(const T &&); // expected-note {{no known conversion from 'S<int>' to 'const dr606::S<int> &&'}}
+  template<typename T> void h(const T &&); // expected-note {{expects an rvalue}}
 
   void test(S<int> s) {
     f(s); // expected-error {{no match}}
@@ -376,7 +376,7 @@ namespace dr641 { // dr641: yes
     struct abc : xyz {};
 
     template<typename T>
-    void use(T &); // expected-note {{expects an l-value}}
+    void use(T &); // expected-note {{expects an lvalue}}
     void test() {
       use<xyz>(xyz()); // expected-error {{no match}}
       use<const xyz>(xyz());

@@ -38,7 +38,7 @@ Expected<const amd_kernel_code_t *> KernelSym::getAmdKernelCodeT(
   const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
 
-  auto ArrayOr = CodeObject->getELFFile()->getSectionContentsAsArray<uint8_t>(*Text);
+  auto ArrayOr = CodeObject->getELFFile().getSectionContentsAsArray<uint8_t>(*Text);
   if (!ArrayOr)
     return ArrayOr.takeError();
 
@@ -62,7 +62,7 @@ Expected<uint64_t>
 FunctionSym::getAddress(const HSACodeObject *CodeObject,
                         const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
-  auto ElfHeader = CodeObject->getELFFile()->getHeader();
+  auto ElfHeader = CodeObject->getELFFile().getHeader();
   if (ElfHeader.e_type == ELF::ET_REL) {
     return st_value + Text->sh_addr;
   }
@@ -180,7 +180,7 @@ void HSACodeObject::InitMarkers() const {
 
 HSACodeObject::note_iterator HSACodeObject::notes_begin() const {
   if (auto NotesOr = getNoteSection()) {
-    if (auto ContentsOr = getELFFile()->getSectionContentsAsArray<uint8_t>(**NotesOr))
+    if (auto ContentsOr = getELFFile().getSectionContentsAsArray<uint8_t>(**NotesOr))
       return const_varsize_item_iterator<ELFNote>(*ContentsOr);
   }
 
@@ -232,7 +232,7 @@ HSACodeObject::getCode(const FunctionSym *Function) const {
   if (!TextOr)
     return TextOr.takeError();
 
-  auto SecBytesOr = getELFFile()->getSectionContentsAsArray<uint8_t>(**TextOr);
+  auto SecBytesOr = getELFFile().getSectionContentsAsArray<uint8_t>(**TextOr);
   if (!SecBytesOr)
     return SecBytesOr.takeError();
 
@@ -264,12 +264,12 @@ HSACodeObject::getCode(const FunctionSym *Function) const {
 Expected<const HSACodeObject::Elf_Shdr *>
 HSACodeObject::getSectionByName(StringRef Name) const {
   auto ELF = getELFFile();
-  auto SectionsOr = ELF->sections();
+  auto SectionsOr = ELF.sections();
   if (!SectionsOr)
     return SectionsOr.takeError();
 
   for (const auto &Sec : *SectionsOr) {
-    auto SecNameOr = ELF->getSectionName(Sec);
+    auto SecNameOr = ELF.getSectionName(Sec);
     if (!SecNameOr) {
       return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {
@@ -282,12 +282,12 @@ HSACodeObject::getSectionByName(StringRef Name) const {
 Expected<uint32_t> HSACodeObject::getSectionIdxByName(StringRef Name) const {
   auto ELF = getELFFile();
   uint32_t Idx = 0;
-  auto SectionsOr = ELF->sections();
+  auto SectionsOr = ELF.sections();
   if (!SectionsOr)
     return SectionsOr.takeError();
 
   for (const auto &Sec : *SectionsOr) {
-    auto SecNameOr = ELF->getSectionName(Sec);
+    auto SecNameOr = ELF.getSectionName(Sec);
     if (!SecNameOr) {
       return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {
@@ -300,7 +300,7 @@ Expected<uint32_t> HSACodeObject::getSectionIdxByName(StringRef Name) const {
 
 Expected<uint32_t> HSACodeObject::getTextSectionIdx() const {
   if (auto IdxOr = getSectionIdxByName(".text")) {
-    auto SecOr = getELFFile()->getSection(*IdxOr);
+    auto SecOr = getELFFile().getSection(*IdxOr);
     if (SecOr || isSectionText(toDRI(*SecOr)))
       return IdxOr;
   }
@@ -313,14 +313,14 @@ Expected<uint32_t> HSACodeObject::getNoteSectionIdx() const {
 
 Expected<const HSACodeObject::Elf_Shdr *> HSACodeObject::getTextSection() const {
   if (auto IdxOr = getTextSectionIdx())
-    return getELFFile()->getSection(*IdxOr);
+    return getELFFile().getSection(*IdxOr);
 
   return createError("invalid section index");
 }
 
 Expected<const HSACodeObject::Elf_Shdr *> HSACodeObject::getNoteSection() const {
   if (auto IdxOr = getNoteSectionIdx())
-    return getELFFile()->getSection(*IdxOr);
+    return getELFFile().getSection(*IdxOr);
 
   return createError("invalid section index");
 }

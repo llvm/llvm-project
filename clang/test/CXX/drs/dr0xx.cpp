@@ -118,10 +118,10 @@ namespace dr9 { // dr9: yes
     int m; // expected-note {{here}}
     friend int R1();
   };
-  struct N : protected B { // expected-note 2{{protected}}
+  struct N : protected B { // expected-note {{protected}}
     friend int R2();
   } n;
-  int R1() { return n.m; } // expected-error {{protected base class}} expected-error {{protected member}}
+  int R1() { return n.m; } // expected-error {{protected member}}
   int R2() { return n.m; }
 }
 
@@ -204,10 +204,10 @@ namespace dr16 { // dr16: yes
     void f(); // expected-note {{here}}
     friend class C;
   };
-  class B : A {}; // expected-note 4{{here}}
+  class B : A {}; // expected-note 3{{here}}
   class C : B {
     void g() {
-      f(); // expected-error {{private member}} expected-error {{private base}}
+      f(); // expected-error {{private member}}
       A::f(); // expected-error {{private member}} expected-error {{private base}}
     }
   };

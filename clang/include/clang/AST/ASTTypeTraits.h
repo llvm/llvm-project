@@ -22,7 +22,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/AlignOf.h"
+#include <type_traits>
 
 namespace llvm {
 
@@ -39,10 +39,6 @@ struct PrintingPolicy;
 enum TraversalKind {
   /// Will traverse all child nodes.
   TK_AsIs,
-
-  /// Will not traverse implicit casts and parentheses.
-  /// Corresponds to Expr::IgnoreParenImpCasts()
-  TK_IgnoreImplicitCastsAndParentheses,
 
   /// Ignore AST nodes not written in the source
   TK_IgnoreUnlessSpelledInSource
@@ -250,9 +246,8 @@ public:
   /// in the \c DynTypedNode, and the returned pointer points at
   /// the storage inside DynTypedNode. For those nodes, do not
   /// use the pointer outside the scope of the DynTypedNode.
-  template <typename T>
-  const T *get() const {
-    return BaseConverter<T>::get(NodeKind, Storage.buffer);
+  template <typename T> const T *get() const {
+    return BaseConverter<T>::get(NodeKind, &Storage);
   }
 
   /// Retrieve the stored node as type \c T.
@@ -260,7 +255,7 @@ public:
   /// Similar to \c get(), but asserts that the type is what we are expecting.
   template <typename T>
   const T &getUnchecked() const {
-    return BaseConverter<T>::getUnchecked(NodeKind, Storage.buffer);
+    return BaseConverter<T>::getUnchecked(NodeKind, &Storage);
   }
 
   ASTNodeKind getNodeKind() const { return NodeKind; }
@@ -272,7 +267,7 @@ public:
   /// method returns NULL.
   const void *getMemoizationData() const {
     return NodeKind.hasPointerIdentity()
-               ? *reinterpret_cast<void *const *>(Storage.buffer)
+               ? *reinterpret_cast<void *const *>(&Storage)
                : nullptr;
   }
 
@@ -394,12 +389,12 @@ private:
 
   /// Converter that uses dyn_cast<T> from a stored BaseT*.
   template <typename T, typename BaseT> struct DynCastPtrConverter {
-    static const T *get(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
       return nullptr;
     }
-    static const T &getUnchecked(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T &getUnchecked(ASTNodeKind NodeKind, const void *Storage) {
       assert(ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind));
       return *cast<T>(static_cast<const BaseT *>(
           *reinterpret_cast<const void *const *>(Storage)));
@@ -407,19 +402,19 @@ private:
     static DynTypedNode create(const BaseT &Node) {
       DynTypedNode Result;
       Result.NodeKind = ASTNodeKind::getFromNode(Node);
-      new (Result.Storage.buffer) const void *(&Node);
+      new (&Result.Storage) const void *(&Node);
       return Result;
     }
   };
 
   /// Converter that stores T* (by pointer).
   template <typename T> struct PtrConverter {
-    static const T *get(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return &getUnchecked(NodeKind, Storage);
       return nullptr;
     }
-    static const T &getUnchecked(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T &getUnchecked(ASTNodeKind NodeKind, const void *Storage) {
       assert(ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind));
       return *static_cast<const T *>(
           *reinterpret_cast<const void *const *>(Storage));
@@ -427,26 +422,26 @@ private:
     static DynTypedNode create(const T &Node) {
       DynTypedNode Result;
       Result.NodeKind = ASTNodeKind::getFromNodeKind<T>();
-      new (Result.Storage.buffer) const void *(&Node);
+      new (&Result.Storage) const void *(&Node);
       return Result;
     }
   };
 
   /// Converter that stores T (by value).
   template <typename T> struct ValueConverter {
-    static const T *get(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return reinterpret_cast<const T *>(Storage);
       return nullptr;
     }
-    static const T &getUnchecked(ASTNodeKind NodeKind, const char Storage[]) {
+    static const T &getUnchecked(ASTNodeKind NodeKind, const void *Storage) {
       assert(ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind));
       return *reinterpret_cast<const T *>(Storage);
     }
     static DynTypedNode create(const T &Node) {
       DynTypedNode Result;
       Result.NodeKind = ASTNodeKind::getFromNodeKind<T>();
-      new (Result.Storage.buffer) T(Node);
+      new (&Result.Storage) T(Node);
       return Result;
     }
   };
@@ -461,9 +456,8 @@ private:
   /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
   /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
   /// have storage or unique pointers and thus need to be stored by value.
-  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
-                              TemplateArgumentLoc, NestedNameSpecifierLoc,
-                              QualType, TypeLoc>
+  std::aligned_union_t<1, const void *, TemplateArgument, TemplateArgumentLoc,
+                       NestedNameSpecifierLoc, QualType, TypeLoc>
       Storage;
 };
 
@@ -542,8 +536,6 @@ using ASTNodeKind = ::clang::ASTNodeKind;
 using TraversalKind = ::clang::TraversalKind;
 
 constexpr TraversalKind TK_AsIs = ::clang::TK_AsIs;
-constexpr TraversalKind TK_IgnoreImplicitCastsAndParentheses =
-    ::clang::TK_IgnoreImplicitCastsAndParentheses;
 constexpr TraversalKind TK_IgnoreUnlessSpelledInSource =
     ::clang::TK_IgnoreUnlessSpelledInSource;
 } // namespace ast_type_traits

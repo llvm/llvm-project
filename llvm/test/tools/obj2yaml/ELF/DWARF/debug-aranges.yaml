@@ -5,45 +5,45 @@
 
 # RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=LSB %s | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
-# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 \
-# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
+# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x4 \
+# RUN:     -DVARADDR=0x1234 -DVARLEN=0x5678
 
 # RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=MSB %s | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
-# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 \
-# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
+# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x4 \
+# RUN:     -DVARADDR=0x1234 -DVARLEN=0x5678
 
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=LSB %s | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
-# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 \
-# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x8 \
+# RUN:     -DVARADDR=0x1234 -DVARLEN=0x5678
 
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=MSB %s | obj2yaml | \
 # RUN:   FileCheck  %s --check-prefix=BASIC --implicit-check-not=Sections \
-# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 \
-# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x8 \
+# RUN:     -DVARADDR=0x1234 -DVARLEN=0x5678
 
 #      BASIC: DWARF:
 # BASIC-NEXT:   debug_aranges:
-# BASIC-NEXT:     - Length:      0x00000000000000[[LENGTH1]]
+# BASIC-NEXT:     - Length:      0x[[LENGTH1]]
 # BASIC-NEXT:       Version:     2
-# BASIC-NEXT:       CuOffset:    0x0000000000001234
+# BASIC-NEXT:       CuOffset:    0x1234
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE]]
 # BASIC-NEXT:       Descriptors:
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:           Length:  0x0000000000005678
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:           Length:  0x5678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:           Length:  0x5678
 # BASIC-NEXT:     - Format:      DWARF64
-# BASIC-NEXT:       Length:      0x00000000000000[[LENGTH2]]
+# BASIC-NEXT:       Length:      0x[[LENGTH2]]
 # BASIC-NEXT:       Version:     2
 # BASIC-NEXT:       CuOffset:    0x1234567890ABCDEF
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE]]
 # BASIC-NEXT:       Descriptors:
 # BASIC-NEXT:         - Address: [[VARADDR]]
 # BASIC-NEXT:           Length:  [[VARLEN]]
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:           Length:  0x5678
 # BASIC-NEXT: ...
 
 --- !ELF
@@ -83,17 +83,17 @@ DWARF:
 #      SHDR-NEXT:   Type:         SHT_[[TYPE]]
 #     FLAGS-NEXT:   Flags:        [ SHF_ALLOC ]
 #      LINK-NEXT:   Link:         .sec
-#   ENTSIZE-NEXT:   EntSize:      0x0000000000000003
-#      INFO-NEXT:   Info:         0x0000000000000003
-# ADDRALIGN-NEXT:   AddressAlign: 0x0000000000000003
-#   ADDRESS-NEXT:   Address:      0x0000000000002020
+#   ENTSIZE-NEXT:   EntSize:      0x3
+#      INFO-NEXT:   Info:         0x3
+# ADDRALIGN-NEXT:   AddressAlign: 0x3
+#   ADDRESS-NEXT:   Address:      0x2020
 
 #      ARANGE: DWARF:
 # ARANGE-NEXT:   debug_aranges:
-# ARANGE-NEXT:     - Length:      0x000000000000001C
+# ARANGE-NEXT:     - Length:      0x1C
 # ARANGE-NEXT:       Version:     2
-# ARANGE-NEXT:       CuOffset:    0x0000000000001234
-# ARANGE-NEXT:       AddressSize: 0x08
+# ARANGE-NEXT:       CuOffset:    0x1234
+# ARANGE-NEXT:       AddressSize: 0x8
 # ARANGE-NEXT: ...
 
 --- !ELF
@@ -121,13 +121,13 @@ DWARF:
 ## object file's address size.
 
 # RUN: yaml2obj --docnum=3 %s | obj2yaml | \
-# RUN:   FileCheck %s -DLENGTH=0x000000000000001C -DADDRSIZE=0x04 -DADDRLEN=0x0000000012345678 --check-prefix=ADDRSIZE
+# RUN:   FileCheck %s -DLENGTH=0x1C -DADDRSIZE=0x4 -DADDRLEN=0x12345678 --check-prefix=ADDRSIZE
 
 #      ADDRSIZE: DWARF:
 # ADDRSIZE-NEXT:   debug_aranges:
 # ADDRSIZE-NEXT:     - Length:      [[LENGTH]]
 # ADDRSIZE-NEXT:       Version:     2
-# ADDRSIZE-NEXT:       CuOffset:    0x0000000000001234
+# ADDRSIZE-NEXT:       CuOffset:    0x1234
 # ADDRSIZE-NEXT:       AddressSize: [[ADDRSIZE]]
 # ADDRSIZE-NEXT:       Descriptors:
 # ADDRSIZE-NEXT:         - Address: [[ADDRLEN]]
@@ -143,14 +143,14 @@ DWARF:
   debug_aranges:
     - Version:     2
       CuOffset:    0x1234
-      AddressSize: [[ADDRSIZE=0x04]]
+      AddressSize: [[ADDRSIZE=0x4]]
       Descriptors:
         - Address: [[ADDRLEN=0x12345678]]
           Length:  [[ADDRLEN=0x12345678]]
 
-# RUN: yaml2obj --docnum=3 -DBITS=32 -DADDRSIZE=0x08 -DADDRLEN=0x1234567890abcdef %s | \
+# RUN: yaml2obj --docnum=3 -DBITS=32 -DADDRSIZE=0x8 -DADDRLEN=0x1234567890abcdef %s | \
 # RUN:   obj2yaml | \
-# RUN:   FileCheck %s -DLENGTH=0x000000000000002C -DADDRSIZE=0x08 -DADDRLEN=0x1234567890ABCDEF --check-prefix=ADDRSIZE
+# RUN:   FileCheck %s -DLENGTH=0x2C -DADDRSIZE=0x8 -DADDRLEN=0x1234567890ABCDEF --check-prefix=ADDRSIZE
 
 ## d) Test dumping a .debug_aranges section whose length field doesn't match the actual length.
 ## This makes the DWARF parser fail to parse it and we will dump it as a raw content section.
@@ -160,7 +160,7 @@ DWARF:
 #      RAW-CONTENT: Sections:
 # RAW-CONTENT-NEXT:   - Name:            .debug_aranges
 # RAW-CONTENT-NEXT:     Type:            SHT_PROGBITS
-# RAW-CONTENT-NEXT:     AddressAlign:    0x0000000000000001
+# RAW-CONTENT-NEXT:     AddressAlign:    0x1
 # RAW-CONTENT-NEXT:     Content:         '3412000002003412000008000000000000000000000000000000000000000000'
 # RAW-CONTENT-NEXT: ...
 
@@ -196,5 +196,4 @@ DWARF:
 
 # RUN: yaml2obj --docnum=1 %s -DADDR=0 -DLENGTH=0 -DBITS=64 -DENDIAN=LSB | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
-# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08  \
-# RUN:     -DVARADDR=0x0000000000000000 -DVARLEN=0x0000000000000000
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x8 -DVARADDR=0x0 -DVARLEN=0x0

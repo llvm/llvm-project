@@ -64,9 +64,9 @@
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_relaxed_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_relaxed_i1RNSt3__16atomicIbEEb:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
   %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %3, i8* %4 monotonic, align 1
@@ -76,9 +76,9 @@ define void @_Z23atomic_store_relaxed_i1RNSt3__16atomicIbEEb(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_relaxed_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z23atomic_store_relaxed_i8RNSt3__16atomicIcEEc:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 monotonic, align 1
   ret void
@@ -87,9 +87,9 @@ define void @_Z23atomic_store_relaxed_i8RNSt3__16atomicIcEEc(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_relaxed_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_relaxed_u8RNSt3__16atomicIhEEh:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 monotonic, align 1
   ret void
@@ -98,9 +98,9 @@ define void @_Z23atomic_store_relaxed_u8RNSt3__16atomicIhEEh(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_i16RNSt3__16atomicIsEEs:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 monotonic, align 2
   ret void
@@ -109,9 +109,9 @@ define void @_Z24atomic_store_relaxed_i16RNSt3__16atomicIsEEs(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_u16RNSt3__16atomicItEEt:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 monotonic, align 2
   ret void
@@ -120,9 +120,9 @@ define void @_Z24atomic_store_relaxed_u16RNSt3__16atomicItEEt(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_i32RNSt3__16atomicIiEEi:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 monotonic, align 4
   ret void
@@ -131,9 +131,9 @@ define void @_Z24atomic_store_relaxed_i32RNSt3__16atomicIiEEi(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_u32RNSt3__16atomicIjEEj:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 monotonic, align 4
   ret void
@@ -142,9 +142,9 @@ define void @_Z24atomic_store_relaxed_u32RNSt3__16atomicIjEEj(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_i64RNSt3__16atomicIlEEl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 monotonic, align 8
   ret void
@@ -153,9 +153,9 @@ define void @_Z24atomic_store_relaxed_i64RNSt3__16atomicIlEEl(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_relaxed_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_relaxed_u64RNSt3__16atomicImEEm:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 monotonic, align 8
   ret void
@@ -166,12 +166,12 @@ define void @_Z25atomic_store_relaxed_i128RNSt3__16atomicInEEn(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_relaxed_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4
@@ -192,12 +192,12 @@ define void @_Z25atomic_store_relaxed_u128RNSt3__16atomicIoEEo(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_relaxed_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4
@@ -216,10 +216,10 @@ define void @_Z25atomic_store_relaxed_u128RNSt3__16atomicIoEEo(%"struct.std::__1
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_release_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_release_i1RNSt3__16atomicIbEEb:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
   %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %3, i8* %4 release, align 1
@@ -229,10 +229,10 @@ define void @_Z23atomic_store_release_i1RNSt3__16atomicIbEEb(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_release_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z23atomic_store_release_i8RNSt3__16atomicIcEEc:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 release, align 1
   ret void
@@ -241,10 +241,10 @@ define void @_Z23atomic_store_release_i8RNSt3__16atomicIcEEc(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_release_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_release_u8RNSt3__16atomicIhEEh:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 release, align 1
   ret void
@@ -253,10 +253,10 @@ define void @_Z23atomic_store_release_u8RNSt3__16atomicIhEEh(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_i16RNSt3__16atomicIsEEs:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 release, align 2
   ret void
@@ -265,10 +265,10 @@ define void @_Z24atomic_store_release_i16RNSt3__16atomicIsEEs(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_u16RNSt3__16atomicItEEt:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 release, align 2
   ret void
@@ -277,10 +277,10 @@ define void @_Z24atomic_store_release_u16RNSt3__16atomicItEEt(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_i32RNSt3__16atomicIiEEi:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 release, align 4
   ret void
@@ -289,10 +289,10 @@ define void @_Z24atomic_store_release_i32RNSt3__16atomicIiEEi(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_u32RNSt3__16atomicIjEEj:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 release, align 4
   ret void
@@ -301,10 +301,10 @@ define void @_Z24atomic_store_release_u32RNSt3__16atomicIjEEj(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_i64RNSt3__16atomicIlEEl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 release, align 8
   ret void
@@ -313,10 +313,10 @@ define void @_Z24atomic_store_release_i64RNSt3__16atomicIlEEl(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_release_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_release_u64RNSt3__16atomicImEEm:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 1
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 release, align 8
   ret void
@@ -327,12 +327,12 @@ define void @_Z25atomic_store_release_i128RNSt3__16atomicInEEn(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_release_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 3, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4
@@ -353,12 +353,12 @@ define void @_Z25atomic_store_release_u128RNSt3__16atomicIoEEo(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_release_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 3, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4
@@ -377,11 +377,11 @@ define void @_Z25atomic_store_release_u128RNSt3__16atomicIoEEo(%"struct.std::__1
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_seq_cst_i1RNSt3__16atomicIbEEb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %0, i1 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_seq_cst_i1RNSt3__16atomicIbEEb:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i1 %1 to i8
   %4 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %0, i64 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %3, i8* %4 seq_cst, align 1
@@ -391,11 +391,11 @@ define void @_Z23atomic_store_seq_cst_i1RNSt3__16atomicIbEEb(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_seq_cst_i8RNSt3__16atomicIcEEc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %0, i8 signext %1) {
 ; CHECK-LABEL: _Z23atomic_store_seq_cst_i8RNSt3__16atomicIcEEc:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 seq_cst, align 1
   ret void
@@ -404,11 +404,11 @@ define void @_Z23atomic_store_seq_cst_i8RNSt3__16atomicIcEEc(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z23atomic_store_seq_cst_u8RNSt3__16atomicIhEEh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %0, i8 zeroext %1) {
 ; CHECK-LABEL: _Z23atomic_store_seq_cst_u8RNSt3__16atomicIhEEh:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i8 %1, i8* %3 seq_cst, align 1
   ret void
@@ -417,11 +417,11 @@ define void @_Z23atomic_store_seq_cst_u8RNSt3__16atomicIhEEh(%"struct.std::__1::
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_i16RNSt3__16atomicIsEEs(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %0, i16 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_i16RNSt3__16atomicIsEEs:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 seq_cst, align 2
   ret void
@@ -430,11 +430,11 @@ define void @_Z24atomic_store_seq_cst_i16RNSt3__16atomicIsEEs(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_u16RNSt3__16atomicItEEt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %0, i16 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_u16RNSt3__16atomicItEEt:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i16 %1, i16* %3 seq_cst, align 2
   ret void
@@ -443,11 +443,11 @@ define void @_Z24atomic_store_seq_cst_u16RNSt3__16atomicItEEt(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_i32RNSt3__16atomicIiEEi(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %0, i32 signext %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_i32RNSt3__16atomicIiEEi:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    stl %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 seq_cst, align 4
   ret void
@@ -456,11 +456,11 @@ define void @_Z24atomic_store_seq_cst_i32RNSt3__16atomicIiEEi(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_u32RNSt3__16atomicIjEEj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %0, i32 zeroext %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_u32RNSt3__16atomicIjEEj:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    stl %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i32 %1, i32* %3 seq_cst, align 4
   ret void
@@ -469,11 +469,11 @@ define void @_Z24atomic_store_seq_cst_u32RNSt3__16atomicIjEEj(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_i64RNSt3__16atomicIlEEl(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_i64RNSt3__16atomicIlEEl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 seq_cst, align 8
   ret void
@@ -482,11 +482,11 @@ define void @_Z24atomic_store_seq_cst_i64RNSt3__16atomicIlEEl(%"struct.std::__1:
 ; Function Attrs: nofree norecurse nounwind
 define void @_Z24atomic_store_seq_cst_u64RNSt3__16atomicImEEm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %0, i64 %1) {
 ; CHECK-LABEL: _Z24atomic_store_seq_cst_u64RNSt3__16atomicImEEm:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    st %s1, (, %s0)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %0, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store atomic i64 %1, i64* %3 seq_cst, align 8
   ret void
@@ -497,12 +497,12 @@ define void @_Z25atomic_store_seq_cst_i128RNSt3__16atomicInEEn(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_seq_cst_i128RNSt3__16atomicInEEn:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 5, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4
@@ -523,12 +523,12 @@ define void @_Z25atomic_store_seq_cst_u128RNSt3__16atomicIoEEo(%"struct.std::__1
 ; CHECK-LABEL: _Z25atomic_store_seq_cst_u128RNSt3__16atomicIoEEo:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s4, 0, %s0
-; CHECK-NEXT:    st %s2, -8(, %s9)
-; CHECK-NEXT:    st %s1, -16(, %s9)
+; CHECK-NEXT:    st %s2, 248(, %s11)
+; CHECK-NEXT:    st %s1, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_store@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_store@hi(, %s0)
-; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    lea %s2, 240(, %s11)
 ; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 5, (0)1
 ; CHECK-NEXT:    or %s1, 0, %s4

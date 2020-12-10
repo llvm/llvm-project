@@ -5,10 +5,10 @@
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
+; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0 ; Reload Reuse
 ; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
 ; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
-; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
+; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]] ; Reload Reuse
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_24regs_32a_used(<16 x float> addrspace(1)* %arg, float addrspace(1)* %out) #0 {
 bb:
@@ -34,10 +34,10 @@ bb:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}}
+; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}} ; Reload Reuse
 ; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
 ; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
-; A2V:        v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
+; A2V:        v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]] ; Reload Reuse
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, <4 x float> addrspace(1)* %arg, <4 x float> addrspace(1)* %out) #2 {
 bb:
@@ -55,8 +55,7 @@ use:
 st:
   %gep1 = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i64 16
   %gep2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i64 32
-  store <4 x float> %mai.1, <4 x float> addrspace(1)* %gep1
-  store <4 x float> %mai.2, <4 x float> addrspace(1)* %gep2
+  call void asm sideeffect "", "a,a"(<4 x float> %mai.1, <4 x float> %mai.2)
   ret void
 }
 
@@ -65,25 +64,20 @@ st:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
 
-; A2V: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}}
-; A2V: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
+; A2V: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}} ; Reload Reuse
+; A2V: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]] ; Reload Reuse
 ; A2V: ScratchSize: 0
 
 ; A2M: buffer_store_dword v[[VSPILLSTORE:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
 ; A2M: buffer_load_dword v[[VSPILL_RELOAD:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
-; A2M: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL_RELOAD]]
+; A2M: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL_RELOAD]] ; Reload Reuse
 define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
-  %v0 = load volatile i32, i32 addrspace(3)* undef
-  %v1 = load volatile i32, i32 addrspace(3)* undef
-  %v2 = load volatile i32, i32 addrspace(3)* undef
-  %v3 = load volatile i32, i32 addrspace(3)* undef
-  %v4 = load volatile i32, i32 addrspace(3)* undef
-  %v5 = load volatile i32, i32 addrspace(3)* undef
-  %v6 = load volatile i32, i32 addrspace(3)* undef
-  %v7 = load volatile i32, i32 addrspace(3)* undef
-  call void asm sideeffect "", "a,a,a,a,~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6}"(i32 %v0, i32 %v1, i32 %v2, i32 %v3)
-  %v8 = load volatile i32, i32 addrspace(3)* undef
-  call void asm sideeffect "", "a,a,a,a,a"(i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8)
+  %a1 = call <4 x i32> asm sideeffect "", "=a"()
+  %a2 = call <4 x i32> asm sideeffect "", "=a"()
+  %a3 = call i32 asm sideeffect "", "=a"()
+  %a4 = call <2 x i32> asm sideeffect "", "=a"()
+  call void asm sideeffect "", "a,a,a"(<4 x i32> %a1, <4 x i32> %a2, i32 %a3)
+  call void asm sideeffect "", "a"(<2 x i32> %a4)
   ret void
 }
 
@@ -91,10 +85,10 @@ define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
+; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0 ; Reload Reuse
 ; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
 ; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
-; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
+; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]] ; Reload Reuse
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_32regs_mfma32(float addrspace(1)* %arg) #3 {
 bb:
@@ -115,6 +109,6 @@ declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i3
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 
 attributes #0 = { nounwind "amdgpu-num-vgpr"="24" }
-attributes #1 = { nounwind "amdgpu-num-vgpr"="8" }
+attributes #1 = { nounwind "amdgpu-num-vgpr"="10" }
 attributes #2 = { nounwind "amdgpu-num-vgpr"="12" }
 attributes #3 = { nounwind "amdgpu-num-vgpr"="32" }

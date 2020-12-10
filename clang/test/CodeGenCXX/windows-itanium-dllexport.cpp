@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple i686-windows-itanium -fdeclspec %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-windows-itanium -fdeclspec %s -o - | FileCheck %s --check-prefixes=CHECK,WI
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps4 -fdeclspec %s -o - | FileCheck %s --check-prefixes=CHECK,PS4
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
@@ -25,14 +26,18 @@ template class __declspec(dllexport) c<int>;
 extern template class c<char>;
 template class __declspec(dllexport) c<char>;
 
-// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIcEaSERKS0_
-// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIcE1fEv
+// WI: define {{.*}} dllexport {{.*}} @_ZN1cIcEaSERKS0_
+// WI: define {{.*}} dllexport {{.*}} @_ZN1cIcE1fEv
+// PS4-NOT: @_ZN1cIcEaSERKS0_
+// PS4: define weak_odr void @_ZN1cIcE1fEv
 
 c<double> g;
 template class __declspec(dllexport) c<double>;
 
-// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIdEaSERKS0_
-// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIdE1fEv
+// WI: define {{.*}} dllexport {{.*}} @_ZN1cIdEaSERKS0_
+// WI: define {{.*}} dllexport {{.*}} @_ZN1cIdE1fEv
+// PS4-NOT: @_ZN1cIdEaSERKS0_
+// PS4: define weak_odr void @_ZN1cIdE1fEv
 
 template <class T>
 struct outer {
@@ -51,5 +56,6 @@ extern template class __declspec(dllimport) outer<char>;
 USEMEMFUNC(outer<char>, f)
 USEMEMFUNC(outer<char>::inner, f)
 
-// CHECK: declare dllimport {{.*}} @_ZN5outerIcE1fEv
-// CHECK: define {{.*}} @_ZN5outerIcE5inner1fEv
+// CHECK-DAG: declare dllimport {{.*}} @_ZN5outerIcE1fEv
+// WI-DAG: define {{.*}} @_ZN5outerIcE5inner1fEv
+// PS4-DAG: declare {{.*}} @_ZN5outerIcE5inner1fEv

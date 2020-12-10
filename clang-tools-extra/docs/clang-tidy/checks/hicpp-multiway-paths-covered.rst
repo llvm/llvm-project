@@ -93,4 +93,4 @@ Options
 .. option:: WarnOnMissingElse
 
   Boolean flag that activates a warning for missing ``else`` branches.
-  Default is `0`.
+  Default is `false`.

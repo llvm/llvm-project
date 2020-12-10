@@ -41,9 +41,9 @@ TARGET_BUILTIN(__builtin_wasm_throw, "vIUiv*", "r", "exception-handling")
 TARGET_BUILTIN(__builtin_wasm_rethrow_in_catch, "v", "r", "exception-handling")
 
 // Atomic wait and notify.
-TARGET_BUILTIN(__builtin_wasm_atomic_wait_i32, "ii*iLLi", "n", "atomics")
-TARGET_BUILTIN(__builtin_wasm_atomic_wait_i64, "iLLi*LLiLLi", "n", "atomics")
-TARGET_BUILTIN(__builtin_wasm_atomic_notify, "Uii*Ui", "n", "atomics")
+TARGET_BUILTIN(__builtin_wasm_memory_atomic_wait32, "ii*iLLi", "n", "atomics")
+TARGET_BUILTIN(__builtin_wasm_memory_atomic_wait64, "iLLi*LLiLLi", "n", "atomics")
+TARGET_BUILTIN(__builtin_wasm_memory_atomic_notify, "Uii*Ui", "n", "atomics")
 
 // Trapping fp-to-int conversions
 BUILTIN(__builtin_wasm_trunc_s_i32_f32, "if", "nc")

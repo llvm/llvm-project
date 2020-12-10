@@ -32,9 +32,7 @@ entry:
 ; CHECK:         std 
 ; CHECK:         blt 0, .LBB0_3
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    addi
 ; CHECK-NEXT:    clrldi
-; CHECK-NEXT:    addi
 ; CHECK-NEXT:    mtctr
 ; CHECK-NEXT:    li 
 ; CHECK:       .LBB0_2: 

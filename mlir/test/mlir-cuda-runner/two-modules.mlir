@@ -25,4 +25,4 @@ func @main() {
   return
 }
 
-func @print_memref_i32(%memref : memref<*xi32>)
+func private @print_memref_i32(%memref : memref<*xi32>)

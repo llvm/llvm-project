@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_SPIRV_SPIRVMODULE_H
 
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/IR/OwningOpRefBase.h"
+#include "mlir/IR/OwningOpRef.h"
 
 namespace mlir {
 namespace spirv {
@@ -18,9 +18,10 @@ namespace spirv {
 /// This class acts as an owning reference to a SPIR-V module, and will
 /// automatically destroy the held module on destruction if the held module
 /// is valid.
-class OwningSPIRVModuleRef : public OwningOpRefBase<spirv::ModuleOp> {
+// TODO: Remove this class in favor of using OwningOpRef directly.
+class OwningSPIRVModuleRef : public OwningOpRef<spirv::ModuleOp> {
 public:
-  using OwningOpRefBase<spirv::ModuleOp>::OwningOpRefBase;
+  using OwningOpRef<spirv::ModuleOp>::OwningOpRef;
 };
 
 } // end namespace spirv

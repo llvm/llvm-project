@@ -16,7 +16,12 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct LowerMatrixIntrinsicsPass : PassInfoMixin<LowerMatrixIntrinsicsPass> {
+class LowerMatrixIntrinsicsPass
+    : public PassInfoMixin<LowerMatrixIntrinsicsPass> {
+  bool Minimal;
+
+public:
+  LowerMatrixIntrinsicsPass(bool Minimal = false) : Minimal(Minimal) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };

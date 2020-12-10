@@ -200,10 +200,10 @@ TEST(InstructionsTest, CastInst) {
   Type *V4Int16Ty = FixedVectorType::get(Int16Ty, 4);
   Type *V1Int16Ty = FixedVectorType::get(Int16Ty, 1);
 
-  Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
-  Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
-  Type *VScaleV4Int16Ty = VectorType::get(Int16Ty, 4, true);
-  Type *VScaleV1Int16Ty = VectorType::get(Int16Ty, 1, true);
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  Type *VScaleV2Int64Ty = ScalableVectorType::get(Int64Ty, 2);
+  Type *VScaleV4Int16Ty = ScalableVectorType::get(Int16Ty, 4);
+  Type *VScaleV1Int16Ty = ScalableVectorType::get(Int16Ty, 1);
 
   Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
   Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
@@ -214,26 +214,21 @@ TEST(InstructionsTest, CastInst) {
   Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
   Type *V4Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 4);
-  Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
+  Type *VScaleV4Int32PtrAS1Ty = ScalableVectorType::get(Int32PtrAS1Ty, 4);
   Type *V4Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 4);
 
   Type *V2Int64PtrTy = FixedVectorType::get(Int64PtrTy, 2);
   Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
-  Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
+  Type *VScaleV2Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 2);
   Type *V4Int32PtrTy = FixedVectorType::get(Int32PtrTy, 4);
-  Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
-  Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
+  Type *VScaleV4Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 4);
+  Type *VScaleV4Int64PtrTy = ScalableVectorType::get(Int64PtrTy, 4);
 
   const Constant* c8 = Constant::getNullValue(V8x8Ty);
   const Constant* c64 = Constant::getNullValue(V8x64Ty);
 
   const Constant *v2ptr32 = Constant::getNullValue(V2Int32PtrTy);
 
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isCastable(Int64Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(V8x64Ty, V8x8Ty));
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, V8x64Ty));
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
@@ -249,7 +244,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrTy, V2Int32PtrAS1Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_TRUE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int64PtrAS1Ty));
-  EXPECT_TRUE(CastInst::isCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_EQ(CastInst::AddrSpaceCast, CastInst::getCastOpcode(v2ptr32, true,
                                                              V2Int32PtrAS1Ty,
                                                              true));
@@ -374,11 +368,19 @@ TEST(InstructionsTest, CastInst) {
   Constant *NullV2I32Ptr = Constant::getNullValue(V2Int32PtrTy);
   auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
+  Constant *NullVScaleV2I32Ptr = Constant::getNullValue(VScaleV2Int32PtrTy);
+  auto Inst1VScale = CastInst::CreatePointerCast(
+      NullVScaleV2I32Ptr, VScaleV2Int32Ty, "foo.vscale", BB);
+
   // Second form
   auto Inst2 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+  auto Inst2VScale =
+      CastInst::CreatePointerCast(NullVScaleV2I32Ptr, VScaleV2Int32Ty);
 
   delete Inst2;
+  delete Inst2VScale;
   Inst1->eraseFromParent();
+  Inst1VScale->eraseFromParent();
   delete BB;
 }
 
@@ -1073,6 +1075,40 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id12->isIdentityWithExtract());
   EXPECT_FALSE(Id12->isConcat());
   delete Id12;
+
+  // Not possible to express shuffle mask for scalable vector for extract
+  // subvector.
+  Type *VScaleV4Int32Ty = ScalableVectorType::get(Int32Ty, 4);
+  ShuffleVectorInst *Id13 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV4Int32Ty),
+                            UndefValue::get(VScaleV4Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  int Index = 0;
+  EXPECT_FALSE(Id13->isExtractSubvectorMask(Index));
+  EXPECT_FALSE(Id13->changesLength());
+  EXPECT_FALSE(Id13->increasesLength());
+  delete Id13;
+
+  // Result has twice as many operands.
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  ShuffleVectorInst *Id14 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            UndefValue::get(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  EXPECT_TRUE(Id14->changesLength());
+  EXPECT_TRUE(Id14->increasesLength());
+  delete Id14;
+
+  // Not possible to express these masks for scalable vectors, make sure we
+  // don't crash.
+  ShuffleVectorInst *Id15 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty));
+  EXPECT_FALSE(Id15->isIdentityWithPadding());
+  EXPECT_FALSE(Id15->isIdentityWithExtract());
+  EXPECT_FALSE(Id15->isConcat());
+  delete Id15;
 }
 
 TEST(InstructionsTest, GetSplat) {
@@ -1374,6 +1410,70 @@ TEST(InstructionsTest, DropLocation) {
     EXPECT_EQ(I2->getDebugLoc().getScope(), Scope);
     EXPECT_EQ(I2->getDebugLoc().getInlinedAt(), nullptr);
   }
+}
+
+TEST(InstructionsTest, BranchWeightOverflow) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @caller() {
+        call void @callee(), !prof !1
+        ret void
+      }
+
+      !1 = !{!"branch_weights", i32 20000}
+  )");
+  ASSERT_TRUE(M);
+  CallInst *CI =
+      cast<CallInst>(&M->getFunction("caller")->getEntryBlock().front());
+  uint64_t ProfWeight;
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, 20000U);
+  CI->updateProfWeight(10000000, 1);
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, UINT32_MAX);
+}
+
+TEST(InstructionsTest, AllocaInst) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      %T = type { i64, [3 x i32]}
+      define void @f(i32 %n) {
+      entry:
+        %A = alloca i32, i32 1
+        %B = alloca i32, i32 4
+        %C = alloca i32, i32 %n
+        %D = alloca <8 x double>
+        %E = alloca <vscale x 8 x double>
+        %F = alloca [2 x half]
+        %G = alloca [2 x [3 x i128]]
+        %H = alloca %T
+        ret void
+      }
+    )");
+  const DataLayout &DL = M->getDataLayout();
+  ASSERT_TRUE(M);
+  Function *Fun = cast<Function>(M->getNamedValue("f"));
+  BasicBlock &BB = Fun->front();
+  auto It = BB.begin();
+  AllocaInst &A = cast<AllocaInst>(*It++);
+  AllocaInst &B = cast<AllocaInst>(*It++);
+  AllocaInst &C = cast<AllocaInst>(*It++);
+  AllocaInst &D = cast<AllocaInst>(*It++);
+  AllocaInst &E = cast<AllocaInst>(*It++);
+  AllocaInst &F = cast<AllocaInst>(*It++);
+  AllocaInst &G = cast<AllocaInst>(*It++);
+  AllocaInst &H = cast<AllocaInst>(*It++);
+  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
+  EXPECT_FALSE(C.getAllocationSizeInBits(DL));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
+  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
+  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
 }
 
 } // end anonymous namespace

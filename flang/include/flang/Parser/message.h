@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
+#include <list>
 #include <optional>
 #include <string>
 #include <utility>
@@ -213,43 +214,22 @@ private:
 class Messages {
 public:
   Messages() {}
-  Messages(Messages &&that) : messages_{std::move(that.messages_)} {
-    if (!messages_.empty()) {
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
-  }
+  Messages(Messages &&that) : messages_{std::move(that.messages_)} {}
   Messages &operator=(Messages &&that) {
     messages_ = std::move(that.messages_);
-    if (messages_.empty()) {
-      ResetLastPointer();
-    } else {
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
     return *this;
   }
 
-  std::forward_list<Message> &messages() { return messages_; }
+  std::list<Message> &messages() { return messages_; }
   bool empty() const { return messages_.empty(); }
-  void clear();
+  void clear() { messages_.clear(); }
 
   template <typename... A> Message &Say(A &&...args) {
-    last_ = messages_.emplace_after(last_, std::forward<A>(args)...);
-    return *last_;
+    return messages_.emplace_back(std::forward<A>(args)...);
   }
 
   void Annex(Messages &&that) {
-    if (!that.messages_.empty()) {
-      messages_.splice_after(last_, that.messages_);
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
-  }
-
-  void Restore(Messages &&that) {
-    that.Annex(std::move(*this));
-    *this = std::move(that);
+    messages_.splice(messages_.end(), that.messages_);
   }
 
   bool Merge(const Message &);
@@ -262,10 +242,7 @@ public:
   bool AnyFatalError() const;
 
 private:
-  void ResetLastPointer() { last_ = messages_.before_begin(); }
-
-  std::forward_list<Message> messages_;
-  std::forward_list<Message>::iterator last_{messages_.before_begin()};
+  std::list<Message> messages_;
 };
 
 class ContextualMessages {
@@ -278,6 +255,7 @@ public:
 
   CharBlock at() const { return at_; }
   Messages *messages() const { return messages_; }
+  Message::Reference contextMessage() const { return contextMessage_; }
   bool empty() const { return !messages_ || messages_->empty(); }
 
   // Set CharBlock for messages; restore when the returned value is deleted
@@ -286,6 +264,13 @@ public:
       at = at_;
     }
     return common::ScopedSet(at_, std::move(at));
+  }
+
+  common::Restorer<Message::Reference> SetContext(Message *m) {
+    if (!m) {
+      m = contextMessage_.get();
+    }
+    return common::ScopedSet(contextMessage_, m);
   }
 
   // Diverts messages to another buffer; restored when the returned
@@ -300,7 +285,11 @@ public:
 
   template <typename... A> Message *Say(CharBlock at, A &&...args) {
     if (messages_ != nullptr) {
-      return &messages_->Say(at, std::forward<A>(args)...);
+      auto &msg{messages_->Say(at, std::forward<A>(args)...)};
+      if (contextMessage_) {
+        msg.SetContext(contextMessage_.get());
+      }
+      return &msg;
     } else {
       return nullptr;
     }
@@ -313,6 +302,7 @@ public:
 private:
   CharBlock at_;
   Messages *messages_{nullptr};
+  Message::Reference contextMessage_;
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_MESSAGE_H_

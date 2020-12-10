@@ -7,7 +7,7 @@
 # CHECK-NEXT:   - Name:    absolute
 # CHECK-NEXT:     Index:   SHN_ABS
 # CHECK-NEXT:     Binding: STB_GLOBAL
-# CHECK-NEXT:     Value:   0x0000000000001234
+# CHECK-NEXT:     Value:   0x1234
 # CHECK-NEXT:   - Name:    common
 # CHECK-NEXT:     Index:   SHN_COMMON
 # CHECK-NEXT:     Binding: STB_GLOBAL

@@ -4,6 +4,7 @@ unittest("OrcJITTests") {
   deps = [
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/Object",

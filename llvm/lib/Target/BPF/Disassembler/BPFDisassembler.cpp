@@ -58,7 +58,7 @@ public:
     BPF_MEM = 0x3,
     BPF_LEN = 0x4,
     BPF_MSH = 0x5,
-    BPF_XADD = 0x6
+    BPF_ATOMIC = 0x6
   };
 
   BPFDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
@@ -176,7 +176,7 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   uint8_t InstMode = getInstMode(Insn);
   if ((InstClass == BPF_LDX || InstClass == BPF_STX) &&
       getInstSize(Insn) != BPF_DW &&
-      (InstMode == BPF_MEM || InstMode == BPF_XADD) &&
+      (InstMode == BPF_MEM || InstMode == BPF_ATOMIC) &&
       STI.getFeatureBits()[BPF::ALU32])
     Result = decodeInstruction(DecoderTableBPFALU3264, Instr, Insn, Address,
                                this, STI);

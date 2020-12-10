@@ -27,6 +27,7 @@
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT:   ModulePass Manager
+; CHECK-NEXT:     Annotation2Metadata
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     Infer set function attributes
 ; CHECK-NEXT:     Interprocedural Sparse Conditional Constant Propagation
@@ -130,8 +131,8 @@
 ; CHECK-NEXT:         Loop-Closed SSA Form Pass
 ; CHECK-NEXT:         Scalar Evolution Analysis
 ; CHECK-NEXT:         Loop Pass Manager
-; CHECK-NEXT:           Induction Variable Simplification
 ; CHECK-NEXT:           Recognize loop idioms
+; CHECK-NEXT:           Induction Variable Simplification
 ; CHECK-NEXT:           Delete dead loops
 ; CHECK-NEXT:           Unroll loops
 ; CHECK-NEXT:         SROA
@@ -311,6 +312,7 @@
 ; CHECK-NEXT:       Remove redundant instructions
 ; CHECK-NEXT:       Hoist/decompose integer division and remainder
 ; CHECK-NEXT:       Simplify the CFG
+; CHECK-NEXT:       Annotation Remarks
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
 ; CHECK-NEXT: Pass Arguments:

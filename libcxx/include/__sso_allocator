@@ -48,7 +48,7 @@ public:
 private:
     __sso_allocator& operator=(const __sso_allocator&);
 public:
-    _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, typename __sso_allocator<void, _Np>::const_pointer = 0)
+    _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, typename __sso_allocator<void, _Np>::const_pointer = nullptr)
     {
         if (!__allocated_ && __n <= _Np)
         {

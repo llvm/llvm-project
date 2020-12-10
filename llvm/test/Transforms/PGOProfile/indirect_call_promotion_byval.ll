@@ -19,7 +19,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @func5(%struct.Foo.1* byval %p) {
+define i32 @func5(%struct.Foo.1* byval(%struct.Foo.1) %p) {
 entry:
   %gep = getelementptr inbounds %struct.Foo.1, %struct.Foo.1* %p, i32 0, i32 0
   %v = load i32, i32* %gep

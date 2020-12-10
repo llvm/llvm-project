@@ -16,6 +16,8 @@ namespace lldb_private {
 
 class NativeThreadProtocol;
 
+enum class ExpeditedRegs { Minimal, Full };
+
 class NativeRegisterContext
     : public std::enable_shared_from_this<NativeRegisterContext> {
 public:
@@ -115,6 +117,11 @@ public:
   virtual lldb::tid_t GetThreadID() const;
 
   virtual NativeThreadProtocol &GetThread() { return m_thread; }
+
+  virtual std::vector<uint32_t>
+  GetExpeditedRegisters(ExpeditedRegs expType) const;
+
+  virtual bool RegisterOffsetIsDynamic() const { return false; }
 
   const RegisterInfo *GetRegisterInfoByName(llvm::StringRef reg_name,
                                             uint32_t start_idx = 0);

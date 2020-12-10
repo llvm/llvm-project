@@ -18,3 +18,15 @@
 %3 = "test.side_effect_op"() {effects = [
   {effect="allocate", on_result, test_resource}
 ]} : () -> i32
+
+// expected-remark@+1 {{found an instance of 'read' on a symbol '@foo_ref', on resource '<Test>'}}
+"test.side_effect_op"() {effects = [
+  {effect="read", on_reference = @foo_ref, test_resource}
+]} : () -> i32
+
+// No _memory_ effects, but a parametric test effect.
+// expected-remark@+2 {{operation has no memory effects}}
+// expected-remark@+1 {{found a parametric effect with affine_map<(d0, d1) -> (d1, d0)>}}
+%4 = "test.side_effect_op"() {
+  effect_parameter = affine_map<(i, j) -> (j, i)>
+} : () -> i32

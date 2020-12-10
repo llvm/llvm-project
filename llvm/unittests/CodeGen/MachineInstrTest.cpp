@@ -383,6 +383,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getHeapAllocMarker());
 }
 
-static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<MCOperand>::value,
+              "trivially copyable");
 
 } // end namespace

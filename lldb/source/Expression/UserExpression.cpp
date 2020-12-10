@@ -358,6 +358,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       } else {
         if (expr_result) {
           result_valobj_sp = expr_result->GetValueObject();
+          result_valobj_sp->SetPreferredDisplayLanguage(language);
 
           LLDB_LOG(log,
                    "== [UserExpression::Evaluate] Execution completed "

@@ -150,3 +150,50 @@ loop:
   store i32 0, i32* %p2
   br label %loop
 }
+
+; CHECK-LABEL: phi_and_gep_unknown_size
+; CHECK: Just Mod:   call void @llvm.memset.p0i8.i32(i8* %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0i8.i32(i8* %z, i8 0, i32 %size, i1 false)
+; TODO: This should be NoModRef.
+define void @phi_and_gep_unknown_size(i1 %c, i8* %x, i8* %y, i8* noalias %z, i32 %size) {
+entry:
+  br i1 %c, label %true, label %false
+
+true:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi i8* [ %x, %true ], [ %y, %false ]
+  %g = getelementptr inbounds i8, i8* %p, i64 1
+  call void @llvm.memset.p0i8.i32(i8* %g, i8 0, i32 %size, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %z, i8 0, i32 %size, i1 false)
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
+
+; CHECK-LABEL: unsound_inequality
+; CHECK: MayAlias:  i32* %arrayidx13, i32* %phi
+; CHECK: MayAlias:  i32* %arrayidx5, i32* %phi
+; CHECK: NoAlias:   i32* %arrayidx13, i32* %arrayidx5
+
+; When recursively reasoning about phis, we can't use predicates between
+; two values as we might be comparing the two from different iterations.
+define i32 @unsound_inequality(i32* %jj7, i32* %j) {
+entry:
+  %oa5 = alloca [100 x i32], align 16
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %phi = phi i32* [ %arrayidx13, %for.body ], [ %j, %entry ]
+  %idx = load i32, i32* %jj7, align 4
+  %arrayidx5 = getelementptr inbounds [100 x i32], [100 x i32]* %oa5, i64 0, i32 %idx
+  store i32 0, i32* %arrayidx5, align 4
+  store i32 0, i32* %phi, align 4
+  %notequal = add i32 %idx, 1
+  %arrayidx13 = getelementptr inbounds [100 x i32], [100 x i32]* %oa5, i64 0, i32 %notequal
+  store i32 0, i32* %arrayidx13, align 4
+  br label %for.body
+} 

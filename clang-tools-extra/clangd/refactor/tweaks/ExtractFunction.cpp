@@ -708,6 +708,27 @@ tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
   return tooling::Replacement(SM, ExtractedFunc.InsertionPoint, 0, FunctionDef);
 }
 
+// Returns true if ExtZone contains any ReturnStmts.
+bool hasReturnStmt(const ExtractionZone &ExtZone) {
+  class ReturnStmtVisitor
+      : public clang::RecursiveASTVisitor<ReturnStmtVisitor> {
+  public:
+    bool VisitReturnStmt(ReturnStmt *Return) {
+      Found = true;
+      return false; // We found the answer, abort the scan.
+    }
+    bool Found = false;
+  };
+
+  ReturnStmtVisitor V;
+  for (const Stmt *RootStmt : ExtZone.RootStmts) {
+    V.TraverseStmt(const_cast<Stmt *>(RootStmt));
+    if (V.Found)
+      break;
+  }
+  return V.Found;
+}
+
 bool ExtractFunction::prepare(const Selection &Inputs) {
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
   if (!LangOpts.CPlusPlus)
@@ -715,8 +736,12 @@ bool ExtractFunction::prepare(const Selection &Inputs) {
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
   const SourceManager &SM = Inputs.AST->getSourceManager();
   auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts);
+  if (!MaybeExtZone ||
+      (hasReturnStmt(*MaybeExtZone) && !alwaysReturns(*MaybeExtZone)))
+    return false;
+
   // FIXME: Get rid of this check once we support hoisting.
-  if (!MaybeExtZone || MaybeExtZone->requiresHoisting(SM))
+  if (MaybeExtZone->requiresHoisting(SM))
     return false;
 
   ExtZone = std::move(*MaybeExtZone);

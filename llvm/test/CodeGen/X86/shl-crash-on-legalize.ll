@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@structMember = external local_unnamed_addr global i64, align 8
+@structMember = external dso_local local_unnamed_addr global i64, align 8
 
 define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-LABEL: PR29058:

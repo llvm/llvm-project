@@ -43,7 +43,7 @@ module attributes {
       // CHECK:        %[[INCREMENT:.*]] = spv.IAdd %[[INDVAR]], %[[STEP]] : i32
       // CHECK:        spv.Branch ^[[HEADER]](%[[INCREMENT]] : i32)
       // CHECK:      ^[[MERGE]]
-      // CHECK:        spv._merge
+      // CHECK:        spv.mlir.merge
       // CHECK:      }
       scf.for %arg4 = %lb to %ub step %step {
         %1 = load %arg2[%arg4] : memref<10xf32>
@@ -80,7 +80,7 @@ module attributes {
       // CHECK-DAG:   spv.Store "Function" %[[VAR2]], %[[UPDATED]] : f32
       // CHECK: spv.Branch ^[[HEADER]](%[[INCREMENT]], %[[UPDATED]], %[[UPDATED]] : i32, f32, f32)
       // CHECK: ^[[MERGE]]:
-      // CHECK:   spv._merge
+      // CHECK:   spv.mlir.merge
       // CHECK: }
       %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
         %sn = addf %si, %si : f32

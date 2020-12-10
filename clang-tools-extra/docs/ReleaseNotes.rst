@@ -57,7 +57,7 @@ The improvements are...
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- The IgnoreImplicitCastsAndParentheses traversal mode has been removed.
 
 Improvements to clang-rename
 ----------------------------
@@ -81,6 +81,11 @@ New modules
   Includes checks related to OpenCL for FPGA coding guidelines, based on the
   `Altera SDK for OpenCL: Best Practices Guide
   <https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf>`_.
+
+- New ``concurrency`` module.
+
+  Includes checks related to concurrent programming (e.g. threads, fibers,
+  coroutines, etc.).
 
 New checks
 ^^^^^^^^^^
@@ -112,6 +117,12 @@ New checks
   Finds condition variables in nested ``if`` statements that were also checked
   in the outer ``if`` statement and were not changed.
 
+- New :doc:`concurrency-mt-unsafe <clang-tidy/checks/concurrency-mt-unsafe>`
+  check.
+
+  Finds thread-unsafe functions usage. Currently knows about POSIX and
+  Glibc function sets.
+
 - New :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone-signal-handler>` check.
 
@@ -123,6 +134,11 @@ New checks
 
   Alias to the :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone-signal-handler>` check.
+
+- New :doc:`performance-no-int-to-ptr
+  <clang-tidy/checks/performance-no-int-to-ptr>` check.
+
+  Diagnoses every integer to pointer cast.
 
 - New :doc:`readability-function-cognitive-complexity
   <clang-tidy/checks/readability-function-cognitive-complexity>` check.
@@ -149,8 +165,16 @@ Changes in existing checks
   Added support for specifying the style of scoped ``enum`` constants. If 
   unspecified, will fall back to the style for regular ``enum`` constants.
 
+  Added an option `IgnoredRegexp` per identifier type to suppress identifier
+  naming checks for names matching a regular expression.
+
 - Removed `google-runtime-references` check because the rule it checks does
   not exist in the Google Style Guide anymore.
+
+- Improved :doc:`readability-redundant-string-init
+  <clang-tidy/checks/readability-redundant-string-init>` check.
+
+  Added `std::basic_string_view` to default list of ``string``-like types.
 
 Improvements to include-fixer
 -----------------------------

@@ -205,10 +205,6 @@ elif config.android:
   config.compile_wrapper = compile_wrapper
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
-  # TODO: Implement `%device_rm` to perform removal of files on a device.  For
-  # now just make it a no-op.
-  lit_config.warning('%device_rm is not implemented')
-  config.substitutions.append( ('%device_rm', 'echo ') )
 else:
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
@@ -352,6 +348,7 @@ if config.android:
   config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%device_rm', "%s -s '%s' shell 'rm ' " % (adb, env['ANDROID_SERIAL']) ) )
 
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
@@ -362,11 +359,12 @@ if config.android:
     android_api_level = int(android_api_level_str)
   except ValueError:
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb): got '%s'" % (adb, android_api_level_str))
-  if android_api_level >= 26:
-    config.available_features.add('android-26')
-  if android_api_level >= 28:
-    config.available_features.add('android-28')
-  if android_api_level >= 31 or android_api_codename == 'S':
+  android_api_level = min(android_api_level, int(config.android_api_level))
+  for required in [26, 28, 30]:
+    if android_api_level >= required:
+      config.available_features.add('android-%s' % required)
+  # FIXME: Replace with appropriate version when availible.  
+  if android_api_level > 30 or (android_api_level == 30 and android_api_codename == 'S'):
     config.available_features.add('android-thread-properties-api')
 
   # Prepare the device.
@@ -391,9 +389,9 @@ if config.host_os == 'Linux':
   if not config.android and ver_line.startswith(b"ldd "):
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_line.split()[-1].decode())
-    # 2.27 introduced some incompatibilities
-    if ver >= LooseVersion("2.27"):
-      config.available_features.add("glibc-2.27")
+    for required in ["2.27", "2.30"]:
+      if ver >= LooseVersion(required):
+        config.available_features.add("glibc-" + required)  
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
@@ -583,6 +581,12 @@ if config.use_lld and config.has_lld and not config.use_lto:
   extra_cflags += ["-fuse-ld=lld"]
 elif config.use_lld and (not config.has_lld):
   config.unsupported = True
+
+# Append any extra flags passed in lit_config
+append_target_cflags = lit_config.params.get('append_target_cflags', None)
+if append_target_cflags:
+  lit_config.note('Appending to extra_cflags: "{}"'.format(append_target_cflags))
+  extra_cflags += [append_target_cflags]
 
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "

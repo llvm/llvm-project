@@ -34,11 +34,11 @@ if.then:                                          ; preds = %entry
   unreachable
 
 if.end:                                           ; preds = %entry
-  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp) #4
+  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp) #4
   call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 8 %agg.tmp) #4
-  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp1) #4
+  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp1) #4
   call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 8 %agg.tmp1) #4
-  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp2) #4
+  call void @getbyval(%struct.ByVal* nonnull sret(%struct.ByVal) %agg.tmp2) #4
   call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 8 %agg.tmp2) #4
   ret i32 0
 }
@@ -55,5 +55,5 @@ declare dso_local void @exit_manyarg(i32, i32, i32, i32, i32, i32, i32, i32, i32
 
 declare dso_local void @make_push_unprofitable(%struct.ByVal* byval(%struct.ByVal) align 8)
 
-declare dso_local void @getbyval(%struct.ByVal* sret)
+declare dso_local void @getbyval(%struct.ByVal* sret(%struct.ByVal))
 

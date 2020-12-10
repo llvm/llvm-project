@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
 ; RUN: llc -verify-machineinstrs -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
 
-declare void @bar(i32)
+declare dso_local void @bar(i32)
 
 ; Test a simple indirect call and tail call.
 define void @icall_reg(void (i32)* %fp, i32 %x) #0 {
@@ -58,7 +58,7 @@ entry:
 ; X86FAST:       calll __x86_indirect_thunk_eax
 
 
-@global_fp = external global void (i32)*
+@global_fp = external dso_local global void (i32)*
 
 ; Test an indirect call through a global variable.
 define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
@@ -139,7 +139,7 @@ define void @vcall(%struct.Foo* %obj) #0 {
 ; X86FAST:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 
-declare void @direct_callee()
+declare dso_local void @direct_callee()
 
 define void @direct_tail() #0 {
   tail call void @direct_callee()

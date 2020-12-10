@@ -154,12 +154,6 @@ public:
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
-  lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
-                                 llvm::StringRef plugin_name,
-                                 lldb_private::Debugger &debugger,
-                                 lldb_private::Target *target,
-                                 lldb_private::Status &error) override;
-
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                    lldb_private::Status &error) override;
 

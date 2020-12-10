@@ -347,6 +347,7 @@ module ValueKind : sig
   | GlobalIFunc
   | GlobalVariable
   | UndefValue
+  | PoisonValue
   | Instruction of Opcode.t
 end
 
@@ -842,6 +843,10 @@ val const_pointer_null : lltype -> llvalue
     See the method [llvm::UndefValue::get]. *)
 val undef : lltype -> llvalue
 
+(** [poison ty] returns the poison value of the type [ty].
+    See the method [llvm::PoisonValue::get]. *)
+val poison : lltype -> llvalue
+
 (** [is_null v] returns [true] if the value [v] is the null (zero) value.
     See the method [llvm::Constant::isNullValue]. *)
 val is_null : llvalue -> bool
@@ -849,6 +854,10 @@ val is_null : llvalue -> bool
 (** [is_undef v] returns [true] if the value [v] is an undefined value, [false]
     otherwise. Similar to [llvm::isa<UndefValue>]. *)
 val is_undef : llvalue -> bool
+
+(** [is_poison v] returns [true] if the value [v] is a poison value, [false]
+    otherwise. Similar to [llvm::isa<PoisonValue>]. *)
+val is_poison : llvalue -> bool
 
 (** [constexpr_opcode v] returns an [Opcode.t] corresponding to constexpr
     value [v], or [Opcode.Invalid] if [v] is not a constexpr. *)

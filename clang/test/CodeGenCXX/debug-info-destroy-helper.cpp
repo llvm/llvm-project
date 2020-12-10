@@ -17,7 +17,7 @@ struct {
 // CHECK: arraydestroy.body
 // CHECK: %arraydestroy.elementPast =
 // CHECK-SAME: !dbg ![[LOCATION:[0-9]+]]
-// CHECK: call void @"??1<unnamed-type-e>@@QEAA@XZ"(%struct.anon* %arraydestroy.element)
+// CHECK: call void @"??1<unnamed-type-e>@@QEAA@XZ"(%struct.anon* {{[^,]*}} %arraydestroy.element)
 // CHECK-SAME: !dbg ![[LOCATION]]
 // CHECK: ![[SUBPROGRAM]] = distinct !DISubprogram(name: "__cxx_global_array_dtor"
 // CHECK-SAME: flags: DIFlagArtificial

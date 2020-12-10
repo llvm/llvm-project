@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -x cuda -std=c++11 -DCUDA %s
 // RUN: %clang_cc1 -x cl -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl -DOPENCL %s
+// RUN: %clang_cc1 -x cl -cl-std=cl1.0 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl1.1 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl1.2 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl2.0 -DOPENCL %s

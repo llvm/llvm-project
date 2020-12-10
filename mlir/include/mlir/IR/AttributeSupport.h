@@ -79,7 +79,7 @@ class AttributeUniquer;
 
 /// Base storage class appearing in an attribute. Derived storage classes should
 /// only be constructed within the context of the AttributeUniquer.
-class AttributeStorage : public StorageUniquer::BaseStorage {
+class alignas(8) AttributeStorage : public StorageUniquer::BaseStorage {
   friend detail::AttributeUniquer;
   friend StorageUniquer;
 

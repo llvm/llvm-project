@@ -55,7 +55,7 @@ Sections:
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:  - Type:            TYPE
 # CHECK:    Signatures:
@@ -73,10 +73,10 @@ Sections:
 # CHECK:    Relocations:
 # CHECK:      - Type:            R_WASM_TABLE_INDEX_SLEB
 # CHECK:        Index:           0
-# CHECK:        Offset:          0x00000006
+# CHECK:        Offset:          0x6
 # CHECK:      - Type:            R_WASM_FUNCTION_INDEX_LEB
 # CHECK:        Index:           1
-# CHECK:        Offset:          0x00000025
+# CHECK:        Offset:          0x25
 # CHECK:    Functions:
 # CHECK:      - Index:              0
 # CHECK:        Locals:

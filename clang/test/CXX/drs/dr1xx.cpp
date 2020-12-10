@@ -528,7 +528,7 @@ namespace dr142 { // dr142: yes
     void f();
   };
   void DD::f() {
-    mi = 3; // expected-error {{private base class}} expected-error {{private member}}
+    mi = 3; // expected-error {{private member}}
     si = 3; // expected-error {{private member}}
     B b_old; // expected-error {{private member}}
     dr142::B b;
@@ -868,7 +868,7 @@ namespace dr176 { // dr176: yes
 namespace dr177 { // dr177: yes
   struct B {};
   struct A {
-    A(A &); // expected-note 0-1{{not viable: expects an l-value}}
+    A(A &); // expected-note 0-1{{not viable: expects an lvalue}}
     A(const B &); // expected-note 0-1{{not viable: no known conversion from 'dr177::A' to}}
   };
   B b;
@@ -877,7 +877,7 @@ namespace dr177 { // dr177: yes
   // expected-error@-2 {{no viable constructor copying variable}}
 #endif
 
-  struct C { C(C&); }; // expected-note {{not viable: no known conversion from 'dr177::D' to 'dr177::C &'}}
+  struct C { C(C&); }; // expected-note {{not viable: expects an lvalue for 1st argument}}
   struct D : C {};
   struct E { operator D(); };
   E e;

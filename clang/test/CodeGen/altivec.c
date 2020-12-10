@@ -1,5 +1,21 @@
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-
+// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s
+// RUN: not %clang_cc1 -target-feature +altivec -mabi=vec-default -triple powerpc-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
+// RUN: not %clang_cc1 -target-feature +altivec -mabi=vec-default -triple powerpc64-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
+ 
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -target powerpc-unknown-aix %s -o - | FileCheck %s
+// RUN: not %clang -S -emit-llvm -maltivec -target powerpc-unknown-aix %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
+// RUN: not %clang -S -emit-llvm -maltivec -target powerpc64-unknown-aix %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR 
+// RUN: not %clang -S -emit-llvm -mabi=vec-default -target powerpc-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -emit-llvm -mabi=vec-extabi -target powerpc-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -target powerpc64-unknown-aix %s -o - | FileCheck %s
+// RUN: not %clang -S -emit-llvm -mabi=vec-default -target powerpc64-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -emit-llvm -mabi=vec-extabi -target powerpc64-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -mabi=vec-default -target powerpc-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -mabi=vec-extabi -target powerpc-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -mabi=vec-default -target powerpc64-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
+// RUN: not %clang -S -mabi=vec-extabi -target powerpc64-unknown-aix %s 2>&1  | FileCheck  %s --check-prefix=AIX-ATVER
 // Check initialization
 
 vector int test0 = (vector int)(1);       // CHECK: @test0 = global <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -38,3 +54,6 @@ void test3() {
   vector float vf;
   vf++;                                    // CHECK: fadd <4 x float> {{.*}} <float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}>
 }
+
+// AIX-ERROR:  error: The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI
+// AIX-ATVER:  error: '-mabi=vec-extabi' and '-mabi=vec-default' require '-maltivec'

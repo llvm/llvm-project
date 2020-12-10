@@ -2,7 +2,7 @@
 
 // We used to declare this hidden dllimport, which is contradictory.
 
-// CHECK: declare dllimport void @"?bar@foo@@QEAAXXZ"(%struct.foo*)
+// CHECK: declare dllimport void @"?bar@foo@@QEAAXXZ"(%struct.foo* {{[^,]*}})
 
 struct __attribute__((dllimport)) foo {
   void bar() {}

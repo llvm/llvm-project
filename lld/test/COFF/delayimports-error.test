@@ -3,7 +3,8 @@
 # RUN: lld-link /out:%t.dir/foo.dll /dll %t1.obj /export:datasym,DATA /noentry
 
 # RUN: yaml2obj %s -o %t2.obj
-# RUN: not lld-link /out:%t.exe /entry:main %t2.obj %t.dir/foo.lib /delayload:foo.dll \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main %t2.obj \
+# RUN:   %t.dir/foo.lib /delayload:foo.dll \
 # RUN:   /alternatename:__delayLoadHelper2=main /opt:noref >& %t.log
 # RUN: FileCheck %s < %t.log
 

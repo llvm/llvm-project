@@ -11,7 +11,6 @@
 // The test below checks that the driver correctly finds the linker and
 // runtime if and only if they exist.
 //
-// REQUIRES: platform-linker
 // RUN: rm -rf %T/testroot-riscv64-baremetal-nogcc
 // RUN: mkdir -p %T/testroot-riscv64-baremetal-nogcc/bin
 // RUN: ln -s %clang %T/testroot-riscv64-baremetal-nogcc/bin/clang
@@ -19,7 +18,11 @@
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/riscv64-unknown-elf %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf
 // RUN: %T/testroot-riscv64-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%T/testroot-riscv64-baremetal-nogcc/invalid \
-// RUN:    -target riscv64-unknown-elf --rtlib=platform 2>&1 \
+// RUN:    -target riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
+
+// RUN: %T/testroot-riscv64-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    -target riscv64-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
 // C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "{{.*}}Output/testroot-riscv64-baremetal-nogcc/bin/../riscv64-unknown-elf/include"

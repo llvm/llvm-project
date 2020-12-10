@@ -1,4 +1,5 @@
 // RUN: %clang -S -### -cl-std=CL %s 2>&1 | FileCheck --check-prefix=CHECK-CL %s
+// RUN: %clang -S -### -cl-std=CL1.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL10 %s
 // RUN: %clang -S -### -cl-std=CL1.1 %s 2>&1 | FileCheck --check-prefix=CHECK-CL11 %s
 // RUN: %clang -S -### -cl-std=CL1.2 %s 2>&1 | FileCheck --check-prefix=CHECK-CL12 %s
 // RUN: %clang -S -### -cl-std=CL2.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL20 %s
@@ -20,6 +21,7 @@
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
 // CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
+// CHECK-CL10: "-cc1" {{.*}} "-cl-std=CL1.0"
 // CHECK-CL11: "-cc1" {{.*}} "-cl-std=CL1.1"
 // CHECK-CL12: "-cc1" {{.*}} "-cl-std=CL1.2"
 // CHECK-CL20: "-cc1" {{.*}} "-cl-std=CL2.0"

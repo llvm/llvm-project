@@ -36,24 +36,34 @@
 #include "omp-tools.h"
 #include <sys/resource.h>
 
+// Define attribute that indicates that the fall through from the previous
+// case label is intentional and should not be diagnosed by a compiler
+//   Code from libcxx/include/__config
+// Use a function like macro to imply that it must be followed by a semicolon
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#define KMP_FALLTHROUGH() [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#define KMP_FALLTHROUGH() [[clang::fallthrough]]
+#elif __has_attribute(fallthrough) || __GNUC__ >= 7
+#define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
+#else
+#define KMP_FALLTHROUGH() ((void)0)
+#endif
+
 static int runOnTsan;
 static int hasReductionCallback;
 
 class ArcherFlags {
 public:
 #if (LLVM_VERSION) >= 40
-  int flush_shadow;
+  int flush_shadow{0};
 #endif
-  int print_max_rss;
-  int verbose;
-  int enabled;
+  int print_max_rss{0};
+  int verbose{0};
+  int enabled{1};
+  int ignore_serial{0};
 
-  ArcherFlags(const char *env)
-      :
-#if (LLVM_VERSION) >= 40
-        flush_shadow(0),
-#endif
-        print_max_rss(0), verbose(0), enabled(1) {
+  ArcherFlags(const char *env) {
     if (env) {
       std::vector<std::string> tokens;
       std::string token;
@@ -73,6 +83,8 @@ public:
         if (sscanf(it->c_str(), "verbose=%d", &verbose))
           continue;
         if (sscanf(it->c_str(), "enable=%d", &enabled))
+          continue;
+        if (sscanf(it->c_str(), "ignore_serial=%d", &ignore_serial))
           continue;
         std::cerr << "Illegal values for ARCHER_OPTIONS variable: " << token
                   << std::endl;
@@ -396,7 +408,7 @@ struct TaskData {
   bool InBarrier;
 
   /// Whether this task is an included task.
-  bool Included;
+  int TaskType{0};
 
   /// Index of which barrier to use next.
   char BarrierIndex;
@@ -429,8 +441,8 @@ struct TaskData {
   int execution;
   int freed;
 
-  TaskData(TaskData *Parent)
-      : InBarrier(false), Included(false), BarrierIndex(0), RefCount(1),
+  TaskData(TaskData *Parent, int taskType)
+      : InBarrier(false), TaskType(taskType), BarrierIndex(0), RefCount(1),
         Parent(Parent), ImplicitTask(nullptr), Team(Parent->Team),
         TaskGroup(nullptr), DependencyCount(0), execution(0), freed(0) {
     if (Parent != nullptr) {
@@ -441,8 +453,8 @@ struct TaskData {
     }
   }
 
-  TaskData(ParallelData *Team = nullptr)
-      : InBarrier(false), Included(false), BarrierIndex(0), RefCount(1),
+  TaskData(ParallelData *Team, int taskType)
+      : InBarrier(false), TaskType(taskType), BarrierIndex(0), RefCount(1),
         Parent(nullptr), ImplicitTask(this), Team(Team), TaskGroup(nullptr),
         DependencyCount(0), execution(1), freed(0) {}
 
@@ -450,6 +462,17 @@ struct TaskData {
     TsanDeleteClock(&Task);
     TsanDeleteClock(&Taskwait);
   }
+
+  bool isIncluded() { return TaskType & ompt_task_undeferred; }
+  bool isUntied() { return TaskType & ompt_task_untied; }
+  bool isFinal() { return TaskType & ompt_task_final; }
+  bool isMergable() { return TaskType & ompt_task_mergeable; }
+  bool isMerged() { return TaskType & ompt_task_merged; }
+
+  bool isExplicit() { return TaskType & ompt_task_explicit; }
+  bool isImplicit() { return TaskType & ompt_task_implicit; }
+  bool isInitial() { return TaskType & ompt_task_initial; }
+  bool isTarget() { return TaskType & ompt_task_target; }
 
   void *GetTaskPtr() { return &Task; }
 
@@ -503,11 +526,15 @@ static void ompt_tsan_parallel_begin(ompt_data_t *parent_task_data,
   parallel_data->ptr = Data;
 
   TsanHappensBefore(Data->GetParallelPtr());
+  if (archer_flags->ignore_serial && ToTaskData(parent_task_data)->isInitial())
+    TsanIgnoreWritesEnd();
 }
 
 static void ompt_tsan_parallel_end(ompt_data_t *parallel_data,
                                    ompt_data_t *task_data, int flag,
                                    const void *codeptr_ra) {
+  if (archer_flags->ignore_serial && ToTaskData(task_data)->isInitial())
+    TsanIgnoreWritesBegin();
   ParallelData *Data = ToParallelData(parallel_data);
   TsanHappensAfter(Data->GetBarrierPtr(0));
   TsanHappensAfter(Data->GetBarrierPtr(1));
@@ -532,11 +559,11 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
     if (type & ompt_task_initial) {
       parallel_data->ptr = new ParallelData(nullptr);
     }
-    task_data->ptr = new TaskData(ToParallelData(parallel_data));
+    task_data->ptr = new TaskData(ToParallelData(parallel_data), type);
     TsanHappensAfter(ToParallelData(parallel_data)->GetParallelPtr());
     TsanFuncEntry(ToParallelData(parallel_data)->codePtr);
     break;
-  case ompt_scope_end:
+  case ompt_scope_end: {
     TaskData *Data = ToTaskData(task_data);
     assert(Data->freed == 0 && "Implicit task end should only be called once!");
     Data->freed = 1;
@@ -544,6 +571,11 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
            "All tasks should have finished at the implicit barrier!");
     delete Data;
     TsanFuncExit();
+    break;
+  }
+  case ompt_scope_beginend:
+    // Should not occur according to OpenMP 5.1
+    // Tested in OMPT tests
     break;
   }
 }
@@ -556,11 +588,15 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
   TaskData *Data = ToTaskData(task_data);
   switch (endpoint) {
   case ompt_scope_begin:
+  case ompt_scope_beginend:
     TsanFuncEntry(codeptr_ra);
     switch (kind) {
     case ompt_sync_region_barrier_implementation:
     case ompt_sync_region_barrier_implicit:
     case ompt_sync_region_barrier_explicit:
+    case ompt_sync_region_barrier_implicit_parallel:
+    case ompt_sync_region_barrier_implicit_workshare:
+    case ompt_sync_region_barrier_teams:
     case ompt_sync_region_barrier: {
       char BarrierIndex = Data->BarrierIndex;
       TsanHappensBefore(Data->Team->GetBarrierPtr(BarrierIndex));
@@ -585,16 +621,23 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       Data->TaskGroup = new Taskgroup(Data->TaskGroup);
       break;
 
-    default:
+    case ompt_sync_region_reduction:
+      // should never be reached
       break;
+
     }
-    break;
+    if (endpoint == ompt_scope_begin)
+      break;
+    KMP_FALLTHROUGH();
   case ompt_scope_end:
     TsanFuncExit();
     switch (kind) {
     case ompt_sync_region_barrier_implementation:
     case ompt_sync_region_barrier_implicit:
     case ompt_sync_region_barrier_explicit:
+    case ompt_sync_region_barrier_implicit_parallel:
+    case ompt_sync_region_barrier_implicit_workshare:
+    case ompt_sync_region_barrier_teams:
     case ompt_sync_region_barrier: {
       if (hasReductionCallback < ompt_set_always) {
         // We want to track writes after the barrier again.
@@ -636,8 +679,11 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       break;
     }
 
-    default:
+    case ompt_sync_region_reduction:
+      // Should not occur according to OpenMP 5.1
+      // Tested in OMPT tests
       break;
+
     }
     break;
   }
@@ -667,6 +713,11 @@ static void ompt_tsan_reduction(ompt_sync_region_t kind,
       break;
     }
     break;
+  case ompt_scope_beginend:
+    // Should not occur according to OpenMP 5.1
+    // Tested in OMPT tests
+    // Would have no implications for DR detection
+    break;
   }
 }
 
@@ -689,14 +740,13 @@ static void ompt_tsan_task_create(
     ParallelData *PData = new ParallelData(nullptr);
     parallel_data->ptr = PData;
 
-    Data = new TaskData(PData);
+    Data = new TaskData(PData, type);
     new_task_data->ptr = Data;
   } else if (type & ompt_task_undeferred) {
-    Data = new TaskData(ToTaskData(parent_task_data));
+    Data = new TaskData(ToTaskData(parent_task_data), type);
     new_task_data->ptr = Data;
-    Data->Included = true;
   } else if (type & ompt_task_explicit || type & ompt_task_target) {
-    Data = new TaskData(ToTaskData(parent_task_data));
+    Data = new TaskData(ToTaskData(parent_task_data), type);
     new_task_data->ptr = Data;
 
     // Use the newly created address. We cannot use a single address from the
@@ -763,7 +813,7 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
       prior_task_status == ompt_task_late_fulfill) {
     // Included tasks are executed sequentially, no need to track
     // synchronization
-    if (!FromTask->Included) {
+    if (!FromTask->isIncluded()) {
       // Task will finish before a barrier in the surrounding parallel region
       // ...
       ParallelData *PData = FromTask->Team;
@@ -938,10 +988,14 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
             "Warning: please export "
             "TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
             "to avoid false positive reports from the OpenMP runtime!\n");
+  if (archer_flags->ignore_serial)
+    TsanIgnoreWritesBegin();
   return 1; // success
 }
 
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
+  if (archer_flags->ignore_serial)
+    TsanIgnoreWritesEnd();
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);

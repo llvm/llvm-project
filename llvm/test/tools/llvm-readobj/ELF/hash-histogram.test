@@ -71,13 +71,14 @@ ProgramHeaders:
 ## the bucket array pointing to a cycle.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
-# RUN: llvm-readelf --elf-hash-histogram 2>&1 %t2.o | FileCheck -DFILE=%t2.o %s --check-prefix=BROKEN
+# RUN: llvm-readelf --elf-hash-histogram 2>&1 %t2.o | \
+# RUN:   FileCheck -DFILE=%t2.o %s --check-prefix=BROKEN --implicit-check-not=warning:
 
 # BROKEN:       warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain
-# BROKEN:       Histogram for bucket list length (total of 1 buckets)
+# BROKEN:       Histogram for bucket list length (total of 2 buckets)
 # BROKEN-NEXT:  Length  Number     % of total  Coverage
 # BROKEN-NEXT:       0  0          (  0.0%)       0.0%
-# BROKEN-NEXT:       1  1          (100.0%)     100.0%
+# BROKEN-NEXT:       1  2          (100.0%)     100.0%
 
 --- !ELF
 FileHeader:
@@ -88,7 +89,7 @@ Sections:
   - Name:   .hash
     Type:   SHT_HASH
     Link:   .dynsym
-    Bucket: [ 1 ]
+    Bucket: [ 1, 1 ]
     Chain:  [ 0, 1 ]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC

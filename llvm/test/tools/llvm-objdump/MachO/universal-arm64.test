@@ -22,7 +22,7 @@
 # CHECK-NEXT:     offset 16384
 # CHECK-NEXT:     size 384
 # CHECK-NEXT:     align 2^14 (16384)
-# CHECK-NEXT: architecture
+# CHECK-NEXT: architecture arm64e
 # CHECK-NEXT:     cputype CPU_TYPE_ARM64
 # CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64E
 # CHECK-NEXT:     capabilities 0x0

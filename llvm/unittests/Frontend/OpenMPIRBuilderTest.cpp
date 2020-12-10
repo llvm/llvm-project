@@ -60,6 +60,25 @@ protected:
   DebugLoc DL;
 };
 
+// Returns the value stored in the given allocation. Returns null if the given
+// value is not a result of an allocation, if no value is stored or if there is
+// more than one store.
+static Value *findStoredValue(Value *AllocaValue) {
+  Instruction *Alloca = dyn_cast<AllocaInst>(AllocaValue);
+  if (!Alloca)
+    return nullptr;
+  StoreInst *Store = nullptr;
+  for (Use &U : Alloca->uses()) {
+    if (auto *CandidateStore = dyn_cast<StoreInst>(U.getUser())) {
+      EXPECT_EQ(Store, nullptr);
+      Store = CandidateStore;
+    }
+  }
+  if (!Store)
+    return nullptr;
+  return Store->getValueOperand();
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
@@ -341,20 +360,25 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   };
 
   auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+                    Value &Orig, Value &Inner,
+                    Value *&ReplacementValue) -> InsertPointTy {
     ++NumPrivatizedVars;
 
-    if (!isa<AllocaInst>(VPtr)) {
-      EXPECT_EQ(&VPtr, F->arg_begin());
-      ReplacementValue = &VPtr;
+    if (!isa<AllocaInst>(Orig)) {
+      EXPECT_EQ(&Orig, F->arg_begin());
+      ReplacementValue = &Inner;
       return CodeGenIP;
     }
 
+    // Since the original value is an allocation, it has a pointer type and
+    // therefore no additional wrapping should happen.
+    EXPECT_EQ(&Orig, &Inner);
+
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = VPtr.getType()->getPointerElementType();
-    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
-    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Type *VTy = Inner.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(V, ReplacementValue);
     return CodeGenIP;
@@ -401,7 +425,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   EXPECT_EQ(ForkCI->getArgOperand(1),
             ConstantInt::get(Type::getInt32Ty(Ctx), 1U));
   EXPECT_EQ(ForkCI->getArgOperand(2), Usr);
-  EXPECT_EQ(ForkCI->getArgOperand(3), F->arg_begin());
+  EXPECT_EQ(findStoredValue(ForkCI->getArgOperand(3)), F->arg_begin());
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelNested) {
@@ -423,12 +447,13 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
   };
 
   auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+                    Value &Orig, Value &Inner,
+                    Value *&ReplacementValue) -> InsertPointTy {
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = VPtr.getType()->getPointerElementType();
-    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
-    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Type *VTy = Inner.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(V, ReplacementValue);
     return CodeGenIP;
@@ -515,12 +540,13 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
   };
 
   auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+                    Value &Orig, Value &Inner,
+                    Value *&ReplacementValue) -> InsertPointTy {
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = VPtr.getType()->getPointerElementType();
-    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
-    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Type *VTy = Inner.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(V, ReplacementValue);
     return CodeGenIP;
@@ -639,20 +665,25 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
   };
 
   auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                    Value &VPtr, Value *&ReplacementValue) -> InsertPointTy {
+                    Value &Orig, Value &Inner,
+                    Value *&ReplacementValue) -> InsertPointTy {
     ++NumPrivatizedVars;
 
-    if (!isa<AllocaInst>(VPtr)) {
-      EXPECT_EQ(&VPtr, F->arg_begin());
-      ReplacementValue = &VPtr;
+    if (!isa<AllocaInst>(Orig)) {
+      EXPECT_EQ(&Orig, F->arg_begin());
+      ReplacementValue = &Inner;
       return CodeGenIP;
     }
 
+    // Since the original value is an allocation, it has a pointer type and
+    // therefore no additional wrapping should happen.
+    EXPECT_EQ(&Orig, &Inner);
+
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = VPtr.getType()->getPointerElementType();
-    Value *V = Builder.CreateLoad(VTy, &VPtr, VPtr.getName() + ".reload");
-    ReplacementValue = Builder.CreateAlloca(VTy, 0, VPtr.getName() + ".copy");
+    Type *VTy = Inner.getType()->getPointerElementType();
+    Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
+    ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(V, ReplacementValue);
     return CodeGenIP;
@@ -708,13 +739,15 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
   EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
   EXPECT_EQ(ForkCI->getArgOperand(1),
             ConstantInt::get(Type::getInt32Ty(Ctx), 1));
-  EXPECT_EQ(ForkCI->getArgOperand(3), F->arg_begin());
+  Value *StoredForkArg = findStoredValue(ForkCI->getArgOperand(3));
+  EXPECT_EQ(StoredForkArg, F->arg_begin());
 
   EXPECT_EQ(DirectCI->getCalledFunction(), OutlinedFn);
   EXPECT_EQ(DirectCI->getNumArgOperands(), 3U);
   EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(0)));
   EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(1)));
-  EXPECT_EQ(DirectCI->getArgOperand(2), F->arg_begin());
+  Value *StoredDirectArg = findStoredValue(DirectCI->getArgOperand(2));
+  EXPECT_EQ(StoredDirectArg, F->arg_begin());
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
@@ -772,7 +805,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     ASSERT_EQ(CBFn->user_back()->getNumUses(), 0U);
   };
 
-  auto PrivCB = [&](InsertPointTy, InsertPointTy, Value &V,
+  auto PrivCB = [&](InsertPointTy, InsertPointTy, Value &V, Value &,
                     Value *&) -> InsertPointTy {
     ++NumPrivatizedVars;
     llvm_unreachable("No privatization callback call expected!");
@@ -827,6 +860,85 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
           cast<BranchInst>(ExitBB->front()).getSuccessor(0)->front()));
     }
   }
+}
+
+TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+
+  Type *I32Ty = Type::getInt32Ty(M->getContext());
+  Type *I32PtrTy = Type::getInt32PtrTy(M->getContext());
+  Type *StructTy = StructType::get(I32Ty, I32PtrTy);
+  Type *StructPtrTy = StructTy->getPointerTo();
+  Type *VoidTy = Type::getVoidTy(M->getContext());
+  FunctionCallee RetI32Func = M->getOrInsertFunction("ret_i32", I32Ty);
+  FunctionCallee TakeI32Func =
+      M->getOrInsertFunction("take_i32", VoidTy, I32Ty);
+  FunctionCallee RetI32PtrFunc = M->getOrInsertFunction("ret_i32ptr", I32PtrTy);
+  FunctionCallee TakeI32PtrFunc =
+      M->getOrInsertFunction("take_i32ptr", VoidTy, I32PtrTy);
+  FunctionCallee RetStructFunc = M->getOrInsertFunction("ret_struct", StructTy);
+  FunctionCallee TakeStructFunc =
+      M->getOrInsertFunction("take_struct", VoidTy, StructTy);
+  FunctionCallee RetStructPtrFunc =
+      M->getOrInsertFunction("ret_structptr", StructPtrTy);
+  FunctionCallee TakeStructPtrFunc =
+      M->getOrInsertFunction("take_structPtr", VoidTy, StructPtrTy);
+  Value *I32Val = Builder.CreateCall(RetI32Func);
+  Value *I32PtrVal = Builder.CreateCall(RetI32PtrFunc);
+  Value *StructVal = Builder.CreateCall(RetStructFunc);
+  Value *StructPtrVal = Builder.CreateCall(RetStructPtrFunc);
+
+  Instruction *Internal;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &ContinuationBB) {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.restoreIP(CodeGenIP);
+    Internal = Builder.CreateCall(TakeI32Func, I32Val);
+    Builder.CreateCall(TakeI32PtrFunc, I32PtrVal);
+    Builder.CreateCall(TakeStructFunc, StructVal);
+    Builder.CreateCall(TakeStructPtrFunc, StructPtrVal);
+  };
+  auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
+                    Value &Inner, Value *&ReplacementValue) {
+    ReplacementValue = &Inner;
+    return CodeGenIP;
+  };
+  auto FiniCB = [](InsertPointTy) {};
+
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  IRBuilder<>::InsertPoint AfterIP =
+      OMPBuilder.createParallel(Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB,
+                                nullptr, nullptr, OMP_PROC_BIND_default, false);
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  OMPBuilder.finalize();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+  Function *OutlinedFn = Internal->getFunction();
+
+  Type *Arg2Type = OutlinedFn->getArg(2)->getType();
+  EXPECT_TRUE(Arg2Type->isPointerTy());
+  EXPECT_EQ(Arg2Type->getPointerElementType(), I32Ty);
+
+  // Arguments that need to be passed through pointers and reloaded will get
+  // used earlier in the functions and therefore will appear first in the
+  // argument list after outlining.
+  Type *Arg3Type = OutlinedFn->getArg(3)->getType();
+  EXPECT_TRUE(Arg3Type->isPointerTy());
+  EXPECT_EQ(Arg3Type->getPointerElementType(), StructTy);
+
+  Type *Arg4Type = OutlinedFn->getArg(4)->getType();
+  EXPECT_EQ(Arg4Type, I32PtrTy);
+
+  Type *Arg5Type = OutlinedFn->getArg(5)->getType();
+  EXPECT_EQ(Arg5Type, StructPtrTy);
 }
 
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
@@ -957,6 +1069,99 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  Type *LCTy = Type::getInt32Ty(Ctx);
+  Value *StartVal = ConstantInt::get(LCTy, 10);
+  Value *StopVal = ConstantInt::get(LCTy, 52);
+  Value *StepVal = ConstantInt::get(LCTy, 2);
+  auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
+
+  CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
+      Loc, LoopBodyGen, StartVal, StopVal, StepVal,
+      /*IsSigned=*/false, /*InclusiveStop=*/false);
+
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  InsertPointTy AllocaIP = Builder.saveIP();
+
+  CLI = OMPBuilder.createStaticWorkshareLoop(Loc, CLI, AllocaIP,
+                                             /*NeedsBarrier=*/true);
+  auto AllocaIter = BB->begin();
+  ASSERT_GE(std::distance(BB->begin(), BB->end()), 4);
+  AllocaInst *PLastIter = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PLowerBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PUpperBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PStride = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  EXPECT_NE(PLastIter, nullptr);
+  EXPECT_NE(PLowerBound, nullptr);
+  EXPECT_NE(PUpperBound, nullptr);
+  EXPECT_NE(PStride, nullptr);
+
+  auto PreheaderIter = CLI->getPreheader()->begin();
+  ASSERT_GE(
+      std::distance(CLI->getPreheader()->begin(), CLI->getPreheader()->end()),
+      7);
+  StoreInst *LowerBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *UpperBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *StrideStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  ASSERT_NE(LowerBoundStore, nullptr);
+  ASSERT_NE(UpperBoundStore, nullptr);
+  ASSERT_NE(StrideStore, nullptr);
+
+  auto *OrigLowerBound =
+      dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
+  auto *OrigUpperBound =
+      dyn_cast<ConstantInt>(UpperBoundStore->getValueOperand());
+  auto *OrigStride = dyn_cast<ConstantInt>(StrideStore->getValueOperand());
+  ASSERT_NE(OrigLowerBound, nullptr);
+  ASSERT_NE(OrigUpperBound, nullptr);
+  ASSERT_NE(OrigStride, nullptr);
+  EXPECT_EQ(OrigLowerBound->getValue(), 0);
+  EXPECT_EQ(OrigUpperBound->getValue(), 20);
+  EXPECT_EQ(OrigStride->getValue(), 1);
+
+  // Check that the loop IV is updated to account for the lower bound returned
+  // by the OpenMP runtime call.
+  BinaryOperator *Add = dyn_cast<BinaryOperator>(&CLI->getBody()->front());
+  EXPECT_EQ(Add->getOperand(0), CLI->getIndVar());
+  auto *LoadedLowerBound = dyn_cast<LoadInst>(Add->getOperand(1));
+  ASSERT_NE(LoadedLowerBound, nullptr);
+  EXPECT_EQ(LoadedLowerBound->getPointerOperand(), PLowerBound);
+
+  // Check that the trip count is updated to account for the lower and upper
+  // bounds return by the OpenMP runtime call.
+  auto *AddOne = dyn_cast<Instruction>(CLI->getTripCount());
+  ASSERT_NE(AddOne, nullptr);
+  ASSERT_TRUE(AddOne->isBinaryOp());
+  auto *One = dyn_cast<ConstantInt>(AddOne->getOperand(1));
+  ASSERT_NE(One, nullptr);
+  EXPECT_EQ(One->getValue(), 1);
+  auto *Difference = dyn_cast<Instruction>(AddOne->getOperand(0));
+  ASSERT_NE(Difference, nullptr);
+  ASSERT_TRUE(Difference->isBinaryOp());
+  EXPECT_EQ(Difference->getOperand(1), LoadedLowerBound);
+  auto *LoadedUpperBound = dyn_cast<LoadInst>(Difference->getOperand(0));
+  ASSERT_NE(LoadedUpperBound, nullptr);
+  EXPECT_EQ(LoadedUpperBound->getPointerOperand(), PUpperBound);
+
+  // The original loop iterator should only be used in the condition, in the
+  // increment and in the statement that adds the lower bound to it.
+  Value *IV = CLI->getIndVar();
+  EXPECT_EQ(std::distance(IV->use_begin(), IV->use_end()), 3);
+
+  // The exit block should contain the "fini" call and the barrier call,
+  // plus the call to obtain the thread ID.
+  BasicBlock *ExitBlock = CLI->getExit();
+  size_t NumCallsInExitBlock =
+      count_if(*ExitBlock, [](Instruction &I) { return isa<CallInst>(I); });
+  EXPECT_EQ(NumCallsInExitBlock, 3u);
 }
 
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {

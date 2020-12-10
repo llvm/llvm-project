@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/MemDerefPrinter.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/DataLayout.h"
@@ -17,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 namespace {
@@ -75,4 +77,36 @@ void MemDerefPrinter::print(raw_ostream &OS, const Module *M) const {
       OS << "\t(unaligned)";
     OS << "\n\n";
   }
+}
+
+PreservedAnalyses MemDerefPrinterPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
+  OS << "Memory Dereferencibility of pointers in function '" << F.getName()
+     << "'\n";
+
+  SmallVector<Value *, 4> Deref;
+  SmallPtrSet<Value *, 4> DerefAndAligned;
+
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  for (auto &I : instructions(F)) {
+    if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+      Value *PO = LI->getPointerOperand();
+      if (isDereferenceablePointer(PO, LI->getType(), DL))
+        Deref.push_back(PO);
+      if (isDereferenceableAndAlignedPointer(
+              PO, LI->getType(), MaybeAlign(LI->getAlignment()), DL))
+        DerefAndAligned.insert(PO);
+    }
+  }
+
+  OS << "The following are dereferenceable:\n";
+  for (Value *V : Deref) {
+    V->print(OS);
+    if (DerefAndAligned.count(V))
+      OS << "\t(aligned)";
+    else
+      OS << "\t(unaligned)";
+    OS << "\n\n";
+  }
+  return PreservedAnalyses::all();
 }

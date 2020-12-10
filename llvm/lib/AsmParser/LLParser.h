@@ -46,7 +46,7 @@ namespace llvm {
       t_LocalID, t_GlobalID,           // ID in UIntVal.
       t_LocalName, t_GlobalName,       // Name in StrVal.
       t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero, t_None, // No value.
+      t_Null, t_Undef, t_Zero, t_None, t_Poison, // No value.
       t_EmptyArray,                    // No value:  []
       t_Constant,                      // Value in ConstantVal.
       t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
@@ -328,7 +328,6 @@ namespace llvm {
     bool parseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
-    bool parseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName);
     bool parseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName);
     bool parsePreallocated(Type *&Result);
     bool parseByRef(Type *&Result);

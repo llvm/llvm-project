@@ -110,7 +110,7 @@ declare void @use(i8*)
 
 %struct.s = type { i32, i32, i32, i32 }
 
-define void @test3(%struct.s* sret %a4) {
+define void @test3(%struct.s* sret(%struct.s) %a4) {
 ; Check that the alignment is bumped up the alignment of the sret type.
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[A4_CAST:%.*]] = bitcast %struct.s* [[A4:%.*]] to i8*

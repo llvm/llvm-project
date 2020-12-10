@@ -75,7 +75,7 @@ ClangASTSource::~ClangASTSource() {
   // demand by passing false to
   // Target::GetScratchTypeSystemClang(create_on_demand).
   TypeSystemClang *scratch_clang_ast_context =
-      TypeSystemClang::GetScratch(*m_target, false);
+      ScratchTypeSystemClang::GetForTarget(*m_target, false);
 
   if (!scratch_clang_ast_context)
     return;
@@ -481,6 +481,15 @@ void ClangASTSource::FindExternalLexicalDecls(
 
       if (!copied_decl)
         continue;
+
+      // FIXME: We should add the copied decl to the 'decls' list. This would
+      // add the copied Decl into the DeclContext and make sure that we
+      // correctly propagate that we added some Decls back to Clang.
+      // By leaving 'decls' empty we incorrectly return false from
+      // DeclContext::LoadLexicalDeclsFromExternalStorage which might cause
+      // lookup issues later on.
+      // We can't just add them for now as the ASTImporter already added the
+      // decl into the DeclContext and this would add it twice.
 
       if (FieldDecl *copied_field = dyn_cast<FieldDecl>(copied_decl)) {
         QualType copied_field_type = copied_field->getType();

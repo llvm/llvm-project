@@ -713,6 +713,7 @@ bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
   case TargetOpcode::PATCHPOINT:
   case TargetOpcode::STACKMAP:
   case TargetOpcode::STATEPOINT:
+  case TargetOpcode::FENTRY_CALL:
     return false;
   }
   return true;

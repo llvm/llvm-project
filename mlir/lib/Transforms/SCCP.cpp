@@ -435,7 +435,7 @@ void SCCPSolver::initializeSymbolCallables(Operation *op) {
 
           // We only need to record the call in the lattice if it produces any
           // values.
-          if (callOp.getOperation()->getNumResults())
+          if (callOp->getNumResults())
             callableLatticeIt->second.addSymbolCall(callOp);
         }
         continue;
@@ -572,7 +572,7 @@ void SCCPSolver::visitCallableOperation(Operation *op) {
 }
 
 void SCCPSolver::visitCallOperation(CallOpInterface op) {
-  ResultRange callResults = op.getOperation()->getResults();
+  ResultRange callResults = op->getResults();
 
   // Resolve the callable operation for this call.
   Operation *callableOp = nullptr;

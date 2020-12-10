@@ -245,8 +245,8 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
                                        : ctx.GetWorkingDirectory());
   const char *process_event = ctx.GetProcessEvent();
   nub_process_t pid = DNBProcessLaunch(
-      resolved_path, &inferior_argv[0], &inferior_envp[0], cwd, stdin_path,
-      stdout_path, stderr_path, no_stdio, launch_flavor, g_disable_aslr,
+      &ctx, resolved_path, &inferior_argv[0], &inferior_envp[0], cwd,
+      stdin_path, stdout_path, stderr_path, no_stdio, g_disable_aslr,
       process_event, launch_err_str, sizeof(launch_err_str));
 
   g_pid = pid;
@@ -368,7 +368,8 @@ RNBRunLoopMode RNBRunLoopLaunchAttaching(RNBRemote *remote,
   DNBLogThreadedIf(LOG_RNB_MINIMAL, "%s Attaching to pid %i...", __FUNCTION__,
                    attach_pid);
   char err_str[1024];
-  pid = DNBProcessAttach(attach_pid, NULL, err_str, sizeof(err_str));
+  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetUnmaskSignals(), err_str,
+                         sizeof(err_str));
   g_pid = pid;
 
   if (pid == INVALID_NUB_PROCESS) {
@@ -889,6 +890,10 @@ static struct option g_long_options[] = {
      'F'}, // When debugserver launches the process, forward debugserver's
            // current environment variables to the child process ("./debugserver
            // -F localhost:1234 -- /bin/ls"
+    {"unmask-signals", no_argument, NULL,
+     'U'}, // debugserver will ignore EXC_MASK_BAD_ACCESS,
+           // EXC_MASK_BAD_INSTRUCTION and EXC_MASK_ARITHMETIC, which results in
+           // SIGSEGV, SIGILL and SIGFPE being propagated to the target process.
     {NULL, 0, NULL, 0}};
 
 int communication_fd = -1;
@@ -1260,6 +1265,10 @@ int main(int argc, char *argv[]) {
       forward_env = true;
       break;
 
+    case 'U':
+      ctx.SetUnmaskSignals(true);
+      break;
+
     case '2':
       // File descriptor passed to this process during fork/exec and is already
       // open and ready for communication.
@@ -1514,8 +1523,8 @@ int main(int argc, char *argv[]) {
         RNBLogSTDOUT("Waiting to attach to process %s...\n",
                      waitfor_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachWait(
-            waitfor_pid_name.c_str(), launch_flavor, ignore_existing,
-            timeout_ptr, waitfor_interval, err_str, sizeof(err_str));
+            &ctx, waitfor_pid_name.c_str(), ignore_existing, timeout_ptr,
+            waitfor_interval, err_str, sizeof(err_str));
         g_pid = pid;
 
         if (pid == INVALID_NUB_PROCESS) {
@@ -1550,7 +1559,8 @@ int main(int argc, char *argv[]) {
 
         RNBLogSTDOUT("Attaching to process %s...\n", attach_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachByName(
-            attach_pid_name.c_str(), timeout_ptr, err_str, sizeof(err_str));
+            attach_pid_name.c_str(), timeout_ptr, ctx.GetUnmaskSignals(),
+            err_str, sizeof(err_str));
         g_pid = pid;
         if (pid == INVALID_NUB_PROCESS) {
           ctx.LaunchStatus().SetError(-1, DNBError::Generic);

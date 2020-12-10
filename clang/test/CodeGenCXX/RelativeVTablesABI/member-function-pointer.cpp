@@ -26,7 +26,7 @@
 // CHECK:      [[memptr_end]]:
 // CHECK-NEXT:   [[method3:%.+]] = phi void (%class.A*)* [ [[method]], %[[virt]] ], [ [[method2]], %[[nonvirt]] ]
 // CHECK-NEXT:   [[a:%.+]] = bitcast i8* [[this_adj]] to %class.A*
-// CHECK-NEXT:   tail call void [[method3]](%class.A* [[a]])
+// CHECK-NEXT:   tail call void [[method3]](%class.A* {{[^,]*}} [[a]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

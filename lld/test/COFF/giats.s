@@ -72,7 +72,7 @@ IndirectCall:                           # @IndirectCall
 	subq	$40, %rsp
 	movq	%rcx, 32(%rsp)
 	movq	32(%rsp), %rax
-	movq	%rax, %rdx        # This would otherwise have be: movq __guard_dispatch_icall_fptr(%rip), %rdx
+	movq	%rax, %rdx        # This would otherwise be: movq __guard_dispatch_icall_fptr(%rip), %rdx
 	xorl	%ecx, %ecx
 	callq	*%rdx
 	nop

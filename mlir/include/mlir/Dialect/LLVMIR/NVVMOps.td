@@ -40,9 +40,9 @@ class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
 
 class NVVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<OpTrait> traits,
-                  bit hasResult>
+                  int numResults>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
-                    overloadedResults, overloadedOperands, traits, hasResult>;
+                    overloadedResults, overloadedOperands, traits, numResults>;
 
 
 //===----------------------------------------------------------------------===//
@@ -107,7 +107,7 @@ def NVVM_ShflBflyOp :
   let parser = [{ return parseNVVMShflSyncBflyOp(parser, result); }];
   let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
   let verifier = [{
-    if (!getAttrOfType<UnitAttr>("return_value_and_is_valid"))
+    if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
       return success();
     auto type = getType().cast<LLVM::LLVMType>();
     if (!type.isStructTy() || type.getStructNumElements() != 2 ||

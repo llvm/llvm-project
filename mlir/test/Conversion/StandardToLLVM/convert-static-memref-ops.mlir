@@ -70,13 +70,11 @@ func @check_static_return_with_offset(%static : memref<32x18xf32, offset:7, stri
 // CHECK-LABEL: func @zero_d_alloc() -> !llvm.struct<(ptr<float>, ptr<float>, i64)> {
 // BAREPTR-LABEL: func @zero_d_alloc() -> !llvm.ptr<float> {
 func @zero_d_alloc() -> memref<f32> {
-// CHECK-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
-// CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
 // CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// CHECK-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  llvm.call @malloc(%{{.*}}) : (!llvm.i64) -> !llvm.ptr<i8>
+// CHECK-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
+// CHECK-NEXT:  llvm.call @malloc(%[[size_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64)>
 // CHECK-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[0] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
@@ -84,13 +82,11 @@ func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
 
-// BAREPTR-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
 // BAREPTR-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// BAREPTR-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
 // BAREPTR-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// BAREPTR-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// BAREPTR-NEXT:  llvm.call @malloc(%{{.*}}) : (!llvm.i64) -> !llvm.ptr<i8>
+// BAREPTR-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
+// BAREPTR-NEXT:  llvm.call @malloc(%[[size_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // BAREPTR-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64)>
 // BAREPTR-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[0] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
@@ -122,14 +118,13 @@ func @zero_d_dealloc(%arg0: memref<f32>) {
 // CHECK-LABEL: func @aligned_1d_alloc(
 // BAREPTR-LABEL: func @aligned_1d_alloc(
 func @aligned_1d_alloc() -> memref<42xf32> {
-//      CHECK:  llvm.mlir.constant(42 : index) : !llvm.i64
+// CHECK-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
+// CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
-// CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// CHECK-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
+// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+// CHECK-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // CHECK-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
-// CHECK-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
+// CHECK-NEXT:  %[[allocsize:.*]] = llvm.add %[[size_bytes]], %[[alignment]] : !llvm.i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // CHECK-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[ptr]] : !llvm.ptr<float> to !llvm.i64
@@ -145,14 +140,13 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 
-// BAREPTR-NEXT:  llvm.mlir.constant(42 : index) : !llvm.i64
+// BAREPTR-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
+// BAREPTR-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
-// BAREPTR-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// BAREPTR-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
+// BAREPTR-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+// BAREPTR-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // BAREPTR-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
-// BAREPTR-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
+// BAREPTR-NEXT:  %[[allocsize:.*]] = llvm.add %[[size_bytes]], %[[alignment]] : !llvm.i64
 // BAREPTR-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // BAREPTR-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[ptr]] : !llvm.ptr<float> to !llvm.i64
@@ -176,26 +170,18 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK-LABEL: func @static_alloc() -> !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> {
 // BAREPTR-LABEL: func @static_alloc() -> !llvm.ptr<float> {
 func @static_alloc() -> memref<32x18xf32> {
-//      CHECK:  %[[sz1:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
-// CHECK-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : !llvm.i64
-// CHECK-NEXT:  %[[num_elems:.*]] = llvm.mul %0, %1 : !llvm.i64
+//      CHECK:  %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : !llvm.i64
 // CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
-// CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// CHECK-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
+// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+// CHECK-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
+// CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[size_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<float>
 
-// BAREPTR-NEXT: %[[sz1:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[sz2:.*]] = llvm.mlir.constant(18 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[num_elems:.*]] = llvm.mul %[[sz1]], %[[sz2]] : !llvm.i64
+// BAREPTR:      %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
-// BAREPTR-NEXT: %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT: %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// BAREPTR-NEXT: %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// BAREPTR-NEXT: %[[allocated:.*]] = llvm.call @malloc(%[[bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
+// BAREPTR-NEXT: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+// BAREPTR-NEXT: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
+// BAREPTR-NEXT: %[[allocated:.*]] = llvm.call @malloc(%[[size_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT: llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<float>
  %0 = alloc() : memref<32x18xf32>
  return %0 : memref<32x18xf32>
@@ -207,13 +193,12 @@ func @static_alloc() -> memref<32x18xf32> {
 func @static_alloca() -> memref<32x18xf32> {
 // CHECK-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
 // CHECK-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : !llvm.i64
-// CHECK-NEXT:  %[[num_elems:.*]] = llvm.mul %0, %1 : !llvm.i64
+// CHECK-NEXT:  %[[st2:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT:  %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : !llvm.i64
 // CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<float>
-// CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
-// CHECK-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[bytes]] x !llvm.float : (!llvm.i64) -> !llvm.ptr<float>
+// CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+// CHECK-NEXT:  %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
+// CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[size_bytes]] x !llvm.float : (!llvm.i64) -> !llvm.ptr<float>
  %0 = alloca() : memref<32x18xf32>
 
  // Test with explicitly specified alignment. llvm.alloca takes care of the
@@ -249,14 +234,10 @@ func @static_dealloc(%static: memref<10x8xf32>) {
 // BAREPTR-LABEL: func @zero_d_load(%{{.*}}: !llvm.ptr<float>) -> !llvm.float
 func @zero_d_load(%arg0: memref<f32>) -> f32 {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[c0]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %{{.*}} = llvm.load %[[addr]] : !llvm.ptr<float>
+// CHECK-NEXT:  %{{.*}} = llvm.load %[[ptr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// BAREPTR-NEXT: %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[c0]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT: llvm.load %[[addr:.*]] : !llvm.ptr<float>
+// BAREPTR-NEXT: llvm.load %[[ptr:.*]] : !llvm.ptr<float>
   %0 = load %arg0[] : memref<f32>
   return %0 : f32
 }
@@ -272,24 +253,16 @@ func @zero_d_load(%arg0: memref<f32>) -> f32 {
 // BAREPTR-SAME: (%[[A:.*]]: !llvm.ptr<float>, %[[I:.*]]: !llvm.i64, %[[J:.*]]: !llvm.i64) {
 func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-// BAREPTR-NEXT: %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-// BAREPTR-NEXT: %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT: llvm.load %[[addr]] : !llvm.ptr<float>
   %0 = load %static[%i, %j] : memref<10x42xf32>
@@ -303,14 +276,10 @@ func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 // BAREPTR-SAME: (%[[A:.*]]: !llvm.ptr<float>, %[[val:.*]]: !llvm.float)
 func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
+// CHECK-NEXT:  llvm.store %{{.*}}, %[[ptr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT: llvm.store %[[val]], %[[addr]] : !llvm.ptr<float>
+// BAREPTR-NEXT: llvm.store %[[val]], %[[ptr]] : !llvm.ptr<float>
   store %arg1, %arg0[] : memref<f32>
   return
 }
@@ -333,24 +302,16 @@ func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // BAREPTR-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-// BAREPTR-NEXT: %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-// BAREPTR-NEXT: %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT: llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
   store %val, %static[%i, %j] : memref<10x42xf32>
@@ -389,7 +350,7 @@ func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // -----
 
 // BAREPTR: llvm.func @foo(!llvm.ptr<i8>) -> !llvm.ptr<i8>
-func @foo(memref<10xi8>) -> memref<20xi8>
+func private @foo(memref<10xi8>) -> memref<20xi8>
 
 // BAREPTR-LABEL: func @check_memref_func_call
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
@@ -415,7 +376,7 @@ func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
 // -----
 
 // BAREPTR: llvm.func @goo(!llvm.float) -> !llvm.float
-func @goo(f32) -> f32
+func private @goo(f32) -> f32
 
 // BAREPTR-LABEL: func @check_scalar_func_call
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.float)
@@ -431,8 +392,8 @@ func @check_scalar_func_call(%in : f32) {
 // convention. Check that the conversion to the LLVM-IR dialect doesn't happen
 // in the presence of unranked memrefs when using such a calling convention.
 
-// BAREPTR: func @hoo(memref<*xi8>) -> memref<*xi8>
-func @hoo(memref<*xi8>) -> memref<*xi8>
+// BAREPTR: func private @hoo(memref<*xi8>) -> memref<*xi8>
+func private @hoo(memref<*xi8>) -> memref<*xi8>
 
 // BAREPTR-LABEL: func @check_unranked_memref_func_call(%{{.*}}: memref<*xi8>) -> memref<*xi8>
 func @check_unranked_memref_func_call(%in: memref<*xi8>) -> memref<*xi8> {

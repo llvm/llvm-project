@@ -116,6 +116,33 @@ static inline T logb(T x) {
   return normal.exponent;
 }
 
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T ldexp(T x, int exp) {
+  FPBits<T> bits(x);
+  if (bits.isZero() || bits.isInfOrNaN() || exp == 0)
+    return x;
+
+  // NormalFloat uses int32_t to store the true exponent value. We should ensure
+  // that adding |exp| to it does not lead to integer rollover. But, if |exp|
+  // value is larger the exponent range for type T, then we can return infinity
+  // early. Because the result of the ldexp operation can be a subnormal number,
+  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // calculating the limit.
+  int expLimit = FPBits<T>::maxExponent + MantissaWidth<T>::value + 1;
+  if (exp > expLimit)
+    return bits.sign ? FPBits<T>::negInf() : FPBits<T>::inf();
+
+  // Similarly on the negative side we return zero early if |exp| is too small.
+  if (exp < -expLimit)
+    return bits.sign ? FPBits<T>::negZero() : FPBits<T>::zero();
+
+  // For all other values, NormalFloat to T conversion handles it the right way.
+  NormalFloat<T> normal(bits);
+  normal.exponent += exp;
+  return normal;
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
 

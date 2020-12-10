@@ -7,7 +7,7 @@
 namespace ClassTemplateParamNotForwardingRef {
   // This is not a forwarding reference.
   template<typename T> struct A { // expected-note {{candidate}}
-    A(T&&); // expected-note {{no known conversion from 'int' to 'int &&'}}
+    A(T&&); // expected-note {{expects an rvalue}}
   };
   int n;
   A a = n; // expected-error {{no viable constructor or deduction guide}}
@@ -53,8 +53,8 @@ void test_f0() {
   X<Y&> xy2 = f0(lvalue<Y>());
 }
 
-template<typename T> X<T> f1(const T&&); // expected-note{{candidate function [with T = int] not viable: no known conversion from 'int' to 'const int &&' for 1st argument}} \
-// expected-note{{candidate function [with T = Y] not viable: no known conversion from 'Y' to 'const Y &&' for 1st argument}}
+template<typename T> X<T> f1(const T&&); // expected-note{{candidate function [with T = int] not viable: expects an rvalue for 1st argument}} \
+// expected-note{{candidate function [with T = Y] not viable: expects an rvalue for 1st argument}}
 
 void test_f1() {
   X<int> xi0 = f1(prvalue<int>());
@@ -67,7 +67,7 @@ void test_f1() {
 
 namespace std_example {
   template <class T> int f(T&&); 
-  template <class T> int g(const T&&); // expected-note{{candidate function [with T = int] not viable: no known conversion from 'int' to 'const int &&' for 1st argument}}
+  template <class T> int g(const T&&); // expected-note{{candidate function [with T = int] not viable: expects an rvalue for 1st argument}}
 
   int i;
   int n1 = f(i);
@@ -77,7 +77,7 @@ namespace std_example {
 #if __cplusplus > 201402L
   template<class T> struct A { // expected-note {{candidate}}
     template<class U>
-    A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: no known conversion from 'int' to 'int &&'}}
+    A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: expects an rvalue}}
     A(T &&, int *);       // expected-note {{requires 2}}
   };
   template<class T> A(T &&, int *) -> A<T>; // expected-note {{requires 2}}

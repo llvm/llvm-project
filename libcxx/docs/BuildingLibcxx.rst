@@ -378,26 +378,6 @@ The following options allow building libc++ for a different ABI version.
   See ``include/__config`` for the list of ABI macros.
 
 
-.. option:: LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION
-
-  **Default**: ``None``, which lets the library figure out which implementation
-  to use based on the object format.
-
-  This setting defines what implementation to use for comparing typeinfo objects.
-  There are two main implementations, which differ on whether we make the assumption
-  that type info names for a type have been fully merged are unique across the entire
-  program. This may not be the case for libraries built with ``-Bsymbolic`` or due to
-  compiler or linker bugs (Ex. llvm.org/PR37398).
-
-
-  When the value is set to ``1``, we assume that typeinfos are unique across the
-  whole program, and typeinfo comparisons compare only the pointer value.
-
-  When the value is set to ``2``, we do not assume that typeinfos are unique across
-  the whole program. We first compare the pointers, and then use ``strcmp`` on the
-  typeinfo names as a fallback.
-
-
 .. _LLVM-specific variables:
 
 LLVM-specific options

@@ -512,7 +512,7 @@ void SplitEditor::forceRecompute(unsigned RegIdx, const VNInfo &ParentVNI) {
   VFP = ValueForcePair(nullptr, true);
 }
 
-SlotIndex SplitEditor::buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
+SlotIndex SplitEditor::buildSingleSubRegCopy(Register FromReg, Register ToReg,
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def) {
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
@@ -538,7 +538,7 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
   return Def;
 }
 
-SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
+SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     LaneBitmask LaneMask, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertBefore, bool Late, unsigned RegIdx) {
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
@@ -644,7 +644,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
   LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
 
-  unsigned Reg = LI->reg();
+  Register Reg = LI->reg();
   bool DidRemat = false;
   if (OrigVNI) {
     LiveRangeEdit::Remat RM(ParentVNI);
@@ -1406,7 +1406,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     }
   }
 
-  for (unsigned R : *Edit) {
+  for (Register R : *Edit) {
     LiveInterval &LI = LIS.getInterval(R);
     if (!LI.hasSubRanges())
       continue;
@@ -1525,7 +1525,7 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     deleteRematVictims();
 
   // Get rid of unused values and set phi-kill flags.
-  for (unsigned Reg : *Edit) {
+  for (Register Reg : *Edit) {
     LiveInterval &LI = LIS.getInterval(Reg);
     LI.removeEmptySubRanges();
     LI.RenumberValues();
@@ -1542,11 +1542,11 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   ConnectedVNInfoEqClasses ConEQ(LIS);
   for (unsigned i = 0, e = Edit->size(); i != e; ++i) {
     // Don't use iterators, they are invalidated by create() below.
-    unsigned VReg = Edit->get(i);
+    Register VReg = Edit->get(i);
     LiveInterval &LI = LIS.getInterval(VReg);
     SmallVector<LiveInterval*, 8> SplitLIs;
     LIS.splitSeparateComponents(LI, SplitLIs);
-    unsigned Original = VRM.getOriginal(VReg);
+    Register Original = VRM.getOriginal(VReg);
     for (LiveInterval *SplitLI : SplitLIs)
       VRM.setIsSplitFromReg(SplitLI->reg(), Original);
 

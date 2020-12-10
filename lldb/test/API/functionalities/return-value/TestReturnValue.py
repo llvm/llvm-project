@@ -25,7 +25,8 @@ class ReturnValueTestCase(TestBase):
     def affected_by_radar_34562999(self):
         return (self.getArchitecture() == 'armv7' or self.getArchitecture() == 'armv7k') and self.platformIsDarwin()
 
-    @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
+    @expectedFailureAll(oslist=["freebsd"], archs=["i386"],
+                        bugnumber="llvm.org/pr48376")
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
         oslist=["linux"],
@@ -154,7 +155,8 @@ class ReturnValueTestCase(TestBase):
             #self.return_and_test_struct_value ("return_one_int_one_double_packed")
             self.return_and_test_struct_value("return_one_int_one_long")
 
-    @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
+    @expectedFailureAll(oslist=["freebsd"], archs=["i386"],
+                        bugnumber="llvm.org/pr48376")
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
         oslist=["linux"],

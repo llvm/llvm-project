@@ -8,6 +8,7 @@
 
 // dummies for outer let
 class LetDummies {
+  bit TRANS;
   bit ReadsModeReg;
   bit mayRaiseFPException;
   bit isCommutable;

@@ -16,9 +16,7 @@
 using namespace llvm;
 using namespace llvm::elfabi;
 
-void ErrorCollector::escalateToFatal() {
-  ErrorsAreFatal = true;
-}
+void ErrorCollector::escalateToFatal() { ErrorsAreFatal = true; }
 
 void ErrorCollector::addError(Error &&Err, StringRef Tag) {
   if (Err) {
@@ -48,9 +46,7 @@ void ErrorCollector::log(raw_ostream &OS) {
   }
 }
 
-bool ErrorCollector::allErrorsHandled() const {
-  return Errors.empty();
-}
+bool ErrorCollector::allErrorsHandled() const { return Errors.empty(); }
 
 ErrorCollector::~ErrorCollector() {
   if (ErrorsAreFatal && !allErrorsHandled())

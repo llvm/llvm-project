@@ -150,7 +150,7 @@ namespace rdar13473493 {
   {
   public:
     template <typename... Args>
-    auto operator()(Args&&... args) const -> decltype(wrapped(args...)) // expected-note{{candidate template ignored: substitution failure [with Args = <int>]: use of undeclared identifier 'wrapped'}}
+    auto operator()(Args&&... args) const -> decltype(wrapped(args...)) // expected-note{{candidate template ignored: substitution failure [with Args = <int>]: member 'wrapped' used before its declaration}}
     {
       return wrapped(args...);
     }

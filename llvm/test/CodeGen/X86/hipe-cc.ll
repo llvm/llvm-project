@@ -86,6 +86,6 @@ define cc 11 { i32, i32, i32 } @tailcaller(i32 %hp, i32 %p) nounwind {
 !0 = !{ !"P_NSP_LIMIT", i32 84 }
 !1 = !{ !"X86_LEAF_WORDS", i32 24 }
 !2 = !{ !"AMD64_LEAF_WORDS", i32 24 }
-@clos = external constant i32
+@clos = external dso_local constant i32
 declare cc 11 void @bar(i32, i32, i32, i32, i32)
 declare cc 11 { i32, i32, i32 } @tailcallee(i32, i32, i32, i32, i32, i32)

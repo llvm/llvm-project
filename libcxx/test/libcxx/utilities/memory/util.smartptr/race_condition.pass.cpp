@@ -20,6 +20,7 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 typedef std::shared_ptr<int> Ptr;
@@ -51,7 +52,7 @@ void run_test(Ptr p) {
     assert(p.use_count() == 2);
     TestRunner r(p);
     assert(p.use_count() == 3);
-    std::thread t1(r); // Start the test thread.
+    std::thread t1 = support::make_test_thread(r); // Start the test thread.
     assert(p.use_count() == 4);
     Start = true;
     // Run until we witness 25 use count changes via both

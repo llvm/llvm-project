@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fobjc-arc %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fobjc-arc -fblocks %s
 
 #define SWIFT_NAME(name) __attribute__((__swift_name__(name)))
+#define SWIFT_ASYNC_NAME(name) __attribute__((__swift_async_name__(name)))
 
 typedef struct {
   float x, y, z;
@@ -27,31 +28,31 @@ __attribute__((__swift_name__("IClass")))
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 
 + (I *)iWithAnotherValue:(int)value SWIFT_NAME("i()");
-// expected-warning@-1 {{too few parameters in '__swift_name__' attribute (expected 1; got 0)}}
+// expected-warning@-1 {{too few parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 0)}}
 
 + (I *)iWithYetAnotherValue:(int)value SWIFT_NAME("i(value:extra:)");
-// expected-warning@-1 {{too many parameters in '__swift_name__' attribute (expected 1; got 2}}
+// expected-warning@-1 {{too many parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 2}}
 
 + (I *)iAndReturnErrorCode:(int *)errorCode SWIFT_NAME("i()"); // no-warning
 + (I *)iWithValue:(int)value andReturnErrorCode:(int *)errorCode SWIFT_NAME("i(value:)"); // no-warning
 
 + (I *)iFromErrorCode:(const int *)errorCode SWIFT_NAME("i()");
-// expected-warning@-1 {{too few parameters in '__swift_name__' attribute (expected 1; got 0)}}
+// expected-warning@-1 {{too few parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 0)}}
 
 + (I *)iWithPointerA:(int *)value andReturnErrorCode:(int *)errorCode SWIFT_NAME("i()"); // no-warning
 + (I *)iWithPointerB:(int *)value andReturnErrorCode:(int *)errorCode SWIFT_NAME("i(pointer:)"); // no-warning
 + (I *)iWithPointerC:(int *)value andReturnErrorCode:(int *)errorCode SWIFT_NAME("i(pointer:errorCode:)"); // no-warning
 
 + (I *)iWithOtherI:(I *)other SWIFT_NAME("i()");
-// expected-warning@-1 {{too few parameters in '__swift_name__' attribute (expected 1; got 0)}}
+// expected-warning@-1 {{too few parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 0)}}
 
 + (instancetype)specialI SWIFT_NAME("init(options:)");
 + (instancetype)specialJ SWIFT_NAME("init(options:extra:)");
-// expected-warning@-1 {{too many parameters in '__swift_name__' attribute (expected 0; got 2)}}
+// expected-warning@-1 {{too many parameters in the signature specified by the '__swift_name__' attribute (expected 0; got 2)}}
 + (instancetype)specialK SWIFT_NAME("init(_:)");
-// expected-warning@-1 {{too many parameters in '__swift_name__' attribute (expected 0; got 1)}}
+// expected-warning@-1 {{too many parameters in the signature specified by the '__swift_name__' attribute (expected 0; got 1)}}
 + (instancetype)specialL SWIFT_NAME("i(options:)");
-// expected-warning@-1 {{too many parameters in '__swift_name__' attribute (expected 0; got 1)}}
+// expected-warning@-1 {{too many parameters in the signature specified by the '__swift_name__' attribute (expected 0; got 1)}}
 
 + (instancetype)trailingParen SWIFT_NAME("foo(");
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
@@ -82,10 +83,10 @@ void f0(int i) SWIFT_NAME("f_0");
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 
 void f1(int i) SWIFT_NAME("f_1()");
-// expected-warning@-1 {{too few parameters in '__swift_name__' attribute (expected 1; got 0)}}
+// expected-warning@-1 {{too few parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 0)}}
 
 void f2(int i) SWIFT_NAME("f_2(a:b:)");
-// expected-warning@-1 {{too many parameters in '__swift_name__' attribute (expected 1; got 2)}}
+// expected-warning@-1 {{too many parameters in the signature specified by the '__swift_name__' attribute (expected 1; got 2)}}
 
 void f3(int x, int y) SWIFT_NAME("fWithX(_:y:)");
 void f4(int x, int *error) SWIFT_NAME("fWithX(_:)");
@@ -95,7 +96,7 @@ typedef int int_t SWIFT_NAME("IntType");
 struct Point3D createPoint3D(float x, float y, float z) SWIFT_NAME("Point3D.init(x:y:z:)");
 struct Point3D rotatePoint3D(Point3D point, float radians) SWIFT_NAME("Point3D.rotate(self:radians:)");
 struct Point3D badRotatePoint3D(Point3D point, float radians) SWIFT_NAME("Point3D.rotate(radians:)");
-// expected-warning@-1 {{too few parameters in '__swift_name__' attribute (expected 2; got 1)}}
+// expected-warning@-1 {{too few parameters in the signature specified by the '__swift_name__' attribute (expected 2; got 1)}}
 
 extern struct Point3D identityPoint SWIFT_NAME("Point3D.identity");
 
@@ -172,3 +173,33 @@ void g(int i) SWIFT_NAME("function(int:)");
 // expected-error@+1 {{'swift_name' and 'swift_name' attributes are not compatible}}
 void g(int i) SWIFT_NAME("function(_:)") {
 }
+
+typedef int (^CallbackTy)(void);
+
+@interface AsyncI<P>
+
+- (void)doSomethingWithCallback:(CallbackTy)callback SWIFT_ASYNC_NAME("doSomething()");
+- (void)doSomethingX:(int)x withCallback:(CallbackTy)callback SWIFT_ASYNC_NAME("doSomething(x:)");
+
+// expected-warning@+1 {{too many parameters in the signature specified by the '__swift_async_name__' attribute (expected 1; got 2)}}
+- (void)doSomethingY:(int)x withCallback:(CallbackTy)callback SWIFT_ASYNC_NAME("doSomething(x:y:)");
+
+// expected-warning@+1 {{too few parameters in the signature specified by the '__swift_async_name__' attribute (expected 1; got 0)}}
+- (void)doSomethingZ:(int)x withCallback:(CallbackTy)callback SWIFT_ASYNC_NAME("doSomething()");
+
+// expected-warning@+1 {{'__swift_async_name__' attribute cannot be applied to a method with no parameters}}
+- (void)doSomethingNone SWIFT_ASYNC_NAME("doSomething()");
+
+// expected-error@+1 {{'__swift_async_name__' attribute takes one argument}}
+- (void)brokenAttr __attribute__((__swift_async_name__("brokenAttr", 2)));
+
+@end
+
+void asyncFunc(CallbackTy callback) SWIFT_ASYNC_NAME("asyncFunc()");
+
+// expected-warning@+1 {{'__swift_async_name__' attribute cannot be applied to a function with no parameters}}
+void asyncNoParams(void) SWIFT_ASYNC_NAME("asyncNoParams()");
+
+// expected-error@+1 {{'__swift_async_name__' attribute only applies to Objective-C methods and functions}}
+SWIFT_ASYNC_NAME("NoAsync")
+@protocol NoAsync @end

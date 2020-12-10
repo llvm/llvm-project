@@ -40,8 +40,8 @@ using namespace llvm;
 
 namespace {
 
-// Went we ceate the indirect function table we start at 1, so that there is
-// and emtpy slot at 0 and therefore calling a null function pointer will trap.
+// When we create the indirect function table we start at 1, so that there is
+// and empty slot at 0 and therefore calling a null function pointer will trap.
 static const uint32_t InitialTableOffset = 1;
 
 // For patching purposes, we need to remember where each section starts, both
@@ -218,9 +218,7 @@ class WasmObjectWriter : public MCObjectWriter {
   SmallVector<WasmDataSegment, 4> DataSegments;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
-  // NumTableImports is initialized to 1 to account for the hardcoded import of
-  // __indirect_function_table
-  unsigned NumTableImports = 1;
+  unsigned NumTableImports = 0;
   unsigned NumEventImports = 0;
   uint32_t SectionCount = 0;
 
@@ -270,7 +268,7 @@ private:
     SectionFunctions.clear();
     NumFunctionImports = 0;
     NumGlobalImports = 0;
-    NumTableImports = 1;
+    NumTableImports = 0;
     MCObjectWriter::reset();
   }
 
@@ -330,9 +328,6 @@ private:
   void writeCustomSection(WasmCustomSection &CustomSection,
                           const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeCustomRelocSections();
-  void
-  updateCustomSectionRelocations(const SmallVector<WasmFunction, 4> &Functions,
-                                 const MCAsmLayout &Layout);
 
   uint64_t getProvisionalValue(const WasmRelocationEntry &RelEntry,
                                const MCAsmLayout &Layout);
@@ -478,6 +473,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   // Currently only supported for for metadata sections.
   // See: test/MC/WebAssembly/blockaddress.ll
   if (Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
+      Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
       Type == wasm::R_WASM_SECTION_OFFSET_I32) {
     if (!FixupSection.getKind().isMetadata())
       report_fatal_error("relocations for function or section offsets are "
@@ -494,6 +490,29 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     C += Layout.getSymbolOffset(*SymA);
     SymA = cast<MCSymbolWasm>(SectionSymbol);
+  }
+
+  if (Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB ||
+      Type == wasm::R_WASM_TABLE_INDEX_SLEB ||
+      Type == wasm::R_WASM_TABLE_INDEX_SLEB64 ||
+      Type == wasm::R_WASM_TABLE_INDEX_I32 ||
+      Type == wasm::R_WASM_TABLE_INDEX_I64) {
+    // TABLE_INDEX relocs implicitly use the default indirect function table.
+    auto TableName = "__indirect_function_table";
+    MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(TableName));
+    if (Sym) {
+      if (!Sym->isFunctionTable())
+        Ctx.reportError(
+            Fixup.getLoc(),
+            "symbol '__indirect_function_table' is not a function table");
+    } else {
+      Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(TableName));
+      Sym->setFunctionTable();
+      // The default function table is synthesized by the linker.
+      Sym->setUndefined();
+    }
+    Sym->setUsedInReloc();
+    Asm.registerSymbol(*Sym);
   }
 
   // Relocation other than R_WASM_TYPE_INDEX_LEB are required to be
@@ -564,6 +583,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
     assert(WasmIndices.count(RelEntry.Symbol) > 0 && "symbol not found in wasm index space");
     return WasmIndices[RelEntry.Symbol];
   case wasm::R_WASM_FUNCTION_OFFSET_I32:
+  case wasm::R_WASM_FUNCTION_OFFSET_I64:
   case wasm::R_WASM_SECTION_OFFSET_I32: {
     const auto &Section =
         static_cast<const MCSectionWasm &>(RelEntry.Symbol->getSection());
@@ -576,7 +596,8 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
   case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
   case wasm::R_WASM_MEMORY_ADDR_I32:
-  case wasm::R_WASM_MEMORY_ADDR_I64: {
+  case wasm::R_WASM_MEMORY_ADDR_I64:
+  case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB: {
     // Provisional value is address of the global plus the offset
     const MCSymbolWasm *Base =
         cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
@@ -679,12 +700,14 @@ void WasmObjectWriter::applyRelocations(
       break;
     case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_MEMORY_ADDR_I64:
+    case wasm::R_WASM_FUNCTION_OFFSET_I64:
       patchI64(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
       writePatchableSLEB<5>(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB64:
@@ -843,11 +866,11 @@ void WasmObjectWriter::writeTableSection(ArrayRef<wasm::WasmTable> Tables) {
 
   encodeULEB128(Tables.size(), W->OS);
   for (const wasm::WasmTable &Table : Tables) {
-    encodeULEB128(Table.ElemType, W->OS);
-    encodeULEB128(Table.Limits.Flags, W->OS);
-    encodeULEB128(Table.Limits.Initial, W->OS);
-    if (Table.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
-      encodeULEB128(Table.Limits.Maximum, W->OS);
+    encodeULEB128(Table.Type.ElemType, W->OS);
+    encodeULEB128(Table.Type.Limits.Flags, W->OS);
+    encodeULEB128(Table.Type.Limits.Initial, W->OS);
+    if (Table.Type.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
+      encodeULEB128(Table.Type.Limits.Maximum, W->OS);
   }
   endSection(Section);
 }
@@ -1196,16 +1219,6 @@ void WasmObjectWriter::prepareImports(
                                      : wasm::WASM_LIMITS_FLAG_NONE;
   Imports.push_back(MemImport);
 
-  // For now, always emit the table section, since indirect calls are not
-  // valid without it. In the future, we could perhaps be more clever and omit
-  // it if there are no indirect calls.
-  wasm::WasmImport TableImport;
-  TableImport.Module = "env";
-  TableImport.Field = "__indirect_function_table";
-  TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
-  TableImport.Table.ElemType = wasm::WASM_TYPE_FUNCREF;
-  Imports.push_back(TableImport);
-
   // Populate SignatureIndices, and Imports and WasmIndices for undefined
   // symbols.  This must be done before populating WasmIndices for defined
   // symbols.
@@ -1264,6 +1277,23 @@ void WasmObjectWriter::prepareImports(
         Imports.push_back(Import);
         assert(WasmIndices.count(&WS) == 0);
         WasmIndices[&WS] = NumEventImports++;
+      } else if (WS.isTable()) {
+        if (WS.isWeak())
+          report_fatal_error("undefined table symbol cannot be weak");
+
+        wasm::WasmImport Import;
+        Import.Module = WS.getImportModule();
+        Import.Field = WS.getImportName();
+        Import.Kind = wasm::WASM_EXTERNAL_TABLE;
+        wasm::ValType ElemType = WS.getTableType();
+        Import.Table.ElemType = uint8_t(ElemType);
+        // FIXME: Extend table type to include limits? For now we don't specify
+        // a min or max which does not place any restrictions on the size of the
+        // imported table.
+        Import.Table.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+        Imports.push_back(Import);
+        assert(WasmIndices.count(&WS) == 0);
+        WasmIndices[&WS] = NumTableImports++;
       }
     }
   }
@@ -1389,6 +1419,16 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         TargetFeaturesSection =
             std::make_unique<WasmCustomSection>(Name, &Section);
         continue;
+      }
+
+      // Custom sections can also belong to COMDAT groups. In this case the
+      // decriptor's "index" field is the section index (in the final object
+      // file), but that is not known until after layout, so it must be fixed up
+      // later
+      if (const MCSymbolWasm *C = Section.getGroup()) {
+        Comdats[C->getName()].emplace_back(
+            WasmComdatEntry{wasm::WASM_COMDAT_SECTION,
+                            static_cast<uint32_t>(CustomSections.size())});
       }
 
       CustomSections.emplace_back(Name, &Section);
@@ -1522,10 +1562,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       if (WS.isDefined()) {
         assert(WasmIndices.count(&WS) == 0);
         wasm::WasmTable Table;
-        Table.ElemType = static_cast<uint8_t>(WS.getTableType());
         Table.Index = NumTableImports + Tables.size();
+        Table.Type.ElemType = static_cast<uint8_t>(WS.getTableType());
         // FIXME: Work on custom limits is ongoing
-        Table.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+        Table.Type.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
 
         WasmIndices[&WS] = Table.Index;
         Tables.push_back(Table);
@@ -1611,6 +1651,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (!isInSymtab(WS)) {
       WS.setIndex(InvalidIndex);
+      continue;
+    }
+    if (WS.isTable() && WS.getName() == "__indirect_function_table") {
+      // For the moment, don't emit table symbols -- wasm-ld can't handle them.
       continue;
     }
     LLVM_DEBUG(dbgs() << "adding to symtab: " << WS << "\n");
@@ -1753,10 +1797,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeTypeSection(Signatures);
     writeImportSection(Imports, DataSize, TableElems.size());
     writeFunctionSection(Functions);
+    writeTableSection(Tables);
     // Skip the "memory" section; we import the memory instead.
     writeEventSection(Events);
     writeGlobalSection(Globals);
-    writeTableSection(Tables);
     writeExportSection(Exports);
     writeElemSection(TableElems);
     writeDataCountSection();
@@ -1765,9 +1809,17 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     DataSectionIndex = writeDataSection(Layout);
   }
 
-  for (auto &CustomSection : CustomSections) {
-    writeCustomSection(CustomSection, Asm, Layout);
+  // The Sections in the COMDAT list have placeholder indices (their index among
+  // custom sections, rather than among all sections). Fix them up here.
+  for (auto &Group : Comdats) {
+    for (auto &Entry : Group.second) {
+      if (Entry.Kind == wasm::WASM_COMDAT_SECTION) {
+        Entry.Index += SectionCount;
+      }
+    }
   }
+  for (auto &CustomSection : CustomSections)
+    writeCustomSection(CustomSection, Asm, Layout);
 
   if (Mode != DwoMode::DwoOnly) {
     writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);

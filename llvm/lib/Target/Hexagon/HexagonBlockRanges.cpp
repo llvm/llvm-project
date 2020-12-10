@@ -275,7 +275,7 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::expandToSubRegs(
     for (; I.isValid(); ++I)
       SRs.insert({*I, 0});
   } else {
-    assert(Register::isVirtualRegister(R.Reg));
+    assert(R.Reg.isVirtual());
     auto &RC = *MRI.getRegClass(R.Reg);
     unsigned PReg = *RC.begin();
     MCSubRegIndexIterator I(PReg, &TRI);
@@ -482,7 +482,7 @@ HexagonBlockRanges::RegToRangeMap HexagonBlockRanges::computeDeadMap(
     }
   }
   for (auto &P : LiveMap)
-    if (Register::isVirtualRegister(P.first.Reg))
+    if (P.first.Reg.isVirtual())
       addDeadRanges(P.first);
 
   LLVM_DEBUG(dbgs() << __func__ << ": dead map\n"

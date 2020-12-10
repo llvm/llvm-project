@@ -105,6 +105,28 @@ void ComputationSliceState::clearBounds() {
   ubOperands.clear();
 }
 
+void ComputationSliceState::dump() const {
+  llvm::errs() << "\tIVs:\n";
+  for (Value iv : ivs)
+    llvm::errs() << "\t\t" << iv << "\n";
+
+  llvm::errs() << "\tLBs:\n";
+  for (auto &en : llvm::enumerate(lbs)) {
+    llvm::errs() << "\t\t" << en.value() << "\n";
+    llvm::errs() << "\t\tOperands:\n";
+    for (Value lbOp : lbOperands[en.index()])
+      llvm::errs() << "\t\t\t" << lbOp << "\n";
+  }
+
+  llvm::errs() << "\tUBs:\n";
+  for (auto &en : llvm::enumerate(ubs)) {
+    llvm::errs() << "\t\t" << en.value() << "\n";
+    llvm::errs() << "\t\tOperands:\n";
+    for (Value ubOp : ubOperands[en.index()])
+      llvm::errs() << "\t\t\t" << ubOp << "\n";
+  }
+}
+
 unsigned MemRefRegion::getRank() const {
   return memref.getType().cast<MemRefType>().getRank();
 }
@@ -211,7 +233,7 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 // TODO: extend this to any other memref dereferencing ops
 // (dma_start, dma_wait).
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
-                                    ComputationSliceState *sliceState,
+                                    const ComputationSliceState *sliceState,
                                     bool addMemRefDimBounds) {
   assert((isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) &&
          "affine read/write op expected");
@@ -541,13 +563,12 @@ static LogicalResult addMissingLoopIVBounds(SmallPtrSet<Value, 8> &ivs,
   return success();
 }
 
-// Returns the innermost common loop depth for the set of operations in 'ops'.
+/// Returns the innermost common loop depth for the set of operations in 'ops'.
 // TODO: Move this to LoopUtils.
-static unsigned
-getInnermostCommonLoopDepth(ArrayRef<Operation *> ops,
-                            SmallVectorImpl<AffineForOp> &surroundingLoops) {
+unsigned mlir::getInnermostCommonLoopDepth(
+    ArrayRef<Operation *> ops, SmallVectorImpl<AffineForOp> *surroundingLoops) {
   unsigned numOps = ops.size();
-  assert(numOps > 0);
+  assert(numOps > 0 && "Expected at least one operation");
 
   std::vector<SmallVector<AffineForOp, 4>> loops(numOps);
   unsigned loopDepthLimit = std::numeric_limits<unsigned>::max();
@@ -564,7 +585,8 @@ getInnermostCommonLoopDepth(ArrayRef<Operation *> ops,
       if (loops[i - 1][d] != loops[i][d])
         return loopDepth;
     }
-    surroundingLoops.push_back(loops[i - 1][d]);
+    if (surroundingLoops)
+      surroundingLoops->push_back(loops[i - 1][d]);
     ++loopDepth;
   }
   return loopDepth;
@@ -684,7 +706,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
   }
   SmallVector<AffineForOp, 4> surroundingLoops;
   unsigned innermostCommonLoopDepth =
-      getInnermostCommonLoopDepth(ops, surroundingLoops);
+      getInnermostCommonLoopDepth(ops, &surroundingLoops);
   if (loopDepth > innermostCommonLoopDepth) {
     LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n");
     return failure();
@@ -850,8 +872,7 @@ mlir::insertBackwardComputationSlice(Operation *srcOpInst, Operation *dstOpInst,
   // Find the op block positions of 'srcOpInst' within 'srcLoopIVs'.
   SmallVector<unsigned, 4> positions;
   // TODO: This code is incorrect since srcLoopIVs can be 0-d.
-  findInstPosition(srcOpInst, srcLoopIVs[0].getOperation()->getBlock(),
-                   &positions);
+  findInstPosition(srcOpInst, srcLoopIVs[0]->getBlock(), &positions);
 
   // Clone src loop nest and insert it a the beginning of the operation block
   // of the loop at 'dstLoopDepth' in 'dstLoopIVs'.
@@ -1021,7 +1042,7 @@ Optional<int64_t> mlir::getMemoryFootprintBytes(AffineForOp forOp,
 /// at 'forOp'.
 void mlir::getSequentialLoops(AffineForOp forOp,
                               llvm::SmallDenseSet<Value, 8> *sequentialLoops) {
-  forOp.getOperation()->walk([&](Operation *op) {
+  forOp->walk([&](Operation *op) {
     if (auto innerFor = dyn_cast<AffineForOp>(op))
       if (!isLoopParallel(innerFor))
         sequentialLoops->insert(innerFor.getInductionVar());

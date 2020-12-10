@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUPALMETADATA_H
 
 #include "llvm/BinaryFormat/MsgPackDocument.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
@@ -26,6 +27,7 @@ class AMDGPUPALMetadata {
   msgpack::Document MsgPackDoc;
   msgpack::DocNode Registers;
   msgpack::DocNode HwStages;
+  msgpack::DocNode ShaderFunctions;
 
 public:
   // Read the amdgpu.pal.metadata supplied by the frontend, ready for
@@ -76,6 +78,9 @@ public:
   // Set the scratch size in the metadata.
   void setScratchSize(unsigned CC, unsigned Val);
 
+  // Set the stack frame size of a function in the metadata.
+  void setStackFrameSize(const MachineFunction &MF, unsigned Val);
+
   // Set the hardware register bit in PAL metadata to enable wave32 on the
   // shader of the given calling convention.
   void setWave32(unsigned CC);
@@ -118,6 +123,12 @@ private:
 
   // Get (create if necessary) the registers map.
   msgpack::MapDocNode getRegisters();
+
+  // Reference (create if necessary) the node for the shader functions map.
+  msgpack::DocNode &refShaderFunctions();
+
+  // Get (create if necessary) the shader functions map.
+  msgpack::MapDocNode getShaderFunctions();
 
   // Get (create if necessary) the .hardware_stages entry for the given calling
   // convention.

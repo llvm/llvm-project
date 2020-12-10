@@ -6,7 +6,9 @@
 
 define void @func() {
 ; CHECK-LABEL: func:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    st %s15, 24(, %s11)
+; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; CHECK-NEXT:    and %s15, %s15, (32)0
 ; CHECK-NEXT:    sic %s16
@@ -21,7 +23,9 @@ define void @func() {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
 ; CHECK-NEXT:    stl %s1, (%s0, %s15)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld %s16, 32(, %s11)
+; CHECK-NEXT:    ld %s15, 24(, %s11)
+; CHECK-NEXT:    b.l.t (, %s10)
 
   %1 = load i1, i1* @src, align 4
   %2 = select i1 %1, i32 100, i32 0

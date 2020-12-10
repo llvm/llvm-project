@@ -19,6 +19,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TileShapeInfo.h"
 #include "llvm/Pass.h"
 #include <cassert>
 
@@ -59,6 +60,10 @@ class TargetInstrInfo;
     /// Virt2SplitMap - This is virtual register to splitted virtual register
     /// mapping.
     IndexedMap<unsigned, VirtReg2IndexFunctor> Virt2SplitMap;
+
+    /// Virt2ShapeMap - For X86 AMX register whose register is bound shape
+    /// information.
+    DenseMap<unsigned, ShapeT> Virt2ShapeMap;
 
     /// createSpillSlot - Allocate a spill slot for RC from MFI.
     unsigned createSpillSlot(const TargetRegisterClass *RC);
@@ -107,6 +112,21 @@ class TargetInstrInfo;
     /// the specified physical register
     void assignVirt2Phys(Register virtReg, MCPhysReg physReg);
 
+    bool isShapeMapEmpty() const { return Virt2ShapeMap.empty(); }
+
+    bool hasShape(Register virtReg) const {
+      return getShape(virtReg).isValid();
+    }
+
+    ShapeT getShape(Register virtReg) const {
+      assert(virtReg.isVirtual());
+      return Virt2ShapeMap.lookup(virtReg);
+    }
+
+    void assignVirt2Shape(Register virtReg, ShapeT shape) {
+      Virt2ShapeMap[virtReg.id()] = shape;
+    }
+
     /// clears the specified virtual register's, physical
     /// register mapping
     void clearVirt(Register virtReg) {
@@ -133,6 +153,9 @@ class TargetInstrInfo;
     /// records virtReg is a split live interval from SReg.
     void setIsSplitFromReg(Register virtReg, unsigned SReg) {
       Virt2SplitMap[virtReg.id()] = SReg;
+      if (hasShape(SReg)) {
+        Virt2ShapeMap[virtReg.id()] = getShape(SReg);
+      }
     }
 
     /// returns the live interval virtReg is split from.

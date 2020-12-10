@@ -17,9 +17,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -141,6 +141,12 @@ TEST(RenameTest, WithinFileRename) {
           ~[[F^oo]]();
           void f([[F^oo]] x);
         };
+
+        template<typename T>
+        [[F^oo]]<T>::[[Fo^o]]() {}
+
+        template<typename T>
+        [[F^oo]]<T>::~[[Fo^o]]() {}
       )cpp",
 
       // Template class constructor.
@@ -152,6 +158,9 @@ TEST(RenameTest, WithinFileRename) {
           template<typename T>
           [[F^oo]](T t);
         };
+
+        template<typename T>
+        [[F^oo]]::[[Fo^o]]() {}
       )cpp",
 
       // Class in template argument.
@@ -196,6 +205,30 @@ TEST(RenameTest, WithinFileRename) {
           A().[[f^oo]]();
           B().[[f^oo]]();
           C().[[f^oo]]();
+        }
+      )cpp",
+
+      // Templated method instantiation.
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          static T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>::[[f^oo]]();
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>().[[f^oo]]();
         }
       )cpp",
 
@@ -272,6 +305,80 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Templated class specialization.
+      R"cpp(
+        template<typename T, typename U=bool>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+
+        template<typename T=int, typename U>
+        class [[Foo^]];
+      )cpp",
+      R"cpp(
+        template<typename T=float, typename U=int>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+      )cpp",
+
+      // Function template specialization.
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]() {};
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        U [[foo^]]() {};
+
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template <typename T>
+        void [[f^oo]](T t);
+
+        template <>
+        void [[f^oo]](int a);
+
+        void test() {
+          [[f^oo]]<double>(1);
+        }
+      )cpp",
+
+      // Variable template.
+      R"cpp(
+        template <typename T, int U>
+        bool [[F^oo]] = true;
+
+        // Explicit template specialization
+        template <>
+        bool [[F^oo]]<int, 0> = false;
+
+        // Partial template specialization
+        template <typename T>
+        bool [[F^oo]]<T, 1> = false;
+
+        void foo() {
+          // Ref to the explicit template specialization
+          [[F^oo]]<int, 0>;
+          // Ref to the primary template.
+          [[F^oo]]<double, 2>;
+        }
+      )cpp",
+
       // Complicated class type.
       R"cpp(
          // Forward declaration.
@@ -304,6 +411,19 @@ TEST(RenameTest, WithinFileRename) {
           reinterpret_cast<const [[^Foo]] *>(BazPointer)->getValue();
           static_cast<const [[^Foo]] &>(BazReference).getValue();
           static_cast<const [[^Foo]] *>(BazPointer)->getValue();
+        }
+      )cpp",
+
+      // Static class member.
+      R"cpp(
+        struct Foo {
+          static Foo *[[Static^Member]];
+        };
+
+        Foo* Foo::[[Static^Member]] = nullptr;
+
+        void foo() {
+          Foo* Pointer = Foo::[[Static^Member]];
         }
       )cpp",
 
@@ -417,6 +537,94 @@ TEST(RenameTest, WithinFileRename) {
           baz.[[F^oo]] = 1;
           MACRO(baz.[[F^oo]]);
           int y = baz.[[F^oo]];
+        }
+      )cpp",
+
+      // Fields in classes & partial and full specialiations.
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          T [[Vari^able]] = 42;
+        };
+
+        void foo() {
+          Foo<int> f;
+          f.[[Varia^ble]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        struct Foo {
+          T Variable[42];
+          U Another;
+
+          void bar() {}
+        };
+
+        template<typename T>
+        struct Foo<T, bool> {
+          T Variable;
+          void bar() { ++Variable; }
+        };
+
+        template<>
+        struct Foo<unsigned, bool> {
+          unsigned [[Var^iable]];
+          void bar() { ++[[Var^iable]]; }
+        };
+
+        void foo() {
+          Foo<unsigned, bool> f;
+          f.[[Var^iable]] = 9000;
+        }
+      )cpp",
+      // Static fields.
+      R"cpp(
+        struct Foo {
+          static int [[Var^iable]];
+        };
+
+        int Foo::[[Var^iable]] = 42;
+
+        void foo() {
+          int LocalInt = Foo::[[Var^iable]];
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        struct Foo {
+          static T [[Var^iable]];
+        };
+
+        template <>
+        int Foo<int>::[[Var^iable]] = 42;
+
+        template <>
+        bool Foo<bool>::[[Var^iable]] = true;
+
+        void foo() {
+          int LocalInt = Foo<int>::[[Var^iable]];
+          bool LocalBool = Foo<bool>::[[Var^iable]];
         }
       )cpp",
 
@@ -588,6 +796,33 @@ TEST(RenameTest, WithinFileRename) {
           ns::[[Old^Alias]] Bar;
         }
       )cpp",
+
+      // User defined conversion.
+      R"cpp(
+        class [[F^oo]] {
+        public:
+          [[F^oo]]() {}
+        };
+
+        class Baz {
+        public:
+          operator [[F^oo]]() {
+            return [[F^oo]]();
+          }
+        };
+
+        int main() {
+          Baz boo;
+          [[F^oo]] foo = static_cast<[[F^oo]]>(boo);
+        }
+      )cpp",
+
+      // ObjC, should not crash.
+      R"cpp(
+        @interface ObjC {
+          char [[da^ta]];
+        } @end
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -595,6 +830,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
     auto AST = TU.build();
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
@@ -709,6 +945,13 @@ TEST(RenameTest, Renameable) {
          }
        )cpp",
        "not a supported kind", !HeaderFile, Index},
+
+      {R"cpp(// disallow rename on non-normal identifiers.
+         @interface Foo {}
+         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         @end
+       )cpp",
+       "not a supported kind", HeaderFile, Index},
 
       {R"cpp(
          void foo(int);
@@ -876,6 +1119,7 @@ TEST(RenameTest, PrepareRename) {
   auto ServerOpts = ClangdServer::optsForTest();
   ServerOpts.BuildDynamicSymbolIndex = true;
 
+  trace::TestTracer Tracer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ServerOpts);
   runAddDocument(Server, FooHPath, FooH.code());
@@ -898,6 +1142,8 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("keyword"));
+  EXPECT_THAT(Tracer.takeMetric("rename_name_invalid", "Keywords"),
+              ElementsAre(1));
 
   // Single-file rename on global symbols, we should report an error.
   Results = runPrepareRename(Server, FooCCPath, FooCC.point(),

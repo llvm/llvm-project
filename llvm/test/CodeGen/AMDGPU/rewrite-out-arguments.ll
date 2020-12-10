@@ -56,7 +56,7 @@ define void @void_one_out_arg_i32_no_use(i32* %val) #0 {
 ; CHECK-LABEL: define void @skip_byval_arg(
 ; CHECK-NEXT: store i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_byval_arg(i32* byval %val) #0 {
+define void @skip_byval_arg(i32* byval(i32) %val) #0 {
   store i32 0, i32* %val
   ret void
 }
@@ -65,7 +65,7 @@ define void @skip_byval_arg(i32* byval %val) #0 {
 ; CHECK-LABEL: define void @skip_optnone(
 ; CHECK-NEXT: store i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_optnone(i32* byval %val) #1 {
+define void @skip_optnone(i32* byval(i32) %val) #1 {
   store i32 0, i32* %val
   ret void
 }
@@ -74,7 +74,7 @@ define void @skip_optnone(i32* byval %val) #1 {
 ; CHECK-LABEL: define void @skip_volatile(
 ; CHECK-NEXT: store volatile i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_volatile(i32* byval %val) #0 {
+define void @skip_volatile(i32* byval(i32) %val) #0 {
   store volatile i32 0, i32* %val
   ret void
 }
@@ -83,7 +83,7 @@ define void @skip_volatile(i32* byval %val) #0 {
 ; CHECK-LABEL: define void @skip_atomic(
 ; CHECK-NEXT: store atomic i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_atomic(i32* byval %val) #0 {
+define void @skip_atomic(i32* byval(i32) %val) #0 {
   store atomic i32 0, i32* %val seq_cst, align 4
   ret void
 }
@@ -108,11 +108,11 @@ define void @skip_store_gep(i32* %val) #0 {
   ret void
 }
 
-; CHECK-LABEL: define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+; CHECK-LABEL: define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
 ; CHECK-NEXT: store
 ; CHECK-NEXT: store
 ; CHECK-NEXT: ret void
-define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
   store i32 1, i32* %sret
   store i32 0, i32* %out
   ret void

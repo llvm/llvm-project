@@ -53,7 +53,7 @@ void test(int n) {
 
   // CHECK: [[arrayctor_loop]]
   // CHECK-NEXT: [[arrayctor_cur:%.+]] = phi [[struct_S]]* [ [[vla]], %[[new_ctorloop]] ], [ [[arrayctor_next:%.+]], %[[arrayctor_loop]] ]
-  // CHECK-NEXT: call void [[ctor:@.+]]([[struct_S]]* [[arrayctor_cur]])
+  // CHECK-NEXT: call void [[ctor:@.+]]([[struct_S]]* {{[^,]*}} [[arrayctor_cur]])
   // CHECK-NEXT: [[arrayctor_next]] = getelementptr inbounds [[struct_S]], [[struct_S]]* [[arrayctor_cur]], i64 1
   // CHECK-NEXT: [[arrayctor_done:%.+]] = icmp eq [[struct_S]]* [[arrayctor_next]], [[arrayctor_end]]
   // CHECK-NEXT: br i1 [[arrayctor_done]], label %[[arrayctor_cont]], label %[[arrayctor_loop]]
@@ -91,7 +91,7 @@ void test(int n) {
   //  CHECK: [[arraydestroy_body]]
   //  CHECK-NEXT: [[arraydestroy_elementPast:%.+]] = phi [[struct_S]]* [ [[t17]], %[[invoke_cont]] ], [ [[arraydestroy_element:%.+]], %[[arraydestroy_body]] ]
   //  CHECK-NEXT: [[arraydestroy_element]] = getelementptr inbounds [[struct_S]], [[struct_S]]* [[arraydestroy_elementPast]]
-  //  CHECK-NEXT: call void @[[dtor:.+]]([[struct_S]]* [[arraydestroy_element]])
+  //  CHECK-NEXT: call void @[[dtor:.+]]([[struct_S]]* {{[^,]*}} [[arraydestroy_element]])
   //  CHECK-NEXT: [[arraydestroy_done:%.+]] = icmp eq [[struct_S]]* [[arraydestroy_element]], [[vla]]
   //  CHECK-NEXT: br i1 [[arraydestroy_done]], label %[[arraydestroy_done2]], label %[[arraydestroy_body]]
 
@@ -114,7 +114,7 @@ void test(int n) {
   //  CHECK: [[arraydestroy_body4]]
   //  CHECK: [[arraydestroy_elementPast5:%.+]] = phi [[struct_S]]* [ [[t23]], %[[lpad]] ], [ [[arraydestroy_element6:.+]], %[[arraydestroy_body4]] ]
   //  CHECK-NEXT: [[arraydestroy_element6]] = getelementptr inbounds [[struct_S]], [[struct_S]]* [[arraydestroy_elementPast5]], i64 -1
-  //  CHECK-NEXT: call void @[[dtor]]([[struct_S]]* [[arraydestroy_element6]])
+  //  CHECK-NEXT: call void @[[dtor]]([[struct_S]]* {{[^,]*}} [[arraydestroy_element6]])
   //  CHECK-NEXT: [[arraydestroy_done7:%.+]] = icmp eq [[struct_S]]* [[arraydestroy_element6]], [[vla]]
   //  CHECK-NEXT: br i1 [[arraydestroy_done7]], label %[[arraydestroy_done8]], label %[[arraydestroy_body4]]
 

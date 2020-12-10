@@ -1537,8 +1537,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ByRef;
   case bitc::ATTR_KIND_MUSTPROGRESS:
     return Attribute::MustProgress;
-  case bitc::ATTR_KIND_NO_STACK_PROTECT:
-    return Attribute::NoStackProtect;
   }
 }
 
@@ -2411,6 +2409,9 @@ Error BitcodeReader::parseConstants() {
     default:  // Default behavior: unknown constant
     case bitc::CST_CODE_UNDEF:     // UNDEF
       V = UndefValue::get(CurTy);
+      break;
+    case bitc::CST_CODE_POISON:    // POISON
+      V = PoisonValue::get(CurTy);
       break;
     case bitc::CST_CODE_SETTYPE:   // SETTYPE: [typeid]
       if (Record.empty())

@@ -18,12 +18,11 @@
 # CHECK: Section Headers
 # CHECK: .text
 # CHECK-NEXT: .orphan
-# CHECK-NEXT: .empty
 # CHECK-NEXT: .rw
 
 # CHECK: Segment Sections
 # CHECK-NEXT: .text .orphan
-# CHECK-NEXT: .empty .rw
+# CHECK-NEXT: .rw
 
 .section .text,"ax"
  ret

@@ -42,12 +42,12 @@
 ; Function Attrs: norecurse nounwind readnone
 define signext i8 @shl_i8_var(i8 signext %0, i8 signext %1) {
 ; CHECK-LABEL: shl_i8_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s1, %s1, (56)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = sext i8 %0 to i32
   %4 = zext i8 %1 to i32
   %5 = shl i32 %3, %4
@@ -58,10 +58,10 @@ define signext i8 @shl_i8_var(i8 signext %0, i8 signext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i8 @shl_u8_var(i8 zeroext %0, i8 zeroext %1) {
 ; CHECK-LABEL: shl_u8_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    and %s0, %s0, (56)0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i8 %0 to i32
   %4 = zext i8 %1 to i32
   %5 = shl i32 %3, %4
@@ -72,12 +72,12 @@ define zeroext i8 @shl_u8_var(i8 zeroext %0, i8 zeroext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i16 @shl_i16_var(i16 signext %0, i16 signext %1) {
 ; CHECK-LABEL: shl_i16_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s1, %s1, (48)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = sext i16 %0 to i32
   %4 = zext i16 %1 to i32
   %5 = shl i32 %3, %4
@@ -88,10 +88,10 @@ define signext i16 @shl_i16_var(i16 signext %0, i16 signext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i16 @shl_u16_var(i16 zeroext %0, i16 zeroext %1) {
 ; CHECK-LABEL: shl_u16_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    and %s0, %s0, (48)0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = zext i16 %0 to i32
   %4 = zext i16 %1 to i32
   %5 = shl i32 %3, %4
@@ -102,10 +102,10 @@ define zeroext i16 @shl_u16_var(i16 zeroext %0, i16 zeroext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @shl_i32_var(i32 signext %0, i32 signext %1) {
 ; CHECK-LABEL: shl_i32_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = shl i32 %0, %1
   ret i32 %3
 }
@@ -113,10 +113,10 @@ define signext i32 @shl_i32_var(i32 signext %0, i32 signext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i32 @shl_u32_var(i32 zeroext %0, i32 zeroext %1) {
 ; CHECK-LABEL: shl_u32_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = shl i32 %0, %1
   ret i32 %3
 }
@@ -124,9 +124,9 @@ define zeroext i32 @shl_u32_var(i32 zeroext %0, i32 zeroext %1) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_i64_var(i64 %0, i64 %1) {
 ; CHECK-LABEL: shl_i64_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = shl i64 %0, %1
   ret i64 %3
 }
@@ -134,9 +134,9 @@ define i64 @shl_i64_var(i64 %0, i64 %1) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_u64_var(i64 %0, i64 %1) {
 ; CHECK-LABEL: shl_u64_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = shl i64 %0, %1
   ret i64 %3
 }
@@ -172,12 +172,12 @@ define i128 @shl_u128_var(i128 %0, i128 %1) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i8 @shl_const_i8(i8 signext %0) {
 ; CHECK-LABEL: shl_const_i8:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = zext i8 %0 to i32
   %3 = shl i32 -4, %2
   %4 = trunc i32 %3 to i8
@@ -187,11 +187,11 @@ define signext i8 @shl_const_i8(i8 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i8 @shl_const_u8(i8 zeroext %0) {
 ; CHECK-LABEL: shl_const_u8:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    lea %s1, 252
 ; CHECK-NEXT:    and %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = zext i8 %0 to i32
   %3 = shl i32 -4, %2
   %4 = trunc i32 %3 to i8
@@ -201,12 +201,12 @@ define zeroext i8 @shl_const_u8(i8 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i16 @shl_const_i16(i16 signext %0) {
 ; CHECK-LABEL: shl_const_i16:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = zext i16 %0 to i32
   %3 = shl i32 -4, %2
   %4 = trunc i32 %3 to i16
@@ -216,11 +216,11 @@ define signext i16 @shl_const_i16(i16 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i16 @shl_const_u16(i16 zeroext %0) {
 ; CHECK-LABEL: shl_const_u16:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    lea %s1, 65532
 ; CHECK-NEXT:    and %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = zext i16 %0 to i32
   %3 = shl i32 -4, %2
   %4 = trunc i32 %3 to i16
@@ -230,10 +230,10 @@ define zeroext i16 @shl_const_u16(i16 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @shl_const_i32(i32 signext %0) {
 ; CHECK-LABEL: shl_const_i32:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i32 -4, %0
   ret i32 %2
 }
@@ -241,10 +241,10 @@ define signext i32 @shl_const_i32(i32 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i32 @shl_const_u32(i32 zeroext %0) {
 ; CHECK-LABEL: shl_const_u32:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, (62)1, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i32 -4, %0
   ret i32 %2
 }
@@ -252,9 +252,9 @@ define zeroext i32 @shl_const_u32(i32 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_const_i64(i64 %0) {
 ; CHECK-LABEL: shl_const_i64:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, (62)1, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i64 -4, %0
   ret i64 %2
 }
@@ -262,9 +262,9 @@ define i64 @shl_const_i64(i64 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_const_u64(i64 %0) {
 ; CHECK-LABEL: shl_const_u64:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, (62)1, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i64 -4, %0
   ret i64 %2
 }
@@ -304,11 +304,11 @@ define i128 @shl_const_u128(i128 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i8 @shl_i8_const(i8 signext %0) {
 ; CHECK-LABEL: shl_i8_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i8 %0, 3
   ret i8 %2
 }
@@ -316,11 +316,11 @@ define signext i8 @shl_i8_const(i8 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i8 @shl_u8_const(i8 zeroext %0) {
 ; CHECK-LABEL: shl_u8_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    lea %s1, 248
 ; CHECK-NEXT:    and %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i8 %0, 3
   ret i8 %2
 }
@@ -328,11 +328,11 @@ define zeroext i8 @shl_u8_const(i8 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i16 @shl_i16_const(i16 signext %0) {
 ; CHECK-LABEL: shl_i16_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 7
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i16 %0, 7
   ret i16 %2
 }
@@ -340,11 +340,11 @@ define signext i16 @shl_i16_const(i16 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i16 @shl_u16_const(i16 zeroext %0) {
 ; CHECK-LABEL: shl_u16_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 7
 ; CHECK-NEXT:    lea %s1, 65408
 ; CHECK-NEXT:    and %s0, %s0, %s1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i16 %0, 7
   ret i16 %2
 }
@@ -352,10 +352,10 @@ define zeroext i16 @shl_u16_const(i16 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @shl_i32_const(i32 signext %0) {
 ; CHECK-LABEL: shl_i32_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 15
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i32 %0, 15
   ret i32 %2
 }
@@ -363,10 +363,10 @@ define signext i32 @shl_i32_const(i32 signext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define zeroext i32 @shl_u32_const(i32 zeroext %0) {
 ; CHECK-LABEL: shl_u32_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 15
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i32 %0, 15
   ret i32 %2
 }
@@ -374,9 +374,9 @@ define zeroext i32 @shl_u32_const(i32 zeroext %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_i64_const(i64 %0) {
 ; CHECK-LABEL: shl_i64_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, %s0, 63
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i64 %0, 63
   ret i64 %2
 }
@@ -384,9 +384,9 @@ define i64 @shl_i64_const(i64 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i64 @shl_u64_const(i64 %0) {
 ; CHECK-LABEL: shl_u64_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s0, %s0, 63
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i64 %0, 63
   ret i64 %2
 }
@@ -394,10 +394,10 @@ define i64 @shl_u64_const(i64 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_i128_const(i128 %0) {
 ; CHECK-LABEL: shl_i128_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s1, %s0, 63
 ; CHECK-NEXT:    or %s0, 0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i128 %0, 127
   ret i128 %2
 }
@@ -405,10 +405,10 @@ define i128 @shl_i128_const(i128 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_u128_const(i128 %0) {
 ; CHECK-LABEL: shl_u128_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s1, %s0, 63
 ; CHECK-NEXT:    or %s0, 0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = shl i128 %0, 127
   ret i128 %2
 }

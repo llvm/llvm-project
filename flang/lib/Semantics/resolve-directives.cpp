@@ -140,6 +140,9 @@ public:
     GetContext().withinConstruct = true;
   }
 
+  bool Pre(const parser::OpenACCCacheConstruct &);
+  void Post(const parser::OpenACCCacheConstruct &) { PopContext(); }
+
   void Post(const parser::AccDefaultClause &);
 
   bool Pre(const parser::AccClause::Copy &x) {
@@ -209,6 +212,7 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
       const parser::Name &, const Symbol &, Symbol::Flag);
+  void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -305,6 +309,12 @@ public:
   }
   void Post(const parser::Name &);
 
+  const parser::OmpClause *associatedClause{nullptr};
+  void SetAssociatedClause(const parser::OmpClause &c) {
+    associatedClause = &c;
+  }
+  const parser::OmpClause *GetAssociatedClause() { return associatedClause; }
+
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
 
@@ -344,7 +354,8 @@ private:
   }
 
   // Predetermined DSA rules
-  void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
+  void PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
+      const parser::OpenMPLoopConstruct &);
   void ResolveSeqLoopIndexInParallelOrTaskConstruct(const parser::Name &);
 
   void ResolveOmpObjectList(const parser::OmpObjectList &, Symbol::Flag);
@@ -361,6 +372,10 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
 
   void CheckDataCopyingClause(
+      const parser::Name &, const Symbol &, Symbol::Flag);
+
+  void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
+  void CheckObjectInNamelist(
       const parser::Name &, const Symbol &, Symbol::Flag);
 };
 
@@ -441,7 +456,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
 bool AccAttributeVisitor::Pre(const parser::OpenACCStandaloneConstruct &x) {
   const auto &standaloneDir{std::get<parser::AccStandaloneDirective>(x.t)};
   switch (standaloneDir.v) {
-  case llvm::acc::Directive::ACCD_cache:
   case llvm::acc::Directive::ACCD_enter_data:
   case llvm::acc::Directive::ACCD_exit_data:
   case llvm::acc::Directive::ACCD_init:
@@ -471,6 +485,64 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
     break;
   }
   ClearDataSharingAttributeObjects();
+  return true;
+}
+
+static bool IsLastNameArray(const parser::Designator &designator) {
+  const auto &name{GetLastName(designator)};
+  const evaluate::DataRef dataRef{*(name.symbol)};
+  return std::visit(
+      common::visitors{
+          [](const evaluate::SymbolRef &ref) { return ref->Rank() > 0; },
+          [](const evaluate::ArrayRef &aref) {
+            return aref.base().IsSymbol() ||
+                aref.base().GetComponent().base().Rank() == 0;
+          },
+          [](const auto &) { return false; },
+      },
+      dataRef.u);
+}
+
+void AccAttributeVisitor::AllowOnlyArrayAndSubArray(
+    const parser::AccObjectList &objectList) {
+  for (const auto &accObject : objectList.v) {
+    std::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (!IsLastNameArray(designator))
+                context_.Say(designator.source,
+                    "Only array element or subarray are allowed in %s directive"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCDirectiveName(
+                            GetContext().directive)
+                            .str()));
+            },
+            [&](const auto &name) {
+              context_.Say(name.source,
+                  "Only array element or subarray are allowed in %s directive"_err_en_US,
+                  parser::ToUpperCaseLetters(
+                      llvm::acc::getOpenACCDirectiveName(GetContext().directive)
+                          .str()));
+            },
+        },
+        accObject.u);
+  }
+}
+
+bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  PushContext(verbatim.source, llvm::acc::Directive::ACCD_cache);
+  ClearDataSharingAttributeObjects();
+
+  const auto &objectListWithModifier =
+      std::get<parser::AccObjectListWithModifier>(x.t);
+  const auto &objectList =
+      std::get<Fortran::parser::AccObjectList>(objectListWithModifier.t);
+
+  // 2.10 Cache directive restriction: A var in a cache directive must be a
+  // single array element or a simple subarray.
+  AllowOnlyArrayAndSubArray(objectList);
+
   return true;
 }
 
@@ -777,7 +849,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
-  PrivatizeAssociatedLoopIndex(x);
+  PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
   return true;
 }
 
@@ -824,24 +896,32 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
     const parser::OmpClauseList &x) {
   std::int64_t orderedLevel{0};
   std::int64_t collapseLevel{0};
+
+  const parser::OmpClause *ordClause{nullptr};
+  const parser::OmpClause *collClause{nullptr};
+
   for (const auto &clause : x.v) {
     if (const auto *orderedClause{
             std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
       if (const auto v{EvaluateInt64(context_, orderedClause->v)}) {
         orderedLevel = *v;
       }
+      ordClause = &clause;
     }
     if (const auto *collapseClause{
             std::get_if<parser::OmpClause::Collapse>(&clause.u)}) {
       if (const auto v{EvaluateInt64(context_, collapseClause->v)}) {
         collapseLevel = *v;
       }
+      collClause = &clause;
     }
   }
 
   if (orderedLevel && (!collapseLevel || orderedLevel >= collapseLevel)) {
+    SetAssociatedClause(*ordClause);
     return orderedLevel;
   } else if (!orderedLevel && collapseLevel) {
+    SetAssociatedClause(*collClause);
     return collapseLevel;
   } // orderedLevel < collapseLevel is an error handled in structural checks
   return 1; // default is outermost loop
@@ -855,10 +935,7 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //     increment of the associated do-loop.
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
-//
-// TODO: revisit after semantics checks are completed for do-loop association of
-//       collapse and ordered
-void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
+void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
@@ -887,7 +964,16 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const auto it{block.begin()};
     loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
   }
-  CHECK(level == 0);
+  CheckAssocLoopLevel(level, GetAssociatedClause());
+}
+void OmpAttributeVisitor::CheckAssocLoopLevel(
+    std::int64_t level, const parser::OmpClause *clause) {
+  if (clause && level != 0) {
+    context_.Say(clause->source,
+        "The value of the parameter in the COLLAPSE or ORDERED clause must"
+        " not be larger than the number of nested loops"
+        " following the construct."_err_en_US);
+  }
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
@@ -1023,6 +1109,10 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (dataSharingAttributeFlags.test(ompFlag)) {
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
+                  if (privateDataSharingAttributeFlags.test(ompFlag)) {
+                    CheckObjectInNamelist(*name, *symbol, ompFlag);
+                  }
+
                   if (ompFlag == Symbol::Flag::OmpAllocate) {
                     AddAllocateName(name);
                   }
@@ -1171,6 +1261,20 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
       context_.Say(name.source,
           "Non-THREADPRIVATE object '%s' in COPYIN clause"_err_en_US,
           checkSymbol->name());
+  }
+}
+
+void OmpAttributeVisitor::CheckObjectInNamelist(
+    const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
+  if (symbol.GetUltimate().test(Symbol::Flag::InNamelist)) {
+    llvm::StringRef clauseName{"PRIVATE"};
+    if (ompFlag == Symbol::Flag::OmpFirstPrivate)
+      clauseName = "FIRSTPRIVATE";
+    else if (ompFlag == Symbol::Flag::OmpLastPrivate)
+      clauseName = "LASTPRIVATE";
+    context_.Say(name.source,
+        "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
+        name.ToString(), clauseName.str());
   }
 }
 

@@ -555,7 +555,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the position of the shaped operand in the operand list.
+        Return the first position of the shaped operand in the operand list.
       }],
       /*retTy=*/"Optional<unsigned>",
       /*methodName=*/"getIndexOfShapedOperand",
@@ -571,6 +571,67 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         if (initTensorIndex.hasValue())
           return $_op.getNumInputs() + $_op.getNumOutputBuffers() + initTensorIndex.getValue();
         return llvm::None;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the operand index given the input index. Returns None
+        of the input index is invalid.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOperandIndexForInputIndex",
+      /*args=*/(ins "unsigned":$input_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if (input_index >= $_op.getNumInputs())
+          return llvm::None;
+        return input_index;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the operand index given the output index. Returns None
+        of the output index is invalid.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOperandIndexForOutputIndex",
+      /*args=*/(ins "unsigned":$output_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if (output_index >= $_op.getNumOutputs())
+          return llvm::None;
+        return output_index + $_op.getNumInputs();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the input index given the operand index. Return None
+        if the operand index doesnt corresponding to an input.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getInputIndex",
+      /*args=*/(ins "unsigned":$operand_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+         if (operand_index >= $_op.getNumInputs())
+           return llvm::None;
+         return operand_index;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the output index given the operand index. Return None
+        if the operand index doesnt corresponding to an output.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOutputIndex",
+      /*args=*/(ins "unsigned":$operand_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+         if (operand_index < $_op.getNumInputs() ||
+             operand_index >= $_op.getNumInputs() + $_op.getNumOutputs())
+           return llvm::None;
+         return operand_index - $_op.getNumInputs();
       }]
     >,
 
@@ -680,6 +741,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return whether the op has sparse tensor semantics.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasSparseSemantics",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getAttr(getSparseAttrName()).template dyn_cast_or_null<ArrayAttr>() != nullptr;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the name registered for this op when lowering to an external
         library call.
       }],
@@ -689,6 +762,59 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return $_op.getLibraryCallName();
+      }]
+    >,
+
+    //===------------------------------------------------------------------===//
+    // Linalg generalization hooks.
+    //===------------------------------------------------------------------===//
+    InterfaceMethod<
+      /*desc=*/[{
+        Hook to provide a custom AffineMap used to compute all the operand
+        subshapes given loop bounds. This is used to answer the question: "given
+        an iteration space over the codomain, what are the subshapes of the
+        operands involved in the computation".
+        The default behavior is to just concatenate all the indexing maps.
+        A custom AffineMap allows providing a map that can be used to
+        compute subshapes even in cases where the concatenation of indexing maps
+        (i.e. the data traversal order) is not a simple permutation of the loop
+        traversal order. It is then possible to define ops with skewed data
+        traversal order for which we can still easily compute hyperrectangular
+        loop bounds and subviews.
+      }],
+      /*retTy=*/"AffineMap",
+      /*methodName=*/"getLoopsToShapesMap",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto r = $_op.indexing_maps().template getAsRange<AffineMapAttr>();
+        auto maps = llvm::to_vector<8>(
+            llvm::map_range(r, [](AffineMapAttr a) { return a.getValue(); }));
+        return concatAffineMaps(maps);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Hook to provide a custom AffineMap used to construct the
+        hyperrectangular loop iteration space given all the operand subshapes.
+        This is used to answer the question:
+        "Given a list of operand ranges, what is the subportion of the iteration
+        space involved in the computation".
+        This is the inverse problem of `getLoopsToShapesMap`.
+        Return the empty AffineMap when such an AffineMap cannot be constructed.
+        The default behavior is based on a very simple inference procedure that
+        only works with permutation affine maps.
+        A more advanced Tensor-Comprehension like inference is possible but has
+        proven to be ambiguous in unfavorable case.
+        A safer and more robust alternative is to allow each each op to define
+        its own AffineMap.
+      }],
+      /*retTy=*/"AffineMap",
+      /*methodName=*/"getShapesToLoopsMap",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return inversePermutation(getLoopsToShapesMap());
       }]
     >,
 
@@ -722,18 +848,38 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
            "ValueRange":$operands),
       [{
         BlockAndValueMapping map;
-        unsigned numRegions = $_op.getOperation()->getNumRegions();
+        unsigned numRegions = $_op->getNumRegions();
         Operation *res = create(b, loc, resultTypes, operands, $_op.getAttrs());
         assert(res->getNumRegions() == numRegions && "inconsistent # regions");
         for (unsigned ridx = 0; ridx < numRegions; ++ridx)
-          $_op.getOperation()->getRegion(ridx).cloneInto(
+          $_op->getRegion(ridx).cloneInto(
             &res->getRegion(ridx), map);
         return res;
       }]
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/[{
+        Returns the region builder for constructing the body for linalg.generic.
+        Returns a null function if this named op does not define a region
+        builder.
+      }],
+      /*retTy=*/"std::function<void(Block &)>",
+      /*methodName=*/"getRegionBuilder",
+      (ins),
+      [{ return ConcreteOp::getRegionBuilder(); }]
     >
   ];
 
   let extraClassDeclaration = [{
+    /// Return the flat list of all operand dimension sizes in the order they 
+    /// appear in the operands.
+    SmallVector<Value, 4> createFlatListOfOperandDims(OpBuilder &, Location);
+
+    /// Create the loop ranges to materialize the computation over the current
+    /// operands. This is done by applying `getShapesToLoopsMap` to
+    /// `createFlatListOfOperandDims`.
+    SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
+
     /// Returns all the operands past the inputs, output_buffers and
     /// init_tensors operands. Asserts that these operands are value types to
     /// allow transformations like tiling to just use the values when cloning

@@ -12,13 +12,13 @@
 #include <list>
 #include <vector>
 
-#include "lldb/Target/Process.h"
+#include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 class ThreadKDP;
 
-class ProcessMachCore : public lldb_private::Process {
+class ProcessMachCore : public lldb_private::PostMortemProcess {
 public:
   // Constructors and Destructors
   ProcessMachCore(lldb::TargetSP target_sp, lldb::ListenerSP listener,
@@ -28,7 +28,8 @@ public:
 
   static lldb::ProcessSP
   CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                 const lldb_private::FileSpec *crash_file_path);
+                 const lldb_private::FileSpec *crash_file_path,
+                 bool can_connect);
 
   static void Initialize();
 

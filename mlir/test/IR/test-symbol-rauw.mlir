@@ -5,8 +5,8 @@
 // CHECK: module
 // CHECK-SAME: @symbol_foo
 module attributes {sym.outside_use = @symbol_foo } {
-  // CHECK: func @replaced_foo
-  func @symbol_foo() attributes {sym.new_name = "replaced_foo" }
+  // CHECK: func private @replaced_foo
+  func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
 
   // CHECK: func @symbol_bar
   // CHECK: @replaced_foo
@@ -38,16 +38,16 @@ module attributes {sym.outside_use = @symbol_foo } {
 module {
   // CHECK: module @module_a
   module @module_a {
-    // CHECK: func @replaced_foo
-    func @foo() attributes {sym.new_name = "replaced_foo" }
+    // CHECK: func nested @replaced_foo
+    func nested @foo() attributes {sym.new_name = "replaced_foo" }
   }
 
   // CHECK: module @replaced_module_b
   module @module_b attributes {sym.new_name = "replaced_module_b"} {
     // CHECK: module @replaced_module_c
     module @module_c attributes {sym.new_name = "replaced_module_c"} {
-      // CHECK: func @replaced_foo
-      func @foo() attributes {sym.new_name = "replaced_foo" }
+      // CHECK: func nested @replaced_foo
+      func nested @foo() attributes {sym.new_name = "replaced_foo" }
     }
   }
 
@@ -67,8 +67,8 @@ module {
 
 // Check that the replacement fails for potentially unknown symbol tables.
 module {
-  // CHECK: func @failed_repl
-  func @failed_repl() attributes {sym.new_name = "replaced_name" }
+  // CHECK: func private @failed_repl
+  func private @failed_repl() attributes {sym.new_name = "replaced_name" }
 
   "foo.possibly_unknown_symbol_table"() ({
   }) : () -> ()

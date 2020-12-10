@@ -5,7 +5,7 @@ target triple = "armv7-eabi"
 
 %foo = type { <4 x float> }
 
-define arm_aapcs_vfpcc void @bar(%foo* noalias sret %agg.result, <4 x float> %quat.0) nounwind {
+define arm_aapcs_vfpcc void @bar(%foo* noalias sret(%foo) %agg.result, <4 x float> %quat.0) nounwind {
 entry:
   %quat_addr = alloca %foo, align 16              ; <%foo*> [#uses=2]
   %0 = getelementptr inbounds %foo, %foo* %quat_addr, i32 0, i32 0 ; <<4 x float>*> [#uses=1]

@@ -103,7 +103,7 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T4]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T4]]
-; CHECK-NEXT:    [[T7:%.*]] = and <8 x i32> [[TMP2]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 undef, i32 2147483647>
+; CHECK-NEXT:    [[T7:%.*]] = and <8 x i32> [[TMP2]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 poison, i32 2147483647>
 ; CHECK-NEXT:    ret <8 x i32> [[T7]]
 ;
   %t0 = add <8 x i32> %nbits, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 undef, i32 -1>
@@ -138,7 +138,7 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T4]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T4]]
-; CHECK-NEXT:    [[T7:%.*]] = and <8 x i32> [[TMP2]], <i32 undef, i32 0, i32 1, i32 2147483647, i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T7:%.*]] = and <8 x i32> [[TMP2]], <i32 poison, i32 0, i32 1, i32 2147483647, i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <8 x i32> [[T7]]
 ;
   %t0 = add <8 x i32> %nbits, <i32 -33, i32 -32, i32 -31, i32 -1, i32 0, i32 1, i32 31, i32 32>

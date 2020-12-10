@@ -9,10 +9,26 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:    std r31, -8(r1)
 ; CHECK-LE-NEXT:    std r30, -16(r1)
 ; CHECK-LE-NEXT:    mr r30, r1
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    .cfi_def_cfa r12, 0
-; CHECK-LE-NEXT:    clrldi r0, r12, 53
-; CHECK-LE-NEXT:    subc r1, r1, r0
+; CHECK-LE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-LE-NEXT:    clrldi r0, r30, 53
+; CHECK-LE-NEXT:    subc r12, r30, r0
+; CHECK-LE-NEXT:    clrldi r0, r0, 52
+; CHECK-LE-NEXT:    cmpdi r0, 0
+; CHECK-LE-NEXT:    beq cr0, .LBB0_2
+; CHECK-LE-NEXT:  # %bb.1: # %entry
+; CHECK-LE-NEXT:    neg r0, r0
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:  .LBB0_2: # %entry
+; CHECK-LE-NEXT:    li r0, -4096
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    beq cr0, .LBB0_4
+; CHECK-LE-NEXT:  .LBB0_3: # %entry
+; CHECK-LE-NEXT:    #
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    bne cr0, .LBB0_3
+; CHECK-LE-NEXT:  .LBB0_4: # %entry
+; CHECK-LE-NEXT:    mr r12, r30
 ; CHECK-LE-NEXT:    stdu r12, -2048(r1)
 ; CHECK-LE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r1
@@ -36,13 +52,13 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:    add r4, r1, r4
 ; CHECK-LE-NEXT:    stdux r3, r1, r5
 ; CHECK-LE-NEXT:    cmpd r1, r4
-; CHECK-LE-NEXT:    beq cr0, .LBB0_2
-; CHECK-LE-NEXT:  .LBB0_1: # %entry
+; CHECK-LE-NEXT:    beq cr0, .LBB0_6
+; CHECK-LE-NEXT:  .LBB0_5: # %entry
 ; CHECK-LE-NEXT:    #
 ; CHECK-LE-NEXT:    stdu r3, -4096(r1)
 ; CHECK-LE-NEXT:    cmpd r1, r4
-; CHECK-LE-NEXT:    bne cr0, .LBB0_1
-; CHECK-LE-NEXT:  .LBB0_2: # %entry
+; CHECK-LE-NEXT:    bne cr0, .LBB0_5
+; CHECK-LE-NEXT:  .LBB0_6: # %entry
 ; CHECK-LE-NEXT:    addi r3, r1, 2048
 ; CHECK-LE-NEXT:    lbz r3, 0(r3)
 ; CHECK-LE-NEXT:    ld r1, 0(r1)

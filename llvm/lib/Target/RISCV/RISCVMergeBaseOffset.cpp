@@ -216,12 +216,14 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
   case RISCV::LHU:
   case RISCV::LWU:
   case RISCV::LD:
+  case RISCV::FLH:
   case RISCV::FLW:
   case RISCV::FLD:
   case RISCV::SB:
   case RISCV::SH:
   case RISCV::SW:
   case RISCV::SD:
+  case RISCV::FSH:
   case RISCV::FSW:
   case RISCV::FSD: {
     // Transforms the sequence:            Into:

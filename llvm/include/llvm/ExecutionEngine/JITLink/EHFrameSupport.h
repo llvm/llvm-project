@@ -21,14 +21,6 @@
 namespace llvm {
 namespace jitlink {
 
-/// Registers all FDEs in the given eh-frame section with the current process.
-Error registerEHFrameSection(const void *EHFrameSectionAddr,
-                             size_t EHFrameSectionSize);
-
-/// Deregisters all FDEs in the given eh-frame section with the current process.
-Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
-                               size_t EHFrameSectionSize);
-
 /// Supports registration/deregistration of EH-frames in a target process.
 class EHFrameRegistrar {
 public:

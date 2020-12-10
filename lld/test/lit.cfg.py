@@ -18,8 +18,7 @@ config.name = 'lld'
 
 # testFormat: The test format to use to interpret tests.
 #
-# For now we require '&&' between commands, until they get globally killed and
-# the test runner updated.
+# For now we require '&&' between commands, until they get globally killed and the test runner updated.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.

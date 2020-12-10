@@ -1315,6 +1315,8 @@ enum CXTypeNullabilityKind clang_Type_getNullability(CXType CT) {
         return CXTypeNullability_NonNull;
       case NullabilityKind::Nullable:
         return CXTypeNullability_Nullable;
+      case NullabilityKind::NullableResult:
+        return CXTypeNullability_NullableResult;
       case NullabilityKind::Unspecified:
         return CXTypeNullability_Unspecified;
     }

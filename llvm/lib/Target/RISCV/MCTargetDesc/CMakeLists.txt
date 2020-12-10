@@ -8,4 +8,13 @@ add_llvm_component_library(LLVMRISCVDesc
   RISCVMCTargetDesc.cpp
   RISCVTargetStreamer.cpp
   RISCVELFStreamer.cpp
+
+  LINK_COMPONENTS
+  MC
+  RISCVInfo
+  RISCVUtils
+  Support
+
+  ADD_TO_COMPONENT
+  RISCV
 )

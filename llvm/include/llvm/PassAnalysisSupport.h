@@ -183,7 +183,7 @@ public:
   }
 
   /// Return analysis result or null if it doesn't exist.
-  Pass *getAnalysisIfAvailable(AnalysisID ID, bool Direction) const;
+  Pass *getAnalysisIfAvailable(AnalysisID ID) const;
 
 private:
   /// This keeps track of which passes implements the interfaces that are
@@ -207,7 +207,7 @@ AnalysisType *Pass::getAnalysisIfAvailable() const {
 
   const void *PI = &AnalysisType::ID;
 
-  Pass *ResultPass = Resolver->getAnalysisIfAvailable(PI, true);
+  Pass *ResultPass = Resolver->getAnalysisIfAvailable(PI);
   if (!ResultPass) return nullptr;
 
   // Because the AnalysisType may not be a subclass of pass (for

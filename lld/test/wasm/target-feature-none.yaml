@@ -22,7 +22,7 @@ Sections:
 # EMPTY-NOT: target_features
 
 # SPECIFIED:        - Type:            CUSTOM
-# SPECIFIED-NEXT:     Name:            target_features
+# SPECIFIED:          Name:            target_features
 # SPECIFIED-NEXT:     Features:
 # SPECIFIED-NEXT:       - Prefix:          USED
 # SPECIFIED-NEXT:         Name:            bar

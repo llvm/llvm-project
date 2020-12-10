@@ -161,7 +161,8 @@ llvm::Expected<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
     return Declaration.takeError();
   Result.CanonicalDeclaration = *Declaration;
   Result.References = Message.references();
-  Result.Origin = static_cast<clangd::SymbolOrigin>(Message.origin());
+  // Overwrite symbol origin: it's coming from remote index.
+  Result.Origin = clangd::SymbolOrigin::Remote;
   Result.Signature = Message.signature();
   Result.TemplateSpecializationArgs = Message.template_specialization_args();
   Result.CompletionSnippetSuffix = Message.completion_snippet_suffix();

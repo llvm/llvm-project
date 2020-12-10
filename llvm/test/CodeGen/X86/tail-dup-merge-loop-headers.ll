@@ -204,8 +204,8 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    jne .LBB1_27
 ; CHECK-NEXT:  .LBB1_21: # %if.end41.us1436.i
 ; CHECK-NEXT:  .LBB1_23: # %if.then99.i
+; CHECK-NEXT:    movq .str.6@{{.*}}(%rip), %rdi
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    movl $.str.6, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq cli_dbgmsg
 ; CHECK-NEXT:  .LBB1_27: # %cleanup

@@ -35,6 +35,7 @@
 #define LLVM_CLANG_BASIC_SOURCEMANAGER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -60,8 +61,6 @@ namespace clang {
 class ASTReader;
 class ASTWriter;
 class FileManager;
-class FileEntry;
-class FileEntryRef;
 class LineTableInfo;
 class SourceManager;
 
@@ -959,6 +958,10 @@ public:
   /// data in the given source file.
   void overrideFileContents(const FileEntry *SourceFile,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  void overrideFileContents(FileEntryRef SourceFile,
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+    overrideFileContents(&SourceFile.getFileEntry(), std::move(Buffer));
+  }
 
   /// Override the given source file with another one.
   ///
@@ -982,11 +985,11 @@ public:
   }
 
   /// Bypass the overridden contents of a file.  This creates a new FileEntry
-  /// and initializes the content cache for it.  Returns nullptr if there is no
+  /// and initializes the content cache for it.  Returns None if there is no
   /// such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  const FileEntry *bypassFileContentsOverride(const FileEntry &File);
+  Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);
@@ -1028,6 +1031,13 @@ public:
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().OrigEntry;
     return nullptr;
+  }
+
+  /// Returns the FileEntryRef for the provided FileID.
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+    if (auto *Entry = getFileEntryForID(FID))
+      return Entry->getLastRef();
+    return None;
   }
 
   /// Returns the filename for the provided FileID, unless it's a built-in
@@ -1583,6 +1593,9 @@ public:
   /// If the source file is included multiple times, the FileID will be the
   /// first inclusion.
   FileID translateFile(const FileEntry *SourceFile) const;
+  FileID translateFile(FileEntryRef SourceFile) const {
+    return translateFile(&SourceFile.getFileEntry());
+  }
 
   /// Get the source location in \p FID for the given line:col.
   /// Returns null location if \p FID is not a file SLocEntry.

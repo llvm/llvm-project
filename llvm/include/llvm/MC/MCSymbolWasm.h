@@ -96,6 +96,15 @@ public:
   StringRef getExportName() const { return ExportName.getValue(); }
   void setExportName(StringRef Name) { ExportName = Name; }
 
+  bool isFunctionTable() const {
+    return isTable() && hasTableType() &&
+           getTableType() == wasm::ValType::FUNCREF;
+  }
+  void setFunctionTable() {
+    setType(wasm::WASM_SYMBOL_TYPE_TABLE);
+    setTableType(wasm::ValType::FUNCREF);
+  }
+
   void setUsedInGOT() const { IsUsedInGOT = true; }
   bool isUsedInGOT() const { return IsUsedInGOT; }
 
@@ -111,8 +120,9 @@ public:
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
 
-  const wasm::ValType &getTableType() const {
-    assert(TableType.hasValue());
+  bool hasTableType() const { return TableType.hasValue(); }
+  wasm::ValType getTableType() const {
+    assert(hasTableType());
     return TableType.getValue();
   }
   void setTableType(wasm::ValType TT) { TableType = TT; }

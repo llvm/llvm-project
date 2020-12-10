@@ -77,3 +77,5 @@ class ObjCModulesTestCase(TestBase):
             "p [NSURL URLWithString:@\"http://lldb.llvm.org\"].scheme",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["http"])
+        # Test that the NULL macro still works with a loaded module.
+        self.expect_expr("int *i = NULL; i == NULL", result_value="true")

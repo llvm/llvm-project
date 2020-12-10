@@ -12,8 +12,8 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "llvm/ADT/DenseMap.h"
@@ -103,8 +103,11 @@ namespace {
 /// operations.
 class OperationParser : public Parser {
 public:
-  OperationParser(ParserState &state, ModuleOp moduleOp)
-      : Parser(state), opBuilder(moduleOp.getBodyRegion()), moduleOp(moduleOp) {
+  OperationParser(ParserState &state, Operation *topLevelOp)
+      : Parser(state), opBuilder(topLevelOp->getRegion(0)),
+        topLevelOp(topLevelOp) {
+    // The top level operation starts a new name scope.
+    pushSSANameScope(/*isIsolated=*/true);
   }
 
   ~OperationParser();
@@ -183,9 +186,15 @@ public:
   Operation *parseGenericOperation(Block *insertBlock,
                                    Block::iterator insertPt);
 
+  /// Parse an optional trailing location for the given operation.
+  ///
+  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
+  ///
+  ParseResult parseTrailingOperationLocation(Operation *op);
+
   /// This is the structure of a result specifier in the assembly syntax,
   /// including the name, number of results, and location.
-  typedef std::tuple<StringRef, unsigned, SMLoc> ResultRecord;
+  using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
 
   /// Parse an operation instance that is in the op-defined custom form.
   /// resultInfo specifies information about the "%name =" specifiers.
@@ -297,11 +306,15 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
+  /// A set of operations whose locations reference aliases that have yet to
+  /// be resolved.
+  SmallVector<std::pair<Operation *, Token>, 8> opsWithDeferredLocs;
+
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
 
-  /// The top level module operation.
-  ModuleOp moduleOp;
+  /// The top level operation that holds all of the parsed operations.
+  Operation *topLevelOp;
 };
 } // end anonymous namespace
 
@@ -333,7 +346,24 @@ ParseResult OperationParser::finalize() {
     return failure();
   }
 
-  return success();
+  // Resolve the locations of any deferred operations.
+  auto &attributeAliases = getState().symbols.attributeAliasDefinitions;
+  for (std::pair<Operation *, Token> &it : opsWithDeferredLocs) {
+    llvm::SMLoc tokLoc = it.second.getLoc();
+    StringRef identifier = it.second.getSpelling().drop_front();
+    Attribute attr = attributeAliases.lookup(identifier);
+    if (!attr)
+      return emitError(tokLoc) << "operation location alias was never defined";
+
+    LocationAttr locAttr = attr.dyn_cast<LocationAttr>();
+    if (!locAttr)
+      return emitError(tokLoc)
+             << "expected location, but found '" << attr << "'";
+    it.first->setLoc(locAttr);
+  }
+
+  // Pop the top level name scope.
+  return popSSANameScope();
 }
 
 //===----------------------------------------------------------------------===//
@@ -360,7 +390,7 @@ ParseResult OperationParser::popSSANameScope() {
     for (auto entry : forwardRefInCurrentScope) {
       errors.push_back({entry.second.getPointer(), entry.first});
       // Add this block to the top-level region to allow for automatic cleanup.
-      moduleOp.getOperation()->getRegion(0).push_back(entry.first);
+      topLevelOp->getRegion(0).push_back(entry.first);
     }
     llvm::array_pod_sort(errors.begin(), errors.end());
 
@@ -774,7 +804,7 @@ Operation *OperationParser::parseGenericOperation() {
   if (consumeIf(Token::l_paren)) {
     do {
       // Create temporary regions with the top level region as parent.
-      result.regions.emplace_back(new Region(moduleOp));
+      result.regions.emplace_back(new Region(topLevelOp));
       if (parseRegion(*result.regions.back(), /*entryArguments=*/{}))
         return nullptr;
     } while (consumeIf(Token::comma));
@@ -817,11 +847,11 @@ Operation *OperationParser::parseGenericOperation() {
       return nullptr;
   }
 
-  // Parse a location if one is present.
-  if (parseOptionalTrailingLocation(result.location))
+  // Create the operation and try to parse a location for it.
+  Operation *op = opBuilder.createOperation(result);
+  if (parseTrailingOperationLocation(op))
     return nullptr;
-
-  return opBuilder.createOperation(result);
+  return op;
 }
 
 Operation *OperationParser::parseGenericOperation(Block *insertBlock,
@@ -994,9 +1024,19 @@ public:
     return parser.parseToken(Token::less, "expected '<'");
   }
 
+  /// Parse a '<' token if present.
+  ParseResult parseOptionalLess() override {
+    return success(parser.consumeIf(Token::less));
+  }
+
   /// Parse a '>' token.
   ParseResult parseGreater() override {
     return parser.parseToken(Token::greater, "expected '>'");
+  }
+
+  /// Parse a '>' token if present.
+  ParseResult parseOptionalGreater() override {
+    return success(parser.consumeIf(Token::greater));
   }
 
   /// Parse a `(` token.
@@ -1019,11 +1059,6 @@ public:
     return success(parser.consumeIf(Token::r_paren));
   }
 
-  /// Parses a '?' if present.
-  ParseResult parseOptionalQuestion() override {
-    return success(parser.consumeIf(Token::question));
-  }
-
   /// Parse a `[` token.
   ParseResult parseLSquare() override {
     return parser.parseToken(Token::l_square, "expected '['");
@@ -1042,6 +1077,36 @@ public:
   /// Parses a ']' if present.
   ParseResult parseOptionalRSquare() override {
     return success(parser.consumeIf(Token::r_square));
+  }
+
+  /// Parses a '?' token.
+  ParseResult parseQuestion() override {
+    return parser.parseToken(Token::question, "expected '?'");
+  }
+
+  /// Parses a '?' token if present.
+  ParseResult parseOptionalQuestion() override {
+    return success(parser.consumeIf(Token::question));
+  }
+
+  /// Parses a '+' token.
+  ParseResult parsePlus() override {
+    return parser.parseToken(Token::plus, "expected '+'");
+  }
+
+  /// Parses a '+' token if present.
+  ParseResult parseOptionalPlus() override {
+    return success(parser.consumeIf(Token::plus));
+  }
+
+  /// Parses a '*' token.
+  ParseResult parseStar() override {
+    return parser.parseToken(Token::star, "expected '*'");
+  }
+
+  /// Parses a '*' token if present.
+  ParseResult parseOptionalStar() override {
+    return success(parser.consumeIf(Token::star));
   }
 
   //===--------------------------------------------------------------------===//
@@ -1368,12 +1433,12 @@ public:
   }
 
   /// Parses a region if present.
-  ParseResult parseOptionalRegion(Region &region,
-                                  ArrayRef<OperandType> arguments,
-                                  ArrayRef<Type> argTypes,
-                                  bool enableNameShadowing) override {
+  OptionalParseResult parseOptionalRegion(Region &region,
+                                          ArrayRef<OperandType> arguments,
+                                          ArrayRef<Type> argTypes,
+                                          bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
-      return success();
+      return llvm::None;
     return parseRegion(region, arguments, argTypes, enableNameShadowing);
   }
 
@@ -1588,12 +1653,56 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   if (opAsmParser.didEmitError())
     return nullptr;
 
-  // Parse a location if one is present.
-  if (parseOptionalTrailingLocation(opState.location))
+  // Otherwise, create the operation and try to parse a location for it.
+  Operation *op = opBuilder.createOperation(opState);
+  if (parseTrailingOperationLocation(op))
     return nullptr;
+  return op;
+}
 
-  // Otherwise, we succeeded.  Use the state it parsed as our op information.
-  return opBuilder.createOperation(opState);
+ParseResult OperationParser::parseTrailingOperationLocation(Operation *op) {
+  // If there is a 'loc' we parse a trailing location.
+  if (!consumeIf(Token::kw_loc))
+    return success();
+  if (parseToken(Token::l_paren, "expected '(' in location"))
+    return failure();
+  Token tok = getToken();
+
+  // Check to see if we are parsing a location alias.
+  LocationAttr directLoc;
+  if (tok.is(Token::hash_identifier)) {
+    consumeToken();
+
+    StringRef identifier = tok.getSpelling().drop_front();
+    if (identifier.contains('.')) {
+      return emitError(tok.getLoc())
+             << "expected location, but found dialect attribute: '#"
+             << identifier << "'";
+    }
+
+    // If this alias can be resolved, do it now.
+    Attribute attr =
+        getState().symbols.attributeAliasDefinitions.lookup(identifier);
+    if (attr) {
+      if (!(directLoc = attr.dyn_cast<LocationAttr>()))
+        return emitError(tok.getLoc())
+               << "expected location, but found '" << attr << "'";
+    } else {
+      // Otherwise, remember this operation and resolve its location later.
+      opsWithDeferredLocs.emplace_back(op, tok);
+    }
+
+    // Otherwise, we parse the location directly.
+  } else if (parseLocationInstance(directLoc)) {
+    return failure();
+  }
+
+  if (parseToken(Token::r_paren, "expected ')' in location"))
+    return failure();
+
+  if (directLoc)
+    op->setLoc(directLoc);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1815,11 +1924,12 @@ ParseResult OperationParser::parseOptionalBlockArgList(
 namespace {
 /// This parser handles entities that are only valid at the top level of the
 /// file.
-class ModuleParser : public Parser {
+class TopLevelOperationParser : public Parser {
 public:
-  explicit ModuleParser(ParserState &state) : Parser(state) {}
+  explicit TopLevelOperationParser(ParserState &state) : Parser(state) {}
 
-  ParseResult parseModule(ModuleOp module);
+  /// Parse a set of operations into the end of the given Block.
+  ParseResult parse(Block *topLevelBlock, Location parserLoc);
 
 private:
   /// Parse an attribute alias declaration.
@@ -1834,7 +1944,7 @@ private:
 ///
 ///   attribute-alias-def ::= '#' alias-name `=` attribute-value
 ///
-ParseResult ModuleParser::parseAttributeAliasDef() {
+ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   assert(getToken().is(Token::hash_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
 
@@ -1866,7 +1976,7 @@ ParseResult ModuleParser::parseAttributeAliasDef() {
 ///
 ///   type-alias-def ::= '!' alias-name `=` 'type' type
 ///
-ParseResult ModuleParser::parseTypeAliasDef() {
+ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   assert(getToken().is(Token::exclamation_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
 
@@ -1896,13 +2006,11 @@ ParseResult ModuleParser::parseTypeAliasDef() {
   return success();
 }
 
-/// This is the top-level module parser.
-ParseResult ModuleParser::parseModule(ModuleOp module) {
-  OperationParser opParser(getState(), module);
-
-  // Module itself is a name scope.
-  opParser.pushSSANameScope(/*isIsolated=*/true);
-
+ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
+                                           Location parserLoc) {
+  // Create a top-level operation to contain the parsed state.
+  OwningOpRef<Operation *> topLevelOp(ModuleOp::create(parserLoc));
+  OperationParser opParser(getState(), topLevelOp.get());
   while (true) {
     switch (getToken().getKind()) {
     default:
@@ -1916,25 +2024,17 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
       if (opParser.finalize())
         return failure();
 
-      // Handle the case where the top level module was explicitly defined.
-      auto &bodyBlocks = module.getBodyRegion().getBlocks();
-      auto &operations = bodyBlocks.front().getOperations();
-      assert(!operations.empty() && "expected a valid module terminator");
+      // Verify that the parsed operations are valid.
+      if (failed(verify(topLevelOp.get())))
+        return failure();
 
-      // Check that the first operation is a module, and it is the only
-      // non-terminator operation.
-      ModuleOp nested = dyn_cast<ModuleOp>(operations.front());
-      if (nested && std::next(operations.begin(), 2) == operations.end()) {
-        // Merge the data of the nested module operation into 'module'.
-        module.setLoc(nested.getLoc());
-        module.setAttrs(nested.getOperation()->getMutableAttrDict());
-        bodyBlocks.splice(bodyBlocks.end(), nested.getBodyRegion().getBlocks());
-
-        // Erase the original module body.
-        bodyBlocks.pop_front();
-      }
-
-      return opParser.popSSANameScope();
+      // Splice the blocks of the parsed operation over to the provided
+      // top-level block.
+      auto &parsedOps = (*topLevelOp)->getRegion(0).front().getOperations();
+      auto &destOps = topLevelBlock->getOperations();
+      destOps.splice(destOps.empty() ? destOps.end() : std::prev(destOps.end()),
+                     parsedOps, parsedOps.begin(), std::prev(parsedOps.end()));
+      return success();
     }
 
     // If we got an error token, then the lexer already emitted an error, just
@@ -1960,73 +2060,55 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
 
 //===----------------------------------------------------------------------===//
 
-/// This parses the file specified by the indicated SourceMgr and returns an
-/// MLIR module if it was valid.  If not, it emits diagnostics and returns
-/// null.
-OwningModuleRef mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                      MLIRContext *context) {
-  auto sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
+LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
+                                    Block *block, MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
+  const auto *sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
-  // This is the result module we are parsing into.
-  OwningModuleRef module(ModuleOp::create(FileLineColLoc::get(
-      sourceBuf->getBufferIdentifier(), /*line=*/0, /*column=*/0, context)));
+  Location parserLoc = FileLineColLoc::get(sourceBuf->getBufferIdentifier(),
+                                           /*line=*/0, /*column=*/0, context);
+  if (sourceFileLoc)
+    *sourceFileLoc = parserLoc;
 
   SymbolState aliasState;
   ParserState state(sourceMgr, context, aliasState);
-  if (ModuleParser(state).parseModule(*module))
-    return nullptr;
-
-  // Make sure the parse module has no other structural problems detected by
-  // the verifier.
-  if (failed(verify(*module)))
-    return nullptr;
-
-  return module;
+  return TopLevelOperationParser(state).parse(block, parserLoc);
 }
 
-/// This parses the file specified by the indicated filename and returns an
-/// MLIR module if it was valid.  If not, the error message is emitted through
-/// the error handler registered in the context, and a null pointer is returned.
-OwningModuleRef mlir::parseSourceFile(StringRef filename,
-                                      MLIRContext *context) {
+LogicalResult mlir::parseSourceFile(llvm::StringRef filename, Block *block,
+                                    MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
   llvm::SourceMgr sourceMgr;
-  return parseSourceFile(filename, sourceMgr, context);
+  return parseSourceFile(filename, sourceMgr, block, context, sourceFileLoc);
 }
 
-/// This parses the file specified by the indicated filename using the provided
-/// SourceMgr and returns an MLIR module if it was valid.  If not, the error
-/// message is emitted through the error handler registered in the context, and
-/// a null pointer is returned.
-OwningModuleRef mlir::parseSourceFile(StringRef filename,
-                                      llvm::SourceMgr &sourceMgr,
-                                      MLIRContext *context) {
+LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
+                                    llvm::SourceMgr &sourceMgr, Block *block,
+                                    MLIRContext *context,
+                                    LocationAttr *sourceFileLoc) {
   if (sourceMgr.getNumBuffers() != 0) {
     // TODO: Extend to support multiple buffers.
-    emitError(mlir::UnknownLoc::get(context),
-              "only main buffer parsed at the moment");
-    return nullptr;
+    return emitError(mlir::UnknownLoc::get(context),
+                     "only main buffer parsed at the moment");
   }
   auto file_or_err = llvm::MemoryBuffer::getFileOrSTDIN(filename);
-  if (std::error_code error = file_or_err.getError()) {
-    emitError(mlir::UnknownLoc::get(context),
-              "could not open input file " + filename);
-    return nullptr;
-  }
+  if (std::error_code error = file_or_err.getError())
+    return emitError(mlir::UnknownLoc::get(context),
+                     "could not open input file " + filename);
 
-  // Load the MLIR module.
+  // Load the MLIR source file.
   sourceMgr.AddNewSourceBuffer(std::move(*file_or_err), llvm::SMLoc());
-  return parseSourceFile(sourceMgr, context);
+  return parseSourceFile(sourceMgr, block, context, sourceFileLoc);
 }
 
-/// This parses the program string to a MLIR module if it was valid. If not,
-/// it emits diagnostics and returns null.
-OwningModuleRef mlir::parseSourceString(StringRef moduleStr,
-                                        MLIRContext *context) {
-  auto memBuffer = MemoryBuffer::getMemBuffer(moduleStr);
+LogicalResult mlir::parseSourceString(llvm::StringRef sourceStr, Block *block,
+                                      MLIRContext *context,
+                                      LocationAttr *sourceFileLoc) {
+  auto memBuffer = MemoryBuffer::getMemBuffer(sourceStr);
   if (!memBuffer)
-    return nullptr;
+    return failure();
 
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  return parseSourceFile(sourceMgr, context);
+  return parseSourceFile(sourceMgr, block, context, sourceFileLoc);
 }

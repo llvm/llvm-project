@@ -15,7 +15,6 @@ lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
-lldb_trace_dir = '@LLDB_TEST_TRACE_DIRECTORY_CONFIGURED@'
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -24,7 +23,6 @@ if __name__ == '__main__':
     cmd = [sys.executable, dotest_path]
     cmd.extend(['--arch', arch])
     cmd.extend(dotest_args)
-    cmd.extend(['-s', lldb_trace_dir])
     cmd.extend(['--build-dir', lldb_build_dir])
     cmd.extend(['--executable', executable])
     cmd.extend(['--compiler', compiler])

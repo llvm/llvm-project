@@ -111,6 +111,12 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
       case WebAssembly::V128RegClassID:
         CopyLocalOpc = WebAssembly::COPY_V128;
         break;
+      case WebAssembly::FUNCREFRegClassID:
+        CopyLocalOpc = WebAssembly::COPY_FUNCREF;
+        break;
+      case WebAssembly::EXTERNREFRegClassID:
+        CopyLocalOpc = WebAssembly::COPY_EXTERNREF;
+        break;
       case WebAssembly::EXNREFRegClassID:
         CopyLocalOpc = WebAssembly::COPY_EXNREF;
         break;

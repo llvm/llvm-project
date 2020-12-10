@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited < %s | \
-// RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+// RUN:   FileCheck %s
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited  < %s | \
-// RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+// RUN:   FileCheck %s
 
 struct X {
   X();
@@ -15,7 +15,7 @@ X v;
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR16:[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN1XC1Ev(%struct.X* @v), !dbg ![[DBGVAR19:[0-9]+]]
+// CHECK:   call void @_ZN1XC1Ev(%struct.X* {{[^,]*}} @v), !dbg ![[DBGVAR19:[0-9]+]]
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor_v) [[ATTR:#[0-9]+]], !dbg ![[DBGVAR19b:[0-9]+]]
 // CHECK:   ret void, !dbg ![[DBGVAR19]]
 // CHECK: }

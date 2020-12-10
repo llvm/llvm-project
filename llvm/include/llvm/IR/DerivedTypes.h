@@ -273,6 +273,10 @@ public:
     return llvm::StructType::get(Ctx, StructFields);
   }
 
+  /// Return the type with the specified name, or null if there is none by that
+  /// name.
+  static StructType *getTypeByName(LLVMContext &C, StringRef Name);
+
   bool isPacked() const { return (getSubclassData() & SCDB_Packed) != 0; }
 
   /// Return true if this type is uniqued by structural equivalence, false if it

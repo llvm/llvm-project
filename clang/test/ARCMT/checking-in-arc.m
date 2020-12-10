@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -arcmt-check -fobjc-arc -fobjc-runtime=macosx-10.8.0 -triple x86_64-apple-darwin12 -fblocks -Werror %s
+// RUN: %clang_cc1 -arcmt-action=check -fobjc-arc -fobjc-runtime=macosx-10.8.0 -triple x86_64-apple-darwin12 -fblocks -Werror %s
 
 #if __has_feature(objc_arc)
 #define NS_AUTOMATED_REFCOUNT_UNAVAILABLE __attribute__((unavailable("not available in automatic reference counting mode")))

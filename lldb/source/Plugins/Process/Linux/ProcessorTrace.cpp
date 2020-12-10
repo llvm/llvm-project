@@ -26,6 +26,8 @@ using namespace process_linux;
 using namespace llvm;
 
 lldb::user_id_t ProcessorTraceMonitor::m_trace_num = 1;
+const char *kOSEventIntelPTTypeFile =
+    "/sys/bus/event_source/devices/intel_pt/type";
 
 Status ProcessorTraceMonitor::GetTraceConfig(TraceOptions &config) const {
 #ifndef PERF_ATTR_SIZE_VER5
@@ -43,6 +45,27 @@ Status ProcessorTraceMonitor::GetTraceConfig(TraceOptions &config) const {
   return error;
 #endif
 }
+
+Expected<uint32_t> ProcessorTraceMonitor::GetOSEventType() {
+  auto intel_pt_type_text =
+      llvm::MemoryBuffer::getFileAsStream(kOSEventIntelPTTypeFile);
+
+  if (!intel_pt_type_text)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't open the file '%s'",
+                             kOSEventIntelPTTypeFile);
+
+  uint32_t intel_pt_type = 0;
+  StringRef buffer = intel_pt_type_text.get()->getBuffer();
+  if (buffer.trim().getAsInteger(10, intel_pt_type))
+    return createStringError(
+        inconvertibleErrorCode(),
+        "The file '%s' has a invalid value. It should be an unsigned int.",
+        kOSEventIntelPTTypeFile);
+  return intel_pt_type;
+}
+
+bool ProcessorTraceMonitor::IsSupported() { return (bool)GetOSEventType(); }
 
 Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
                                          const TraceOptions &config) {
@@ -76,25 +99,15 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
   attr.exclude_idle = 1;
   attr.mmap = 1;
 
-  int intel_pt_type = 0;
+  Expected<uint32_t> intel_pt_type = GetOSEventType();
 
-  auto ret = llvm::MemoryBuffer::getFileAsStream(
-      "/sys/bus/event_source/devices/intel_pt/type");
-  if (!ret) {
-    LLDB_LOG(log, "failed to open Config file");
-    return ret.getError();
-  }
-
-  StringRef rest = ret.get()->getBuffer();
-  if (rest.empty() || rest.trim().getAsInteger(10, intel_pt_type)) {
-    LLDB_LOG(log, "failed to read Config file");
-    error.SetErrorString("invalid file");
+  if (!intel_pt_type) {
+    error = intel_pt_type.takeError();
     return error;
   }
 
-  rest.trim().getAsInteger(10, intel_pt_type);
-  LLDB_LOG(log, "intel pt type {0}", intel_pt_type);
-  attr.type = intel_pt_type;
+  LLDB_LOG(log, "intel pt type {0}", *intel_pt_type);
+  attr.type = *intel_pt_type;
 
   LLDB_LOG(log, "meta buffer size {0}", metabufsize);
   LLDB_LOG(log, "buffer size {0} ", bufsize);

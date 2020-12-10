@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
+// UNSUPPORTED: clang-8
+// UNSUPPORTED: gcc-9
 
+// Became constexpr in C++20
 // template <InputIterator InIter,
 //           OutputIterator<auto, const InIter::value_type&> OutIter>
 //   requires HasMinus<InIter::value_type, InIter::value_type>
@@ -25,7 +28,7 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {15, 10, 6, 3, 1};
@@ -46,18 +49,18 @@ class X
 {
     int i_;
 
-    X& operator=(const X&);
+    TEST_CONSTEXPR_CXX20 X& operator=(const X&);
 public:
-    explicit X(int i) : i_(i) {}
-    X(const X& x) : i_(x.i_) {}
-    X& operator=(X&& x)
+    TEST_CONSTEXPR_CXX20 explicit X(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 X(const X& x) : i_(x.i_) {}
+    TEST_CONSTEXPR_CXX20 X& operator=(X&& x)
     {
         i_ = x.i_;
         x.i_ = -1;
         return *this;
     }
 
-    friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
+    TEST_CONSTEXPR_CXX20 friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
 
     friend class Y;
 };
@@ -66,16 +69,17 @@ class Y
 {
     int i_;
 
-    Y& operator=(const Y&);
+    TEST_CONSTEXPR_CXX20 Y& operator=(const Y&);
 public:
-    explicit Y(int i) : i_(i) {}
-    Y(const Y& y) : i_(y.i_) {}
-    void operator=(const X& x) {i_ = x.i_;}
+    TEST_CONSTEXPR_CXX20 explicit Y(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 Y(const Y& y) : i_(y.i_) {}
+    TEST_CONSTEXPR_CXX20 void operator=(const X& x) {i_ = x.i_;}
 };
 
 #endif
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test<input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, forward_iterator<int*> >();
@@ -113,5 +117,14 @@ int main(int, char**)
     std::adjacent_difference(x, x+3, y);
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

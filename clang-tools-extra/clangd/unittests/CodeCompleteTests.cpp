@@ -1628,6 +1628,29 @@ TEST(CompletionTest, OverloadBundling) {
   EXPECT_EQ(A.SnippetSuffix, "($0)");
 }
 
+TEST(CompletionTest, OverloadBundlingSameFileDifferentURI) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.BundleOverloads = true;
+
+  Symbol SymX = sym("ns::X", index::SymbolKind::Function, "@F@\\0#");
+  Symbol SymY = sym("ns::X", index::SymbolKind::Function, "@F@\\0#I#");
+  std::string BarHeader = testPath("bar.h");
+  auto BarURI = URI::create(BarHeader).toString();
+  SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
+  SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
+  // The include header is different, but really it's the same file.
+  SymX.IncludeHeaders.emplace_back("\"bar.h\"", 1);
+  SymY.IncludeHeaders.emplace_back(BarURI.c_str(), 1);
+
+  auto Results = completions("void f() { ::ns::^ }", {SymX, SymY}, Opts);
+  // Expect both results are bundled, despite the different-but-same
+  // IncludeHeader.
+  ASSERT_EQ(1u, Results.Completions.size());
+  const auto &R = Results.Completions.front();
+  EXPECT_EQ("X", R.Name);
+  EXPECT_EQ(2u, R.BundleSize);
+}
+
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   MockFS FS;
   auto FooH = testPath("foo.h");

@@ -47,11 +47,14 @@ define void @_start() {
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; DEMANGLE-NEXT:      Name:            'undefined:bar(int)'
-; MANGLE-NEXT:        Name:            'undefined:_Z3bari'
+; DEMANGLE-NEXT:      Name:            'undefined_weak:bar(int)'
+; MANGLE-NEXT:        Name:            'undefined_weak:_Z3bari'
 ; CHECK-NEXT:       - Index:           1
 ; DEMANGLE-NEXT:      Name:            'foo(int)'
 ; MANGLE-NEXT:        Name:            _Z3fooi
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...

@@ -59,9 +59,13 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   auto ConstReferenceOrValue =
       qualType(anyOf(referenceType(pointee(qualType(isConstQualified()))),
-                     unless(anyOf(referenceType(), pointerType()))));
+                     unless(anyOf(referenceType(), pointerType(),
+                                  substTemplateTypeParmType()))));
+  auto ConstReferenceOrValueOrReplaced = qualType(anyOf(
+      ConstReferenceOrValue,
+      substTemplateTypeParmType(hasReplacementType(ConstReferenceOrValue))));
   auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
-      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValue)));
+      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValueOrReplaced)));
   Matches = match(findAll(callExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   Matches =

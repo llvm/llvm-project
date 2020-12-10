@@ -9,4 +9,9 @@ add_llvm_component_library(LLVMAsmParser
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  BinaryFormat
+  Core
+  Support
   )

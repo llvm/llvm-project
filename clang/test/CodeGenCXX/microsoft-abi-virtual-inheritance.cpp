@@ -91,11 +91,11 @@ B::~B() {
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[B_i8:.*]] = getelementptr i8, i8* %[[THIS_i8]], i32 8
   // CHECK2: %[[B:.*]] = bitcast i8* %[[B_i8]] to %struct.B*
-  // CHECK2: call x86_thiscallcc void @"??1B@@UAE@XZ"(%struct.B* %[[B]])
+  // CHECK2: call x86_thiscallcc void @"??1B@@UAE@XZ"(%struct.B* {{[^,]*}} %[[B]])
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[VBASE_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 8
   // CHECK2: %[[VBASE:.*]] = bitcast i8* %[[VBASE_i8]] to %struct.VBase*
-  // CHECK2: call x86_thiscallcc void @"??1VBase@@UAE@XZ"(%struct.VBase* %[[VBASE]])
+  // CHECK2: call x86_thiscallcc void @"??1VBase@@UAE@XZ"(%struct.VBase* {{[^,]*}} %[[VBASE]])
   // CHECK2: ret
 
   // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_GB@@UAEPAXI@Z"
@@ -104,7 +104,7 @@ B::~B() {
   // CHECK2:   %[[THIS_PARAM_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2:   %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_PARAM_i8:.*]], i32 -8
   // CHECK2:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
-  // CHECK2:   call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
+  // CHECK2:   call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* {{[^,]*}} %[[THIS]])
   // ...
   // CHECK2: ret
 }
@@ -211,16 +211,16 @@ void delete_B(B *obj) {
 // CHECK: %[[VFUN:.*]] = getelementptr inbounds i8* (%struct.B*, i32)*, i8* (%struct.B*, i32)** %[[VFTABLE]], i64 0
 // CHECK: %[[VFUN_VALUE:.*]] = load i8* (%struct.B*, i32)*, i8* (%struct.B*, i32)** %[[VFUN]]
 //
-// CHECK: call x86_thiscallcc i8* %[[VFUN_VALUE]](%struct.B* %[[VBASE]], i32 1)
+// CHECK: call x86_thiscallcc i8* %[[VFUN_VALUE]](%struct.B* {{[^,]*}} %[[VBASE]], i32 1)
 // CHECK: ret void
 }
 
 void call_complete_dtor() {
   // CHECK-LABEL: define dso_local void @"?call_complete_dtor@@YAXXZ"
   B b;
-  // CHECK: call x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
+  // CHECK: call x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"(%struct.B* {{[^,]*}} %[[B:.*]], i32 1)
   // CHECK-NOT: getelementptr
-  // CHECK: call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* %[[B]])
+  // CHECK: call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* {{[^,]*}} %[[B]])
   // CHECK: ret
 }
 
@@ -313,13 +313,13 @@ D::~D() {
   // CHECK: %[[ARG_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 16
   // FIXME: We might consider changing the dtor this parameter type to i8*.
   // CHECK: %[[ARG:.*]] = bitcast i8* %[[ARG_i8]] to %"struct.diamond::C"*
-  // CHECK: call x86_thiscallcc void @"??1C@diamond@@UAE@XZ"(%"struct.diamond::C"* %[[ARG]])
+  // CHECK: call x86_thiscallcc void @"??1C@diamond@@UAE@XZ"(%"struct.diamond::C"* {{[^,]*}} %[[ARG]])
 
   // CHECK: %[[B:.*]] = bitcast %"struct.diamond::D"* %[[THIS]] to %"struct.diamond::B"*
   // CHECK: %[[B_i8:.*]] = bitcast %"struct.diamond::B"* %[[B]] to i8*
   // CHECK: %[[ARG_i8:.*]] = getelementptr i8, i8* %[[B_i8]], i32 4
   // CHECK: %[[ARG:.*]] = bitcast i8* %[[ARG_i8]] to %"struct.diamond::B"*
-  // CHECK: call x86_thiscallcc void @"??1B@diamond@@UAE@XZ"(%"struct.diamond::B"* %[[ARG]])
+  // CHECK: call x86_thiscallcc void @"??1B@diamond@@UAE@XZ"(%"struct.diamond::B"* {{[^,]*}} %[[ARG]])
   // CHECK: ret void
 }
 
@@ -335,19 +335,19 @@ struct C : B, A { C() {} };
 void callC() { C x; }
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::C"* @"??0C@test2@@QAE@XZ"
-// CHECK:           (%"struct.test2::C"* returned %this, i32 %is_most_derived)
+// CHECK:           (%"struct.test2::C"* {{[^,]*}} returned {{[^,]*}} %this, i32 %is_most_derived)
 // CHECK: br i1
 //   Virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* {{[^,]*}} %{{.*}})
 // CHECK: br label
 //   Non-virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"(%"struct.test2::B"* %{{.*}}, i32 0)
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"(%"struct.test2::B"* {{[^,]*}} %{{.*}}, i32 0)
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* {{[^,]*}} %{{.*}})
 // CHECK: ret
 
 // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"
-// CHECK2:           (%"struct.test2::B"* returned %this, i32 %is_most_derived)
-// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK2:           (%"struct.test2::B"* {{[^,]*}} returned {{[^,]*}} %this, i32 %is_most_derived)
+// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* {{[^,]*}} %{{.*}})
 // CHECK2: ret
 
 }
@@ -374,7 +374,7 @@ struct D : B, C {
 };
 
 void D::bar() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"?bar@D@test3@@UAEXXZ"(%"struct.test3::D"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"?bar@D@test3@@UAEXXZ"(%"struct.test3::D"* {{[^,]*}} %this)
 
   C::foo();
   // Shouldn't need any vbtable lookups.  All we have to do is adjust to C*,
@@ -408,7 +408,7 @@ struct C : virtual A, B {
 void foo(void*);
 
 C::~C() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1C@test4@@UAE@XZ"(%"struct.test4::C"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1C@test4@@UAE@XZ"(%"struct.test4::C"* {{[^,]*}} %this)
 
   // In this case "this" points to the most derived class, so no GEPs needed.
   // CHECK-NOT: getelementptr
@@ -428,7 +428,7 @@ void destroy(C *obj) {
   // CHECK: %[[VFTABLE:.*]] = load i8* (%"struct.test4::C"*, i32)**, i8* (%"struct.test4::C"*, i32)*** %[[VPTR]]
   // CHECK: %[[VFTENTRY:.*]] = getelementptr inbounds i8* (%"struct.test4::C"*, i32)*, i8* (%"struct.test4::C"*, i32)** %[[VFTABLE]], i64 0
   // CHECK: %[[VFUN:.*]] = load i8* (%"struct.test4::C"*, i32)*, i8* (%"struct.test4::C"*, i32)** %[[VFTENTRY]]
-  // CHECK: call x86_thiscallcc i8* %[[VFUN]](%"struct.test4::C"* %[[OBJ]], i32 1)
+  // CHECK: call x86_thiscallcc i8* %[[VFUN]](%"struct.test4::C"* {{[^,]*}} %[[OBJ]], i32 1)
   // CHECK: ret
 }
 
@@ -443,7 +443,7 @@ struct E : D, B, virtual A {
 };
 
 E::~E() {
-  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1E@test4@@UAE@XZ"(%"struct.test4::E"* %this)
+  // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1E@test4@@UAE@XZ"(%"struct.test4::E"* {{[^,]*}} %this)
 
   // In this case "this" points to the most derived class, so no GEPs needed.
   // CHECK-NOT: getelementptr
@@ -467,7 +467,7 @@ void destroy(E *obj) {
   // CHECK: %[[VFTABLE:.*]] = load i8* (%"struct.test4::E"*, i32)**, i8* (%"struct.test4::E"*, i32)*** %[[VPTR]]
   // CHECK: %[[VFTENTRY:.*]] = getelementptr inbounds i8* (%"struct.test4::E"*, i32)*, i8* (%"struct.test4::E"*, i32)** %[[VFTABLE]], i64 0
   // CHECK: %[[VFUN:.*]] = load i8* (%"struct.test4::E"*, i32)*, i8* (%"struct.test4::E"*, i32)** %[[VFTENTRY]]
-  // CHECK: call x86_thiscallcc i8* %[[VFUN]](%"struct.test4::E"* %[[B_as_E]], i32 1)
+  // CHECK: call x86_thiscallcc i8* %[[VFUN]](%"struct.test4::E"* {{[^,]*}} %[[B_as_E]], i32 1)
   delete obj;
 }
 

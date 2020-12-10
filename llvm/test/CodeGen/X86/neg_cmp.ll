@@ -4,7 +4,7 @@
 ; rdar://11245199
 ; PR12545
 
-declare void @g()
+declare dso_local void @g()
 
 define void @neg_cmp(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: neg_cmp:

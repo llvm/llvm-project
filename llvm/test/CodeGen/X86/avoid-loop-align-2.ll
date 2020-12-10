@@ -4,7 +4,7 @@
 ; knowing what their trip counts are, or other dynamic information. For
 ; now, CodeGen aligns all loops.
 
-@x = external global i32*		; <i32**> [#uses=1]
+@x = external dso_local global i32*		; <i32**> [#uses=1]
 
 define i32 @t(i32 %a, i32 %b) nounwind readonly ssp {
 entry:

@@ -3,7 +3,7 @@
 %struct.two_ints = type { i32, i32 }
 %struct.__va_list = type { i8* }
 
-define void @test1(%struct.two_ints* noalias nocapture sret align 4 %agg.result) "cmse_nonsecure_entry" {
+define void @test1(%struct.two_ints* noalias nocapture sret(%struct.two_ints) align 4 %agg.result) "cmse_nonsecure_entry" {
 entry:
   %0 = bitcast %struct.two_ints* %agg.result to i64*
   store i64 8589934593, i64* %0, align 4
@@ -29,7 +29,7 @@ define void @test4(void (%struct.two_ints*)* nocapture %p) {
 entry:
   %r = alloca %struct.two_ints, align 4
   %0 = bitcast %struct.two_ints* %r to i8*
-  call void %p(%struct.two_ints* nonnull sret align 4 %r) "cmse_nonsecure_call"
+  call void %p(%struct.two_ints* nonnull sret(%struct.two_ints) align 4 %r) "cmse_nonsecure_call"
   ret void
 }
 ; CHECK: error: {{.*}}test4{{.*}}: call to non-secure function would return value through pointer

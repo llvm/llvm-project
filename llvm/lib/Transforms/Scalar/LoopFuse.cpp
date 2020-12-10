@@ -1392,7 +1392,7 @@ private:
     }
 
     // The pre-header of L1 is not necessary anymore.
-    assert(pred_begin(FC1.Preheader) == pred_end(FC1.Preheader));
+    assert(pred_empty(FC1.Preheader));
     FC1.Preheader->getTerminator()->eraseFromParent();
     new UnreachableInst(FC1.Preheader->getContext(), FC1.Preheader);
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
@@ -1610,9 +1610,9 @@ private:
                           FC0ExitBlockSuccessor);
     }
 
-    assert(pred_begin(FC1GuardBlock) == pred_end(FC1GuardBlock) &&
+    assert(pred_empty(FC1GuardBlock) &&
            "Expecting guard block to have no predecessors");
-    assert(succ_begin(FC1GuardBlock) == succ_end(FC1GuardBlock) &&
+    assert(succ_empty(FC1GuardBlock) &&
            "Expecting guard block to have no successors");
 
     // Remember the phi nodes originally in the header of FC0 in order to rewire
@@ -1666,14 +1666,13 @@ private:
     // TODO: In the future, we can handle non-empty exit blocks my merging any
     // instructions from FC0 exit block into FC1 exit block prior to removing
     // the block.
-    assert(pred_begin(FC0.ExitBlock) == pred_end(FC0.ExitBlock) &&
-           "Expecting exit block to be empty");
+    assert(pred_empty(FC0.ExitBlock) && "Expecting exit block to be empty");
     FC0.ExitBlock->getTerminator()->eraseFromParent();
     new UnreachableInst(FC0.ExitBlock->getContext(), FC0.ExitBlock);
 
     // Remove FC1 Preheader
     // The pre-header of L1 is not necessary anymore.
-    assert(pred_begin(FC1.Preheader) == pred_end(FC1.Preheader));
+    assert(pred_empty(FC1.Preheader));
     FC1.Preheader->getTerminator()->eraseFromParent();
     new UnreachableInst(FC1.Preheader->getContext(), FC1.Preheader);
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
@@ -1736,10 +1735,8 @@ private:
     // All done
     // Apply the updates to the Dominator Tree and cleanup.
 
-    assert(succ_begin(FC1GuardBlock) == succ_end(FC1GuardBlock) &&
-           "FC1GuardBlock has successors!!");
-    assert(pred_begin(FC1GuardBlock) == pred_end(FC1GuardBlock) &&
-           "FC1GuardBlock has predecessors!!");
+    assert(succ_empty(FC1GuardBlock) && "FC1GuardBlock has successors!!");
+    assert(pred_empty(FC1GuardBlock) && "FC1GuardBlock has predecessors!!");
 
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);

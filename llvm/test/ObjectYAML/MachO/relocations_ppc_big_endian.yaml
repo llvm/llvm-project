@@ -43,19 +43,19 @@
 # CHECK:     Sections:
 # CHECK-NEXT:       - sectname:        __text
 # CHECK-NEXT:         segname:         __TEXT
-# CHECK-NEXT:         addr:            0x0000000000000000
+# CHECK-NEXT:         addr:            0x0
 # CHECK-NEXT:         size:            76
-# CHECK-NEXT:         offset:          0x000002EC
+# CHECK-NEXT:         offset:          0x2EC
 # CHECK-NEXT:         align:           4
-# CHECK-NEXT:         reloff:          0x00000430
+# CHECK-NEXT:         reloff:          0x430
 # CHECK-NEXT:         nreloc:          8
 # CHECK-NEXT:         flags:           0x80000400
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:
 # CHECK-NEXT:         relocations:
-# CHECK-NEXT:           - address:         0x00000030
+# CHECK-NEXT:           - address:         0x30
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -63,7 +63,7 @@
 # CHECK-NEXT:             type:            11
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           324
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -71,7 +71,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           24
-# CHECK-NEXT:           - address:         0x0000002C
+# CHECK-NEXT:           - address:         0x2C
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -79,7 +79,7 @@
 # CHECK-NEXT:             type:            12
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           324
-# CHECK-NEXT:           - address:         0x0000012C
+# CHECK-NEXT:           - address:         0x12C
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -87,7 +87,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           24
-# CHECK-NEXT:           - address:         0x00000028
+# CHECK-NEXT:           - address:         0x28
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -95,7 +95,7 @@
 # CHECK-NEXT:             type:            11
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           212
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -103,7 +103,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           24
-# CHECK-NEXT:           - address:         0x00000024
+# CHECK-NEXT:           - address:         0x24
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -111,7 +111,7 @@
 # CHECK-NEXT:             type:            12
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           212
-# CHECK-NEXT:           - address:         0x000000BC
+# CHECK-NEXT:           - address:         0xBC
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -121,45 +121,45 @@
 # CHECK-NEXT:             value:           24
 # CHECK-NEXT:       - sectname:        __textcoal_nt
 # CHECK-NEXT:         segname:         __TEXT
-# CHECK-NEXT:         addr:            0x000000000000004C
+# CHECK-NEXT:         addr:            0x4C
 # CHECK-NEXT:         size:            0
-# CHECK-NEXT:         offset:          0x00000338
+# CHECK-NEXT:         offset:          0x338
 # CHECK-NEXT:         align:           0
-# CHECK-NEXT:         reloff:          0x00000000
+# CHECK-NEXT:         reloff:          0x0
 # CHECK-NEXT:         nreloc:          0
 # CHECK-NEXT:         flags:           0x8000000B
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         ''
 # CHECK-NEXT:       - sectname:        __picsymbolstub1
 # CHECK-NEXT:         segname:         __TEXT
-# CHECK-NEXT:         addr:            0x000000000000004C
+# CHECK-NEXT:         addr:            0x4C
 # CHECK-NEXT:         size:            0
-# CHECK-NEXT:         offset:          0x00000338
+# CHECK-NEXT:         offset:          0x338
 # CHECK-NEXT:         align:           0
-# CHECK-NEXT:         reloff:          0x00000000
+# CHECK-NEXT:         reloff:          0x0
 # CHECK-NEXT:         nreloc:          0
 # CHECK-NEXT:         flags:           0x80000008
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000020
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x20
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         ''
 # CHECK-NEXT:       - sectname:        __StaticInit
 # CHECK-NEXT:         segname:         __TEXT
-# CHECK-NEXT:         addr:            0x0000000000000050
+# CHECK-NEXT:         addr:            0x50
 # CHECK-NEXT:         size:            124
-# CHECK-NEXT:         offset:          0x0000033C
+# CHECK-NEXT:         offset:          0x33C
 # CHECK-NEXT:         align:           4
-# CHECK-NEXT:         reloff:          0x00000470
+# CHECK-NEXT:         reloff:          0x470
 # CHECK-NEXT:         nreloc:          13
 # CHECK-NEXT:         flags:           0x80000400
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         
 # CHECK-NEXT:         relocations:
-# CHECK-NEXT:           - address:         0x00000064
+# CHECK-NEXT:           - address:         0x64
 # CHECK-NEXT:             symbolnum:       4
 # CHECK-NEXT:             pcrel:           true
 # CHECK-NEXT:             length:          2
@@ -167,7 +167,7 @@
 # CHECK-NEXT:             type:            3
 # CHECK-NEXT:             scattered:       false
 # CHECK-NEXT:             value:           0
-# CHECK-NEXT:           - address:         0x00000034
+# CHECK-NEXT:           - address:         0x34
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -175,7 +175,7 @@
 # CHECK-NEXT:             type:            11
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           324
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -183,7 +183,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           104
-# CHECK-NEXT:           - address:         0x00000030
+# CHECK-NEXT:           - address:         0x30
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -191,7 +191,7 @@
 # CHECK-NEXT:             type:            12
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           324
-# CHECK-NEXT:           - address:         0x000000DC
+# CHECK-NEXT:           - address:         0xDC
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -199,7 +199,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           104
-# CHECK-NEXT:           - address:         0x00000028
+# CHECK-NEXT:           - address:         0x28
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -207,7 +207,7 @@
 # CHECK-NEXT:             type:            11
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           208
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -215,7 +215,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           104
-# CHECK-NEXT:           - address:         0x00000024
+# CHECK-NEXT:           - address:         0x24
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -223,7 +223,7 @@
 # CHECK-NEXT:             type:            12
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           208
-# CHECK-NEXT:           - address:         0x00000068
+# CHECK-NEXT:           - address:         0x68
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -231,7 +231,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           104
-# CHECK-NEXT:           - address:         0x00000020
+# CHECK-NEXT:           - address:         0x20
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -239,7 +239,7 @@
 # CHECK-NEXT:             type:            11
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           204
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -247,7 +247,7 @@
 # CHECK-NEXT:             type:            1
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           104
-# CHECK-NEXT:           - address:         0x0000001C
+# CHECK-NEXT:           - address:         0x1C
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -255,7 +255,7 @@
 # CHECK-NEXT:             type:            12
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           204
-# CHECK-NEXT:           - address:         0x00000064
+# CHECK-NEXT:           - address:         0x64
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -265,19 +265,19 @@
 # CHECK-NEXT:             value:           104
 # CHECK-NEXT:       - sectname:        __data
 # CHECK-NEXT:         segname:         __DATA
-# CHECK-NEXT:         addr:            0x00000000000000CC
+# CHECK-NEXT:         addr:            0xCC
 # CHECK-NEXT:         size:            12
-# CHECK-NEXT:         offset:          0x000003B8
+# CHECK-NEXT:         offset:          0x3B8
 # CHECK-NEXT:         align:           2
-# CHECK-NEXT:         reloff:          0x000004D8
+# CHECK-NEXT:         reloff:          0x4D8
 # CHECK-NEXT:         nreloc:          1
-# CHECK-NEXT:         flags:           0x00000000
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         flags:           0x0
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         
 # CHECK-NEXT:         relocations:
-# CHECK-NEXT:           - address:         0x00000008
+# CHECK-NEXT:           - address:         0x8
 # CHECK-NEXT:             symbolnum:       5
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -287,31 +287,31 @@
 # CHECK-NEXT:             value:           0
 # CHECK-NEXT:       - sectname:        __common
 # CHECK-NEXT:         segname:         __DATA
-# CHECK-NEXT:         addr:            0x0000000000000144
+# CHECK-NEXT:         addr:            0x144
 # CHECK-NEXT:         size:            4
-# CHECK-NEXT:         offset:          0x00000000
+# CHECK-NEXT:         offset:          0x0
 # CHECK-NEXT:         align:           2
-# CHECK-NEXT:         reloff:          0x00000000
+# CHECK-NEXT:         reloff:          0x0
 # CHECK-NEXT:         nreloc:          0
-# CHECK-NEXT:         flags:           0x00000001
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         flags:           0x1
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:       - sectname:        __mod_init_func
 # CHECK-NEXT:         segname:         __DATA
-# CHECK-NEXT:         addr:            0x00000000000000D8
+# CHECK-NEXT:         addr:            0xD8
 # CHECK-NEXT:         size:            4
-# CHECK-NEXT:         offset:          0x000003C4
+# CHECK-NEXT:         offset:          0x3C4
 # CHECK-NEXT:         align:           2
-# CHECK-NEXT:         reloff:          0x000004E0
+# CHECK-NEXT:         reloff:          0x4E0
 # CHECK-NEXT:         nreloc:          1
-# CHECK-NEXT:         flags:           0x00000009
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         flags:           0x9
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         000000A0
 # CHECK-NEXT:         relocations:
-# CHECK-NEXT:           - address:         0x00000000
+# CHECK-NEXT:           - address:         0x0
 # CHECK-NEXT:             symbolnum:       4
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -321,19 +321,19 @@
 # CHECK-NEXT:             value:           0
 # CHECK-NEXT:       - sectname:        __eh_frame
 # CHECK-NEXT:         segname:         __TEXT
-# CHECK-NEXT:         addr:            0x00000000000000DC
+# CHECK-NEXT:         addr:            0xDC
 # CHECK-NEXT:         size:            104
-# CHECK-NEXT:         offset:          0x000003C8
+# CHECK-NEXT:         offset:          0x3C8
 # CHECK-NEXT:         align:           2
-# CHECK-NEXT:         reloff:          0x000004E8
+# CHECK-NEXT:         reloff:          0x4E8
 # CHECK-NEXT:         nreloc:          3
 # CHECK-NEXT:         flags:           0x6800000B
-# CHECK-NEXT:         reserved1:       0x00000000
-# CHECK-NEXT:         reserved2:       0x00000000
-# CHECK-NEXT:         reserved3:       0x00000000
+# CHECK-NEXT:         reserved1:       0x0
+# CHECK-NEXT:         reserved2:       0x0
+# CHECK-NEXT:         reserved3:       0x0
 # CHECK-NEXT:         content:         
 # CHECK-NEXT:         relocations:
-# CHECK-NEXT:           - address:         0x00000054
+# CHECK-NEXT:           - address:         0x54
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -341,7 +341,7 @@
 # CHECK-NEXT:             type:            0
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           160
-# CHECK-NEXT:           - address:         0x00000038
+# CHECK-NEXT:           - address:         0x38
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2
@@ -349,7 +349,7 @@
 # CHECK-NEXT:             type:            0
 # CHECK-NEXT:             scattered:       true
 # CHECK-NEXT:             value:           0
-# CHECK-NEXT:           - address:         0x0000001C
+# CHECK-NEXT:           - address:         0x1C
 # CHECK-NEXT:             symbolnum:       0
 # CHECK-NEXT:             pcrel:           false
 # CHECK-NEXT:             length:          2

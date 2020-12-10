@@ -30,7 +30,7 @@ public:
   void AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer> &&);
 
   bool atIssueLimit() const override;
-  HazardType getHazardType(SUnit *m, int Stalls = 0) override;
+  HazardType getHazardType(SUnit *, int Stalls = 0) override;
   void Reset() override;
   void EmitInstruction(SUnit *) override;
   void EmitInstruction(MachineInstr *) override;

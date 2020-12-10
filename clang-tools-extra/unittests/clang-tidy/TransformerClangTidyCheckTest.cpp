@@ -23,6 +23,7 @@ using namespace ::clang::ast_matchers;
 using transformer::cat;
 using transformer::change;
 using transformer::IncludeFormat;
+using transformer::makeRule;
 using transformer::node;
 using transformer::RewriteRule;
 using transformer::statement;
@@ -30,14 +31,14 @@ using transformer::statement;
 // Invert the code of an if-statement, while maintaining its semantics.
 RewriteRule invertIf() {
   StringRef C = "C", T = "T", E = "E";
-  RewriteRule Rule = tooling::makeRule(
-      ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
-             hasElse(stmt().bind(E))),
-      change(statement(std::string(RewriteRule::RootID)),
-             cat("if(!(", node(std::string(C)), ")) ",
-                 statement(std::string(E)), " else ",
-                 statement(std::string(T)))),
-      cat("negate condition and reverse `then` and `else` branches"));
+  RewriteRule Rule =
+      makeRule(ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
+                      hasElse(stmt().bind(E))),
+               change(statement(std::string(RewriteRule::RootID)),
+                      cat("if(!(", node(std::string(C)), ")) ",
+                          statement(std::string(E)), " else ",
+                          statement(std::string(T)))),
+               cat("negate condition and reverse `then` and `else` branches"));
   return Rule;
 }
 
@@ -70,10 +71,9 @@ TEST(TransformerClangTidyCheckTest, Basic) {
 class IntLitCheck : public TransformerClangTidyCheck {
 public:
   IntLitCheck(StringRef Name, ClangTidyContext *Context)
-      : TransformerClangTidyCheck(tooling::makeRule(integerLiteral(),
-                                                    change(cat("LIT")),
-                                                    cat("no message")),
-                                  Name, Context) {}
+      : TransformerClangTidyCheck(
+            makeRule(integerLiteral(), change(cat("LIT")), cat("no message")),
+            Name, Context) {}
 };
 
 // Tests that two changes in a single macro expansion do not lead to conflicts
@@ -95,7 +95,7 @@ class BinOpCheck : public TransformerClangTidyCheck {
 public:
   BinOpCheck(StringRef Name, ClangTidyContext *Context)
       : TransformerClangTidyCheck(
-            tooling::makeRule(
+            makeRule(
                 binaryOperator(hasOperatorName("+"), hasRHS(expr().bind("r"))),
                 change(node("r"), cat("RIGHT")), cat("no message")),
             Name, Context) {}
@@ -122,8 +122,8 @@ Optional<RewriteRule> needsObjC(const LangOptions &LangOpts,
                                 const ClangTidyCheck::OptionsView &Options) {
   if (!LangOpts.ObjC)
     return None;
-  return tooling::makeRule(clang::ast_matchers::functionDecl(),
-                           change(cat("void changed() {}")), cat("no message"));
+  return makeRule(clang::ast_matchers::functionDecl(),
+                  change(cat("void changed() {}")), cat("no message"));
 }
 
 class NeedsObjCCheck : public TransformerClangTidyCheck {
@@ -147,8 +147,8 @@ Optional<RewriteRule> noSkip(const LangOptions &LangOpts,
                              const ClangTidyCheck::OptionsView &Options) {
   if (Options.get("Skip", "false") == "true")
     return None;
-  return tooling::makeRule(clang::ast_matchers::functionDecl(),
-                           change(cat("void nothing()")), cat("no message"));
+  return makeRule(clang::ast_matchers::functionDecl(),
+                  changeTo(cat("void nothing();")), cat("no message"));
 }
 
 class ConfigurableCheck : public TransformerClangTidyCheck {
@@ -174,9 +174,8 @@ TEST(TransformerClangTidyCheckTest, DisableByConfig) {
 
 RewriteRule replaceCall(IncludeFormat Format) {
   using namespace ::clang::ast_matchers;
-  RewriteRule Rule =
-      tooling::makeRule(callExpr(callee(functionDecl(hasName("f")))),
-                        change(cat("other()")), cat("no message"));
+  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                              change(cat("other()")), cat("no message"));
   addInclude(Rule, "clang/OtherLib.h", Format);
   return Rule;
 }

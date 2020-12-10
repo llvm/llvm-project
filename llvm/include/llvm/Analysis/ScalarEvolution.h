@@ -600,8 +600,16 @@ public:
     return getConstant(Ty, -1, /*isSigned=*/true);
   }
 
-  /// Return an expression for sizeof AllocTy that is type IntTy
+  /// Return an expression for sizeof ScalableTy that is type IntTy, where
+  /// ScalableTy is a scalable vector type.
+  const SCEV *getSizeOfScalableVectorExpr(Type *IntTy,
+                                          ScalableVectorType *ScalableTy);
+
+  /// Return an expression for the alloc size of AllocTy that is type IntTy
   const SCEV *getSizeOfExpr(Type *IntTy, Type *AllocTy);
+
+  /// Return an expression for the store size of StoreTy that is type IntTy
+  const SCEV *getStoreSizeOfExpr(Type *IntTy, Type *StoreTy);
 
   /// Return an expression for offsetof on the given field with type IntTy
   const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy, unsigned FieldNo);
@@ -958,26 +966,33 @@ public:
   getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
                             ICmpInst::Predicate Pred);
 
-  /// Return true if the result of the predicate LHS `Pred` RHS is loop
-  /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
-  /// InvariantLHS so that InvariantLHS `InvariantPred` InvariantRHS is the
-  /// loop invariant form of LHS `Pred` RHS.
-  bool isLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                                const SCEV *RHS, const Loop *L,
-                                ICmpInst::Predicate &InvariantPred,
-                                const SCEV *&InvariantLHS,
-                                const SCEV *&InvariantRHS);
+  struct LoopInvariantPredicate {
+    ICmpInst::Predicate Pred;
+    const SCEV *LHS;
+    const SCEV *RHS;
 
-  /// Return true if the result of the predicate LHS `Pred` RHS is loop
-  /// invariant with respect to L at given Context during at least first
-  /// MaxIter iterations.  Set InvariantPred, InvariantLHS and InvariantLHS so
-  /// that InvariantLHS `InvariantPred` InvariantRHS is the loop invariant form
-  /// of LHS `Pred` RHS. The predicate should be the loop's exit condition.
-  bool isLoopInvariantExitCondDuringFirstIterations(
-      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-      const Instruction *Context, const SCEV *MaxIter,
-      ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
-      const SCEV *&InvariantRHS);
+    LoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
+                           const SCEV *RHS)
+        : Pred(Pred), LHS(LHS), RHS(RHS) {}
+  };
+  /// If the result of the predicate LHS `Pred` RHS is loop invariant with
+  /// respect to L, return a LoopInvariantPredicate with LHS and RHS being
+  /// invariants, available at L's entry. Otherwise, return None.
+  Optional<LoopInvariantPredicate>
+  getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
+                            const SCEV *RHS, const Loop *L);
+
+  /// If the result of the predicate LHS `Pred` RHS is loop invariant with
+  /// respect to L at given Context during at least first MaxIter iterations,
+  /// return a LoopInvariantPredicate with LHS and RHS being invariants,
+  /// available at L's entry. Otherwise, return None. The predicate should be
+  /// the loop's exit condition.
+  Optional<LoopInvariantPredicate>
+  getLoopInvariantExitCondDuringFirstIterations(ICmpInst::Predicate Pred,
+                                                const SCEV *LHS,
+                                                const SCEV *RHS, const Loop *L,
+                                                const Instruction *Context,
+                                                const SCEV *MaxIter);
 
   /// Simplify LHS and RHS in a comparison with predicate Pred. Return true
   /// iff any changes were made. If the operands are provably equal or
@@ -1147,15 +1162,6 @@ public:
   const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
       const SCEV *S, const Loop *L,
       SmallPtrSetImpl<const SCEVPredicate *> &Preds);
-
-  /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
-  /// constant, and None if it isn't.
-  ///
-  /// This is intended to be a cheaper version of getMinusSCEV.  We can be
-  /// frugal here since we just bail out of actually constructing and
-  /// canonicalizing an expression in the cases where the result isn't going
-  /// to be a constant.
-  Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
   /// Update no-wrap flags of an AddRec. This may drop the cached info about
   /// this AddRec (such as range info) in case if new flags may potentially
@@ -1657,7 +1663,14 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsExit,
                                          bool AllowPredicates);
-
+  Optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool ControlsExit, bool AllowPredicates);
+  ExitLimit computeExitLimitFromCondFromBinOpHelper(
+      ExitLimitCacheTy &Cache, const Loop *L, BinaryOperator *BO,
+      bool EitherMayExit, bool ExitIfTrue, bool ControlsExit,
+      bool AllowPredicates, const Constant *NeutralElement);
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
   /// ExitCond and ExitIfTrue. If AllowPredicates is set, this call will try
@@ -1871,6 +1884,15 @@ private:
   bool splitBinaryAdd(const SCEV *Expr, const SCEV *&L, const SCEV *&R,
                       SCEV::NoWrapFlags &Flags);
 
+  /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
+  /// constant, and None if it isn't.
+  ///
+  /// This is intended to be a cheaper version of getMinusSCEV.  We can be
+  /// frugal here since we just bail out of actually constructing and
+  /// canonicalizing an expression in the cases where the result isn't going
+  /// to be a constant.
+  Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
+
   /// Drop memoized information computed for S.
   void forgetMemoizedResults(const SCEV *S);
 
@@ -1892,6 +1914,14 @@ private:
 
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+
+  /// Try to prove NSW on \p AR by proving facts about conditions known  on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR);
+
+  /// Try to prove NUW on \p AR by proving facts about conditions known on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
   Optional<MonotonicPredicateType>
   getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,

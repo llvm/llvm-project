@@ -16,6 +16,19 @@ def run(f):
   gc.collect()
   assert Context._get_live_count() == 0
 
+# Verify capsule interop.
+# CHECK-LABEL: TEST: testCapsule
+def testCapsule():
+  with Context():
+    pm = PassManager()
+    pm_capsule = pm._CAPIPtr
+    assert '"mlir.passmanager.PassManager._CAPIPtr"' in repr(pm_capsule)
+    pm._testing_release()
+    pm1 = PassManager._CAPICreate(pm_capsule)
+    assert pm1 is not None  # And does not crash.
+run(testCapsule)
+
+
 # Verify successful round-trip.
 # CHECK-LABEL: TEST: testParseSuccess
 def testParseSuccess():
@@ -51,6 +64,21 @@ def testParseFail():
     else:
       log("Exception not produced")
 run(testParseFail)
+
+
+# Verify failure on incorrect level of nesting.
+# CHECK-LABEL: TEST: testInvalidNesting
+def testInvalidNesting():
+  with Context():
+    try:
+      pm = PassManager.parse("func(print-op-graph)")
+    except ValueError as e:
+      # CHECK: Can't add pass 'PrintOp' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
+      # CHECK: ValueError exception: invalid pass pipeline 'func(print-op-graph)'.
+      log("ValueError exception:", e)
+    else:
+      log("Exception not produced")
+run(testInvalidNesting)
 
 
 # Verify that a pass manager can execute on IR

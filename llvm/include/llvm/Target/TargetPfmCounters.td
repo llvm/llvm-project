@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the target-independent interfaces for performance counters.
+//
+//===----------------------------------------------------------------------===//
 
 // Definition of a hardware counters from libpfm identifiers.
 class PfmCounter<string counter> {

@@ -79,9 +79,9 @@ module real_tests
   !WARN: invalid argument on division
   real(4), parameter :: r4_nan = 0._4/0._4
   TEST_ISNAN(r4_nan)
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_pinf = 1._4/0._4
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
   logical, parameter :: test_r4_nan_parentheses1 = .NOT.(((r4_nan)).EQ.r4_nan)

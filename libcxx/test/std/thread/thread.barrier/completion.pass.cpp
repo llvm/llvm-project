@@ -26,6 +26,7 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
@@ -34,7 +35,7 @@ int main(int, char**)
   auto comp = [&]() { x += 1; };
   std::barrier<decltype(comp)> b(2, comp);
 
-  std::thread t([&](){
+  std::thread t = support::make_test_thread([&](){
       for(int i = 0; i < 10; ++i)
         b.arrive_and_wait();
   });

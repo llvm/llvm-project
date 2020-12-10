@@ -696,7 +696,7 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
     Type *RetTy = ICA.getReturnType();
-    unsigned VF = ICA.getVectorFactor();
+    unsigned VF = ICA.getVectorFactor().getFixedValue();
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
                              : 1);

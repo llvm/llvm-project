@@ -26,6 +26,10 @@ uint64_t InputSection::getFileOffset() const {
   return parent->fileOff + outSecFileOff;
 }
 
+uint64_t InputSection::getFileSize() const {
+  return isZeroFill(flags) ? 0 : getSize();
+}
+
 uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
 void InputSection::writeTo(uint8_t *buf) {
@@ -56,6 +60,23 @@ void InputSection::writeTo(uint8_t *buf) {
       referentVal -= getVA() + r.offset;
     target->relocateOne(buf + r.offset, r, referentVal);
   }
+}
+
+bool macho::isCodeSection(InputSection *isec) {
+  uint32_t type = isec->flags & MachO::SECTION_TYPE;
+  if (type != S_REGULAR && type != S_COALESCED)
+    return false;
+
+  uint32_t attr = isec->flags & MachO::SECTION_ATTRIBUTES_USR;
+  if (attr == S_ATTR_PURE_INSTRUCTIONS)
+    return true;
+
+  if (isec->segname == segment_names::text)
+    return StringSwitch<bool>(isec->name)
+        .Cases("__textcoal_nt", "__StaticInit", true)
+        .Default(false);
+
+  return false;
 }
 
 std::string lld::toString(const InputSection *isec) {

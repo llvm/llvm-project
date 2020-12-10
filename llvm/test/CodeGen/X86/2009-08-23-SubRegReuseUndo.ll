@@ -3,7 +3,7 @@
 
 ; This function has a sub-register reuse undone.
 
-@uint8 = external global i32                      ; <i32*> [#uses=3]
+@uint8 = external dso_local global i32                      ; <i32*> [#uses=3]
 
 declare signext i8 @foo(i32, i8 signext) nounwind readnone
 

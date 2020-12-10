@@ -134,10 +134,10 @@ DECLARE_REAL(uptr, strnlen, const char *s, uptr maxlen)
 DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 
 #if !SANITIZER_MAC
-#define ASAN_INTERCEPT_FUNC(name)                                         \
-  do {                                                                    \
-    if (!INTERCEPT_FUNCTION(name))                                        \
-      VReport(1, "AddressSanitizer: failed to intercept '%s'\n'", #name); \
+#define ASAN_INTERCEPT_FUNC(name)                                        \
+  do {                                                                   \
+    if (!INTERCEPT_FUNCTION(name))                                       \
+      VReport(1, "AddressSanitizer: failed to intercept '%s'\n", #name); \
   } while (0)
 #define ASAN_INTERCEPT_FUNC_VER(name, ver)                                  \
   do {                                                                      \

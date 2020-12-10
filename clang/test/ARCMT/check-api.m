@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -arcmt-check -verify -triple x86_64-apple-macosx10.7 %s
+// RUN: %clang_cc1 -arcmt-action=check -verify -triple x86_64-apple-macosx10.7 %s
 
 #include "Common.h"
 

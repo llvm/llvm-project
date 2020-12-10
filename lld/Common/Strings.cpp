@@ -21,12 +21,11 @@ using namespace lld;
 
 // Returns the demangled C++ symbol name for name.
 std::string lld::demangleItanium(StringRef name) {
-  // itaniumDemangle can be used to demangle strings other than symbol
-  // names which do not necessarily start with "_Z". Name can be
-  // either a C or C++ symbol. Don't call demangle if the name
-  // does not look like a C++ symbol name to avoid getting unexpected
-  // result for a C symbol that happens to match a mangled type name.
-  if (!name.startswith("_Z"))
+  // demangleItanium() can be called for all symbols. Only demangle C++ symbols,
+  // to avoid getting unexpected result for a C symbol that happens to match a
+  // mangled type name such as "Pi" (which would demangle to "int*").
+  if (!name.startswith("_Z") && !name.startswith("__Z") &&
+      !name.startswith("___Z") && !name.startswith("____Z"))
     return std::string(name);
 
   return demangle(std::string(name));

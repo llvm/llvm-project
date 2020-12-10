@@ -332,13 +332,9 @@ def : Pat<(fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
           (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), FPR32:$rs3),
-          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
-          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
-def : Pat<(fma FPR32:$rs1, (fneg FPR32:$rs2), (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
@@ -389,6 +385,7 @@ defm : StPat<store, FSW, FPR32>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtF, IsRV32] in {
+// Moves (no conversion)
 def : Pat<(bitconvert GPR:$rs1), (FMV_W_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR32:$rs1), (FMV_X_W FPR32:$rs1)>;
 
@@ -402,9 +399,10 @@ def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
+// Moves (no conversion)
 def : Pat<(riscv_fmv_w_x_rv64 GPR:$src), (FMV_W_X GPR:$src)>;
 def : Pat<(riscv_fmv_x_anyextw_rv64 FPR32:$src), (FMV_X_W FPR32:$src)>;
-def : Pat<(sexti32 (riscv_fmv_x_anyextw_rv64 FPR32:$src)),
+def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
           (FMV_X_W FPR32:$src)>;
 
 // FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
@@ -419,7 +417,7 @@ def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_L_S $rs1, 0b001)>;
 def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_LU_S $rs1, 0b001)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp (sext_inreg GPR:$rs1, i32)), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(sint_to_fp (sexti32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
 def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
 def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_L $rs1, 0b111)>;
 def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_LU $rs1, 0b111)>;

@@ -52,6 +52,9 @@ MacroNames("D", cl::desc("Name of the macro to be defined"),
 static cl::opt<bool>
 WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 
+static cl::opt<bool>
+TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
   errs().flush();
@@ -83,7 +86,12 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
 int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
   RecordKeeper Records;
 
+  if (TimePhases)
+    Records.startPhaseTiming();
+
   // Parse the input file.
+
+  Records.startTimer("Parse, build records");
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (std::error_code EC = FileOrErr.getError())
@@ -103,11 +111,15 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
 
   if (Parser.ParseFile())
     return 1;
+  Records.stopTimer();
 
   // Write output to memory.
+  Records.startBackendTimer("Backend overall");
   std::string OutString;
   raw_string_ostream Out(OutString);
-  if (MainFn(Out, Records))
+  unsigned status = MainFn(Out, Records);
+  Records.stopBackendTimer();
+  if (status)
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
@@ -119,26 +131,31 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
       return Ret;
   }
 
+  Records.startTimer("Write output");
+  bool WriteFile = true;
   if (WriteIfChanged) {
     // Only updates the real output file if there are any differences.
     // This prevents recompilation of all the files depending on it if there
     // aren't any.
     if (auto ExistingOrErr = MemoryBuffer::getFile(OutputFilename))
       if (std::move(ExistingOrErr.get())->getBuffer() == Out.str())
-        return 0;
+        WriteFile = false;
   }
-
-  std::error_code EC;
-  ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_None);
-  if (EC)
-    return reportError(argv0, "error opening " + OutputFilename + ":" +
-                                  EC.message() + "\n");
-  OutFile.os() << Out.str();
+  if (WriteFile) {
+    std::error_code EC;
+    ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_None);
+    if (EC)
+      return reportError(argv0, "error opening " + OutputFilename + ": " +
+                                    EC.message() + "\n");
+    OutFile.os() << Out.str();
+    if (ErrorsPrinted == 0)
+      OutFile.keep();
+  }
+  
+  Records.stopTimer();
+  Records.stopPhaseTiming();
 
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
-
-  // Declare success.
-  OutFile.keep();
   return 0;
 }

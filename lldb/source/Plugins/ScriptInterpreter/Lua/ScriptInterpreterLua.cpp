@@ -8,14 +8,17 @@
 
 #include "ScriptInterpreterLua.h"
 #include "Lua.h"
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/FormatAdapters.h"
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,6 +175,49 @@ llvm::Error ScriptInterpreterLua::LeaveSession() {
                         "lldb.thread = nil; "
                         "lldb.frame = nil";
   return m_lua->Run(str);
+}
+
+bool ScriptInterpreterLua::BreakpointCallbackFunction(
+    void *baton, StoppointCallbackContext *context, user_id_t break_id,
+    user_id_t break_loc_id) {
+  assert(context);
+
+  ExecutionContext exe_ctx(context->exe_ctx_ref);
+  Target *target = exe_ctx.GetTargetPtr();
+  if (target == nullptr)
+    return true;
+
+  StackFrameSP stop_frame_sp(exe_ctx.GetFrameSP());
+  BreakpointSP breakpoint_sp = target->GetBreakpointByID(break_id);
+  BreakpointLocationSP bp_loc_sp(breakpoint_sp->FindLocationByID(break_loc_id));
+
+  Debugger &debugger = target->GetDebugger();
+  ScriptInterpreterLua *lua_interpreter = static_cast<ScriptInterpreterLua *>(
+      debugger.GetScriptInterpreter(true, eScriptLanguageLua));
+  Lua &lua = lua_interpreter->GetLua();
+
+  llvm::Expected<bool> BoolOrErr =
+      lua.CallBreakpointCallback(baton, stop_frame_sp, bp_loc_sp);
+  if (llvm::Error E = BoolOrErr.takeError()) {
+    debugger.GetErrorStream() << toString(std::move(E));
+    return true;
+  }
+
+  return *BoolOrErr;
+}
+
+Status ScriptInterpreterLua::SetBreakpointCommandCallback(
+    BreakpointOptions *bp_options, const char *command_body_text) {
+  Status error;
+  auto data_up = std::make_unique<CommandDataLua>();
+  error = m_lua->RegisterBreakpointCallback(data_up.get(), command_body_text);
+  if (error.Fail())
+    return error;
+  auto baton_sp =
+      std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
+  bp_options->SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
+                          baton_sp);
+  return error;
 }
 
 lldb::ScriptInterpreterSP

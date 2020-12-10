@@ -75,6 +75,8 @@ bool getDontPlaceZerosInBSS();
 
 bool getEnableGuaranteedTailCallOpt();
 
+bool getEnableAIXExtendedAltivecABI();
+
 bool getDisableTailCalls();
 
 bool getStackSymbolOrdering();
@@ -124,6 +126,8 @@ bool getEmitCallSiteInfo();
 bool getEnableMachineFunctionSplitter();
 
 bool getEnableDebugEntryValues();
+
+bool getPseudoProbeForProfiling();
 
 bool getValueTrackingVariableLocations();
 

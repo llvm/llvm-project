@@ -102,6 +102,13 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::BSWAP,                    T, Legal);
     }
 
+    setOperationAction(ISD::SMIN,           T, Legal);
+    setOperationAction(ISD::SMAX,           T, Legal);
+    if (T.getScalarType() != MVT::i32) {
+      setOperationAction(ISD::UMIN,         T, Legal);
+      setOperationAction(ISD::UMAX,         T, Legal);
+    }
+
     setOperationAction(ISD::CTTZ,               T, Custom);
     setOperationAction(ISD::LOAD,               T, Custom);
     setOperationAction(ISD::MLOAD,              T, Custom);
@@ -182,6 +189,13 @@ HexagonTargetLowering::initializeHVXLowering() {
 
       // Promote all shuffles to operate on vectors of bytes.
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
+    }
+
+    setOperationAction(ISD::SMIN,     T, Custom);
+    setOperationAction(ISD::SMAX,     T, Custom);
+    if (T.getScalarType() != MVT::i32) {
+      setOperationAction(ISD::UMIN,   T, Custom);
+      setOperationAction(ISD::UMAX,   T, Custom);
     }
   }
 
@@ -2029,6 +2043,10 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SRA:
       case ISD::SHL:
       case ISD::SRL:
+      case ISD::SMIN:
+      case ISD::SMAX:
+      case ISD::UMIN:
+      case ISD::UMAX:
       case ISD::SETCC:
       case ISD::VSELECT:
       case ISD::SIGN_EXTEND:

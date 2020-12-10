@@ -992,9 +992,6 @@ inline bool operator>=(const CodeCompletionResult &X,
   return !(X < Y);
 }
 
-raw_ostream &operator<<(raw_ostream &OS,
-                              const CodeCompletionString &CCS);
-
 /// Abstract interface for a consumer of code-completion
 /// information.
 class CodeCompleteConsumer {

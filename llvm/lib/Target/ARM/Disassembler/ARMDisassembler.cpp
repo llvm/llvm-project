@@ -860,7 +860,8 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
         VCCPos + 2, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
-      MI.insert(VCCI, MI.getOperand(TiedOp));
+      // Copy the operand to ensure it's not invalidated when MI grows.
+      MI.insert(VCCI, MCOperand(MI.getOperand(TiedOp)));
     }
   } else if (VCC != ARMVCC::None) {
     Check(S, SoftFail);

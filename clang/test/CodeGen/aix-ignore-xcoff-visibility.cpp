@@ -66,8 +66,8 @@ void prambar() {}
 // VISIBILITY-IR:    define hidden void @_Z5foo_hPi(i32* %p)
 // VISIBILITY-IR:    declare hidden void @_Z12zoo_extern_hv()
 // VISIBILITY-IR:    define protected void @_Z3barv()
-// VISIBILITY-IR:    define linkonce_odr hidden i32 @_ZNK9TestClass5valueEv(%class.TestClass* %this)
-// VISIBILITY-IR:    define weak_odr protected i32 @_ZN5basicIiE7getdataEv(%class.basic* %this)
+// VISIBILITY-IR:    define linkonce_odr hidden i32 @_ZNK9TestClass5valueEv(%class.TestClass* {{[^,]*}} %this)
+// VISIBILITY-IR:    define weak_odr protected i32 @_ZN5basicIiE7getdataEv(%class.basic* {{[^,]*}} %this)
 // VISIBILITY-IR:    define hidden void @_Z7prambarv()
 
 // VISIBILITY-ASM: .globl  _Z5foo_hPi[DS],hidden

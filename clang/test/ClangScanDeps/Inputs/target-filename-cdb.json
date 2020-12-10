@@ -1,0 +1,22 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -o a.o",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -ob.o",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -o first.o -o last.o",
+  "file": "DIR/target-filename_input.cpp"
+}
+]

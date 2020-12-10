@@ -7,11 +7,12 @@
 ; CHECK-LABEL: bar:
 ; CHECK: movq %rdi, %rax
 
-; For the x32 ABI, pointers are 32-bit so 32-bit instructions will be used
+; For the x32 ABI, pointers are 32-bit but passed in zero-extended to 64-bit
+; so either 32-bit or 64-bit instructions may be used.
 ; X32ABI-LABEL: bar:
-; X32ABI: movl %edi, %eax
+; X32ABI: mov{{l|q}} %{{r|e}}di, %{{r|e}}ax
 
-define void @bar(%struct.foo* noalias sret  %agg.result, %struct.foo* %d) nounwind  {
+define void @bar(%struct.foo* noalias sret(%struct.foo)  %agg.result, %struct.foo* %d) nounwind  {
 entry:
 	%d_addr = alloca %struct.foo*		; <%struct.foo**> [#uses=2]
 	%memtmp = alloca %struct.foo, align 8		; <%struct.foo*> [#uses=1]
@@ -63,11 +64,12 @@ return:		; preds = %entry
 ; CHECK-LABEL: foo:
 ; CHECK: movq %rdi, %rax
 
-; For the x32 ABI, pointers are 32-bit so 32-bit instructions will be used
+; For the x32 ABI, pointers are 32-bit but passed in zero-extended to 64-bit
+; so either 32-bit or 64-bit instructions may be used.
 ; X32ABI-LABEL: foo:
-; X32ABI: movl %edi, %eax
+; X32ABI: mov{{l|q}} %{{r|e}}di, %{{r|e}}ax
 
-define void @foo({ i64 }* noalias nocapture sret %agg.result) nounwind {
+define void @foo({ i64 }* noalias nocapture sret({ i64 }) %agg.result) nounwind {
   store { i64 } { i64 0 }, { i64 }* %agg.result
   ret void
 }

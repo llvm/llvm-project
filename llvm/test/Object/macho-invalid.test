@@ -428,9 +428,6 @@ INVALID-LOADFVMLIB-OBSOLETE: macho-invalid-loadfvmlib-obsolete': truncated or ma
 RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-prebound_dylib-obsolete 2>&1 | FileCheck --check-prefix=INVALID-PREBOUND_DYLIB-OBSOLETE %s
 INVALID-PREBOUND_DYLIB-OBSOLETE: macho-invalid-prebound_dylib-obsolete': truncated or malformed object (load command 0 for cmd value of: 16 is obsolete and not supported)
 
-RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-ident-obsolete 2>&1 | FileCheck --check-prefix=INVALID-IDENT-OBSOLETE %s
-INVALID-IDENT-OBSOLETE: macho-invalid-ident-obsolete': truncated or malformed object (load command 0 for cmd value of: 8 is obsolete and not supported)
-
 RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-fvmfile-obsolete 2>&1 | FileCheck --check-prefix=INVALID-FVMFILE-OBSOLETE %s
 INVALID-FVMFILE-OBSOLETE: macho-invalid-fvmfile-obsolete': truncated or malformed object (load command 0 for cmd value of: 9 is obsolete and not supported)
 

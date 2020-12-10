@@ -12,7 +12,7 @@ proc_one:
 .globl proc_two
 proc_two:
  .cfi_startproc
- 
+# CHECK: [[#@LINE]]:1: error: starting new .cfi frame before finishing the previous one
+
  .cfi_endproc
 
-# CHECK: error: starting new .cfi frame before finishing the previous one

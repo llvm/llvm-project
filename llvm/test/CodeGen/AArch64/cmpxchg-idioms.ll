@@ -1,6 +1,8 @@
 ; RUN: llc -mtriple=aarch64-apple-ios7.0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-ios7.0 -mattr=+outline-atomics -o - %s | FileCheck %s --check-prefix=OUTLINE-ATOMICS
 
 define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
+; OUTLINE-ATOMICS: bl ___aarch64_cas4_acq_rel
 ; CHECK-LABEL: test_return:
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
@@ -27,6 +29,7 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 }
 
 define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
+; OUTLINE-ATOMICS: bl ___aarch64_cas1_acq_rel
 ; CHECK-LABEL: test_return_bool:
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
@@ -55,6 +58,7 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 }
 
 define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
+; OUTLINE-ATOMICS: bl ___aarch64_cas4_acq_rel
 ; CHECK-LABEL: test_conditional:
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
@@ -92,6 +96,7 @@ declare void @bar()
 declare void @baz()
 
 define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
+; OUTLINE-ATOMICS: bl ___aarch64_cas4_acq_rel
 ; CHECK-LABEL: test_conditional2:
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldaxr [[LOADED:w[0-9]+]], [x19]

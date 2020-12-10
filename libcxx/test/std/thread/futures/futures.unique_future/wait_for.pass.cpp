@@ -20,6 +20,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 typedef std::chrono::milliseconds ms;
@@ -54,7 +55,7 @@ void test(F func, bool waitFirst) {
   std::promise<T> p;
   std::future<T> f = p.get_future();
   Clock::time_point t1, t0 = Clock::now();
-  std::thread(func, std::move(p)).detach();
+  support::make_test_thread(func, std::move(p)).detach();
   assert(f.valid());
   assert(f.wait_for(ms(1)) == std::future_status::timeout);
   assert(f.valid());

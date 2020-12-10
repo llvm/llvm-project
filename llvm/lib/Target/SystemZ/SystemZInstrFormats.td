@@ -1911,6 +1911,11 @@ class ICV<string name>
                 !cast<CondVariant>("IntCondVariant"#name).suffix,
                 !cast<CondVariant>("IntCondVariant"#name).alternate>;
 
+// Defines a class that makes it easier to define
+// a MnemonicAlias when CondVariant's are involved.
+class MnemonicCondBranchAlias<CondVariant V, string from, string to>
+  : MnemonicAlias<!subst("#", V.suffix, from), !subst("#", V.suffix, to)>;
+
 //===----------------------------------------------------------------------===//
 // Instruction definitions with semantics
 //===----------------------------------------------------------------------===//

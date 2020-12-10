@@ -165,27 +165,13 @@ end
 
 module m9a
   interface g
-    module procedure s1
     module procedure g
   end interface
 contains
   subroutine g()
   end
-  subroutine s1(x)
-    integer :: x
-  end
 end module
 module m9b
-  use m9a
-  interface g
-    module procedure s2
-  end interface
-contains
-  subroutine s2(x)
-    real :: x
-  end
-end module
-module m9c
   interface g
     module procedure g
   end interface
@@ -194,14 +180,61 @@ contains
     real :: x
   end
 end module
-! Merge use-associated generics that have the same symbol (s1)
-subroutine s9
+module m9c
+  interface g
+    module procedure g
+  end interface
+contains
+  subroutine g()
+  end
+end module
+subroutine s9a
   use m9a
   use m9b
 end
-! Merge use-associate generics each with specific of same name
-subroutine s9c
+subroutine s9b
+  !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
   use m9a
-  !ERROR: Generic interface 'g' has ambiguous specific procedures from modules 'm9a' and 'm9c'
   use m9c
 end
+
+module m10a
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    integer :: x
+  end
+end
+module m10b
+  use m10a
+  !ERROR: Generic 'g' may not have specific procedures 's' and 's' as their interfaces are not distinguishable
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    integer :: x
+  end
+end
+
+module m11a
+  interface g
+  end interface
+  type g
+  end type
+end module
+module m11b
+  interface g
+  end interface
+  type g
+  end type
+end module
+module m11c
+  use m11a
+  !ERROR: Generic interface 'g' has ambiguous derived types from modules 'm11a' and 'm11b'
+  use m11b
+end module

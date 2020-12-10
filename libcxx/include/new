@@ -88,13 +88,11 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 #include <__config>
 #include <__availability>
+#include <cstddef>
+#include <cstdlib>
 #include <exception>
 #include <type_traits>
-#include <cstddef>
 #include <version>
-#ifdef _LIBCPP_NO_EXCEPTIONS
-#include <cstdlib>
-#endif
 
 #if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <new.h>
@@ -302,6 +300,36 @@ inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate_unsized(void* __ptr, s
     }
 #endif
 }
+
+#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+// Low-level helpers to call the aligned allocation and deallocation functions
+// on the target platform. This is used to implement libc++'s own memory
+// allocation routines -- if you need to allocate memory inside the library,
+// chances are that you want to use `__libcpp_allocate` instead.
+//
+// Returns the allocated memory, or `nullptr` on failure.
+inline _LIBCPP_INLINE_VISIBILITY
+void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
+#if defined(_LIBCPP_MSVCRT_LIKE)
+  return ::_aligned_malloc(__size, __alignment);
+#else
+  void* __result = nullptr;
+  ::posix_memalign(&__result, __alignment, __size);
+  // If posix_memalign fails, __result is unmodified so we still return `nullptr`.
+  return __result;
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void __libcpp_aligned_free(void* __ptr) {
+#if defined(_LIBCPP_MSVCRT_LIKE)
+  ::_aligned_free(__ptr);
+#else
+  ::free(__ptr);
+#endif
+}
+#endif // !_LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+
 
 template <class _Tp>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline

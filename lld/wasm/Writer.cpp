@@ -308,20 +308,19 @@ void Writer::layoutMemory() {
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
-  if (config->isPic) {
+  if (config->isPic)
     out.dylinkSec->memSize = staticDataSize;
-    return;
-  }
 
   if (!config->stackFirst)
     placeStack();
 
-  // Set `__heap_base` to directly follow the end of the stack or global data.
-  // The fact that this comes last means that a malloc/brk implementation
-  // can grow the heap at runtime.
-  log("mem: heap base   = " + Twine(memoryPtr));
-  if (WasmSym::heapBase)
+  if (WasmSym::heapBase) {
+    // Set `__heap_base` to directly follow the end of the stack or global data.
+    // The fact that this comes last means that a malloc/brk implementation
+    // can grow the heap at runtime.
+    log("mem: heap base   = " + Twine(memoryPtr));
     WasmSym::heapBase->setVirtualAddress(memoryPtr);
+  }
 
   uint64_t maxMemorySetting = 1ULL
                               << (config->is64.getValueOr(false) ? 48 : 32);
@@ -340,8 +339,7 @@ void Writer::layoutMemory() {
       alignTo(memoryPtr, WasmPageSize) / WasmPageSize;
   log("mem: total pages = " + Twine(out.memorySec->numMemoryPages));
 
-  // Check max if explicitly supplied or required by shared memory
-  if (config->maxMemory != 0 || config->sharedMemory) {
+  if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (memoryPtr > config->maxMemory)
@@ -349,7 +347,20 @@ void Writer::layoutMemory() {
     if (config->maxMemory > maxMemorySetting)
       error("maximum memory too large, cannot be greater than " +
             Twine(maxMemorySetting));
-    out.memorySec->maxMemoryPages = config->maxMemory / WasmPageSize;
+  }
+
+  // Check max if explicitly supplied or required by shared memory
+  if (config->maxMemory != 0 || config->sharedMemory) {
+    uint64_t max = config->maxMemory;
+    if (max == 0) {
+      // If no maxMemory config was supplied but we are building with
+      // shared memory, we need to pick a sensible upper limit.
+      if (config->isPic)
+        max = maxMemorySetting;
+      else
+        max = alignTo(memoryPtr, WasmPageSize);
+    }
+    out.memorySec->maxMemoryPages = max / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }
@@ -539,6 +550,25 @@ void Writer::populateTargetFeatures() {
   }
 }
 
+static bool shouldImport(Symbol *sym) {
+  // We don't generate imports for data symbols. They however can be imported
+  // as GOT entries.
+  if (isa<DataSymbol>(sym))
+    return false;
+
+  if (config->relocatable ||
+      config->unresolvedSymbols == UnresolvedPolicy::ImportFuncs)
+    return true;
+  if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
+    return true;
+  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
+    return g->importName.hasValue();
+  if (auto *f = dyn_cast<UndefinedFunction>(sym))
+    return f->importName.hasValue();
+
+  return false;
+}
+
 void Writer::calculateImports() {
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isUndefined())
@@ -549,13 +579,10 @@ void Writer::calculateImports() {
       continue;
     if (!sym->isUsedInRegularObj)
       continue;
-    // We don't generate imports for data symbols. They however can be imported
-    // as GOT entries.
-    if (isa<DataSymbol>(sym))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
-    out.importSec->addImport(sym);
+    if (shouldImport(sym)) {
+      LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
+      out.importSec->addImport(sym);
+    }
   }
 }
 
@@ -749,15 +776,15 @@ void Writer::assignIndexes() {
 }
 
 static StringRef getOutputDataSegmentName(StringRef name) {
-  // With PIC code we currently only support a single data segment since
-  // we only have a single __memory_base to use as our base address.
-  if (config->isPic)
-    return ".data";
   // We only support one thread-local segment, so we must merge the segments
   // despite --no-merge-data-segments.
   // We also need to merge .tbss into .tdata so they share the same offsets.
   if (name.startswith(".tdata") || name.startswith(".tbss"))
     return ".tdata";
+  // With PIC code we currently only support a single data segment since
+  // we only have a single __memory_base to use as our base address.
+  if (config->isPic)
+    return ".data";
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -841,11 +868,25 @@ bool Writer::hasPassiveInitializedSegments() {
 void Writer::createInitMemoryFunction() {
   LLVM_DEBUG(dbgs() << "createInitMemoryFunction\n");
   assert(WasmSym::initMemoryFlag);
-  uint32_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  bool is64 = config->is64.getValueOr(false);
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
+    // With PIC code we cache the flag address in local 0
+    if (config->isPic) {
+      writeUleb128(os, 1, "num local decls");
+      writeUleb128(os, 1, "local count");
+      writeU8(os, is64 ? WASM_TYPE_I64 : WASM_TYPE_I32, "address type");
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+      writePtrConst(os, flagAddress, is64, "flag address");
+      writeU8(os, WASM_OPCODE_I32_ADD, "add");
+      writeU8(os, WASM_OPCODE_LOCAL_SET, "local.set");
+      writeUleb128(os, 0, "local 0");
+    } else {
+      writeUleb128(os, 0, "num locals");
+    }
 
     if (hasPassiveInitializedSegments()) {
       // Initialize memory in a thread-safe manner. The thread that successfully
@@ -889,9 +930,24 @@ void Writer::createInitMemoryFunction() {
       //  )
       //  ( ... drop data segments ... )
       // )
+      //
+      // When we are building with PIC, calculate the flag location using:
+      //
+      //    (global.get $__memory_base)
+      //    (i32.const $__init_memory_flag)
+      //    (i32.const 1)
+
+      auto writeGetFlagAddress = [&]() {
+        if (config->isPic) {
+          writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+          writeUleb128(os, 0, "local 0");
+        } else {
+          writePtrConst(os, flagAddress, is64, "flag address");
+        }
+      };
 
       // Atomically check whether this is the main thread.
-      writeI32Const(os, flagAddress, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 0, "expected flag value");
       writeI32Const(os, 1, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
@@ -901,9 +957,10 @@ void Writer::createInitMemoryFunction() {
       writeU8(os, WASM_TYPE_NORESULT, "blocktype");
 
       // Did not increment 0, so wait for main thread to initialize memory
-      writeI32Const(os, flagAddress, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 1, "expected flag value");
       writeI64Const(os, -1, "timeout");
+
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_I32_ATOMIC_WAIT, "i32.atomic.wait");
       writeMemArg(os, 2, 0);
@@ -915,11 +972,12 @@ void Writer::createInitMemoryFunction() {
       for (const OutputSegment *s : segments) {
         if (needsPassiveInitialization(s)) {
           // destination address
-          if (config->is64.getValueOr(false)) {
-            writeI64Const(os, s->startVA, "destination address");
-          } else {
-            writeI32Const(os, static_cast<int32_t>(s->startVA),
-                          "destination address");
+          writePtrConst(os, s->startVA, is64, "destination address");
+          if (config->isPic) {
+            writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+            writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                         "memory_base");
+            writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
           }
           // source segment offset
           writeI32Const(os, 0, "segment offset");
@@ -934,14 +992,14 @@ void Writer::createInitMemoryFunction() {
       }
 
       // Set flag to 2 to mark end of initialization
-      writeI32Const(os, flagAddress, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, 2, "flag value");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_I32_ATOMIC_STORE, "i32.atomic.store");
       writeMemArg(os, 2, 0);
 
       // Notify any waiters that memory initialization is complete
-      writeI32Const(os, flagAddress, "flag address");
+      writeGetFlagAddress();
       writeI32Const(os, -1, "number of waiters");
       writeU8(os, WASM_OPCODE_ATOMICS_PREFIX, "atomics prefix");
       writeUleb128(os, WASM_OPCODE_ATOMIC_NOTIFY, "atomic.notify");
@@ -1070,9 +1128,6 @@ void Writer::createCommandExportWrapper(uint32_t functionIndex,
 }
 
 void Writer::createInitTLSFunction() {
-  if (!WasmSym::initTLS->isLive())
-    return;
-
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
@@ -1155,7 +1210,7 @@ void Writer::createSyntheticSections() {
   out.elemSec = make<ElemSection>();
   out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
-  out.nameSec = make<NameSection>();
+  out.nameSec = make<NameSection>(segments);
   out.producersSec = make<ProducersSection>();
   out.targetFeaturesSec = make<TargetFeaturesSection>();
 }
@@ -1198,11 +1253,12 @@ void Writer::run() {
   calculateInitFunctions();
 
   if (!config->relocatable) {
-    // Create linker synthesized functions
-    if (config->sharedMemory)
-      createInitMemoryFunction();
-    if (config->isPic)
+    if (WasmSym::applyRelocs)
       createApplyRelocationsFunction();
+    if (WasmSym::initMemory)
+      createInitMemoryFunction();
+
+    // Create linker synthesized functions
     createCallCtorsFunction();
 
     // Create export wrappers for commands if needed.
@@ -1218,7 +1274,7 @@ void Writer::run() {
     }
   }
 
-  if (!config->relocatable && config->sharedMemory && !config->shared)
+  if (WasmSym::initTLS && WasmSym::initTLS->isLive())
     createInitTLSFunction();
 
   if (errorCount())

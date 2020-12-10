@@ -177,7 +177,8 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getFrontendOpts().ModuleFileExtensions,
-      /*AllowASTWithErrors=*/false,
+      /*AllowASTWithErrors=*/
+      +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule,
       /*ShouldCacheASTInMemory=*/
@@ -185,6 +186,11 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+}
+
+bool GenerateModuleAction::shouldEraseOutputFiles() {
+  return !getCompilerInstance().getFrontendOpts().AllowPCMWithCompilerErrors &&
+         ASTFrontendAction::shouldEraseOutputFiles();
 }
 
 bool GenerateModuleFromModuleMapAction::BeginSourceFileAction(
@@ -298,7 +304,7 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
         << Name;
       continue;
     }
-    Headers.push_back({std::string(Name), &FE->getFileEntry()});
+    Headers.push_back({std::string(Name), *FE});
   }
   HS.getModuleMap().createHeaderModule(CI.getLangOpts().CurrentModule, Headers);
 
@@ -339,7 +345,7 @@ void VerifyPCHAction::ExecuteAction() {
       CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       /*DisableValidation*/ false,
-      /*AllowPCHWithCompilerErrors*/ false,
+      /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true));
 
@@ -467,7 +473,10 @@ private:
     Entry.Event = BeginInstantiation ? "Begin" : "End";
     if (auto *NamedTemplate = dyn_cast_or_null<NamedDecl>(Inst.Entity)) {
       llvm::raw_string_ostream OS(Entry.Name);
-      NamedTemplate->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
+      // FIXME: Also ask for FullyQualifiedNames?
+      Policy.SuppressDefaultTemplateArgs = false;
+      NamedTemplate->getNameForDiagnostic(OS, Policy, true);
       const PresumedLoc DefLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.Entity->getLocation());
       if(!DefLoc.isInvalid())

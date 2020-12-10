@@ -18,6 +18,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Shape op definitions
@@ -33,7 +34,9 @@ def Shape_AddOp : Shape_Op<"add", [Commutative, NoSideEffect]> {
     Adds two sizes or indices. If either operand is an error it will be
     propagated to the result. The operands can be of type `size` or `index`. If
     at least one of the operands can hold an error, i.e. if it is of type `size`,
-    then also the result must be of type `size`.
+    the result must be of type `size`. If error propagation is not possible
+    because both operands are of type `index` then the result may be of type
+    `size` or `index`.
   }];
 
   let arguments = (ins Shape_SizeOrIndexType:$lhs, Shape_SizeOrIndexType:$rhs);
@@ -104,6 +107,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Shape_ConstSizeOp : Shape_Op<"const_size", [
@@ -175,10 +179,10 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
     extents match the values of the elements.
   }];
 
-  let arguments = (ins IndexTensor:$input);
+  let arguments = (ins 1DTensorOf<[Index]>:$input);
   let results = (outs Shape_ShapeType:$result);
 
-  let assemblyFormat = "attr-dict $input `:` type($input)";
+  let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
 def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
@@ -204,7 +208,7 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
                        Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs I1:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs) `,` type($rhs)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
 }
 
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
@@ -216,7 +220,7 @@ def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
   let results = (outs Shape_SizeOrIndexType:$rank);
 
-  let assemblyFormat = "$shape `:` type($shape) `->` type($rank) attr-dict";
+  let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($rank)";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -236,7 +240,7 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$input);
   let results = (outs IndexTensor:$result);
 
-  let assemblyFormat = "attr-dict $input `:` type($input) `->` type($result)";
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($result)";
 
   let hasFolder = 1;
 }
@@ -245,13 +249,13 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
   let summary = "Gets the specified extent from a shape or extent tensor";
   let description = [{
     Gets the extent indexed by `dim` from the `shape` operand. If the shape is
-    an error then it returns an error size.
+    an error then it returns an invalid size.
   }];
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape,
                        Shape_SizeOrIndexType:$dim);
   let results = (outs Shape_SizeOrIndexType:$extent);
-  let assemblyFormat = "$shape `,` $dim `:` type($shape) `,` type($dim) `->` "
-                       "type($extent) attr-dict";
+  let assemblyFormat = "$shape `,` $dim attr-dict `:` type($shape) `,` type($dim) `->` "
+                       "type($extent)";
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
@@ -287,7 +291,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
 }
 
 def Shape_JoinOp : Shape_Op<"join", [Commutative]> {
-  let summary = "Returns the least general shape.size of its operands";
+  let summary = "Returns the least general shape.shape of its operands";
   let description = [{
     An operation that computes the least general shape of input operands.
     This effectively asserts that corresponding static dimensions are equal.
@@ -325,16 +329,16 @@ def Shape_MulOp : Shape_Op<"mul", [Commutative, NoSideEffect]> {
     Multiplies two sizes or indices. If either operand is an error it will be
     propagated to the result. The operands can be of type `size` or `index`. If
     at least one of the operands can hold an error, i.e. if it is of type `size`,
-    then also the result must be of type `size`. If error propagation is not
-    possible because both operands are of type `index` then the result must also
-    be of type `index`.
+    the result must be of type `size`. If error propagation is not possible
+    because both operands are of type `index` then the result may be of type
+    `size` or `index`.
   }];
 
   let arguments = (ins Shape_SizeOrIndexType:$lhs, Shape_SizeOrIndexType:$rhs);
   let results = (outs Shape_SizeOrIndexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` type($lhs) `,` type($rhs) `->` type($result) attr-dict
+    $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
 
   let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
@@ -356,7 +360,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
 
   let builders = [OpBuilderDAG<(ins "Value":$shape)>];
 
-  let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
+  let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($result)";
 
   let hasFolder = 1;
   let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
@@ -367,23 +371,22 @@ def Shape_ReduceOp : Shape_Op<"reduce",
   let summary = "Returns an expression reduced over a shape or extent tensor";
   let description = [{
     An operation that takes as input a shape or extent tensor, and a number of
-    initial values. This operation has a region/function that is applied
-    repeatedly for every extent of the input. Starting with the initial values,
-    the individual extents are then aggregated as defined by the associated
-    region.
+    initial values. This operation has a region that is applied repeatedly for
+    every extent of the input. Starting with the initial values, the individual
+    extents are then aggregated as defined by the associated region.
 
     Conceptually this op performs the following reduction:
 
     ```
     res[] = init;
     for (int i = 0, i < shape.rank(); i++) {
-      res = fn(i, shape[i], res[0], ..., res[n]);
+      res = reduce(i, shape[i], res[0], ..., res[n]);
     }
     ```
 
-    Where `fn` is provided by the user and the result of the reduce op is the
-    last computed output of the reduce function. As an example, computing the
-    number of elements can be defined as follows:
+    Where `reduce` represents the region attached and the result of the reduce
+    op is the last computed output of the reduce region. As an example, the
+    number of elements can be computed as follows:
 
     ```mlir
     func @reduce(%shape : !shape.shape, %init : !shape.size) -> !shape.size {
@@ -421,7 +424,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
 
   let builders = [OpBuilderDAG<(ins "Value":$arg)>];
 
@@ -492,7 +495,7 @@ def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
 }
 
 def Shape_YieldOp : Shape_Op<"yield",
-    [HasParent<"ReduceOp">,
+    [HasParent<"ReduceOp, FunctionLibraryOp">,
      NoSideEffect,
      ReturnLike,
      Terminator]> {
@@ -629,6 +632,7 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let assemblyFormat = "$inputs attr-dict";
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 
   let verifier = [{ return ::verify(*this); }];
 }
@@ -666,13 +670,13 @@ def Shape_AssumingOp : Shape_Op<"assuming",
 }
 
 def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
-                                     [NoSideEffect, ReturnLike, Terminator]> {
+       [NoSideEffect, ReturnLike, Terminator, HasParent<"AssumingOp">]> {
   let summary = "Yield operation";
   let description = [{
-    This yield operation represents a return operation within the assert_and_exec
-    region. The operation takes variable number of operands and produces no
-    results. The operand number and types must match the return signature of
-    the region that contains the operation.
+    This yield operation represents a return operation within the
+    `shape.assuming` operation region. The operation takes variable number of
+    operands and produces no results. The operand number and types must match
+    the number and types of parent `shape.assuming` results.
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -702,7 +706,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
                        Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs Shape_WitnessType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -739,7 +743,7 @@ def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect
 
   ```mlir
   %0 = shape.const_shape [1,2,3]
-  %1 = shape.const_shape [1, 2, 3]
+  %1 = shape.const_shape [1,2,3]
   %w0 = shape.cstr_eq(%0, %1) // Can be folded to "const_witness true"
   %w1 = shape.const_witness true
   %w2 = shape.assuming_all(%w0, %w2) // Can be folded to "const_witness true"
@@ -778,6 +782,64 @@ def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
   let assemblyFormat = "$pred `,` $msg attr-dict";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Shape collection ops.
+//===----------------------------------------------------------------------===//
+
+def Shape_FunctionLibraryOp : Shape_Op<"function_library",
+    [AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+     SingleBlockImplicitTerminator<"ShapeFunctionLibraryTerminatorOp">]> {
+  let summary = "Represents shape functions and corresponding ops";
+  let description = [{
+    Represents a list of shape functions and the ops whose shape transfer
+    functions they represent.
+
+    Example:
+
+    ```mlir
+    shape.function_library {
+      func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+        %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+        return %0 : !shape.shape
+      }
+    } mapping {
+      std.atan = @same_result_shape
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let arguments = (ins DictionaryAttr:$mapping);
+  let regions = (region AnyRegion:$body);
+
+  let extraClassDeclaration = [{
+    /// Returns an associated shape function for an operation if defined.
+    FuncOp getShapeFunction(Operation *op);
+  }];
+
+  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let skipDefaultBuilders = 1;
+
+  let printer = [{ ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeFunctionLibraryTerminatorOp
+//===----------------------------------------------------------------------===//
+
+def ShapeFunctionLibraryTerminatorOp : Shape_Op<"fn_lib_terminator",
+    [Terminator, HasParent<"FunctionLibraryOp">]> {
+  let summary = "A pseudo op that marks the end of a shape function library";
+  let description = [{
+    `shape_fn_lib_terminator` is a special pseudo terminator operation for the
+    shape function library. It has no semantic meaning beyond keeping the body
+    well-formed.
+  }];
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // SHAPE_OPS

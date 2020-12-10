@@ -158,7 +158,7 @@ LogicalResult replaceBlockArgForUnitDimLoops<IndexedGenericOp>(
     IndexedGenericOp op, const DenseSet<unsigned> &unitDims,
     PatternRewriter &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
-  Block *entryBlock = &op.getOperation()->getRegion(0).front();
+  Block *entryBlock = &op->getRegion(0).front();
   rewriter.setInsertionPointToStart(entryBlock);
   Value zero = rewriter.create<ConstantIndexOp>(op.getLoc(), 0);
   for (unsigned unitDimLoop : unitDims) {

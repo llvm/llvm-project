@@ -758,9 +758,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, bool UseDebugInfo,
-    bool OnlyLocalDecls, ArrayRef<RemappedFile> RemappedFiles,
-    CaptureDiagsKind CaptureDiagnostics, bool AllowPCHWithCompilerErrors,
-    bool UserFilesAreVolatile) {
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
+    bool AllowASTWithCompilerErrors, bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
   // Recover resources if we crash before exiting this method.
@@ -793,9 +792,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                                          /*Target=*/nullptr));
   AST->PPOpts = std::make_shared<PreprocessorOptions>();
 
-  for (const auto &RemappedFile : RemappedFiles)
-    AST->PPOpts->addRemappedFile(RemappedFile.first, RemappedFile.second);
-
   // Gather Info for preprocessor construction later on.
 
   HeaderSearch &HeaderInfo = *AST->HeaderInfo;
@@ -819,7 +815,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->Reader = new ASTReader(
       PP, *AST->ModuleCache, AST->Ctx.get(), PCHContainerRdr, {},
       /*isysroot=*/"",
-      /*DisableValidation=*/disableValid, AllowPCHWithCompilerErrors);
+      /*DisableValidation=*/disableValid, AllowASTWithCompilerErrors);
 
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
@@ -1186,9 +1182,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     TopLevelDeclsInPreamble.clear();
   }
 
-  // Create a file manager object to provide access to and cache the filesystem.
-  Clang->setFileManager(&getFileManager());
-
   // Create the source manager.
   Clang->setSourceManager(&getSourceManager());
 
@@ -1317,9 +1310,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   if (!MainFileBuffer)
     return nullptr;
 
-  PreambleBounds Bounds =
-      ComputePreambleBounds(*PreambleInvocationIn.getLangOpts(),
-                            MainFileBuffer.get(), MaxLines);
+  PreambleBounds Bounds = ComputePreambleBounds(
+      *PreambleInvocationIn.getLangOpts(), *MainFileBuffer, MaxLines);
   if (!Bounds.Size)
     return nullptr;
 
@@ -1521,8 +1513,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     ASTUnit *Unit, bool Persistent, StringRef ResourceFilesPath,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, bool CacheCodeCompletionResults,
-    bool IncludeBriefCommentsInCodeCompletion, bool UserFilesAreVolatile,
-    std::unique_ptr<ASTUnit> *ErrAST) {
+    bool UserFilesAreVolatile, std::unique_ptr<ASTUnit> *ErrAST) {
   assert(CI && "A CompilerInvocation is required");
 
   std::unique_ptr<ASTUnit> OwnAST;
@@ -1545,8 +1536,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     AST->PreambleRebuildCountdown = PrecompilePreambleAfterNParses;
   AST->TUKind = Action ? Action->getTranslationUnitKind() : TU_Complete;
   AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;
-  AST->IncludeBriefCommentsInCodeCompletion
-    = IncludeBriefCommentsInCodeCompletion;
+  AST->IncludeBriefCommentsInCodeCompletion = false;
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit>
@@ -2243,28 +2233,30 @@ void ASTUnit::CodeComplete(
     = new AugmentedCodeCompleteConsumer(*this, Consumer, CodeCompleteOpts);
   Clang->setCodeCompletionConsumer(AugmentedConsumer);
 
+  auto getUniqueID =
+      [&FileMgr](StringRef Filename) -> Optional<llvm::sys::fs::UniqueID> {
+    if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
+      return Status->getUniqueID();
+    return None;
+  };
+
+  auto hasSameUniqueID = [getUniqueID](StringRef LHS, StringRef RHS) {
+    if (LHS == RHS)
+      return true;
+    if (auto LHSID = getUniqueID(LHS))
+      if (auto RHSID = getUniqueID(RHS))
+        return *LHSID == *RHSID;
+    return false;
+  };
+
   // If we have a precompiled preamble, try to use it. We only allow
   // the use of the precompiled preamble if we're if the completion
   // point is within the main file, after the end of the precompiled
   // preamble.
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
-  if (Preamble) {
-    std::string CompleteFilePath(File);
-
-    auto &VFS = FileMgr.getVirtualFileSystem();
-    auto CompleteFileStatus = VFS.status(CompleteFilePath);
-    if (CompleteFileStatus) {
-      llvm::sys::fs::UniqueID CompleteFileID = CompleteFileStatus->getUniqueID();
-
-      std::string MainPath(OriginalSourceFile);
-      auto MainStatus = VFS.status(MainPath);
-      if (MainStatus) {
-        llvm::sys::fs::UniqueID MainID = MainStatus->getUniqueID();
-        if (CompleteFileID == MainID && Line > 1)
-          OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-              PCHContainerOps, Inv, &VFS, false, Line - 1);
-      }
-    }
+  if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
+    OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
+        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,

@@ -528,4 +528,502 @@ entry:
   ret i8 %c
 }
 
+; alloca + align < probe_size
+define i32 @f8(i64 %i) local_unnamed_addr #0 {
+; CHECK-LE-LABEL: f8:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    clrldi r0, r1, 58
+; CHECK-LE-NEXT:    std r30, -16(r1)
+; CHECK-LE-NEXT:    mr r30, r1
+; CHECK-LE-NEXT:    subfic r0, r0, -896
+; CHECK-LE-NEXT:    stdux r1, r1, r0
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-LE-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-NEXT:    addi r4, r1, 64
+; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    li r5, 1
+; CHECK-LE-NEXT:    stwx r5, r4, r3
+; CHECK-LE-NEXT:    lwz r3, 64(r1)
+; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    ld r30, -16(r1)
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: f8:
+; CHECK-BE:       # %bb.0:
+; CHECK-BE-NEXT:    clrldi r0, r1, 58
+; CHECK-BE-NEXT:    std r30, -16(r1)
+; CHECK-BE-NEXT:    mr r30, r1
+; CHECK-BE-NEXT:    subfic r0, r0, -896
+; CHECK-BE-NEXT:    stdux r1, r1, r0
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    addi r4, r1, 64
+; CHECK-BE-NEXT:    li r5, 1
+; CHECK-BE-NEXT:    sldi r3, r3, 2
+; CHECK-BE-NEXT:    stwx r5, r4, r3
+; CHECK-BE-NEXT:    lwz r3, 64(r1)
+; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    ld r30, -16(r1)
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-32-LABEL: f8:
+; CHECK-32:       # %bb.0:
+; CHECK-32-NEXT:    clrlwi r0, r1, 26
+; CHECK-32-NEXT:    subfic r0, r0, -896
+; CHECK-32-NEXT:    stwux r1, r1, r0
+; CHECK-32-NEXT:    sub r0, r1, r0
+; CHECK-32-NEXT:    addic r0, r0, -8
+; CHECK-32-NEXT:    stwx r30, 0, r0
+; CHECK-32-NEXT:    addic r30, r0, 8
+; CHECK-32-NEXT:    .cfi_def_cfa_register r30
+; CHECK-32-NEXT:    .cfi_offset r30, -8
+; CHECK-32-NEXT:    addi r3, r1, 64
+; CHECK-32-NEXT:    li r5, 1
+; CHECK-32-NEXT:    slwi r4, r4, 2
+; CHECK-32-NEXT:    stwx r5, r3, r4
+; CHECK-32-NEXT:    mr r0, r31
+; CHECK-32-NEXT:    lwz r3, 64(r1)
+; CHECK-32-NEXT:    lwz r31, 0(r1)
+; CHECK-32-NEXT:    lwz r30, -8(r31)
+; CHECK-32-NEXT:    mr r1, r31
+; CHECK-32-NEXT:    mr r31, r0
+; CHECK-32-NEXT:    blr
+  %a = alloca i32, i32 200, align 64
+  %b = getelementptr inbounds i32, i32* %a, i64 %i
+  store volatile i32 1, i32* %b
+  %c = load volatile i32, i32* %a
+  ret i32 %c
+}
+
+; alloca > probe_size, align > probe_size
+define i32 @f9(i64 %i) local_unnamed_addr #0 {
+; CHECK-LE-LABEL: f9:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    std r30, -16(r1)
+; CHECK-LE-NEXT:    mr r30, r1
+; CHECK-LE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-LE-NEXT:    clrldi r0, r30, 53
+; CHECK-LE-NEXT:    subc r12, r30, r0
+; CHECK-LE-NEXT:    clrldi r0, r0, 52
+; CHECK-LE-NEXT:    cmpdi r0, 0
+; CHECK-LE-NEXT:    beq cr0, .LBB9_2
+; CHECK-LE-NEXT:  # %bb.1:
+; CHECK-LE-NEXT:    neg r0, r0
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:  .LBB9_2:
+; CHECK-LE-NEXT:    li r0, -4096
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    beq cr0, .LBB9_4
+; CHECK-LE-NEXT:  .LBB9_3:
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    bne cr0, .LBB9_3
+; CHECK-LE-NEXT:  .LBB9_4:
+; CHECK-LE-NEXT:    mr r12, r30
+; CHECK-LE-NEXT:    stdu r12, -2048(r1)
+; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-LE-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-NEXT:    addi r4, r1, 2048
+; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    li r5, 1
+; CHECK-LE-NEXT:    stwx r5, r4, r3
+; CHECK-LE-NEXT:    lwz r3, 2048(r1)
+; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    ld r30, -16(r1)
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: f9:
+; CHECK-BE:       # %bb.0:
+; CHECK-BE-NEXT:    std r30, -16(r1)
+; CHECK-BE-NEXT:    mr r30, r1
+; CHECK-BE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-BE-NEXT:    clrldi r0, r30, 53
+; CHECK-BE-NEXT:    subc r12, r30, r0
+; CHECK-BE-NEXT:    clrldi r0, r0, 52
+; CHECK-BE-NEXT:    cmpdi r0, 0
+; CHECK-BE-NEXT:    beq cr0, .LBB9_2
+; CHECK-BE-NEXT:  # %bb.1:
+; CHECK-BE-NEXT:    neg r0, r0
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:  .LBB9_2:
+; CHECK-BE-NEXT:    li r0, -4096
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    beq cr0, .LBB9_4
+; CHECK-BE-NEXT:  .LBB9_3:
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    bne cr0, .LBB9_3
+; CHECK-BE-NEXT:  .LBB9_4:
+; CHECK-BE-NEXT:    mr r12, r30
+; CHECK-BE-NEXT:    stdu r12, -2048(r1)
+; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    addi r4, r1, 2048
+; CHECK-BE-NEXT:    li r5, 1
+; CHECK-BE-NEXT:    sldi r3, r3, 2
+; CHECK-BE-NEXT:    stwx r5, r4, r3
+; CHECK-BE-NEXT:    lwz r3, 2048(r1)
+; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    ld r30, -16(r1)
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-32-LABEL: f9:
+; CHECK-32:       # %bb.0:
+; CHECK-32-NEXT:    mr r12, r1
+; CHECK-32-NEXT:    .cfi_def_cfa r12, 0
+; CHECK-32-NEXT:    clrlwi r0, r12, 21
+; CHECK-32-NEXT:    subc r1, r1, r0
+; CHECK-32-NEXT:    stwu r12, -2048(r1)
+; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    .cfi_def_cfa_register r1
+; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
+; CHECK-32-NEXT:    addic r0, r0, -8
+; CHECK-32-NEXT:    stwx r30, 0, r0
+; CHECK-32-NEXT:    addic r30, r0, 8
+; CHECK-32-NEXT:    .cfi_def_cfa_register r30
+; CHECK-32-NEXT:    .cfi_offset r30, -8
+; CHECK-32-NEXT:    addi r3, r1, 2048
+; CHECK-32-NEXT:    li r5, 1
+; CHECK-32-NEXT:    slwi r4, r4, 2
+; CHECK-32-NEXT:    stwx r5, r3, r4
+; CHECK-32-NEXT:    mr r0, r31
+; CHECK-32-NEXT:    lwz r3, 2048(r1)
+; CHECK-32-NEXT:    lwz r31, 0(r1)
+; CHECK-32-NEXT:    lwz r30, -8(r31)
+; CHECK-32-NEXT:    mr r1, r31
+; CHECK-32-NEXT:    mr r31, r0
+; CHECK-32-NEXT:    blr
+  %a = alloca i32, i32 2000, align 2048
+  %b = getelementptr inbounds i32, i32* %a, i64 %i
+  store volatile i32 1, i32* %b
+  %c = load volatile i32, i32* %a
+  ret i32 %c
+}
+
+; alloca < probe_size, align < probe_size, alloca + align > probe_size
+define i32 @f10(i64 %i) local_unnamed_addr #0 {
+; CHECK-LE-LABEL: f10:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    std r30, -16(r1)
+; CHECK-LE-NEXT:    mr r30, r1
+; CHECK-LE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-LE-NEXT:    clrldi r0, r30, 54
+; CHECK-LE-NEXT:    subc r12, r30, r0
+; CHECK-LE-NEXT:    clrldi r0, r0, 52
+; CHECK-LE-NEXT:    cmpdi r0, 0
+; CHECK-LE-NEXT:    beq cr0, .LBB10_2
+; CHECK-LE-NEXT:  # %bb.1:
+; CHECK-LE-NEXT:    neg r0, r0
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:  .LBB10_2:
+; CHECK-LE-NEXT:    li r0, -4096
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    beq cr0, .LBB10_4
+; CHECK-LE-NEXT:  .LBB10_3:
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    bne cr0, .LBB10_3
+; CHECK-LE-NEXT:  .LBB10_4:
+; CHECK-LE-NEXT:    mr r12, r30
+; CHECK-LE-NEXT:    stdu r12, -1024(r1)
+; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-LE-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-NEXT:    addi r4, r1, 1024
+; CHECK-LE-NEXT:    sldi r3, r3, 2
+; CHECK-LE-NEXT:    li r5, 1
+; CHECK-LE-NEXT:    stwx r5, r4, r3
+; CHECK-LE-NEXT:    lwz r3, 1024(r1)
+; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    ld r30, -16(r1)
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: f10:
+; CHECK-BE:       # %bb.0:
+; CHECK-BE-NEXT:    std r30, -16(r1)
+; CHECK-BE-NEXT:    mr r30, r1
+; CHECK-BE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-BE-NEXT:    clrldi r0, r30, 54
+; CHECK-BE-NEXT:    subc r12, r30, r0
+; CHECK-BE-NEXT:    clrldi r0, r0, 52
+; CHECK-BE-NEXT:    cmpdi r0, 0
+; CHECK-BE-NEXT:    beq cr0, .LBB10_2
+; CHECK-BE-NEXT:  # %bb.1:
+; CHECK-BE-NEXT:    neg r0, r0
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:  .LBB10_2:
+; CHECK-BE-NEXT:    li r0, -4096
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    beq cr0, .LBB10_4
+; CHECK-BE-NEXT:  .LBB10_3:
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    bne cr0, .LBB10_3
+; CHECK-BE-NEXT:  .LBB10_4:
+; CHECK-BE-NEXT:    mr r12, r30
+; CHECK-BE-NEXT:    stdu r12, -1024(r1)
+; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    addi r4, r1, 1024
+; CHECK-BE-NEXT:    li r5, 1
+; CHECK-BE-NEXT:    sldi r3, r3, 2
+; CHECK-BE-NEXT:    stwx r5, r4, r3
+; CHECK-BE-NEXT:    lwz r3, 1024(r1)
+; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    ld r30, -16(r1)
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-32-LABEL: f10:
+; CHECK-32:       # %bb.0:
+; CHECK-32-NEXT:    mr r12, r1
+; CHECK-32-NEXT:    .cfi_def_cfa r12, 0
+; CHECK-32-NEXT:    clrlwi r0, r12, 22
+; CHECK-32-NEXT:    subc r1, r1, r0
+; CHECK-32-NEXT:    stwu r12, -1024(r1)
+; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    .cfi_def_cfa_register r1
+; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
+; CHECK-32-NEXT:    addic r0, r0, -8
+; CHECK-32-NEXT:    stwx r30, 0, r0
+; CHECK-32-NEXT:    addic r30, r0, 8
+; CHECK-32-NEXT:    .cfi_def_cfa_register r30
+; CHECK-32-NEXT:    .cfi_offset r30, -8
+; CHECK-32-NEXT:    addi r3, r1, 1024
+; CHECK-32-NEXT:    li r5, 1
+; CHECK-32-NEXT:    slwi r4, r4, 2
+; CHECK-32-NEXT:    stwx r5, r3, r4
+; CHECK-32-NEXT:    mr r0, r31
+; CHECK-32-NEXT:    lwz r3, 1024(r1)
+; CHECK-32-NEXT:    lwz r31, 0(r1)
+; CHECK-32-NEXT:    lwz r30, -8(r31)
+; CHECK-32-NEXT:    mr r1, r31
+; CHECK-32-NEXT:    mr r31, r0
+; CHECK-32-NEXT:    blr
+  %a = alloca i32, i32 1000, align 1024
+  %b = getelementptr inbounds i32, i32* %a, i64 %i
+  store volatile i32 1, i32* %b
+  %c = load volatile i32, i32* %a
+  ret i32 %c
+}
+
+define void @f11(i32 %vla_size, i64 %i) #0 {
+; CHECK-LE-LABEL: f11:
+; CHECK-LE:       # %bb.0:
+; CHECK-LE-NEXT:    std r31, -8(r1)
+; CHECK-LE-NEXT:    std r30, -16(r1)
+; CHECK-LE-NEXT:    mr r30, r1
+; CHECK-LE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-LE-NEXT:    clrldi r0, r30, 49
+; CHECK-LE-NEXT:    subc r12, r30, r0
+; CHECK-LE-NEXT:    clrldi r0, r0, 52
+; CHECK-LE-NEXT:    cmpdi r0, 0
+; CHECK-LE-NEXT:    beq cr0, .LBB11_2
+; CHECK-LE-NEXT:  # %bb.1:
+; CHECK-LE-NEXT:    neg r0, r0
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:  .LBB11_2:
+; CHECK-LE-NEXT:    li r0, -4096
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    beq cr0, .LBB11_4
+; CHECK-LE-NEXT:  .LBB11_3:
+; CHECK-LE-NEXT:    stdux r30, r1, r0
+; CHECK-LE-NEXT:    cmpd r1, r12
+; CHECK-LE-NEXT:    bne cr0, .LBB11_3
+; CHECK-LE-NEXT:  .LBB11_4:
+; CHECK-LE-NEXT:    mr r12, r30
+; CHECK-LE-NEXT:    li r0, 24
+; CHECK-LE-NEXT:    mtctr r0
+; CHECK-LE-NEXT:  .LBB11_5:
+; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    bdnz .LBB11_5
+; CHECK-LE-NEXT:  # %bb.6:
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-LE-NEXT:    .cfi_offset r31, -8
+; CHECK-LE-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-NEXT:    clrldi r3, r3, 32
+; CHECK-LE-NEXT:    lis r5, 1
+; CHECK-LE-NEXT:    mr r31, r1
+; CHECK-LE-NEXT:    li r6, 1
+; CHECK-LE-NEXT:    addi r3, r3, 15
+; CHECK-LE-NEXT:    ori r5, r5, 0
+; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
+; CHECK-LE-NEXT:    sldi r4, r4, 2
+; CHECK-LE-NEXT:    add r5, r31, r5
+; CHECK-LE-NEXT:    rldicl r3, r3, 4, 31
+; CHECK-LE-NEXT:    stwx r6, r5, r4
+; CHECK-LE-NEXT:    li r4, -32768
+; CHECK-LE-NEXT:    neg r7, r3
+; CHECK-LE-NEXT:    ld r3, 0(r1)
+; CHECK-LE-NEXT:    and r4, r7, r4
+; CHECK-LE-NEXT:    mr r7, r4
+; CHECK-LE-NEXT:    li r4, -4096
+; CHECK-LE-NEXT:    divd r5, r7, r4
+; CHECK-LE-NEXT:    mulld r4, r5, r4
+; CHECK-LE-NEXT:    sub r5, r7, r4
+; CHECK-LE-NEXT:    add r4, r1, r7
+; CHECK-LE-NEXT:    stdux r3, r1, r5
+; CHECK-LE-NEXT:    cmpd r1, r4
+; CHECK-LE-NEXT:    beq cr0, .LBB11_8
+; CHECK-LE-NEXT:  .LBB11_7:
+; CHECK-LE-NEXT:    stdu r3, -4096(r1)
+; CHECK-LE-NEXT:    cmpd r1, r4
+; CHECK-LE-NEXT:    bne cr0, .LBB11_7
+; CHECK-LE-NEXT:  .LBB11_8:
+; CHECK-LE-NEXT:    addi r3, r1, -32768
+; CHECK-LE-NEXT:    lbz r3, 0(r3)
+; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    ld r31, -8(r1)
+; CHECK-LE-NEXT:    ld r30, -16(r1)
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: f11:
+; CHECK-BE:       # %bb.0:
+; CHECK-BE-NEXT:    std r31, -8(r1)
+; CHECK-BE-NEXT:    std r30, -16(r1)
+; CHECK-BE-NEXT:    mr r30, r1
+; CHECK-BE-NEXT:    .cfi_def_cfa r30, 0
+; CHECK-BE-NEXT:    clrldi r0, r30, 49
+; CHECK-BE-NEXT:    subc r12, r30, r0
+; CHECK-BE-NEXT:    clrldi r0, r0, 52
+; CHECK-BE-NEXT:    cmpdi r0, 0
+; CHECK-BE-NEXT:    beq cr0, .LBB11_2
+; CHECK-BE-NEXT:  # %bb.1:
+; CHECK-BE-NEXT:    neg r0, r0
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:  .LBB11_2:
+; CHECK-BE-NEXT:    li r0, -4096
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    beq cr0, .LBB11_4
+; CHECK-BE-NEXT:  .LBB11_3:
+; CHECK-BE-NEXT:    stdux r30, r1, r0
+; CHECK-BE-NEXT:    cmpd r1, r12
+; CHECK-BE-NEXT:    bne cr0, .LBB11_3
+; CHECK-BE-NEXT:  .LBB11_4:
+; CHECK-BE-NEXT:    mr r12, r30
+; CHECK-BE-NEXT:    li r0, 24
+; CHECK-BE-NEXT:    mtctr r0
+; CHECK-BE-NEXT:  .LBB11_5:
+; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    bdnz .LBB11_5
+; CHECK-BE-NEXT:  # %bb.6:
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r1
+; CHECK-BE-NEXT:    .cfi_def_cfa_register r30
+; CHECK-BE-NEXT:    .cfi_offset r31, -8
+; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
+; CHECK-BE-NEXT:    lis r5, 1
+; CHECK-BE-NEXT:    addi r3, r3, 15
+; CHECK-BE-NEXT:    mr r31, r1
+; CHECK-BE-NEXT:    ori r5, r5, 0
+; CHECK-BE-NEXT:    rldicl r3, r3, 60, 4
+; CHECK-BE-NEXT:    add r5, r31, r5
+; CHECK-BE-NEXT:    sldi r4, r4, 2
+; CHECK-BE-NEXT:    li r6, 1
+; CHECK-BE-NEXT:    rldicl r3, r3, 4, 31
+; CHECK-BE-NEXT:    stwx r6, r5, r4
+; CHECK-BE-NEXT:    neg r7, r3
+; CHECK-BE-NEXT:    li r4, -32768
+; CHECK-BE-NEXT:    and r4, r7, r4
+; CHECK-BE-NEXT:    ld r3, 0(r1)
+; CHECK-BE-NEXT:    mr r7, r4
+; CHECK-BE-NEXT:    li r4, -4096
+; CHECK-BE-NEXT:    divd r5, r7, r4
+; CHECK-BE-NEXT:    mulld r4, r5, r4
+; CHECK-BE-NEXT:    sub r5, r7, r4
+; CHECK-BE-NEXT:    add r4, r1, r7
+; CHECK-BE-NEXT:    stdux r3, r1, r5
+; CHECK-BE-NEXT:    cmpd r1, r4
+; CHECK-BE-NEXT:    beq cr0, .LBB11_8
+; CHECK-BE-NEXT:  .LBB11_7:
+; CHECK-BE-NEXT:    stdu r3, -4096(r1)
+; CHECK-BE-NEXT:    cmpd r1, r4
+; CHECK-BE-NEXT:    bne cr0, .LBB11_7
+; CHECK-BE-NEXT:  .LBB11_8:
+; CHECK-BE-NEXT:    addi r3, r1, -32768
+; CHECK-BE-NEXT:    lbz r3, 0(r3)
+; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    ld r31, -8(r1)
+; CHECK-BE-NEXT:    ld r30, -16(r1)
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-32-LABEL: f11:
+; CHECK-32:       # %bb.0:
+; CHECK-32-NEXT:    mr r12, r1
+; CHECK-32-NEXT:    .cfi_def_cfa r12, 0
+; CHECK-32-NEXT:    clrlwi r0, r12, 17
+; CHECK-32-NEXT:    subc r1, r1, r0
+; CHECK-32-NEXT:    li r0, 24
+; CHECK-32-NEXT:    mtctr r0
+; CHECK-32-NEXT:  .LBB11_1:
+; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    bdnz .LBB11_1
+; CHECK-32-NEXT:  # %bb.2:
+; CHECK-32-NEXT:    .cfi_def_cfa_register r1
+; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
+; CHECK-32-NEXT:    addic r0, r0, -4
+; CHECK-32-NEXT:    stwx r31, 0, r0
+; CHECK-32-NEXT:    addic r0, r0, -4
+; CHECK-32-NEXT:    stwx r30, 0, r0
+; CHECK-32-NEXT:    addic r30, r0, 8
+; CHECK-32-NEXT:    .cfi_def_cfa_register r30
+; CHECK-32-NEXT:    .cfi_offset r31, -4
+; CHECK-32-NEXT:    .cfi_offset r30, -8
+; CHECK-32-NEXT:    lis r4, 1
+; CHECK-32-NEXT:    mr r31, r1
+; CHECK-32-NEXT:    ori r4, r4, 0
+; CHECK-32-NEXT:    addi r3, r3, 15
+; CHECK-32-NEXT:    add r4, r31, r4
+; CHECK-32-NEXT:    li r5, 1
+; CHECK-32-NEXT:    slwi r6, r6, 2
+; CHECK-32-NEXT:    rlwinm r3, r3, 0, 0, 27
+; CHECK-32-NEXT:    neg r7, r3
+; CHECK-32-NEXT:    stwx r5, r4, r6
+; CHECK-32-NEXT:    li r4, -32768
+; CHECK-32-NEXT:    and r4, r7, r4
+; CHECK-32-NEXT:    lwz r3, 0(r1)
+; CHECK-32-NEXT:    mr r7, r4
+; CHECK-32-NEXT:    li r4, -4096
+; CHECK-32-NEXT:    divw r5, r7, r4
+; CHECK-32-NEXT:    mullw r4, r5, r4
+; CHECK-32-NEXT:    sub r5, r7, r4
+; CHECK-32-NEXT:    add r4, r1, r7
+; CHECK-32-NEXT:    stwux r3, r1, r5
+; CHECK-32-NEXT:    cmpw r1, r4
+; CHECK-32-NEXT:    beq cr0, .LBB11_4
+; CHECK-32-NEXT:  .LBB11_3:
+; CHECK-32-NEXT:    stwu r3, -4096(r1)
+; CHECK-32-NEXT:    cmpw r1, r4
+; CHECK-32-NEXT:    bne cr0, .LBB11_3
+; CHECK-32-NEXT:  .LBB11_4:
+; CHECK-32-NEXT:    addi r3, r1, -32768
+; CHECK-32-NEXT:    lbz r3, 0(r3)
+; CHECK-32-NEXT:    lwz r31, 0(r1)
+; CHECK-32-NEXT:    lwz r0, -4(r31)
+; CHECK-32-NEXT:    lwz r30, -8(r31)
+; CHECK-32-NEXT:    mr r1, r31
+; CHECK-32-NEXT:    mr r31, r0
+; CHECK-32-NEXT:    blr
+  %a = alloca i32, i32 4096, align 32768
+  %b = getelementptr inbounds i32, i32* %a, i64 %i
+  store volatile i32 1, i32* %b
+  %1 = zext i32 %vla_size to i64
+  %vla = alloca i8, i64 %1, align 2048
+  %2 = load volatile i8, i8* %vla, align 2048
+  ret void
+}
+
 attributes #0 = { "probe-stack"="inline-asm" }

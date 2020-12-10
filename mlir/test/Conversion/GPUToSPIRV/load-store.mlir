@@ -37,10 +37,10 @@ module attributes {
     // CHECK-SAME: %[[ARG6:.*]]: i32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}
     gpu.func @load_store_kernel(%arg0: memref<12x4xf32>, %arg1: memref<12x4xf32>, %arg2: memref<12x4xf32>, %arg3: index, %arg4: index, %arg5: index, %arg6: index) kernel
       attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
-      // CHECK: %[[ADDRESSWORKGROUPID:.*]] = spv._address_of @[[$WORKGROUPIDVAR]]
+      // CHECK: %[[ADDRESSWORKGROUPID:.*]] = spv.mlir.addressof @[[$WORKGROUPIDVAR]]
       // CHECK: %[[WORKGROUPID:.*]] = spv.Load "Input" %[[ADDRESSWORKGROUPID]]
       // CHECK: %[[WORKGROUPIDX:.*]] = spv.CompositeExtract %[[WORKGROUPID]]{{\[}}0 : i32{{\]}}
-      // CHECK: %[[ADDRESSLOCALINVOCATIONID:.*]] = spv._address_of @[[$LOCALINVOCATIONIDVAR]]
+      // CHECK: %[[ADDRESSLOCALINVOCATIONID:.*]] = spv.mlir.addressof @[[$LOCALINVOCATIONIDVAR]]
       // CHECK: %[[LOCALINVOCATIONID:.*]] = spv.Load "Input" %[[ADDRESSLOCALINVOCATIONID]]
       // CHECK: %[[LOCALINVOCATIONIDX:.*]] = spv.CompositeExtract %[[LOCALINVOCATIONID]]{{\[}}0 : i32{{\]}}
       %0 = "gpu.block_id"() {dimension = "x"} : () -> index

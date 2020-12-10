@@ -60,6 +60,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -80,10 +81,8 @@
 
 using namespace llvm;
 
-// By default, we limit this to creating 16 common bases out of loops per
-// function. 16 is a little over half of the allocatable register set.
 static cl::opt<unsigned> MaxVarsPrep("ppc-formprep-max-vars",
-                                 cl::Hidden, cl::init(16),
+                                 cl::Hidden, cl::init(24),
   cl::desc("Potential common base number threshold per function for PPC loop "
            "prep"));
 
@@ -93,8 +92,7 @@ static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
 
 // Sum of following 3 per loop thresholds for all loops can not be larger
 // than MaxVarsPrep.
-// By default, we limit this to creating 9 PHIs for one loop.
-// 9 and 3 for each kind prep are exterimental values on Power9.
+// now the thresholds for each kind prep are exterimental values on Power9.
 static cl::opt<unsigned> MaxVarsUpdateForm("ppc-preinc-prep-max-vars",
                                  cl::Hidden, cl::init(3),
   cl::desc("Potential PHI threshold per loop for PPC loop prep of update "
@@ -105,7 +103,7 @@ static cl::opt<unsigned> MaxVarsDSForm("ppc-dsprep-max-vars",
   cl::desc("Potential PHI threshold per loop for PPC loop prep of DS form"));
 
 static cl::opt<unsigned> MaxVarsDQForm("ppc-dqprep-max-vars",
-                                 cl::Hidden, cl::init(3),
+                                 cl::Hidden, cl::init(8),
   cl::desc("Potential PHI threshold per loop for PPC loop prep of DQ form"));
 
 
@@ -277,8 +275,11 @@ static Value *GetPointerOperand(Value *MemI) {
   } else if (StoreInst *SMemI = dyn_cast<StoreInst>(MemI)) {
     return SMemI->getPointerOperand();
   } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(MemI)) {
-    if (IMemI->getIntrinsicID() == Intrinsic::prefetch)
+    if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
+        IMemI->getIntrinsicID() == Intrinsic::ppc_mma_lxvp)
       return IMemI->getArgOperand(0);
+    if (IMemI->getIntrinsicID() == Intrinsic::ppc_mma_stxvp)
+      return IMemI->getArgOperand(1);
   }
 
   return nullptr;
@@ -345,9 +346,13 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
         MemI = SMemI;
         PtrValue = SMemI->getPointerOperand();
       } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(&J)) {
-        if (IMemI->getIntrinsicID() == Intrinsic::prefetch) {
+        if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
+            IMemI->getIntrinsicID() == Intrinsic::ppc_mma_lxvp) {
           MemI = IMemI;
           PtrValue = IMemI->getArgOperand(0);
+        } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_mma_stxvp) {
+          MemI = IMemI;
+          PtrValue = IMemI->getArgOperand(1);
         } else continue;
       } else continue;
 
@@ -827,6 +832,11 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     if (ST && ST->hasAltivec() &&
         PtrValue->getType()->getPointerElementType()->isVectorTy())
       return false;
+    // There are no update forms for P10 lxvp/stxvp intrinsic.
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (II && ((II->getIntrinsicID() == Intrinsic::ppc_mma_lxvp) ||
+               II->getIntrinsicID() == Intrinsic::ppc_mma_stxvp))
+      return false;
     // See getPreIndexedAddressParts, the displacement for LDU/STDU has to
     // be 4's multiple (DS-form). For i64 loads/stores when the displacement
     // fits in a 16-bit signed field but isn't a multiple of 4, it will be
@@ -864,7 +874,13 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Check if a load/store has DQ form.
   auto isDQFormCandidate = [&] (const Instruction *I, const Value *PtrValue) {
     assert((PtrValue && I) && "Invalid parameter!");
-    return !isa<IntrinsicInst>(I) && ST && ST->hasP9Vector() &&
+    // Check if it is a P10 lxvp/stxvp intrinsic.
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (II)
+      return II->getIntrinsicID() == Intrinsic::ppc_mma_lxvp ||
+             II->getIntrinsicID() == Intrinsic::ppc_mma_stxvp;
+    // Check if it is a P9 vector load/store.
+    return ST && ST->hasP9Vector() &&
            (PtrValue->getType()->getPointerElementType()->isVectorTy());
   };
 

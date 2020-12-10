@@ -117,6 +117,8 @@ protected:
   }
 
   bool hasASTFileSupport() const override { return false; }
+
+  bool shouldEraseOutputFiles() override;
 };
 
 class GenerateInterfaceStubsAction : public ASTFrontendAction {

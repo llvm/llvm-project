@@ -80,9 +80,6 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
-  auto ConstIns =
-      PtrVT == MVT::i64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
-  auto AddIns = PtrVT == MVT::i64 ? WebAssembly::ADD_I64 : WebAssembly::ADD_I32;
 
   // Few custom selection stuff.
   SDLoc DL(Node);
@@ -123,41 +120,6 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
 
     ReplaceNode(Node, Fence);
     CurDAG->RemoveDeadNode(Node);
-    return;
-  }
-
-  case ISD::GlobalTLSAddress: {
-    const auto *GA = cast<GlobalAddressSDNode>(Node);
-
-    if (!MF.getSubtarget<WebAssemblySubtarget>().hasBulkMemory())
-      report_fatal_error("cannot use thread-local storage without bulk memory",
-                         false);
-
-    // Currently Emscripten does not support dynamic linking with threads.
-    // Therefore, if we have thread-local storage, only the local-exec model
-    // is possible.
-    // TODO: remove this and implement proper TLS models once Emscripten
-    // supports dynamic linking with threads.
-    if (GA->getGlobal()->getThreadLocalMode() !=
-            GlobalValue::LocalExecTLSModel &&
-        !Subtarget->getTargetTriple().isOSEmscripten()) {
-      report_fatal_error("only -ftls-model=local-exec is supported for now on "
-                         "non-Emscripten OSes: variable " +
-                             GA->getGlobal()->getName(),
-                         false);
-    }
-
-    SDValue TLSBaseSym = CurDAG->getTargetExternalSymbol("__tls_base", PtrVT);
-    SDValue TLSOffsetSym = CurDAG->getTargetGlobalAddress(
-        GA->getGlobal(), DL, PtrVT, GA->getOffset(), 0);
-
-    MachineSDNode *TLSBase =
-        CurDAG->getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);
-    MachineSDNode *TLSOffset =
-        CurDAG->getMachineNode(ConstIns, DL, PtrVT, TLSOffsetSym);
-    MachineSDNode *TLSAddress = CurDAG->getMachineNode(
-        AddIns, DL, PtrVT, SDValue(TLSBase, 0), SDValue(TLSOffset, 0));
-    ReplaceNode(Node, TLSAddress);
     return;
   }
 

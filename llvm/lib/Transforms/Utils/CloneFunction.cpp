@@ -675,8 +675,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     // Check if this block has become dead during inlining or other
     // simplifications. Note that the first block will appear dead, as it has
     // not yet been wired up properly.
-    if (I != Begin && (pred_begin(&*I) == pred_end(&*I) ||
-                       I->getSinglePredecessor() == &*I)) {
+    if (I != Begin && (pred_empty(&*I) || I->getSinglePredecessor() == &*I)) {
       BasicBlock *DeadBB = &*I++;
       DeleteDeadBlock(DeadBB);
       continue;

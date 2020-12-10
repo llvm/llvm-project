@@ -1,8 +1,25 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: not %lld -o %t %t.o 2>&1 | FileCheck %s -DBASENAME=%basename_t
-# CHECK: error: undefined symbol _foo, referenced from [[BASENAME]]
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
+# RUN: llvm-ar crs %t/foo.a %t/foo.o
+# RUN: not %lld -o /dev/null %t/main.o 2>&1 | \
+# RUN:     FileCheck %s -DSYM=_foo -DFILENAME=%t/main.o
+# RUN: not %lld -o /dev/null %t/main.o %t/foo.a 2>&1 | \
+# RUN:     FileCheck %s -DSYM=_bar -DFILENAME='foo.a(foo.o)'
+# RUN: not %lld -o /dev/null %t/main.o -force_load %t/foo.a 2>&1 | \
+# RUN:     FileCheck %s -DSYM=_bar -DFILENAME='foo.a(foo.o)'
+# CHECK: error: undefined symbol [[SYM]], referenced from [[FILENAME]]
 
+#--- foo.s
+.globl _foo
+.text
+_foo:
+  callq _bar
+  retq
+
+#--- main.s
 .globl _main
 .text
 _main:

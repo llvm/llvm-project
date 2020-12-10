@@ -70,11 +70,18 @@ void FastUnwindTest::TearDown() {
 
 #if SANITIZER_CAN_FAST_UNWIND
 
+#ifdef __sparc__
+// Fake stacks don't meet SPARC UnwindFast requirements.
+#define SKIP_ON_SPARC(x) DISABLED_##x
+#else
+#define SKIP_ON_SPARC(x) x
+#endif
+
 void FastUnwindTest::UnwindFast() {
   trace.UnwindFast(start_pc, fake_bp, fake_top, fake_bottom, kStackTraceMax);
 }
 
-TEST_F(FastUnwindTest, Basic) {
+TEST_F(FastUnwindTest, SKIP_ON_SPARC(Basic)) {
   UnwindFast();
   // Should get all on-stack retaddrs and start_pc.
   EXPECT_EQ(6U, trace.size);
@@ -85,7 +92,7 @@ TEST_F(FastUnwindTest, Basic) {
 }
 
 // From: https://github.com/google/sanitizers/issues/162
-TEST_F(FastUnwindTest, FramePointerLoop) {
+TEST_F(FastUnwindTest, SKIP_ON_SPARC(FramePointerLoop)) {
   // Make one fp point to itself.
   fake_stack[4] = (uhwptr)&fake_stack[4];
   UnwindFast();
@@ -97,7 +104,7 @@ TEST_F(FastUnwindTest, FramePointerLoop) {
   }
 }
 
-TEST_F(FastUnwindTest, MisalignedFramePointer) {
+TEST_F(FastUnwindTest, SKIP_ON_SPARC(MisalignedFramePointer)) {
   // Make one fp misaligned.
   fake_stack[4] += 3;
   UnwindFast();
@@ -122,7 +129,7 @@ TEST_F(FastUnwindTest, ZeroFramesStackTrace) {
   EXPECT_EQ(0U, trace.top_frame_bp);
 }
 
-TEST_F(FastUnwindTest, FPBelowPrevFP) {
+TEST_F(FastUnwindTest, SKIP_ON_SPARC(FPBelowPrevFP)) {
   // The next FP points to unreadable memory inside the stack limits, but below
   // current FP.
   fake_stack[0] = (uhwptr)&fake_stack[-50];
@@ -133,7 +140,7 @@ TEST_F(FastUnwindTest, FPBelowPrevFP) {
   EXPECT_EQ(PC(1), trace.trace[1]);
 }
 
-TEST_F(FastUnwindTest, CloseToZeroFrame) {
+TEST_F(FastUnwindTest, SKIP_ON_SPARC(CloseToZeroFrame)) {
   // Make one pc a NULL pointer.
   fake_stack[5] = 0x0;
   UnwindFast();

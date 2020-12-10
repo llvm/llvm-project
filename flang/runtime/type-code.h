@@ -52,6 +52,9 @@ public:
 
   std::optional<std::pair<TypeCategory, int>> GetCategoryAndKind() const;
 
+  bool operator==(const TypeCode &that) const { return raw_ == that.raw_; }
+  bool operator!=(const TypeCode &that) const { return raw_ != that.raw_; }
+
 private:
   ISO::CFI_type_t raw_{CFI_type_other};
 };

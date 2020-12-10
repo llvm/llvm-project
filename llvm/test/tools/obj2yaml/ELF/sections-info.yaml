@@ -9,7 +9,7 @@
 # CHECK-NEXT:    Type: SHT_PROGBITS
 # CHECK-NEXT:  - Name: .bar
 # CHECK-NEXT:    Type: SHT_PROGBITS
-# CHECK-NEXT:    Info: 0x0000000000000001
+# CHECK-NEXT:    Info: 0x1
 
 --- !ELF
 FileHeader:

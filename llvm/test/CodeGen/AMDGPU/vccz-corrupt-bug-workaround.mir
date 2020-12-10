@@ -163,3 +163,169 @@ body: |
   bb.1:
 
 ...
+---
+# Test vcc definition in a previous basic block.
+
+# CHECK-LABEL: name: vcc_def_pred
+# CHECK: bb.1:
+# SI:  $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
+# CHECK: S_CBRANCH_VCCZ %bb.2, implicit $vcc
+
+name: vcc_def_pred
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+  bb.1:
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+  bb.2:
+
+...
+
+# Test various ways that the live range of vccz can overlap with the live range
+# of an outstanding smem load.
+
+---
+# CHECK-LABEL: name: load_wait_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_wait_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 127
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_wait_nop_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_wait_nop_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 127
+    S_NOP 0
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_def_wait_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_wait_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $vcc = S_MOV_B64 0
+    S_WAITCNT 127
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+# CHECK-LABEL: name: load_def_wait_nop_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_wait_nop_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $vcc = S_MOV_B64 0
+    S_WAITCNT 127
+    S_NOP 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_wait_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_wait_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 127
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_wait_nop_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_wait_nop_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_WAITCNT 127
+    S_NOP 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...

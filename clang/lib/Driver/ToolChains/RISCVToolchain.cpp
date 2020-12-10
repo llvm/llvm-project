@@ -31,6 +31,21 @@ static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
       addPathIfExists(D, InstallPath + Path, Paths);
 }
 
+// This function tests whether a gcc installation is present either
+// through gcc-toolchain argument or in the same prefix where clang
+// is installed. This helps decide whether to instantiate this toolchain
+// or Baremetal toolchain.
+bool RISCVToolChain::hasGCCToolchain(const Driver &D,
+                                     const llvm::opt::ArgList &Args) {
+  if (Args.getLastArg(options::OPT_gcc_toolchain))
+    return true;
+
+  SmallString<128> GCCDir;
+  llvm::sys::path::append(GCCDir, D.Dir, "..", D.getTargetTriple(),
+                          "lib/crt0.o");
+  return llvm::sys::fs::exists(GCCDir);
+}
+
 /// RISCV Toolchain
 RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)

@@ -18,15 +18,15 @@ define i32 @test_or_ule(i32 %x, i32 %y, i32 %z, i32 %a) {
 ; CHECK-NEXT:    ret i32 10
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i32 [[X]], [[A]]
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[Y]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i32 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret i32 20
 ;
 entry:

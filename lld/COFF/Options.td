@@ -33,9 +33,12 @@ def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
 def base    : P<"base", "Base address of the program">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
-    HelpText<"Use colors in diagnostics">;
+    HelpText<"Alias for --color-diagnostics=always">;
+def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
+    HelpText<"Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
-    HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
+    HelpText<"Use colors in diagnostics (default: auto)">,
+    MetaVarName<"[auto,always,never]">;
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -55,8 +58,9 @@ def implib  : P<"implib", "Import library name">;
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
-def linkrepro : P<"linkrepro",
-    "Dump linker invocation and input files for debugging">;
+def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
+    MetaVarName<"directory">,
+    HelpText<"Write repro.tar containing inputs and command to reproduce link">;
 def lldignoreenv : F<"lldignoreenv">,
     HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache",
@@ -73,8 +77,6 @@ def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
 def natvis : P<"natvis", "Path to natvis file to embed in the PDB">;
-def no_color_diagnostics: F<"no-color-diagnostics">,
-    HelpText<"Do not use colors in diagnostics">;
 def pdb : P<"pdb", "PDB file path">;
 def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
@@ -134,8 +136,9 @@ def noentry : F<"noentry">,
 def profile : F<"profile">;
 def repro : F<"Brepro">,
     HelpText<"Use a hash of the executable as the PE header timestamp">;
-def reproduce : P<"reproduce",
-    "Dump linker invocation and input files for debugging">;
+def reproduce : Joined<["/", "-", "/?", "-?"], "reproduce:">,
+    MetaVarName<"filename">,
+    HelpText<"Write tar file containing inputs and command to reproduce link">;
 def swaprun : P<"swaprun",
   "Comma-separated list of 'cd' or 'net'">;
 def swaprun_cd : F<"swaprun:cd">, Alias<swaprun>, AliasArgs<["cd"]>,
@@ -199,7 +202,7 @@ def help_q : Flag<["/??", "-??", "/?", "-?"], "">, Alias<help>;
 defm auto_import : B_priv<"auto-import">;
 defm runtime_pseudo_reloc : B_priv<"runtime-pseudo-reloc">;
 def end_lib : F<"end-lib">,
-  HelpText<"Ends group of objects treated as if they were in a library">;
+  HelpText<"End group of objects treated as if they were in a library">;
 def exclude_all_symbols : F<"exclude-all-symbols">;
 def export_all_symbols : F<"export-all-symbols">;
 defm demangle : B<"demangle",
@@ -217,7 +220,7 @@ def pdb_source_path : P<"pdbsourcepath",
 def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
 def start_lib : F<"start-lib">,
-  HelpText<"Starts group of objects treated as if they were in a library">;
+  HelpText<"Start group of objects treated as if they were in a library">;
 def thinlto_emit_imports_files :
     F<"thinlto-emit-imports-files">,
     HelpText<"Emit .imports files with -thinlto-index-only">;

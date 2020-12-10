@@ -13,6 +13,7 @@ program openacc_clause_validity
   integer :: i, j
   integer :: N = 256
   real(8) :: a(256)
+  real(8) :: aa(256, 256)
 
   !ERROR: A DO loop must follow the LOOP directive
   !$acc loop
@@ -105,5 +106,21 @@ program openacc_clause_validity
   do i = 1, N
     a(i) = 3.14
   end do
+
+  !$acc parallel
+  !ERROR: TILE and COLLAPSE clause may not appear on loop construct associated with DO CONCURRENT
+  !$acc loop collapse(2)
+  do concurrent (i = 1:N, j = 1:N)
+    aa(i, j) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: TILE and COLLAPSE clause may not appear on loop construct associated with DO CONCURRENT
+  !$acc loop tile(2, 2)
+  do concurrent (i = 1:N, j = 1:N)
+    aa(i, j) = 3.14
+  end do
+  !$acc end parallel
 
 end program openacc_clause_validity

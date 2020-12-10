@@ -439,23 +439,23 @@ understand. When types of a dialect are:
 
 *   In operations of other dialects
 
-    -   For standard/builtin operations, only standard/builtin types are
-        allowed. This restriction allows for operations to clearly understand
-        the invariants that they are working under.
+    -   For standard/builtin operations, only builtin types are allowed. This
+        restriction allows for operations to clearly understand the invariants
+        that they are working under.
     -   Outside of standard/builtin operations, dialects are expected to verify
         the allowable operation types per operation.
 
 *   In types of other dialects
 
-    -   For standard/builtin types, these types are allowed to contain types
-        from other dialects. This simplifies the type system and removes the
-        need for dialects to redefine all of the standard aggregate types, e.g.
-        tensor, as well as the memref type. Dialects are expected to verify that
-        a specific type is valid within a standard type, e.g. if a type can be
-        an element of a tensor.
+    -   For builtin types, these types are allowed to contain types from other
+        dialects. This simplifies the type system and removes the need for
+        dialects to redefine all of the builtin aggregate types, e.g. tensor, as
+        well as the memref type. Dialects are expected to verify that a specific
+        type is valid within a builtin type, e.g. if a type can be an element of
+        a tensor.
     -   For dialect types, the dialect is expected to verify any type
-        invariants, e.g. if the standard tensor type can contain a specific type
-        of that dialect.
+        invariants, e.g. if the tensor type can contain a specific type of that
+        dialect.
 
 #### Separating builtin and standard types
 
@@ -570,10 +570,10 @@ for (i = 0; i < N; i++) {
 ```
 
 The presence of dynamic control flow leads to an inner non-affine function
-nested in an outer function that using affine loops.
+nested in an outer function that uses affine loops.
 
 ```mlir
-func @search(%A: memref<?x?xi32, %S: <?xi32>, %key : i32) {
+func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
   %ni = dim %A, 0 : memref<?x?xi32>
   // This loop can be parallelized
   affine.for %i = 0 to %ni {

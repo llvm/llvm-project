@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple arm64-apple-ios -mattr=+lse %s -o - | FileCheck %s
+; RUN: llc -mtriple arm64-apple-ios -mattr=+lse -mattr=+outline-atomics %s -o - | FileCheck %s
 
 ; Only "even,even+1" pairs are valid for CASP instructions. Make sure LLVM
 ; doesn't allocate odd ones and that it can copy them around properly. N.b. we

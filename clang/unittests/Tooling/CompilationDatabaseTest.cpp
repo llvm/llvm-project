@@ -172,13 +172,15 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
 }
 
 static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
-                                                    StringRef JSONDatabase,
+                                                    std::string JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
       JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
+  // Overwrite the string to verify we're not reading from it later.
+  JSONDatabase.assign(JSONDatabase.size(), '*');
   std::vector<CompileCommand> Commands = Database->getCompileCommands(FileName);
   EXPECT_LE(Commands.size(), 1u);
   if (Commands.empty())
@@ -539,6 +541,27 @@ TEST(FixedCompilationDatabase, GetAllCompileCommands) {
   FixedCompilationDatabase Database(".", CommandLine);
 
   EXPECT_EQ(0ul, Database.getAllCompileCommands().size());
+}
+
+TEST(FixedCompilationDatabase, FromBuffer) {
+  const char *Data = R"(
+
+ -DFOO=BAR
+
+--baz
+
+  )";
+  std::string ErrorMsg;
+  auto CDB =
+      FixedCompilationDatabase::loadFromBuffer("/cdb/dir", Data, ErrorMsg);
+
+  std::vector<CompileCommand> Result = CDB->getCompileCommands("/foo/bar.cc");
+  ASSERT_EQ(1ul, Result.size());
+  EXPECT_EQ("/cdb/dir", Result.front().Directory);
+  EXPECT_EQ("/foo/bar.cc", Result.front().Filename);
+  EXPECT_THAT(
+      Result.front().CommandLine,
+      ElementsAre(EndsWith("clang-tool"), "-DFOO=BAR", "--baz", "/foo/bar.cc"));
 }
 
 TEST(ParseFixedCompilationDatabase, ReturnsNullOnEmptyArgumentList) {

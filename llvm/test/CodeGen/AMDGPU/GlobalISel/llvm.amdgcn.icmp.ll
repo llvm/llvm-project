@@ -18,7 +18,6 @@ define amdgpu_ps void @test_intr_icmp_ne_i32(i32 addrspace(1)* %out, i32 %src) #
 ; GCN-LABEL: test_intr_icmp_ne_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s0, 0x64, v2
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_dword v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm

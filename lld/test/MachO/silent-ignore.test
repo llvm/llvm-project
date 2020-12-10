@@ -1,5 +1,4 @@
 RUN: %lld -v \
-RUN:   -demangle \
 RUN:   -dynamic \
 RUN:   -no_deduplicate \
 RUN:   -lto_library /lib/foo \
@@ -10,4 +9,4 @@ RUN:   -objc_abi_version 2 \
 RUN:   -ios_simulator_version_min 9.0.0 \
 RUN:   -sdk_version 13.2
 RUN: not %lld -v --not-an-ignored-argument 2>&1 | FileCheck %s
-CHECK: error: unknown argument: --not-an-ignored-argument
+CHECK: error: unknown argument '--not-an-ignored-argument'

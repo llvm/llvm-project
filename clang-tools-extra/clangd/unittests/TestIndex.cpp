@@ -29,7 +29,7 @@ Symbol symbol(llvm::StringRef QName) {
 
 static std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
                            llvm::StringRef Repl) {
-  llvm::SmallVector<llvm::StringRef, 8> Parts;
+  llvm::SmallVector<llvm::StringRef> Parts;
   Haystack.split(Parts, Needle);
   return llvm::join(Parts, Repl);
 }

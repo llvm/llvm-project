@@ -37,8 +37,9 @@ void MsanThread::ClearShadowForThreadStackAndTLS() {
     __msan_unpoison((void *)tls_begin_, tls_end_ - tls_begin_);
   DTLS *dtls = DTLS_Get();
   CHECK_NE(dtls, 0);
-  for (uptr i = 0; i < dtls->dtv_size; ++i)
-    __msan_unpoison((void *)(dtls->dtv[i].beg), dtls->dtv[i].size);
+  ForEachDVT(dtls, [](const DTLS::DTV &dtv, int id) {
+    __msan_unpoison((void *)(dtv.beg), dtv.size);
+  });
 }
 
 void MsanThread::Init() {

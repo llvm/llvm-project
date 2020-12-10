@@ -131,11 +131,13 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IB-LABEL: fshl_i32:
 ; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a2, a2, 31
 ; RV32IB-NEXT:    fsl a0, a0, a1, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBT-LABEL: fshl_i32:
 ; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    andi a2, a2, 31
 ; RV32IBT-NEXT:    fsl a0, a0, a1, a2
 ; RV32IBT-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
@@ -315,11 +317,13 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IB-LABEL: fshr_i32:
 ; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a2, a2, 31
 ; RV32IB-NEXT:    fsr a0, a1, a0, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBT-LABEL: fshr_i32:
 ; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    andi a2, a2, 31
 ; RV32IBT-NEXT:    fsr a0, a1, a0, a2
 ; RV32IBT-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
@@ -413,14 +417,12 @@ define i64 @fshr_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32IB-NEXT:    mv t0, zero
 ; RV32IB-NEXT:    bgez a5, .LBB7_8
 ; RV32IB-NEXT:  .LBB7_5:
+; RV32IB-NEXT:    fsri a1, a0, a1, 31
+; RV32IB-NEXT:    sll a1, a1, t1
 ; RV32IB-NEXT:    sub a2, a6, a2
-; RV32IB-NEXT:    lui a5, 524288
-; RV32IB-NEXT:    addi a5, a5, -1
-; RV32IB-NEXT:    and a5, a0, a5
-; RV32IB-NEXT:    srl a2, a5, a2
-; RV32IB-NEXT:    fsri a0, a0, a1, 31
-; RV32IB-NEXT:    sll a0, a0, t1
-; RV32IB-NEXT:    or a1, a0, a2
+; RV32IB-NEXT:    sbclri a0, a0, 31
+; RV32IB-NEXT:    srl a0, a0, a2
+; RV32IB-NEXT:    or a1, a1, a0
 ; RV32IB-NEXT:    or a0, t0, a7
 ; RV32IB-NEXT:    bgez t2, .LBB7_9
 ; RV32IB-NEXT:  .LBB7_6:

@@ -72,19 +72,19 @@ TEST_F(SortIncludesTest, BasicSorting) {
 TEST_F(SortIncludesTest, SortedIncludesUsingSortPriorityAttribute) {
   FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   FmtStyle.IncludeStyle.IncludeCategories = {
-      {"^<sys/param\\.h>", 1, 0},
-      {"^<sys/types\\.h>", 1, 1},
-      {"^<sys.*/", 1, 2},
-      {"^<uvm/", 2, 3},
-      {"^<machine/", 3, 4},
-      {"^<dev/", 4, 5},
-      {"^<net.*/", 5, 6},
-      {"^<protocols/", 5, 7},
-      {"^<(fs|miscfs|msdosfs|nfs|ntfs|ufs)/", 6, 8},
-      {"^<(x86|amd64|i386|xen)/", 7, 8},
-      {"<path", 9, 11},
-      {"^<[^/].*\\.h>", 8, 10},
-      {"^\".*\\.h\"", 10, 12}};
+      {"^<sys/param\\.h>", 1, 0, false},
+      {"^<sys/types\\.h>", 1, 1, false},
+      {"^<sys.*/", 1, 2, false},
+      {"^<uvm/", 2, 3, false},
+      {"^<machine/", 3, 4, false},
+      {"^<dev/", 4, 5, false},
+      {"^<net.*/", 5, 6, false},
+      {"^<protocols/", 5, 7, false},
+      {"^<(fs|miscfs|msdosfs|nfs|ntfs|ufs)/", 6, 8, false},
+      {"^<(x86|amd64|i386|xen)/", 7, 8, false},
+      {"<path", 9, 11, false},
+      {"^<[^/].*\\.h>", 8, 10, false},
+      {"^\".*\\.h\"", 10, 12, false}};
   EXPECT_EQ("#include <sys/param.h>\n"
             "#include <sys/types.h>\n"
             "#include <sys/ioctl.h>\n"
@@ -289,6 +289,19 @@ TEST_F(SortIncludesTest, LeadingWhitespace) {
             sort("# include \"a.h\"\n"
                  "#  include \"c.h\"\n"
                  "#   include \"b.h\"\n"));
+  EXPECT_EQ("#include \"a.h\"\n", sort("#include \"a.h\"\n"
+                                       " #include \"a.h\"\n"));
+}
+
+TEST_F(SortIncludesTest, TrailingWhitespace) {
+  EXPECT_EQ("#include \"a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"a.h\" \n"
+                 "#include \"c.h\"  \n"
+                 "#include \"b.h\"   \n"));
+  EXPECT_EQ("#include \"a.h\"\n", sort("#include \"a.h\"\n"
+                                       "#include \"a.h\" \n"));
 }
 
 TEST_F(SortIncludesTest, GreaterInComment) {
@@ -587,8 +600,59 @@ TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
                  "a_TEST.cc"));
 }
 
+TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveMachting) {
+  Style.IncludeBlocks = clang::tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeCategories = {{"^\"", 1, 0, false},
+                             {"^<.*\\.h>$", 2, 0, false},
+                             {"^<Q[A-Z][^\\.]*>", 3, 0, false},
+                             {"^<Qt[^\\.]*>", 4, 0, false},
+                             {"^<", 5, 0, false}};
+
+  StringRef UnsortedCode = "#include <QWidget>\n"
+                           "#include \"qt.h\"\n"
+                           "#include <algorithm>\n"
+                           "#include <windows.h>\n"
+                           "#include <QLabel>\n"
+                           "#include \"qa.h\"\n"
+                           "#include <queue>\n"
+                           "#include <qtwhatever.h>\n"
+                           "#include <QtGlobal>\n";
+
+  EXPECT_EQ("#include \"qa.h\"\n"
+            "#include \"qt.h\"\n"
+            "\n"
+            "#include <qtwhatever.h>\n"
+            "#include <windows.h>\n"
+            "\n"
+            "#include <QLabel>\n"
+            "#include <QWidget>\n"
+            "#include <QtGlobal>\n"
+            "#include <queue>\n"
+            "\n"
+            "#include <algorithm>\n",
+            sort(UnsortedCode));
+
+  Style.IncludeCategories[2].RegexIsCaseSensitive = true;
+  Style.IncludeCategories[3].RegexIsCaseSensitive = true;
+  EXPECT_EQ("#include \"qa.h\"\n"
+            "#include \"qt.h\"\n"
+            "\n"
+            "#include <qtwhatever.h>\n"
+            "#include <windows.h>\n"
+            "\n"
+            "#include <QLabel>\n"
+            "#include <QWidget>\n"
+            "\n"
+            "#include <QtGlobal>\n"
+            "\n"
+            "#include <algorithm>\n"
+            "#include <queue>\n",
+            sort(UnsortedCode));
+}
+
 TEST_F(SortIncludesTest, NegativePriorities) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false},
+                             {".*", 1, 0, false}};
   EXPECT_EQ("#include \"important_os_header.h\"\n"
             "#include \"c_main.h\"\n"
             "#include \"a_other.h\"\n",
@@ -608,7 +672,8 @@ TEST_F(SortIncludesTest, NegativePriorities) {
 }
 
 TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false},
+                             {".*", 1, 0, false}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
 
   EXPECT_EQ("#include \"important_os_header.h\"\n"

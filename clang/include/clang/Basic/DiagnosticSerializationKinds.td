@@ -17,17 +17,10 @@ def err_fe_pch_malformed : Error<
     "malformed or corrupted AST file: '%0'">, DefaultFatal;
 def err_fe_pch_malformed_block : Error<
     "malformed block record in PCH file: '%0'">, DefaultFatal;
-def err_fe_pch_file_modified : Error<
-    "file '%0' has been modified since the precompiled header '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
-    DefaultFatal;
-def err_fe_module_file_modified : Error<
-    "file '%0' has been modified since the module file '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
-    DefaultFatal;
 def err_fe_ast_file_modified : Error<
-    "file '%0' has been modified since the AST file '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
+    "file '%0' has been modified since the "
+    "%select{precompiled header|module file|AST file}1 '%2' was built"
+    ": %select{size|mtime|content}3 changed">,
     DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
@@ -63,12 +56,12 @@ def err_pch_with_compiler_errors : Error<
 
 def err_module_file_conflict : Error<
   "module '%0' is defined in both '%1' and '%2'">, DefaultFatal;
-def err_module_file_not_found : Error<
+def err_ast_file_not_found : Error<
   "%select{PCH|module|AST}0 file '%1' not found%select{|: %3}2">, DefaultFatal;
-def err_module_file_out_of_date : Error<
+def err_ast_file_out_of_date : Error<
   "%select{PCH|module|AST}0 file '%1' is out of date and "
   "needs to be rebuilt%select{|: %3}2">, DefaultFatal;
-def err_module_file_invalid : Error<
+def err_ast_file_invalid : Error<
   "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file">, DefaultFatal;
 def note_module_file_imported_by : Note<
   "imported by %select{|module '%2' in }1'%0'">;

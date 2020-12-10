@@ -301,6 +301,21 @@ bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
   return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
 }
 
+Optional<ElementCount>
+llvm::getOptionalElementCountLoopAttribute(Loop *TheLoop) {
+  Optional<int> Width =
+      getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
+
+  if (Width.hasValue()) {
+    Optional<int> IsScalable = getOptionalIntLoopAttribute(
+        TheLoop, "llvm.loop.vectorize.scalable.enable");
+    return ElementCount::get(*Width,
+                             IsScalable.hasValue() ? *IsScalable : false);
+  }
+
+  return None;
+}
+
 llvm::Optional<int> llvm::getOptionalIntLoopAttribute(Loop *TheLoop,
                                                       StringRef Name) {
   const MDOperand *AttrMD =
@@ -450,14 +465,15 @@ TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
   if (Enable == false)
     return TM_SuppressedByUser;
 
-  Optional<int> VectorizeWidth =
-      getOptionalIntLoopAttribute(L, "llvm.loop.vectorize.width");
+  Optional<ElementCount> VectorizeWidth =
+      getOptionalElementCountLoopAttribute(L);
   Optional<int> InterleaveCount =
       getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
 
   // 'Forcing' vector width and interleave count to one effectively disables
   // this tranformation.
-  if (Enable == true && VectorizeWidth == 1 && InterleaveCount == 1)
+  if (Enable == true && VectorizeWidth && VectorizeWidth->isScalar() &&
+      InterleaveCount == 1)
     return TM_SuppressedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
@@ -466,10 +482,10 @@ TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
   if (Enable == true)
     return TM_ForcedByUser;
 
-  if (VectorizeWidth == 1 && InterleaveCount == 1)
+  if ((VectorizeWidth && VectorizeWidth->isScalar()) && InterleaveCount == 1)
     return TM_Disable;
 
-  if (VectorizeWidth > 1 || InterleaveCount > 1)
+  if ((VectorizeWidth && VectorizeWidth->isVector()) || InterleaveCount > 1)
     return TM_Enable;
 
   if (hasDisableAllTransformsHint(L))

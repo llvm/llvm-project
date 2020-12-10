@@ -9,6 +9,21 @@
 #ifndef _OPENCL_H_
 #define _OPENCL_H_
 
+// Define extension macros
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+// For SPIR all extensions are supported.
+#if defined(__SPIR__)
+#define cl_khr_subgroup_extended_types 1
+#define cl_khr_subgroup_non_uniform_vote 1
+#define cl_khr_subgroup_ballot 1
+#define cl_khr_subgroup_non_uniform_arithmetic 1
+#define cl_khr_subgroup_shuffle 1
+#define cl_khr_subgroup_shuffle_relative 1
+#define cl_khr_subgroup_clustered_reduce 1
+#endif // defined(__SPIR__)
+#endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 
 #ifndef cl_khr_depth_images
@@ -4881,6 +4896,7 @@ float16 __ovld __cnfn convert_float16(float16);
 // Conversions with double data type parameters or return value.
 
 #ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 char __ovld __cnfn convert_char(double);
 char __ovld __cnfn convert_char_rte(double);
 char __ovld __cnfn convert_char_rtn(double);
@@ -5703,6 +5719,7 @@ double16 __ovld __cnfn convert_double16_rtz(ushort16);
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
 // Convert half types to non-double types.
 uchar __ovld __cnfn convert_uchar(half);
 uchar __ovld __cnfn convert_uchar_rte(half);
@@ -17467,6 +17484,9 @@ intel_sub_group_avc_mce_convert_to_sic_result(
     intel_sub_group_avc_mce_result_t result);
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
+
+// Disable any extensions we may have enabled previously.
+#pragma OPENCL EXTENSION all : disable
 
 #ifdef cl_amd_media_ops
 uint __ovld amd_bitalign(uint a, uint b, uint c);

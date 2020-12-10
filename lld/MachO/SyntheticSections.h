@@ -20,6 +20,10 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
+class DWARFUnit;
+} // namespace llvm
+
 namespace lld {
 namespace macho {
 
@@ -48,6 +52,7 @@ constexpr const char ehFrame[] = "__eh_frame";
 class Defined;
 class DylibSymbol;
 class LoadCommand;
+class ObjFile;
 
 class SyntheticSection : public OutputSection {
 public:
@@ -393,11 +398,10 @@ public:
   void writeTo(uint8_t *buf) const override;
 
 private:
-  // An n_strx value of 0 always indicates the empty string, so we must locate
-  // our non-empty string values at positive offsets in the string table.
-  // Therefore we insert a dummy value at position zero.
-  std::vector<StringRef> strings{"\0"};
-  size_t size = 1;
+  // ld64 emits string tables which start with a space and a zero byte. We
+  // match its behavior here since some tools depend on it.
+  std::vector<StringRef> strings{" "};
+  size_t size = 2;
 };
 
 struct SymtabEntry {
@@ -405,22 +409,53 @@ struct SymtabEntry {
   size_t strx;
 };
 
+struct StabsEntry {
+  uint8_t type = 0;
+  uint32_t strx = 0;
+  uint8_t sect = 0;
+  uint16_t desc = 0;
+  uint64_t value = 0;
+
+  StabsEntry() = default;
+  explicit StabsEntry(uint8_t type) : type(type) {}
+};
+
+// Symbols of the same type must be laid out contiguously: we choose to emit
+// all local symbols first, then external symbols, and finally undefined
+// symbols. For each symbol type, the LC_DYSYMTAB load command will record the
+// range (start index and total number) of those symbols in the symbol table.
 class SymtabSection : public LinkEditSection {
 public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
-  size_t getNumSymbols() const { return symbols.size(); }
+  uint32_t getNumSymbols() const;
+  uint32_t getNumLocalSymbols() const {
+    return stabs.size() + localSymbols.size();
+  }
+  uint32_t getNumExternalSymbols() const { return externalSymbols.size(); }
+  uint32_t getNumUndefinedSymbols() const { return undefinedSymbols.size(); }
   uint64_t getRawSize() const override;
   void writeTo(uint8_t *buf) const override;
 
 private:
+  void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
+  void emitEndSourceStab();
+  void emitObjectFileStab(ObjFile *);
+  void emitEndFunStab(Defined *);
+  void emitStabs();
+
   StringTableSection &stringTableSection;
-  std::vector<SymtabEntry> symbols;
+  // STABS symbols are always local symbols, but we represent them with special
+  // entries because they may use fields like n_sect and n_desc differently.
+  std::vector<StabsEntry> stabs;
+  std::vector<SymtabEntry> localSymbols;
+  std::vector<SymtabEntry> externalSymbols;
+  std::vector<SymtabEntry> undefinedSymbols;
 };
 
 // The indirect symbol table is a list of 32-bit integers that serve as indices
 // into the (actual) symbol table. The indirect symbol table is a
-// concatentation of several sub-arrays of indices, each sub-array belonging to
+// concatenation of several sub-arrays of indices, each sub-array belonging to
 // a separate section. The starting offset of each sub-array is stored in the
 // reserved1 header field of the respective section.
 //

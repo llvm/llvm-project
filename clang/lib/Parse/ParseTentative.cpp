@@ -842,7 +842,8 @@ Parser::TPResult Parser::TryParsePtrOperatorSeq() {
 
       while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict,
                          tok::kw__Nonnull, tok::kw__Nullable,
-                         tok::kw__Null_unspecified, tok::kw__Atomic))
+                         tok::kw__Nullable_result, tok::kw__Null_unspecified,
+                         tok::kw__Atomic))
         ConsumeToken();
     } else {
       return TPResult::True;
@@ -1437,6 +1438,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw___unaligned:
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
+  case tok::kw__Nullable_result:
   case tok::kw__Null_unspecified:
   case tok::kw___kindof:
     return TPResult::True;

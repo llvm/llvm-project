@@ -36,7 +36,7 @@ invoke.cont:                                      ; preds = %entry
   %__exception_ = getelementptr inbounds %"class.std::__1::__assoc_sub_state", %"class.std::__1::__assoc_sub_state"* %this, i64 0, i32 1
   %0 = bitcast { i64, i64 }* %tmp to i8*
   call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 16, i1 false)
-  call void @_ZNSt15__exception_ptr13exception_ptrC1EMS0_FvvE(%"class.std::__exception_ptr::exception_ptr"* %ref.tmp, { i64, i64 }* byval %tmp) #5
+  call void @_ZNSt15__exception_ptr13exception_ptrC1EMS0_FvvE(%"class.std::__exception_ptr::exception_ptr"* %ref.tmp, { i64, i64 }* byval({ i64, i64 }) %tmp) #5
   %call = call zeroext i1 @_ZNSt15__exception_ptrneERKNS_13exception_ptrES2_(%"class.std::__exception_ptr::exception_ptr"* %__exception_, %"class.std::__exception_ptr::exception_ptr"* %ref.tmp) #5
   call void @_ZNSt15__exception_ptr13exception_ptrD1Ev(%"class.std::__exception_ptr::exception_ptr"* %ref.tmp) #5
   br i1 %call, label %if.then, label %if.end
@@ -102,7 +102,7 @@ declare void @_ZNSt3__117__assoc_sub_state10__sub_waitERNS_11unique_lockINS_5mut
 declare zeroext i1 @_ZNSt15__exception_ptrneERKNS_13exception_ptrES2_(%"class.std::__exception_ptr::exception_ptr"*, %"class.std::__exception_ptr::exception_ptr"*) #1
 
 ; Function Attrs: nounwind optsize
-declare void @_ZNSt15__exception_ptr13exception_ptrC1EMS0_FvvE(%"class.std::__exception_ptr::exception_ptr"*, { i64, i64 }* byval) #1
+declare void @_ZNSt15__exception_ptr13exception_ptrC1EMS0_FvvE(%"class.std::__exception_ptr::exception_ptr"*, { i64, i64 }* byval({ i64, i64 })) #1
 
 ; Function Attrs: nounwind optsize
 declare void @_ZNSt15__exception_ptr13exception_ptrD1Ev(%"class.std::__exception_ptr::exception_ptr"*) #1

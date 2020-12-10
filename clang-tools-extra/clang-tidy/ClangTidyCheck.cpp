@@ -21,34 +21,28 @@ char UnparseableEnumOptionError::ID;
 char UnparseableIntegerOptionError::ID;
 
 std::string MissingOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "option not found '" << OptionName << '\'';
+  llvm::SmallString<128> Buffer({"option not found '", OptionName, "'"});
   return std::string(Buffer);
 }
 
 std::string UnparseableEnumOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "invalid configuration value '" << LookupValue << "' for option '"
-         << LookupName << '\'';
+  llvm::SmallString<256> Buffer({"invalid configuration value '", LookupValue,
+                                 "' for option '", LookupName, "'"});
   if (SuggestedValue)
-    Output << "; did you mean '" << *SuggestedValue << "'?";
+    Buffer.append({"; did you mean '", *SuggestedValue, "'?"});
   return std::string(Buffer);
 }
 
 std::string UnparseableIntegerOptionError::message() const {
-  llvm::SmallString<128> Buffer;
-  llvm::raw_svector_ostream Output(Buffer);
-  Output << "invalid configuration value '" << LookupValue << "' for option '"
-         << LookupName << "'; expected "
-         << (IsBoolean ? "a bool" : "an integer value");
+  llvm::SmallString<256> Buffer({"invalid configuration value '", LookupValue,
+                                 "' for option '", LookupName, "'; expected ",
+                                 (IsBoolean ? "a bool" : "an integer value")});
   return std::string(Buffer);
 }
 
 ClangTidyCheck::ClangTidyCheck(StringRef CheckName, ClangTidyContext *Context)
     : CheckName(CheckName), Context(Context),
-      Options(CheckName, Context->getOptions().CheckOptions) {
+      Options(CheckName, Context->getOptions().CheckOptions, Context) {
   assert(Context != nullptr);
   assert(!CheckName.empty());
 }
@@ -58,6 +52,17 @@ DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
   return Context->diag(CheckName, Loc, Message, Level);
 }
 
+DiagnosticBuilder ClangTidyCheck::diag(StringRef Message,
+                                       DiagnosticIDs::Level Level) {
+  return Context->diag(CheckName, Message, Level);
+}
+
+DiagnosticBuilder
+ClangTidyCheck::configurationDiag(StringRef Description,
+                                  DiagnosticIDs::Level Level) {
+  return Context->configurationDiag(Description, Level);
+}
+
 void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   // For historical reasons, checks don't implement the MatchFinder run()
   // callback directly. We keep the run()/check() distinction to avoid interface
@@ -65,9 +70,11 @@ void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   check(Result);
 }
 
-ClangTidyCheck::OptionsView::OptionsView(StringRef CheckName,
-                         const ClangTidyOptions::OptionMap &CheckOptions)
-    : NamePrefix(CheckName.str() + "."), CheckOptions(CheckOptions) {}
+ClangTidyCheck::OptionsView::OptionsView(
+    StringRef CheckName, const ClangTidyOptions::OptionMap &CheckOptions,
+    ClangTidyContext *Context)
+    : NamePrefix(CheckName.str() + "."), CheckOptions(CheckOptions),
+      Context(Context) {}
 
 llvm::Expected<std::string>
 ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
@@ -127,7 +134,7 @@ bool ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName,
   llvm::Expected<bool> ValueOr = get<bool>(LocalName);
   if (ValueOr)
     return *ValueOr;
-  logIfOptionParsingError(ValueOr.takeError());
+  reportOptionParsingError(ValueOr.takeError());
   return Default;
 }
 
@@ -146,7 +153,7 @@ bool ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName,
   llvm::Expected<bool> ValueOr = getLocalOrGlobal<bool>(LocalName);
   if (ValueOr)
     return *ValueOr;
-  logIfOptionParsingError(ValueOr.takeError());
+  reportOptionParsingError(ValueOr.takeError());
   return Default;
 }
 
@@ -205,11 +212,11 @@ llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
                                                       Iter->getValue().Value);
 }
 
-void ClangTidyCheck::OptionsView::logIfOptionParsingError(llvm::Error &&Err) {
+void ClangTidyCheck::OptionsView::reportOptionParsingError(
+    llvm::Error &&Err) const {
   if (auto RemainingErrors =
           llvm::handleErrors(std::move(Err), [](const MissingOptionError &) {}))
-    llvm::logAllUnhandledErrors(std::move(RemainingErrors),
-                                llvm::WithColor::warning());
+    Context->configurationDiag(llvm::toString(std::move(RemainingErrors)));
 }
 
 template <>

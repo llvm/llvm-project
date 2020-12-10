@@ -7,8 +7,6 @@
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:   -target-abi elfv1 | FileCheck %s --check-prefix=CHECK-ELFv1
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s \
-// RUN:   -target-abi elfv1-qpx | FileCheck %s --check-prefix=CHECK-ELFv1
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:   -target-abi elfv2 | FileCheck %s --check-prefix=CHECK-ELFv2
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ELFv2

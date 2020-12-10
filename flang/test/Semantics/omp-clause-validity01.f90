@@ -62,7 +62,7 @@ use omp_lib
      a = 3.14
   enddo
   !$omp end parallel
-  
+
   !$omp task private(b) allocate(b)
   do i = 1, N
      z = 2
@@ -80,7 +80,7 @@ use omp_lib
      z = 2
   end do
   !$omp end target
- 
+
   !ERROR: ALLOCATE clause is not allowed on the TARGET DATA directive
   !$omp target data map(from: b) allocate(b)
   do i = 1, N
@@ -214,8 +214,9 @@ use omp_lib
      a = 3.14
   enddo
 
+  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
-  !ERROR: A loop directive may not have both a LINEAR clause and an ORDERED clause with a parameter
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
   do i = 1, N
      a = 3.14
@@ -319,7 +320,7 @@ use omp_lib
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
   !$omp single private(a) lastprivate(c)
   a = 3.14
-  !ERROR: The COPYPRIVATE clause must not be used with the NOWAIT clause
+  !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
@@ -365,7 +366,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The ALIGNMENT parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
   !$omp simd aligned(b:-2)
   do i = 1, N
      a = 3.14
@@ -487,6 +488,11 @@ use omp_lib
   !$omp flush release
   !$omp flush acquire
   !$omp flush release (c)
+  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
+  !$omp flush seq_cst
+  !ERROR: RELAXED clause is not allowed on the FLUSH directive
+  !$omp flush relaxed
+
   !$omp cancel DO
   !$omp cancellation point parallel
 
@@ -552,7 +558,7 @@ use omp_lib
   enddo
 
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The ALIGNMENT parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
   !$omp taskloop simd simdlen(-1) aligned(a:-2)
   do i = 1, N
      a = 3.14

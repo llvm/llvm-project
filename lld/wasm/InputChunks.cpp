@@ -79,6 +79,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB:
       existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
@@ -96,6 +97,7 @@ void InputChunk::verifyRelocTargets() const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       existingValue = read64le(loc);
       break;
     default:
@@ -132,10 +134,11 @@ void InputChunk::writeTo(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
                     << " count=" << relocations.size() << "\n");
   int32_t off = outputOffset - getInputSectionOffset();
+  auto tombstone = getTombstone();
 
   for (const WasmRelocation &rel : relocations) {
     uint8_t *loc = buf + rel.Offset + off;
-    auto value = file->calcNewValue(rel);
+    auto value = file->calcNewValue(rel, tombstone);
     LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(rel.Type));
     if (rel.Type != R_WASM_TYPE_INDEX_LEB)
       LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
@@ -158,6 +161,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB:
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
@@ -174,6 +178,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       write64le(loc, value);
       break;
     default:
@@ -287,11 +292,13 @@ void InputFunction::calculateSize() {
   uint32_t start = getInputSectionOffset();
   uint32_t end = start + function->Size;
 
+  auto tombstone = getTombstone();
+
   uint32_t lastRelocEnd = start + functionSizeLength;
   for (const WasmRelocation &rel : relocations) {
     LLVM_DEBUG(dbgs() << "  region: " << (rel.Offset - lastRelocEnd) << "\n");
     compressedFuncSize += rel.Offset - lastRelocEnd;
-    compressedFuncSize += getRelocWidth(rel, file->calcNewValue(rel));
+    compressedFuncSize += getRelocWidth(rel, file->calcNewValue(rel, tombstone));
     lastRelocEnd = rel.Offset + getRelocWidthPadded(rel);
   }
   LLVM_DEBUG(dbgs() << "  final region: " << (end - lastRelocEnd) << "\n");
@@ -319,6 +326,7 @@ void InputFunction::writeTo(uint8_t *buf) const {
   const uint8_t *secStart = file->codeSection->Content.data();
   const uint8_t *funcStart = secStart + getInputSectionOffset();
   const uint8_t *end = funcStart + function->Size;
+  auto tombstone = getTombstone();
   uint32_t count;
   decodeULEB128(funcStart, &count);
   funcStart += count;
@@ -331,7 +339,7 @@ void InputFunction::writeTo(uint8_t *buf) const {
     LLVM_DEBUG(dbgs() << "  write chunk: " << chunkSize << "\n");
     memcpy(buf, lastRelocEnd, chunkSize);
     buf += chunkSize;
-    buf += writeCompressedReloc(buf, rel, file->calcNewValue(rel));
+    buf += writeCompressedReloc(buf, rel, file->calcNewValue(rel, tombstone));
     lastRelocEnd = secStart + rel.Offset + getRelocWidthPadded(rel);
   }
 
@@ -355,6 +363,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
                                 ? WASM_OPCODE_I64_ADD
                                 : WASM_OPCODE_I32_ADD;
 
+  auto tombstone = getTombstone();
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   uint64_t segmentVA = outputSeg->startVA + outputSegmentOffset;
@@ -401,7 +410,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
       writeU8(os, opcode_reloc_const, "CONST");
-      writeSleb128(os, file->calcNewValue(rel), "offset");
+      writeSleb128(os, file->calcNewValue(rel, tombstone), "offset");
       writeU8(os, opcode_reloc_add, "ADD");
     }
 
@@ -410,6 +419,21 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
     writeUleb128(os, 2, "align");
     writeUleb128(os, 0, "offset");
   }
+}
+
+uint64_t InputSection::getTombstoneForSection(StringRef name) {
+  // When a function is not live we need to update relocations referring to it.
+  // If they occur in DWARF debug symbols, we want to change the pc of the
+  // function to -1 to avoid overlapping with a valid range. However for the
+  // debug_ranges and debug_loc sections that would conflict with the existing
+  // meaning of -1 so we use -2.
+  // Returning 0 means there is no tombstone value for this section, and relocation
+  // will just use the addend.
+  if (!name.startswith(".debug_"))
+    return 0;
+  if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
+    return UINT64_C(-2);
+  return UINT64_C(-1);
 }
 
 } // namespace wasm

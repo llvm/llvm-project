@@ -524,6 +524,28 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
 
       return true;
     }
+    // detect a __builtin_debugtrap instruction pattern ("brk #0xf000")
+    // and advance the $pc past it, so that the user can continue execution.
+    // Generally speaking, this knowledge should be centralized in lldb, 
+    // recognizing the builtin_trap instruction and knowing how to advance
+    // the pc past it, so that continue etc work.
+    if (exc.exc_data.size() == 2 && exc.exc_data[0] == EXC_ARM_BREAKPOINT) {
+      nub_addr_t pc = GetPC(INVALID_NUB_ADDRESS);
+      if (pc != INVALID_NUB_ADDRESS && pc > 0) {
+        DNBBreakpoint *bp =
+            m_thread->Process()->Breakpoints().FindByAddress(pc);
+        if (bp == nullptr) {
+          uint8_t insnbuf[4];
+          if (m_thread->Process()->ReadMemory(pc, 4, insnbuf) == 4) {
+            uint8_t builtin_debugtrap_insn[4] = {0x00, 0x00, 0x3e,
+                                                 0xd4}; // brk #0xf000
+            if (memcmp(insnbuf, builtin_debugtrap_insn, 4) == 0) {
+              SetPC(pc + 4);
+            }
+          }
+        }
+      }
+    }
     break;
   }
   return false;

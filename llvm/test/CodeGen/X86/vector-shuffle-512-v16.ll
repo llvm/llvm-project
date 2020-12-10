@@ -167,6 +167,16 @@ define <16 x float> @shuffle_v16f32_00_17_02_19_04_21_06_23_08_25_10_27_12_29_14
   ret <16 x float> %tmp2
 }
 
+; PR48322
+define <16 x float> @shuffle_v16f32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28_29(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28_29:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[7],zmm1[6]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 2, i32 3, i32 16, i32 17, i32 6, i32 7, i32 20, i32 21, i32 10, i32 11, i32 24, i32 25, i32 14, i32 15, i32 28, i32 29>
+  ret <16 x float> %shuffle
+}
+
 define <16 x i32> @shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; ALL:       # %bb.0:
@@ -502,6 +512,22 @@ define <16 x i32> @shuffle_v16i32_16_16_02_03_20_20_06_07_24_24_10_11_28_28_uu_u
 ; ALL-NEXT:    vshufps {{.*#+}} zmm0 = zmm1[0,0],zmm0[2,3],zmm1[4,4],zmm0[6,7],zmm1[8,8],zmm0[10,11],zmm1[12,12],zmm0[14,15]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 16, i32 16, i32 02, i32 03, i32 20, i32 20, i32 06, i32 07, i32 24, i32 24, i32 10, i32 11, i32 28, i32 28, i32 undef, i32 undef>
+  ret <16 x i32> %shuffle
+}
+
+; PR48322
+define <16 x i32> @shuffle_v16i32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28_29(<16 x i32> %a, <16 x i32> %b) {
+; AVX512F-LABEL: shuffle_v16i32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28_29:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,8,3,10,5,12,7,14]
+; AVX512F-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuffle_v16i32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28_29:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpalignr {{.*#+}} zmm0 = zmm0[8,9,10,11,12,13,14,15],zmm1[0,1,2,3,4,5,6,7],zmm0[24,25,26,27,28,29,30,31],zmm1[16,17,18,19,20,21,22,23],zmm0[40,41,42,43,44,45,46,47],zmm1[32,33,34,35,36,37,38,39],zmm0[56,57,58,59,60,61,62,63],zmm1[48,49,50,51,52,53,54,55]
+; AVX512BW-NEXT:    retq
+  %shuffle = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 2, i32 3, i32 16, i32 17, i32 6, i32 7, i32 20, i32 21, i32 10, i32 11, i32 24, i32 25, i32 14, i32 15, i32 28, i32 29>
   ret <16 x i32> %shuffle
 }
 

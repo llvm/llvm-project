@@ -416,43 +416,43 @@ DWARF:
 ...
 
 #CHECK:   debug_info:      
-#CHECK:     - Length:          0x00000000000000A8
+#CHECK:     - Length:          0xA8
 #CHECK:       Version:         2
 #CHECK:       AbbrOffset:      0
 #CHECK:       AddrSize:        8
 #CHECK:       Entries:         
-#CHECK:         - AbbrCode:        0x00000001
+#CHECK:         - AbbrCode:        0x1
 #CHECK:           Values:          
-#CHECK:             - Value:           0x0123456789ABCDEF
-#CHECK:             - Value:           0x000000000000000A
-#CHECK:               BlockData:       [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-#CHECK:                                  0x08, 0x09, 0x00 ]
-#CHECK:             - Value:           0x000000000000000A
-#CHECK:               BlockData:       [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-#CHECK:                                  0x08, 0x09, 0x00 ]
-#CHECK:             - Value:           0x000000000000000A
-#CHECK:               BlockData:       [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-#CHECK:                                  0x08, 0x09, 0x00 ]
-#CHECK:             - Value:           0x000000000000000A
-#CHECK:               BlockData:       [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-#CHECK:                                  0x08, 0x09, 0x00 ]
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000002345
-#CHECK:             - Value:           0x000000006789ABCD
-#CHECK:             - Value:           0x0011223344556677
+#CHECK:             - Value:           0x123456789ABCDEF
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2345
+#CHECK:             - Value:           0x6789ABCD
+#CHECK:             - Value:           0x11223344556677
 #CHECK:               CStr:            Hello
-#CHECK:             - Value:           0x0000000000000000
-#CHECK:             - Value:           0x0000000012345678
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000002345
-#CHECK:             - Value:           0x000000006789ABCD
-#CHECK:             - Value:           0x0011223344556677
+#CHECK:             - Value:           0x0
+#CHECK:             - Value:           0x12345678
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2345
+#CHECK:             - Value:           0x6789ABCD
+#CHECK:             - Value:           0x11223344556677
 #CHECK:             - Value:           0xAABBCCDDEEFF0011
 #CHECK:             - Value:           0xFFFFFFFFFFFFFFFE
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000000
-#CHECK:             - Value:           0x0000000000000001
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x0
+#CHECK:             - Value:           0x1
 #CHECK:             - Value:           0xFFFFFFFFFFFFFFFE
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000002
-#CHECK:             - Value:           0x0123456789ABCDEF
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2
+#CHECK:             - Value:           0x123456789ABCDEF

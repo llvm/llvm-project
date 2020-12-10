@@ -48,42 +48,54 @@ FileHeader:
 Sections:
   - Name: .group
     Type: SHT_GROUP
-    Link: .symtab
+    Link: [[SYMTAB1=.symtab]]
     Info: foo
     Members:
       - SectionOrType: GRP_COMDAT
       - SectionOrType: .text.foo
-      - SectionOrType: .rela.text.foo
+      - SectionOrType: [[MEMBER1=.rela.text.foo]]
+    ShSize: [[SECSIZE1=<none>]]
+    ShName: [[GROUP1SHNAME=<none>]]
   - Name: .group1
     Type: SHT_GROUP
-    Link: .symtab
+    Link: [[SYMTAB2=.symtab]]
     Info: bar
     Members:
       - SectionOrType: GRP_COMDAT
-      - SectionOrType: [[TEXTBARNAME=.text.bar]]
+      - SectionOrType: [[MEMBER2=.text.bar]]
       - SectionOrType: .rela.text.bar
+    ShSize: [[SECSIZE2=<none>]]
   - Name:  .text.foo
     Type:  SHT_PROGBITS
   - Name: .rela.text.foo
     Type: SHT_RELA
     Link: .symtab
     Info: .text.foo
-  - Name: .text.bar
-    Type: SHT_PROGBITS
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    ShName: [[TEXTBARSHNAME=<none>]]
   - Name: .rela.text.bar
     Type: SHT_RELA
     Link: .symtab
     Info: .text.bar
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Link: [[SYMTABLINK=.strtab]]
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: [[STRTABCONTENT=<none>]]
 Symbols:
   - Name:    foo
     Section: .text.foo
+    StName:  [[SYM1STNAME=<none>]]
   - Name:    bar
     Section: .text.bar
+    StName:  [[SYM2STNAME=<none>]]
 
 ## Check that we report a warning and continue dumping when a section is included
 ## in two group sections at the same time.
 
-# RUN: yaml2obj %s -DTEXTBARNAME=.text.foo -o %t.dup.o
+# RUN: yaml2obj %s -DMEMBER2=.text.foo -o %t.dup.o
 # RUN: llvm-readobj --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-LLVM
 # RUN: llvm-readelf --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-GNU
 
@@ -123,3 +135,286 @@ Symbols:
 # DUP-GNU-NEXT: warning: '[[FILE]]': section with index 3, included in the group section with index 1, was also found in the group section with index 2
 # DUP-GNU-NEXT:    [    3]   .text.foo
 # DUP-GNU-NEXT:    [    6]   .rela.text.bar
+
+## Check what we do when we are unable to dump the signature symbol name.
+## In this case the index of the string table section, linked to the symbol table used by a group section,
+## is broken (section does not exist).
+## Check we report a warning in this case. Check we don't print the same warning message twice.
+
+# RUN: yaml2obj %s -DSYMTABLINK=0xFF -o %t.symtab.o
+# RUN: llvm-readobj --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-GNU --implicit-check-not=warning:
+
+# SYMTAB-LLVM:      Groups {
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: invalid section index: 255
+# SYMTAB-LLVM-NEXT:   Group {
+# SYMTAB-LLVM-NEXT:     Name: .group (16)
+# SYMTAB-LLVM-NEXT:     Index: 1
+# SYMTAB-LLVM-NEXT:     Link: 7
+# SYMTAB-LLVM-NEXT:     Info: 1
+# SYMTAB-LLVM-NEXT:     Type: COMDAT (0x1)
+# SYMTAB-LLVM-NEXT:     Signature: <?>
+# SYMTAB-LLVM-NEXT:     Section(s) in group [
+# SYMTAB-LLVM-NEXT:       .text.foo (3)
+# SYMTAB-LLVM-NEXT:       .rela.text.foo (4)
+# SYMTAB-LLVM-NEXT:     ]
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT:   Group {
+# SYMTAB-LLVM-NEXT:     Name: .group1 (64)
+# SYMTAB-LLVM-NEXT:     Index: 2
+# SYMTAB-LLVM-NEXT:     Link: 7
+# SYMTAB-LLVM-NEXT:     Info: 2
+# SYMTAB-LLVM-NEXT:     Type: COMDAT (0x1)
+# SYMTAB-LLVM-NEXT:     Signature: <?>
+# SYMTAB-LLVM-NEXT:     Section(s) in group [
+# SYMTAB-LLVM-NEXT:       .text.bar (5)
+# SYMTAB-LLVM-NEXT:       .rela.text.bar (6)
+# SYMTAB-LLVM-NEXT:     ]
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: }
+
+# SYMTAB-GNU:        warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: invalid section index: 255
+# SYMTAB-GNU-EMPTY:
+# SYMTAB-GNU-NEXT:   COMDAT group section [    1] `.group' [<?>] contains 2 sections:
+# SYMTAB-GNU-NEXT:      [Index]    Name
+# SYMTAB-GNU-NEXT:      [    3]   .text.foo
+# SYMTAB-GNU-NEXT:      [    4]   .rela.text.foo
+# SYMTAB-GNU-EMPTY:
+# SYMTAB-GNU-NEXT:   COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
+# SYMTAB-GNU-NEXT:      [Index]    Name
+# SYMTAB-GNU-NEXT:      [    5]   .text.bar
+# SYMTAB-GNU-NEXT:      [    6]   .rela.text.bar
+
+## This tests the behavior for two more cases when we are unable to dump the signature symbol name.
+## In the first case we link the group section to the section with index 255, which does not exist.
+## We check that a warning is reported when we are unable to locate the symbol table.
+## In the second case we link the SHT_GROUP section to itself. This documents that we don't check the
+## type of the linked section (we assume it is the symbol table) and checks that we report a warning
+## when we are unable to read a signature symbol.
+
+# RUN: yaml2obj %s -DSYMTAB1=0xFF -DSYMTAB2=0x1 -o %t.symtab2.o
+# RUN: llvm-readobj --elf-section-groups %t.symtab2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab2.o %s --check-prefix=SIGNATURE-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.symtab2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab2.o %s --check-prefix=SIGNATURE-GNU --implicit-check-not=warning:
+
+# SIGNATURE:      Groups {
+# SIGNATURE-LLVM: warning: '[[FILE]]': unable to get the symbol table for SHT_GROUP section with index 1: invalid section index: 255
+# SIGNATURE-LLVM: warning: '[[FILE]]': unable to get the signature symbol for SHT_GROUP section with index 2: section [index 1] has invalid sh_entsize: expected 24, but got 4
+# SIGNATURE-LLVM:   Group {
+# SIGNATURE-LLVM:     Name: .group (16)
+# SIGNATURE-LLVM:     Index: 1
+# SIGNATURE-LLVM:     Link: 255
+# SIGNATURE-LLVM:     Info: 1
+# SIGNATURE-LLVM:     Type: COMDAT (0x1)
+# SIGNATURE-LLVM:     Signature: <?>
+# SIGNATURE-LLVM:     Section(s) in group [
+# SIGNATURE-LLVM:       .text.foo (3)
+# SIGNATURE-LLVM:       .rela.text.foo (4)
+# SIGNATURE-LLVM:     ]
+# SIGNATURE-LLVM:   }
+# SIGNATURE-LLVM:   Group {
+# SIGNATURE-LLVM:     Name: .group1 (64)
+# SIGNATURE-LLVM:     Index: 2
+# SIGNATURE-LLVM:     Link: 1
+# SIGNATURE-LLVM:     Info: 2
+# SIGNATURE-LLVM:     Type: COMDAT (0x1)
+# SIGNATURE-LLVM:     Signature: <?>
+# SIGNATURE-LLVM:     Section(s) in group [
+# SIGNATURE-LLVM:       .text.bar (5)
+# SIGNATURE-LLVM:       .rela.text.bar (6)
+# SIGNATURE-LLVM:     ]
+# SIGNATURE-LLVM:   }
+# SIGNATURE-LLVM: }
+
+# SIGNATURE-GNU:       warning: '[[FILE]]': unable to get the symbol table for SHT_GROUP section with index 1: invalid section index: 255
+# SIGNATURE-GNU-NEXT:  warning: '[[FILE]]': unable to get the signature symbol for SHT_GROUP section with index 2: section [index 1] has invalid sh_entsize: expected 24, but got 4
+# SIGNATURE-GNU-EMPTY:
+# SIGNATURE-GNU-NEXT:  COMDAT group section [    1] `.group' [<?>] contains 2 sections:
+# SIGNATURE-GNU-NEXT:     [Index]    Name
+# SIGNATURE-GNU-NEXT:     [    3]   .text.foo
+# SIGNATURE-GNU-NEXT:     [    4]   .rela.text.foo
+# SIGNATURE-GNU-EMPTY:
+# SIGNATURE-GNU-NEXT:  COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
+# SIGNATURE-GNU-NEXT:     [Index]    Name
+# SIGNATURE-GNU-NEXT:     [    5]   .text.bar
+# SIGNATURE-GNU-NEXT:     [    6]   .rela.text.bar
+
+## Check we report a warning when the content of the group section is empty or can't be read.
+## In both cases we are unable to read the section group flag and dump it as 0.
+
+# RUN: yaml2obj %s -DSECSIZE1=0x0 -DSECSIZE2=0x1 -o %t.secsize.o
+# RUN: llvm-readobj --elf-section-groups %t.secsize.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.secsize.o %s --check-prefix=CONTENT-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.secsize.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.secsize.o %s --check-prefix=CONTENT-GNU --implicit-check-not=warning:
+
+# CONTENT-LLVM:      Groups {
+# CONTENT-LLVM-NEXT: warning: '[[FILE]]': unable to read the section group flag from the SHT_GROUP section with index 1: the section is empty
+# CONTENT-LLVM-NEXT: warning: '[[FILE]]': unable to get the content of the SHT_GROUP section with index 2: section [index 2] has an invalid sh_size (1) which is not a multiple of its sh_entsize (4)
+# CONTENT-LLVM-NEXT:   Group {
+# CONTENT-LLVM-NEXT:     Name: .group (16)
+# CONTENT-LLVM-NEXT:     Index: 1
+# CONTENT-LLVM-NEXT:     Link: 7
+# CONTENT-LLVM-NEXT:     Info: 1
+# CONTENT-LLVM-NEXT:     Type: (unknown) (0x0)
+# CONTENT-LLVM-NEXT:     Signature: foo
+# CONTENT-LLVM-NEXT:     Section(s) in group [
+# CONTENT-LLVM-NEXT:     ]
+# CONTENT-LLVM-NEXT:   }
+# CONTENT-LLVM-NEXT:   Group {
+# CONTENT-LLVM-NEXT:     Name: .group1 (64)
+# CONTENT-LLVM-NEXT:     Index: 2
+# CONTENT-LLVM-NEXT:     Link: 7
+# CONTENT-LLVM-NEXT:     Info: 2
+# CONTENT-LLVM-NEXT:     Type: (unknown) (0x0)
+# CONTENT-LLVM-NEXT:     Signature: bar
+# CONTENT-LLVM-NEXT:     Section(s) in group [
+# CONTENT-LLVM-NEXT:     ]
+# CONTENT-LLVM-NEXT:   }
+# CONTENT-LLVM-NEXT: }
+
+# CONTENT-GNU:       warning: '[[FILE]]': unable to read the section group flag from the SHT_GROUP section with index 1: the section is empty
+# CONTENT-GNU:       warning: '[[FILE]]': unable to get the content of the SHT_GROUP section with index 2: section [index 2] has an invalid sh_size (1) which is not a multiple of its sh_entsize (4)
+# CONTENT-GNU-EMPTY:
+# CONTENT-GNU-NEXT:  (unknown) group section [    1] `.group' [foo] contains 0 sections:
+# CONTENT-GNU-NEXT:    [Index]    Name
+# CONTENT-GNU-EMPTY:
+# CONTENT-GNU-NEXT:  (unknown) group section [    2] `.group1' [bar] contains 0 sections:
+# CONTENT-GNU-NEXT:    [Index]    Name
+
+## Check that we emit a warning when we are unable to read the group section name or the name of a member.
+
+# RUN: yaml2obj %s -DGROUP1SHNAME=0xAAAA -DTEXTBARSHNAME=0xBBBB -o %t.name.o
+# RUN: llvm-readobj --elf-section-groups %t.name.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.name.o %s --check-prefix=NAME-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.name.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.name.o %s --check-prefix=NAME-GNU --implicit-check-not=warning:
+
+# NAME-LLVM:      Groups {
+# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
+# NAME-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
+# NAME-LLVM-NEXT:   Group {
+# NAME-LLVM-NEXT:     Name: <?> (43690)
+# NAME-LLVM-NEXT:     Index: 1
+# NAME-LLVM-NEXT:     Link: 7
+# NAME-LLVM-NEXT:     Info: 1
+# NAME-LLVM-NEXT:     Type: COMDAT (0x1)
+# NAME-LLVM-NEXT:     Signature: foo
+# NAME-LLVM-NEXT:     Section(s) in group [
+# NAME-LLVM-NEXT:       .text.foo (3)
+# NAME-LLVM-NEXT:       .rela.text.foo (4)
+# NAME-LLVM-NEXT:     ]
+# NAME-LLVM-NEXT:   }
+# NAME-LLVM-NEXT:   Group {
+# NAME-LLVM-NEXT:     Name: .group1 (64)
+# NAME-LLVM-NEXT:     Index: 2
+# NAME-LLVM-NEXT:     Link: 7
+# NAME-LLVM-NEXT:     Info: 2
+# NAME-LLVM-NEXT:     Type: COMDAT (0x1)
+# NAME-LLVM-NEXT:     Signature: bar
+# NAME-LLVM-NEXT:     Section(s) in group [
+# NAME-LLVM-NEXT:       <?> (5)
+# NAME-LLVM-NEXT:       .rela.text.bar (6)
+# NAME-LLVM-NEXT:     ]
+# NAME-LLVM-NEXT:   }
+# NAME-LLVM-NEXT: }
+
+# NAME-GNU:        warning: '[[FILE]]': unable to get the name of SHT_GROUP section with index 1: a section [index 1] has an invalid sh_name (0xaaaa) offset which goes past the end of the section name string table
+# NAME-GNU-NEXT:   warning: '[[FILE]]': unable to get the name of SHT_PROGBITS section with index 5: a section [index 5] has an invalid sh_name (0xbbbb) offset which goes past the end of the section name string table
+# NAME-GNU-EMPTY:
+# NAME-GNU-NEXT:   COMDAT group section [    1] `<?>' [foo] contains 2 sections:
+# NAME-GNU-NEXT:      [Index]    Name
+# NAME-GNU-NEXT:      [    3]   .text.foo
+# NAME-GNU-NEXT:      [    4]   .rela.text.foo
+# NAME-GNU-EMPTY:
+# NAME-GNU-NEXT:  COMDAT group section [    2] `.group1' [bar] contains 2 sections:
+# NAME-GNU-NEXT:     [Index]    Name
+# NAME-GNU-NEXT:     [    5]   <?>
+# NAME-GNU-NEXT:     [    6]   .rela.text.bar
+
+## Check we report a warning then the section index of a section group member is invalid.
+
+# RUN: yaml2obj %s -DMEMBER1=0xEE -DMEMBER2=0xFF -o %t.member.index.o
+# RUN: llvm-readobj --elf-section-groups %t.member.index.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.member.index.o %s --check-prefix=MEMBER-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.member.index.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.member.index.o %s --check-prefix=MEMBER-GNU --implicit-check-not=warning:
+
+# MEMBER-LLVM:      Groups {
+# MEMBER-LLVM-NEXT: warning: '[[FILE]]': unable to get the section with index 238 when dumping the SHT_GROUP section with index 1: invalid section index: 238
+# MEMBER-LLVM-NEXT: warning: '[[FILE]]': unable to get the section with index 255 when dumping the SHT_GROUP section with index 2: invalid section index: 255
+# MEMBER-LLVM-NEXT:   Group {
+# MEMBER-LLVM-NEXT:     Name: .group (16)
+# MEMBER-LLVM-NEXT:     Index: 1
+# MEMBER-LLVM-NEXT:     Link: 7
+# MEMBER-LLVM-NEXT:     Info: 1
+# MEMBER-LLVM-NEXT:     Type: COMDAT (0x1)
+# MEMBER-LLVM-NEXT:     Signature: foo
+# MEMBER-LLVM-NEXT:     Section(s) in group [
+# MEMBER-LLVM-NEXT:       .text.foo (3)
+# MEMBER-LLVM-NEXT:       <?> (238)
+# MEMBER-LLVM-NEXT:     ]
+# MEMBER-LLVM-NEXT:   }
+# MEMBER-LLVM-NEXT:   Group {
+# MEMBER-LLVM-NEXT:     Name: .group1 (64)
+# MEMBER-LLVM-NEXT:     Index: 2
+# MEMBER-LLVM-NEXT:     Link: 7
+# MEMBER-LLVM-NEXT:     Info: 2
+# MEMBER-LLVM-NEXT:     Type: COMDAT (0x1)
+# MEMBER-LLVM-NEXT:     Signature: bar
+# MEMBER-LLVM-NEXT:     Section(s) in group [
+# MEMBER-LLVM-NEXT:       <?> (255)
+# MEMBER-LLVM-NEXT:       .rela.text.bar (6)
+# MEMBER-LLVM-NEXT:     ]
+# MEMBER-LLVM-NEXT:   }
+# MEMBER-LLVM-NEXT: }
+
+# MEMBER-GNU:       warning: '[[FILE]]': unable to get the section with index 238 when dumping the SHT_GROUP section with index 1: invalid section index: 238
+# MEMBER-GNU-NEXT:  warning: '[[FILE]]': unable to get the section with index 255 when dumping the SHT_GROUP section with index 2: invalid section index: 255
+# MEMBER-GNU-EMPTY:
+# MEMBER-GNU-NEXT:  COMDAT group section [    1] `.group' [foo] contains 2 sections:
+# MEMBER-GNU-NEXT:     [Index]    Name
+# MEMBER-GNU-NEXT:     [    3]   .text.foo
+# MEMBER-GNU-NEXT:     [  238]   <?>
+# MEMBER-GNU-EMPTY:
+# MEMBER-GNU-NEXT:  COMDAT group section [    2] `.group1' [bar] contains 2 sections:
+# MEMBER-GNU-NEXT:     [Index]    Name
+# MEMBER-GNU-NEXT:     [  255]   <?>
+# MEMBER-GNU-NEXT:     [    6]   .rela.text.bar
+
+## Check warnings that are reported when the st_name field of the signature symbol goes past the end of the string table.
+
+## We set the content of the string table to '0061626300' ('\0abc\0') to fixup the size of the string table.
+## This makes it easier to test the boundary conditions.
+# RUN: yaml2obj %s -DSTRTABCONTENT="0061626300" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame.o
+# RUN: llvm-readobj --elf-section-groups %t.signame.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.signame.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-GNU --implicit-check-not=warning:
+
+# SIGNAME1-WARN: warning: '[[FILE]]': unable to get the name of the symbol with index 2: st_name (0x5) is past the end of the string table of size 0x5
+
+# SIGNAME1-LLVM: Signature: {{$}}
+# SIGNAME1-LLVM: Signature: <?>
+
+# SIGNAME1-GNU: COMDAT group section [    1] `.group' [] contains 2 sections:
+# SIGNAME1-GNU: COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
+
+## Check we report a warning when the string table that contains the signature symbol name is not null-terminated.
+
+# RUN: yaml2obj %s -DSTRTABCONTENT="0061626361" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame2.o
+# RUN: llvm-readobj --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-GNU --implicit-check-not=warning:
+
+# SIGNAME2-WARN: warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: SHT_STRTAB string table section [index 8] is non-null terminated
+
+# SIGNAME2-LLVM: Signature: <?>
+# SIGNAME2-LLVM: Signature: <?>
+
+# SIGNAME2-GNU: COMDAT group section [    1] `.group' [<?>] contains 2 sections:
+# SIGNAME2-GNU: COMDAT group section [    2] `.group1' [<?>] contains 2 sections:

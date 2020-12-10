@@ -92,7 +92,7 @@ private:
   static llvm::ArrayRef<Rule> rulesFor(llvm::StringRef Arg);
   const Rule *matchingRule(llvm::StringRef Arg, unsigned Mode,
                            unsigned &ArgCount) const;
-  llvm::SmallVector<Rule, 4> Rules;
+  llvm::SmallVector<Rule> Rules;
   std::deque<std::string> Storage; // Store strings not found in option table.
 };
 

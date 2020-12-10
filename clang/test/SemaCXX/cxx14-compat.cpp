@@ -16,7 +16,7 @@ namespace [[]] NS_with_attr {} // expected-warning {{incompatible with C++ stand
 enum { e [[]] }; // expected-warning {{incompatible with C++ standards before C++17}}
 
 template<typename T = int> struct X {};
-X x; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17; for compatibility, use explicit type name 'X<int>'}}
+X x; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17; for compatibility, use explicit type name 'X<>'}}
 
 template<template<typename> class> struct Y {};
 Y<X> yx; // ok, not class template argument deduction

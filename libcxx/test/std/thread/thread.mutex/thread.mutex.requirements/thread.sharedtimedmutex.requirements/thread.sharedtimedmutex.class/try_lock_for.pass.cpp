@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::shared_timed_mutex m;
@@ -73,14 +74,14 @@ int main(int, char**)
 {
     {
         m.lock();
-        std::thread t(f1);
+        std::thread t = support::make_test_thread(f1);
         std::this_thread::sleep_for(WaitTime);
         m.unlock();
         t.join();
     }
     {
         m.lock();
-        std::thread t(f2);
+        std::thread t = support::make_test_thread(f2);
         std::this_thread::sleep_for(WaitTime + Tolerance);
         m.unlock();
         t.join();

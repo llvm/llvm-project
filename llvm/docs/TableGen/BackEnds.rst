@@ -693,8 +693,8 @@ This class provides six fields.
   table that holds the entries. If unspecified, the ``FilterClass`` name is
   used.
 
-* ``list<string> Fields``. A list of the names of the fields in the
-  collected records that contain the data for the table entries. The order of
+* ``list<string> Fields``. A list of the names of the fields *in the
+  collected records* that contain the data for the table entries. The order of
   this list determines the order of the values in the C++ initializers. See
   below for information about the types of these fields.
 
@@ -706,12 +706,25 @@ This class provides six fields.
 
 * ``bit PrimaryKeyEarlyOut``. See the third example below.
 
-TableGen attempts to deduce the type of each of the table fields. It can
-deduce ``bit``, ``bits<n>``, ``string``, ``Intrinsic``, and ``Instruction``.
-These can be used in the primary key. TableGen also deduces ``code``, but it
-cannot be used in the primary key. Any other field types must be specified
+TableGen attempts to deduce the type of each of the table fields so that it
+can format the C++ initializers in the emitted table. It can deduce ``bit``,
+``bits<n>``, ``string``, ``Intrinsic``, and ``Instruction``.  These can be
+used in the primary key. Any other field types must be specified
 explicitly; this is done as shown in the second example below. Such fields
 cannot be used in the primary key.
+
+One special case of the field type has to do with code. Arbitrary code is
+represented by a string, but has to be emitted as a C++ initializer without
+quotes. If the code field was defined using a code literal (``[{...}]``),
+then TableGen will know to emit it without quotes. However, if it was
+defined using a string literal or complex string expression, then TableGen
+will not know. In this case, you can force TableGen to treat the field as
+code by including the following line in the ``GenericTable`` record, where
+*xxx* is the code field name.
+
+.. code-block:: text
+
+  string TypeOf_xxx = "code";
 
 Here is an example where TableGen can deduce the field types. Note that the
 table entry records are anonymous; the names of entry records are
@@ -793,7 +806,7 @@ pointer if no entry is found.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen
-of the type, the class derived from ``GenericTable`` must include a field
+of the type, the record derived from ``GenericTable`` must include a string field
 named ``TypeOf_``\ *field*, where *field* is the name of the field whose type
 is required.
 
@@ -802,7 +815,7 @@ is required.
   def CTable : GenericTable {
     let FilterClass = "CEntry";
     let Fields = ["Name", "Kind", "Encoding"];
-    GenericEnum TypeOf_Kind = CEnum;
+    string TypeOf_Kind = "CEnum";
     let PrimaryKey = ["Encoding"];
     let PrimaryKeyName = "lookupCEntryByEncoding";
   }

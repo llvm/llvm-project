@@ -13,7 +13,7 @@ public:
 
   ~unique_ptr() { delete ptr; }
 
-  unique_ptr &operator=(unique_ptr &&other) { // expected-note{{candidate function not viable: no known conversion from 'unique_ptr<int>' to 'unique_ptr<int> &&' for 1st argument}}
+  unique_ptr &operator=(unique_ptr &&other) { // expected-note{{candidate function not viable: expects an rvalue for 1st argument}}
     if (this == &other)
       return *this;
 

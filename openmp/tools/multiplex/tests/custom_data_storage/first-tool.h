@@ -123,7 +123,7 @@ static void on_cds_ompt_callback_master(ompt_scope_endpoint_t endpoint,
                                         const void *codeptr_ra) {
   parallel_data = get_own_ompt_data(parallel_data);
   task_data = get_own_ompt_data(task_data);
-  on_ompt_callback_master(endpoint, parallel_data, task_data, codeptr_ra);
+  on_ompt_callback_masked(endpoint, parallel_data, task_data, codeptr_ra);
 }
 
 static void on_cds_ompt_callback_parallel_begin(

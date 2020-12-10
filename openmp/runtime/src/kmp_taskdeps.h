@@ -89,6 +89,16 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_depnode_t *node = task->td_depnode;
 
+  // Check mutexinoutset dependencies, release locks
+  if (UNLIKELY(node && (node->dn.mtx_num_locks < 0))) {
+    // negative num_locks means all locks were acquired
+    node->dn.mtx_num_locks = -node->dn.mtx_num_locks;
+    for (int i = node->dn.mtx_num_locks - 1; i >= 0; --i) {
+      KMP_DEBUG_ASSERT(node->dn.mtx_locks[i] != NULL);
+      __kmp_release_lock(node->dn.mtx_locks[i], gtid);
+    }
+  }
+
   if (task->td_dephash) {
     KA_TRACE(
         40, ("__kmp_release_deps: T#%d freeing dependencies hash of task %p.\n",

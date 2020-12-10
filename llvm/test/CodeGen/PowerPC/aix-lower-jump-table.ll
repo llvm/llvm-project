@@ -1,16 +1,16 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN: -code-model=small -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefix=32SMALL-MIR %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN: -code-model=large -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefix=32LARGE-MIR %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -code-model=small -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefix=64SMALL-MIR %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -code-model=large -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefix=64LARGE-MIR %s
 

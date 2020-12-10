@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::condition_variable cv;
@@ -41,7 +42,7 @@ void func()
 int main(int, char**)
 {
     std::unique_lock<std::mutex> lk(mut);
-    std::thread t(func);
+    std::thread t = support::make_test_thread(func);
     Clock::time_point t0 = Clock::now();
     cv.wait(lk);
     Clock::time_point t1 = Clock::now();

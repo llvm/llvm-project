@@ -80,18 +80,18 @@ declare fp128 @llvm.sin.f128(fp128)
 ; Function Attrs: norecurse nounwind readnone
 define float @fsin_float_zero() {
 ; CHECK-LABEL: fsin_float_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 0.000000e+00
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fsin_double_zero() {
 ; CHECK-LABEL: fsin_double_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 0.000000e+00
 }
 
@@ -116,20 +116,20 @@ define fp128 @fsin_quad_zero() {
 ; Function Attrs: norecurse nounwind readnone
 define float @fsin_float_const() {
 ; CHECK-LABEL: fsin_float_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -1083652169
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 0xBFED18F6E0000000
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fsin_double_const() {
 ; CHECK-LABEL: fsin_double_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s0, -355355578
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, -1074980618(, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 0xBFED18F6EAD1B446
 }
 

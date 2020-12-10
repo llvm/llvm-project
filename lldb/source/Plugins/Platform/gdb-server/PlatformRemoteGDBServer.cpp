@@ -500,7 +500,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
           // The darwin always currently uses the GDB remote debugger plug-in
           // so even when debugging locally we are debugging remotely!
           process_sp = target->CreateProcess(launch_info.GetListener(),
-                                             "gdb-remote", nullptr);
+                                             "gdb-remote", nullptr, true);
 
           if (process_sp) {
             error = process_sp->ConnectRemote(connect_url.c_str());
@@ -587,7 +587,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
           // so even when debugging locally we are debugging remotely!
           process_sp =
               target->CreateProcess(attach_info.GetListenerForProcess(debugger),
-                                    "gdb-remote", nullptr);
+                                    "gdb-remote", nullptr, true);
           if (process_sp) {
             error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success()) {
@@ -835,18 +835,6 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
   if (path)
     result.Write(path, strlen(path));
   return std::string(result.GetString());
-}
-
-lldb::ProcessSP PlatformRemoteGDBServer::ConnectProcess(
-    llvm::StringRef connect_url, llvm::StringRef plugin_name,
-    lldb_private::Debugger &debugger, lldb_private::Target *target,
-    lldb_private::Status &error) {
-  if (!IsRemote() || !IsConnected()) {
-    error.SetErrorString("Not connected to remote gdb server");
-    return nullptr;
-  }
-  return Platform::ConnectProcess(connect_url, plugin_name, debugger, target,
-                                  error);
 }
 
 size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx | FileCheck %s --check-prefix=X64
 
-@b = external local_unnamed_addr global i32, align 4
+@b = external dso_local local_unnamed_addr global i32, align 4
 
 define void @PR33960() {
 ; X86-LABEL: PR33960:

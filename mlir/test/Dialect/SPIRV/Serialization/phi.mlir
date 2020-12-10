@@ -142,8 +142,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK-NEXT: ^bb4:
     ^merge:
-// CHECK-NEXT:   spv._merge
-      spv._merge
+// CHECK-NEXT:   spv.mlir.merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -165,16 +165,16 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %3 = spv.constant 12 : i32
     %4 = spv.constant 32 : i32
     %5 = spv.constant 4 : i32
-    %6 = spv._address_of @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
+    %6 = spv.mlir.addressof @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
     %7 = spv.Load "Input" %6 : vector<3xi32>
     %8 = spv.CompositeExtract %7[0 : i32] : vector<3xi32>
-    %9 = spv._address_of @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
+    %9 = spv.mlir.addressof @__builtin_var_WorkgroupId__ : !spv.ptr<vector<3xi32>, Input>
     %10 = spv.Load "Input" %9 : vector<3xi32>
     %11 = spv.CompositeExtract %10[1 : i32] : vector<3xi32>
-    %18 = spv._address_of @__builtin_var_NumWorkgroups__ : !spv.ptr<vector<3xi32>, Input>
+    %18 = spv.mlir.addressof @__builtin_var_NumWorkgroups__ : !spv.ptr<vector<3xi32>, Input>
     %19 = spv.Load "Input" %18 : vector<3xi32>
     %20 = spv.CompositeExtract %19[0 : i32] : vector<3xi32>
-    %21 = spv._address_of @__builtin_var_NumWorkgroups__ : !spv.ptr<vector<3xi32>, Input>
+    %21 = spv.mlir.addressof @__builtin_var_NumWorkgroups__ : !spv.ptr<vector<3xi32>, Input>
     %22 = spv.Load "Input" %21 : vector<3xi32>
     %23 = spv.CompositeExtract %22[1 : i32] : vector<3xi32>
     %30 = spv.IMul %11, %4 : i32
@@ -218,8 +218,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
         spv.Branch ^bb1(%48 : i32)
 // CHECK:     ^[[LP2_MG]]:
       ^bb3:
-// CHECK:       spv._merge
-        spv._merge
+// CHECK:       spv.mlir.merge
+        spv.mlir.merge
       }
 // CHECK:     %[[ADD2:.*]] = spv.IAdd %[[LP1_HDR_ARG]]
       %36 = spv.IAdd %32, %31 : i32
@@ -227,8 +227,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^bb1(%36 : i32)
 // CHECK:   ^[[LP1_MG]]:
     ^bb3:
-// CHECK:     spv._merge
-      spv._merge
+// CHECK:     spv.mlir.merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -261,7 +261,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       %loop1_add = spv.IAdd %loop1_bb_arg, %cst4 : i32
       spv.Branch ^bb1(%loop1_add : i32)
     ^bb3:
-      spv._merge
+      spv.mlir.merge
     }
 
 // CHECK:        spv.constant 44
@@ -277,7 +277,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       %loop2_add = spv.IAdd %loop2_bb_arg, %cst4 : i32
       spv.Branch ^bb1(%loop2_add : i32)
     ^bb3:
-      spv._merge
+      spv.mlir.merge
     }
 
     spv.Return

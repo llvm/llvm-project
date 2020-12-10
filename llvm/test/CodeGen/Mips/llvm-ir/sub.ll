@@ -1,19 +1,19 @@
 ; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
-; RUN:    -check-prefixes=NOT-R2-R6,GP32,GP32-NOT-MM,NOT-MM,PRE4
+; RUN:    -check-prefixes=NOT-R2-R6,GP32,NOT-MM,PRE4
 ; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
-; RUN:    -check-prefixes=NOT-R2-R6,GP32,GP32-NOT-MM,NOT-MM
+; RUN:    -check-prefixes=NOT-R2-R6,GP32,NOT-MM
 ; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
-; RUN:    -check-prefixes=R2-R6,GP32,GP32-NOT-MM,NOT-MM
+; RUN:    -check-prefixes=R2-R6,GP32,NOT-MM
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
-; RUN:    -check-prefixes=R2-R6,GP32,GP32-NOT-MM,NOT-MM
+; RUN:    -check-prefixes=R2-R6,GP32,NOT-MM
 ; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
-; RUN:    -check-prefixes=R2-R6,GP32,GP32-NOT-MM,NOT-MM
+; RUN:    -check-prefixes=R2-R6,GP32,NOT-MM
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    -check-prefixes=R2-R6,GP32,GP32-NOT-MM,NOT-MM
+; RUN:    -check-prefixes=R2-R6,GP32,NOT-MM
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
-; RUN:    -check-prefixes=GP32-MM,GP32,MM32,MMR3
+; RUN:    -check-prefixes=MM32,MMR3
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
-; RUN:    -check-prefixes=GP32-MM,GP32,MM32,MMR6
+; RUN:    -check-prefixes=MM32,MMR6
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefixes=NOT-R2-R6,GP64,NOT-MM,GP64-NOT-R2
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
@@ -98,17 +98,17 @@ define signext i64 @sub_i64(i64 signext %a, i64 signext %b) {
 entry:
 ; ALL-LABEL: sub_i64:
 
-  ; GP32-NOT-MM:    sltu    $[[T0:[0-9]+]], $5, $7
-  ; GP32-NOT-MM:    subu    $2, $4, $6
-  ; GP32-NOT-MM:    subu    $2, $2, $[[T0]]
-  ; GP32-NOT-MM:    subu    $3, $5, $7
+  ; GP32:    sltu    $[[T0:[0-9]+]], $5, $7
+  ; GP32:    subu    $2, $4, $6
+  ; GP32:    subu    $2, $2, $[[T0]]
+  ; GP32:    subu    $3, $5, $7
 
-  ; MM32:           sltu    $[[T0:[0-9]+]], $5, $7
-  ; MM32:           subu16    $3, $4, $6
-  ; MM32:           subu16    $2, $3, $[[T0]]
-  ; MM32:           subu16    $3, $5, $7
+  ; MM32:    sltu    $[[T0:[0-9]+]], $5, $7
+  ; MM32:    subu16  $3, $4, $6
+  ; MM32:    subu16  $2, $3, $[[T0]]
+  ; MM32:    subu16  $3, $5, $7
 
-  ; GP64:           dsubu   $2, $4, $5
+  ; GP64:    dsubu   $2, $4, $5
 
   %r = sub i64 %a, %b
   ret i64 %r

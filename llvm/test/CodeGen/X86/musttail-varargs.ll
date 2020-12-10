@@ -136,7 +136,7 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movq %rcx, %r13
 ; LINUX-X32-NEXT:    movq %rdx, %rbp
 ; LINUX-X32-NEXT:    movq %rsi, %rbx
-; LINUX-X32-NEXT:    movl %edi, %r14d
+; LINUX-X32-NEXT:    movq %rdi, %r14
 ; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    testb %al, %al
 ; LINUX-X32-NEXT:    je .LBB0_2
@@ -161,7 +161,7 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; LINUX-X32-NEXT:    movabsq $206158430216, %rax # imm = 0x3000000008
 ; LINUX-X32-NEXT:    movq %rax, {{[0-9]+}}(%esp)
-; LINUX-X32-NEXT:    movl %r14d, %edi
+; LINUX-X32-NEXT:    movq %r14, %rdi
 ; LINUX-X32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -172,7 +172,7 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    callq get_f
 ; LINUX-X32-NEXT:    movl %eax, %r11d
-; LINUX-X32-NEXT:    movl %r14d, %edi
+; LINUX-X32-NEXT:    movq %r14, %rdi
 ; LINUX-X32-NEXT:    movq %rbx, %rsi
 ; LINUX-X32-NEXT:    movq %rbp, %rdx
 ; LINUX-X32-NEXT:    movq %r13, %rcx
@@ -236,8 +236,6 @@ define void @f_thunk(i8* %this, ...) {
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
-; WINDOWS-NEXT:    .seh_handlerdata
-; WINDOWS-NEXT:    .text
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; X86-NOSSE-LABEL: f_thunk:
@@ -306,8 +304,7 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 ;
 ; LINUX-X32-LABEL: g_thunk:
 ; LINUX-X32:       # %bb.0:
-; LINUX-X32-NEXT:    movl %edi, %r11d
-; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
+; LINUX-X32-NEXT:    jmpq *%rdi # TAILCALL
 ;
 ; WINDOWS-LABEL: g_thunk:
 ; WINDOWS:       # %bb.0:
@@ -327,7 +324,7 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 
 %struct.Foo = type { i1, i8*, i8* }
 
-@g = external global i32
+@g = external dso_local global i32
 
 define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-LABEL: h_thunk:
@@ -348,10 +345,12 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-X32-NEXT:    jne .LBB2_2
 ; LINUX-X32-NEXT:  # %bb.1: # %then
 ; LINUX-X32-NEXT:    movl 4(%edi), %r11d
+; LINUX-X32-NEXT:    movl %edi, %edi
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ; LINUX-X32-NEXT:  .LBB2_2: # %else
 ; LINUX-X32-NEXT:    movl 8(%edi), %r11d
 ; LINUX-X32-NEXT:    movl $42, {{.*}}(%rip)
+; LINUX-X32-NEXT:    movl %edi, %edi
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; WINDOWS-LABEL: h_thunk:

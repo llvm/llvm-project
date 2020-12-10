@@ -27,7 +27,7 @@ namespace {
 class MachODumper : public ObjDumper {
 public:
   MachODumper(const MachOObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj) {}
+      : ObjDumper(Writer, Obj->getFileName()), Obj(Obj) {}
 
   void printFileHeaders() override;
   void printSectionHeaders() override;

@@ -290,4 +290,10 @@ void test_generic(void) {
   int a3[_Generic(0, svint8_t : 1, svint16_t : 2, default : 3) == 3 ? 1 : -1];
   (void)_Generic(0, svint8_t : 1, svint8_t : 2, default : 3); // expected-error {{type 'svint8_t' (aka '__SVInt8_t') in generic association compatible with previously specified type 'svint8_t'}} expected-note {{compatible type}}
 }
+
+void test_compound_literal(void) {
+  svint8_t local_int8;
+
+  (void)(svint8_t){local_int8};
+}
 #endif

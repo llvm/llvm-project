@@ -7,17 +7,17 @@
 # RUN:   /merge:.foo=.bar /merge:.bar=.abc %t.obj /debug
 # RUN: llvm-readobj --sections %t.exe | FileCheck --check-prefix=CHECK2 %s
 
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.rsrc=.foo %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-RSRC %s
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.foo=.rsrc %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-RSRC %s
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.reloc=.foo %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-RELOC %s
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.foo=.reloc %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-RELOC %s
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.foo=.foo1 /merge:.foo1=.foo %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-CYCLE %s
-# RUN: not lld-link /out:%t.exe /entry:main /subsystem:console /force \
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /subsystem:console /force \
 # RUN:   /merge:.foo=.foo1 /merge:.foo1=.foo2 /merge:.foo2=.foo1 %t.obj /debug 2>&1 | FileCheck --check-prefix=NO-CYCLE %s
 
 # CHECK: Name: .def

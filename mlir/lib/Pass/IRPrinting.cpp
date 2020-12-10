@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/Module.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -95,21 +94,12 @@ private:
 };
 } // end anonymous namespace
 
-/// Returns true if the given pass is hidden from IR printing.
-static bool isHiddenPass(Pass *pass) {
-  return isa<OpToOpPassAdaptor, VerifierPass>(pass);
-}
-
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
-  // Check to see if we are printing the top-level module.
-  auto module = dyn_cast<ModuleOp>(op);
-  if (module && !op->getBlock())
-    return module.print(out << "\n", flags);
-
   // Otherwise, check to see if we are not printing at module scope.
   if (!printModuleScope)
-    return op->print(out << "\n", flags.useLocalScope());
+    return op->print(out << "\n",
+                     op->getBlock() ? flags.useLocalScope() : flags);
 
   // Otherwise, we are printing at module scope.
   out << " ('" << op->getName() << "' operation";
@@ -118,22 +108,16 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
     out << ": @" << symbolName.getValue();
   out << ")\n";
 
-  // Find the top-level module operation.
+  // Find the top-level operation.
   auto *topLevelOp = op;
   while (auto *parentOp = topLevelOp->getParentOp())
     topLevelOp = parentOp;
-
-  // Check to see if the top-level operation is actually a module in the case of
-  // invalid-ir.
-  if (auto module = dyn_cast<ModuleOp>(topLevelOp))
-    module.print(out, flags);
-  else
-    topLevelOp->print(out, flags);
+  topLevelOp->print(out, flags);
 }
 
 /// Instrumentation hooks.
 void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
-  if (isHiddenPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   // If the config asked to detect changes, record the current fingerprint.
   if (config->shouldPrintAfterOnlyOnChange())
@@ -148,7 +132,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
 }
 
 void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
-  if (isHiddenPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   // If the config asked to detect changes, compare the current fingerprint with
   // the previous.

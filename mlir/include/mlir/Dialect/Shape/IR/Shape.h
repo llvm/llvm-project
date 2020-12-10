@@ -14,9 +14,11 @@
 #ifndef MLIR_SHAPE_IR_SHAPE_H
 #define MLIR_SHAPE_IR_SHAPE_H
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -28,18 +30,6 @@ namespace shape {
 
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx);
-
-/// The component type corresponding to shape, element type and attribute.
-class ComponentType : public Type::TypeBase<ComponentType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The element type of the shaped type.
-class ElementType : public Type::TypeBase<ElementType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
 
 /// The shape descriptor type represents rank and dimension sizes.
 class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {

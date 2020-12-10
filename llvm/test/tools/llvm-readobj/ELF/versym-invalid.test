@@ -74,12 +74,12 @@ DynamicSymbols: []
 
 ## Check we report a warning when a SHT_GNU_versym section is not correctly aligned in memory.
 
-# RUN: yaml2obj --docnum=3 %s -o %t4
+# RUN: yaml2obj --docnum=3 %s -DSHOFFSET=0xffff -o %t4
 # RUN: llvm-readelf -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-GNU
 # RUN: llvm-readobj -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-LLVM
 
-# MISALIGNED-GNU:      Version symbols section '.gnu.version' contains 0 entries:
-# MISALIGNED-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x00ffff  Link: 0 ()
+# MISALIGNED-GNU:      Version symbols section '.gnu.version' contains 1 entries:
+# MISALIGNED-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x00ffff  Link: 2 (.dynsym)
 # MISALIGNED-GNU-NEXT:  warning: '[[FILE]]': the SHT_GNU_versym section with index 1 is misaligned
 
 # MISALIGNED-LLVM:      VersionSymbols [
@@ -92,10 +92,50 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:    .gnu.version
-    Type:    SHT_GNU_versym
-    Entries: [ ]
-    ShOffset: 0xffff
+  - Name:     .gnu.version
+    Type:     SHT_GNU_versym
+    Entries:  [ 0 ]
+    Link:     .dynsym
+    ShOffset: [[SHOFFSET=<none>]]
+    ShName:   [[SHNAME=<none>]]
+  - Name:   .dynsym
+    Type:   SHT_DYNSYM
+    ShName: [[DYNSYMNAME=<none>]]
+DynamicSymbols: []
+
+## Check that llvm-readelf reports a warning when the name of the SHT_GNU_versym section can't be read.
+
+# RUN: yaml2obj %s --docnum=3 -DSHNAME=0xFF -o %t.invalid.name
+# RUN: llvm-readobj -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-LLVM -DFILE=%t.invalid.name --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-GNU -DFILE=%t.invalid.name --implicit-check-not=warning:
+
+# INVALID-NAME-LLVM:      VersionSymbols [
+# INVALID-NAME-LLVM-NEXT:   Symbol {
+# INVALID-NAME-LLVM-NEXT:     Version: 0
+# INVALID-NAME-LLVM-NEXT:     Name:
+# INVALID-NAME-LLVM-NEXT:   }
+# INVALID-NAME-LLVM-NEXT: ]
+
+# INVALID-NAME-GNU:      warning: '[[FILE]]': unable to get the name of SHT_GNU_versym section with index 1: a section [index 1] has an invalid sh_name (0xff) offset which goes past the end of the section name string table
+# INVALID-NAME-GNU-NEXT: Version symbols section '<?>' contains 1 entries:
+# INVALID-NAME-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.dynsym)
+# INVALID-NAME-GNU-NEXT:   000:   0 (*local*)
+
+## Check that llvm-readelf reports a warning when we are unable to read the name of
+## the section linked with the SHT_GNU_verneed section (usually ".dynsym").
+
+# RUN: yaml2obj %s --docnum=3 -DDYNSYMNAME=0xFF -o %t.invalid.name2
+# RUN: llvm-readobj -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-LLVM -DFILE=%t.invalid.name2 --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME2-GNU -DFILE=%t.invalid.name2 --implicit-check-not=warning:
+
+# INVALID-NAME2-GNU:      Version symbols section '.gnu.version' contains 1 entries:
+# INVALID-NAME2-GNU-NEXT: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xff) offset which goes past the end of the section name string table
+# INVALID-NAME2-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (<?>)
+# INVALID-NAME2-GNU-NEXT:   000:   0 (*local*)
 
 ## Check we report a warning when a SHT_GNU_versym section has an invalid entry size.
 

@@ -44,8 +44,8 @@ module attributes {
     call @print_memref_i32(%arg6) : (memref<*xi32>) -> ()
     return
   }
-  func @fillResource1DInt8(%0 : memref<?xi8>, %1 : i8)
-  func @fillResource2DInt8(%0 : memref<?x?xi8>, %1 : i8)
-  func @fillResource3DInt(%0 : memref<?x?x?xi32>, %1 : i32)
-  func @print_memref_i32(%ptr : memref<*xi32>)
+  func private @fillResource1DInt8(%0 : memref<?xi8>, %1 : i8)
+  func private @fillResource2DInt8(%0 : memref<?x?xi8>, %1 : i8)
+  func private @fillResource3DInt(%0 : memref<?x?x?xi32>, %1 : i32)
+  func private @print_memref_i32(%ptr : memref<*xi32>)
 }

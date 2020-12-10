@@ -85,6 +85,9 @@ public:
   TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D) {
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isImplicit())
+      return;
+
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(D);
       if (!D)
@@ -123,9 +126,6 @@ public:
         switch (Traversal) {
         case TK_AsIs:
           break;
-        case TK_IgnoreImplicitCastsAndParentheses:
-          S = E->IgnoreParenImpCasts();
-          break;
         case TK_IgnoreUnlessSpelledInSource:
           S = E->IgnoreUnlessSpelledInSource();
           break;
@@ -144,7 +144,8 @@ public:
       if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S))
         return;
 
-      if (isa<LambdaExpr>(S) && Traversal == TK_IgnoreUnlessSpelledInSource)
+      if (Traversal == TK_IgnoreUnlessSpelledInSource &&
+          isa<LambdaExpr, CXXForRangeStmt, CallExpr>(S))
         return;
 
       for (const Stmt *SubStmt : S->children())
@@ -185,6 +186,8 @@ public:
   }
 
   void Visit(const CXXCtorInitializer *Init) {
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && !Init->isWritten())
+      return;
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(Init);
       Visit(Init->getInit());
@@ -401,6 +404,9 @@ public:
     if (const Expr *TRC = D->getTrailingRequiresClause())
       Visit(TRC);
 
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isDefaulted())
+      return;
+
     if (const auto *C = dyn_cast<CXXConstructorDecl>(D))
       for (const auto *I : C->inits())
         Visit(I);
@@ -417,6 +423,9 @@ public:
   }
 
   void VisitVarDecl(const VarDecl *D) {
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isCXXForRangeDecl())
+      return;
+
     if (D->hasInit())
       Visit(D->getInit());
   }
@@ -715,6 +724,26 @@ public:
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node) {
     if (const VarDecl *CatchParam = Node->getCatchParamDecl())
       Visit(CatchParam);
+  }
+
+  void VisitCXXForRangeStmt(const CXXForRangeStmt *Node) {
+    if (Traversal == TK_IgnoreUnlessSpelledInSource) {
+      Visit(Node->getInit());
+      Visit(Node->getLoopVariable());
+      Visit(Node->getRangeInit());
+      Visit(Node->getBody());
+    }
+  }
+
+  void VisitCallExpr(const CallExpr *Node) {
+    for (const auto *Child :
+         make_filter_range(Node->children(), [this](const Stmt *Child) {
+           if (Traversal != TK_IgnoreUnlessSpelledInSource)
+             return false;
+           return !isa<CXXDefaultArgExpr>(Child);
+         })) {
+      Visit(Child);
+    }
   }
 
   void VisitExpressionTemplateArgument(const TemplateArgument &TA) {

@@ -108,6 +108,7 @@ struct WasmSection {
   uint32_t Type = 0;         // Section type (See below)
   uint32_t Offset = 0;       // Offset with in the file
   StringRef Name;            // Section name (User-defined sections only)
+  uint32_t Comdat = UINT32_MAX; // From the "comdat info" section
   ArrayRef<uint8_t> Content; // Section content
   std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
 };
@@ -149,7 +150,7 @@ public:
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
   ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
-  ArrayRef<wasm::WasmFunctionName> debugNames() const { return DebugNames; }
+  ArrayRef<wasm::WasmDebugName> debugNames() const { return DebugNames; }
   uint32_t startFunction() const { return StartFunction; }
   uint32_t getNumImportedGlobals() const { return NumImportedGlobals; }
   uint32_t getNumImportedTables() const { return NumImportedTables; }
@@ -284,7 +285,7 @@ private:
   llvm::Optional<size_t> DataCount;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
-  std::vector<wasm::WasmFunctionName> DebugNames;
+  std::vector<wasm::WasmDebugName> DebugNames;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
@@ -299,6 +300,7 @@ private:
   uint32_t DataSection = 0;
   uint32_t EventSection = 0;
   uint32_t GlobalSection = 0;
+  uint32_t TableSection = 0;
 };
 
 class WasmSectionOrderChecker {

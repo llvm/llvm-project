@@ -234,6 +234,7 @@ group("test") {
     "//llvm/tools/llvm-ifs",
     "//llvm/tools/llvm-isel-fuzzer",
     "//llvm/tools/llvm-jitlink",
+    "//llvm/tools/llvm-jitlink/llvm-jitlink-executor",
     "//llvm/tools/llvm-libtool-darwin",
     "//llvm/tools/llvm-link",
     "//llvm/tools/llvm-lipo",

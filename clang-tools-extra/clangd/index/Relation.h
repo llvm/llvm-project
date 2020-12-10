@@ -21,11 +21,16 @@ namespace clangd {
 
 enum class RelationKind : uint8_t {
   BaseOf,
+  OverriddenBy,
 };
 
 /// Represents a relation between two symbols.
-/// For an example "A is a base class of B" may be represented
-/// as { Subject = A, Predicate = BaseOf, Object = B }.
+/// For an example:
+///   - "A is a base class of B" is represented as
+///     { Subject = A, Predicate = BaseOf, Object = B }.
+///   - "Derived::Foo overrides Base::Foo" is represented as
+///     { Subject = Base::Foo, Predicate = OverriddenBy, Object = Derived::Foo
+///     }.
 struct Relation {
   SymbolID Subject;
   RelationKind Predicate;
@@ -41,6 +46,8 @@ struct Relation {
            std::tie(Other.Subject, Other.Predicate, Other.Object);
   }
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const RelationKind R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Relation &R);
 
 class RelationSlab {
 public:

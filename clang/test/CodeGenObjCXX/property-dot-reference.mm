@@ -12,7 +12,7 @@ void GetURL() const;
 @implementation TNodeIconAndNameCell     
 - (const TFENode&) node {
 // CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.TFENode* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK-NEXT: call void @_ZNK7TFENode6GetURLEv(%struct.TFENode* %{{.*}})
+// CHECK-NEXT: call void @_ZNK7TFENode6GetURLEv(%struct.TFENode* {{[^,]*}} %{{.*}})
 	self.node.GetURL();
 }	// expected-warning {{non-void function does not return a value}}
 @end

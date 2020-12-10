@@ -4,7 +4,7 @@
 ; CHECK-NOT: insertvalue
 ; CHECK-NOT: extractelement
 ; CHECK: store <2 x double>
-define void @julia_2xdouble([2 x double]* sret, <2 x double>*) {
+define void @julia_2xdouble([2 x double]* sret([2 x double]), <2 x double>*) {
 top:
   %x = load <2 x double>, <2 x double>* %1
   %x0 = extractelement <2 x double> %x, i32 0
@@ -20,7 +20,7 @@ top:
 ; CHECK-NOT: insertvalue
 ; CHECK-NOT: extractelement
 ; CHECK: store <2 x i64>
-define void @julia_2xi64([2 x i64]* sret, <2 x i64>*) {
+define void @julia_2xi64([2 x i64]* sret([2 x i64]), <2 x i64>*) {
 top:
   %x = load <2 x i64>, <2 x i64>* %1
   %x0 = extractelement <2 x i64> %x, i32 1
@@ -37,7 +37,7 @@ top:
 ; CHECK-NOT: insertvalue
 ; CHECK-NOT: extractelement
 ; CHECK: store <4 x float>
-define void @julia_4xfloat([4 x float]* sret, <4 x float>*) {
+define void @julia_4xfloat([4 x float]* sret([4 x float]), <4 x float>*) {
 top:
   %x = load <4 x float>, <4 x float>* %1
   %x0 = extractelement <4 x float> %x, i32 0
@@ -58,7 +58,7 @@ top:
 ; CHECK-NOT: insertvalue
 ; CHECK-NOT: extractelement
 ; CHECK: store <4 x float>
-define void @julia_pseudovec(%pseudovec* sret, <4 x float>*) {
+define void @julia_pseudovec(%pseudovec* sret(%pseudovec), <4 x float>*) {
 top:
   %x = load <4 x float>, <4 x float>* %1
   %x0 = extractelement <4 x float> %x, i32 0

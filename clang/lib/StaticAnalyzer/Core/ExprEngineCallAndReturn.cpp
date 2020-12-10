@@ -842,19 +842,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
 static bool hasMember(const ASTContext &Ctx, const CXXRecordDecl *RD,
                       StringRef Name) {
   const IdentifierInfo &II = Ctx.Idents.get(Name);
-  DeclarationName DeclName = Ctx.DeclarationNames.getIdentifier(&II);
-  if (!RD->lookup(DeclName).empty())
-    return true;
-
-  CXXBasePaths Paths(false, false, false);
-  if (RD->lookupInBases(
-          [DeclName](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-            return CXXRecordDecl::FindOrdinaryMember(Specifier, Path, DeclName);
-          },
-          Paths))
-    return true;
-
-  return false;
+  return RD->hasMemberName(Ctx.DeclarationNames.getIdentifier(&II));
 }
 
 /// Returns true if the given C++ class is a container or iterator.

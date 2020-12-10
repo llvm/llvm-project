@@ -59,7 +59,7 @@ def RetCC_PPC_Cold : CallingConv<[
 
   CCIfType<[f32], CCAssignToReg<[F1]>>,
   CCIfType<[f64], CCAssignToReg<[F1]>>,
-  CCIfType<[f128], CCIfSubtarget<"hasP9Vector()", CCAssignToReg<[V2]>>>,
+  CCIfType<[f128], CCIfSubtarget<"hasAltivec()", CCAssignToReg<[V2]>>>,
 
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v1i128, v4f32, v2f64],
            CCIfSubtarget<"hasAltivec()",
@@ -92,7 +92,7 @@ def RetCC_PPC : CallingConv<[
 
   // For P9, f128 are passed in vector registers.
   CCIfType<[f128],
-           CCIfSubtarget<"hasP9Vector()",
+           CCIfSubtarget<"hasAltivec()",
            CCAssignToReg<[V2, V3, V4, V5, V6, V7, V8, V9]>>>,
 
   // Vector types returned as "direct" go into V2 .. V9; note that only the
@@ -149,7 +149,7 @@ def RetCC_PPC64_ELF_FIS : CallingConv<[
   CCIfType<[f32],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f64],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f128],
-           CCIfSubtarget<"hasP9Vector()",
+           CCIfSubtarget<"hasAltivec()",
            CCAssignToReg<[V2, V3, V4, V5, V6, V7, V8, V9]>>>,
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v1i128, v4f32, v2f64],
            CCIfSubtarget<"hasAltivec()",
@@ -216,7 +216,7 @@ def CC_PPC32_SVR4_Common : CallingConv<[
 
   // Vectors and float128 get 16-byte stack slots that are 16-byte aligned.
   CCIfType<[v16i8, v8i16, v4i32, v4f32, v2f64, v2i64], CCAssignToStack<16, 16>>,
-  CCIfType<[f128], CCIfSubtarget<"hasP9Vector()", CCAssignToStack<16, 16>>>
+  CCIfType<[f128], CCIfSubtarget<"hasAltivec()", CCAssignToStack<16, 16>>>
 ]>;
 
 // This calling convention puts vector arguments always on the stack. It is used
@@ -238,7 +238,7 @@ def CC_PPC32_SVR4 : CallingConv<[
 
   // Float128 types treated as vector arguments.
   CCIfType<[f128],
-           CCIfSubtarget<"hasP9Vector()", CCAssignToReg<[V2, V3, V4, V5, V6, V7,
+           CCIfSubtarget<"hasAltivec()", CCAssignToReg<[V2, V3, V4, V5, V6, V7,
                           V8, V9, V10, V11, V12, V13]>>>,
            
   CCDelegateTo<CC_PPC32_SVR4_Common>
@@ -290,6 +290,8 @@ def CSR_AIX32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
                                      F19, F20, F21, F22, F23, F24, F25, F26,
                                      F27, F28, F29, F30, F31, CR2, CR3, CR4
                                 )>;
+
+def CSR_AIX32_Altivec : CalleeSavedRegs<(add CSR_AIX32, CSR_Altivec)>;
 
 // Common CalleeSavedRegs for SVR4 and AIX.
 def CSR_PPC64   : CalleeSavedRegs<(add X14, X15, X16, X17, X18, X19, X20,

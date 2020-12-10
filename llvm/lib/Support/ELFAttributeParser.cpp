@@ -200,7 +200,7 @@ Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
 
   // Unrecognized format-version.
   uint8_t formatVersion = de.getU8(cursor);
-  if (formatVersion != 'A')
+  if (formatVersion != ELFAttrs::Format_Version)
     return createStringError(errc::invalid_argument,
                              "unrecognized format-version: 0x" +
                                  utohexstr(formatVersion));

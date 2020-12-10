@@ -33,6 +33,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VINTRP = 0;
   field bit SDWA = 0;
   field bit DPP = 0;
+  field bit TRANS = 0;
 
   // Memory instruction formats.
   field bit MUBUF = 0;
@@ -153,17 +154,18 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{13} = VINTRP;
   let TSFlags{14} = SDWA;
   let TSFlags{15} = DPP;
+  let TSFlags{16} = TRANS;
 
-  let TSFlags{16} = MUBUF;
-  let TSFlags{17} = MTBUF;
-  let TSFlags{18} = SMRD;
-  let TSFlags{19} = MIMG;
-  let TSFlags{20} = EXP;
-  let TSFlags{21} = FLAT;
-  let TSFlags{22} = DS;
+  let TSFlags{17} = MUBUF;
+  let TSFlags{18} = MTBUF;
+  let TSFlags{19} = SMRD;
+  let TSFlags{20} = MIMG;
+  let TSFlags{21} = EXP;
+  let TSFlags{22} = FLAT;
+  let TSFlags{23} = DS;
 
-  let TSFlags{23} = VGPRSpill;
-  let TSFlags{24} = SGPRSpill;
+  let TSFlags{24} = VGPRSpill;
+  let TSFlags{25} = SGPRSpill;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -361,17 +363,6 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let mayStore = 0;
   let hasSideEffects = 0;
   let VALU = 1;
-}
-
-class EXPCommon<dag outs, dag ins, string asm, list<dag> pattern> :
-  InstSI<outs, ins, asm, pattern> {
-  let EXP = 1;
-  let EXP_CNT = 1;
-  let mayLoad = 0; // Set to 1 if done bit is set.
-  let mayStore = 1;
-  let UseNamedOperandTable = 1;
-  let Uses = [EXEC];
-  let SchedRW = [WriteExport];
 }
 
 } // End Uses = [EXEC]

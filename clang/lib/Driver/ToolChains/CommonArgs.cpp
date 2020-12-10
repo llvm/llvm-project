@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -626,11 +627,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                          Path));
   }
 
-  // Need this flag to turn on new pass manager via Gold plugin.
-  if (Args.hasFlag(options::OPT_fexperimental_new_pass_manager,
-                   options::OPT_fno_experimental_new_pass_manager,
-                   /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER)) {
-    CmdArgs.push_back("-plugin-opt=new-pass-manager");
+  // Pass an option to enable/disable the new pass manager.
+  if (auto *A = Args.getLastArg(options::OPT_flegacy_pass_manager,
+                                options::OPT_fno_legacy_pass_manager)) {
+    if (A->getOption().matches(options::OPT_flegacy_pass_manager))
+      CmdArgs.push_back("-plugin-opt=legacy-pass-manager");
+    else
+      CmdArgs.push_back("-plugin-opt=new-pass-manager");
   }
 
   // Setup statistics file output.

@@ -490,6 +490,9 @@ typedef user_regs_struct regs_struct;
 #ifndef NT_X86_XSTATE
 #define NT_X86_XSTATE 0x202
 #endif
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
 // Compiler may use FP registers to store pointers.
 static constexpr uptr kExtraRegs[] = {NT_X86_XSTATE, NT_FPREGSET};
 
@@ -513,6 +516,8 @@ static constexpr uptr kExtraRegs[] = {0};
 
 #elif SANITIZER_RISCV64
 typedef struct user_regs_struct regs_struct;
+// sys/ucontext.h already defines REG_SP as 2. Undefine it first.
+#undef REG_SP
 #define REG_SP sp
 static constexpr uptr kExtraRegs[] = {0};
 #define ARCH_IOVEC_FOR_GETREGSET

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/OptBisect.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,6 +30,7 @@ namespace llvm {
 
 class Module;
 class Function;
+class PassInstrumentationCallbacks;
 
 /// Instrumentation to print IR before/after passes.
 ///
@@ -47,11 +47,15 @@ private:
   void printAfterPass(StringRef PassID, Any IR);
   void printAfterPassInvalidated(StringRef PassID);
 
+  bool shouldPrintBeforePass(StringRef PassID);
+  bool shouldPrintAfterPass(StringRef PassID);
+
   using PrintModuleDesc = std::tuple<const Module *, std::string, StringRef>;
 
   void pushModuleDesc(StringRef PassID, Any IR);
   PrintModuleDesc popModuleDesc(StringRef PassID);
 
+  PassInstrumentationCallbacks *PIC;
   /// Stack of Module description, enough to print the module after a given
   /// pass.
   SmallVector<PrintModuleDesc, 2> ModuleDescStack;
@@ -146,12 +150,12 @@ public:
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class ChangePrinter {
+template <typename IRUnitT> class ChangeReporter {
 protected:
-  ChangePrinter() {}
+  ChangeReporter() {}
 
 public:
-  virtual ~ChangePrinter();
+  virtual ~ChangeReporter();
 
   // Determine if this pass/IR is interesting and if so, save the IR
   // otherwise it is left on the stack without data.
@@ -162,6 +166,20 @@ public:
   void handleInvalidatedPass(StringRef PassID);
 
 protected:
+  // Register required callbacks.
+  void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
+
+  // Return true when this is a defined function for which printing
+  // of changes is desired.
+  bool isInterestingFunction(const Function &F);
+
+  // Return true when this is a pass for which printing of changes is desired.
+  bool isInterestingPass(StringRef PassID);
+
+  // Return true when this is a pass on IR for which printing
+  // of changes is desired.
+  bool isInteresting(Any IR, StringRef PassID);
+
   // Called on the first IR processed.
   virtual void handleInitialIR(Any IR) = 0;
   // Called before and after a pass to get the representation of the IR.
@@ -188,38 +206,49 @@ protected:
   bool InitialIR = true;
 };
 
+// An abstract template base class that handles printing banners and
+// reporting when things have not changed or are filtered out.
+template <typename IRUnitT>
+class TextChangeReporter : public ChangeReporter<IRUnitT> {
+protected:
+  TextChangeReporter();
+
+  // Print a module dump of the first IR that is changed.
+  void handleInitialIR(Any IR) override;
+  // Report that the IR was omitted because it did not change.
+  void omitAfter(StringRef PassID, std::string &Name) override;
+  // Report that the pass was invalidated.
+  void handleInvalidated(StringRef PassID) override;
+  // Report that the IR was filtered out.
+  void handleFiltered(StringRef PassID, std::string &Name) override;
+  // Report that the pass was ignored.
+  void handleIgnored(StringRef PassID, std::string &Name) override;
+  // Make substitutions in \p S suitable for reporting changes
+  // after the pass and then print it.
+
+  raw_ostream &Out;
+};
+
 // A change printer based on the string representation of the IR as created
 // by unwrapAndPrint.  The string representation is stored in a std::string
 // to preserve it as the IR changes in each pass.  Note that the banner is
 // included in this representation but it is massaged before reporting.
-class IRChangePrinter : public ChangePrinter<std::string> {
+class IRChangedPrinter : public TextChangeReporter<std::string> {
 public:
-  IRChangePrinter();
-  ~IRChangePrinter() override;
+  IRChangedPrinter() {}
+  ~IRChangedPrinter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 protected:
-  // Called on the first IR processed.
-  void handleInitialIR(Any IR) override;
   // Called before and after a pass to get the representation of the IR.
   void generateIRRepresentation(Any IR, StringRef PassID,
                                 std::string &Output) override;
-  // Called when the pass is not iteresting.
-  void omitAfter(StringRef PassID, std::string &Name) override;
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
                    Any) override;
-  // Called when an interesting pass is invalidated.
-  void handleInvalidated(StringRef PassID) override;
-  // Called when the IR or pass is not interesting.
-  void handleFiltered(StringRef PassID, std::string &Name) override;
-  // Called when an ignored pass is encountered.
-  void handleIgnored(StringRef PassID, std::string &Name) override;
   // Called to compare the before and after representations of the IR.
   bool same(const std::string &Before, const std::string &After) override;
-
-  raw_ostream &Out;
 };
 
 class VerifyInstrumentation {
@@ -239,7 +268,7 @@ class StandardInstrumentations {
   OptNoneInstrumentation OptNone;
   OptBisectInstrumentation OptBisect;
   PreservedCFGCheckerInstrumentation PreservedCFGChecker;
-  IRChangePrinter PrintChangedIR;
+  IRChangedPrinter PrintChangedIR;
   VerifyInstrumentation Verify;
 
   bool VerifyEach;
@@ -253,6 +282,10 @@ public:
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
+
+extern template class ChangeReporter<std::string>;
+extern template class TextChangeReporter<std::string>;
+
 } // namespace llvm
 
 #endif

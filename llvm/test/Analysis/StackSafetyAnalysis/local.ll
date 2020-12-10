@@ -445,7 +445,7 @@ entry:
   ret void
 }
 
-define void @ByVal(i16* byval %p) {
+define void @ByVal(i16* byval(i16) %p) {
   ; CHECK-LABEL: @ByVal dso_preemptable{{$}}
   ; CHECK-NEXT: args uses:
   ; CHECK-NEXT: allocas uses:
@@ -463,16 +463,16 @@ define void @TestByVal() {
 ; CHECK-EMPTY:
 entry:
   %x = alloca i16, align 4
-  call void @ByVal(i16* byval %x)
+  call void @ByVal(i16* byval(i16) %x)
 
   %y = alloca i64, align 4
   %y1 = bitcast i64* %y to i16*
-  call void @ByVal(i16* byval %y1)
-  
+  call void @ByVal(i16* byval(i16) %y1)
+
   ret void
 }
 
-declare void @ByValArray([100000 x i64]* byval %p)
+declare void @ByValArray([100000 x i64]* byval([100000 x i64]) %p)
 
 define void @TestByValArray() {
 ; CHECK-LABEL: @TestByValArray dso_preemptable{{$}}
@@ -485,7 +485,7 @@ entry:
   %z1 = bitcast [100000 x i64]* %z to i8*
   %z2 = getelementptr i8, i8* %z1, i64 500000
   %z3 = bitcast i8* %z2 to [100000 x i64]*
-  call void @ByValArray([100000 x i64]* byval %z3)
+  call void @ByValArray([100000 x i64]* byval([100000 x i64]) %z3)
   ret void
 }
 

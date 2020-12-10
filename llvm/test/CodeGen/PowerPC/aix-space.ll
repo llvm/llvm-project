@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 
 @a = common global double 0.000000e+00, align 8
 

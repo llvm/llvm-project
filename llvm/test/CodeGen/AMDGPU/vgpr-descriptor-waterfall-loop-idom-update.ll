@@ -4,7 +4,6 @@
 define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GCN-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:  BB0_1: ; %bb0

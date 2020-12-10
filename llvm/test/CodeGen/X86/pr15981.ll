@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-@a = external global i32
-@b = external global i32
-@c = external global i32
+@a = external dso_local global i32
+@b = external dso_local global i32
+@c = external dso_local global i32
 
 define i32 @fn1(i32, i32) {
 ; X86-LABEL: fn1:

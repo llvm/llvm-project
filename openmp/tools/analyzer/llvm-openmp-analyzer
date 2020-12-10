@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+"""
+A wrapper for Clang specialized for gathering information about OpenMP programs.
+Simple replace calls to clang or clang++ with llvm-openmp-analyzer to run the
+analysis passes.
+"""
+
+import argparse
+import subprocess
+import yaml # PyYaml to save and load analysis information
+import sys
+import io
+
+from analyzer import getKernelUsage
+
+desc = '''A wrapper around clang that runs OpenMP Analysis passes and gathers
+information about OpenMP programs.'''
+
+default_args = ["-fopenmp", "-Rpass=openmp-opt", "-Rpass-missed=openmp-opt", "-Rpass-analysis=openmp-opt"]
+
+def main():
+    compiler = ["clang++"] if sys.argv[0].endswith('++') else ["clang"]
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('--usage-report-file',
+            metavar='filename',
+            default='usage.yaml',
+            help='Filename used for the OpenMP kernel usage reports in YAML format. "usage.yaml" by default.')
+    parser.add_argument('--no-usage-report', 
+            action='store_true',
+            default=False, 
+            help='Do not general a usage report for the OpenMP kernels.')
+    args, clang_args = parser.parse_known_args()
+
+    subprocess.run(compiler + default_args + clang_args, check=True)
+    output = subprocess.run(compiler + default_args + clang_args + ["-v"], stderr=subprocess.PIPE)
+    stderr = output.stderr.decode('utf-8')
+
+    if not args.no_usage_report:
+        usage = getKernelUsage(stderr, fname=args.usage_report_file)
+        with io.open(args.usage_report_file, 'w', encoding = 'utf-8') as f:
+            yaml.dump(usage, f)
+
+if __name__ == '__main__':
+    main()

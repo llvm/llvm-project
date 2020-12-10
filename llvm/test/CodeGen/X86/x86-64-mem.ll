@@ -22,8 +22,10 @@ define void @test1() nounwind {
 ;
 ; LINUX-LABEL: test1:
 ; LINUX:       # %bb.0:
-; LINUX-NEXT:    movl {{.*}}(%rip), %eax
-; LINUX-NEXT:    movl %eax, {{.*}}(%rip)
+; LINUX-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-NEXT:    movl (%rax), %eax
+; LINUX-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-NEXT:    movl %eax, (%rcx)
 ; LINUX-NEXT:    retq
 	%tmp = load i32, i32* getelementptr ([0 x i32], [0 x i32]* @src, i32 0, i32 0)		; <i32> [#uses=1]
 	store i32 %tmp, i32* getelementptr ([0 x i32], [0 x i32]* @dst, i32 0, i32 0)
@@ -40,7 +42,9 @@ define void @test2() nounwind {
 ;
 ; LINUX-LABEL: test2:
 ; LINUX:       # %bb.0:
-; LINUX-NEXT:    movq $dst, {{.*}}(%rip)
+; LINUX-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-NEXT:    movq %rax, (%rcx)
 ; LINUX-NEXT:    retq
 	store i32* getelementptr ([0 x i32], [0 x i32]* @dst, i32 0, i32 0), i32** @ptr
 	ret void

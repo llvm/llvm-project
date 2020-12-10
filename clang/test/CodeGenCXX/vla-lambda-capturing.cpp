@@ -22,7 +22,7 @@ typedef __INTPTR_TYPE__ intptr_t;
 // CHECK:       store [[INTPTR_T]]* %{{.+}}, [[INTPTR_T]]** [[CAP_BUFFER_ADDR]]
 // CHECK:       [[CAP_N_REF:%.+]] = getelementptr inbounds [[CAP_TYPE1]], [[CAP_TYPE1]]* [[CAP_ARG:%.+]], i{{.+}} 0, i{{.+}} 2
 // CHECK:       store [[INTPTR_T]]* [[N_ADDR]], [[INTPTR_T]]** [[CAP_N_REF]]
-// CHECK:       call{{.*}} void [[G_LAMBDA:@.+]]([[CAP_TYPE1]]* [[CAP_ARG]])
+// CHECK:       call{{.*}} void [[G_LAMBDA:@.+]]([[CAP_TYPE1]]* {{[^,]*}} [[CAP_ARG]])
 // CHECK:       ret void
 void g(intptr_t n) {
   intptr_t buffer[n];
@@ -88,7 +88,7 @@ int main() {
 // CHECK: store [[INTPTR_T]] [[SIZE]], [[INTPTR_T]]* [[CAP_SIZE_REF]]
 // CHECK: [[CAP_BUFFER_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_TYPE2]], [[CAP_TYPE2]]* [[CAP_ARG]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store [[INTPTR_T]]* [[BUFFER_ADDR]], [[INTPTR_T]]** [[CAP_BUFFER_ADDR_REF]]
-// CHECK: call{{.*}} void [[F_INT_LAMBDA:@.+]]([[CAP_TYPE2]]* [[CAP_ARG]])
+// CHECK: call{{.*}} void [[F_INT_LAMBDA:@.+]]([[CAP_TYPE2]]* {{[^,]*}} [[CAP_ARG]])
 // CHECK: call void @llvm.stackrestore(
 // CHECK: ret void
 // CHECK: void [[B_INT]]([[INTPTR_T]]
@@ -107,7 +107,7 @@ int main() {
 // CHECK: store [[INTPTR_T]]* [[BUFFER1_ADDR]], [[INTPTR_T]]** [[CAP_BUFFER1_ADDR_REF]]
 // CHECK: [[CAP_BUFFER2_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[CAP_ARG]], i{{.+}} 0, i{{.+}} 4
 // CHECK: store [[INTPTR_T]]* [[BUFFER2_ADDR]], [[INTPTR_T]]** [[CAP_BUFFER2_ADDR_REF]]
-// CHECK: call{{.*}} void [[B_INT_LAMBDA:@.+]]([[CAP_TYPE3]]* [[CAP_ARG]])
+// CHECK: call{{.*}} void [[B_INT_LAMBDA:@.+]]([[CAP_TYPE3]]* {{[^,]*}} [[CAP_ARG]])
 // CHECK: call void @llvm.stackrestore(
 // CHECK: ret void
 
@@ -152,7 +152,7 @@ int main() {
 // CHECK: [[BUFFER1_ADDR_REF_ORIG:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[THIS]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
 // CHECK: [[BUFFER1_ADDR_ORIG:%.+]] = load [[INTPTR_T]]*, [[INTPTR_T]]** [[BUFFER1_ADDR_REF_ORIG]]
 // CHECK: store [[INTPTR_T]]* [[BUFFER1_ADDR_ORIG]], [[INTPTR_T]]** [[BUFFER1_ADDR_REF]]
-// CHECK: call{{.*}} void [[B_INT_LAMBDA_LAMBDA:@.+]]([[CAP_TYPE4]]* [[CAP]])
+// CHECK: call{{.*}} void [[B_INT_LAMBDA_LAMBDA:@.+]]([[CAP_TYPE4]]* {{[^,]*}} [[CAP]])
 // CHECK: ret void
 
 // CHECK: define linkonce_odr{{.*}} void [[B_INT_LAMBDA_LAMBDA]]([[CAP_TYPE4]]*

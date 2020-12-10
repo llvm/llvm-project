@@ -26,10 +26,10 @@ define i32 @__wrap_foo() {
 ; CHECK-NEXT:   Relocations:     
 ; CHECK-NEXT:     - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:       Index:           2
-; CHECK-NEXT:       Offset:          0x00000009
+; CHECK-NEXT:       Offset:          0x9
 ; CHECK-NEXT:     - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:       Index:           0
-; CHECK-NEXT:       Offset:          0x00000013
+; CHECK-NEXT:       Offset:          0x13
 
 ; CHECK:        FunctionNames:
 ; CHECK-NEXT:      - Index:           0

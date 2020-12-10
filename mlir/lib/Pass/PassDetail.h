@@ -15,15 +15,6 @@ namespace mlir {
 namespace detail {
 
 //===----------------------------------------------------------------------===//
-// Verifier Pass
-//===----------------------------------------------------------------------===//
-
-/// Pass to verify an operation and signal failure if necessary.
-class VerifierPass : public PassWrapper<VerifierPass, OperationPass<>> {
-  void runOnOperation() override;
-};
-
-//===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//
 

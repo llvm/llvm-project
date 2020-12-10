@@ -119,13 +119,13 @@ public:
   }
 
   std::vector<const Symbol *> importedSymbols;
+  std::vector<const Symbol *> gotSymbols;
 
 protected:
   bool isSealed = false;
   unsigned numImportedGlobals = 0;
   unsigned numImportedFunctions = 0;
   unsigned numImportedEvents = 0;
-  std::vector<const Symbol *> gotSymbols;
 };
 
 class FunctionSection : public SyntheticSection {
@@ -203,7 +203,6 @@ public:
   void assignIndexes() override;
   void writeBody() override;
   void addGlobal(InputGlobal *global);
-  void addDataAddressGlobal(DefinedData *global);
 
   // Add an internal GOT entry global that corresponds to the given symbol.
   // Normally GOT entries are imported and assigned by the external dynamic
@@ -221,11 +220,11 @@ public:
   void generateRelocationCode(raw_ostream &os) const;
 
   std::vector<const DefinedData *> dataAddressGlobals;
+  std::vector<InputGlobal *> inputGlobals;
+  std::vector<Symbol *> internalGotSymbols;
 
 protected:
   bool isSealed = false;
-  std::vector<InputGlobal *> inputGlobals;
-  std::vector<Symbol *> internalGotSymbols;
 };
 
 class ExportSection : public SyntheticSection {
@@ -297,12 +296,20 @@ protected:
 // Create the custom "name" section containing debug symbol names.
 class NameSection : public SyntheticSection {
 public:
-  NameSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name") {}
+  NameSection(ArrayRef<OutputSegment *> segments)
+      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
+        segments(segments) {}
   bool isNeeded() const override {
     return !config->stripDebug && !config->stripAll && numNames() > 0;
   }
   void writeBody() override;
-  unsigned numNames() const;
+  unsigned numNames() const { return numNamedGlobals() + numNamedFunctions(); }
+  unsigned numNamedGlobals() const;
+  unsigned numNamedFunctions() const;
+  unsigned numNamedDataSegments() const;
+
+protected:
+  ArrayRef<OutputSegment *> segments;
 };
 
 class ProducersSection : public SyntheticSection {

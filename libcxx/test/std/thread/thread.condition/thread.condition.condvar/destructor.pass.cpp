@@ -19,6 +19,7 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::condition_variable* cv;
@@ -48,12 +49,12 @@ void g()
 int main(int, char**)
 {
     cv = new std::condition_variable;
-    std::thread th2(g);
+    std::thread th2 = support::make_test_thread(g);
     Lock lk(m);
     while (!g_ready)
         cv->wait(lk);
     lk.unlock();
-    std::thread th1(f);
+    std::thread th1 = support::make_test_thread(f);
     th1.join();
     th2.join();
 

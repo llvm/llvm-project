@@ -11,4 +11,5 @@
 // CHECK: All checks completed, 2 errors
 
 #include "missing.h"
-auto x = []{};
+void fun();
+auto x = fun;

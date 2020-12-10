@@ -442,6 +442,16 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   return SMS.hasNewSchedule();
 }
 
+void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<LiveIntervals>();
+  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
   if (II_setByPragma > 0)
     MII = II_setByPragma;
@@ -803,10 +813,8 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
             continue;
           }
           AliasResult AAResult = AA->alias(
-              MemoryLocation(MMO1->getValue(), LocationSize::unknown(),
-                             MMO1->getAAInfo()),
-              MemoryLocation(MMO2->getValue(), LocationSize::unknown(),
-                             MMO2->getAAInfo()));
+              MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
+              MemoryLocation::getAfter(MMO2->getValue(), MMO2->getAAInfo()));
 
           if (AAResult != NoAlias) {
             SDep Dep(Load, SDep::Barrier);

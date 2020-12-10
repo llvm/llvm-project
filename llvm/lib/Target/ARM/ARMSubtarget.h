@@ -76,6 +76,7 @@ protected:
     Krait,
     Kryo,
     NeoverseN1,
+    NeoverseN2,
     NeoverseV1,
     Swift
   };

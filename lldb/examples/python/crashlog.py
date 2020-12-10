@@ -41,6 +41,7 @@ import subprocess
 import sys
 import time
 import uuid
+import json
 
 try:
     # First try for LLDB in case PYTHONPATH is already correctly setup.
@@ -378,6 +379,129 @@ class CrashLog(symbolication.Symbolicator):
         return self.target
 
 
+class CrashLogFormatException(Exception):
+    pass
+
+
+class CrashLogParser:
+    def parse(self, debugger, path, verbose):
+        try:
+            return JSONCrashLogParser(debugger, path, verbose).parse()
+        except CrashLogFormatException:
+            return TextCrashLogParser(debugger, path, verbose).parse()
+
+
+class JSONCrashLogParser:
+    def __init__(self, debugger, path, verbose):
+        self.path = os.path.expanduser(path)
+        self.verbose = verbose
+        self.crashlog = CrashLog(debugger, self.path, self.verbose)
+
+    def parse(self):
+        with open(self.path, 'r') as f:
+            buffer = f.read()
+
+        # First line is meta-data.
+        buffer = buffer[buffer.index('\n') + 1:]
+
+        try:
+            self.data = json.loads(buffer)
+        except ValueError:
+            raise CrashLogFormatException()
+
+        self.parse_process_info(self.data)
+        self.parse_images(self.data['usedImages'])
+        self.parse_threads(self.data['threads'])
+
+        thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
+        thread.reason = self.parse_crash_reason(self.data['exception'])
+        thread.registers = self.parse_thread_registers(self.data['threadState'])
+
+        return self.crashlog
+
+    def get_image_extra_info(self, idx):
+        return self.data['legacyInfo']['imageExtraInfo'][idx]
+
+    def get_used_image(self, idx):
+        return self.data['usedImages'][idx]
+
+    def parse_process_info(self, json_data):
+        self.crashlog.process_id = json_data['pid']
+        self.crashlog.process_identifier = json_data['procName']
+        self.crashlog.process_path = json_data['procPath']
+
+    def parse_crash_reason(self, json_exception):
+        exception_type = json_exception['type']
+        exception_signal = json_exception['signal']
+        if 'codes' in json_exception:
+            exception_extra = " ({})".format(json_exception['codes'])
+        elif 'subtype' in json_exception:
+            exception_extra = " ({})".format(json_exception['subtype'])
+        else:
+            exception_extra = ""
+        return "{} ({}){}".format(exception_type, exception_signal,
+                                            exception_extra)
+
+    def parse_images(self, json_images):
+        idx = 0
+        for json_images in json_images:
+            img_uuid = uuid.UUID(json_images[0])
+            low = int(json_images[1])
+            high = 0
+            extra_info = self.get_image_extra_info(idx)
+            name = extra_info['name']
+            path = extra_info['path']
+            version = ""
+            darwin_image = self.crashlog.DarwinImage(low, high, name, version,
+                                                     img_uuid, path,
+                                                     self.verbose)
+            self.crashlog.images.append(darwin_image)
+            idx += 1
+
+    def parse_frames(self, thread, json_frames):
+        idx = 0
+        for json_frame in json_frames:
+            image_id = int(json_frame[0])
+
+            ident = self.get_image_extra_info(image_id)['name']
+            thread.add_ident(ident)
+            if ident not in self.crashlog.idents:
+                self.crashlog.idents.append(ident)
+
+            frame_offset = int(json_frame[1])
+            image = self.get_used_image(image_id)
+            image_addr = int(image[1])
+            pc = image_addr + frame_offset
+            thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
+            idx += 1
+
+    def parse_threads(self, json_threads):
+        idx = 0
+        for json_thread in json_threads:
+            thread = self.crashlog.Thread(idx, False)
+            if json_thread.get('triggered', False):
+                self.crashlog.crashed_thread_idx = idx
+            thread.queue = json_thread.get('queue')
+            self.parse_frames(thread, json_thread.get('frames', []))
+            self.crashlog.threads.append(thread)
+            idx += 1
+
+    def parse_thread_registers(self, json_thread_state):
+        idx = 0
+        registers = dict()
+        for reg in json_thread_state.get('x', []):
+            key = str('x{}'.format(idx))
+            value = int(reg)
+            registers[key] = value
+            idx += 1
+
+        for register in ['lr', 'cpsr', 'fp', 'sp', 'esr', 'pc']:
+            if register in json_thread_state:
+                registers[register] = int(json_thread_state[register])
+
+        return registers
+
+
 class CrashLogParseMode:
     NORMAL = 0
     THREAD = 1
@@ -387,7 +511,7 @@ class CrashLogParseMode:
     INSTRS = 5
 
 
-class CrashLogParser:
+class TextCrashLogParser:
     parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
     thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
     thread_instrs_regex = re.compile('^Thread ([0-9]+) instruction stream')
@@ -720,7 +844,7 @@ def interactive_crashlogs(debugger, options, args):
     crash_logs = list()
     for crash_log_file in crash_log_files:
         try:
-            crash_log = CrashLogParser(debugger, crash_log_file, options.verbose).parse()
+            crash_log = CrashLogParser().parse(debugger, crash_log_file, options.verbose)
         except Exception as e:
             print(e)
             continue
@@ -1055,8 +1179,7 @@ be disassembled and lookups can be performed using the addresses found in the cr
             interactive_crashlogs(debugger, options, args)
         else:
             for crash_log_file in args:
-                crash_log_parser = CrashLogParser(debugger, crash_log_file, options.verbose)
-                crash_log = crash_log_parser.parse()
+                crash_log = CrashLogParser().parse(debugger, crash_log_file, options.verbose)
                 SymbolicateCrashLog(crash_log, options)
 if __name__ == '__main__':
     # Create a new debugger instance

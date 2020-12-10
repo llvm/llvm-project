@@ -8,7 +8,7 @@
 @_2E_str7 = internal constant [21 x i8] c"ERROR: Only 1 point!\00", section "__TEXT,__cstring,cstring_literals", align 1
 @llvm.used = appending global [1 x i8*] [i8* bitcast (void (%struct.EDGE_PAIR*, %struct.VERTEX*, %struct.VERTEX*)* @build_delaunay to i8*)], section "llvm.metadata"
 
-define void @build_delaunay(%struct.EDGE_PAIR* noalias nocapture sret %agg.result, %struct.VERTEX* %tree, %struct.VERTEX* %extra) nounwind {
+define void @build_delaunay(%struct.EDGE_PAIR* noalias nocapture sret(%struct.EDGE_PAIR) %agg.result, %struct.VERTEX* %tree, %struct.VERTEX* %extra) nounwind {
 entry:
   %delright = alloca %struct.EDGE_PAIR, align 8
   %delleft = alloca %struct.EDGE_PAIR, align 8
@@ -29,10 +29,10 @@ bb1.i:
   br i1 %6, label %get_low.exit, label %bb1.i
 
 get_low.exit:
-  call  void @build_delaunay(%struct.EDGE_PAIR* noalias sret %delright, %struct.VERTEX* %2, %struct.VERTEX* %extra) nounwind
+  call  void @build_delaunay(%struct.EDGE_PAIR* noalias sret(%struct.EDGE_PAIR) %delright, %struct.VERTEX* %2, %struct.VERTEX* %extra) nounwind
   %7 = getelementptr %struct.VERTEX, %struct.VERTEX* %tree, i32 0, i32 1
   %8 = load %struct.VERTEX*, %struct.VERTEX** %7, align 4
-  call  void @build_delaunay(%struct.EDGE_PAIR* noalias sret %delleft, %struct.VERTEX* %8, %struct.VERTEX* %tree) nounwind
+  call  void @build_delaunay(%struct.EDGE_PAIR* noalias sret(%struct.EDGE_PAIR) %delleft, %struct.VERTEX* %8, %struct.VERTEX* %tree) nounwind
   %9 = getelementptr %struct.EDGE_PAIR, %struct.EDGE_PAIR* %delleft, i32 0, i32 0
   %10 = load %struct.edge_rec*, %struct.edge_rec** %9, align 8
   %11 = getelementptr %struct.EDGE_PAIR, %struct.EDGE_PAIR* %delleft, i32 0, i32 1

@@ -38,7 +38,6 @@ config.libcxxabi_shared         = @LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI@
 config.cxx_ext_threads          = @LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY@
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 config.pstl_obj_root            = "@ParallelSTL_BINARY_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
-config.libcxx_gdb               = "@LIBCXX_GDB@"
 
 # Code signing
 config.llvm_codesign_identity   = "@LLVM_CODESIGNING_IDENTITY@"

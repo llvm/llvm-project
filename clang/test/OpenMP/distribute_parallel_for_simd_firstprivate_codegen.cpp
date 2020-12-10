@@ -69,7 +69,7 @@ int main() {
   [&]() {
     static float sfvar;
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
     // LAMBDA: call void [[OFFLOADING_FUN:@.+]](
 
     // LAMBDA: define{{.+}} void [[OFFLOADING_FUN]](
@@ -225,11 +225,11 @@ int main() {
       // LAMBDA-32: store i{{[0-9]+}}* [[SVAR_ADDR]], i{{[0-9]+}}** [[SVAR_PRIVATE_ADDR_REF]]
       // LAMBDA: [[SFVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
       // LAMBDA: store float* [[SFVAR_CONV]], float** [[SFVAR_PRIVATE_ADDR_REF]]
-      // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
+      // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* {{[^,]*}} [[ARG]])
       // LAMBDA: call {{.*}}void @__kmpc_for_static_fini(
       // LAMBDA: ret void
       [&]() {
-	// LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+	// LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
 	// LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
 	g = 2;
 	g1 = 2;
@@ -273,10 +273,10 @@ int main() {
 
 // CHECK-LABEL: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOAD_FUN_0:@.+]](
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
 
 // CHECK: define{{.+}} [[OFFLOAD_FUN_0]](i{{[0-9]+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]* {{.+}} [[VEC_IN:%.+]], [2 x [[S_FLOAT_TY]]]* {{.+}} [[S_ARR_IN:%.+]], [[S_FLOAT_TY]]* {{.+}} [[VAR_IN:%.+]], i{{[0-9]+}} [[SVAR_IN:%.+]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i{{[0-9]+}}]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}}*)* [[OMP_OUTLINED_0:@.+]] to void
@@ -373,13 +373,13 @@ int main() {
 // CHECK: call void @__kmpc_for_static_fini(
 
 // call destructors: var..
-// CHECK-DAG: call {{.+}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.+}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // ..and s_arr
 // CHECK: {{.+}}:
 // CHECK: [[S_ARR_EL_PAST:%.+]] = phi [[S_FLOAT_TY]]*
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = getelementptr {{.+}}, {{.+}} [[S_ARR_EL_PAST]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
 
 // CHECK: ret void
 
@@ -449,23 +449,23 @@ int main() {
 // CHECK: call void @__kmpc_for_static_fini(
 
 // call destructors: var..
-// CHECK-DAG: call {{.+}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.+}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // ..and s_arr
 // CHECK: {{.+}}:
 // CHECK: [[S_ARR_EL_PAST:%.+]] = phi [[S_FLOAT_TY]]*
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = getelementptr {{.+}}, {{.+}} [[S_ARR_EL_PAST]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
 
 // CHECK: ret void
 
 // template tmain with S_INT_TY
 // CHECK-LABEL: define{{.*}} i{{[0-9]+}} @{{.+}}tmain{{.+}}()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOAD_FUN_0:@.+]](
-// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 
 // CHECK: define{{.+}} [[OFFLOAD_FUN_0]](i{{[0-9]+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]* {{.+}} [[VEC_IN:%.+]], [2 x [[S_INT_TY]]]* {{.+}} [[S_ARR_IN:%.+]], [[S_INT_TY]]* {{.+}} [[VAR_IN:%.+]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i{{[0-9]+}}]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[OMP_OUTLINED_0:@.+]] to void
@@ -549,13 +549,13 @@ int main() {
 // CHECK: call void @__kmpc_for_static_fini(
 
 // call destructors: var..
-// CHECK-DAG: call {{.+}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.+}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // ..and s_arr
 // CHECK: {{.+}}:
 // CHECK: [[S_ARR_EL_PAST:%.+]] = phi [[S_INT_TY]]*
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = getelementptr {{.+}}, {{.+}} [[S_ARR_EL_PAST]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
 
 // CHECK: ret void
 
@@ -623,13 +623,13 @@ int main() {
 // CHECK: call void @__kmpc_for_static_fini(
 
 // call destructors: var..
-// CHECK-DAG: call {{.+}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.+}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // ..and s_arr
 // CHECK: {{.+}}:
 // CHECK: [[S_ARR_EL_PAST:%.+]] = phi [[S_INT_TY]]*
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = getelementptr {{.+}}, {{.+}} [[S_ARR_EL_PAST]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
 
 // CHECK: ret void
 

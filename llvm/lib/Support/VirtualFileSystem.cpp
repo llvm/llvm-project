@@ -792,14 +792,12 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
 }
 
 bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
-                                      llvm::MemoryBuffer *Buffer,
+                                      const llvm::MemoryBufferRef &Buffer,
                                       Optional<uint32_t> User,
                                       Optional<uint32_t> Group,
                                       Optional<llvm::sys::fs::file_type> Type,
                                       Optional<llvm::sys::fs::perms> Perms) {
-  return addFile(P, ModificationTime,
-                 llvm::MemoryBuffer::getMemBuffer(
-                     Buffer->getBuffer(), Buffer->getBufferIdentifier()),
+  return addFile(P, ModificationTime, llvm::MemoryBuffer::getMemBuffer(Buffer),
                  std::move(User), std::move(Group), std::move(Type),
                  std::move(Perms));
 }
@@ -1274,7 +1272,8 @@ class llvm::vfs::RedirectingFileSystemParser {
     return true;
   }
 
-  RedirectingFileSystem::Entry *
+public:
+  static RedirectingFileSystem::Entry *
   lookupOrCreateEntry(RedirectingFileSystem *FS, StringRef Name,
                       RedirectingFileSystem::Entry *ParentEntry = nullptr) {
     if (!ParentEntry) { // Look for a existent root
@@ -1316,6 +1315,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     return DE->getLastContent();
   }
 
+private:
   void uniqueOverlayTree(RedirectingFileSystem *FS,
                          RedirectingFileSystem::Entry *SrcE,
                          RedirectingFileSystem::Entry *NewParentE = nullptr) {
@@ -1641,7 +1641,7 @@ public:
   }
 };
 
-RedirectingFileSystem *
+std::unique_ptr<RedirectingFileSystem>
 RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
                               SourceMgr::DiagHandlerTy DiagHandler,
                               StringRef YAMLFilePath, void *DiagContext,
@@ -1681,7 +1681,62 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (!P.parse(Root, FS.get()))
     return nullptr;
 
-  return FS.release();
+  return FS;
+}
+
+std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
+    ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
+    bool UseExternalNames, FileSystem &ExternalFS) {
+  std::unique_ptr<RedirectingFileSystem> FS(
+      new RedirectingFileSystem(&ExternalFS));
+  FS->UseExternalNames = UseExternalNames;
+
+  StringMap<RedirectingFileSystem::Entry *> Entries;
+
+  for (auto &Mapping : llvm::reverse(RemappedFiles)) {
+    SmallString<128> From = StringRef(Mapping.first);
+    SmallString<128> To = StringRef(Mapping.second);
+    {
+      auto EC = ExternalFS.makeAbsolute(From);
+      (void)EC;
+      assert(!EC && "Could not make absolute path");
+    }
+
+    // Check if we've already mapped this file. The first one we see (in the
+    // reverse iteration) wins.
+    RedirectingFileSystem::Entry *&ToEntry = Entries[From];
+    if (ToEntry)
+      continue;
+
+    // Add parent directories.
+    RedirectingFileSystem::Entry *Parent = nullptr;
+    StringRef FromDirectory = llvm::sys::path::parent_path(From);
+    for (auto I = llvm::sys::path::begin(FromDirectory),
+              E = llvm::sys::path::end(FromDirectory);
+         I != E; ++I) {
+      Parent = RedirectingFileSystemParser::lookupOrCreateEntry(FS.get(), *I,
+                                                                Parent);
+    }
+    assert(Parent && "File without a directory?");
+    {
+      auto EC = ExternalFS.makeAbsolute(To);
+      (void)EC;
+      assert(!EC && "Could not make absolute path");
+    }
+
+    // Add the file.
+    auto NewFile =
+        std::make_unique<RedirectingFileSystem::RedirectingFileEntry>(
+            llvm::sys::path::filename(From), To,
+            UseExternalNames
+                ? RedirectingFileSystem::RedirectingFileEntry::NK_External
+                : RedirectingFileSystem::RedirectingFileEntry::NK_Virtual);
+    ToEntry = NewFile.get();
+    cast<RedirectingFileSystem::RedirectingDirectoryEntry>(Parent)->addContent(
+        std::move(NewFile));
+  }
+
+  return FS;
 }
 
 ErrorOr<RedirectingFileSystem::Entry *>
@@ -1863,7 +1918,7 @@ RedirectingFileSystem::getRealPath(const Twine &Path,
                                : llvm::errc::invalid_argument;
 }
 
-IntrusiveRefCntPtr<FileSystem>
+std::unique_ptr<FileSystem>
 vfs::getVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                     SourceMgr::DiagHandlerTy DiagHandler,
                     StringRef YAMLFilePath, void *DiagContext,
@@ -1904,7 +1959,7 @@ void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                              SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
                              void *DiagContext,
                              IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  RedirectingFileSystem *VFS = RedirectingFileSystem::create(
+  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
       std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
       std::move(ExternalFS));
   ErrorOr<RedirectingFileSystem::Entry *> RootE = VFS->lookupPath("/");

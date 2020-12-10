@@ -100,3 +100,33 @@ const int pr44406_a = 32;
 typedef struct {
   char c[pr44406_a]; // expected-warning {{folded to constant array as an extension}}
 } pr44406_s;
+
+void test_fold_to_constant_array() {
+  const int ksize = 4;
+
+  goto jump_over_a1; // expected-error{{cannot jump from this goto statement to its label}}
+  char a1[ksize]; // expected-note{{variable length array}}
+ jump_over_a1:;
+
+  goto jump_over_a2;
+  char a2[ksize] = "foo"; // expected-warning{{variable length array folded to constant array as an extension}}
+ jump_over_a2:;
+
+  goto jump_over_a3;
+  char a3[ksize] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of GNU empty initializer}}
+ jump_over_a3:;
+
+  goto jump_over_a4; // expected-error{{cannot jump from this goto statement to its label}}
+  char a4[ksize][2]; // expected-note{{variable length array}}
+ jump_over_a4:;
+
+  char a5[ksize][2] = {}; // expected-warning {{variable length array folded to constant array as an extension}} expected-warning{{use of GNU empty initializer}}
+
+  int a6[ksize] = {1,2,3,4}; // expected-warning{{variable length array folded to constant array as an extension}}
+
+  // expected-warning@+1{{variable length array folded to constant array as an extension}}
+  int a7[ksize] __attribute__((annotate("foo"))) = {1,2,3,4};
+
+  // expected-warning@+1{{variable length array folded to constant array as an extension}}
+  char a8[2][ksize] = {{1,2,3,4},{4,3,2,1}};
+}

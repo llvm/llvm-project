@@ -93,6 +93,9 @@ run-qemu.sh has following dependencies:
 
 * --sve option will enable AArch64 SVE mode.
 
+* --mte option will enable AArch64 MTE (memory tagging) mode.
+  (can be used on its own or in addition to --sve)
+
 
 **Example:** Run QEMU Arm or AArch64 system emulation using run-qemu.sh
 ::

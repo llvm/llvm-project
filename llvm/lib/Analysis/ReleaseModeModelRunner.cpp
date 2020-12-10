@@ -25,8 +25,8 @@
 using namespace llvm;
 namespace {
 
-static const char *const FeedPrefix = "feed_";
-static const char *const FetchPrefix = "fetch_";
+const char FeedPrefix[] = "feed_";
+const char FetchPrefix[] = "fetch_";
 
 /// MLModelRunner - production mode implementation. It uses a AOT-compiled
 /// SavedModel for efficient execution.

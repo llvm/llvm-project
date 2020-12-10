@@ -217,7 +217,7 @@ entry:
 ; CHECK: retl
 
 
-define void @avoid_byval(i32* byval %x) {
+define void @avoid_byval(i32* byval(i32) %x) {
 entry:
   %x.p.p = alloca i32*
   store i32* %x, i32** %x.p.p
@@ -280,7 +280,7 @@ define void @escape_with_store(i32 %x) {
 
 ; This test case exposed issues with the use of TokenFactor.
 
-define void @sret_and_elide(i32* sret %sret, i32 %v) {
+define void @sret_and_elide(i32* sret(i32) %sret, i32 %v) {
   %v.p = alloca i32
   store i32 %v, i32* %v.p
   call void @addrof_i32(i32* %v.p)

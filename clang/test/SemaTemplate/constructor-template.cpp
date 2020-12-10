@@ -158,7 +158,7 @@ namespace self_by_value {
 namespace self_by_value_2 {
   template <class T, class U> struct A {
     A() {} // expected-note {{not viable: requires 0 arguments}}
-    A(A<T,U> &o) {} // expected-note {{not viable: expects an l-value}}
+    A(A<T,U> &o) {} // expected-note {{not viable: expects an lvalue}}
     A(A<T,T> o) {} // expected-note {{ignored: instantiation takes its own class type by value}}
   };
 

@@ -50,8 +50,12 @@ static MCInstrInfo *createAArch64MCInstrInfo() {
 
 static MCSubtargetInfo *
 createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  if (CPU.empty())
+  if (CPU.empty()) {
     CPU = "generic";
+
+    if (TT.isArm64e())
+      CPU = "apple-a12";
+  }
 
   return createAArch64MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }

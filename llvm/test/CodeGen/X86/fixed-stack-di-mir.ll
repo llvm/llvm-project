@@ -7,7 +7,7 @@ target triple = "x86_64-apple-unknown"
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
-define hidden void @foo(i32* byval %dstRect) {
+define hidden void @foo(i32* byval(i32) %dstRect) {
 ; CHECK-LABEL: name: foo
 entry:
   call void @llvm.dbg.declare(metadata i32* %dstRect, metadata !3, metadata !DIExpression()), !dbg !5

@@ -88,8 +88,14 @@ public:
   /// provide more context so that non-trivial false positives can be quickly
   /// detected by the user.
   bool allowExtraAnalysis(StringRef PassName) const {
-    return (F->getContext().getLLVMRemarkStreamer() ||
-            F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
+    return OptimizationRemarkEmitter::allowExtraAnalysis(*F, PassName);
+  }
+  static bool allowExtraAnalysis(const Function &F, StringRef PassName) {
+    return allowExtraAnalysis(F.getContext(), PassName);
+  }
+  static bool allowExtraAnalysis(LLVMContext &Ctx, StringRef PassName) {
+    return Ctx.getLLVMRemarkStreamer() ||
+           Ctx.getDiagHandlerPtr()->isAnyRemarkEnabled(PassName);
   }
 
 private:

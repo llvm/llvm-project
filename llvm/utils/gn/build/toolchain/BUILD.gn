@@ -3,7 +3,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 declare_args() {
   # If is_goma is true, the location of the goma client install.
   if (host_os == "win") {
-    goma_dir = "c:\src\goma\goma-win64"
+    goma_dir = "C:/src/goma/goma-win64"
   } else {
     goma_dir = getenv("HOME") + "/goma"
   }

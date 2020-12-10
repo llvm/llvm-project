@@ -1245,10 +1245,10 @@ int OnExit() {
       CHECK_UNPOISONED_0(x, n);                                 \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC(name)                                        \
-  do {                                                                   \
-    if (!INTERCEPT_FUNCTION(name))                                       \
-      VReport(1, "MemorySanitizer: failed to intercept '%s'\n'", #name); \
+#define MSAN_INTERCEPT_FUNC(name)                                       \
+  do {                                                                  \
+    if (!INTERCEPT_FUNCTION(name))                                      \
+      VReport(1, "MemorySanitizer: failed to intercept '%s'\n", #name); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                 \

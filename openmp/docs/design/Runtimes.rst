@@ -19,6 +19,8 @@ LLVM/OpenMP Target Host Runtime (``libomptarget``)
 LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 -------------------------------------------------------------------
 
+.. _device_runtime:
+
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 --------------------------------------------------------------------
 

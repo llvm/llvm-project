@@ -411,12 +411,12 @@ inline namespace __1 {
 
 template <class>
 class function;
-template <class R, class... Args>
-class function<R(Args...)> {
+template <class R, class... ArgTypes>
+class function<R(ArgTypes...)> {
 public:
   function();
-  function(const function &other);
-  R operator()(Args &&...args) const;
+  function(const function &Other);
+  R operator()(ArgTypes... Args) const;
 };
 
 } // namespace __1
@@ -460,3 +460,19 @@ void positiveFakeStdFunction(std::function<void(int)> F) {
 }
 
 } // namespace fake
+
+void positiveInvokedOnStdFunction(
+    std::function<void(const ExpensiveToCopyType &)> Update,
+    const ExpensiveToCopyType Orig) {
+  auto Copy = Orig.reference();
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'Copy' is copy-constructed from a const reference
+  // CHECK-FIXES: const auto& Copy = Orig.reference();
+  Update(Copy);
+}
+
+void negativeInvokedOnStdFunction(
+    std::function<void(ExpensiveToCopyType &)> Update,
+    const ExpensiveToCopyType Orig) {
+  auto Copy = Orig.reference();
+  Update(Copy);
+}

@@ -13,7 +13,7 @@
 // a stream of bytes.
 
 #include <cstddef>
-#include <forward_list>
+#include <list>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,13 +24,12 @@ class CharBuffer {
 public:
   CharBuffer() {}
   CharBuffer(CharBuffer &&that)
-      : blocks_(std::move(that.blocks_)), last_{that.last_},
-        bytes_{that.bytes_}, lastBlockEmpty_{that.lastBlockEmpty_} {
+      : blocks_(std::move(that.blocks_)), bytes_{that.bytes_},
+        lastBlockEmpty_{that.lastBlockEmpty_} {
     that.clear();
   }
   CharBuffer &operator=(CharBuffer &&that) {
     blocks_ = std::move(that.blocks_);
-    last_ = that.last_;
     bytes_ = that.bytes_;
     lastBlockEmpty_ = that.lastBlockEmpty_;
     that.clear();
@@ -42,7 +41,6 @@ public:
 
   void clear() {
     blocks_.clear();
-    last_ = blocks_.end();
     bytes_ = 0;
     lastBlockEmpty_ = false;
   }
@@ -65,8 +63,7 @@ private:
   };
 
   int LastBlockOffset() const { return bytes_ % Block::capacity; }
-  std::forward_list<Block> blocks_;
-  std::forward_list<Block>::iterator last_{blocks_.end()};
+  std::list<Block> blocks_;
   std::size_t bytes_{0};
   bool lastBlockEmpty_{false};
 };

@@ -2,6 +2,8 @@
 
 // REQUIRES: stable-runtime
 // XFAIL: android && asan
+// No libutil.
+// UNSUPPORTED: solaris
 
 #include <assert.h>
 #include <stdio.h>
@@ -14,6 +16,8 @@
 #include <sys/ioctl.h>
 #include <sys/termios.h>
 #include <sys/types.h>
+#elif defined(__sun__) && defined(__svr4__)
+#include <termios.h>
 #else
 #include <util.h>
 #endif

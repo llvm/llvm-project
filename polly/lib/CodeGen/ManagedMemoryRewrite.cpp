@@ -354,7 +354,7 @@ public:
   GPURuntime Runtime;
 
   ManagedMemoryRewritePass() : ModulePass(ID) {}
-  virtual bool runOnModule(Module &M) {
+  bool runOnModule(Module &M) override {
     const DataLayout &DL = M.getDataLayout();
 
     Function *Malloc = M.getFunction("malloc");

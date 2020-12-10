@@ -3,19 +3,18 @@
 
 from __future__ import division, print_function
 
-
+import binascii
 import os
 import os.path
 import platform
 import re
 import six
-import socket_packet_pump
+import socket
 import subprocess
+from lldbsuite.support import seven
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
-
-from six.moves import queue
-
+from textwrap import dedent
 
 def _get_debug_monitor_from_lldb(lldb_exe, debug_monitor_basename):
     """Return the debug monitor exe path given the lldb exe path.
@@ -165,17 +164,14 @@ def assert_packets_equal(asserter, actual_packet, expected_packet):
 
 def expect_lldb_gdbserver_replay(
         asserter,
-        sock,
+        server,
         test_sequence,
-        pump_queues,
         timeout_seconds,
         logger=None):
     """Replay socket communication with lldb-gdbserver and verify responses.
 
     Args:
         asserter: the object providing assertEqual(first, second, msg=None), e.g. TestCase instance.
-
-        sock: the TCP socket connected to the lldb-gdbserver exe.
 
         test_sequence: a GdbRemoteTestSequence instance that describes
             the messages sent to the gdb remote and the responses
@@ -207,75 +203,62 @@ def expect_lldb_gdbserver_replay(
         return {}
 
     context = {"O_count": 0, "O_content": ""}
-    with socket_packet_pump.SocketPacketPump(sock, pump_queues, logger) as pump:
-        # Grab the first sequence entry.
-        sequence_entry = test_sequence.entries.pop(0)
 
-        # While we have an active sequence entry, send messages
-        # destined for the stub and collect/match/process responses
-        # expected from the stub.
-        while sequence_entry:
-            if sequence_entry.is_send_to_remote():
-                # This is an entry to send to the remote debug monitor.
-                send_packet = sequence_entry.get_send_packet()
-                if logger:
-                    if len(send_packet) == 1 and send_packet[0] == chr(3):
-                        packet_desc = "^C"
-                    else:
-                        packet_desc = send_packet
-                    logger.info(
-                        "sending packet to remote: {}".format(packet_desc))
-                sock.sendall(send_packet.encode())
-            else:
-                # This is an entry expecting to receive content from the remote
-                # debug monitor.
+    # Grab the first sequence entry.
+    sequence_entry = test_sequence.entries.pop(0)
 
-                # We'll pull from (and wait on) the queue appropriate for the type of matcher.
-                # We keep separate queues for process output (coming from non-deterministic
-                # $O packet division) and for all other packets.
+    # While we have an active sequence entry, send messages
+    # destined for the stub and collect/match/process responses
+    # expected from the stub.
+    while sequence_entry:
+        if sequence_entry.is_send_to_remote():
+            # This is an entry to send to the remote debug monitor.
+            send_packet = sequence_entry.get_send_packet()
+            if logger:
+                if len(send_packet) == 1 and send_packet[0] == chr(3):
+                    packet_desc = "^C"
+                else:
+                    packet_desc = send_packet
+                logger.info(
+                    "sending packet to remote: {}".format(packet_desc))
+            server.send_raw(send_packet.encode())
+        else:
+            # This is an entry expecting to receive content from the remote
+            # debug monitor.
+
+            # We'll pull from (and wait on) the queue appropriate for the type of matcher.
+            # We keep separate queues for process output (coming from non-deterministic
+            # $O packet division) and for all other packets.
+            try:
                 if sequence_entry.is_output_matcher():
-                    try:
-                        # Grab next entry from the output queue.
-                        content = pump_queues.output_queue().get(True, timeout_seconds)
-                    except queue.Empty:
-                        if logger:
-                            logger.warning(
-                                "timeout waiting for stub output (accumulated output:{})".format(
-                                    pump.get_accumulated_output()))
-                        raise Exception(
-                            "timed out while waiting for output match (accumulated output: {})".format(
-                                pump.get_accumulated_output()))
+                    # Grab next entry from the output queue.
+                    content = server.get_raw_output_packet()
                 else:
-                    try:
-                        content = pump_queues.packet_queue().get(True, timeout_seconds)
-                    except queue.Empty:
-                        if logger:
-                            logger.warning(
-                                "timeout waiting for packet match (receive buffer: {})".format(
-                                    pump.get_receive_buffer()))
-                        raise Exception(
-                            "timed out while waiting for packet match (receive buffer: {})".format(
-                                pump.get_receive_buffer()))
+                    content = server.get_raw_normal_packet()
+                content = seven.bitcast_to_string(content)
+            except socket.timeout:
+                asserter.fail(
+                        "timed out while waiting for '{}':\n{}".format(sequence_entry, server))
 
-                # Give the sequence entry the opportunity to match the content.
-                # Output matchers might match or pass after more output accumulates.
-                # Other packet types generally must match.
-                asserter.assertIsNotNone(content)
-                context = sequence_entry.assert_match(
-                    asserter, content, context=context)
+            # Give the sequence entry the opportunity to match the content.
+            # Output matchers might match or pass after more output accumulates.
+            # Other packet types generally must match.
+            asserter.assertIsNotNone(content)
+            context = sequence_entry.assert_match(
+                asserter, content, context=context)
 
-            # Move on to next sequence entry as needed.  Some sequence entries support executing multiple
-            # times in different states (for looping over query/response
-            # packets).
-            if sequence_entry.is_consumed():
-                if len(test_sequence.entries) > 0:
-                    sequence_entry = test_sequence.entries.pop(0)
-                else:
-                    sequence_entry = None
+        # Move on to next sequence entry as needed.  Some sequence entries support executing multiple
+        # times in different states (for looping over query/response
+        # packets).
+        if sequence_entry.is_consumed():
+            if len(test_sequence.entries) > 0:
+                sequence_entry = test_sequence.entries.pop(0)
+            else:
+                sequence_entry = None
 
-        # Fill in the O_content entries.
-        context["O_count"] = 1
-        context["O_content"] = pump.get_accumulated_output()
+    # Fill in the O_content entries.
+    context["O_count"] = 1
+    context["O_content"] = server.consume_accumulated_output()
 
     return context
 
@@ -950,9 +933,99 @@ def process_is_running(pid, unknown_value=True):
     # Check if the pid is in the process_ids
     return pid in process_ids
 
-if __name__ == '__main__':
-    EXE_PATH = get_lldb_server_exe()
-    if EXE_PATH:
-        print("lldb-server path detected: {}".format(EXE_PATH))
+def _handle_output_packet_string(packet_contents):
+    if (not packet_contents) or (len(packet_contents) < 1):
+        return None
+    elif packet_contents[0:1] != b"O":
+        return None
+    elif packet_contents == b"OK":
+        return None
     else:
-        print("lldb-server could not be found")
+        return binascii.unhexlify(packet_contents[1:])
+
+class Server(object):
+
+    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^\$([^\#]*)#[0-9a-fA-F]{2}')
+
+    class ChecksumMismatch(Exception):
+        pass
+
+    def __init__(self, sock, proc = None):
+        self._accumulated_output = b""
+        self._receive_buffer = b""
+        self._normal_queue = []
+        self._output_queue = []
+        self._sock = sock
+        self._proc = proc
+
+    def send_raw(self, frame):
+        self._sock.sendall(frame)
+
+    def _read(self, q):
+        while not q:
+            new_bytes = self._sock.recv(4096)
+            self._process_new_bytes(new_bytes)
+        return q.pop(0)
+
+    def _process_new_bytes(self, new_bytes):
+        # Add new bytes to our accumulated unprocessed packet bytes.
+        self._receive_buffer += new_bytes
+
+        # Parse fully-formed packets into individual packets.
+        has_more = len(self._receive_buffer) > 0
+        while has_more:
+            if len(self._receive_buffer) <= 0:
+                has_more = False
+            # handle '+' ack
+            elif self._receive_buffer[0:1] == b"+":
+                self._normal_queue += [b"+"]
+                self._receive_buffer = self._receive_buffer[1:]
+            else:
+                packet_match = self._GDB_REMOTE_PACKET_REGEX.match(
+                    self._receive_buffer)
+                if packet_match:
+                    # Our receive buffer matches a packet at the
+                    # start of the receive buffer.
+                    new_output_content = _handle_output_packet_string(
+                        packet_match.group(1))
+                    if new_output_content:
+                        # This was an $O packet with new content.
+                        self._accumulated_output += new_output_content
+                        self._output_queue += [self._accumulated_output]
+                    else:
+                        # Any packet other than $O.
+                        self._normal_queue += [packet_match.group(0)]
+
+                    # Remove the parsed packet from the receive
+                    # buffer.
+                    self._receive_buffer = self._receive_buffer[
+                        len(packet_match.group(0)):]
+                else:
+                    # We don't have enough in the receive bufferto make a full
+                    # packet. Stop trying until we read more.
+                    has_more = False
+
+    def get_raw_output_packet(self):
+        return self._read(self._output_queue)
+
+    def get_raw_normal_packet(self):
+        return self._read(self._normal_queue)
+
+    def get_accumulated_output(self):
+        return self._accumulated_output
+
+    def consume_accumulated_output(self):
+        output = self._accumulated_output
+        self._accumulated_output = b""
+        return output
+
+    def __str__(self):
+        return dedent("""\
+            server '{}' on '{}'
+            _receive_buffer: {}
+            _normal_queue: {}
+            _output_queue: {}
+            _accumulated_output: {}
+            """).format(self._proc, self._sock, self._receive_buffer,
+                    self._normal_queue, self._output_queue,
+                    self._accumulated_output)

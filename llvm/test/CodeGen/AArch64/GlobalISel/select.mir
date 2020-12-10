@@ -1,5 +1,4 @@
 # RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
-# RUN: llc -O0 -mtriple=aarch64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-DEFAULT
 # RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
 
 --- |
@@ -78,7 +77,6 @@ registers:
 
 # CHECK:  body:
 # IOS: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
-# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
 # LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_local
 body:             |
   bb.0:
@@ -96,7 +94,6 @@ registers:
 
 # CHECK:  body:
 # IOS: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
-# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
 # LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
 body:             |
   bb.0:

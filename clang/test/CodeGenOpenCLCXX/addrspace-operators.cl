@@ -20,10 +20,10 @@ __global int globI;
 void bar() {
   C c;
   //CHECK: [[A1:%[.a-z0-9]+]] = addrspacecast %class.C* [[C:%[a-z0-9]+]] to %class.C addrspace(4)*
-  //CHECK: call spir_func void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* [[A1]], i32 0)
+  //CHECK: call spir_func void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* {{[^,]*}} [[A1]], i32 0)
   c.Assign(a);
   //CHECK: [[A2:%[.a-z0-9]+]] = addrspacecast %class.C* [[C]] to %class.C addrspace(4)*
-  //CHECK: call spir_func void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* [[A2]], i32 0)
+  //CHECK: call spir_func void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* {{[^,]*}} [[A2]], i32 0)
   c.OrAssign(a);
 
   E e;
@@ -45,7 +45,7 @@ void bar() {
   globVI -= a;
 }
 
-//CHECK: define linkonce_odr spir_func void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)*{{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
+//CHECK: define linkonce_odr spir_func void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* {{[^,]*}} {{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
 //CHECK: [[THIS_ADDR:%[.a-z0-9]+]] = alloca %class.C addrspace(4)
 //CHECK: [[E_ADDR:%[.a-z0-9]+]] = alloca i32
 //CHECK: store %class.C addrspace(4)* {{%[a-z0-9]+}}, %class.C addrspace(4)** [[THIS_ADDR]]
@@ -55,7 +55,7 @@ void bar() {
 //CHECK: [[ME:%[a-z0-9]+]] = getelementptr inbounds %class.C, %class.C addrspace(4)* [[THIS1]], i32 0, i32 0
 //CHECK: store i32 [[E]], i32 addrspace(4)* [[ME]]
 
-//CHECK: define linkonce_odr spir_func void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)*{{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
+//CHECK: define linkonce_odr spir_func void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* {{[^,]*}} {{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
 //CHECK: [[THIS_ADDR:%[.a-z0-9]+]] = alloca %class.C addrspace(4)
 //CHECK: [[E_ADDR:%[.a-z0-9]+]] = alloca i32
 //CHECK: store %class.C addrspace(4)* {{%[a-z0-9]+}}, %class.C addrspace(4)** [[THIS_ADDR]]

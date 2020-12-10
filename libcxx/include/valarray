@@ -136,6 +136,7 @@ public:
     void operator>>=(const valarray<value_type>& v) const;
 
     void operator=(const value_type& x) const;
+    void operator=(const valarray<T>& val_arr) const;
 
     slice_array() = delete;
 };
@@ -802,7 +803,7 @@ private:
 public:
     // construct/destroy:
     _LIBCPP_INLINE_VISIBILITY
-    valarray() : __begin_(0), __end_(0) {}
+    valarray() : __begin_(nullptr), __end_(nullptr) {}
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     explicit valarray(size_t __n);
     _LIBCPP_INLINE_VISIBILITY
@@ -1264,6 +1265,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void operator=(const value_type& __x) const;
 
+    _LIBCPP_INLINE_VISIBILITY
+    void operator=(const valarray<value_type>& __va) const;
+
 private:
     _LIBCPP_INLINE_VISIBILITY
     slice_array(const slice& __sl, const valarray<value_type>& __v)
@@ -1301,6 +1305,15 @@ slice_array<_Tp>::operator=(const _Expr& __v) const
     value_type* __t = __vp_;
     for (size_t __i = 0; __i < __size_; ++__i, __t += __stride_)
         *__t = __v[__i];
+}
+
+template <class _Tp>
+inline void
+slice_array<_Tp>::operator=(const valarray<value_type>& __va) const
+{
+    value_type* __t = __vp_;
+    for (size_t __i = 0; __i < __va.size(); ++__i, __t += __stride_)
+        *__t = __va[__i];
 }
 
 template <class _Tp>
@@ -2750,8 +2763,8 @@ __val_expr<_ValExpr>::operator valarray<__val_expr::result_type>() const
 template <class _Tp>
 inline
 valarray<_Tp>::valarray(size_t __n)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     if (__n)
     {
@@ -2776,16 +2789,16 @@ valarray<_Tp>::valarray(size_t __n)
 template <class _Tp>
 inline
 valarray<_Tp>::valarray(const value_type& __x, size_t __n)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     resize(__n, __x);
 }
 
 template <class _Tp>
 valarray<_Tp>::valarray(const value_type* __p, size_t __n)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     if (__n)
     {
@@ -2809,8 +2822,8 @@ valarray<_Tp>::valarray(const value_type* __p, size_t __n)
 
 template <class _Tp>
 valarray<_Tp>::valarray(const valarray& __v)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     if (__v.size())
     {
@@ -2845,8 +2858,8 @@ valarray<_Tp>::valarray(valarray&& __v) _NOEXCEPT
 
 template <class _Tp>
 valarray<_Tp>::valarray(initializer_list<value_type> __il)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     const size_t __n = __il.size();
     if (__n)
@@ -2874,8 +2887,8 @@ valarray<_Tp>::valarray(initializer_list<value_type> __il)
 
 template <class _Tp>
 valarray<_Tp>::valarray(const slice_array<value_type>& __sa)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     const size_t __n = __sa.__size_;
     if (__n)
@@ -2901,8 +2914,8 @@ valarray<_Tp>::valarray(const slice_array<value_type>& __sa)
 
 template <class _Tp>
 valarray<_Tp>::valarray(const gslice_array<value_type>& __ga)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     const size_t __n = __ga.__1d_.size();
     if (__n)
@@ -2930,8 +2943,8 @@ valarray<_Tp>::valarray(const gslice_array<value_type>& __ga)
 
 template <class _Tp>
 valarray<_Tp>::valarray(const mask_array<value_type>& __ma)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     const size_t __n = __ma.__1d_.size();
     if (__n)
@@ -2959,8 +2972,8 @@ valarray<_Tp>::valarray(const mask_array<value_type>& __ma)
 
 template <class _Tp>
 valarray<_Tp>::valarray(const indirect_array<value_type>& __ia)
-    : __begin_(0),
-      __end_(0)
+    : __begin_(nullptr),
+      __end_(nullptr)
 {
     const size_t __n = __ia.__1d_.size();
     if (__n)

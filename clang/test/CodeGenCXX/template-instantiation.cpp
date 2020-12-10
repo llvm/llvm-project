@@ -18,7 +18,7 @@
 // CHECK2-NOT: _ZTVN5test31SIiEE
 // CHECK2-NOT: _ZTSN5test31SIiEE
 
-// CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(%"class.test2::C"* %this) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(%"class.test2::C"* {{[^,]*}} %this) unnamed_addr
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiE6foobarIdEEvT_(
 // CHECK-LABEL: define available_externally void @_ZN5test21CIiE6zedbarEd(
 

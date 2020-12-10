@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512VL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX,AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX,AVX512VL
 
 ; fold (abs c1) -> c2
 define <4 x i32> @combine_v4i32_abs_constant() {
@@ -55,10 +55,9 @@ define i32 @combine_i32_abs_abs(i32 %a) {
 define <8 x i16> @combine_v8i16_abs_abs(<8 x i16> %a) {
 ; SSE2-LABEL: combine_v8i16_abs_abs:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psraw $15, %xmm1
-; SSE2-NEXT:    paddw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    psubw %xmm0, %xmm1
+; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_v8i16_abs_abs:
@@ -82,12 +81,10 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm3
-; SSE2-NEXT:    paddb %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
-; SSE2-NEXT:    paddb %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    psubb %xmm0, %xmm3
+; SSE2-NEXT:    pminub %xmm3, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm2
+; SSE2-NEXT:    pminub %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_v32i8_abs_abs:

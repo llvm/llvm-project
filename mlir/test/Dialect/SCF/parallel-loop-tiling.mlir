@@ -112,3 +112,29 @@ func @tile_nested_innermost() {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+func @tile_nested_in_non_ploop() {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  scf.for %i = %c0 to %c2 step %c1 {
+    scf.for %j = %c0 to %c2 step %c1 {
+      scf.parallel (%k, %l) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @tile_nested_in_non_ploop
+// CHECK:         scf.for
+// CHECK:           scf.for
+// CHECK:             scf.parallel
+// CHECK:               scf.parallel
+// CHECK:               }
+// CHECK:             }
+// CHECK:           }
+// CHECK:         }
+// CHECK:       }

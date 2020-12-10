@@ -1,7 +1,7 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-# Generates RISCVGenSystemOperands.inc
-tablegen("RISCVGenSystemOperands") {
+# Generates RISCVGenSearchableTables.inc
+tablegen("RISCVGenSearchableTables") {
   visibility = [ ":Utils" ]
   args = [ "-gen-searchable-tables" ]
   td_file = "../RISCV.td"
@@ -9,7 +9,7 @@ tablegen("RISCVGenSystemOperands") {
 
 static_library("Utils") {
   output_name = "LLVMRISCVUtils"
-  public_deps = [ ":RISCVGenSystemOperands" ]
+  public_deps = [ ":RISCVGenSearchableTables" ]
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",

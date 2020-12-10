@@ -108,7 +108,7 @@ public:
     ParseState backtrack{state};
     std::optional<resultType> result{parser_.Parse(state)};
     if (result) {
-      state.messages().Restore(std::move(messages));
+      state.messages().Annex(std::move(messages));
     } else {
       state = std::move(backtrack);
       state.messages() = std::move(messages);
@@ -311,7 +311,7 @@ public:
         ParseRest<1>(result, state, backtrack);
       }
     }
-    state.messages().Restore(std::move(messages));
+    state.messages().Annex(std::move(messages));
     return result;
   }
 
@@ -371,7 +371,7 @@ public:
     }
     Messages messages{std::move(state.messages())};
     if (std::optional<resultType> ax{pa_.Parse(state)}) {
-      state.messages().Restore(std::move(messages));
+      state.messages().Annex(std::move(messages));
       return ax;
     }
     messages.Annex(std::move(state.messages()));

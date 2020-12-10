@@ -46,120 +46,120 @@
 
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
 
-// CHECK: func @foo(i32, i64) -> f32
-func @foo(i32, i64) -> f32
+// CHECK: func private @foo(i32, i64) -> f32
+func private @foo(i32, i64) -> f32
 
-// CHECK: func @bar()
-func @bar() -> ()
+// CHECK: func private @bar()
+func private @bar() -> ()
 
-// CHECK: func @baz() -> (i1, index, f32)
-func @baz() -> (i1, index, f32)
+// CHECK: func private @baz() -> (i1, index, f32)
+func private @baz() -> (i1, index, f32)
 
-// CHECK: func @missingReturn()
-func @missingReturn()
+// CHECK: func private @missingReturn()
+func private @missingReturn()
 
-// CHECK: func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
-func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
+// CHECK: func private @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
+func private @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
 
-// CHECK: func @sint_types(si2, si4) -> (si7, si1023)
-func @sint_types(si2, si4) -> (si7, si1023)
+// CHECK: func private @sint_types(si2, si4) -> (si7, si1023)
+func private @sint_types(si2, si4) -> (si7, si1023)
 
-// CHECK: func @uint_types(ui2, ui4) -> (ui7, ui1023)
-func @uint_types(ui2, ui4) -> (ui7, ui1023)
+// CHECK: func private @uint_types(ui2, ui4) -> (ui7, ui1023)
+func private @uint_types(ui2, ui4) -> (ui7, ui1023)
 
 
-// CHECK: func @vectors(vector<1xf32>, vector<2x4xf32>)
-func @vectors(vector<1 x f32>, vector<2x4xf32>)
+// CHECK: func private @vectors(vector<1xf32>, vector<2x4xf32>)
+func private @vectors(vector<1 x f32>, vector<2x4xf32>)
 
-// CHECK: func @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
-func @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
+// CHECK: func private @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
+func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
                  tensor<1x?x4x?x?xi32>, tensor<i8>)
 
-// CHECK: func @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
-func @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
+// CHECK: func private @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
+func private @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
 
 // Test memref affine map compositions.
 
-// CHECK: func @memrefs2(memref<2x4x8xi8, 1>)
-func @memrefs2(memref<2x4x8xi8, #map2, 1>)
+// CHECK: func private @memrefs2(memref<2x4x8xi8, 1>)
+func private @memrefs2(memref<2x4x8xi8, #map2, 1>)
 
-// CHECK: func @memrefs23(memref<2x4x8xi8, #map{{[0-9]+}}>)
-func @memrefs23(memref<2x4x8xi8, #map2, #map3, 0>)
+// CHECK: func private @memrefs23(memref<2x4x8xi8, #map{{[0-9]+}}>)
+func private @memrefs23(memref<2x4x8xi8, #map2, #map3, 0>)
 
-// CHECK: func @memrefs234(memref<2x4x8xi8, #map{{[0-9]+}}, #map{{[0-9]+}}, 3>)
-func @memrefs234(memref<2x4x8xi8, #map2, #map3, #map4, 3>)
+// CHECK: func private @memrefs234(memref<2x4x8xi8, #map{{[0-9]+}}, #map{{[0-9]+}}, 3>)
+func private @memrefs234(memref<2x4x8xi8, #map2, #map3, #map4, 3>)
 
 // Test memref inline affine map compositions, minding that identity maps are removed.
 
-// CHECK: func @memrefs3(memref<2x4x8xi8>)
-func @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
+// CHECK: func private @memrefs3(memref<2x4x8xi8>)
+func private @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
 
-// CHECK: func @memrefs33(memref<2x4x8xi8, #map{{[0-9]+}}, 1>)
-func @memrefs33(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>, 1>)
+// CHECK: func private @memrefs33(memref<2x4x8xi8, #map{{[0-9]+}}, 1>)
+func private @memrefs33(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>, 1>)
 
-// CHECK: func @memrefs_drop_triv_id_inline(memref<2xi8>)
-func @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
+// CHECK: func private @memrefs_drop_triv_id_inline(memref<2xi8>)
+func private @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
 
-// CHECK: func @memrefs_drop_triv_id_inline0(memref<2xi8>)
-func @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>, 0>)
+// CHECK: func private @memrefs_drop_triv_id_inline0(memref<2xi8>)
+func private @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>, 0>)
 
-// CHECK: func @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
-func @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
+// CHECK: func private @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
+func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
 
 // Identity maps should be dropped from the composition, but not the pair of
 // "interchange" maps that, if composed, would be also an identity.
-// CHECK: func @memrefs_drop_triv_id_composition(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_composition(memref<2x2xi8,
+// CHECK: func private @memrefs_drop_triv_id_composition(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_composition(memref<2x2xi8,
                                                 affine_map<(d0, d1) -> (d1, d0)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>,
                                                 affine_map<(d0, d1) -> (d1, d0)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_trailing(memref<2x2xi8, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_trailing(memref<2x2xi8, affine_map<(d0, d1) -> (d1, d0)>,
+// CHECK: func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, affine_map<(d0, d1) -> (d1, d0)>,
                                                    affine_map<(d0, d1) -> (d0, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_middle(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_middle(memref<2x2xi8,
+// CHECK: func private @memrefs_drop_triv_id_middle(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_middle(memref<2x2xi8,
                                          affine_map<(d0, d1) -> (d0, d1 + 1)>,
                                          affine_map<(d0, d1) -> (d0, d1)>,
                                          affine_map<(d0, d1) -> (d0 + 1, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_multiple(memref<2xi8>)
-func @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>>)
+// CHECK: func private @memrefs_drop_triv_id_multiple(memref<2xi8>)
+func private @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>>)
 
 // These maps appeared before, so they must be uniqued and hoisted to the beginning.
 // Identity map should be removed.
-// CHECK: func @memrefs_compose_with_id(memref<2x2xi8, #map{{[0-9]+}}>)
-func @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
+// CHECK: func private @memrefs_compose_with_id(memref<2x2xi8, #map{{[0-9]+}}>)
+func private @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
                                              affine_map<(d0, d1) -> (d1, d0)>>)
 
 
-// CHECK: func @complex_types(complex<i1>) -> complex<f32>
-func @complex_types(complex<i1>) -> complex<f32>
+// CHECK: func private @complex_types(complex<i1>) -> complex<f32>
+func private @complex_types(complex<i1>) -> complex<f32>
 
 
-// CHECK: func @memref_with_index_elems(memref<1x?xindex>)
-func @memref_with_index_elems(memref<1x?xindex>)
+// CHECK: func private @memref_with_index_elems(memref<1x?xindex>)
+func private @memref_with_index_elems(memref<1x?xindex>)
 
-// CHECK: func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
-func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
+// CHECK: func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
+func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
 
-// CHECK: func @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
-func @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+// CHECK: func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
 
-// CHECK: func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
-func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
+// CHECK: func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
+func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 
-// CHECK: func @unranked_memref_with_index_elems(memref<*xindex>)
-func @unranked_memref_with_index_elems(memref<*xindex>)
+// CHECK: func private @unranked_memref_with_index_elems(memref<*xindex>)
+func private @unranked_memref_with_index_elems(memref<*xindex>)
 
-// CHECK: func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
-func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+// CHECK: func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
 
-// CHECK: func @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
-func @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
+// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
+func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
 // CHECK-LABEL: func @simpleCFG(%{{.*}}: i32, %{{.*}}: f32) -> i1 {
 func @simpleCFG(%arg0: i32, %f: f32) -> i1 {
@@ -565,17 +565,17 @@ func @floatAttrs() -> () {
   return
 }
 
-// CHECK-LABEL: func @externalfuncattr
-func @externalfuncattr() -> ()
+// CHECK-LABEL: func private @externalfuncattr
+func private @externalfuncattr() -> ()
   // CHECK: attributes {dialect.a = "a\22quoted\22string", dialect.b = 4.000000e+00 : f64, dialect.c = tensor<*xf32>}
   attributes {dialect.a = "a\"quoted\"string", dialect.b = 4.0, dialect.c = tensor<*xf32>}
 
-// CHECK-LABEL: func @funcattrempty
-func @funcattrempty() -> ()
+// CHECK-LABEL: func private @funcattrempty
+func private @funcattrempty() -> ()
   attributes {}
 
-// CHECK-LABEL: func @funcattr
-func @funcattr() -> ()
+// CHECK-LABEL: func private @funcattr
+func private @funcattr() -> ()
   // CHECK: attributes {dialect.a = "a\22quoted\22string", dialect.b = 4.000000e+00 : f64, dialect.c = tensor<*xf32>}
   attributes {dialect.a = "a\"quoted\"string", dialect.b = 4.0, dialect.c = tensor<*xf32>} {
 ^bb0:
@@ -888,11 +888,11 @@ func @dialect_attrs()
   return
 }
 
-// CHECK-LABEL: func @_valid.function$name
-func @_valid.function$name()
+// CHECK-LABEL: func private @_valid.function$name
+func private @_valid.function$name()
 
-// CHECK-LABEL: func @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
-func @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
+// CHECK-LABEL: func private @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
+func private @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
 
 // CHECK-LABEL: func @func_arg_attrs(%{{.*}}: i1 {dialect.attr = 10 : i64})
 func @func_arg_attrs(%arg0: i1 {dialect.attr = 10 : i64}) {
@@ -904,17 +904,17 @@ func @func_result_attrs(%arg0: f32) -> (f32 {dialect.attr = 1}) {
   return %arg0 : f32
 }
 
-// CHECK-LABEL: func @empty_tuple(tuple<>)
-func @empty_tuple(tuple<>)
+// CHECK-LABEL: func private @empty_tuple(tuple<>)
+func private @empty_tuple(tuple<>)
 
-// CHECK-LABEL: func @tuple_single_element(tuple<i32>)
-func @tuple_single_element(tuple<i32>)
+// CHECK-LABEL: func private @tuple_single_element(tuple<i32>)
+func private @tuple_single_element(tuple<i32>)
 
-// CHECK-LABEL: func @tuple_multi_element(tuple<i32, i16, f32>)
-func @tuple_multi_element(tuple<i32, i16, f32>)
+// CHECK-LABEL: func private @tuple_multi_element(tuple<i32, i16, f32>)
+func private @tuple_multi_element(tuple<i32, i16, f32>)
 
-// CHECK-LABEL: func @tuple_nested(tuple<tuple<tuple<i32>>>)
-func @tuple_nested(tuple<tuple<tuple<i32>>>)
+// CHECK-LABEL: func private @tuple_nested(tuple<tuple<tuple<i32>>>)
+func private @tuple_nested(tuple<tuple<tuple<i32>>>)
 
 // CHECK-LABEL: func @pretty_form_multi_result
 func @pretty_form_multi_result() -> (i16, i16) {
@@ -1168,11 +1168,11 @@ func @op_with_passthrough_region_args() {
   return
 }
 
-// CHECK-LABEL: func @ptr_to_function() -> !unreg.ptr<() -> ()>
-func @ptr_to_function() -> !unreg.ptr<() -> ()>
+// CHECK-LABEL: func private @ptr_to_function() -> !unreg.ptr<() -> ()>
+func private @ptr_to_function() -> !unreg.ptr<() -> ()>
 
-// CHECK-LABEL: func @escaped_string_char(i1 {foo.value = "\0A"})
-func @escaped_string_char(i1 {foo.value = "\n"})
+// CHECK-LABEL: func private @escaped_string_char(i1 {foo.value = "\0A"})
+func private @escaped_string_char(i1 {foo.value = "\n"})
 
 // CHECK-LABEL: func @wrapped_keyword_test
 func @wrapped_keyword_test() {
@@ -1188,13 +1188,13 @@ func @"\"_string_symbol_reference\""() {
   return
 }
 
-// CHECK-LABEL: func @string_attr_name
+// CHECK-LABEL: func private @string_attr_name
 // CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
-func @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
+func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
 
-// CHECK-LABEL: func @nested_reference
+// CHECK-LABEL: func private @nested_reference
 // CHECK: ref = @some_symbol::@some_nested_symbol
-func @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
+func private @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
 
 // CHECK-LABEL: func @custom_asm_names
 func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32, i32) {

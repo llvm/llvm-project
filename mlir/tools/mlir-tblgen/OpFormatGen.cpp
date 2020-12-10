@@ -281,7 +281,7 @@ bool LiteralElement::isValidLiteral(StringRef value) {
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1)
-    return isalpha(front) || StringRef("_:,=<>()[]{}?").contains(front);
+    return isalpha(front) || StringRef("_:,=<>()[]{}?+*").contains(front);
 
   // Check the punctuation that are larger than a single character.
   if (value == "->")
@@ -462,7 +462,8 @@ struct OperationFormat {
 /// Returns true if we can format the given attribute as an EnumAttr in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
-  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&attr->attr);
+  Attribute baseAttr = attr->attr.getBaseAttr();
+  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
   if (!enumAttr)
     return false;
 
@@ -652,8 +653,11 @@ const char *regionListEnsureTerminatorParserCode = R"(
 ///
 /// {0}: The name of the region.
 const char *optionalRegionParserCode = R"(
-  if (parser.parseOptionalRegion(*{0}Region))
-    return ::mlir::failure();
+  {
+     auto parseResult = parser.parseOptionalRegion(*{0}Region);
+     if (parseResult.hasValue() && failed(*parseResult))
+       return ::mlir::failure();
+  }
 )";
 
 /// The code snippet used to generate a parser call for a region.
@@ -762,7 +766,9 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
               .Case(")", "RParen()")
               .Case("[", "LSquare()")
               .Case("]", "RSquare()")
-              .Case("?", "Question()");
+              .Case("?", "Question()")
+              .Case("+", "Plus()")
+              .Case("*", "Star()");
 }
 
 /// Generate the storage code required for parsing the given element.
@@ -1102,7 +1108,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
 
     // Check to see if we can parse this as an enum attribute.
     if (canFormatEnumAttr(var)) {
-      const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+      Attribute baseAttr = var->attr.getBaseAttr();
+      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
 
       // Generate the code for building an attribute for this enum.
       std::string attrBuilderStr;
@@ -1677,9 +1684,11 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 
     // If we are formatting as an enum, symbolize the attribute as a string.
     if (canFormatEnumAttr(var)) {
-      const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+      Attribute baseAttr = var->attr.getBaseAttr();
+      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
       body << "  p << '\"' << " << enumAttr.getSymbolToStringFnName() << "("
-           << var->name << "()) << '\"';\n";
+           << (var->attr.isOptional() ? "*" : "") << var->name
+           << "()) << '\"';\n";
       return;
     }
 

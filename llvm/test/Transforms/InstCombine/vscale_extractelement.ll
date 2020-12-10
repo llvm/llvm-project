@@ -168,3 +168,18 @@ define i1 @extractelement_is_zero(<vscale x 2 x i32> %d, i1 %b, i32 %z) {
   %bb = icmp eq i32 %ext, 0
   ret i1 %bb
 }
+
+; OSS-Fuzz #25272
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=25272
+define i32 @ossfuzz_25272(float %f) {
+; CHECK-LABEL: @ossfuzz_25272(
+; CHECK-NEXT:    [[VEC_FLOAT:%.*]] = insertelement <vscale x 4 x float> undef, float [[F:%.*]], i32 0
+; CHECK-NEXT:    [[VEC_INT:%.*]] = bitcast <vscale x 4 x float> [[VEC_FLOAT]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[E:%.*]] = extractelement <vscale x 4 x i32> [[VEC_INT]], i32 2147483647
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %vec_float = insertelement <vscale x 4 x float> undef, float %f, i32 0
+  %vec_int = bitcast <vscale x 4 x float> %vec_float to <vscale x 4 x i32>
+  %E = extractelement <vscale x 4 x i32> %vec_int, i32 2147483647
+  ret i32 %E
+}

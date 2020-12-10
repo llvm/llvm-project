@@ -7,8 +7,9 @@ define i32 @t() nounwind readonly {
 entry:
 ; CHECK: LCPI0_0:
 ; CHECK-NEXT: .long _x
+;; .long _y can be used if @y is dso_local.
 ; CHECK: LCPI0_1:
-; CHECK-NEXT: .long _y
+; CHECK-NEXT: .long L_y$non_lazy_ptr
 
 	%0 = load i32, i32* @x, align 4		; <i32> [#uses=1]
 	%1 = load i32, i32* @y, align 4		; <i32> [#uses=1]

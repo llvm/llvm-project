@@ -12,14 +12,18 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "gtest/gtest.h"
+#include <type_traits>
 
 using namespace llvm;
 
 #if __has_feature(is_trivially_copyable) || (defined(__GNUC__) && __GNUC__ >= 5)
-static_assert(is_trivially_copyable<PressureChange>::value, "trivially copyable");
-static_assert(is_trivially_copyable<SDep>::value, "trivially copyable");
-static_assert(is_trivially_copyable<SDValue>::value, "trivially copyable");
-static_assert(is_trivially_copyable<SlotIndex>::value, "trivially copyable");
-static_assert(is_trivially_copyable<IdentifyingPassPtr>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<PressureChange>::value,
+              "trivially copyable");
+static_assert(std::is_trivially_copyable<SDep>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<SDValue>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<SlotIndex>::value,
+              "trivially copyable");
+static_assert(std::is_trivially_copyable<IdentifyingPassPtr>::value,
+              "trivially copyable");
 #endif
 

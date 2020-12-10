@@ -4136,7 +4136,8 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
   Constant *TrueC, *FalseC;
-  if (TrueVal->getType()->isVectorTy() && match(TrueVal, m_Constant(TrueC)) &&
+  if (isa<FixedVectorType>(TrueVal->getType()) &&
+      match(TrueVal, m_Constant(TrueC)) &&
       match(FalseVal, m_Constant(FalseC))) {
     unsigned NumElts =
         cast<FixedVectorType>(TrueC->getType())->getNumElements();

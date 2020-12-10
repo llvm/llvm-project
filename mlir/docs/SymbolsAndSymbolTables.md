@@ -35,7 +35,7 @@ link, or use, to the symbol. An example of a `Symbol` operation is
 [referred to](#referencing-a-symbol) by operations like
 [`std.call`](Dialects/Standard.md#call).
 
-### Defining a Symbol
+### Defining or declaring a Symbol
 
 A `Symbol` operation should use the `SymbolOpInterface` interface to provide the
 necessary verification and accessors; it also supports
@@ -52,6 +52,9 @@ have the following properties:
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.
+*   Whether this operation is a declaration or definition (`isDeclaration`)
+    -   Declarations do not define a new symbol but reference a symbol defined
+        outside the visible IR.
 
 ## Symbol Table
 
@@ -182,7 +185,10 @@ symbol has one of the following visibilities:
 *   Public (Default)
 
     -   The symbol may be referenced from outside of the visible IR. We cannot
-        assume that all of the uses of this symbol are observable.
+        assume that all of the uses of this symbol are observable. If the
+        operation declares a symbol (as opposed to defining it), public
+        visibility is not allowed because symbol declarations are not intended
+        to be used from outside the visible IR.
 
 *   Private
 

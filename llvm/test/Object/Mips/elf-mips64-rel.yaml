@@ -14,28 +14,28 @@
 # OBJ-NEXT: ]
 
 # YAML:      Relocations:
-# YAML-NEXT:   - Offset:      0x0000000000000014
+# YAML-NEXT:   - Offset:      0x14
 # YAML-NEXT:     Symbol:      main
 # YAML-NEXT:     Type:        R_MIPS_GPREL16
 # YAML-NEXT:     Type2:       R_MIPS_SUB
 # YAML-NEXT:     Type3:       R_MIPS_HI16
 # YAML-NEXT:     Addend:      4
-# YAML-NEXT:   - Offset:      0x000000000000001C
+# YAML-NEXT:   - Offset:      0x1C
 # YAML-NEXT:     Symbol:      main
 # YAML-NEXT:     Type:        R_MIPS_GPREL16
 # YAML-NEXT:     Type2:       R_MIPS_SUB
 # YAML-NEXT:     Type3:       R_MIPS_LO16
 # YAML-NEXT:     Addend:      8
-# YAML-NEXT:   - Offset:      0x0000000000000020
+# YAML-NEXT:   - Offset:      0x20
 # YAML-NEXT:     Symbol:      .rodata
 # YAML-NEXT:     Type:        R_MIPS_GOT_PAGE
-# YAML-NEXT:   - Offset:      0x0000000000000024
+# YAML-NEXT:   - Offset:      0x24
 # YAML-NEXT:     Symbol:      .rodata
 # YAML-NEXT:     Type:        R_MIPS_GOT_OFST
-# YAML-NEXT:   - Offset:      0x0000000000000028
+# YAML-NEXT:   - Offset:      0x28
 # YAML-NEXT:     Symbol:      printf
 # YAML-NEXT:     Type:        R_MIPS_CALL16
-# YAML-NEXT:   - Offset:      0x0000000000000030
+# YAML-NEXT:   - Offset:      0x30
 # YAML-NEXT:     Symbol:      printf
 # YAML-NEXT:     Type:        R_MIPS_GPREL16
 # YAML-NEXT:     Type2:       R_MIPS_LO16

@@ -13,9 +13,9 @@
 #ifndef MLIR_DIALECT_SPIRV_SPIRVTYPES_H_
 #define MLIR_DIALECT_SPIRV_SPIRVTYPES_H_
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 

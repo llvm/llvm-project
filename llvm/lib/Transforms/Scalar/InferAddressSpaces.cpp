@@ -286,7 +286,8 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
   case Instruction::IntToPtr:
     return isNoopPtrIntCastPair(Op, DL, TTI);
   default:
-    return false;
+    // That value is an address expression if it has an assumed address space.
+    return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
   }
 }
 
@@ -394,8 +395,8 @@ void InferAddressSpaces::appendsFlatAddressExpressionToPostorderStack(
     return;
   }
 
-  if (isAddressExpression(*V, *DL, TTI) &&
-      V->getType()->getPointerAddressSpace() == FlatAddrSpace) {
+  if (V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
+      isAddressExpression(*V, *DL, TTI)) {
     if (Visited.insert(V).second) {
       PostorderStack.emplace_back(V, false);
 
@@ -478,9 +479,12 @@ InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
     }
     // Otherwise, adds its operands to the stack and explores them.
     PostorderStack.back().setInt(true);
-    for (Value *PtrOperand : getPointerOperands(*TopVal, *DL, TTI)) {
-      appendsFlatAddressExpressionToPostorderStack(PtrOperand, PostorderStack,
-                                                   Visited);
+    // Skip values with an assumed address space.
+    if (TTI->getAssumedAddrSpace(TopVal) == UninitializedAddressSpace) {
+      for (Value *PtrOperand : getPointerOperands(*TopVal, *DL, TTI)) {
+        appendsFlatAddressExpressionToPostorderStack(PtrOperand, PostorderStack,
+                                                     Visited);
+      }
     }
   }
   return Postorder;
@@ -553,6 +557,16 @@ Value *InferAddressSpaces::cloneInstructionWithNewAddressSpace(
     }
 
     return nullptr;
+  }
+
+  unsigned AS = TTI->getAssumedAddrSpace(I);
+  if (AS != UninitializedAddressSpace) {
+    // For the assumed address space, insert an `addrspacecast` to make that
+    // explicit.
+    auto *NewPtrTy = I->getType()->getPointerElementType()->getPointerTo(AS);
+    auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
+    NewI->insertAfter(I);
+    return NewI;
   }
 
   // Computes the converted pointer operands.
@@ -700,8 +714,8 @@ Value *InferAddressSpaces::cloneValueWithNewAddressSpace(
   const ValueToValueMapTy &ValueWithNewAddrSpace,
   SmallVectorImpl<const Use *> *UndefUsesToFix) const {
   // All values in Postorder are flat address expressions.
-  assert(isAddressExpression(*V, *DL, TTI) &&
-         V->getType()->getPointerAddressSpace() == FlatAddrSpace);
+  assert(V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
+         isAddressExpression(*V, *DL, TTI));
 
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     Value *NewV = cloneInstructionWithNewAddressSpace(
@@ -848,15 +862,24 @@ Optional<unsigned> InferAddressSpaces::updateAddressSpace(
     else
       NewAS = joinAddressSpaces(Src0AS, Src1AS);
   } else {
-    for (Value *PtrOperand : getPointerOperands(V, *DL, TTI)) {
-      auto I = InferredAddrSpace.find(PtrOperand);
-      unsigned OperandAS = I != InferredAddrSpace.end() ?
-        I->second : PtrOperand->getType()->getPointerAddressSpace();
+    unsigned AS = TTI->getAssumedAddrSpace(&V);
+    if (AS != UninitializedAddressSpace) {
+      // Use the assumed address space directly.
+      NewAS = AS;
+    } else {
+      // Otherwise, infer the address space from its pointer operands.
+      for (Value *PtrOperand : getPointerOperands(V, *DL, TTI)) {
+        auto I = InferredAddrSpace.find(PtrOperand);
+        unsigned OperandAS =
+            I != InferredAddrSpace.end()
+                ? I->second
+                : PtrOperand->getType()->getPointerAddressSpace();
 
-      // join(flat, *) = flat. So we can break if NewAS is already flat.
-      NewAS = joinAddressSpaces(NewAS, OperandAS);
-      if (NewAS == FlatAddrSpace)
-        break;
+        // join(flat, *) = flat. So we can break if NewAS is already flat.
+        NewAS = joinAddressSpaces(NewAS, OperandAS);
+        if (NewAS == FlatAddrSpace)
+          break;
+      }
     }
   }
 
@@ -1068,6 +1091,9 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
       }
 
       User *CurUser = U.getUser();
+      // Skip if the current user is the new value itself.
+      if (CurUser == NewV)
+        continue;
       // Handle more complex cases like intrinsic that need to be remangled.
       if (auto *MI = dyn_cast<MemIntrinsic>(CurUser)) {
         if (!MI->isVolatile() && handleMemIntrinsicPtrUse(MI, V, NewV))

@@ -1,6 +1,9 @@
 ; REQUIRES: x86
 ; Test that --lto-whole-program-visibility enables devirtualization.
 
+; Note that the --export-dynamic used below is simply to ensure symbols are
+; retained during linking.
+
 ; Index based WPD
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt --thinlto-bc -o %t2.o %s
@@ -29,6 +32,10 @@
 
 ; Index based WPD
 ; RUN: ld.lld %t2.o -o %t3 -save-temps \
+; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+; Ensure --no-lto-whole-program-visibility overrides explicit --lto-whole-program-visibility.
+; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility --no-lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 

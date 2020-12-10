@@ -83,14 +83,14 @@ Sections:
 
 # ENT-SIZE:      - Name:    .hash.entsize.0
 # ENT-SIZE-NEXT:   Type:    SHT_HASH
-# ENT-SIZE-NEXT:   EntSize: 0x0000000000000000
+# ENT-SIZE-NEXT:   EntSize: 0x0
 # ENT-SIZE-NEXT:   Content: ''
 # ENT-SIZE-NEXT: - Name:    .hash.entsize.4.default
 # ENT-SIZE-NEXT:   Type:    SHT_HASH
 # ENT-SIZE-NEXT:   Content: ''
 # ENT-SIZE-NEXT: - Name:    .hash.entsize.255
 # ENT-SIZE-NEXT:   Type:    SHT_HASH
-# ENT-SIZE-NEXT:   EntSize: 0x00000000000000FF
+# ENT-SIZE-NEXT:   EntSize: 0xFF
 # ENT-SIZE-NEXT:   Content: ''
 
 --- !ELF

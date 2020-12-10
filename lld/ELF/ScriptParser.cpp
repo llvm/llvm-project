@@ -102,6 +102,7 @@ private:
                                                  uint64_t withFlags,
                                                  uint64_t withoutFlags);
   unsigned readPhdrType();
+  SortSectionPolicy peekSortKind();
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool provide, bool hidden);
   SymbolAssignment *readAssignment(StringRef tok);
@@ -618,16 +619,20 @@ StringMatcher ScriptParser::readFilePatterns() {
   return Matcher;
 }
 
+SortSectionPolicy ScriptParser::peekSortKind() {
+  return StringSwitch<SortSectionPolicy>(peek())
+      .Cases("SORT", "SORT_BY_NAME", SortSectionPolicy::Name)
+      .Case("SORT_BY_ALIGNMENT", SortSectionPolicy::Alignment)
+      .Case("SORT_BY_INIT_PRIORITY", SortSectionPolicy::Priority)
+      .Case("SORT_NONE", SortSectionPolicy::None)
+      .Default(SortSectionPolicy::Default);
+}
+
 SortSectionPolicy ScriptParser::readSortKind() {
-  if (consume("SORT") || consume("SORT_BY_NAME"))
-    return SortSectionPolicy::Name;
-  if (consume("SORT_BY_ALIGNMENT"))
-    return SortSectionPolicy::Alignment;
-  if (consume("SORT_BY_INIT_PRIORITY"))
-    return SortSectionPolicy::Priority;
-  if (consume("SORT_NONE"))
-    return SortSectionPolicy::None;
-  return SortSectionPolicy::Default;
+  SortSectionPolicy ret = peekSortKind();
+  if (ret != SortSectionPolicy::Default)
+    skip();
+  return ret;
 }
 
 // Reads SECTIONS command contents in the following form:
@@ -653,11 +658,15 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
     }
 
     StringMatcher SectionMatcher;
-    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE")
+    // Break if the next token is ), EXCLUDE_FILE, or SORT*.
+    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE" &&
+           peekSortKind() == SortSectionPolicy::Default)
       SectionMatcher.addPattern(unquote(next()));
 
     if (!SectionMatcher.empty())
       ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});
+    else if (excludeFilePat.empty())
+      break;
     else
       setError("section pattern is expected");
   }

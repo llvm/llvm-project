@@ -20,22 +20,22 @@ void *p = new S[2][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK: %[[S_0:.*]] = bitcast %[[S]]* %[[START_AS_S]] to [3 x %[[S]]]*
 //
 // CHECK: %[[S_0_0:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_0]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_0]], i32 1)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_0]], i32 1)
 // CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_0_0]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_1]], i32 2)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_1]], i32 2)
 // CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_0_1]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_2]], i32 3)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_2]], i32 3)
 //
 // { 4, 5, 6 }
 //
 // CHECK: %[[S_1:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_0]], i64 1
 //
 // CHECK: %[[S_1_0:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_1]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_0]], i32 4)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_0]], i32 4)
 // CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_1_0]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_1]], i32 5)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_1]], i32 5)
 // CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_1_1]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_2]], i32 6)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_2]], i32 6)
 //
 // CHECK-NOT: br i1
 // CHECK-NOT: call
@@ -64,22 +64,22 @@ void *q = new S[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK: %[[S_0:.*]] = bitcast %[[S]]* %[[START_AS_S]] to [3 x %[[S]]]*
 //
 // CHECK: %[[S_0_0:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_0]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_0]], i32 1)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_0]], i32 1)
 // CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_0_0]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_1]], i32 2)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_1]], i32 2)
 // CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_0_1]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_0_2]], i32 3)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_0_2]], i32 3)
 //
 // { 4, 5, 6 }
 //
 // CHECK: %[[S_1:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_0]], i64 1
 //
 // CHECK: %[[S_1_0:.*]] = getelementptr inbounds [3 x %[[S]]], [3 x %[[S]]]* %[[S_1]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_0]], i32 4)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_0]], i32 4)
 // CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_1_0]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_1]], i32 5)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_1]], i32 5)
 // CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], %[[S]]* %[[S_1_1]], i64 1
-// CHECK: call void @_ZN1SC1Ei(%[[S]]* %[[S_1_2]], i32 6)
+// CHECK: call void @_ZN1SC1Ei(%[[S]]* {{[^,]*}} %[[S_1_2]], i32 6)
 //
 // And the rest.
 //
@@ -94,7 +94,7 @@ void *q = new S[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK: br label
 //
 // CHECK: %[[CUR:.*]] = phi %[[S]]* [ %[[S_2_AS_S]], {{.*}} ], [ %[[NEXT:.*]], {{.*}} ]
-// CHECK: call void @_ZN1SC1Ev(%[[S]]* %[[CUR]])
+// CHECK: call void @_ZN1SC1Ev(%[[S]]* {{[^,]*}} %[[CUR]])
 // CHECK: %[[NEXT]] = getelementptr inbounds %[[S]], %[[S]]* %[[CUR]], i64 1
 // CHECK: icmp eq %[[S]]* %[[NEXT]], %[[END]]
 // CHECK: br i1

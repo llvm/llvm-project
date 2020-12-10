@@ -171,7 +171,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
   Info.byte_size /= CHAR_BIT;
 
   if (!to_integer(Elements["offset"], Info.byte_offset, 10))
-    return make_parsing_error("qRegisterInfo: offset");
+    Info.byte_offset = LLDB_INVALID_INDEX32;
 
   Info.encoding = Args::StringToEncoding(Elements["encoding"]);
   if (Info.encoding == eEncodingInvalid)

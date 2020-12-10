@@ -961,6 +961,12 @@ APInt APInt::sextOrTrunc(unsigned width) const {
   return *this;
 }
 
+APInt APInt::truncOrSelf(unsigned width) const {
+  if (BitWidth > width)
+    return trunc(width);
+  return *this;
+}
+
 APInt APInt::zextOrSelf(unsigned width) const {
   if (BitWidth < width)
     return zext(width);

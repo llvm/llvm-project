@@ -8,10 +8,10 @@
 // RUN: FileCheck %s
 
 module {
-  func @openMatrix(!llvm.ptr<i8>, memref<index>, memref<index>, memref<index>) -> ()
-  func @readMatrixItem(memref<index>, memref<index>, memref<f64>) -> ()
-  func @closeMatrix() -> ()
-  func @getMatrix(index) -> (!llvm.ptr<i8>)
+  func private @openMatrix(!llvm.ptr<i8>, memref<index>, memref<index>, memref<index>) -> ()
+  func private @readMatrixItem(memref<index>, memref<index>, memref<f64>) -> ()
+  func private @closeMatrix() -> ()
+  func private @getMatrix(index) -> (!llvm.ptr<i8>)
 
   func @entry() {
     %d0  = constant 0.0 : f64

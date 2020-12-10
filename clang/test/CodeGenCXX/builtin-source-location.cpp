@@ -104,7 +104,7 @@ struct TestInit {
 //
 // CHECK-CTOR-GLOBAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP_ONE:[^,]*]],
 // CHECK-CTOR-GLOBAL-SAME: i32 3400, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
-// CHECK-CTOR-GLOBAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* @GlobalInitVal, %struct.source_location* {{.*}}%[[TMP_ONE]])
+// CHECK-CTOR-GLOBAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* {{[^,]*}} @GlobalInitVal, %struct.source_location* {{.*}}%[[TMP_ONE]])
 #line 3400 "GlobalInitVal.cpp"
 TestInit GlobalInitVal;
 
@@ -119,7 +119,7 @@ extern "C" void test_init_function() {
 //
 // CHECK-CTOR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP:[^,]*]],
 // CHECK-CTOR-LOCAL-SAME: i32 3500, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
-// CHECK-CTOR-LOCAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* %init_local, %struct.source_location* {{.*}}%[[TMP]])
+// CHECK-CTOR-LOCAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* {{[^,]*}} %init_local, %struct.source_location* {{.*}}%[[TMP]])
 #line 3500 "LocalInitVal.cpp"
   TestInit init_local;
   sink(init_local);
@@ -155,7 +155,7 @@ extern "C" void test_init_function_constexpr() {
 // CHECK-CONSTEXPR-LOCAL: define void @test_init_function_constexpr()
 // CHECK-CONSTEXPR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP:[^,]*]],
 // CHECK-CONSTEXPR-LOCAL-SAME: i32 4600, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]]
-// CHECK-CONSTEXPR-LOCAL: call void @_ZN17TestInitConstexprC1E15source_location(%struct.TestInitConstexpr* %local_val, {{.*}}%[[TMP]])
+// CHECK-CONSTEXPR-LOCAL: call void @_ZN17TestInitConstexprC1E15source_location(%struct.TestInitConstexpr* {{[^,]*}} %local_val, {{.*}}%[[TMP]])
 #line 4600 "ConstexprLocal.cpp"
   TestInitConstexpr local_val;
 }

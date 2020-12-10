@@ -30,7 +30,7 @@ config.substitutions.append( ("%clangxx ", build_invocation(clang_ubsan_cxxflags
 config.suffixes = ['.c', '.cpp']
 
 # Check that the host supports UndefinedBehaviorSanitizerMinimal tests
-if config.host_os not in ['Linux', 'FreeBSD', 'NetBSD', 'Darwin', 'OpenBSD']: # TODO: Windows
+if config.host_os not in ['Linux', 'FreeBSD', 'NetBSD', 'Darwin', 'OpenBSD', 'SunOS']: # TODO: Windows
   config.unsupported = True
 
 # Don't target x86_64h if the test machine can't execute x86_64h binaries.

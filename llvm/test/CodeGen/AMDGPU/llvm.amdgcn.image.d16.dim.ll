@@ -72,6 +72,12 @@ main_body:
   ret float %x
 }
 
+
+; GCN-LABEL: {{^}}image_load_3d_v3f16:
+; UNPACKED: image_load v[0:2], v[0:2], s[0:7] dmask:0x7 unorm d16
+; PACKED: image_load v[0:1], v[0:2], s[0:7] dmask:0x7 unorm d16
+; GFX81: image_load v[0:1], v[0:2], s[0:7] dmask:0x7 unorm d16
+; GFX10: image_load v[0:1], v[0:2], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D unorm d16{{$}}
 define amdgpu_ps <2 x float> @image_load_3d_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
 main_body:
   %tex = call <3 x half> @llvm.amdgcn.image.load.3d.v3f16.i32(i32 7, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
@@ -103,6 +109,11 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}image_store_v3f16:
+; UNPACKED: image_store v[2:4], v[0:1], s[0:7] dmask:0x7 unorm d16
+; PACKED: image_store v[2:3], v[0:1], s[0:7] dmask:0x7 unorm d16
+; GFX81: image_store v[2:4], v[0:1], s[0:7] dmask:0x7 unorm d16
+; GFX10: image_store v[2:3], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm d16{{$}}
 define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, <2 x float> %in) {
 main_body:
   %r = bitcast <2 x float> %in to <4 x half>

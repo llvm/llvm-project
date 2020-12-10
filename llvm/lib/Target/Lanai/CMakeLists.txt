@@ -1,3 +1,5 @@
+add_llvm_component_group(Lanai)
+
 set(LLVM_TARGET_DEFINITIONS Lanai.td)
 
 tablegen(LLVM LanaiGenAsmMatcher.inc -gen-asm-matcher)
@@ -27,6 +29,23 @@ add_llvm_target(LanaiCodeGen
   LanaiSubtarget.cpp
   LanaiTargetMachine.cpp
   LanaiTargetObjectFile.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  LanaiAsmParser
+  LanaiDesc
+  LanaiInfo
+  MC
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+
+  ADD_TO_COMPONENT
+  Lanai
 )
 
 add_subdirectory(AsmParser)

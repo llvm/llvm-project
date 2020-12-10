@@ -5,7 +5,7 @@ target triple = "powerpc64le-unknown-linux"
 
 %"struct.std::complex" = type { { float, float } }
 
-define void @_Z4testSt7complexIfE(%"struct.std::complex"* noalias nocapture sret %agg.result, i64 %c.coerce) {
+define void @_Z4testSt7complexIfE(%"struct.std::complex"* noalias nocapture sret(%"struct.std::complex") %agg.result, i64 %c.coerce) {
 ; CHECK-LABEL: @_Z4testSt7complexIfE(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REF_TMP:%.*]] = alloca i64, align 8
@@ -15,7 +15,7 @@ define void @_Z4testSt7complexIfE(%"struct.std::complex"* noalias nocapture sret
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[C_SROA_0_0_EXTRACT_TRUNC]] to float
 ; CHECK-NEXT:    [[C_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[C_COERCE]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[C_SROA_2_0_EXTRACT_TRUNC]] to float
-; CHECK-NEXT:    call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret [[TMPCAST]], i64 [[C_COERCE]])
+; CHECK-NEXT:    call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret(%"struct.std::complex") [[TMPCAST]], i64 [[C_COERCE]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[REF_TMP]], align 8
 ; CHECK-NEXT:    [[_M_VALUE_REALP_I_I:%.*]] = getelementptr inbounds %"struct.std::complex", %"struct.std::complex"* [[AGG_RESULT:%.*]], i64 0, i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
@@ -43,7 +43,7 @@ entry:
   %0 = bitcast i32 %c.sroa.0.0.extract.trunc to float
   %c.sroa.2.0.extract.trunc = trunc i64 %c.coerce to i32
   %1 = bitcast i32 %c.sroa.2.0.extract.trunc to float
-  call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret %tmpcast, i64 %c.coerce)
+  call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret(%"struct.std::complex") %tmpcast, i64 %c.coerce)
   %2 = bitcast %"struct.std::complex"* %agg.result to i64*
   %3 = load i64, i64* %ref.tmp, align 8
   store i64 %3, i64* %2, align 4
@@ -66,7 +66,7 @@ entry:
   ret void
 }
 
-declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret, i64)
+declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret(%"struct.std::complex"), i64)
 
 define void @test1(i32 *%ptr) {
 ; CHECK-LABEL: @test1(

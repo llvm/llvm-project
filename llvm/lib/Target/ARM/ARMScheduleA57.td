@@ -173,28 +173,29 @@ def : InstRW<[A57Write_6cyc_1B_1L], (instregex "BR_JTm")>;
 
 def : InstRW<[A57Write_1cyc_1I], (instregex "tADDframe")>;
 
+// Check branch forms of ALU ops:
+// check reg 0 for ARM_AM::PC
+// if so adds 2 cyc to latency, 1 uop, 1 res cycle for A57UnitB
+class A57BranchForm<SchedWriteRes non_br> :
+  BranchWriteRes<2, 1, [A57UnitB], [1], non_br>;
+
 // shift by register, conditional or unconditional
 // TODO: according to the doc, conditional uses I0/I1, unconditional uses M
 // Why more complex instruction uses more simple pipeline?
 // May be an error in doc.
-def A57WriteALUsi : SchedWriteVariant<[
-  // lsl #2, lsl #1, or lsr #1.
-  SchedVar<IsPredicatedPred, [A57Write_2cyc_1M]>,
-  SchedVar<NoSchedPred,      [A57Write_2cyc_1M]>
-]>;
 def A57WriteALUsr : SchedWriteVariant<[
-  SchedVar<IsPredicatedPred, [A57Write_2cyc_1I]>,
-  SchedVar<NoSchedPred,      [A57Write_2cyc_1M]>
+  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1I>>]>,
+  SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
 ]>;
 def A57WriteALUSsr : SchedWriteVariant<[
-  SchedVar<IsPredicatedPred, [A57Write_2cyc_1I]>,
-  SchedVar<NoSchedPred,      [A57Write_2cyc_1M]>
+  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1I>>]>,
+  SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
 ]>;
 def A57ReadALUsr : SchedReadVariant<[
   SchedVar<IsPredicatedPred, [ReadDefault]>,
   SchedVar<NoSchedPred,      [ReadDefault]>
 ]>;
-def : SchedAlias<WriteALUsi,  A57WriteALUsi>;
+def : SchedAlias<WriteALUsi,  CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>>;
 def : SchedAlias<WriteALUsr,  A57WriteALUsr>;
 def : SchedAlias<WriteALUSsr, A57WriteALUSsr>;
 def : SchedAlias<ReadALUsr,   A57ReadALUsr>;
@@ -830,7 +831,6 @@ def A57WriteVLDMuncond : SchedWriteVariant<[
   SchedVar<A57LMAddrPred5,  A57VLDMOpsListUncond.Writes[0-9]>,
   SchedVar<A57LMAddrPred6,  A57VLDMOpsListUncond.Writes[0-11]>,
   SchedVar<A57LMAddrPred7,  A57VLDMOpsListUncond.Writes[0-13]>,
-  SchedVar<A57LMAddrPred8,  A57VLDMOpsListUncond.Writes[0-15]>,
   SchedVar<NoSchedPred,     A57VLDMOpsListUncond.Writes[0-15]>
 ]> { let Variadic=1; }
 
@@ -851,7 +851,6 @@ def A57WriteVLDMcond : SchedWriteVariant<[
   SchedVar<A57LMAddrPred5,  A57VLDMOpsListCond.Writes[0-9]>,
   SchedVar<A57LMAddrPred6,  A57VLDMOpsListCond.Writes[0-11]>,
   SchedVar<A57LMAddrPred7,  A57VLDMOpsListCond.Writes[0-13]>,
-  SchedVar<A57LMAddrPred8,  A57VLDMOpsListCond.Writes[0-15]>,
   SchedVar<NoSchedPred,     A57VLDMOpsListCond.Writes[0-15]>
 ]> { let Variadic=1; }
 
@@ -879,7 +878,6 @@ def A57WriteVLDMuncond_UPD : SchedWriteVariant<[
   SchedVar<A57LMAddrPred5,  A57VLDMOpsListUncond_Upd.Writes[0-9]>,
   SchedVar<A57LMAddrPred6,  A57VLDMOpsListUncond_Upd.Writes[0-11]>,
   SchedVar<A57LMAddrPred7,  A57VLDMOpsListUncond_Upd.Writes[0-13]>,
-  SchedVar<A57LMAddrPred8,  A57VLDMOpsListUncond_Upd.Writes[0-15]>,
   SchedVar<NoSchedPred,     A57VLDMOpsListUncond_Upd.Writes[0-15]>
 ]> { let Variadic=1; }
 
@@ -900,7 +898,6 @@ def A57WriteVLDMcond_UPD : SchedWriteVariant<[
   SchedVar<A57LMAddrPred5,  A57VLDMOpsListCond_Upd.Writes[0-9]>,
   SchedVar<A57LMAddrPred6,  A57VLDMOpsListCond_Upd.Writes[0-11]>,
   SchedVar<A57LMAddrPred7,  A57VLDMOpsListCond_Upd.Writes[0-13]>,
-  SchedVar<A57LMAddrPred8,  A57VLDMOpsListCond_Upd.Writes[0-15]>,
   SchedVar<NoSchedPred,     A57VLDMOpsListCond_Upd.Writes[0-15]>
 ]> { let Variadic=1; }
 
@@ -1486,7 +1483,7 @@ def : InstRW<[A57Write_3cyc_1W], (instregex "^(t2)?CRC32")>;
 // -----------------------------------------------------------------------------
 // Common definitions
 def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
-def : SchedAlias<WriteALU, A57Write_1cyc_1I>;
+def : SchedAlias<WriteALU, CheckBranchForm<0, A57BranchForm<A57Write_1cyc_1I>>>;
 
 def : SchedAlias<WriteBr, A57Write_1cyc_1B>;
 def : SchedAlias<WriteBrL, A57Write_1cyc_1B_1I>;

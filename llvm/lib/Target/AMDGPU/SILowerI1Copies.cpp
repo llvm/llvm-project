@@ -213,7 +213,7 @@ public:
         ReachableMap[MBB] = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
-          if (llvm::find(Predecessors, UnreachablePred) == Predecessors.end())
+          if (!llvm::is_contained(Predecessors, UnreachablePred))
             Predecessors.push_back(UnreachablePred);
         }
       }
@@ -347,7 +347,7 @@ private:
     if (DomIt != Visited.end() && DomIt->second <= LoopLevel)
       return true;
 
-    if (llvm::find(Blocks, &MBB) != Blocks.end())
+    if (llvm::is_contained(Blocks, &MBB))
       return true;
 
     return false;

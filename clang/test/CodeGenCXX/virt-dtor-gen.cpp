@@ -7,4 +7,4 @@ class Foo {
 };
 Foo::~Foo() {}
 
-// CHECK-LABEL: define {{.*}}void @_ZN3FooD0Ev(%class.Foo* %this) unnamed_addr
+// CHECK-LABEL: define {{.*}}void @_ZN3FooD0Ev(%class.Foo* {{[^,]*}} %this) unnamed_addr

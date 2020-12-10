@@ -19,6 +19,7 @@
 #include <memory>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int i = 0;
@@ -34,7 +35,7 @@ int main(int, char**)
     {
         std::promise<void> p;
         std::future<void> f = p.get_future();
-        std::thread(func, std::move(p)).detach();
+        support::make_test_thread(func, std::move(p)).detach();
         f.get();
         assert(i == 1);
     }

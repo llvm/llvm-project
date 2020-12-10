@@ -408,13 +408,13 @@ struct Inliner : public InlinerInterface {
 static bool shouldInline(ResolvedCall &resolvedCall) {
   // Don't allow inlining terminator calls. We currently don't support this
   // case.
-  if (resolvedCall.call.getOperation()->isKnownTerminator())
+  if (resolvedCall.call->isKnownTerminator())
     return false;
 
   // Don't allow inlining if the target is an ancestor of the call. This
   // prevents inlining recursively.
   if (resolvedCall.targetNode->getCallableRegion()->isAncestor(
-          resolvedCall.call.getParentRegion()))
+          resolvedCall.call->getParentRegion()))
     return false;
 
   // Otherwise, inline.

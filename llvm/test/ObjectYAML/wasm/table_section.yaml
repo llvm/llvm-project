@@ -14,7 +14,7 @@ Sections:
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:  - Type:            TABLE
 # CHECK:    Tables:         
@@ -22,6 +22,6 @@ Sections:
 # CHECK:        ElemType:        FUNCREF
 # CHECK:        Limits:
 # CHECK:          Flags:           [ HAS_MAX ]
-# CHECK:          Initial:         0x00000010
-# CHECK:          Maximum:         0x00000011
+# CHECK:          Initial:         0x10
+# CHECK:          Maximum:         0x11
 # CHECK: ...

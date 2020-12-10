@@ -122,6 +122,10 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (LongDoubleWidth == 128) {
     Builder.defineMacro("__LONG_DOUBLE_128__");
     Builder.defineMacro("__LONGDOUBLE128");
+    if (Opts.PPCIEEELongDouble)
+      Builder.defineMacro("__LONG_DOUBLE_IEEE128__");
+    else
+      Builder.defineMacro("__LONG_DOUBLE_IBM128__");
   }
 
   // Define this for elfv2 (64-bit only) or 64-bit darwin.
@@ -313,6 +317,9 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr9", true)
                         .Case("pwr8", true)
                         .Default(false);
+  Features["float128"] = llvm::StringSwitch<bool>(CPU)
+                        .Case("pwr9", true)
+                        .Default(false);
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
@@ -340,6 +347,13 @@ bool PPCTargetInfo::initFeatureMap(
       llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
     // We have __float128 on PPC but not power 9 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
+    return false;
+  }
+
+  if (!(ArchDefs & ArchDefinePwr10) &&
+      llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
+    // We have MMA on PPC but not power 10 and above.
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
     return false;
   }
 

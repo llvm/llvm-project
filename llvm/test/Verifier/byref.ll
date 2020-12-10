@@ -40,7 +40,7 @@ define void @byref_preallocated(i32* byref(i32) preallocated(i32)) {
 
 ; CHECK: Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', 'byref', and 'sret' are incompatible!
 ; CHECK-NEXT: void (i32*)* @byref_sret
-define void @byref_sret(i32* byref(i32) sret) {
+define void @byref_sret(i32* byref(i32) sret(i32)) {
   ret void
 }
 

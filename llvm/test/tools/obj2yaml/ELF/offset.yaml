@@ -1,0 +1,301 @@
+## Check how the "Offset" field is dumped by obj2yaml.
+## For each section we calulate the expected offset.
+## When it does not match the actual offset, we emit the "Offset" key.
+
+# RUN: yaml2obj %s -o %t1.o
+# RUN: obj2yaml %t1.o | FileCheck %s --check-prefix=BASIC
+
+#   BASIC:      --- !ELF
+#   BASIC-NEXT: FileHeader:
+#   BASIC-NEXT:   Class: ELFCLASS64
+#   BASIC-NEXT:   Data:  ELFDATA2LSB
+#   BASIC-NEXT:   Type:  ET_REL
+#   BASIC-NEXT: Sections:
+#   BASIC-NEXT:   - Name:         .foo1
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .foo2
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .foo3
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar1
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Offset:       0x100
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar2
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x10
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar3
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x10
+#   BASIC-NEXT:     Offset:       0x200
+#   BASIC-NEXT:   - Name:         .bar4
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x100000000
+#   BASIC-NEXT:     Offset:       0x210
+# HEADERS-NEXT: SectionHeaderTable:
+# HEADERS-NEXT:   Sections:
+# HEADERS-NEXT:     - Name:            .bar4
+# HEADERS-NEXT:     - Name:            .bar3
+# HEADERS-NEXT:     - Name:            .bar2
+# HEADERS-NEXT:     - Name:            .bar1
+# HEADERS-NEXT:     - Name:            .foo3
+# HEADERS-NEXT:     - Name:            .foo2
+# HEADERS-NEXT:     - Name:            .foo1
+# HEADERS-NEXT:     - Name:            .strtab
+# HEADERS-NEXT:     - Name:            .shstrtab
+# BASIC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+## The offset of .foo1 by default is 0x40, because it is placed right
+## after the ELF header. In this case we don't dump the "Offset" key,
+## because the file offset is naturally expected.
+  - Name:         .foo1
+    Type:         SHT_PROGBITS
+    Size:         1
+    Offset:       [[FIRSTOFF=<none>]]
+    AddressAlign: [[FIRSTADDRALIGN=0]]
+## Offset of .foo2 == offset of .foo1 + size of .foo1.
+## We don't dump the "Offset" key in this case.
+## sh_offset of .foo2 is 0x41.
+  - Name: .foo2
+    Type: SHT_PROGBITS
+    Size: 1
+## Offset of .foo3 == offset of .foo2 + size of .foo2,
+## We don't dump the "Offset" key in this case.
+## sh_offset of .foo3 is 0x42.
+  - Name: .foo3
+    Type: SHT_PROGBITS
+    Size: 1
+## Offset of .bar1 != offset of .foo3 + size of .foo3.
+## We dump the "Offset" key in this case.
+## sh_offset of .bar1 is 0x100.
+  - Name:   .bar1
+    Type:   SHT_PROGBITS
+    Offset: 0x100
+    Size: 1
+## [Offset of .bar1 + size of .bar1] aligned by 0x10 is equal to the offset
+## of .bar2. We don't dump the "Offset" key in this case.
+## sh_offset of .bar2 is 0x110.
+  - Name:         .bar2
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x10
+    Offset:       0x110
+    Size:         1
+## [Offset of .bar2 + size of .bar2] aligned by 0x10 is not equal to the offset
+## of .bar3. We dump the "Offset" key in this case.
+## sh_offset of .bar3 is 0x200.
+  - Name:         .bar3
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x10
+    Offset:       0x200
+## A case where AddressAlign > MAX_UINT32 and (uint32_t)AddressAlign == 0.
+## Check we dump an offset in this case properly.
+  - Name:         .bar4
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x100000000
+    Offset:       0x210
+SectionHeaderTable:
+  Sections:
+## By default we have the same order of sections as defined by the "Sections" key.
+    - Name: [[SEC1=.foo1]]
+    - Name: [[SEC2=.foo2]]
+    - Name: [[SEC3=.foo3]]
+    - Name: [[SEC4=.bar1]]
+    - Name: [[SEC5=.bar2]]
+    - Name: [[SEC6=.bar3]]
+    - Name: [[SEC7=.bar4]]
+    - Name: .strtab
+    - Name: .shstrtab
+
+## In this case we change the order of sections in the section header table.
+## Check that we still dump offsets correctly.
+
+# RUN: yaml2obj %s -DSEC1=.bar4 -DSEC2=.bar3 -DSEC3=.bar2 \
+# RUN:   -DSEC4=.bar1 -DSEC5=.foo3 -DSEC6=.foo2 -DSEC7=.foo1 -o %t1-sechdr.o
+# RUN: obj2yaml %t1-sechdr.o | FileCheck --check-prefixes=BASIC,HEADERS %s
+
+## Show we dump the "Offset" key for the first section when
+## it has an unexpected file offset.
+
+# RUN: yaml2obj %s -DFIRSTOFF=0x40 -o %t2a.o
+# RUN: obj2yaml %t2a.o | FileCheck %s --check-prefix=BASIC
+# RUN: yaml2obj %s -DFIRSTOFF=0x41 -o %t2b.o
+# RUN: obj2yaml %t2b.o | FileCheck %s --check-prefix=FIRSTSEC
+
+# FIRSTSEC:      Sections:
+# FIRSTSEC-NEXT:   - Name:    .foo1
+# FIRSTSEC-NEXT:     Type:    SHT_PROGBITS
+# FIRSTSEC-NEXT:     Offset:  0x41
+# FIRSTSEC-NEXT:     Content: '00'
+
+## Test that we take the alignment of the first section into account
+## when calculating the expected offset for it. In this case we don't
+## dump the "Offset", because it is expected.
+
+# RUN: yaml2obj %s -DFIRSTOFF=0x80 -DFIRSTADDRALIGN=0x80 -o %t3.o
+# RUN: obj2yaml %t3.o | FileCheck %s --check-prefix=FIRSTSECALIGN
+
+# FIRSTSECALIGN:      - Name:         .foo1
+# FIRSTSECALIGN-NEXT:   Type:         SHT_PROGBITS
+# FIRSTSECALIGN-NEXT:   AddressAlign: 0x80
+# FIRSTSECALIGN-NEXT:   Content:      '00'
+# FIRSTSECALIGN-NEXT: - Name:
+
+## Test that we take the program headers offset and size into account when calculating
+## the expected file offset of the first section.
+
+# RUN: yaml2obj %s --docnum=2 -o %t4a.o
+# RUN: obj2yaml %t4a.o | FileCheck %s --check-prefix=FIRSTSECPHDRS
+## The expected file offset of the first section is:
+## 0x40 (start of program headers) + 0x38 (size of program headers) * 2(number of program headers) = 0xB0
+# RUN: yaml2obj %s --docnum=2 -DFIRSTOFF=0xB0 -o %t4b.o
+# RUN: obj2yaml %t4b.o | FileCheck %s --check-prefix=FIRSTSECPHDRS
+# RUN: yaml2obj %s --docnum=2 -DFIRSTOFF=0xB1 -o %t4c.o
+# RUN: obj2yaml %t4c.o | FileCheck %s --check-prefixes=FIRSTSECPHDRS,FIRSTSECPHDRSOFFSET
+
+#       FIRSTSECPHDRS:      Sections:
+#       FIRSTSECPHDRS-NEXT:   - Name:   .foo
+#       FIRSTSECPHDRS-NEXT:     Type:   SHT_PROGBITS
+# FIRSTSECPHDRSOFFSET-NEXT:     Offset: 0xB1
+#       FIRSTSECPHDRS-NEXT:   ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+    Offset: [[FIRSTOFF=<none>]]
+ProgramHeaders:
+  - Type: PT_LOAD
+  - Type: PT_LOAD
+
+## Test that when there are no program headers in the file, we don't take SHT_NOBITS
+## section sizes into account, but respect their alignment when calculating the expected
+## section offsets.
+
+# RUN: yaml2obj %s --docnum=3 -o %t5.o
+# RUN: obj2yaml %t5.o | FileCheck %s --check-prefix=NOBITS
+
+# NOBITS:      Sections:
+# NOBITS-NEXT:   - Name:         .progbits1
+# NOBITS-NEXT:     Type:         SHT_PROGBITS
+# NOBITS-NEXT:     Content:      '00'
+# NOBITS-NEXT:   - Name:         .nobits1
+# NOBITS-NEXT:     Type:         SHT_NOBITS
+# NOBITS-NEXT:     Size:         0x10
+# NOBITS-NEXT:   - Name:         .progbits2
+# NOBITS-NEXT:     Type:         SHT_PROGBITS
+# NOBITS-NEXT:     Content:      '0000'
+# NOBITS-NEXT:   - Name:         .nobits2
+# NOBITS-NEXT:     Type:         SHT_NOBITS
+# NOBITS-NEXT:     AddressAlign: 0x100
+# NOBITS-NEXT:     Size:         0x100
+# NOBITS-NEXT:   - Name:         .progbits3
+# NOBITS-NEXT:     Type:         SHT_PROGBITS
+# NOBITS-NEXT:     Content:      '000000'
+# NOBITS-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+## sh_offset == 0x40.
+  - Name: .progbits1
+    Type: SHT_PROGBITS
+    Size: 0x1
+## sh_offset == 0x41.
+  - Name: .nobits1
+    Type: SHT_NOBITS
+    Size: 0x10
+## sh_offset == 0x41.
+  - Name: .progbits2
+    Type: SHT_PROGBITS
+    Size: 0x2
+## sh_offset == 0x100.
+  - Name:         .nobits2
+    Type:         SHT_NOBITS
+    Size:         0x100
+    AddressAlign: 0x100
+## sh_offset == 0x100.
+  - Name: .progbits3
+    Type: SHT_PROGBITS
+    Size: 0x3
+
+## Check that we might take sizes of SHT_NOBITS sections into account when calculating
+## the expected offsets when there are program headers in the file. The rule is the following:
+## we assume that the file space is allocated for the SHT_NOBITS section when there are
+## other non-nobits sections in the same segment that follows it.
+
+# RUN: yaml2obj %s --docnum=4 -o %t6.o
+# RUN: obj2yaml %t6.o | FileCheck %s --check-prefix=NOBITS-PHDRS
+
+# NOBITS-PHDRS:      Sections:
+# NOBITS-PHDRS-NEXT:   - Name:    .nobits1
+# NOBITS-PHDRS-NEXT:     Type:    SHT_NOBITS
+# NOBITS-PHDRS-NEXT:     Size:    0x1
+# NOBITS-PHDRS-NEXT:   - Name:    .progbits
+# NOBITS-PHDRS-NEXT:     Type:    SHT_PROGBITS
+# NOBITS-PHDRS-NEXT:     Content: '0000'
+# NOBITS-PHDRS-NEXT:   - Name:    .nobits3
+# NOBITS-PHDRS-NEXT:     Type:    SHT_NOBITS
+# NOBITS-PHDRS-NEXT:     Size:    0x100
+# NOBITS-PHDRS-NEXT:   - Name:    .nobits4
+# NOBITS-PHDRS-NEXT:     Type:    SHT_NOBITS
+# NOBITS-PHDRS-NEXT:     Size:    0x200
+# NOBITS-PHDRS-NEXT:   - Name:    .nobits5
+# NOBITS-PHDRS-NEXT:     Type:    SHT_NOBITS
+# NOBITS-PHDRS-NEXT:     Offset:  0x100
+# NOBITS-PHDRS-NEXT:     Size:    0x300
+# NOBITS-PHDRS-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+## sh_offset == 0xe8.
+  - Name: .nobits1
+    Type: SHT_NOBITS
+    Size: 0x1
+## sh_offset == 0xe9.
+  - Name: .progbits
+    Type: SHT_PROGBITS
+    Size: 0x2
+## sh_offset == 0xeb.
+  - Name: .nobits3
+    Type: SHT_NOBITS
+    Size: 0x100
+## sh_offset == 0xeb.
+  - Name: .nobits4
+    Type: SHT_NOBITS
+    Size: 0x200
+## sh_offset == 0x100.
+  - Name:   .nobits5
+    Type:   SHT_NOBITS
+    Size:   0x300
+    Offset: 0x100
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .nobits1
+    LastSec:  .progbits
+  - Type:     PT_LOAD
+    FirstSec: .nobits3
+    LastSec:  .nobits4
+  - Type:     PT_LOAD
+    FirstSec: .nobits5
+    LastSec:  .nobits5

@@ -2,7 +2,7 @@
 %VeryLarge = type { i8, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 
 ; intentionally cause a spill
-define void @inc(%VeryLarge* byval align 1 %s) {
+define void @inc(%VeryLarge* byval(%VeryLarge) align 1 %s) {
 entry:
   %p0 = getelementptr inbounds %VeryLarge, %VeryLarge* %s, i32 0, i32 0
   %0 = load i8, i8* %p0

@@ -49,9 +49,10 @@ public:
 
   static void RegisterArchPlugin(const DNBArchPluginInfo &arch_info);
 
-  static uint32_t GetArchitecture();
+  static uint32_t GetCPUType();
+  static uint32_t GetCPUSubType();
 
-  static bool SetArchitecture(uint32_t cpu_type);
+  static bool SetArchitecture(uint32_t cpu_type, uint32_t cpu_subtype = 0);
 
   DNBArchProtocol() : m_save_id(0) {}
 

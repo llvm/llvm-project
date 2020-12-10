@@ -467,11 +467,19 @@ let Defs = [RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
 def TLS_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_addr64",
                   [(X86tlsaddr tls64addr:$sym)]>,
-                  Requires<[In64BitMode]>;
+                  Requires<[In64BitMode, IsLP64]>;
 def TLS_base_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_base_addr64",
                   [(X86tlsbaseaddr tls64baseaddr:$sym)]>,
-                  Requires<[In64BitMode]>;
+                  Requires<[In64BitMode, IsLP64]>;
+def TLS_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_addrX32",
+                  [(X86tlsaddr tls32addr:$sym)]>,
+                  Requires<[In64BitMode, NotLP64]>;
+def TLS_base_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_base_addrX32",
+                  [(X86tlsbaseaddr tls32baseaddr:$sym)]>,
+                  Requires<[In64BitMode, NotLP64]>;
 }
 
 // Darwin TLS Support

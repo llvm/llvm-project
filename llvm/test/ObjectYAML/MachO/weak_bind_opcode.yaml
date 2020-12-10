@@ -107,7 +107,7 @@ LinkEditData:
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   [ 0x0000000000000000 ]
+#CHECK:       ULEBExtraData:   [ 0x0 ]
 #CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM

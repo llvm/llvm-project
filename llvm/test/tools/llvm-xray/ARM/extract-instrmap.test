@@ -129,21 +129,21 @@ DynamicSymbols:
 # RUN: llvm-xray extract %t.so -s | FileCheck %s
 
 # CHECK:      ---
-# CHECK-NEXT: - { id: 1, address: 0x00000000000012B0, function: 0x00000000000012B0, kind: function-enter, always-instrument: true, function-name: 'foo()' }
-# CHECK-NEXT: - { id: 1, address: 0x00000000000012CC, function: 0x00000000000012B0, kind: function-exit, always-instrument: true, function-name: 'foo()' }
-# CHECK-NEXT: - { id: 2, address: 0x00000000000012EC, function: 0x00000000000012EC, kind: function-enter, always-instrument: true, function-name: 'bar()' }
-# CHECK-NEXT: - { id: 2, address: 0x0000000000001308, function: 0x00000000000012EC, kind: function-exit, always-instrument: true, function-name: 'bar()' }
-# CHECK-NEXT: - { id: 3, address: 0x0000000000001328, function: 0x0000000000001328, kind: function-enter, always-instrument: true, function-name: 'jar()' }
-# CHECK-NEXT: - { id: 3, address: 0x0000000000001344, function: 0x0000000000001328, kind: function-exit, always-instrument: true, function-name: 'jar()' }
+# CHECK-NEXT: - { id: 1, address: 0x12B0, function: 0x12B0, kind: function-enter, always-instrument: true, function-name: 'foo()' }
+# CHECK-NEXT: - { id: 1, address: 0x12CC, function: 0x12B0, kind: function-exit, always-instrument: true, function-name: 'foo()' }
+# CHECK-NEXT: - { id: 2, address: 0x12EC, function: 0x12EC, kind: function-enter, always-instrument: true, function-name: 'bar()' }
+# CHECK-NEXT: - { id: 2, address: 0x1308, function: 0x12EC, kind: function-exit, always-instrument: true, function-name: 'bar()' }
+# CHECK-NEXT: - { id: 3, address: 0x1328, function: 0x1328, kind: function-enter, always-instrument: true, function-name: 'jar()' }
+# CHECK-NEXT: - { id: 3, address: 0x1344, function: 0x1328, kind: function-exit, always-instrument: true, function-name: 'jar()' }
 # CHECK-NEXT: ...
 
 # RUN: llvm-xray extract -s --no-demangle %t.so | FileCheck --check-prefix=MANGLED %s
 
 # MANGLED:      ---
-# MANGLED-NEXT: - { id: 1, address: 0x00000000000012B0, function: 0x00000000000012B0, kind: function-enter, always-instrument: true, function-name: _Z3foov }
-# MANGLED-NEXT: - { id: 1, address: 0x00000000000012CC, function: 0x00000000000012B0, kind: function-exit, always-instrument: true, function-name: _Z3foov }
-# MANGLED-NEXT: - { id: 2, address: 0x00000000000012EC, function: 0x00000000000012EC, kind: function-enter, always-instrument: true, function-name: _Z3barv }
-# MANGLED-NEXT: - { id: 2, address: 0x0000000000001308, function: 0x00000000000012EC, kind: function-exit, always-instrument: true, function-name: _Z3barv }
-# MANGLED-NEXT: - { id: 3, address: 0x0000000000001328, function: 0x0000000000001328, kind: function-enter, always-instrument: true, function-name: _Z3jarv }
-# MANGLED-NEXT: - { id: 3, address: 0x0000000000001344, function: 0x0000000000001328, kind: function-exit, always-instrument: true, function-name: _Z3jarv }
+# MANGLED-NEXT: - { id: 1, address: 0x12B0, function: 0x12B0, kind: function-enter, always-instrument: true, function-name: _Z3foov }
+# MANGLED-NEXT: - { id: 1, address: 0x12CC, function: 0x12B0, kind: function-exit, always-instrument: true, function-name: _Z3foov }
+# MANGLED-NEXT: - { id: 2, address: 0x12EC, function: 0x12EC, kind: function-enter, always-instrument: true, function-name: _Z3barv }
+# MANGLED-NEXT: - { id: 2, address: 0x1308, function: 0x12EC, kind: function-exit, always-instrument: true, function-name: _Z3barv }
+# MANGLED-NEXT: - { id: 3, address: 0x1328, function: 0x1328, kind: function-enter, always-instrument: true, function-name: _Z3jarv }
+# MANGLED-NEXT: - { id: 3, address: 0x1344, function: 0x1328, kind: function-exit, always-instrument: true, function-name: _Z3jarv }
 # MANGLED-NEXT: ...

@@ -22,6 +22,7 @@ using namespace llvm;
 enum ActionType {
   PrintRecords,
   PrintDetailedRecords,
+  NullBackend,
   DumpJSON,
   GenEmitter,
   GenRegisterInfo,
@@ -59,9 +60,6 @@ enum ActionType {
 };
 
 namespace llvm {
-/// Storage for TimeRegionsOpt as a global so that backends aren't required to
-/// include CommandLine.h
-bool TimeRegions = false;
 cl::opt<bool> EmitLongStrLiterals(
     "long-string-literals",
     cl::desc("when emitting large string tables, prefer string literals over "
@@ -78,6 +76,8 @@ cl::opt<ActionType> Action(
                    "Print all records to stdout (default)"),
         clEnumValN(PrintDetailedRecords, "print-detailed-records",
                    "Print full details of all records to stdout"),
+        clEnumValN(NullBackend, "null-backend",
+                   "Do nothing after parsing (useful for timing)"),
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
         clEnumValN(GenEmitter, "gen-emitter", "Generate machine code emitter"),
@@ -145,18 +145,15 @@ cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
                            cl::value_desc("class name"),
                            cl::cat(PrintEnumsCat));
 
-cl::opt<bool, true>
-    TimeRegionsOpt("time-regions",
-                   cl::desc("Time regions of tablegens execution"),
-                   cl::location(TimeRegions));
-
 bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
-    OS << Records;           // No argument, dump all contents
+    OS << Records;              // No argument, dump all contents
     break;
   case PrintDetailedRecords:
     EmitDetailedRecords(Records, OS);
+    break;
+  case NullBackend:             // No backend at all.
     break;
   case DumpJSON:
     EmitJSON(Records, OS);

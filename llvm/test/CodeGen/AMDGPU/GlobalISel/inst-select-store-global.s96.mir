@@ -44,7 +44,6 @@ body: |
     ; GFX9: GLOBAL_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec :: (store 12, align 16, addrspace 1)
     ; GFX10-LABEL: name: store_global_v3s32
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vreg_96 = COPY $vgpr2_vgpr3_vgpr4
     ; GFX10: GLOBAL_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, 0, 0, implicit $exec :: (store 12, align 16, addrspace 1)

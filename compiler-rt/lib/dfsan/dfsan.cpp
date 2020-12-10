@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __dfsan;
 
@@ -40,8 +41,15 @@ static dfsan_label_info __dfsan_label_info[kNumLabels];
 
 Flags __dfsan::flags_data;
 
-SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_retval_tls;
-SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
+// The size of TLS variables. These constants must be kept in sync with the ones
+// in DataFlowSanitizer.cpp.
+static const int kDFsanArgTlsSize = 800;
+static const int kDFsanRetvalTlsSize = 800;
+
+SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
+    __dfsan_retval_tls[kDFsanRetvalTlsSize / sizeof(u64)];
+SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
+    __dfsan_arg_tls[kDFsanArgTlsSize / sizeof(u64)];
 
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 
@@ -143,8 +151,7 @@ int __dfsan::vmaSize;
 #endif
 
 static uptr UnusedAddr() {
-  return MappingArchImpl<MAPPING_UNION_TABLE_ADDR>()
-         + sizeof(dfsan_union_table_t);
+  return UnionTableAddr() + sizeof(dfsan_union_table_t);
 }
 
 static atomic_dfsan_label *union_table(dfsan_label l1, dfsan_label l2) {
@@ -405,6 +412,22 @@ dfsan_dump_labels(int fd) {
     }
     WriteToFile(fd, "\n", 1);
   }
+}
+
+#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp) \
+  BufferedStackTrace stack;                 \
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+
+void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
+                                                 void *context,
+                                                 bool request_fast,
+                                                 u32 max_depth) {
+  Unwind(max_depth, pc, bp, context, 0, 0, false);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
+  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME());
+  stack.Print();
 }
 
 void Flags::SetDefaults() {

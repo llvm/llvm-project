@@ -124,6 +124,11 @@ public:
   void SetDetachOnError(bool detach) { m_detach_on_error = detach; }
   bool GetDetachOnError() { return m_detach_on_error; }
 
+  void SetUnmaskSignals(bool unmask_signals) {
+    m_unmask_signals = unmask_signals;
+  }
+  bool GetUnmaskSignals() { return m_unmask_signals; }
+
 protected:
   // Classes that inherit from RNBContext can see and modify these
   nub_process_t m_pid;
@@ -147,6 +152,7 @@ protected:
   void StartProcessStatusThread();
   void StopProcessStatusThread();
   static void *ThreadFunctionProcessStatus(void *arg);
+  bool m_unmask_signals;
 
 private:
   RNBContext(const RNBContext &rhs) = delete;

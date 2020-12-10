@@ -21,7 +21,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}global_atomic_csub:
-; GCN: global_atomic_csub v{{[0-9]+}}, v[{{[0-9:]+}}], v{{[0-9]+}}, off glc
+; GCN: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9:]+}}, s{{\[[0-9]+:[0-9]+\]}} glc
 define amdgpu_kernel void @global_atomic_csub(i32 addrspace(1)* %ptr, i32 %data) {
 main_body:
   %ret = call i32 @llvm.amdgcn.global.atomic.csub(i32 addrspace(1)* %ptr, i32 %data)
@@ -29,7 +29,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}global_atomic_csub_off4:
-; GCN: global_atomic_csub v{{[0-9]+}}, v[{{[0-9:]+}}], v{{[0-9]+}}, off offset:4 glc
+; GCN: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4 glc
 define amdgpu_kernel void @global_atomic_csub_off4(i32 addrspace(1)* %ptr, i32 %data) {
 main_body:
   %p = getelementptr i32, i32 addrspace(1)* %ptr, i64 1

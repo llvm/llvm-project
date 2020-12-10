@@ -43,7 +43,6 @@ define i32 @s_add_co_select_user() {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s5, s4, s4
@@ -124,7 +123,6 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX10-LABEL: s_add_co_br_user:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_add_i32 s1, s0, s0
 ; GFX10-NEXT:    v_cmp_lt_u32_e64 s1, s1, s0

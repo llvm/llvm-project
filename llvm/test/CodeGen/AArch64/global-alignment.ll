@@ -60,7 +60,7 @@ define i64 @test_var32_alias() {
   ret i64 %val
 }
 
-@yet_another_var = external global {i32, i32}
+@yet_another_var = external dso_local global {i32, i32}
 
 define i64 @test_yet_another_var() {
 ; CHECK-LABEL: test_yet_another_var:

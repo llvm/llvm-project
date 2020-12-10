@@ -725,7 +725,7 @@ define <2 x float> @fmls_commuted_neg_2s(<2 x float>* %A, <2 x float>* %B, <2 x 
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    ldr d2, [x1]
 ; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    fmls.2s v0, v2, v1
+; CHECK-NEXT:    fmls.2s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x float>, <2 x float>* %A
   %tmp2 = load <2 x float>, <2 x float>* %B
@@ -741,7 +741,7 @@ define <4 x float> @fmls_commuted_neg_4s(<4 x float>* %A, <4 x float>* %B, <4 x 
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.4s v0, v2, v1
+; CHECK-NEXT:    fmls.4s v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x float>, <4 x float>* %A
   %tmp2 = load <4 x float>, <4 x float>* %B
@@ -757,7 +757,7 @@ define <2 x double> @fmls_commuted_neg_2d(<2 x double>* %A, <2 x double>* %B, <2
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    fmls.2d v0, v2, v1
+; CHECK-NEXT:    fmls.2d v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x double>, <2 x double>* %A
   %tmp2 = load <2 x double>, <2 x double>* %B

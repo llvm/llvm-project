@@ -46,5 +46,5 @@ func @main() {
   return
 }
 
-func @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
-func @print_memref_f32(%ptr : memref<*xf32>)
+func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
+func private @print_memref_f32(%ptr : memref<*xf32>)

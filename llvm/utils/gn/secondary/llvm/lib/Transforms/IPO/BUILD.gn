@@ -20,6 +20,7 @@ static_library("IPO") {
   ]
   sources = [
     "AlwaysInliner.cpp",
+    "Annotation2Metadata.cpp",
     "ArgumentPromotion.cpp",
     "Attributor.cpp",
     "AttributorAttributes.cpp",
@@ -51,7 +52,9 @@ static_library("IPO") {
     "PassManagerBuilder.cpp",
     "PruneEH.cpp",
     "SCCP.cpp",
+    "SampleContextTracker.cpp",
     "SampleProfile.cpp",
+    "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",
     "StripSymbols.cpp",
     "SyntheticCountsPropagation.cpp",

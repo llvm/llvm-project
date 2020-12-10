@@ -46,7 +46,7 @@ void delete_B(B *b) { delete b; }
 // CHECK-NOT: call
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
-// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* %[[b]]
+// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[b]]
 // CHECK-MSABI-SAME: , i32 1)
 // CHECK-NOT: call
 // CHECK: }
@@ -97,7 +97,7 @@ void delete_D(D *d) { delete d; }
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
 //
-// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* %[[d]]
+// CHECK: call {{void|i8\*|x86_thiscallcc i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[d]]
 // CHECK-MSABI-SAME: , i32 1)
 // CHECK-NOT: call
 // CHECK: }

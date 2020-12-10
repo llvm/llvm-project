@@ -1,6 +1,8 @@
 ; RUN: opt < %s -S -loop-flatten -debug-only=loop-flatten 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
+target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+
 ; Every function in this file has a reason that it can't be transformed.
 
 ; CHECK-NOT: Checks all passed, doing the transformation

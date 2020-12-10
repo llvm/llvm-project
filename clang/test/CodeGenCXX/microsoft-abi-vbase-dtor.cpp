@@ -16,10 +16,10 @@ void useCompleteDtor(HasCompleteDtor *p) { delete p; }
 // CHECK-LABEL: define dso_local void @"?useCompleteDtor@@YAXPEAUHasCompleteDtor@@@Z"(%struct.HasCompleteDtor* %p)
 // CHECK: call void @"??_DHasCompleteDtor@@QEAAXXZ"({{.*}})
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"??_DHasCompleteDtor@@QEAAXXZ"(%struct.HasCompleteDtor* %this)
+// CHECK-LABEL: define linkonce_odr dso_local void @"??_DHasCompleteDtor@@QEAAXXZ"(%struct.HasCompleteDtor* {{[^,]*}} %this)
 // CHECK: call void @"??1HasCompleteDtor@@QEAA@XZ"({{.*}})
 // CHECK: call void @"??1DefaultedDtor@@QEAA@XZ"({{.*}})
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"??1DefaultedDtor@@QEAA@XZ"(%struct.DefaultedDtor* %this)
-// CHECK: call void @"??1HasDtor@@QEAA@XZ"(%struct.HasDtor* %{{.*}})
+// CHECK-LABEL: define linkonce_odr dso_local void @"??1DefaultedDtor@@QEAA@XZ"(%struct.DefaultedDtor* {{[^,]*}} %this)
+// CHECK: call void @"??1HasDtor@@QEAA@XZ"(%struct.HasDtor* {{[^,]*}} %{{.*}})
 

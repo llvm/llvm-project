@@ -112,7 +112,10 @@ class HwasanThreadList {
   void RemoveThreadFromLiveList(Thread *t) {
     for (Thread *&t2 : live_list_)
       if (t2 == t) {
-        live_list_.erase(&t2);
+        // To remove t2, copy the last element of the list in t2's position, and
+        // pop_back(). This works even if t2 is itself the last element.
+        t2 = live_list_.back();
+        live_list_.pop_back();
         return;
       }
     CHECK(0 && "thread not found in live list");

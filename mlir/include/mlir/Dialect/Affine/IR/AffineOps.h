@@ -18,9 +18,9 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -336,6 +336,11 @@ bool isValidSymbol(Value value);
 /// Returns true if the given Value can be used as a symbol for `region`, i.e.,
 /// for all its uses in `region`.
 bool isValidSymbol(Value value, Region *region);
+
+/// Parses dimension and symbol list and returns true if parsing failed.
+ParseResult parseDimAndSymbolList(OpAsmParser &parser,
+                                  SmallVectorImpl<Value> &operands,
+                                  unsigned &numDims);
 
 /// Modifies both `map` and `operands` in-place so as to:
 /// 1. drop duplicate operands

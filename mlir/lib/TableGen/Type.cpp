@@ -46,7 +46,7 @@ Optional<StringRef> TypeConstraint::getBuilderCall() const {
   if (!builderCall || !builderCall->getValue())
     return llvm::None;
   return TypeSwitch<llvm::Init *, Optional<StringRef>>(builderCall->getValue())
-      .Case<llvm::StringInit, llvm::CodeInit>([&](auto *init) {
+      .Case<llvm::StringInit>([&](auto *init) {
         StringRef value = init->getValue();
         return value.empty() ? Optional<StringRef>() : value;
       })

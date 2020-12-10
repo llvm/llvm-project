@@ -97,6 +97,9 @@ MATCHER(RefRange, "") {
   const Range &Range = ::testing::get<1>(arg);
   return rangesMatch(Pos.Location, Range);
 }
+MATCHER_P2(OverriddenBy, Subject, Object, "") {
+  return arg == Relation{Subject.ID, RelationKind::OverriddenBy, Object.ID};
+}
 ::testing::Matcher<const std::vector<Ref> &>
 HaveRanges(const std::vector<Range> Ranges) {
   return ::testing::UnorderedPointwise(RefRange(), Ranges);
@@ -1031,7 +1034,7 @@ TEST_F(SymbolCollectorTest, RefsInHeaders) {
                                   HaveRanges(Header.ranges("macro")))));
 }
 
-TEST_F(SymbolCollectorTest, Relations) {
+TEST_F(SymbolCollectorTest, BaseOfRelations) {
   std::string Header = R"(
   class Base {};
   class Derived : public Base {};
@@ -1041,6 +1044,77 @@ TEST_F(SymbolCollectorTest, Relations) {
   const Symbol &Derived = findSymbol(Symbols, "Derived");
   EXPECT_THAT(Relations,
               Contains(Relation{Base.ID, RelationKind::BaseOf, Derived.ID}));
+}
+
+TEST_F(SymbolCollectorTest, OverrideRelationsSimpleInheritance) {
+  std::string Header = R"cpp(
+    class A {
+      virtual void foo();
+    };
+    class B : public A {
+      void foo() override;  // A::foo
+      virtual void bar();
+    };
+    class C : public B {
+      void bar() override;  // B::bar
+    };
+    class D: public C {
+      void foo() override;  // B::foo
+      void bar() override;  // C::bar
+    };
+  )cpp";
+  runSymbolCollector(Header, /*Main=*/"");
+  const Symbol &AFoo = findSymbol(Symbols, "A::foo");
+  const Symbol &BFoo = findSymbol(Symbols, "B::foo");
+  const Symbol &DFoo = findSymbol(Symbols, "D::foo");
+
+  const Symbol &BBar = findSymbol(Symbols, "B::bar");
+  const Symbol &CBar = findSymbol(Symbols, "C::bar");
+  const Symbol &DBar = findSymbol(Symbols, "D::bar");
+
+  std::vector<Relation> Result;
+  for (const Relation &R : Relations)
+    if (R.Predicate == RelationKind::OverriddenBy)
+      Result.push_back(R);
+  EXPECT_THAT(Result, UnorderedElementsAre(
+                          OverriddenBy(AFoo, BFoo), OverriddenBy(BBar, CBar),
+                          OverriddenBy(BFoo, DFoo), OverriddenBy(CBar, DBar)));
+}
+
+TEST_F(SymbolCollectorTest, OverrideRelationsMultipleInheritance) {
+  std::string Header = R"cpp(
+    class A {
+      virtual void foo();
+    };
+    class B {
+      virtual void bar();
+    };
+    class C : public B {
+      void bar() override;  // B::bar
+      virtual void baz();
+    }
+    class D : public A, C {
+      void foo() override;  // A::foo
+      void bar() override;  // C::bar
+      void baz() override;  // C::baz
+    };
+  )cpp";
+  runSymbolCollector(Header, /*Main=*/"");
+  const Symbol &AFoo = findSymbol(Symbols, "A::foo");
+  const Symbol &BBar = findSymbol(Symbols, "B::bar");
+  const Symbol &CBar = findSymbol(Symbols, "C::bar");
+  const Symbol &CBaz = findSymbol(Symbols, "C::baz");
+  const Symbol &DFoo = findSymbol(Symbols, "D::foo");
+  const Symbol &DBar = findSymbol(Symbols, "D::bar");
+  const Symbol &DBaz = findSymbol(Symbols, "D::baz");
+
+  std::vector<Relation> Result;
+  for (const Relation &R : Relations)
+    if (R.Predicate == RelationKind::OverriddenBy)
+      Result.push_back(R);
+  EXPECT_THAT(Result, UnorderedElementsAre(
+                          OverriddenBy(BBar, CBar), OverriddenBy(AFoo, DFoo),
+                          OverriddenBy(CBar, DBar), OverriddenBy(CBaz, DBaz)));
 }
 
 TEST_F(SymbolCollectorTest, CountReferences) {

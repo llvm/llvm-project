@@ -791,7 +791,7 @@ void test(NSArray *x) {
 
 void foo(NSArray *array) {
   for (NSString *string in array) {
-    for (string in @[@"blah", @"more blah", string]) { // expected-error {{selector element of type 'NSString *const __strong' cannot be a constant l-value}}
+    for (string in @[@"blah", @"more blah", string]) { // expected-error {{selector element of type 'NSString *const __strong' cannot be a constant lvalue}}
     }
   }
 }

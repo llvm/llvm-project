@@ -311,6 +311,14 @@
 // RUN: %clang_cl -c -fno-strict-aliasing -### -- %s 2>&1 | FileCheck -check-prefix=NOSTRICT %s
 // NOSTRICT: "-relaxed-aliasing"
 
+// We recognize -f[no-]delete-null-pointer-checks.
+// RUN: %clang_cl -c -### -- %s 2>&1 | FileCheck -check-prefix=DEFAULTNULL %s
+// DEFAULTNULL-NOT: "-fno-delete-null-pointer-checks"
+// RUN: %clang_cl -c -fdelete-null-pointer-checks -### -- %s 2>&1 | FileCheck -check-prefix=NULL %s
+// NULL-NOT: "-fno-delete-null-pointer-checks"
+// RUN: %clang_cl -c -fno-delete-null-pointer-checks -### -- %s 2>&1 | FileCheck -check-prefix=NONULL %s
+// NONULL: "-fno-delete-null-pointer-checks"
+
 // We recognize -f[no-]delayed-template-parsing.
 // /Zc:twoPhase[-] has the opposite meaning.
 // RUN: %clang_cl -c -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDDEFAULT %s

@@ -17,13 +17,31 @@
 
 namespace llvm {
 
+void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
+                                                      StringRef PassName) {
+  ClassToPassName[ClassName] = PassName.str();
+}
+
+bool PassInstrumentationCallbacks::hasPassName(StringRef PassName) {
+  for (const auto &E : ClassToPassName) {
+    if (E.getValue() == PassName)
+      return true;
+  }
+  return false;
+}
+
+StringRef
+PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
+  return ClassToPassName[ClassName];
+}
+
 AnalysisKey PassInstrumentationAnalysis::Key;
 
 bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials) {
   size_t Pos = PassID.find('<');
-  if (Pos == StringRef::npos)
-    return false;
-  StringRef Prefix = PassID.substr(0, Pos);
+  StringRef Prefix = PassID;
+  if (Pos != StringRef::npos)
+    Prefix = PassID.substr(0, Pos);
   return any_of(Specials, [Prefix](StringRef S) { return Prefix.endswith(S); });
 }
 

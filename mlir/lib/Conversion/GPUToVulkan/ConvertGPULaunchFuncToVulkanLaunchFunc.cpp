@@ -22,9 +22,8 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/Module.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 using namespace mlir;
 
@@ -123,9 +122,8 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
   }
 
   // Declare vulkan launch function.
-  builder.create<FuncOp>(
-      loc, kVulkanLaunch,
-      FunctionType::get(vulkanLaunchTypes, {}, loc->getContext()));
+  auto funcType = FunctionType::get(vulkanLaunchTypes, {}, loc->getContext());
+  builder.create<FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
 
   return success();
 }

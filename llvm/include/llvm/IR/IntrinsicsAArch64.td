@@ -497,6 +497,11 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   // v8.3-A Floating-point complex add
   def int_aarch64_neon_vcadd_rot90  : AdvSIMD_2VectorArg_Intrinsic;
   def int_aarch64_neon_vcadd_rot270 : AdvSIMD_2VectorArg_Intrinsic;
+
+  def int_aarch64_neon_vcmla_rot0   : AdvSIMD_3VectorArg_Intrinsic;
+  def int_aarch64_neon_vcmla_rot90  : AdvSIMD_3VectorArg_Intrinsic;
+  def int_aarch64_neon_vcmla_rot180 : AdvSIMD_3VectorArg_Intrinsic;
+  def int_aarch64_neon_vcmla_rot270 : AdvSIMD_3VectorArg_Intrinsic;
 }
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".

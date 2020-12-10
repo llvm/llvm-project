@@ -43,8 +43,7 @@ class BSDArchivesTestCase(TestBase):
         # Break at a(int) first.
         self.expect("frame variable", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['(int) arg = 1'])
-        self.expect("frame variable __a_global", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['(int) __a_global = 1'])
+        self.expect_var_path("__a_global", type="int", value="1")
 
         # Set breakpoint for b() next.
         lldbutil.run_break_set_by_symbol(
@@ -57,5 +56,4 @@ class BSDArchivesTestCase(TestBase):
                              'stop reason = breakpoint'])
         self.expect("frame variable", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['(int) arg = 2'])
-        self.expect("frame variable __b_global", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['(int) __b_global = 2'])
+        self.expect_var_path("__b_global", type="int", value="2")

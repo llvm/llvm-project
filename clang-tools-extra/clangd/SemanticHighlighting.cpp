@@ -234,6 +234,10 @@ public:
       // with line-based diffing.
       assert(R.start.line <= R.end.line);
       for (int Line = R.start.line; Line <= R.end.line; ++Line) {
+        // If the end of the inactive range is at the beginning
+        // of a line, that line is not inactive.
+        if (Line == R.end.line && R.end.character == 0)
+          continue;
         // Copy tokens before the inactive line
         for (; It != NonConflicting.end() && It->R.start.line < Line; ++It)
           WithInactiveLines.push_back(std::move(*It));
@@ -556,12 +560,12 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::Function:
     return "function";
   case HighlightingKind::Method:
-    return "member";
+    return "method";
   case HighlightingKind::StaticMethod:
-    // FIXME: better function/member with static modifier?
+    // FIXME: better method with static modifier?
     return "function";
   case HighlightingKind::Field:
-    return "member";
+    return "property";
   case HighlightingKind::Class:
     return "class";
   case HighlightingKind::Enum:
@@ -601,7 +605,7 @@ toTheiaSemanticHighlightingInformation(
   std::vector<TheiaSemanticHighlightingInformation> Lines;
   Lines.reserve(Tokens.size());
   for (const auto &Line : Tokens) {
-    llvm::SmallVector<char, 128> LineByteTokens;
+    llvm::SmallVector<char> LineByteTokens;
     llvm::raw_svector_ostream OS(LineByteTokens);
     for (const auto &Token : Line.Tokens) {
       // Writes the token to LineByteTokens in the byte format specified by the

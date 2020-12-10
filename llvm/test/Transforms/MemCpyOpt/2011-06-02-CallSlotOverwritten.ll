@@ -11,13 +11,13 @@ target triple = "i386-apple-darwin10"
 %struct1 = type { i32, i32 }
 %struct2 = type { %struct1, i8* }
 
-declare void @bar(%struct1* nocapture sret %agg.result) nounwind
+declare void @bar(%struct1* nocapture sret(%struct1) %agg.result) nounwind
 
 define i32 @foo() nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[X:%.*]] = alloca [[STRUCT1:%.*]], align 8
 ; CHECK-NEXT:    [[Y:%.*]] = alloca [[STRUCT2:%.*]], align 8
-; CHECK-NEXT:    call void @bar(%struct1* sret [[X]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    call void @bar(%struct1* sret(%struct1) [[X]]) [[ATTR0:#.*]]
 ; CHECK-NEXT:    [[GEPN1:%.*]] = getelementptr inbounds [[STRUCT2]], %struct2* [[Y]], i32 0, i32 0, i32 0
 ; CHECK-NEXT:    store i32 0, i32* [[GEPN1]], align 8
 ; CHECK-NEXT:    [[GEPN2:%.*]] = getelementptr inbounds [[STRUCT2]], %struct2* [[Y]], i32 0, i32 0, i32 1
@@ -32,7 +32,7 @@ define i32 @foo() nounwind {
 ;
   %x = alloca %struct1, align 8
   %y = alloca %struct2, align 8
-  call void @bar(%struct1* sret %x) nounwind
+  call void @bar(%struct1* sret(%struct1) %x) nounwind
 
   %gepn1 = getelementptr inbounds %struct2, %struct2* %y, i32 0, i32 0, i32 0
   store i32 0, i32* %gepn1, align 8

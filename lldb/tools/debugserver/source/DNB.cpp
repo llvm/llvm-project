@@ -319,20 +319,21 @@ static bool spawn_waitpid_thread(pid_t pid) {
 }
 
 nub_process_t DNBProcessLaunch(
-    const char *path, char const *argv[], const char *envp[],
+    RNBContext *ctx, const char *path, char const *argv[], const char *envp[],
     const char *working_directory, // NULL => don't change, non-NULL => set
                                    // working directory for inferior to this
     const char *stdin_path, const char *stdout_path, const char *stderr_path,
-    bool no_stdio, nub_launch_flavor_t launch_flavor, int disable_aslr,
-    const char *event_data, char *err_str, size_t err_len) {
-  DNBLogThreadedIf(LOG_PROCESS, "%s ( path='%s', argv = %p, envp = %p, "
-                                "working_dir=%s, stdin=%s, stdout=%s, "
-                                "stderr=%s, no-stdio=%i, launch_flavor = %u, "
-                                "disable_aslr = %d, err = %p, err_len = "
-                                "%llu) called...",
+    bool no_stdio, int disable_aslr, const char *event_data, char *err_str,
+    size_t err_len) {
+  DNBLogThreadedIf(LOG_PROCESS,
+                   "%s ( path='%s', argv = %p, envp = %p, "
+                   "working_dir=%s, stdin=%s, stdout=%s, "
+                   "stderr=%s, no-stdio=%i, launch_flavor = %u, "
+                   "disable_aslr = %d, err = %p, err_len = "
+                   "%llu) called...",
                    __FUNCTION__, path, static_cast<void *>(argv),
                    static_cast<void *>(envp), working_directory, stdin_path,
-                   stdout_path, stderr_path, no_stdio, launch_flavor,
+                   stdout_path, stderr_path, no_stdio, ctx->LaunchFlavor(),
                    disable_aslr, static_cast<void *>(err_str),
                    static_cast<uint64_t>(err_len));
 
@@ -349,10 +350,10 @@ nub_process_t DNBProcessLaunch(
   MachProcessSP processSP(new MachProcess);
   if (processSP.get()) {
     DNBError launch_err;
-    pid_t pid = processSP->LaunchForDebug(path, argv, envp, working_directory,
-                                          stdin_path, stdout_path, stderr_path,
-                                          no_stdio, launch_flavor, disable_aslr,
-                                          event_data, launch_err);
+    pid_t pid = processSP->LaunchForDebug(
+        path, argv, envp, working_directory, stdin_path, stdout_path,
+        stderr_path, no_stdio, ctx->LaunchFlavor(), disable_aslr, event_data,
+        ctx->GetUnmaskSignals(), launch_err);
     if (err_str) {
       *err_str = '\0';
       if (launch_err.Fail()) {
@@ -412,7 +413,8 @@ nub_process_t DNBProcessGetPIDByName(const char *name) {
 }
 
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     char *err_str, size_t err_len) {
+                                     bool unmask_signals, char *err_str,
+                                     size_t err_len) {
   if (err_str && err_len > 0)
     err_str[0] = '\0';
   std::vector<struct kinfo_proc> matching_proc_infos;
@@ -433,12 +435,12 @@ nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
   }
 
   return DNBProcessAttach(matching_proc_infos[0].kp_proc.p_pid, timeout,
-                          err_str, err_len);
+                          unmask_signals, err_str, err_len);
 }
 
 nub_process_t DNBProcessAttach(nub_process_t attach_pid,
-                               struct timespec *timeout, char *err_str,
-                               size_t err_len) {
+                               struct timespec *timeout, bool unmask_signals,
+                               char *err_str, size_t err_len) {
   if (err_str && err_len > 0)
     err_str[0] = '\0';
 
@@ -480,7 +482,8 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
   if (processSP.get()) {
     DNBLogThreadedIf(LOG_PROCESS, "(DebugNub) attaching to pid %d...",
                      attach_pid);
-    pid = processSP->AttachForDebug(attach_pid, err_str, err_len);
+    pid =
+        processSP->AttachForDebug(attach_pid, unmask_signals, err_str, err_len);
 
     if (pid != INVALID_NUB_PROCESS) {
       bool res = AddProcessToMap(pid, processSP);
@@ -667,14 +670,17 @@ GetAllInfosMatchingName(const char *full_process_name,
   return matching_proc_infos.size();
 }
 
-nub_process_t DNBProcessAttachWait(
-    const char *waitfor_process_name, nub_launch_flavor_t launch_flavor,
-    bool ignore_existing, struct timespec *timeout_abstime,
-    useconds_t waitfor_interval, char *err_str, size_t err_len,
-    DNBShouldCancelCallback should_cancel_callback, void *callback_data) {
+nub_process_t
+DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
+                     bool ignore_existing, struct timespec *timeout_abstime,
+                     useconds_t waitfor_interval, char *err_str, size_t err_len,
+                     DNBShouldCancelCallback should_cancel_callback,
+                     void *callback_data) {
   DNBError prepare_error;
   std::vector<struct kinfo_proc> exclude_proc_infos;
   size_t num_exclude_proc_infos;
+
+  nub_launch_flavor_t launch_flavor = ctx->LaunchFlavor();
 
   // If the PrepareForAttach returns a valid token, use  MachProcess to check
   // for the process, otherwise scan the process table.
@@ -771,8 +777,8 @@ nub_process_t DNBProcessAttachWait(
   if (waitfor_pid != INVALID_NUB_PROCESS) {
     DNBLogThreadedIf(LOG_PROCESS, "Attaching to %s with pid %i...\n",
                      waitfor_process_name, waitfor_pid);
-    waitfor_pid =
-        DNBProcessAttach(waitfor_pid, timeout_abstime, err_str, err_len);
+    waitfor_pid = DNBProcessAttach(waitfor_pid, timeout_abstime,
+                                   ctx->GetUnmaskSignals(), err_str, err_len);
   }
 
   bool success = waitfor_pid != INVALID_NUB_PROCESS;
@@ -1756,19 +1762,52 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
   if (arch && arch[0]) {
     if (strcasecmp(arch, "i386") == 0)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_I386);
-    else if ((strcasecmp(arch, "x86_64") == 0) ||
-             (strcasecmp(arch, "x86_64h") == 0))
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64);
-    else if (strstr(arch, "arm64_32") == arch || 
+    else if (strcasecmp(arch, "x86_64") == 0)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64,
+                                              CPU_SUBTYPE_X86_64_ALL);
+    else if (strcasecmp(arch, "x86_64h") == 0)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64,
+                                              CPU_SUBTYPE_X86_64_H);
+    else if (strstr(arch, "arm64_32") == arch ||
              strstr(arch, "aarch64_32") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
     else if (strstr(arch, "arm64e") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
-    else if (strstr(arch, "arm64") == arch || strstr(arch, "armv8") == arch ||
-             strstr(arch, "aarch64") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64E);
+    else if (strstr(arch, "arm64") == arch || strstr(arch, "aarch64") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64_ALL);
+    else if (strstr(arch, "armv8") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
+                                              CPU_SUBTYPE_ARM64_V8);
+    else if (strstr(arch, "armv7em") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7EM);
+    else if (strstr(arch, "armv7m") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7M);
+    else if (strstr(arch, "armv7k") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7K);
+    else if (strstr(arch, "armv7s") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V7S);
+    else if (strstr(arch, "armv7") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM, CPU_SUBTYPE_ARM_V7);
+    else if (strstr(arch, "armv6m") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V6M);
+    else if (strstr(arch, "armv6") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM, CPU_SUBTYPE_ARM_V6);
+    else if (strstr(arch, "armv5") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V5TEJ);
+    else if (strstr(arch, "armv4t") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V4T);
     else if (strstr(arch, "arm") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_ALL);
   }
   return false;
 }

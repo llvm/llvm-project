@@ -226,17 +226,21 @@ void string_literal_and_char_ptr_tests() {
   // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, cc);{{$}}
 }
 
-// Confirms that it does *not* match when the parameter to find() is a char,
-// because absl::StrContains is not implemented for char.
-void no_char_param_tests() {
+void char_param_tests() {
   std::string ss;
   ss.find('c') == std::string::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, 'c');{{$}}
 
   std::string_view ssv;
   ssv.find('c') == std::string_view::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, 'c');{{$}}
 
   absl::string_view asv;
   asv.find('c') == absl::string_view::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, 'c');{{$}}
 }
 
 #define FOO(a, b, c, d) ((a).find(b) == std::string::npos ? (c) : (d))

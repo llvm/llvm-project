@@ -1304,7 +1304,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     return DescriptorMapUpdateResult::Fail();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
   if (!ast)
     return DescriptorMapUpdateResult::Fail();
@@ -1547,7 +1548,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     return DescriptorMapUpdateResult::Fail();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
   if (!ast)
     return DescriptorMapUpdateResult::Fail();
@@ -2609,7 +2611,7 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
     if (!abi) return;
 
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process_sp->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!clang_ast_context)
       return;
     CompilerType voidstar =

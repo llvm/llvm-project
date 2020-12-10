@@ -283,7 +283,7 @@ static APInt constructOperandMask(ArrayRef<int64_t> Indices) {
 
 static void
 processSTIPredicate(STIPredicateFunction &Fn,
-                    const DenseMap<Record *, unsigned> &ProcModelMap) {
+                    const ProcModelMapTy &ProcModelMap) {
   DenseMap<const Record *, unsigned> Opcode2Index;
   using OpcodeMapPair = std::pair<const Record *, OpcodeInfo>;
   std::vector<OpcodeMapPair> OpcodeMappings;
@@ -950,9 +950,9 @@ void CodeGenSchedModels::collectSchedClasses() {
     }
     // If ProcIndices contains zero, the class applies to all processors.
     LLVM_DEBUG({
-      if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
+      if (!llvm::is_contained(ProcIndices, 0)) {
         for (const CodeGenProcModel &PM : ProcModels) {
-          if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
+          if (!llvm::is_contained(ProcIndices, PM.Index))
             dbgs() << "No machine model for " << Inst->TheDef->getName()
                    << " on processor " << PM.ModelName << '\n';
         }
@@ -1248,7 +1248,7 @@ void CodeGenSchedModels::inferFromItinClass(Record *ItinClassDef,
     bool HasMatch = false;
     for (const Record *Rec : PM.ItinRWDefs) {
       RecVec Matched = Rec->getValueAsListOfDefs("MatchedItinClasses");
-      if (!std::count(Matched.begin(), Matched.end(), ItinClassDef))
+      if (!llvm::is_contained(Matched, ItinClassDef))
         continue;
       if (HasMatch)
         PrintFatalError(Rec->getLoc(), "Duplicate itinerary class "
@@ -1314,16 +1314,12 @@ struct PredTransition {
   SmallVector<PredCheck, 4> PredTerm;
   SmallVector<SmallVector<unsigned,4>, 16> WriteSequences;
   SmallVector<SmallVector<unsigned,4>, 16> ReadSequences;
-  SmallVector<unsigned, 4> ProcIndices;
+  unsigned ProcIndex = 0;
 
   PredTransition() = default;
-  PredTransition(ArrayRef<PredCheck> PT) {
+  PredTransition(ArrayRef<PredCheck> PT, unsigned ProcId) {
     PredTerm.assign(PT.begin(), PT.end());
-    ProcIndices.assign(1, 0);
-  }
-  PredTransition(ArrayRef<PredCheck> PT, ArrayRef<unsigned> PIds) {
-    PredTerm.assign(PT.begin(), PT.end());
-    ProcIndices.assign(PIds.begin(), PIds.end());
+    ProcIndex = ProcId;
   }
 };
 
@@ -1337,18 +1333,18 @@ public:
 
   PredTransitions(CodeGenSchedModels &sm): SchedModels(sm) {}
 
-  void substituteVariantOperand(const SmallVectorImpl<unsigned> &RWSeq,
-                                bool IsRead, bool IsForAnyCPU,
-                                unsigned StartIdx);
+  bool substituteVariantOperand(const SmallVectorImpl<unsigned> &RWSeq,
+                                bool IsRead, unsigned StartIdx);
 
-  void substituteVariants(const PredTransition &Trans);
+  bool substituteVariants(const PredTransition &Trans);
 
 #ifndef NDEBUG
   void dump() const;
 #endif
 
 private:
-  bool mutuallyExclusive(Record *PredDef, ArrayRef<PredCheck> Term);
+  bool mutuallyExclusive(Record *PredDef, ArrayRef<Record *> Preds,
+                         ArrayRef<PredCheck> Term);
   void getIntersectingVariants(
     const CodeGenSchedRW &SchedRW, unsigned TransIdx,
     std::vector<TransVariant> &IntersectingVariants);
@@ -1367,6 +1363,7 @@ private:
 // are always checked in the order they are defined in the .td file. Later
 // conditions implicitly negate any prior condition.
 bool PredTransitions::mutuallyExclusive(Record *PredDef,
+                                        ArrayRef<Record *> Preds,
                                         ArrayRef<PredCheck> Term) {
   for (const PredCheck &PC: Term) {
     if (PC.Predicate == PredDef)
@@ -1377,49 +1374,49 @@ bool PredTransitions::mutuallyExclusive(Record *PredDef,
     RecVec Variants = SchedRW.TheDef->getValueAsListOfDefs("Variants");
     if (any_of(Variants, [PredDef](const Record *R) {
           return R->getValueAsDef("Predicate") == PredDef;
-        }))
+        })) {
+      // To check if PredDef is mutually exclusive with PC we also need to
+      // check that PC.Predicate is exclusive with all predicates from variant
+      // we're expanding. Consider following RW sequence with two variants
+      // (1 & 2), where A, B and C are predicates from corresponding SchedVars:
+      //
+      // 1:A/B - 2:C/B
+      //
+      // Here C is not mutually exclusive with variant (1), because A doesn't
+      // exist in variant (2). This means we have possible transitions from A
+      // to C and from A to B, and fully expanded sequence would look like:
+      //
+      // if (A & C) return ...;
+      // if (A & B) return ...;
+      // if (B) return ...;
+      //
+      // Now let's consider another sequence:
+      //
+      // 1:A/B - 2:A/B
+      //
+      // Here A in variant (2) is mutually exclusive with variant (1), because
+      // A also exists in (2). This means A->B transition is impossible and
+      // expanded sequence would look like:
+      //
+      // if (A) return ...;
+      // if (B) return ...;
+      if (!count(Preds, PC.Predicate))
+        continue;
       return true;
-  }
-  return false;
-}
-
-static bool hasAliasedVariants(const CodeGenSchedRW &RW,
-                               CodeGenSchedModels &SchedModels) {
-  if (RW.HasVariants)
-    return true;
-
-  for (Record *Alias : RW.Aliases) {
-    const CodeGenSchedRW &AliasRW =
-      SchedModels.getSchedRW(Alias->getValueAsDef("AliasRW"));
-    if (AliasRW.HasVariants)
-      return true;
-    if (AliasRW.IsSequence) {
-      IdxVec ExpandedRWs;
-      SchedModels.expandRWSequence(AliasRW.Index, ExpandedRWs, AliasRW.IsRead);
-      for (unsigned SI : ExpandedRWs) {
-        if (hasAliasedVariants(SchedModels.getSchedRW(SI, AliasRW.IsRead),
-                               SchedModels))
-          return true;
-      }
     }
   }
   return false;
 }
 
-static bool hasVariant(ArrayRef<PredTransition> Transitions,
-                       CodeGenSchedModels &SchedModels) {
-  for (const PredTransition &PTI : Transitions) {
-    for (const SmallVectorImpl<unsigned> &WSI : PTI.WriteSequences)
-      for (unsigned WI : WSI)
-        if (hasAliasedVariants(SchedModels.getSchedWrite(WI), SchedModels))
-          return true;
-
-    for (const SmallVectorImpl<unsigned> &RSI : PTI.ReadSequences)
-      for (unsigned RI : RSI)
-        if (hasAliasedVariants(SchedModels.getSchedRead(RI), SchedModels))
-          return true;
+static std::vector<Record *> getAllPredicates(ArrayRef<TransVariant> Variants,
+                                              unsigned ProcId) {
+  std::vector<Record *> Preds;
+  for (auto &Variant : Variants) {
+    if (!Variant.VarOrSeqDef->isSubClassOf("SchedVar"))
+      continue;
+    Preds.push_back(Variant.VarOrSeqDef->getValueAsDef("Predicate"));
   }
-  return false;
+  return Preds;
 }
 
 // Populate IntersectingVariants with any variants or aliased sequences of the
@@ -1438,12 +1435,14 @@ void PredTransitions::getIntersectingVariants(
       Record *ModelDef = SchedRW.TheDef->getValueAsDef("SchedModel");
       VarProcIdx = SchedModels.getProcModel(ModelDef).Index;
     }
-    // Push each variant. Assign TransVecIdx later.
-    const RecVec VarDefs = SchedRW.TheDef->getValueAsListOfDefs("Variants");
-    for (Record *VarDef : VarDefs)
-      Variants.emplace_back(VarDef, SchedRW.Index, VarProcIdx, 0);
-    if (VarProcIdx == 0)
-      GenericRW = true;
+    if (VarProcIdx == 0 || VarProcIdx == TransVec[TransIdx].ProcIndex) {
+      // Push each variant. Assign TransVecIdx later.
+      const RecVec VarDefs = SchedRW.TheDef->getValueAsListOfDefs("Variants");
+      for (Record *VarDef : VarDefs)
+        Variants.emplace_back(VarDef, SchedRW.Index, VarProcIdx, 0);
+      if (VarProcIdx == 0)
+        GenericRW = true;
+    }
   }
   for (RecIter AI = SchedRW.Aliases.begin(), AE = SchedRW.Aliases.end();
        AI != AE; ++AI) {
@@ -1455,6 +1454,17 @@ void PredTransitions::getIntersectingVariants(
       Record *ModelDef = (*AI)->getValueAsDef("SchedModel");
       AliasProcIdx = SchedModels.getProcModel(ModelDef).Index;
     }
+    if (AliasProcIdx && AliasProcIdx != TransVec[TransIdx].ProcIndex)
+      continue;
+    if (!Variants.empty()) {
+      const CodeGenProcModel &PM =
+          *(SchedModels.procModelBegin() + AliasProcIdx);
+      PrintFatalError((*AI)->getLoc(),
+                      "Multiple variants defined for processor " +
+                          PM.ModelName +
+                          " Ensure only one SchedAlias exists per RW.");
+    }
+
     const CodeGenSchedRW &AliasRW =
       SchedModels.getSchedRW((*AI)->getValueAsDef("AliasRW"));
 
@@ -1468,29 +1478,17 @@ void PredTransitions::getIntersectingVariants(
     if (AliasProcIdx == 0)
       GenericRW = true;
   }
+  std::vector<Record *> AllPreds =
+      getAllPredicates(Variants, TransVec[TransIdx].ProcIndex);
   for (TransVariant &Variant : Variants) {
     // Don't expand variants if the processor models don't intersect.
     // A zero processor index means any processor.
-    SmallVectorImpl<unsigned> &ProcIndices = TransVec[TransIdx].ProcIndices;
-    if (ProcIndices[0] && Variant.ProcIdx) {
-      unsigned Cnt = std::count(ProcIndices.begin(), ProcIndices.end(),
-                                Variant.ProcIdx);
-      if (!Cnt)
-        continue;
-      if (Cnt > 1) {
-        const CodeGenProcModel &PM =
-          *(SchedModels.procModelBegin() + Variant.ProcIdx);
-        PrintFatalError(Variant.VarOrSeqDef->getLoc(),
-                        "Multiple variants defined for processor " +
-                        PM.ModelName +
-                        " Ensure only one SchedAlias exists per RW.");
-      }
-    }
     if (Variant.VarOrSeqDef->isSubClassOf("SchedVar")) {
       Record *PredDef = Variant.VarOrSeqDef->getValueAsDef("Predicate");
-      if (mutuallyExclusive(PredDef, TransVec[TransIdx].PredTerm))
+      if (mutuallyExclusive(PredDef, AllPreds, TransVec[TransIdx].PredTerm))
         continue;
     }
+
     if (IntersectingVariants.empty()) {
       // The first variant builds on the existing transition.
       Variant.TransVecIdx = TransIdx;
@@ -1517,9 +1515,6 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
 
   // If this operand transition is reached through a processor-specific alias,
   // then the whole transition is specific to this processor.
-  if (VInfo.ProcIdx != 0)
-    Trans.ProcIndices.assign(1, VInfo.ProcIdx);
-
   IdxVec SelectedRWs;
   if (VInfo.VarOrSeqDef->isSubClassOf("SchedVar")) {
     Record *PredDef = VInfo.VarOrSeqDef->getValueAsDef("Predicate");
@@ -1540,6 +1535,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
   if (SchedRW.IsVariadic) {
     unsigned OperIdx = RWSequences.size()-1;
     // Make N-1 copies of this transition's last sequence.
+    RWSequences.reserve(RWSequences.size() + SelectedRWs.size() - 1);
     RWSequences.insert(RWSequences.end(), SelectedRWs.size() - 1,
                        RWSequences[OperIdx]);
     // Push each of the N elements of the SelectedRWs onto a copy of the last
@@ -1578,22 +1574,9 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
 // operand. StartIdx is an index into TransVec where partial results
 // starts. RWSeq must be applied to all transitions between StartIdx and the end
 // of TransVec.
-void PredTransitions::substituteVariantOperand(
-    const SmallVectorImpl<unsigned> &RWSeq, bool IsRead, bool IsForAnyCPU,
-    unsigned StartIdx) {
-
-  auto CollectAndAddVariants = [&](unsigned TransIdx,
-                                   const CodeGenSchedRW &SchedRW) {
-    // Distribute this partial PredTransition across intersecting variants.
-    // This will push a copies of TransVec[TransIdx] on the back of TransVec.
-    std::vector<TransVariant> IntersectingVariants;
-    getIntersectingVariants(SchedRW, TransIdx, IntersectingVariants);
-    // Now expand each variant on top of its copy of the transition.
-    for (const TransVariant &IV : IntersectingVariants)
-      pushVariant(IV, IsRead);
-    return !IntersectingVariants.empty();
-  };
-
+bool PredTransitions::substituteVariantOperand(
+    const SmallVectorImpl<unsigned> &RWSeq, bool IsRead, unsigned StartIdx) {
+  bool Subst = false;
   // Visit each original RW within the current sequence.
   for (SmallVectorImpl<unsigned>::const_iterator
          RWI = RWSeq.begin(), RWE = RWSeq.end(); RWI != RWE; ++RWI) {
@@ -1601,35 +1584,27 @@ void PredTransitions::substituteVariantOperand(
     // Push this RW on all partial PredTransitions or distribute variants.
     // New PredTransitions may be pushed within this loop which should not be
     // revisited (TransEnd must be loop invariant).
-    bool HasAliases = false, WasPushed = false;
     for (unsigned TransIdx = StartIdx, TransEnd = TransVec.size();
          TransIdx != TransEnd; ++TransIdx) {
-      // In the common case, push RW onto the current operand's sequence.
-      if (!hasAliasedVariants(SchedRW, SchedModels)) {
+      // Distribute this partial PredTransition across intersecting variants.
+      // This will push a copies of TransVec[TransIdx] on the back of TransVec.
+      std::vector<TransVariant> IntersectingVariants;
+      getIntersectingVariants(SchedRW, TransIdx, IntersectingVariants);
+      // Now expand each variant on top of its copy of the transition.
+      for (const TransVariant &IV : IntersectingVariants)
+        pushVariant(IV, IsRead);
+      if (IntersectingVariants.empty()) {
         if (IsRead)
           TransVec[TransIdx].ReadSequences.back().push_back(*RWI);
         else
           TransVec[TransIdx].WriteSequences.back().push_back(*RWI);
         continue;
+      } else {
+        Subst = true;
       }
-      HasAliases = true;
-      WasPushed |= CollectAndAddVariants(TransIdx, SchedRW);
-    }
-    if (IsRead && IsForAnyCPU && HasAliases && !WasPushed) {
-      // If we're here this means that in some sched class:
-      // a) We have read variant for CPU A
-      // b) We have write variant for CPU B
-      // b) We don't have write variant for CPU A
-      // d) We must expand all read/write variants (IsForAnyCPU is true)
-      // e) We couldn't expand SchedRW because TransVec doesn't have
-      //    any transition with compatible CPU ID.
-      // In such case we create new empty transition with zero (AnyCPU)
-      // index.
-      TransVec.emplace_back(TransVec[StartIdx].PredTerm);
-      TransVec.back().ReadSequences.emplace_back();
-      CollectAndAddVariants(TransVec.size() - 1, SchedRW);
     }
   }
+  return Subst;
 }
 
 // For each variant of a Read/Write in Trans, substitute the sequence of
@@ -1638,13 +1613,14 @@ void PredTransitions::substituteVariantOperand(
 // predicates should result in linear growth in the total number variants.
 //
 // This is one step in a breadth-first search of nested variants.
-void PredTransitions::substituteVariants(const PredTransition &Trans) {
+bool PredTransitions::substituteVariants(const PredTransition &Trans) {
   // Build up a set of partial results starting at the back of
   // PredTransitions. Remember the first new transition.
   unsigned StartIdx = TransVec.size();
-  TransVec.emplace_back(Trans.PredTerm, Trans.ProcIndices);
+  bool Subst = false;
+  assert(Trans.ProcIndex != 0);
+  TransVec.emplace_back(Trans.PredTerm, Trans.ProcIndex);
 
-  bool IsForAnyCPU = llvm::count(Trans.ProcIndices, 0);
   // Visit each original write sequence.
   for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
          WSI = Trans.WriteSequences.begin(), WSE = Trans.WriteSequences.end();
@@ -1654,7 +1630,7 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
       I->WriteSequences.emplace_back();
     }
-    substituteVariantOperand(*WSI, /*IsRead=*/false, IsForAnyCPU, StartIdx);
+    Subst |= substituteVariantOperand(*WSI, /*IsRead=*/false, StartIdx);
   }
   // Visit each original read sequence.
   for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
@@ -1665,8 +1641,9 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
            TransVec.begin() + StartIdx, E = TransVec.end(); I != E; ++I) {
       I->ReadSequences.emplace_back();
     }
-    substituteVariantOperand(*RSI, /*IsRead=*/true, IsForAnyCPU, StartIdx);
+    Subst |= substituteVariantOperand(*RSI, /*IsRead=*/true, StartIdx);
   }
+  return Subst;
 }
 
 static void addSequences(CodeGenSchedModels &SchedModels,
@@ -1677,15 +1654,23 @@ static void addSequences(CodeGenSchedModels &SchedModels,
       Result.push_back(SchedModels.findOrInsertRW(S, IsRead));
 }
 
+#ifndef NDEBUG
+static void dumpRecVec(const RecVec &RV) {
+  for (const Record *R : RV)
+    dbgs() << R->getName() << ", ";
+}
+#endif
+
 static void dumpTransition(const CodeGenSchedModels &SchedModels,
                            const CodeGenSchedClass &FromSC,
-                           const CodeGenSchedTransition &SCTrans) {
+                           const CodeGenSchedTransition &SCTrans,
+                           const RecVec &Preds) {
   LLVM_DEBUG(dbgs() << "Adding transition from " << FromSC.Name << "("
                     << FromSC.Index << ") to "
                     << SchedModels.getSchedClass(SCTrans.ToClassIdx).Name << "("
-                    << SCTrans.ToClassIdx << ")"
-                    << " on processor indices: (";
-             dumpIdxVec(SCTrans.ProcIndices); dbgs() << ")\n");
+                    << SCTrans.ToClassIdx << ") on pred term: (";
+             dumpRecVec(Preds);
+             dbgs() << ") on processor (" << SCTrans.ProcIndex << ")\n");
 }
 // Create a new SchedClass for each variant found by inferFromRW. Pass
 static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
@@ -1695,6 +1680,10 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
   // requires creating a new SchedClass.
   for (ArrayRef<PredTransition>::iterator
          I = LastTransitions.begin(), E = LastTransitions.end(); I != E; ++I) {
+    // Variant expansion (substituteVariants) may create unconditional
+    // transitions. We don't need to build sched classes for them.
+    if (I->PredTerm.empty())
+      continue;
     IdxVec OperWritesVariant, OperReadsVariant;
     addSequences(SchedModels, I->WriteSequences, OperWritesVariant, false);
     addSequences(SchedModels, I->ReadSequences, OperReadsVariant, true);
@@ -1703,16 +1692,13 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
     // Transition should not contain processor indices already assigned to
     // InstRWs in this scheduling class.
     const CodeGenSchedClass &FromSC = SchedModels.getSchedClass(FromClassIdx);
-    llvm::copy_if(I->ProcIndices, std::back_inserter(SCTrans.ProcIndices),
-                  [&FromSC](unsigned PIdx) {
-                    return !FromSC.InstRWProcIndices.count(PIdx);
-                  });
-    if (SCTrans.ProcIndices.empty())
+    if (FromSC.InstRWProcIndices.count(I->ProcIndex))
       continue;
+    SCTrans.ProcIndex = I->ProcIndex;
     SCTrans.ToClassIdx =
         SchedModels.addSchedClass(/*ItinClassDef=*/nullptr, OperWritesVariant,
-                                  OperReadsVariant, I->ProcIndices);
-    dumpTransition(SchedModels, FromSC, SCTrans);
+                                  OperReadsVariant, I->ProcIndex);
+
     // The final PredTerm is unique set of predicates guarding the transition.
     RecVec Preds;
     transform(I->PredTerm, std::back_inserter(Preds),
@@ -1720,10 +1706,31 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
                 return P.Predicate;
               });
     Preds.erase(std::unique(Preds.begin(), Preds.end()), Preds.end());
+    dumpTransition(SchedModels, FromSC, SCTrans, Preds);
     SCTrans.PredTerm = std::move(Preds);
     SchedModels.getSchedClass(FromClassIdx)
         .Transitions.push_back(std::move(SCTrans));
   }
+}
+
+std::vector<unsigned> CodeGenSchedModels::getAllProcIndices() const {
+  std::vector<unsigned> ProcIdVec;
+  for (const auto &PM : ProcModelMap)
+    if (PM.second != 0)
+      ProcIdVec.push_back(PM.second);
+  return ProcIdVec;
+}
+
+static std::vector<PredTransition>
+makePerProcessorTransitions(const PredTransition &Trans,
+                            ArrayRef<unsigned> ProcIndices) {
+  std::vector<PredTransition> PerCpuTransVec;
+  for (unsigned ProcId : ProcIndices) {
+    assert(ProcId != 0);
+    PerCpuTransVec.push_back(Trans);
+    PerCpuTransVec.back().ProcIndex = ProcId;
+  }
+  return PerCpuTransVec;
 }
 
 // Create new SchedClasses for the given ReadWrite list. If any of the
@@ -1739,8 +1746,6 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   // of SchedWrites for the current SchedClass.
   std::vector<PredTransition> LastTransitions;
   LastTransitions.emplace_back();
-  LastTransitions.back().ProcIndices.append(ProcIndices.begin(),
-                                            ProcIndices.end());
 
   for (unsigned WriteIdx : OperWrites) {
     IdxVec WriteSeq;
@@ -1761,18 +1766,21 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   }
   LLVM_DEBUG(dbgs() << '\n');
 
+  LastTransitions = makePerProcessorTransitions(
+      LastTransitions[0], llvm::is_contained(ProcIndices, 0)
+                              ? ArrayRef<unsigned>(getAllProcIndices())
+                              : ProcIndices);
   // Collect all PredTransitions for individual operands.
   // Iterate until no variant writes remain.
-  while (hasVariant(LastTransitions, *this)) {
+  bool SubstitutedAny;
+  do {
+    SubstitutedAny = false;
     PredTransitions Transitions(*this);
     for (const PredTransition &Trans : LastTransitions)
-      Transitions.substituteVariants(Trans);
+      SubstitutedAny |= Transitions.substituteVariants(Trans);
     LLVM_DEBUG(Transitions.dump());
     LastTransitions.swap(Transitions.TransVec);
-  }
-  // If the first transition has no variants, nothing to do.
-  if (LastTransitions[0].PredTerm.empty())
-    return;
+  } while (SubstitutedAny);
 
   // WARNING: We are about to mutate the SchedClasses vector. Do not refer to
   // OperWrites, OperReads, or ProcIndices after calling inferFromTransitions.
@@ -2038,7 +2046,7 @@ void CodeGenSchedModels::collectItinProcResources(Record *ItinClassDef) {
     for (RecIter II = PM.ItinRWDefs.begin(), IE = PM.ItinRWDefs.end();
          II != IE; ++II) {
       RecVec Matched = (*II)->getValueAsListOfDefs("MatchedItinClasses");
-      if (!std::count(Matched.begin(), Matched.end(), ItinClassDef))
+      if (!llvm::is_contained(Matched, ItinClassDef))
         continue;
       if (HasMatch)
         PrintFatalError((*II)->getLoc(), "Duplicate itinerary class "
@@ -2243,7 +2251,7 @@ void CodeGenSchedClass::dump(const CodeGenSchedModels* SchedModels) const {
   if (!Transitions.empty()) {
     dbgs() << "\n Transitions for Proc ";
     for (const CodeGenSchedTransition &Transition : Transitions) {
-      dumpIdxVec(Transition.ProcIndices);
+      dbgs() << Transition.ProcIndex << ", ";
     }
   }
   dbgs() << '\n';

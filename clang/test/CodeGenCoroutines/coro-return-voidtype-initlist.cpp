@@ -72,7 +72,7 @@ template <typename bc>
 f<std::b<std::c<int, int>>> J<bc>::bo() {
   std::c<int> bu;
   int bw(0);
-  // CHECK: void @_ZN1j12return_valueESt1bISt1cIiiEE(%struct.j* %__promise)
+  // CHECK: void @_ZN1j12return_valueESt1bISt1cIiiEE(%struct.j* {{[^,]*}} %__promise)
   co_return{0, co_await ax(bu, bw)};
 }
 void bh() {

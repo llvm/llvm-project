@@ -9,6 +9,10 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
+N: Paul C. Anagnostopoulos
+E: paul@windfall.com
+D: TableGen
+
 N: Matt Arsenault
 E: Matthew.Arsenault@amd.com
 E: arsenm2@gmail.com

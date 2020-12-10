@@ -33,26 +33,27 @@ enum : uint64_t {
   VOP2 = 1 << 8,
   VOPC = 1 << 9,
 
- // TODO: Should this be spilt into VOP3 a and b?
+  // TODO: Should this be spilt into VOP3 a and b?
   VOP3 = 1 << 10,
   VOP3P = 1 << 12,
 
   VINTRP = 1 << 13,
   SDWA = 1 << 14,
   DPP = 1 << 15,
+  TRANS = 1 << 16,
 
   // Memory instruction formats.
-  MUBUF = 1 << 16,
-  MTBUF = 1 << 17,
-  SMRD = 1 << 18,
-  MIMG = 1 << 19,
-  EXP = 1 << 20,
-  FLAT = 1 << 21,
-  DS = 1 << 22,
+  MUBUF = 1 << 17,
+  MTBUF = 1 << 18,
+  SMRD = 1 << 19,
+  MIMG = 1 << 20,
+  EXP = 1 << 21,
+  FLAT = 1 << 22,
+  DS = 1 << 23,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 23,
-  SGPRSpill = 1 << 24,
+  VGPRSpill = 1 << 24,
+  SGPRSpill = 1 << 25,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -688,6 +689,24 @@ enum DppFiMode {
 };
 
 } // namespace DPP
+
+namespace Exp {
+
+enum Target {
+  ET_MRT0 = 0,
+  ET_MRT7 = 7,
+  ET_MRTZ = 8,
+  ET_NULL = 9,
+  ET_POS0 = 12,
+  ET_POS3 = 15,
+  ET_POS4 = 16,          // GFX10+
+  ET_POS_LAST = ET_POS4, // Highest pos used on any subtarget
+  ET_PRIM = 20,          // GFX10+
+  ET_PARAM0 = 32,
+  ET_PARAM31 = 63,
+};
+
+} // namespace Exp
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

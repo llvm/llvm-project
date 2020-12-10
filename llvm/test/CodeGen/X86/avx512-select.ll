@@ -552,6 +552,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X86-AVX512F-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512F-NEXT:    kandw %k2, %k0, %k0
 ; X86-AVX512F-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512F-NEXT:    kshiftlw $15, %k0, %k0
+; X86-AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
 ; X86-AVX512F-NEXT:    movb %al, (%edx)
 ; X86-AVX512F-NEXT:    popl %esi
@@ -568,6 +570,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X64-AVX512F-NEXT:    kandnw %k1, %k2, %k1
 ; X64-AVX512F-NEXT:    kandw %k2, %k0, %k0
 ; X64-AVX512F-NEXT:    korw %k1, %k0, %k0
+; X64-AVX512F-NEXT:    kshiftlw $15, %k0, %k0
+; X64-AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    movb %al, (%rsi)
 ; X64-AVX512F-NEXT:    retq
@@ -587,6 +591,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X86-AVX512BW-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512BW-NEXT:    kandw %k2, %k0, %k0
 ; X86-AVX512BW-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
+; X86-AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512BW-NEXT:    movb %al, (%edx)
 ; X86-AVX512BW-NEXT:    popl %esi
@@ -603,6 +609,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X64-AVX512BW-NEXT:    kandnw %k1, %k2, %k1
 ; X64-AVX512BW-NEXT:    kandw %k2, %k0, %k0
 ; X64-AVX512BW-NEXT:    korw %k1, %k0, %k0
+; X64-AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
+; X64-AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    movb %al, (%rsi)
 ; X64-AVX512BW-NEXT:    retq
@@ -634,6 +642,8 @@ define void @select_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y, i1 %z) nounwi
 ; X86-AVX512F-NEXT:    movzbl (%eax), %ecx
 ; X86-AVX512F-NEXT:    kmovw %ecx, %k0
 ; X86-AVX512F-NEXT:  .LBB18_3:
+; X86-AVX512F-NEXT:    kshiftlw $15, %k0, %k0
+; X86-AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %ecx
 ; X86-AVX512F-NEXT:    movb %cl, (%eax)
 ; X86-AVX512F-NEXT:    retl
@@ -653,6 +663,8 @@ define void @select_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y, i1 %z) nounwi
 ; X64-AVX512F-NEXT:    movzbl (%rsi), %eax
 ; X64-AVX512F-NEXT:    kmovw %eax, %k0
 ; X64-AVX512F-NEXT:  .LBB18_3:
+; X64-AVX512F-NEXT:    kshiftlw $15, %k0, %k0
+; X64-AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    movb %al, (%rsi)
 ; X64-AVX512F-NEXT:    retq
@@ -675,6 +687,8 @@ define void @select_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y, i1 %z) nounwi
 ; X86-AVX512BW-NEXT:    movzbl (%eax), %ecx
 ; X86-AVX512BW-NEXT:    kmovd %ecx, %k0
 ; X86-AVX512BW-NEXT:  .LBB18_3:
+; X86-AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
+; X86-AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %ecx
 ; X86-AVX512BW-NEXT:    movb %cl, (%eax)
 ; X86-AVX512BW-NEXT:    retl
@@ -694,6 +708,8 @@ define void @select_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y, i1 %z) nounwi
 ; X64-AVX512BW-NEXT:    movzbl (%rsi), %eax
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k0
 ; X64-AVX512BW-NEXT:  .LBB18_3:
+; X64-AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
+; X64-AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    movb %al, (%rsi)
 ; X64-AVX512BW-NEXT:    retq

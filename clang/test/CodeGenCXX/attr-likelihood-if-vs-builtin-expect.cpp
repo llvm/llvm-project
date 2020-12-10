@@ -36,7 +36,7 @@ void ab0(int &i) {
   // CHECK: br {{.*}}end{{$}}
   // CHECK: br {{.*}}end{{$}}
   // CHECK: br {{.*}}end{{$}}
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (__builtin_expect(a() && b() && c(), 0)) {
     ++i;
   } else {
@@ -48,7 +48,7 @@ void au(int &i) {
   // CHECK-LABEL: define{{.*}}au
   // CHECK: br {{.*}}else{{$}}
   // CHECK: br {{.*}}else{{$}}
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (a() && b() && c()) [[unlikely]] {
     ++i;
   } else {
@@ -83,9 +83,9 @@ void ol(int &i) {
 
 void ob0(int &i) {
   // CHECK-LABEL: define{{.*}}ob0
-  // CHECK: br {{.*}} !prof !10
-  // CHECK: br {{.*}} !prof !10
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !9
   if (__builtin_expect(a() || b() || c(), 0)) {
     i = 0;
   } else {
@@ -95,9 +95,9 @@ void ob0(int &i) {
 
 void ou(int &i) {
   // CHECK-LABEL: define{{.*}}ou
-  // CHECK: br {{.*}} !prof !10
-  // CHECK: br {{.*}} !prof !10
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !9
   if (a() || b() || c()) [[unlikely]] {
     i = 0;
   } else {
@@ -127,7 +127,7 @@ void nl(int &i) {
 
 void nb0(int &i) {
   // CHECK-LABEL: define{{.*}}nb0
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (__builtin_expect(!a(), 0)) {
     ++i;
   } else {
@@ -137,7 +137,7 @@ void nb0(int &i) {
 
 void nu(int &i) {
   // CHECK-LABEL: define{{.*}}nu
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (bool d = !a()) [[unlikely]] {
     ++i;
   } else {
@@ -188,7 +188,7 @@ void tb0(int &i) {
   // CHECK: br {{.*}}false{{$}}
   // CHECK: br {{.*}}end{{$}}
   // CHECK: br {{.*}}end{{$}}
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (__builtin_expect(a() ? b() : c(), 0)) {
     ++i;
   } else {
@@ -201,7 +201,7 @@ void tu(int &i) {
   // CHECK: br {{.*}}false{{$}}
   // CHECK: br {{.*}}end{{$}}
   // CHECK: br {{.*}}end{{$}}
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
   if (bool d = a() ? b() : c()) [[unlikely]] {
     ++i;
   } else {
@@ -212,8 +212,8 @@ void tu(int &i) {
 void tu2(int &i) {
   // CHECK-LABEL: define{{.*}}tu
   // CHECK: br {{.*}}false{{$}}
-  // CHECK: br {{.*}} !prof !10
-  // CHECK: br {{.*}} !prof !10
+  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !9
   if (a() ? b() : c()) [[unlikely]] {
     ++i;
   } else {
@@ -222,4 +222,4 @@ void tu2(int &i) {
 }
 
 // CHECK: !6 = !{!"branch_weights", i32 2000, i32 1}
-// CHECK: !10 = !{!"branch_weights", i32 1, i32 2000}
+// CHECK: !9 = !{!"branch_weights", i32 1, i32 2000}

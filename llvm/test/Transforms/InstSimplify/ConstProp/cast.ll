@@ -5,7 +5,7 @@
 
 define i8 @overflow_fptosi() {
 ; CHECK-LABEL: @overflow_fptosi(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %i = fptosi double 1.56e+02 to i8
   ret i8 %i
@@ -13,7 +13,7 @@ define i8 @overflow_fptosi() {
 
 define i8 @overflow_fptoui() {
 ; CHECK-LABEL: @overflow_fptoui(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %i = fptoui double 2.56e+02 to i8
   ret i8 %i

@@ -48,7 +48,7 @@ Setting up the build
 First, configure and build LLVM as described in :doc:`GettingStarted`.
 
 Next, we will reuse an existing directory (creating a new directory involves
-modifying more ``CMakeLists.txt``s and ``LLVMBuild.txt``s than we want). For
+modifying more ``CMakeLists.txt``s than we want). For
 this example, we'll use ``llvm/lib/Transforms/HelloNew/HelloWorld.cpp``,
 which has already been created. If you'd like to create your own pass, add a
 new source file into ``llvm/lib/Transforms/HelloNew/CMakeLists.txt`` under

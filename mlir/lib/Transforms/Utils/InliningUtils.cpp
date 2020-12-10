@@ -14,7 +14,7 @@
 
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
@@ -307,7 +307,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
   SmallVector<Value, 8> callOperands(call.getArgOperands());
-  SmallVector<Value, 8> callResults(call.getOperation()->getResults());
+  SmallVector<Value, 8> callResults(call->getResults());
   if (callOperands.size() != entryBlock->getNumArguments() ||
       callResults.size() != callableResultTypes.size())
     return failure();
@@ -329,7 +329,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   // Builder used for any conversion operations that need to be materialized.
   OpBuilder castBuilder(call);
   Location castLoc = call.getLoc();
-  auto *callInterface = interface.getInterfaceFor(call.getDialect());
+  const auto *callInterface = interface.getInterfaceFor(call->getDialect());
 
   // Map the provided call operands to the arguments of the region.
   BlockAndValueMapping mapper;

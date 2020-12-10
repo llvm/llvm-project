@@ -38,6 +38,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
+  Records.startTimer("Emit prototypes");
   for (Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
       unsigned Pad = CC->getName().size();
@@ -56,6 +57,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
   }
 
   // Emit each non-custom calling convention description in full.
+  Records.startTimer("Emit full descriptions");
   for (Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom"))
       EmitCallingConv(CC, O);

@@ -139,6 +139,9 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
     case WebAssemblyII::MO_MEMORY_BASE_REL:
       Kind = MCSymbolRefExpr::VK_WASM_MBREL;
       break;
+    case WebAssemblyII::MO_TLS_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_TLSREL;
+      break;
     case WebAssemblyII::MO_TABLE_BASE_REL:
       Kind = MCSymbolRefExpr::VK_WASM_TBREL;
       break;

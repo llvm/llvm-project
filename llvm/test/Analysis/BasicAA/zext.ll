@@ -26,6 +26,19 @@ define void @test_with_lshr(i64 %i) {
   ret void
 }
 
+; CHECK-LABEL: test_with_lshr_different_sizes
+; CHECK:  NoAlias: i16* %m2.idx, i8* %m1
+
+define void @test_with_lshr_different_sizes(i64 %i) {
+  %m0 = tail call i8* @malloc(i64 120)
+  %m1 = getelementptr inbounds i8, i8* %m0, i64 1
+  %m2 = getelementptr inbounds i8, i8* %m0, i64 2
+  %idx = lshr i64 %i, 2
+  %m2.i16 = bitcast i8* %m2 to i16*
+  %m2.idx = getelementptr inbounds i16, i16* %m2.i16, i64 %idx
+  ret void
+}
+
 ; CHECK-LABEL: test_with_a_loop
 ; CHECK:  NoAlias: i8* %a, i8* %b
 

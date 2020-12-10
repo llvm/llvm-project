@@ -61,10 +61,10 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect", "AffineDialect"];
 }
 
-def LinalgBufferize : Pass<"linalg-bufferize", "ModuleOp"> {
+def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
-  let dependentDialects = ["linalg::LinalgDialect", "vector::VectorDialect"];
+  let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
 }
 
 def LinalgLowerToParallelLoops
@@ -110,6 +110,12 @@ def LinalgTilingToParallelLoops
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
   let dependentDialects = ["AffineDialect", "linalg::LinalgDialect", "scf::SCFDialect"];
+}
+
+def LinalgGeneralization : FunctionPass<"linalg-generalize-named-ops"> {
+  let summary = "Convert named ops into generic ops";
+  let constructor = "mlir::createLinalgGeneralizationPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 #endif // MLIR_DIALECT_LINALG_PASSES

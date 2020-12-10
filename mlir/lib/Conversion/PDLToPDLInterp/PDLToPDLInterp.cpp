@@ -580,7 +580,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
     DenseMap<Value, Value> &rewriteValues,
     function_ref<Value(Value)> mapRewriteValue) {
   // Functor that returns if the given use can be used to infer a type.
-  Block *rewriterBlock = op.getOperation()->getBlock();
+  Block *rewriterBlock = op->getBlock();
   auto getReplacedOperationFrom = [&](OpOperand &use) -> Operation * {
     // Check that the use corresponds to a ReplaceOp and that it is the
     // replacement value, not the operation being replaced.

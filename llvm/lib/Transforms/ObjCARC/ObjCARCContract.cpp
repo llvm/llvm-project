@@ -30,6 +30,7 @@
 #include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InlineAsm.h"
@@ -62,7 +63,7 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  AliasAnalysis *AA;
+  AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
   ARCRuntimeEntryPoints EP;
@@ -82,16 +83,13 @@ class ObjCARCContract {
   /// Returns true if we eliminated Inst.
   bool tryToPeepholeInstruction(
       Function &F, Instruction *Inst, inst_iterator &Iter,
-      SmallPtrSetImpl<Instruction *> &DepInsts,
-      SmallPtrSetImpl<const BasicBlock *> &Visited, bool &TailOkForStoreStrong,
+      bool &TailOkForStoreStrong,
       const DenseMap<BasicBlock *, ColorVector> &BlockColors);
 
   bool optimizeRetainCall(Function &F, Instruction *Retain);
 
-  bool
-  contractAutorelease(Function &F, Instruction *Autorelease, ARCInstKind Class,
-                      SmallPtrSetImpl<Instruction *> &DependingInstructions,
-                      SmallPtrSetImpl<const BasicBlock *> &Visited);
+  bool contractAutorelease(Function &F, Instruction *Autorelease,
+                           ARCInstKind Class);
 
   void tryToContractReleaseIntoStoreStrong(
       Instruction *Release, inst_iterator &Iter,
@@ -158,32 +156,17 @@ bool ObjCARCContract::optimizeRetainCall(Function &F, Instruction *Retain) {
 }
 
 /// Merge an autorelease with a retain into a fused call.
-bool ObjCARCContract::contractAutorelease(
-    Function &F, Instruction *Autorelease, ARCInstKind Class,
-    SmallPtrSetImpl<Instruction *> &DependingInstructions,
-    SmallPtrSetImpl<const BasicBlock *> &Visited) {
+bool ObjCARCContract::contractAutorelease(Function &F, Instruction *Autorelease,
+                                          ARCInstKind Class) {
   const Value *Arg = GetArgRCIdentityRoot(Autorelease);
 
   // Check that there are no instructions between the retain and the autorelease
   // (such as an autorelease_pop) which may change the count.
-  CallInst *Retain = nullptr;
-  if (Class == ARCInstKind::AutoreleaseRV)
-    FindDependencies(RetainAutoreleaseRVDep, Arg,
-                     Autorelease->getParent(), Autorelease,
-                     DependingInstructions, Visited, PA);
-  else
-    FindDependencies(RetainAutoreleaseDep, Arg,
-                     Autorelease->getParent(), Autorelease,
-                     DependingInstructions, Visited, PA);
-
-  Visited.clear();
-  if (DependingInstructions.size() != 1) {
-    DependingInstructions.clear();
-    return false;
-  }
-
-  Retain = dyn_cast_or_null<CallInst>(*DependingInstructions.begin());
-  DependingInstructions.clear();
+  DependenceKind DK = Class == ARCInstKind::AutoreleaseRV
+                          ? RetainAutoreleaseRVDep
+                          : RetainAutoreleaseDep;
+  auto *Retain = dyn_cast_or_null<CallInst>(
+      findSingleDependency(DK, Arg, Autorelease->getParent(), Autorelease, PA));
 
   if (!Retain || GetBasicARCInstKind(Retain) != ARCInstKind::Retain ||
       GetArgRCIdentityRoot(Retain) != Arg)
@@ -213,7 +196,7 @@ bool ObjCARCContract::contractAutorelease(
 static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
                                                          Instruction *Release,
                                                          ProvenanceAnalysis &PA,
-                                                         AliasAnalysis *AA) {
+                                                         AAResults *AA) {
   StoreInst *Store = nullptr;
   bool SawRelease = false;
 
@@ -451,8 +434,7 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
 
 bool ObjCARCContract::tryToPeepholeInstruction(
     Function &F, Instruction *Inst, inst_iterator &Iter,
-    SmallPtrSetImpl<Instruction *> &DependingInsts,
-    SmallPtrSetImpl<const BasicBlock *> &Visited, bool &TailOkForStoreStrongs,
+    bool &TailOkForStoreStrongs,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   // Only these library routines return their argument. In particular,
   // objc_retainBlock does not necessarily return its argument.
@@ -463,7 +445,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     return false;
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
-    return contractAutorelease(F, Inst, Class, DependingInsts, Visited);
+    return contractAutorelease(F, Inst, Class);
   case ARCInstKind::Retain:
     // Attempt to convert retains to retainrvs if they are next to function
     // calls.
@@ -597,9 +579,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   // For ObjC library calls which return their argument, replace uses of the
   // argument with uses of the call return value, if it dominates the use. This
   // reduces register pressure.
-  SmallPtrSet<Instruction *, 4> DependingInstructions;
-  SmallPtrSet<const BasicBlock *, 4> Visited;
-
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E;) {
     Instruction *Inst = &*I++;
 
@@ -607,8 +586,8 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     // First try to peephole Inst. If there is nothing further we can do in
     // terms of undoing objc-arc-expand, process the next inst.
-    if (tryToPeepholeInstruction(F, Inst, I, DependingInstructions, Visited,
-                                 TailOkForStoreStrongs, BlockColors))
+    if (tryToPeepholeInstruction(F, Inst, I, TailOkForStoreStrongs,
+                                 BlockColors))
       continue;
 
     // Otherwise, try to undo objc-arc-expand.

@@ -806,11 +806,8 @@ bool GVNHoist::valueAnticipable(CHIArgs C, Instruction *TI) const {
     return false; // Not enough args in this CHI.
 
   for (auto CHI : C) {
-    BasicBlock *Dest = CHI.Dest;
     // Find if all the edges have values flowing out of BB.
-    bool Found = llvm::any_of(
-        successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
-    if (!Found)
+    if (!llvm::is_contained(successors(TI), CHI.Dest))
       return false;
   }
   return true;

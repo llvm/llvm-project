@@ -85,7 +85,7 @@ class TestFirmwareCorefiles(TestBase):
                 'fi',
                 'echo "<dict><key>$uuid</key><dict>"',
                 '',
-                'echo "<key>DBGArchitecture</key><string>x86_64</string>"',
+                'echo "<key>DBGArchitecture</key><string>i386</string>"',
                 'echo "<key>DBGDSYMPath</key><string>$dsym</string>"',
                 'echo "<key>DBGSymbolRichExecutable</key><string>$bin</string>"',
                 'echo "</dict></dict></plist>"',

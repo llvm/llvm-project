@@ -10,6 +10,7 @@
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
 #include "Protocol.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
@@ -35,6 +36,14 @@ MATCHER_P(Val, Value, "") {
   return false;
 }
 
+MATCHER_P2(PairVal, Value1, Value2, "") {
+  if (*arg.first == Value1 && *arg.second == Value2)
+    return true;
+  *result_listener << "values are [" << *arg.first << ", " << *arg.second
+                   << "]";
+  return false;
+}
+
 TEST(ParseYAML, SyntacticForms) {
   CapturedDiags Diags;
   const char *YAML = R"yaml(
@@ -50,10 +59,16 @@ CompileFlags:
 ---
 Index:
   Background: Skip
+---
+ClangTidy: 
+  CheckOptions: 
+    IgnoreMacros: true
+    example-check.ExampleOption: 0
   )yaml";
   auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_EQ(Results.size(), 3u);
+  EXPECT_THAT(Diags.Files, ElementsAre("config.yaml"));
+  ASSERT_EQ(Results.size(), 4u);
   EXPECT_FALSE(Results[0].If.HasUnrecognizedCondition);
   EXPECT_THAT(Results[0].If.PathMatch, ElementsAre(Val("abc")));
   EXPECT_THAT(Results[0].CompileFlags.Add, ElementsAre(Val("foo"), Val("bar")));
@@ -62,6 +77,9 @@ Index:
 
   ASSERT_TRUE(Results[2].Index.Background);
   EXPECT_EQ("Skip", *Results[2].Index.Background.getValue());
+  EXPECT_THAT(Results[3].ClangTidy.CheckOptions,
+              ElementsAre(PairVal("IgnoreMacros", "true"),
+                          PairVal("example-check.ExampleOption", "0")));
 }
 
 TEST(ParseYAML, Locations) {
@@ -84,11 +102,11 @@ TEST(ParseYAML, Diagnostics) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 If:
-  [[UnknownCondition]]: "foo"
+  $unknown[[UnknownCondition]]: "foo"
 CompileFlags:
   Add: 'first'
 ---
-CompileFlags: {^
+CompileFlags: {$unexpected^
 )yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
@@ -97,11 +115,13 @@ CompileFlags: {^
       Diags.Diagnostics,
       ElementsAre(AllOf(DiagMessage("Unknown If key UnknownCondition"),
                         DiagKind(llvm::SourceMgr::DK_Warning),
-                        DiagPos(YAML.range().start), DiagRange(YAML.range())),
+                        DiagPos(YAML.range("unknown").start),
+                        DiagRange(YAML.range("unknown"))),
                   AllOf(DiagMessage("Unexpected token. Expected Key, Flow "
                                     "Entry, or Flow Mapping End."),
                         DiagKind(llvm::SourceMgr::DK_Error),
-                        DiagPos(YAML.point()), DiagRange(llvm::None))));
+                        DiagPos(YAML.point("unexpected")),
+                        DiagRange(llvm::None))));
 
   ASSERT_EQ(Results.size(), 1u); // invalid fragment discarded.
   EXPECT_THAT(Results.front().CompileFlags.Add, ElementsAre(Val("first")));
@@ -122,6 +142,25 @@ horrible
               ElementsAre(DiagMessage("If should be a dictionary"),
                           DiagMessage("Config should be a dictionary")));
   ASSERT_THAT(Results, IsEmpty());
+}
+
+TEST(ParseYAML, ExternalBlock) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Index:
+  External:
+    File: "foo"
+    Server: ^"bar"
+    MountPoint: "baz"
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_EQ(Results.size(), 1u);
+  ASSERT_TRUE(Results[0].Index.External);
+  EXPECT_THAT(*Results[0].Index.External.getValue()->File, Val("foo"));
+  EXPECT_THAT(*Results[0].Index.External.getValue()->MountPoint, Val("baz"));
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(*Results[0].Index.External.getValue()->Server, Val("bar"));
 }
 
 } // namespace

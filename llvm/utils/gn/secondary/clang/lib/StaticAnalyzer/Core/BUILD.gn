@@ -40,7 +40,6 @@ static_library("Core") {
     "ExprEngineObjC.cpp",
     "FunctionSummary.cpp",
     "HTMLDiagnostics.cpp",
-    "IssueHash.cpp",
     "LoopUnrolling.cpp",
     "LoopWidening.cpp",
     "MemRegion.cpp",

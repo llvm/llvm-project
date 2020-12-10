@@ -69,7 +69,7 @@ auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
   return symbol && symbol->attrs().test(semantics::Attr::POINTER);
 }
 
-// Conversions of complex component expressions to REAL.
+// Conversions of COMPLEX component expressions to REAL.
 ConvertRealOperandsResult ConvertRealOperands(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -498,31 +498,14 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
           },
           [&](Expr<SomeComplex> &&zx,
               Expr<SomeComplex> &&zy) -> std::optional<Expr<LogicalResult>> {
-            if (opr != RelationalOperator::EQ &&
-                opr != RelationalOperator::NE) {
+            if (opr == RelationalOperator::EQ ||
+                opr == RelationalOperator::NE) {
+              return PromoteAndRelate(opr, std::move(zx), std::move(zy));
+            } else {
               messages.Say(
                   "COMPLEX data may be compared only for equality"_err_en_US);
-            } else {
-              auto rr{Relate(messages, opr,
-                  AsGenericExpr(GetComplexPart(zx, false)),
-                  AsGenericExpr(GetComplexPart(zy, false)))};
-              auto ri{
-                  Relate(messages, opr, AsGenericExpr(GetComplexPart(zx, true)),
-                      AsGenericExpr(GetComplexPart(zy, true)))};
-              if (auto parts{
-                      common::AllPresent(std::move(rr), std::move(ri))}) {
-                // (a,b)==(c,d) -> (a==c) .AND. (b==d)
-                // (a,b)/=(c,d) -> (a/=c) .OR. (b/=d)
-                LogicalOperator combine{opr == RelationalOperator::EQ
-                        ? LogicalOperator::And
-                        : LogicalOperator::Or};
-                return Expr<LogicalResult>{
-                    LogicalOperation<LogicalResult::kind>{combine,
-                        std::get<0>(std::move(*parts)),
-                        std::get<1>(std::move(*parts))}};
-              }
+              return std::nullopt;
             }
-            return std::nullopt;
           },
           [&](Expr<SomeComplex> &&zx, Expr<SomeInteger> &&iy) {
             return Relate(messages, opr, std::move(x),
@@ -832,10 +815,7 @@ parser::Message *AttachDeclaration(
 
 parser::Message *AttachDeclaration(
     parser::Message *message, const Symbol &symbol) {
-  if (message) {
-    AttachDeclaration(*message, symbol);
-  }
-  return message;
+  return message ? AttachDeclaration(*message, symbol) : nullptr;
 }
 
 class FindImpureCallHelper
@@ -844,12 +824,11 @@ class FindImpureCallHelper
   using Base = AnyTraverse<FindImpureCallHelper, Result>;
 
 public:
-  explicit FindImpureCallHelper(const IntrinsicProcTable &intrinsics)
-      : Base{*this}, intrinsics_{intrinsics} {}
+  explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{characteristics::Procedure::Characterize(
-            call.proc(), intrinsics_)}) {
+    if (auto chars{
+            characteristics::Procedure::Characterize(call.proc(), context_)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }
@@ -858,16 +837,16 @@ public:
   }
 
 private:
-  const IntrinsicProcTable &intrinsics_;
+  FoldingContext &context_;
 };
 
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const Expr<SomeType> &expr) {
-  return FindImpureCallHelper{intrinsics}(expr);
+    FoldingContext &context, const Expr<SomeType> &expr) {
+  return FindImpureCallHelper{context}(expr);
 }
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const ProcedureRef &proc) {
-  return FindImpureCallHelper{intrinsics}(proc);
+    FoldingContext &context, const ProcedureRef &proc) {
+  return FindImpureCallHelper{context}(proc);
 }
 
 // Compare procedure characteristics for equality except that lhs may be
@@ -950,6 +929,11 @@ const Symbol *GetAssociationRoot(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
   const auto *details{ultimate.detailsIf<semantics::AssocEntityDetails>()};
   return details ? GetAssociatedVariable(*details) : &ultimate;
+}
+
+Symbol *GetAssociationRoot(Symbol &symbol) {
+  return const_cast<Symbol *>(
+      GetAssociationRoot(const_cast<const Symbol &>(symbol)));
 }
 
 bool IsVariableName(const Symbol &symbol) {
@@ -1081,6 +1065,16 @@ bool IsFunctionResult(const Symbol &symbol) {
              symbol.get<ObjectEntityDetails>().isFuncResult()) ||
       (symbol.has<ProcEntityDetails>() &&
           symbol.get<ProcEntityDetails>().isFuncResult());
+}
+
+bool IsKindTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Kind;
+}
+
+bool IsLenTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Len;
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {

@@ -12,11 +12,13 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace llvm {
   class MemoryBuffer;
+  class MemoryBufferRef;
 }
 
 namespace clang {
@@ -54,6 +56,12 @@ public:
   void remap(StringRef filePath, std::unique_ptr<llvm::MemoryBuffer> memBuf);
 
   void applyMappings(PreprocessorOptions &PPOpts) const;
+
+  /// Iterate through all the mappings.
+  void forEachMapping(
+      llvm::function_ref<void(StringRef, StringRef)> CaptureFile,
+      llvm::function_ref<void(StringRef, const llvm::MemoryBufferRef &)>
+          CaptureBuffer) const;
 
   void clear(StringRef outputDir = StringRef());
 

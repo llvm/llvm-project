@@ -14,13 +14,13 @@
 // Test with op_norm and maps in arguments and in the operations in the function.
 
 // CHECK-LABEL: test_norm
-// CHECK-SAME: (%[[ARG0:[a-z0-9]*]]: memref<1x16x1x1x32x64xf32>)
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x64xf32>)
 func @test_norm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
     %0 = alloc() : memref<1x16x14x14xf32, #map0>
     "test.op_norm"(%arg0, %0) : (memref<1x16x14x14xf32, #map0>, memref<1x16x14x14xf32, #map0>) -> ()
     dealloc %0 :  memref<1x16x14x14xf32, #map0>
 
-    // CHECK: %[[v0:[a-z0-9]*]] = alloc() : memref<1x16x1x1x32x64xf32>
+    // CHECK: %[[v0:.*]] = alloc() : memref<1x16x1x1x32x64xf32>
     // CHECK: "test.op_norm"(%[[ARG0]], %[[v0]]) : (memref<1x16x1x1x32x64xf32>, memref<1x16x1x1x32x64xf32>) -> ()
     // CHECK: dealloc %[[v0]] : memref<1x16x1x1x32x64xf32>
     return
@@ -29,13 +29,13 @@ func @test_norm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
 // Same test with op_nonnorm, with maps in the arguments and the operations in the function.
 
 // CHECK-LABEL: test_nonnorm
-// CHECK-SAME: (%[[ARG0:[a-z0-9]*]]: memref<1x16x14x14xf32, #map>)
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x14x14xf32, #map>)
 func @test_nonnorm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
     %0 = alloc() : memref<1x16x14x14xf32, #map0>
     "test.op_nonnorm"(%arg0, %0) : (memref<1x16x14x14xf32, #map0>, memref<1x16x14x14xf32, #map0>) -> ()
     dealloc %0 :  memref<1x16x14x14xf32, #map0>
 
-    // CHECK: %[[v0:[a-z0-9]*]] = alloc() : memref<1x16x14x14xf32, #map>
+    // CHECK: %[[v0:.*]] = alloc() : memref<1x16x14x14xf32, #map>
     // CHECK: "test.op_nonnorm"(%[[ARG0]], %[[v0]]) : (memref<1x16x14x14xf32, #map>, memref<1x16x14x14xf32, #map>) -> ()
     // CHECK: dealloc %[[v0]] : memref<1x16x14x14xf32, #map>
     return
@@ -44,13 +44,13 @@ func @test_nonnorm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
 // Test with op_norm, with maps in the operations in the function.
 
 // CHECK-LABEL: test_norm_mix
-// CHECK-SAME: (%[[ARG0:[a-z0-9]*]]: memref<1x16x1x1x32x64xf32>
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x64xf32>
 func @test_norm_mix(%arg0 : memref<1x16x1x1x32x64xf32>) -> () {
     %0 = alloc() : memref<1x16x14x14xf32, #map0>
     "test.op_norm"(%arg0, %0) : (memref<1x16x1x1x32x64xf32>, memref<1x16x14x14xf32, #map0>) -> ()
     dealloc %0 :  memref<1x16x14x14xf32, #map0>
 
-    // CHECK: %[[v0:[a-z0-9]*]] = alloc() : memref<1x16x1x1x32x64xf32>
+    // CHECK: %[[v0:.*]] = alloc() : memref<1x16x1x1x32x64xf32>
     // CHECK: "test.op_norm"(%[[ARG0]], %[[v0]]) : (memref<1x16x1x1x32x64xf32>, memref<1x16x1x1x32x64xf32>) -> ()
     // CHECK: dealloc %[[v0]] : memref<1x16x1x1x32x64xf32>
     return
@@ -61,12 +61,12 @@ func @test_norm_mix(%arg0 : memref<1x16x1x1x32x64xf32>) -> () {
 #map_tile = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 floordiv 32, d3 floordiv 32, d2 mod 32, d3 mod 32)>
 
 // CHECK-LABEL: test_load_store
-// CHECK-SAME: (%[[ARG0:[a-z0-9]*]]: memref<1x16x14x14xf32>
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x14x14xf32>
 func @test_load_store(%arg0 : memref<1x16x14x14xf32>) -> () {
     %0 = alloc() : memref<1x16x14x14xf32, #map_tile>
-    // CHECK: %[[v0:[a-z0-9]*]] = alloc() : memref<1x16x1x1x32x32xf32>
+    // CHECK: %[[v0:.*]] = alloc() : memref<1x16x1x1x32x32xf32>
     %1 = alloc() : memref<1x16x14x14xf32>
-    // CHECK: %[[v1:[a-z0-9]*]] = alloc() : memref<1x16x14x14xf32>
+    // CHECK: %[[v1:.*]] = alloc() : memref<1x16x14x14xf32>
     "test.op_norm"(%0, %1) : (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32>) -> ()
     // CHECK: "test.op_norm"(%[[v0]], %[[v1]]) : (memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>) -> ()
     %cst = constant 3.0 : f32
@@ -88,6 +88,25 @@ func @test_load_store(%arg0 : memref<1x16x14x14xf32>) -> () {
     dealloc %1 :  memref<1x16x14x14xf32>
     // CHECK: dealloc %[[v1]] : memref<1x16x14x14xf32>
     return
+}
+
+// Test with op_norm_ret, with maps in the results of normalizable operation.
+
+// CHECK-LABEL: test_norm_ret
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x32xf32>) -> (memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>) {
+func @test_norm_ret(%arg0: memref<1x16x14x14xf32, #map_tile>) -> (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32>) {
+    %0 = alloc() : memref<1x16x14x14xf32, #map_tile>
+    // CHECK-NEXT: %[[v0:.*]] = alloc() : memref<1x16x1x1x32x32xf32>
+    %1, %2 = "test.op_norm_ret"(%arg0) : (memref<1x16x14x14xf32, #map_tile>) -> (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32>)
+    // CHECK-NEXT: %[[v1:.*]], %[[v2:.*]] = "test.op_norm_ret"
+    // CHECK-SAME: (memref<1x16x1x1x32x32xf32>) -> (memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>)
+    "test.op_norm"(%1, %0) : (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32, #map_tile>) -> ()
+    // CHECK-NEXT: "test.op_norm"
+    // CHECK-SAME: : (memref<1x16x1x1x32x32xf32>, memref<1x16x1x1x32x32xf32>) -> ()
+    dealloc %0 : memref<1x16x14x14xf32, #map_tile>
+    // CHECK-NEXT: dealloc %[[v0]] : memref<1x16x1x1x32x32xf32>
+    return %1, %2 : memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32>
+    // CHECK-NEXT: return %[[v1]], %[[v2]] : memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>
 }
 
 // Test with an arbitrary op that references the function symbol.

@@ -79,7 +79,7 @@ public:
     if (!xferOp.isMaskedDim(0))
       return failure();
 
-    auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
+    auto toLLVMTy = [&](Type t) { return typeConverter->convertType(t); };
     LLVM::LLVMType vecTy =
         toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
     unsigned vecWidth = vecTy.getVectorNumElements();
@@ -102,8 +102,8 @@ public:
     // Note that the dataPtr starts at the offset address specified by
     // indices, so no need to calculate offset size in bytes again in
     // the MUBUF instruction.
-    Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                               adaptor.indices(), rewriter);
+    Value dataPtr = getStridedElementPtr(loc, memRefType, adaptor.memref(),
+                                         adaptor.indices(), rewriter);
 
     // 1. Create and fill a <4 x i32> dwordConfig with:
     //    1st two elements holding the address of dataPtr.
@@ -142,9 +142,9 @@ public:
     Value int32Zero = rewriter.create<LLVM::ConstantOp>(
         loc, toLLVMTy(i32Ty),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32), 0));
-    return replaceTransferOpWithMubuf(rewriter, operands, typeConverter, loc,
-                                      xferOp, vecTy, dwordConfig, int32Zero,
-                                      int32Zero, int1False, int1False);
+    return replaceTransferOpWithMubuf(
+        rewriter, operands, *getTypeConverter(), loc, xferOp, vecTy,
+        dwordConfig, int32Zero, int32Zero, int1False, int1False);
   }
 };
 } // end anonymous namespace

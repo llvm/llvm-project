@@ -110,9 +110,28 @@ bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 bool formLCSSARecursively(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
                           ScalarEvolution *SE);
 
-struct SinkAndHoistLICMFlags {
-  bool NoOfMemAccTooLarge;
-  unsigned LicmMssaOptCounter;
+/// Flags controlling how much is checked when sinking or hoisting
+/// instructions.  The number of memory access in the loop (and whether there
+/// are too many) is determined in the constructors when using MemorySSA.
+class SinkAndHoistLICMFlags {
+public:
+  // Explicitly set limits.
+  SinkAndHoistLICMFlags(unsigned LicmMssaOptCap,
+                        unsigned LicmMssaNoAccForPromotionCap, bool IsSink,
+                        Loop *L = nullptr, MemorySSA *MSSA = nullptr);
+  // Use default limits.
+  SinkAndHoistLICMFlags(bool IsSink, Loop *L = nullptr,
+                        MemorySSA *MSSA = nullptr);
+
+  void setIsSink(bool B) { IsSink = B; }
+  bool getIsSink() { return IsSink; }
+  bool tooManyMemoryAccesses() { return NoOfMemAccTooLarge; }
+  bool tooManyClobberingCalls() { return LicmMssaOptCounter >= LicmMssaOptCap; }
+  void incrementClobberingCalls() { ++LicmMssaOptCounter; }
+
+protected:
+  bool NoOfMemAccTooLarge = false;
+  unsigned LicmMssaOptCounter = 0;
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
   bool IsSink;
@@ -193,6 +212,13 @@ Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
 
 /// Find named metadata for a loop with an integer value.
 llvm::Optional<int> getOptionalIntLoopAttribute(Loop *TheLoop, StringRef Name);
+
+/// Find a combination of metadata ("llvm.loop.vectorize.width" and
+/// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
+/// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
+/// then None is returned.
+Optional<ElementCount>
+getOptionalElementCountLoopAttribute(Loop *TheLoop);
 
 /// Create a new loop identifier for a loop created from a loop transformation.
 ///

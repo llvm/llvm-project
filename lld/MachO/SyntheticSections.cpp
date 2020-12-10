@@ -19,8 +19,11 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::support;
@@ -574,24 +577,168 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
       stringTableSection(stringTableSection) {}
 
 uint64_t SymtabSection::getRawSize() const {
-  return symbols.size() * sizeof(structs::nlist_64);
+  return getNumSymbols() * sizeof(structs::nlist_64);
+}
+
+void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
+  StabsEntry stab(MachO::N_SO);
+  SmallString<261> dir(compileUnit->getCompilationDir());
+  StringRef sep = sys::path::get_separator();
+  // We don't use `path::append` here because we want an empty `dir` to result
+  // in an absolute path. `append` would give us a relative path for that case.
+  if (!dir.endswith(sep))
+    dir += sep;
+  stab.strx = stringTableSection.addString(
+      saver.save(dir + compileUnit->getUnitDIE().getShortName()));
+  stabs.emplace_back(std::move(stab));
+}
+
+void SymtabSection::emitEndSourceStab() {
+  StabsEntry stab(MachO::N_SO);
+  stab.sect = 1;
+  stabs.emplace_back(std::move(stab));
+}
+
+void SymtabSection::emitObjectFileStab(ObjFile *file) {
+  StabsEntry stab(MachO::N_OSO);
+  stab.sect = target->cpuSubtype;
+  SmallString<261> path(!file->archiveName.empty() ? file->archiveName
+                                                   : file->getName());
+  std::error_code ec = sys::fs::make_absolute(path);
+  if (ec)
+    fatal("failed to get absolute path for " + path);
+
+  if (!file->archiveName.empty())
+    path.append({"(", file->getName(), ")"});
+
+  stab.strx = stringTableSection.addString(saver.save(path.str()));
+  stab.desc = 1;
+  stab.value = file->modTime;
+  stabs.emplace_back(std::move(stab));
+}
+
+void SymtabSection::emitEndFunStab(Defined *defined) {
+  StabsEntry stab(MachO::N_FUN);
+  // FIXME this should be the size of the symbol. Using the section size in
+  // lieu is only correct if .subsections_via_symbols is set.
+  stab.value = defined->isec->getSize();
+  stabs.emplace_back(std::move(stab));
+}
+
+void SymtabSection::emitStabs() {
+  std::vector<Defined *> symbolsNeedingStabs;
+  for (const SymtabEntry &entry :
+       concat<SymtabEntry>(localSymbols, externalSymbols)) {
+    Symbol *sym = entry.sym;
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->isAbsolute())
+        continue;
+      InputSection *isec = defined->isec;
+      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->file);
+      if (!file || !file->compileUnit)
+        continue;
+      symbolsNeedingStabs.push_back(defined);
+    }
+  }
+
+  llvm::stable_sort(symbolsNeedingStabs, [&](Defined *a, Defined *b) {
+    return a->isec->file->id < b->isec->file->id;
+  });
+
+  // Emit STABS symbols so that dsymutil and/or the debugger can map address
+  // regions in the final binary to the source and object files from which they
+  // originated.
+  InputFile *lastFile = nullptr;
+  for (Defined *defined : symbolsNeedingStabs) {
+    InputSection *isec = defined->isec;
+    ObjFile *file = dyn_cast<ObjFile>(isec->file);
+    assert(file);
+
+    if (lastFile == nullptr || lastFile != file) {
+      if (lastFile != nullptr)
+        emitEndSourceStab();
+      lastFile = file;
+
+      emitBeginSourceStab(file->compileUnit);
+      emitObjectFileStab(file);
+    }
+
+    StabsEntry symStab;
+    symStab.sect = defined->isec->parent->index;
+    symStab.strx = stringTableSection.addString(defined->getName());
+    symStab.value = defined->getVA();
+
+    if (isCodeSection(isec)) {
+      symStab.type = MachO::N_FUN;
+      stabs.emplace_back(std::move(symStab));
+      emitEndFunStab(defined);
+    } else {
+      symStab.type = defined->isExternal() ? MachO::N_GSYM : MachO::N_STSYM;
+      stabs.emplace_back(std::move(symStab));
+    }
+  }
+
+  if (!stabs.empty())
+    emitEndSourceStab();
 }
 
 void SymtabSection::finalizeContents() {
-  // TODO support other symbol types
-  for (Symbol *sym : symtab->getSymbols()) {
-    if (isa<Defined>(sym) || sym->isInGot() || sym->isInStubs()) {
-      sym->symtabIndex = symbols.size();
-      symbols.push_back({sym, stringTableSection.addString(sym->getName())});
+  // Local symbols aren't in the SymbolTable, so we walk the list of object
+  // files to gather them.
+  for (InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file)) {
+      for (Symbol *sym : objFile->symbols) {
+        // TODO: when we implement -dead_strip, we should filter out symbols
+        // that belong to dead sections.
+        if (auto *defined = dyn_cast<Defined>(sym)) {
+          if (!defined->isExternal()) {
+            uint32_t strx = stringTableSection.addString(sym->getName());
+            localSymbols.push_back({sym, strx});
+          }
+        }
+      }
     }
   }
+
+  for (Symbol *sym : symtab->getSymbols()) {
+    uint32_t strx = stringTableSection.addString(sym->getName());
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      assert(defined->isExternal());
+      externalSymbols.push_back({sym, strx});
+    } else if (sym->isInGot() || sym->isInStubs()) {
+      undefinedSymbols.push_back({sym, strx});
+    }
+  }
+
+  emitStabs();
+  uint32_t symtabIndex = stabs.size();
+  for (const SymtabEntry &entry :
+       concat<SymtabEntry>(localSymbols, externalSymbols, undefinedSymbols)) {
+    entry.sym->symtabIndex = symtabIndex++;
+  }
+}
+
+uint32_t SymtabSection::getNumSymbols() const {
+  return stabs.size() + localSymbols.size() + externalSymbols.size() +
+         undefinedSymbols.size();
 }
 
 void SymtabSection::writeTo(uint8_t *buf) const {
   auto *nList = reinterpret_cast<structs::nlist_64 *>(buf);
-  for (const SymtabEntry &entry : symbols) {
+  // Emit the stabs entries before the "real" symbols. We cannot emit them
+  // after as that would render Symbol::symtabIndex inaccurate.
+  for (const StabsEntry &entry : stabs) {
     nList->n_strx = entry.strx;
-    // TODO support other symbol types
+    nList->n_type = entry.type;
+    nList->n_sect = entry.sect;
+    nList->n_desc = entry.desc;
+    nList->n_value = entry.value;
+    ++nList;
+  }
+
+  for (const SymtabEntry &entry : concat<const SymtabEntry>(
+           localSymbols, externalSymbols, undefinedSymbols)) {
+    nList->n_strx = entry.strx;
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       if (defined->isAbsolute()) {
@@ -599,10 +746,11 @@ void SymtabSection::writeTo(uint8_t *buf) const {
         nList->n_sect = MachO::NO_SECT;
         nList->n_value = defined->value;
       } else {
-        nList->n_type = MachO::N_EXT | MachO::N_SECT;
+        nList->n_type =
+            (defined->isExternal() ? MachO::N_EXT : 0) | MachO::N_SECT;
         nList->n_sect = defined->isec->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
-        nList->n_value = defined->value + defined->isec->getVA();
+        nList->n_value = defined->getVA();
       }
       nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
     }
@@ -656,7 +804,7 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  strings.push_back(str);
+  strings.push_back(str); // TODO: consider deduplicating strings
   size += str.size() + 1; // account for null terminator
   return strx;
 }

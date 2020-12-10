@@ -5,7 +5,7 @@
 ; Function Attrs: nofree norecurse nounwind writeonly
 define void @test() {
 ; CHECK-LABEL: test:
-; CHECK:       .LBB0_3: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  # %bb.1: # %test1
 ; CHECK-NEXT:    lea %s0, addr@lo
@@ -15,7 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s1, .Ltmp0@hi(, %s1)
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
 entry:
   br label %test1
 

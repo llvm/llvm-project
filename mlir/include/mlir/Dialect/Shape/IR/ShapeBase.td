@@ -39,29 +39,11 @@ def ShapeDialect : Dialect {
   let hasConstantMaterializer = 1;
 }
 
-def Shape_ComponentType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ComponentType>()">, "component type">,
-    BuildableType<"$_builder.getType<::mlir::shape::ComponentType>()"> {
-  let typeDescription = [{
-    `shape.component_type` represents the tuple of shape, element type and
-    attribute.
-  }];
-}
-
-def Shape_ElementType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ElementType>()">, "element type">,
-    BuildableType<"$_builder.getType<::mlir::shape::ElementType>()"> {
-  let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
-  }];
-}
-
 def Shape_ShapeType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::ShapeType>()">, "shape">,
     BuildableType<"$_builder.getType<::mlir::shape::ShapeType>()"> {
   let typeDescription = [{
-    `shape.type` represents either an unranked shape, a ranked shape with
+    `shape.shape` represents either an unranked shape, a ranked shape with
     possibly unknown dimensions or an invalid shape. The rank is of type
     `shape.size` and, if rank is known, the extent is a 1D tensor of type
     `shape.size`.
@@ -96,12 +78,12 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
   let typeDescription = [{
     `shape.value_shape` represents the value produced by an operation (this
     corresponds to `Value` in the compiler) and a shape. Conceptually this is a
-    tuple of a value (potentially unknown) and `shape.type`. The value and shape
-    can either or both be unknown. If both the `value` and `shape` are known,
-    then the shape of `value` is conformant with `shape`. That is, the shape of
-    the value conforms to the shape of the ValueShape, so that if we have
-    ValueShape `(value, shape)` then `join(shape_of(value), shape)` would be
-    error free and in particular it means that if both are statically known,
+    tuple of a value (potentially unknown) and `shape.shape`. The value and
+    shape can either or both be unknown. If both the `value` and `shape` are
+    known, then the shape of `value` is conformant with `shape`. That is, the
+    shape of the value conforms to the shape of the ValueShape, so that if we
+    have ValueShape `(value, shape)` then `join(shape_of(value), shape)` would
+    be error free and in particular it means that if both are statically known,
     then they are equal.
   }];
 }
@@ -112,8 +94,8 @@ def Shape_ExtentTensorType :
                   "$_builder.getType<::mlir::IndexType>())"> {
   let typeDescription = [{
     The extent tensor is a tensor of rank one with arbitrarily many index
-    elements. Like `!shape.shape`, it is used to represent shapes with the
-    difference that it is guaranteed to be error-free.
+    elements (tensor<?xindex>). Like `!shape.shape`, it is used to represent
+    shapes with the difference that it is guaranteed to be error-free.
   }];
 }
 

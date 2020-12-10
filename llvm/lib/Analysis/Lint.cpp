@@ -94,7 +94,7 @@ class Lint : public InstVisitor<Lint> {
   void visitFunction(Function &F);
 
   void visitCallBase(CallBase &CB);
-  void visitMemoryReference(Instruction &I, Value *Ptr, uint64_t Size,
+  void visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
                             MaybeAlign Alignment, Type *Ty, unsigned Flags);
   void visitEHBeginCatch(IntrinsicInst *II);
   void visitEHEndCatch(IntrinsicInst *II);
@@ -190,7 +190,7 @@ void Lint::visitFunction(Function &F) {
 void Lint::visitCallBase(CallBase &I) {
   Value *Callee = I.getCalledOperand();
 
-  visitMemoryReference(I, Callee, MemoryLocation::UnknownSize, None, nullptr,
+  visitMemoryReference(I, MemoryLocation::getAfter(Callee), None, nullptr,
                        MemRef::Callee);
 
   if (Function *F = dyn_cast<Function>(findValue(Callee,
@@ -251,8 +251,9 @@ void Lint::visitCallBase(CallBase &I) {
         // Check that an sret argument points to valid memory.
         if (Formal->hasStructRetAttr() && Actual->getType()->isPointerTy()) {
           Type *Ty = Formal->getParamStructRetType();
-          visitMemoryReference(I, Actual, DL->getTypeStoreSize(Ty),
-                               DL->getABITypeAlign(Ty), Ty,
+          MemoryLocation Loc(
+              Actual, LocationSize::precise(DL->getTypeStoreSize(Ty)));
+          visitMemoryReference(I, Loc, DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);
         }
       }
@@ -286,16 +287,15 @@ void Lint::visitCallBase(CallBase &I) {
 
     case Intrinsic::memcpy: {
       MemCpyInst *MCI = cast<MemCpyInst>(&I);
-      // TODO: If the size is known, use it.
-      visitMemoryReference(I, MCI->getDest(), MemoryLocation::UnknownSize,
+      visitMemoryReference(I, MemoryLocation::getForDest(MCI),
                            MCI->getDestAlign(), nullptr, MemRef::Write);
-      visitMemoryReference(I, MCI->getSource(), MemoryLocation::UnknownSize,
+      visitMemoryReference(I, MemoryLocation::getForSource(MCI),
                            MCI->getSourceAlign(), nullptr, MemRef::Read);
 
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
       // overlap is not distinguished from the case where nothing is known.
-      auto Size = LocationSize::unknown();
+      auto Size = LocationSize::afterPointer();
       if (const ConstantInt *Len =
               dyn_cast<ConstantInt>(findValue(MCI->getLength(),
                                               /*OffsetOk=*/false)))
@@ -309,10 +309,10 @@ void Lint::visitCallBase(CallBase &I) {
     case Intrinsic::memcpy_inline: {
       MemCpyInlineInst *MCII = cast<MemCpyInlineInst>(&I);
       const uint64_t Size = MCII->getLength()->getValue().getLimitedValue();
-      visitMemoryReference(I, MCII->getDest(), Size, MCII->getDestAlign(),
-                           nullptr, MemRef::Write);
-      visitMemoryReference(I, MCII->getSource(), Size, MCII->getSourceAlign(),
-                           nullptr, MemRef::Read);
+      visitMemoryReference(I, MemoryLocation::getForDest(MCII),
+                           MCII->getDestAlign(), nullptr, MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForSource(MCII),
+                           MCII->getSourceAlign(), nullptr, MemRef::Read);
 
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
@@ -324,17 +324,15 @@ void Lint::visitCallBase(CallBase &I) {
     }
     case Intrinsic::memmove: {
       MemMoveInst *MMI = cast<MemMoveInst>(&I);
-      // TODO: If the size is known, use it.
-      visitMemoryReference(I, MMI->getDest(), MemoryLocation::UnknownSize,
+      visitMemoryReference(I, MemoryLocation::getForDest(MMI),
                            MMI->getDestAlign(), nullptr, MemRef::Write);
-      visitMemoryReference(I, MMI->getSource(), MemoryLocation::UnknownSize,
+      visitMemoryReference(I, MemoryLocation::getForSource(MMI),
                            MMI->getSourceAlign(), nullptr, MemRef::Read);
       break;
     }
     case Intrinsic::memset: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
-      // TODO: If the size is known, use it.
-      visitMemoryReference(I, MSI->getDest(), MemoryLocation::UnknownSize,
+      visitMemoryReference(I, MemoryLocation::getForDest(MSI),
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
@@ -344,26 +342,26 @@ void Lint::visitCallBase(CallBase &I) {
              "Undefined behavior: va_start called in a non-varargs function",
              &I);
 
-      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
-                           None, nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
+                           nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::vacopy:
-      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
-                           None, nullptr, MemRef::Write);
-      visitMemoryReference(I, I.getArgOperand(1), MemoryLocation::UnknownSize,
-                           None, nullptr, MemRef::Read);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
+                           nullptr, MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 1, TLI), None,
+                           nullptr, MemRef::Read);
       break;
     case Intrinsic::vaend:
-      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
-                           None, nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
+                           nullptr, MemRef::Read | MemRef::Write);
       break;
 
     case Intrinsic::stackrestore:
       // Stackrestore doesn't read or write memory, but it sets the
       // stack pointer, which the compiler may read from or write to
       // at any time, so check it for both readability and writeability.
-      visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
-                           None, nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
+                           nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::get_active_lane_mask:
       if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
@@ -386,13 +384,14 @@ void Lint::visitReturnInst(ReturnInst &I) {
 
 // TODO: Check that the reference is in bounds.
 // TODO: Check readnone/readonly function attributes.
-void Lint::visitMemoryReference(Instruction &I, Value *Ptr, uint64_t Size,
+void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
                                 MaybeAlign Align, Type *Ty, unsigned Flags) {
   // If no memory is being referenced, it doesn't matter if the pointer
   // is valid.
-  if (Size == 0)
+  if (Loc.Size.isZero())
     return;
 
+  Value *Ptr = const_cast<Value *>(Loc.Ptr);
   Value *UnderlyingObject = findValue(Ptr, /*OffsetOk=*/true);
   Assert(!isa<ConstantPointerNull>(UnderlyingObject),
          "Undefined behavior: Null pointer dereference", &I);
@@ -460,9 +459,8 @@ void Lint::visitMemoryReference(Instruction &I, Value *Ptr, uint64_t Size,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Assert(Size == MemoryLocation::UnknownSize ||
-               BaseSize == MemoryLocation::UnknownSize ||
-               (Offset >= 0 && Offset + Size <= BaseSize),
+    Assert(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
            "Undefined behavior: Buffer overflow", &I);
 
     // Accesses that say that the memory is more aligned than it is are not
@@ -476,15 +474,13 @@ void Lint::visitMemoryReference(Instruction &I, Value *Ptr, uint64_t Size,
 }
 
 void Lint::visitLoadInst(LoadInst &I) {
-  visitMemoryReference(I, I.getPointerOperand(),
-                       DL->getTypeStoreSize(I.getType()), I.getAlign(),
-                       I.getType(), MemRef::Read);
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(), I.getType(),
+                       MemRef::Read);
 }
 
 void Lint::visitStoreInst(StoreInst &I) {
-  visitMemoryReference(I, I.getPointerOperand(),
-                       DL->getTypeStoreSize(I.getOperand(0)->getType()),
-                       I.getAlign(), I.getOperand(0)->getType(), MemRef::Write);
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
 }
 
 void Lint::visitXor(BinaryOperator &I) {
@@ -585,12 +581,12 @@ void Lint::visitAllocaInst(AllocaInst &I) {
 }
 
 void Lint::visitVAArgInst(VAArgInst &I) {
-  visitMemoryReference(I, I.getOperand(0), MemoryLocation::UnknownSize, None,
-                       nullptr, MemRef::Read | MemRef::Write);
+  visitMemoryReference(I, MemoryLocation::get(&I), None, nullptr,
+                       MemRef::Read | MemRef::Write);
 }
 
 void Lint::visitIndirectBrInst(IndirectBrInst &I) {
-  visitMemoryReference(I, I.getAddress(), MemoryLocation::UnknownSize, None,
+  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()), None,
                        nullptr, MemRef::Branchee);
 
   Assert(I.getNumDestinations() != 0,

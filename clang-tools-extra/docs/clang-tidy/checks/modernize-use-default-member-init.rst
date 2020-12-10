@@ -36,7 +36,7 @@ Options
 
 .. option:: UseAssignment
 
-   If this option is set to non-zero (default is `0`), the check will initialise
+   If this option is set to `true` (default is `false`), the check will initialise
    members with an assignment. For example:
 
 .. code-block:: c++
@@ -50,5 +50,5 @@ Options
 
 .. option:: IgnoreMacros
 
-   If this option is set to non-zero (default is `1`), the check will not warn
+   If this option is set to `true` (default is `true`), the check will not warn
    about members declared inside macros.

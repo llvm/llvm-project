@@ -45,11 +45,14 @@ def Blurmpq_eq : Flag<["--"], "blurmp=">;
 
 def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;
 
-def marshalled_flag_0 : Flag<["-"], "marshalled-flag-0">,
-  MarshallingInfoFlag<"MarshalledFlag0", DefaultAnyOf<[]>>;
-def marshalled_flag_1 : Flag<["-"], "marshalled-flag-1">,
-  MarshallingInfoFlag<"MarshalledFlag1", DefaultAnyOf<[marshalled_flag_0]>>;
-def marshalled_flag_2 : Flag<["-"], "marshalled-flag-2">,
-  MarshallingInfoFlag<"MarshalledFlag2", DefaultAnyOf<[marshalled_flag_0]>>;
-def marshalled_flag_3 : Flag<["-"], "marshalled-flag-3">,
-  MarshallingInfoFlag<"MarshalledFlag3", DefaultAnyOf<[marshalled_flag_1, marshalled_flag_2]>>;
+def marshalled_flag_d : Flag<["-"], "marshalled-flag-d">,
+  MarshallingInfoFlag<"MarshalledFlagD">;
+def marshalled_flag_c : Flag<["-"], "marshalled-flag-c">,
+  MarshallingInfoFlag<"MarshalledFlagC">,
+  ImpliedByAnyOf<[marshalled_flag_d], "true">;
+def marshalled_flag_b : Flag<["-"], "marshalled-flag-b">,
+  MarshallingInfoFlag<"MarshalledFlagB">,
+  ImpliedByAnyOf<[marshalled_flag_d], "true">;
+def marshalled_flag_a : Flag<["-"], "marshalled-flag-a">,
+  MarshallingInfoFlag<"MarshalledFlagA">,
+  ImpliedByAnyOf<[marshalled_flag_c, marshalled_flag_b]>;

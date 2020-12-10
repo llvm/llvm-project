@@ -22,7 +22,7 @@ class TestBasicList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::list<int, std::allocator<int> >"
+        list_type = "std::list<int>"
         size_type = list_type + "::size_type"
         value_type = list_type + "::value_type"
 

@@ -127,6 +127,16 @@ tablegen("IntrinsicsS390") {
   td_file = "Intrinsics.td"
 }
 
+tablegen("IntrinsicsVE") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsVE.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=ve",
+  ]
+  td_file = "Intrinsics.td"
+}
+
 tablegen("IntrinsicsWebAssembly") {
   visibility = [ ":public_tablegen" ]
   output_name = "IntrinsicsWebAssembly.h"
@@ -182,6 +192,7 @@ group("public_tablegen") {
     ":IntrinsicsR600",
     ":IntrinsicsRISCV",
     ":IntrinsicsS390",
+    ":IntrinsicsVE",
     ":IntrinsicsWebAssembly",
     ":IntrinsicsX86",
     ":IntrinsicsXCore",

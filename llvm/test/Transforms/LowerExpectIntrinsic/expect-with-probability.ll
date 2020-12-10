@@ -13,7 +13,7 @@ entry:
   %conv1 = sext i32 %conv to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv1, i64 1, double 8.000000e-01)
   %tobool = icmp ne i64 %expval, 0
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool, label %if.then, label %if.end
 
@@ -45,7 +45,7 @@ entry:
   %conv = sext i32 %tmp to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv, i64 1, double 8.000000e-01)
   %tobool = icmp ne i64 %expval, 0
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool, label %if.then, label %if.end
 
@@ -76,7 +76,7 @@ entry:
   %conv = sext i32 %lnot.ext to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv, i64 1, double 8.000000e-01)
   %tobool1 = icmp ne i64 %expval, 0
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool1, label %if.then, label %if.end
 
@@ -108,7 +108,7 @@ entry:
   %conv = sext i32 %lnot.ext to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv, i64 1, double 8.000000e-01)
   %tobool2 = icmp ne i64 %expval, 0
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool2, label %if.then, label %if.end
 
@@ -138,7 +138,7 @@ entry:
   %conv1 = sext i32 %conv to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv1, i64 0, double 8.000000e-01)
   %tobool = icmp ne i64 %expval, 0
-; CHECK: !prof !2, !misexpect !3
+; CHECK: !prof !1
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool, label %if.then, label %if.end
 
@@ -165,7 +165,7 @@ entry:
   %tmp = load i32, i32* %x.addr, align 4
   %conv = sext i32 %tmp to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv, i64 2, double 8.000000e-01)
-; CHECK: !prof !4, !misexpect !5
+; CHECK: !prof !2
 ; CHECK-NOT: @llvm.expect.with.probability
   switch i64 %expval, label %sw.epilog [
     i64 1, label %sw.bb
@@ -194,7 +194,7 @@ entry:
   %tmp = load i32, i32* %x.addr, align 4
   %conv = sext i32 %tmp to i64
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %conv, i64 1, double 8.000000e-01)
-; CHECK: !prof !6, !misexpect !7
+; CHECK: !prof !3
 ; CHECK-NOT: @llvm.expect.with.probability
   switch i64 %expval, label %sw.epilog [
     i64 2, label %sw.bb
@@ -226,7 +226,7 @@ entry:
   %conv = zext i1 %cmp to i32
   %expval = call i32 @llvm.expect.with.probability.i32(i32 %conv, i32 1, double 8.000000e-01)
   %tobool = icmp ne i32 %expval, 0
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %tobool, label %if.then, label %if.end
 
@@ -255,7 +255,7 @@ entry:
   %tmp = load i32, i32* %x.addr, align 4
   %cmp = icmp sgt i32 %tmp, 1
   %expval = call i1 @llvm.expect.with.probability.i1(i1 %cmp, i1 1, double 8.000000e-01)
-; CHECK: !prof !0, !misexpect !1
+; CHECK: !prof !0
 ; CHECK-NOT: @llvm.expect.with.probability
   br i1 %expval, label %if.then, label %if.end
 
@@ -278,7 +278,7 @@ define i32 @test10(i64 %t6) {
   %t7 = call i64 @llvm.expect.with.probability.i64(i64 %t6, i64 0, double 8.000000e-01)
   %t8 = icmp ne i64 %t7, 0
   %t9 = select i1 %t8, i32 1, i32 2
-; CHECK: select{{.*}}, !prof !2, !misexpect !3
+; CHECK: select{{.*}}, !prof !1
   ret i32 %t9
 }
 
@@ -286,10 +286,6 @@ define i32 @test10(i64 %t6) {
 declare i1 @llvm.expect.with.probability.i1(i1, i1, double) nounwind readnone
 
 ; CHECK: !0 = !{!"branch_weights", i32 1717986918, i32 429496731}
-; CHECK: !1 = !{!"misexpect", i64 0, i64 1717986918, i64 429496731}
-; CHECK: !2 = !{!"branch_weights", i32 429496731, i32 1717986918}
-; CHECK: !3 = !{!"misexpect", i64 1, i64 1717986918, i64 429496731}
-; CHECK: !4 = !{!"branch_weights", i32 214748366, i32 214748366, i32 1717986918}
-; CHECK: !5 = !{!"misexpect", i64 2, i64 1717986918, i64 214748366}
-; CHECK: !6 = !{!"branch_weights", i32 1717986918, i32 214748366, i32 214748366}
-; CHECK: !7 = !{!"misexpect", i64 0, i64 1717986918, i64 214748366}
+; CHECK: !1 = !{!"branch_weights", i32 429496731, i32 1717986918}
+; CHECK: !2 = !{!"branch_weights", i32 214748366, i32 214748366, i32 1717986918}
+; CHECK: !3 = !{!"branch_weights", i32 1717986918, i32 214748366, i32 214748366}

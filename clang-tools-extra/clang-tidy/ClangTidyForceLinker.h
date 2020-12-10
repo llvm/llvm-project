@@ -45,6 +45,11 @@ extern volatile int CERTModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CERTModuleAnchorDestination =
     CERTModuleAnchorSource;
 
+// This anchor is used to force the linker to link the ConcurrencyModule.
+extern volatile int ConcurrencyModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ConcurrencyModuleAnchorDestination =
+    ConcurrencyModuleAnchorSource;
+
 // This anchor is used to force the linker to link the CppCoreGuidelinesModule.
 extern volatile int CppCoreGuidelinesModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =

@@ -1,7 +1,8 @@
 // REQUIRES: x86
 
 // Check that wrapping works when the wrapped symbol is imported from a
-// different DLL.
+// different DLL, redirecting references that used to point at the import
+// thunk, towards the local wrap function instead.
 
 // RUN: split-file %s %t.dir
 // RUN: llc %t.dir/main.ll -o %t.main.obj --filetype=obj

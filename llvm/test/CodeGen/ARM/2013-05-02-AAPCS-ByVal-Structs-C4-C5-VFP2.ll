@@ -14,10 +14,10 @@ define void @foo(double %vfp0,     ; --> D0,              NSAA=SP
 		 double %vfp6,     ; --> D6,              NSAA=SP
 		 double %vfp7,     ; --> D7,              NSAA=SP
 		 double %vfp8,     ; --> SP,              NSAA=SP+8 (!)
-                 i32 %p0,          ; --> R0,              NSAA=SP+8 
-		 %st_t* byval %p1, ; --> SP+8, 4 words    NSAA=SP+24
-		 i32 %p2) #0 {     ; --> SP+24,           NSAA=SP+24 
-                 
+                 i32 %p0,          ; --> R0,              NSAA=SP+8
+		 %st_t* byval(%st_t) %p1, ; --> SP+8, 4 words    NSAA=SP+24
+		 i32 %p2) #0 {     ; --> SP+24,           NSAA=SP+24
+
 entry:
   ;CHECK:  push {r7, lr}
   ;CHECK:  ldr    r0, [sp, #32]
@@ -39,7 +39,7 @@ entry:
                  double 23.6,
                  double 23.7,
                  double 23.8,
-                 i32 0, %st_t* byval @static_val, i32 1)
+                 i32 0, %st_t* byval(%st_t) @static_val, i32 1)
   ret void
 }
 

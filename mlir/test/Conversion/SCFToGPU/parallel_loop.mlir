@@ -317,15 +317,13 @@ func @parallel_loop_optional_attr() {
 
 // -----
 
-// Mapping to the same processor twice.
+// Mapping to the same processor twice. Cannot be mapped.
 
 func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3 : index,
                           %buf : memref<?x?xf32>,
                           %res : memref<?x?xf32>) {
   %four = constant 4 : index
-  // expected-error@+2 {{cannot redefine the bound for processor 1}}
-  // expected-error@+1 {{failed to legalize operation 'scf.parallel'}}
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%four, %four)  {
   } { mapping = [
@@ -335,9 +333,12 @@ func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
+// CHECK-LABEL: @parallel_double_map
+// CHECK: scf.parallel
+
 // -----
 
-// Loop with loop-variant upper bound.
+// Loop with loop-variant upper bound. Cannot be mapped.
 
 func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : index,
                                        %arg3 : index,
@@ -346,10 +347,8 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
   %zero = constant 0 : index
   %one = constant 1 : index
   %four = constant 4 : index
-  // expected-error@+1 {{failed to legalize operation 'scf.parallel'}}
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%four, %four)  {
-    // expected-error@+1 {{cannot derive loop-invariant upper bound}}
     scf.parallel (%si0, %si1) = (%zero, %zero) to (%i0, %i1)
                                             step (%one, %one)  {
       %idx0 = addi %i0, %si0 : index
@@ -366,3 +365,25 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
     ] }
   return
 }
+
+// CHECK-LABEL: @parallel_loop_loop_variant_bound
+// CHECK: scf.parallel
+// CHECK: scf.parallel
+
+// -----
+
+// Loop without annotations. Cannot be mapped.
+
+func @parallel_no_annotations(%arg0 : index, %arg1 : index, %arg2 : index,
+                              %arg3 : index,
+                              %buf : memref<?x?xf32>,
+                              %res : memref<?x?xf32>) {
+  %four = constant 4 : index
+  scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                                          step (%four, %four)  {
+  }
+  return
+}
+
+// CHECK-LABEL: @parallel_no_annotations
+// CHECK: scf.parallel

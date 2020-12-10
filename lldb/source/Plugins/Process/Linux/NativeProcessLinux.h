@@ -117,6 +117,8 @@ public:
 
   Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) override;
 
+  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType() override;
+
   // Interface used by NativeRegisterContext-derived classes.
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               void *data = nullptr, size_t data_size = 0,

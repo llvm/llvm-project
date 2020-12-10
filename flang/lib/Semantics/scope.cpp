@@ -49,13 +49,6 @@ std::string EquivalenceObject::AsFortran() const {
   return ss.str();
 }
 
-bool Scope::IsModule() const {
-  return kind_ == Kind::Module && !symbol_->get<ModuleDetails>().isSubmodule();
-}
-bool Scope::IsSubmodule() const {
-  return kind_ == Kind::Module && symbol_->get<ModuleDetails>().isSubmodule();
-}
-
 Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
   return children_.emplace_back(*this, kind, symbol);
 }

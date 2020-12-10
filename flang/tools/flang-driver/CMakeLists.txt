@@ -25,7 +25,6 @@ clang_target_link_libraries(flang-new
   PRIVATE
   clangDriver
   clangBasic
-  clangFrontend
 )
 
 install(TARGETS flang-new DESTINATION bin)

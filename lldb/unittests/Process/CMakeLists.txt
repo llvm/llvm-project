@@ -3,6 +3,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   add_subdirectory(Linux)
   add_subdirectory(POSIX)
 endif()
+add_subdirectory(Utility)
 add_subdirectory(minidump)
 
 add_lldb_unittest(ProcessEventDataTests

@@ -3,7 +3,7 @@
 ;
 ; Note that a lot of this code was lifted from retpoline.ll.
 
-declare void @bar(i32)
+declare dso_local void @bar(i32)
 
 ; Test a simple indirect call and tail call.
 define void @icall_reg(void (i32)* %fp, i32 %x) {
@@ -36,7 +36,7 @@ entry:
 ; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
-@global_fp = external global void (i32)*
+@global_fp = external dso_local global void (i32)*
 
 ; Test an indirect call through a global variable.
 define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
@@ -90,7 +90,7 @@ define void @vcall(%struct.Foo* %obj) #0 {
 ; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
-declare void @direct_callee()
+declare dso_local void @direct_callee()
 
 define void @direct_tail() #0 {
   tail call void @direct_callee()

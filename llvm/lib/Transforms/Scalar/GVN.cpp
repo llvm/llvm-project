@@ -2804,8 +2804,7 @@ void GVN::addDeadBlock(BasicBlock *BB) {
       if (!DeadBlocks.count(P))
         continue;
 
-      if (llvm::any_of(successors(P),
-                       [B](BasicBlock *Succ) { return Succ == B; }) &&
+      if (llvm::is_contained(successors(P), B) &&
           isCriticalEdge(P->getTerminator(), B)) {
         if (BasicBlock *S = splitCriticalEdges(P, B))
           DeadBlocks.insert(P = S);

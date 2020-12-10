@@ -3,7 +3,8 @@ static_library("Orc") {
   deps = [
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/JITLink",
-    "//llvm/lib/ExecutionEngine/OrcError",
+    "//llvm/lib/ExecutionEngine/Orc/Shared",
+    "//llvm/lib/ExecutionEngine/Orc/TargetProcess",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
@@ -34,6 +35,7 @@ static_library("Orc") {
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",
     "TPCDynamicLibrarySearchGenerator.cpp",
+    "TPCEHFrameRegistrar.cpp",
     "TPCIndirectionUtils.cpp",
     "TargetProcessControl.cpp",
     "ThreadSafeModule.cpp",

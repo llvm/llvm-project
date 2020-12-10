@@ -75,6 +75,14 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strncpy
+  SRCS
+    strncpy.cpp
+  HDRS
+    strncpy.h
+)
+
+add_entrypoint_object(
   strnlen
   SRCS
     strnlen.cpp

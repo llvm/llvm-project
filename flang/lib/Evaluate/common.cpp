@@ -19,7 +19,11 @@ void RealFlagWarnings(
     context.messages().Say("overflow on %s"_en_US, operation);
   }
   if (flags.test(RealFlag::DivideByZero)) {
-    context.messages().Say("division by zero on %s"_en_US, operation);
+    if (std::strcmp(operation, "division") == 0) {
+      context.messages().Say("division by zero"_en_US);
+    } else {
+      context.messages().Say("division on %s"_en_US);
+    }
   }
   if (flags.test(RealFlag::InvalidArgument)) {
     context.messages().Say("invalid argument on %s"_en_US, operation);

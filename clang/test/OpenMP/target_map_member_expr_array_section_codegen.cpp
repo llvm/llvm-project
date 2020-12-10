@@ -60,7 +60,7 @@ struct maptest {
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: call void @__tgt_target_data_begin_mapper(i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_ENTER]], i32 0, i32 0), i8** null)
+    // CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_ENTER]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target enter data map(alloc : s.data[:6])
   }
 
@@ -104,7 +104,7 @@ struct maptest {
     // CHECK: [[BPTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BPTRS]], i32 0, i32 0
     // CHECK: [[PTR:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS]], i32 0, i32 0
     // CHECK: [[SIZE:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZES]], i32 0, i32 0
-    // CHECK: call void @__tgt_target_data_end_mapper(i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_EXIT]], i32 0, i32 0), i8** null)
+    // CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAP_EXIT]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target exit data map(delete : s.data[:6])
   }
 };

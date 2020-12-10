@@ -52,6 +52,6 @@ detached_task foo() {
 // CHECK-LABEL: final.suspend:
 // CHECK:         %[[PTR1:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP:.+]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[PTR1]])
-// CHECK:         call i8* @{{.*address.*}}(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP]])
+// CHECK:         call i8* @{{.*address.*}}(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* {{[^,]*}} %[[ADDR_TMP]])
 // CHECK-NEXT:    %[[PTR2:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[PTR2]])

@@ -7,6 +7,8 @@
 ; RUN:     |FileCheck %s --check-prefixes=USE_PRE_LINK,USE
 ; RUN: opt -debug-pass-manager -passes='thinlto<O0>' -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' %s 2>&1 \
 ; RUN:     |FileCheck %s --check-prefixes=USE_POST_LINK,USE
+; RUN: opt -debug-pass-manager -passes='lto<O0>' -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' %s 2>&1 \
+; RUN:     |FileCheck %s --check-prefixes=USE_POST_LINK,USE
 
 ;
 ; GEN: Running pass: PGOInstrumentationGen

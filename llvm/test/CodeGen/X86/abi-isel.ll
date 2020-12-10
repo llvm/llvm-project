@@ -36,8 +36,10 @@
 define void @foo00() nounwind {
 ; LINUX-64-STATIC-LABEL: foo00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst(%rip)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo00:
@@ -61,9 +63,9 @@ define void @foo00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -94,25 +96,25 @@ define void @foo00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -126,8 +128,10 @@ entry:
 define void @fxo00() nounwind {
 ; LINUX-64-STATIC-LABEL: fxo00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, xdst(%rip)
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: fxo00:
@@ -151,9 +155,9 @@ define void @fxo00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: fxo00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -184,25 +188,25 @@ define void @fxo00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: fxo00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: fxo00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: fxo00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -216,7 +220,9 @@ entry:
 define void @foo01() nounwind {
 ; LINUX-64-STATIC-LABEL: foo01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $dst, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo01:
@@ -238,8 +244,8 @@ define void @foo01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -267,22 +273,22 @@ define void @foo01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -294,7 +300,9 @@ entry:
 define void @fxo01() nounwind {
 ; LINUX-64-STATIC-LABEL: fxo01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $xdst, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: fxo01:
@@ -316,8 +324,8 @@ define void @fxo01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: fxo01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -345,22 +353,22 @@ define void @fxo01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: fxo01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: fxo01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: fxo01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -372,8 +380,10 @@ entry:
 define void @foo02() nounwind {
 ; LINUX-64-STATIC-LABEL: foo02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -400,9 +410,9 @@ define void @foo02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -437,27 +447,27 @@ define void @foo02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -472,8 +482,10 @@ entry:
 define void @fxo02() nounwind {
 ; LINUX-64-STATIC-LABEL: fxo02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -500,9 +512,9 @@ define void @fxo02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: fxo02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -537,27 +549,27 @@ define void @fxo02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: fxo02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: fxo02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: fxo02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -572,8 +584,8 @@ entry:
 define void @foo03() nounwind {
 ; LINUX-64-STATIC-LABEL: foo03:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ddst(%rip)
+; LINUX-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo03:
@@ -597,9 +609,9 @@ define void @foo03() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -626,20 +638,20 @@ define void @foo03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ddst(%rip)
+; DARWIN-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ddst(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ddst(%rip)
+; DARWIN-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -651,7 +663,7 @@ entry:
 define void @foo04() nounwind {
 ; LINUX-64-STATIC-LABEL: foo04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ddst, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ddst, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo04:
@@ -673,8 +685,8 @@ define void @foo04() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -699,20 +711,20 @@ define void @foo04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -723,8 +735,8 @@ entry:
 define void @foo05() nounwind {
 ; LINUX-64-STATIC-LABEL: foo05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -751,9 +763,9 @@ define void @foo05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -784,22 +796,22 @@ define void @foo05() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -813,8 +825,8 @@ entry:
 define void @foo06() nounwind {
 ; LINUX-64-STATIC-LABEL: foo06:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ldst(%rip)
+; LINUX-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo06:
@@ -836,8 +848,8 @@ define void @foo06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc(%rip), %eax
-; LINUX-64-PIC-NEXT:    movl %eax, ldst(%rip)
+; LINUX-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: foo06:
@@ -863,20 +875,20 @@ define void @foo06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ldst(%rip)
+; DARWIN-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ldst(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ldst(%rip)
+; DARWIN-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -888,7 +900,7 @@ entry:
 define void @foo07() nounwind {
 ; LINUX-64-STATIC-LABEL: foo07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ldst, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ldst, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: foo07:
@@ -909,8 +921,8 @@ define void @foo07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: foo07:
@@ -934,20 +946,20 @@ define void @foo07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -958,8 +970,8 @@ entry:
 define void @foo08() nounwind {
 ; LINUX-64-STATIC-LABEL: foo08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -984,8 +996,8 @@ define void @foo08() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: foo08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc(%rip), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1015,22 +1027,22 @@ define void @foo08() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: foo08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: foo08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: foo08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl {{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1044,8 +1056,10 @@ entry:
 define void @qux00() nounwind {
 ; LINUX-64-STATIC-LABEL: qux00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst+64(%rip)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux00:
@@ -1069,9 +1083,9 @@ define void @qux00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1102,25 +1116,25 @@ define void @qux00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1133,8 +1147,10 @@ entry:
 define void @qxx00() nounwind {
 ; LINUX-64-STATIC-LABEL: qxx00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, xdst+64(%rip)
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qxx00:
@@ -1158,9 +1174,9 @@ define void @qxx00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qxx00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1191,25 +1207,25 @@ define void @qxx00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qxx00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qxx00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qxx00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1222,12 +1238,16 @@ entry:
 define void @qux01() nounwind {
 ; LINUX-64-STATIC-LABEL: qux01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $dst+64, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+64, ptr
+; LINUX-32-STATIC-NEXT:    leal dst+64, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: qux01:
@@ -1245,9 +1265,9 @@ define void @qux01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1277,25 +1297,25 @@ define void @qux01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1307,12 +1327,16 @@ entry:
 define void @qxx01() nounwind {
 ; LINUX-64-STATIC-LABEL: qxx01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $xdst+64, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qxx01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+64, ptr
+; LINUX-32-STATIC-NEXT:    leal xdst+64, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: qxx01:
@@ -1330,9 +1354,9 @@ define void @qxx01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qxx01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1362,25 +1386,25 @@ define void @qxx01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qxx01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qxx01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qxx01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1392,8 +1416,10 @@ entry:
 define void @qux02() nounwind {
 ; LINUX-64-STATIC-LABEL: qux02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -1420,9 +1446,9 @@ define void @qux02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -1457,27 +1483,27 @@ define void @qux02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -1493,8 +1519,10 @@ entry:
 define void @qxx02() nounwind {
 ; LINUX-64-STATIC-LABEL: qxx02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -1521,9 +1549,9 @@ define void @qxx02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qxx02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -1558,27 +1586,27 @@ define void @qxx02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qxx02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qxx02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qxx02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -1594,8 +1622,8 @@ entry:
 define void @qux03() nounwind {
 ; LINUX-64-STATIC-LABEL: qux03:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ddst+64(%rip)
+; LINUX-64-STATIC-NEXT:    movl dsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, ddst+{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux03:
@@ -1619,9 +1647,9 @@ define void @qux03() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1648,20 +1676,20 @@ define void @qux03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ddst+64(%rip)
+; DARWIN-64-STATIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ddst+64(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ddst+64(%rip)
+; DARWIN-64-PIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -1673,7 +1701,7 @@ entry:
 define void @qux04() nounwind {
 ; LINUX-64-STATIC-LABEL: qux04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ddst+64, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ddst+64, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux04:
@@ -1696,9 +1724,9 @@ define void @qux04() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -1723,20 +1751,20 @@ define void @qux04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst+64(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+64(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst+64(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -1747,8 +1775,8 @@ entry:
 define void @qux05() nounwind {
 ; LINUX-64-STATIC-LABEL: qux05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl dsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -1775,9 +1803,9 @@ define void @qux05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -1808,22 +1836,22 @@ define void @qux05() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc+64(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -1838,8 +1866,8 @@ entry:
 define void @qux06() nounwind {
 ; LINUX-64-STATIC-LABEL: qux06:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ldst+64(%rip)
+; LINUX-64-STATIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, ldst+{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux06:
@@ -1861,8 +1889,8 @@ define void @qux06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc+64(%rip), %eax
-; LINUX-64-PIC-NEXT:    movl %eax, ldst+64(%rip)
+; LINUX-64-PIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movl %eax, ldst+{{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: qux06:
@@ -1888,20 +1916,20 @@ define void @qux06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ldst+64(%rip)
+; DARWIN-64-STATIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ldst+64(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ldst+64(%rip)
+; DARWIN-64-PIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -1913,7 +1941,7 @@ entry:
 define void @qux07() nounwind {
 ; LINUX-64-STATIC-LABEL: qux07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ldst+64, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ldst+64, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: qux07:
@@ -1934,8 +1962,8 @@ define void @qux07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst+64(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    leaq ldst+{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: qux07:
@@ -1959,20 +1987,20 @@ define void @qux07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst+64(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+64(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst+64(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -1983,8 +2011,8 @@ entry:
 define void @qux08() nounwind {
 ; LINUX-64-STATIC-LABEL: qux08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc+64(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -2009,8 +2037,8 @@ define void @qux08() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: qux08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc+64(%rip), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2040,22 +2068,22 @@ define void @qux08() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: qux08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: qux08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: qux08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc+64(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2070,8 +2098,10 @@ entry:
 define void @ind00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst(,%rdi,4)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ind00:
@@ -2097,9 +2127,9 @@ define void @ind00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2133,25 +2163,25 @@ define void @ind00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2166,8 +2196,10 @@ entry:
 define void @ixd00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ixd00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, xdst(,%rdi,4)
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ixd00:
@@ -2193,9 +2225,9 @@ define void @ixd00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ixd00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2229,25 +2261,25 @@ define void @ixd00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ixd00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ixd00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ixd00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2262,8 +2294,10 @@ entry:
 define void @ind01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq dst(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    shlq $2, %rdi
+; LINUX-64-STATIC-NEXT:    addq dst@{{.*}}(%rip), %rdi
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq %rdi, (%rax)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ind01:
@@ -2290,8 +2324,8 @@ define void @ind01(i64 %i) nounwind {
 ; LINUX-64-PIC-LABEL: ind01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    shlq $2, %rdi
-; LINUX-64-PIC-NEXT:    addq dst@GOTPCREL(%rip), %rdi
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq dst@{{.*}}(%rip), %rdi
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq %rdi, (%rax)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2326,24 +2360,24 @@ define void @ind01(i64 %i) nounwind {
 ; DARWIN-64-STATIC-LABEL: ind01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-STATIC-NEXT:    addq _dst@GOTPCREL(%rip), %rdi
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq _dst@{{.*}}(%rip), %rdi
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-DYNAMIC-NEXT:    addq _dst@GOTPCREL(%rip), %rdi
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq _dst@{{.*}}(%rip), %rdi
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-PIC-NEXT:    addq _dst@GOTPCREL(%rip), %rdi
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq _dst@{{.*}}(%rip), %rdi
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2356,8 +2390,10 @@ entry:
 define void @ixd01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ixd01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xdst(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    shlq $2, %rdi
+; LINUX-64-STATIC-NEXT:    addq xdst@{{.*}}(%rip), %rdi
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq %rdi, (%rax)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ixd01:
@@ -2384,8 +2420,8 @@ define void @ixd01(i64 %i) nounwind {
 ; LINUX-64-PIC-LABEL: ixd01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    shlq $2, %rdi
-; LINUX-64-PIC-NEXT:    addq xdst@GOTPCREL(%rip), %rdi
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq xdst@{{.*}}(%rip), %rdi
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq %rdi, (%rax)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2420,24 +2456,24 @@ define void @ixd01(i64 %i) nounwind {
 ; DARWIN-64-STATIC-LABEL: ixd01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-STATIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rdi
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq _xdst@{{.*}}(%rip), %rdi
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ixd01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-DYNAMIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rdi
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq _xdst@{{.*}}(%rip), %rdi
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ixd01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    shlq $2, %rdi
-; DARWIN-64-PIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rdi
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq _xdst@{{.*}}(%rip), %rdi
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq %rdi, (%rax)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2450,8 +2486,10 @@ entry:
 define void @ind02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -2480,9 +2518,9 @@ define void @ind02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -2520,27 +2558,27 @@ define void @ind02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -2557,8 +2595,10 @@ entry:
 define void @ixd02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ixd02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -2587,9 +2627,9 @@ define void @ixd02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ixd02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -2627,27 +2667,27 @@ define void @ixd02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ixd02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ixd02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ixd02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -2691,9 +2731,9 @@ define void @ind03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2723,25 +2763,25 @@ define void @ind03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2757,7 +2797,7 @@ define void @ind04(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ddst(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ind04:
@@ -2784,8 +2824,8 @@ define void @ind04(i64 %i) nounwind {
 ; LINUX-64-PIC-LABEL: ind04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    shlq $2, %rdi
-; LINUX-64-PIC-NEXT:    addq ddst@GOTPCREL(%rip), %rdi
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq ddst@{{.*}}(%rip), %rdi
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq %rdi, (%rax)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -2815,23 +2855,23 @@ define void @ind04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -2844,7 +2884,7 @@ define void @ind05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl dsrc(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -2873,9 +2913,9 @@ define void @ind05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -2909,25 +2949,25 @@ define void @ind05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -2968,9 +3008,9 @@ define void @ind06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rcx
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3000,25 +3040,25 @@ define void @ind06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3034,7 +3074,7 @@ define void @ind07(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ldst(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: ind07:
@@ -3058,9 +3098,9 @@ define void @ind07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: ind07:
@@ -3089,23 +3129,23 @@ define void @ind07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq (%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -3118,7 +3158,7 @@ define void @ind08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: ind08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl lsrc(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -3145,9 +3185,9 @@ define void @ind08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: ind08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3180,25 +3220,25 @@ define void @ind08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: ind08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ind08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ind08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl (%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, (%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3214,8 +3254,10 @@ entry:
 define void @off00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst+64(,%rdi,4)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: off00:
@@ -3241,9 +3283,9 @@ define void @off00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3277,25 +3319,25 @@ define void @off00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3311,8 +3353,10 @@ entry:
 define void @oxf00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: oxf00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, xdst+64(,%rdi,4)
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: oxf00:
@@ -3338,9 +3382,9 @@ define void @oxf00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: oxf00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3374,25 +3418,25 @@ define void @oxf00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: oxf00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: oxf00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: oxf00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3408,8 +3452,10 @@ entry:
 define void @off01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq dst+64(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: off01:
@@ -3435,9 +3481,9 @@ define void @off01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3471,25 +3517,25 @@ define void @off01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3503,8 +3549,10 @@ entry:
 define void @oxf01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: oxf01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xdst+64(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: oxf01:
@@ -3530,9 +3578,9 @@ define void @oxf01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: oxf01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3566,25 +3614,25 @@ define void @oxf01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: oxf01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: oxf01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: oxf01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3598,8 +3646,10 @@ entry:
 define void @off02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -3628,9 +3678,9 @@ define void @off02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -3668,27 +3718,27 @@ define void @off02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -3706,8 +3756,10 @@ entry:
 define void @oxf02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: oxf02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl xsrc+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -3736,9 +3788,9 @@ define void @oxf02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: oxf02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -3776,27 +3828,27 @@ define void @oxf02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: oxf02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: oxf02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: oxf02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -3841,9 +3893,9 @@ define void @off03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3873,25 +3925,25 @@ define void @off03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -3908,7 +3960,7 @@ define void @off04(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ddst+64(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: off04:
@@ -3934,9 +3986,9 @@ define void @off04(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -3966,23 +4018,23 @@ define void @off04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -3996,7 +4048,7 @@ define void @off05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl dsrc+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -4025,9 +4077,9 @@ define void @off05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -4061,25 +4113,25 @@ define void @off05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4121,9 +4173,9 @@ define void @off06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rcx
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4153,25 +4205,25 @@ define void @off06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4188,7 +4240,7 @@ define void @off07(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ldst+64(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: off07:
@@ -4212,9 +4264,9 @@ define void @off07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: off07:
@@ -4243,23 +4295,23 @@ define void @off07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -4273,7 +4325,7 @@ define void @off08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: off08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl lsrc+64(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -4300,9 +4352,9 @@ define void @off08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: off08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4335,25 +4387,25 @@ define void @off08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: off08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: off08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: off08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 64(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 64(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4370,8 +4422,10 @@ entry:
 define void @moo00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst+262144(%rip)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 262144(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo00:
@@ -4395,9 +4449,9 @@ define void @moo00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4428,25 +4482,25 @@ define void @moo00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4459,12 +4513,16 @@ entry:
 define void @moo01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $dst+262144, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
+; LINUX-64-STATIC-NEXT:    addq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+262144, ptr
+; LINUX-32-STATIC-NEXT:    leal dst+262144, %eax
+; LINUX-32-STATIC-NEXT:    movl %eax, ptr
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: moo01:
@@ -4483,8 +4541,8 @@ define void @moo01(i64 %i) nounwind {
 ; LINUX-64-PIC-LABEL: moo01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq dst@GOTPCREL(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    addq dst@{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4515,24 +4573,24 @@ define void @moo01(i64 %i) nounwind {
 ; DARWIN-64-STATIC-LABEL: moo01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4544,8 +4602,10 @@ entry:
 define void @moo02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 262144(%rax), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -4572,9 +4632,9 @@ define void @moo02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -4609,27 +4669,27 @@ define void @moo02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -4645,8 +4705,8 @@ entry:
 define void @moo03(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo03:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ddst+262144(%rip)
+; LINUX-64-STATIC-NEXT:    movl dsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, ddst+{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo03:
@@ -4670,9 +4730,9 @@ define void @moo03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4699,20 +4759,20 @@ define void @moo03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ddst+262144(%rip)
+; DARWIN-64-STATIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ddst+262144(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ddst+262144(%rip)
+; DARWIN-64-PIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, _ddst+{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -4724,7 +4784,7 @@ entry:
 define void @moo04(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ddst+262144, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ddst+262144, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo04:
@@ -4748,8 +4808,8 @@ define void @moo04(i64 %i) nounwind {
 ; LINUX-64-PIC-LABEL: moo04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq ddst@GOTPCREL(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    addq ddst@{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -4774,20 +4834,20 @@ define void @moo04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst+262144(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+262144(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst+262144(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -4798,8 +4858,8 @@ entry:
 define void @moo05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl dsrc+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl dsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -4826,9 +4886,9 @@ define void @moo05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
@@ -4859,22 +4919,22 @@ define void @moo05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _dsrc+262144(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl _dsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -4889,8 +4949,8 @@ entry:
 define void @moo06(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo06:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, ldst+262144(%rip)
+; LINUX-64-STATIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movl %eax, ldst+{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo06:
@@ -4912,8 +4972,8 @@ define void @moo06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc+262144(%rip), %eax
-; LINUX-64-PIC-NEXT:    movl %eax, ldst+262144(%rip)
+; LINUX-64-PIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movl %eax, ldst+{{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: moo06:
@@ -4939,20 +4999,20 @@ define void @moo06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movl %eax, _ldst+262144(%rip)
+; DARWIN-64-STATIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ldst+262144(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movl %eax, _ldst+262144(%rip)
+; DARWIN-64-PIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movl %eax, _ldst+{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -4964,7 +5024,7 @@ entry:
 define void @moo07(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq $ldst+262144, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq $ldst+262144, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: moo07:
@@ -4985,8 +5045,8 @@ define void @moo07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst+262144(%rip), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    leaq ldst+{{.*}}(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: moo07:
@@ -5010,20 +5070,20 @@ define void @moo07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst+262144(%rip), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+262144(%rip), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst+262144(%rip), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -5034,8 +5094,8 @@ entry:
 define void @moo08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: moo08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl lsrc+262144(%rip), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -5060,8 +5120,8 @@ define void @moo08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: moo08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movl lsrc+262144(%rip), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movl lsrc+{{.*}}(%rip), %eax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5091,22 +5151,22 @@ define void @moo08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: moo08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: moo08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: moo08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movl _lsrc+262144(%rip), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movl _lsrc+{{.*}}(%rip), %eax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5121,8 +5181,10 @@ entry:
 define void @big00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+262144(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movl %eax, dst+262144(,%rdi,4)
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: big00:
@@ -5148,9 +5210,9 @@ define void @big00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5184,25 +5246,25 @@ define void @big00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5218,8 +5280,10 @@ entry:
 define void @big01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq dst+262144(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, ptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: big01:
@@ -5245,9 +5309,9 @@ define void @big01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5281,25 +5345,25 @@ define void @big01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq %rax, (%rcx)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5313,8 +5377,10 @@ entry:
 define void @big02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl src+262144(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -5343,9 +5409,9 @@ define void @big02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -5383,27 +5449,27 @@ define void @big02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movq (%rcx), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
@@ -5448,9 +5514,9 @@ define void @big03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5480,25 +5546,25 @@ define void @big03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5515,7 +5581,7 @@ define void @big04(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big04:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ddst+262144(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, dptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: big04:
@@ -5541,9 +5607,9 @@ define void @big04(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq %rax, (%rcx)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5573,23 +5639,23 @@ define void @big04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _dptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -5603,7 +5669,7 @@ define void @big05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl dsrc+262144(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -5632,9 +5698,9 @@ define void @big05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movq (%rcx), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
@@ -5668,25 +5734,25 @@ define void @big05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5728,9 +5794,9 @@ define void @big06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rcx
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5760,25 +5826,25 @@ define void @big06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5795,7 +5861,7 @@ define void @big07(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big07:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    leaq ldst+262144(,%rdi,4), %rax
-; LINUX-64-STATIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: big07:
@@ -5819,9 +5885,9 @@ define void @big07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; LINUX-64-PIC-NEXT:    movq %rax, lptr(%rip)
+; LINUX-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: big07:
@@ -5850,23 +5916,23 @@ define void @big07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-STATIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-STATIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-DYNAMIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
-; DARWIN-64-PIC-NEXT:    movq %rax, _lptr(%rip)
+; DARWIN-64-PIC-NEXT:    movq %rax, {{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -5880,7 +5946,7 @@ define void @big08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: big08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl lsrc+262144(,%rdi,4), %eax
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -5907,9 +5973,9 @@ define void @big08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: big08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -5942,25 +6008,25 @@ define void @big08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: big08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: big08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: big08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movl 262144(%rax,%rdi,4), %eax
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl %eax, 262144(%rcx,%rdi,4)
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -5977,7 +6043,7 @@ entry:
 define i8* @bar00() nounwind {
 ; LINUX-64-STATIC-LABEL: bar00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $src, %eax
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bar00:
@@ -5997,7 +6063,7 @@ define i8* @bar00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar00:
@@ -6020,17 +6086,17 @@ define i8* @bar00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6040,7 +6106,7 @@ entry:
 define i8* @bxr00() nounwind {
 ; LINUX-64-STATIC-LABEL: bxr00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xsrc, %eax
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bxr00:
@@ -6060,7 +6126,7 @@ define i8* @bxr00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bxr00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bxr00:
@@ -6083,17 +6149,17 @@ define i8* @bxr00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bxr00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bxr00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bxr00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6103,7 +6169,7 @@ entry:
 define i8* @bar01() nounwind {
 ; LINUX-64-STATIC-LABEL: bar01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $dst, %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bar01:
@@ -6123,7 +6189,7 @@ define i8* @bar01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar01:
@@ -6146,17 +6212,17 @@ define i8* @bar01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6166,7 +6232,7 @@ entry:
 define i8* @bxr01() nounwind {
 ; LINUX-64-STATIC-LABEL: bxr01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xdst, %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bxr01:
@@ -6186,7 +6252,7 @@ define i8* @bxr01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bxr01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bxr01:
@@ -6209,17 +6275,17 @@ define i8* @bxr01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bxr01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bxr01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bxr01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6229,7 +6295,7 @@ entry:
 define i8* @bar02() nounwind {
 ; LINUX-64-STATIC-LABEL: bar02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $ptr, %eax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bar02:
@@ -6249,7 +6315,7 @@ define i8* @bar02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar02:
@@ -6272,17 +6338,17 @@ define i8* @bar02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6312,7 +6378,7 @@ define i8* @bar03() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar03:
@@ -6335,17 +6401,17 @@ define i8* @bar03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6375,7 +6441,7 @@ define i8* @bar04() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar04:
@@ -6398,17 +6464,17 @@ define i8* @bar04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6438,7 +6504,7 @@ define i8* @bar05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar05:
@@ -6461,17 +6527,17 @@ define i8* @bar05() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6501,7 +6567,7 @@ define i8* @bar06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar06:
@@ -6524,17 +6590,17 @@ define i8* @bar06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6564,7 +6630,7 @@ define i8* @bar07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar07:
@@ -6587,17 +6653,17 @@ define i8* @bar07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6627,7 +6693,7 @@ define i8* @bar08() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bar08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bar08:
@@ -6650,17 +6716,17 @@ define i8* @bar08() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bar08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bar08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bar08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6670,7 +6736,7 @@ entry:
 define i8* @har00() nounwind {
 ; LINUX-64-STATIC-LABEL: har00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $src, %eax
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: har00:
@@ -6690,7 +6756,7 @@ define i8* @har00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har00:
@@ -6713,17 +6779,17 @@ define i8* @har00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6733,7 +6799,7 @@ entry:
 define i8* @hxr00() nounwind {
 ; LINUX-64-STATIC-LABEL: hxr00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xsrc, %eax
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: hxr00:
@@ -6753,7 +6819,7 @@ define i8* @hxr00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: hxr00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: hxr00:
@@ -6776,17 +6842,17 @@ define i8* @hxr00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: hxr00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: hxr00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: hxr00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6796,7 +6862,7 @@ entry:
 define i8* @har01() nounwind {
 ; LINUX-64-STATIC-LABEL: har01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $dst, %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: har01:
@@ -6816,7 +6882,7 @@ define i8* @har01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har01:
@@ -6839,17 +6905,17 @@ define i8* @har01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6859,7 +6925,7 @@ entry:
 define i8* @hxr01() nounwind {
 ; LINUX-64-STATIC-LABEL: hxr01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xdst, %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: hxr01:
@@ -6879,7 +6945,7 @@ define i8* @hxr01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: hxr01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: hxr01:
@@ -6902,17 +6968,17 @@ define i8* @hxr01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: hxr01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: hxr01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: hxr01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -6922,7 +6988,8 @@ entry:
 define i8* @har02() nounwind {
 ; LINUX-64-STATIC-LABEL: har02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: har02:
@@ -6943,7 +7010,7 @@ define i8* @har02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -6969,19 +7036,19 @@ define i8* @har02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7014,7 +7081,7 @@ define i8* @har03() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har03:
@@ -7037,17 +7104,17 @@ define i8* @har03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7077,7 +7144,7 @@ define i8* @har04() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har04:
@@ -7100,17 +7167,17 @@ define i8* @har04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7120,7 +7187,7 @@ entry:
 define i8* @har05() nounwind {
 ; LINUX-64-STATIC-LABEL: har05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: har05:
@@ -7141,7 +7208,7 @@ define i8* @har05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7165,17 +7232,17 @@ define i8* @har05() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7207,7 +7274,7 @@ define i8* @har06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har06:
@@ -7230,17 +7297,17 @@ define i8* @har06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7270,7 +7337,7 @@ define i8* @har07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har07:
@@ -7293,17 +7360,17 @@ define i8* @har07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7313,7 +7380,7 @@ entry:
 define i8* @har08() nounwind {
 ; LINUX-64-STATIC-LABEL: har08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: har08:
@@ -7333,7 +7400,7 @@ define i8* @har08() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: har08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: har08:
@@ -7356,17 +7423,17 @@ define i8* @har08() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: har08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: har08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: har08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7378,12 +7445,13 @@ entry:
 define i8* @bat00() nounwind {
 ; LINUX-64-STATIC-LABEL: bat00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $src+64, %eax
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bat00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $src+64, %eax
+; LINUX-32-STATIC-NEXT:    leal src+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bat00:
@@ -7399,7 +7467,7 @@ define i8* @bat00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7425,19 +7493,19 @@ define i8* @bat00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7448,12 +7516,13 @@ entry:
 define i8* @bxt00() nounwind {
 ; LINUX-64-STATIC-LABEL: bxt00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xsrc+64, %eax
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bxt00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xsrc+64, %eax
+; LINUX-32-STATIC-NEXT:    leal xsrc+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxt00:
@@ -7469,7 +7538,7 @@ define i8* @bxt00() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bxt00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7495,19 +7564,19 @@ define i8* @bxt00() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bxt00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bxt00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bxt00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7518,12 +7587,13 @@ entry:
 define i8* @bat01() nounwind {
 ; LINUX-64-STATIC-LABEL: bat01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $dst+64, %eax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bat01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+64, %eax
+; LINUX-32-STATIC-NEXT:    leal dst+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bat01:
@@ -7539,7 +7609,7 @@ define i8* @bat01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7565,19 +7635,19 @@ define i8* @bat01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7588,12 +7658,13 @@ entry:
 define i8* @bxt01() nounwind {
 ; LINUX-64-STATIC-LABEL: bxt01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xdst+64, %eax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bxt01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+64, %eax
+; LINUX-32-STATIC-NEXT:    leal xdst+64, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxt01:
@@ -7609,7 +7680,7 @@ define i8* @bxt01() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bxt01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7635,19 +7706,19 @@ define i8* @bxt01() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bxt01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bxt01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bxt01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7658,7 +7729,8 @@ entry:
 define i8* @bat02() nounwind {
 ; LINUX-64-STATIC-LABEL: bat02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -7682,7 +7754,7 @@ define i8* @bat02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -7712,21 +7784,21 @@ define i8* @bat02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
@@ -7762,7 +7834,7 @@ define i8* @bat03() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7786,17 +7858,17 @@ define i8* @bat03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc+64(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc+64(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc+64(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7827,7 +7899,7 @@ define i8* @bat04() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7851,17 +7923,17 @@ define i8* @bat04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst+64(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+64(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst+64(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -7871,7 +7943,7 @@ entry:
 define i8* @bat05() nounwind {
 ; LINUX-64-STATIC-LABEL: bat05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -7895,7 +7967,7 @@ define i8* @bat05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -7923,19 +7995,19 @@ define i8* @bat05() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7969,7 +8041,7 @@ define i8* @bat06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc+64(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq lsrc+{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bat06:
@@ -7992,17 +8064,17 @@ define i8* @bat06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc+64(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc+64(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc+64(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8032,7 +8104,7 @@ define i8* @bat07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst+64(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq ldst+{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bat07:
@@ -8055,17 +8127,17 @@ define i8* @bat07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst+64(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+64(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst+64(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8075,7 +8147,7 @@ entry:
 define i8* @bat08() nounwind {
 ; LINUX-64-STATIC-LABEL: bat08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    addq $64, %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -8098,7 +8170,7 @@ define i8* @bat08() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bat08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    addq $64, %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -8125,19 +8197,19 @@ define i8* @bat08() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bat08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    addq $64, %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bat08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    addq $64, %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bat08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    addq $64, %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -8151,12 +8223,13 @@ entry:
 define i8* @bam00() nounwind {
 ; LINUX-64-STATIC-LABEL: bam00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $src+262144, %eax
+; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
+; LINUX-64-STATIC-NEXT:    addq src@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bam00:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $src+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal src+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bam00:
@@ -8173,7 +8246,7 @@ define i8* @bam00() nounwind {
 ; LINUX-64-PIC-LABEL: bam00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam00:
@@ -8199,19 +8272,19 @@ define i8* @bam00() nounwind {
 ; DARWIN-64-STATIC-LABEL: bam00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8221,12 +8294,13 @@ entry:
 define i8* @bam01() nounwind {
 ; LINUX-64-STATIC-LABEL: bam01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $dst+262144, %eax
+; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
+; LINUX-64-STATIC-NEXT:    addq dst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bam01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $dst+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal dst+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bam01:
@@ -8243,7 +8317,7 @@ define i8* @bam01() nounwind {
 ; LINUX-64-PIC-LABEL: bam01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam01:
@@ -8269,19 +8343,19 @@ define i8* @bam01() nounwind {
 ; DARWIN-64-STATIC-LABEL: bam01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8291,12 +8365,13 @@ entry:
 define i8* @bxm01() nounwind {
 ; LINUX-64-STATIC-LABEL: bxm01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $xdst+262144, %eax
+; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
+; LINUX-64-STATIC-NEXT:    addq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bxm01:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
-; LINUX-32-STATIC-NEXT:    movl $xdst+262144, %eax
+; LINUX-32-STATIC-NEXT:    leal xdst+262144, %eax
 ; LINUX-32-STATIC-NEXT:    retl
 ;
 ; LINUX-32-PIC-LABEL: bxm01:
@@ -8313,7 +8388,7 @@ define i8* @bxm01() nounwind {
 ; LINUX-64-PIC-LABEL: bxm01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bxm01:
@@ -8339,19 +8414,19 @@ define i8* @bxm01() nounwind {
 ; DARWIN-64-STATIC-LABEL: bxm01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bxm01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bxm01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8361,8 +8436,9 @@ entry:
 define i8* @bam02() nounwind {
 ; LINUX-64-STATIC-LABEL: bam02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-STATIC-NEXT:    addq ptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq (%rcx), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bam02:
@@ -8385,7 +8461,7 @@ define i8* @bam02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
 ; LINUX-64-PIC-NEXT:    addq (%rcx), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -8415,21 +8491,21 @@ define i8* @bam02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
 ; DARWIN-64-STATIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
 ; DARWIN-64-DYNAMIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
 ; DARWIN-64-PIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-PIC-NEXT:    retq
@@ -8466,7 +8542,7 @@ define i8* @bam03() nounwind {
 ; LINUX-64-PIC-LABEL: bam03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam03:
@@ -8489,17 +8565,17 @@ define i8* @bam03() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc+262144(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc+262144(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc+262144(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _dsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8531,7 +8607,7 @@ define i8* @bam04() nounwind {
 ; LINUX-64-PIC-LABEL: bam04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam04:
@@ -8554,17 +8630,17 @@ define i8* @bam04() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst+262144(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+262144(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst+262144(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _ddst+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8575,7 +8651,7 @@ define i8* @bam05() nounwind {
 ; LINUX-64-STATIC-LABEL: bam05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-STATIC-NEXT:    addq dptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bam05:
@@ -8598,7 +8674,7 @@ define i8* @bam05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
 ; LINUX-64-PIC-NEXT:    addq (%rcx), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -8627,19 +8703,19 @@ define i8* @bam05() nounwind {
 ; DARWIN-64-STATIC-LABEL: bam05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8672,7 +8748,7 @@ define i8* @bam06() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc+262144(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq lsrc+{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam06:
@@ -8695,17 +8771,17 @@ define i8* @bam06() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc+262144(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc+262144(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc+262144(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _lsrc+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8735,7 +8811,7 @@ define i8* @bam07() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst+262144(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq ldst+{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam07:
@@ -8758,17 +8834,17 @@ define i8* @bam07() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst+262144(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+262144(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst+262144(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq _ldst+{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8779,7 +8855,7 @@ define i8* @bam08() nounwind {
 ; LINUX-64-STATIC-LABEL: bam08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-STATIC-NEXT:    addq lptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    addq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: bam08:
@@ -8802,7 +8878,7 @@ define i8* @bam08() nounwind {
 ; LINUX-64-PIC-LABEL: bam08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    addq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    addq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: bam08:
@@ -8829,19 +8905,19 @@ define i8* @bam08() nounwind {
 ; DARWIN-64-STATIC-LABEL: bam08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    addq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    addq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    addq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    addq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -8854,7 +8930,8 @@ entry:
 define i8* @cat00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cat00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq src+64(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cat00:
@@ -8877,7 +8954,7 @@ define i8* @cat00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -8906,19 +8983,19 @@ define i8* @cat00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -8932,7 +9009,8 @@ entry:
 define i8* @cxt00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cxt00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xsrc+64(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cxt00:
@@ -8955,7 +9033,7 @@ define i8* @cxt00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cxt00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -8984,19 +9062,19 @@ define i8* @cxt00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cxt00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cxt00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cxt00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9010,7 +9088,8 @@ entry:
 define i8* @cat01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cat01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq dst+64(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cat01:
@@ -9033,7 +9112,7 @@ define i8* @cat01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9062,19 +9141,19 @@ define i8* @cat01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9088,7 +9167,8 @@ entry:
 define i8* @cxt01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cxt01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xdst+64(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cxt01:
@@ -9111,7 +9191,7 @@ define i8* @cxt01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cxt01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9140,19 +9220,19 @@ define i8* @cxt01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cxt01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cxt01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cxt01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9166,7 +9246,8 @@ entry:
 define i8* @cat02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cat02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -9192,7 +9273,7 @@ define i8* @cat02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -9225,21 +9306,21 @@ define i8* @cat02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
@@ -9278,7 +9359,7 @@ define i8* @cat03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9305,19 +9386,19 @@ define i8* @cat03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9354,7 +9435,7 @@ define i8* @cat04(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9381,19 +9462,19 @@ define i8* @cat04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9407,7 +9488,7 @@ entry:
 define i8* @cat05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cat05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -9433,7 +9514,7 @@ define i8* @cat05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -9464,19 +9545,19 @@ define i8* @cat05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9513,7 +9594,7 @@ define i8* @cat06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9540,19 +9621,19 @@ define i8* @cat06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9588,7 +9669,7 @@ define i8* @cat07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9615,19 +9696,19 @@ define i8* @cat07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9641,7 +9722,7 @@ entry:
 define i8* @cat08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cat08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -9666,7 +9747,7 @@ define i8* @cat08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cat08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9696,19 +9777,19 @@ define i8* @cat08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cat08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cat08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cat08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 64(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9723,7 +9804,8 @@ entry:
 define i8* @cam00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cam00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq src+262144(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq src@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cam00:
@@ -9746,7 +9828,7 @@ define i8* @cam00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq src@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq src@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9775,19 +9857,19 @@ define i8* @cam00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _src@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _src@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9801,7 +9883,8 @@ entry:
 define i8* @cxm00(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cxm00:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xsrc+262144(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cxm00:
@@ -9824,7 +9907,7 @@ define i8* @cxm00(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cxm00:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9853,19 +9936,19 @@ define i8* @cxm00(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cxm00:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cxm00:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cxm00:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xsrc@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xsrc@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9879,7 +9962,8 @@ entry:
 define i8* @cam01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cam01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq dst+262144(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq dst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cam01:
@@ -9902,7 +9986,7 @@ define i8* @cam01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -9931,19 +10015,19 @@ define i8* @cam01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _dst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -9957,7 +10041,8 @@ entry:
 define i8* @cxm01(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cxm01:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    leaq xdst+262144(,%rdi,4), %rax
+; LINUX-64-STATIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: cxm01:
@@ -9980,7 +10065,7 @@ define i8* @cxm01(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cxm01:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq xdst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq xdst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10009,19 +10094,19 @@ define i8* @cxm01(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cxm01:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cxm01:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cxm01:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _xdst@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _xdst@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10035,7 +10120,8 @@ entry:
 define i8* @cam02(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cam02:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq ptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -10061,7 +10147,7 @@ define i8* @cam02(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -10094,21 +10180,21 @@ define i8* @cam02(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    movq (%rax), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
@@ -10147,7 +10233,7 @@ define i8* @cam03(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam03:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dsrc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dsrc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10174,19 +10260,19 @@ define i8* @cam03(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam03:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam03:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam03:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10223,7 +10309,7 @@ define i8* @cam04(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam04:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq ddst@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq ddst@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10250,19 +10336,19 @@ define i8* @cam04(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam04:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam04:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam04:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ddst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10276,7 +10362,7 @@ entry:
 define i8* @cam05(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cam05:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq dptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -10302,7 +10388,7 @@ define i8* @cam05(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    movq (%rax), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -10333,19 +10419,19 @@ define i8* @cam05(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam05:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam05:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam05:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _dptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10382,7 +10468,7 @@ define i8* @cam06(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam06:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq lsrc(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10409,19 +10495,19 @@ define i8* @cam06(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam06:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam06:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam06:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lsrc(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10457,7 +10543,7 @@ define i8* @cam07(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam07:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq ldst(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10484,19 +10570,19 @@ define i8* @cam07(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam07:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam07:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam07:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _ldst(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10510,7 +10596,7 @@ entry:
 define i8* @cam08(i64 %i) nounwind {
 ; LINUX-64-STATIC-LABEL: cam08:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -10535,7 +10621,7 @@ define i8* @cam08(i64 %i) nounwind {
 ;
 ; LINUX-64-PIC-LABEL: cam08:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq lptr(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -10565,19 +10651,19 @@ define i8* @cam08(i64 %i) nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: cam08:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: cam08:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: cam08:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _lptr(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    leaq 262144(%rax,%rdi,4), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -10593,26 +10679,26 @@ define void @lcallee() nounwind {
 ; LINUX-64-STATIC-LABEL: lcallee:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
-; LINUX-64-STATIC-NEXT:    callq x
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
+; LINUX-64-STATIC-NEXT:    callq x@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: lcallee:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
-; LINUX-32-STATIC-NEXT:    calll x
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
+; LINUX-32-STATIC-NEXT:    calll x@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -10744,26 +10830,26 @@ define internal void @dcallee() nounwind {
 ; LINUX-64-STATIC-LABEL: dcallee:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
-; LINUX-64-STATIC-NEXT:    callq y
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
+; LINUX-64-STATIC-NEXT:    callq y@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: dcallee:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
-; LINUX-32-STATIC-NEXT:    calll y
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
+; LINUX-32-STATIC-NEXT:    calll y@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -10894,7 +10980,7 @@ declare void @y()
 define void ()* @address() nounwind {
 ; LINUX-64-STATIC-LABEL: address:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    movl $callee, %eax
+; LINUX-64-STATIC-NEXT:    movq callee@{{.*}}(%rip), %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: address:
@@ -10914,7 +11000,7 @@ define void ()* @address() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: address:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq callee@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq callee@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: address:
@@ -10937,17 +11023,17 @@ define void ()* @address() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: address:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    movq _callee@GOTPCREL(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    movq _callee@{{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: address:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    movq _callee@GOTPCREL(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    movq _callee@{{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: address:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    movq _callee@GOTPCREL(%rip), %rax
+; DARWIN-64-PIC-NEXT:    movq _callee@{{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -10979,7 +11065,7 @@ define void ()* @laddress() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: laddress:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    movq lcallee@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq lcallee@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: laddress:
@@ -11002,17 +11088,17 @@ define void ()* @laddress() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: laddress:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _lcallee(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: laddress:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _lcallee(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: laddress:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _lcallee(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -11042,7 +11128,7 @@ define void ()* @daddress() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: daddress:
 ; LINUX-64-PIC:       # %bb.0: # %entry
-; LINUX-64-PIC-NEXT:    leaq dcallee(%rip), %rax
+; LINUX-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
 ; DARWIN-32-STATIC-LABEL: daddress:
@@ -11065,17 +11151,17 @@ define void ()* @daddress() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: daddress:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
-; DARWIN-64-STATIC-NEXT:    leaq _dcallee(%rip), %rax
+; DARWIN-64-STATIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: daddress:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
-; DARWIN-64-DYNAMIC-NEXT:    leaq _dcallee(%rip), %rax
+; DARWIN-64-DYNAMIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: daddress:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
-; DARWIN-64-PIC-NEXT:    leaq _dcallee(%rip), %rax
+; DARWIN-64-PIC-NEXT:    leaq {{.*}}(%rip), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
 entry:
@@ -11086,16 +11172,16 @@ define void @caller() nounwind {
 ; LINUX-64-STATIC-LABEL: caller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq callee
-; LINUX-64-STATIC-NEXT:    callq callee
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: caller:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll callee
-; LINUX-32-STATIC-NEXT:    calll callee
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -11368,14 +11454,14 @@ define void @tailcaller() nounwind {
 ; LINUX-64-STATIC-LABEL: tailcaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq callee
+; LINUX-64-STATIC-NEXT:    callq callee@PLT
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: tailcaller:
 ; LINUX-32-STATIC:       # %bb.0: # %entry
 ; LINUX-32-STATIC-NEXT:    subl $12, %esp
-; LINUX-32-STATIC-NEXT:    calll callee
+; LINUX-32-STATIC-NEXT:    calll callee@PLT
 ; LINUX-32-STATIC-NEXT:    addl $12, %esp
 ; LINUX-32-STATIC-NEXT:    retl
 ;
@@ -11616,10 +11702,11 @@ entry:
 define void @icaller() nounwind {
 ; LINUX-64-STATIC-LABEL: icaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *ifunc(%rip)
-; LINUX-64-STATIC-NEXT:    callq *ifunc(%rip)
-; LINUX-64-STATIC-NEXT:    popq %rax
+; LINUX-64-STATIC-NEXT:    pushq %rbx
+; LINUX-64-STATIC-NEXT:    movq ifunc@{{.*}}(%rip), %rbx
+; LINUX-64-STATIC-NEXT:    callq *(%rbx)
+; LINUX-64-STATIC-NEXT:    callq *(%rbx)
+; LINUX-64-STATIC-NEXT:    popq %rbx
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: icaller:
@@ -11651,7 +11738,7 @@ define void @icaller() nounwind {
 ; LINUX-64-PIC-LABEL: icaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rbx
-; LINUX-64-PIC-NEXT:    movq ifunc@GOTPCREL(%rip), %rbx
+; LINUX-64-PIC-NEXT:    movq ifunc@{{.*}}(%rip), %rbx
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    popq %rbx
@@ -11693,7 +11780,7 @@ define void @icaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: icaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rbx
-; DARWIN-64-STATIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-STATIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-STATIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-STATIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-STATIC-NEXT:    popq %rbx
@@ -11702,7 +11789,7 @@ define void @icaller() nounwind {
 ; DARWIN-64-DYNAMIC-LABEL: icaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rbx
-; DARWIN-64-DYNAMIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-DYNAMIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-DYNAMIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rbx
@@ -11711,7 +11798,7 @@ define void @icaller() nounwind {
 ; DARWIN-64-PIC-LABEL: icaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rbx
-; DARWIN-64-PIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-PIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-PIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-PIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-PIC-NEXT:    popq %rbx
@@ -11729,8 +11816,8 @@ define void @dicaller() nounwind {
 ; LINUX-64-STATIC-LABEL: dicaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *difunc(%rip)
-; LINUX-64-STATIC-NEXT:    callq *difunc(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -11763,7 +11850,7 @@ define void @dicaller() nounwind {
 ; LINUX-64-PIC-LABEL: dicaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rbx
-; LINUX-64-PIC-NEXT:    movq difunc@GOTPCREL(%rip), %rbx
+; LINUX-64-PIC-NEXT:    movq difunc@{{.*}}(%rip), %rbx
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    popq %rbx
@@ -11801,24 +11888,24 @@ define void @dicaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: dicaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rax
-; DARWIN-64-STATIC-NEXT:    callq *_difunc(%rip)
-; DARWIN-64-STATIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    popq %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: dicaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rax
-; DARWIN-64-DYNAMIC-NEXT:    callq *_difunc(%rip)
-; DARWIN-64-DYNAMIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: dicaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rax
-; DARWIN-64-PIC-NEXT:    callq *_difunc(%rip)
-; DARWIN-64-PIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    popq %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -11834,8 +11921,8 @@ define void @licaller() nounwind {
 ; LINUX-64-STATIC-LABEL: licaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *lifunc(%rip)
-; LINUX-64-STATIC-NEXT:    callq *lifunc(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -11865,8 +11952,8 @@ define void @licaller() nounwind {
 ; LINUX-64-PIC-LABEL: licaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rax
-; LINUX-64-PIC-NEXT:    callq *lifunc(%rip)
-; LINUX-64-PIC-NEXT:    callq *lifunc(%rip)
+; LINUX-64-PIC-NEXT:    callq *{{.*}}(%rip)
+; LINUX-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    popq %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -11902,24 +11989,24 @@ define void @licaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: licaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rax
-; DARWIN-64-STATIC-NEXT:    callq *_lifunc(%rip)
-; DARWIN-64-STATIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    popq %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: licaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rax
-; DARWIN-64-DYNAMIC-NEXT:    callq *_lifunc(%rip)
-; DARWIN-64-DYNAMIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: licaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rax
-; DARWIN-64-PIC-NEXT:    callq *_lifunc(%rip)
-; DARWIN-64-PIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    popq %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -11934,10 +12021,11 @@ entry:
 define void @itailcaller() nounwind {
 ; LINUX-64-STATIC-LABEL: itailcaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
-; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *ifunc(%rip)
-; LINUX-64-STATIC-NEXT:    callq *ifunc(%rip)
-; LINUX-64-STATIC-NEXT:    popq %rax
+; LINUX-64-STATIC-NEXT:    pushq %rbx
+; LINUX-64-STATIC-NEXT:    movq ifunc@{{.*}}(%rip), %rbx
+; LINUX-64-STATIC-NEXT:    callq *(%rbx)
+; LINUX-64-STATIC-NEXT:    callq *(%rbx)
+; LINUX-64-STATIC-NEXT:    popq %rbx
 ; LINUX-64-STATIC-NEXT:    retq
 ;
 ; LINUX-32-STATIC-LABEL: itailcaller:
@@ -11969,7 +12057,7 @@ define void @itailcaller() nounwind {
 ; LINUX-64-PIC-LABEL: itailcaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rbx
-; LINUX-64-PIC-NEXT:    movq ifunc@GOTPCREL(%rip), %rbx
+; LINUX-64-PIC-NEXT:    movq ifunc@{{.*}}(%rip), %rbx
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    callq *(%rbx)
 ; LINUX-64-PIC-NEXT:    popq %rbx
@@ -12011,7 +12099,7 @@ define void @itailcaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: itailcaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rbx
-; DARWIN-64-STATIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-STATIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-STATIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-STATIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-STATIC-NEXT:    popq %rbx
@@ -12020,7 +12108,7 @@ define void @itailcaller() nounwind {
 ; DARWIN-64-DYNAMIC-LABEL: itailcaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rbx
-; DARWIN-64-DYNAMIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-DYNAMIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-DYNAMIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-DYNAMIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rbx
@@ -12029,7 +12117,7 @@ define void @itailcaller() nounwind {
 ; DARWIN-64-PIC-LABEL: itailcaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rbx
-; DARWIN-64-PIC-NEXT:    movq _ifunc@GOTPCREL(%rip), %rbx
+; DARWIN-64-PIC-NEXT:    movq _ifunc@{{.*}}(%rip), %rbx
 ; DARWIN-64-PIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-PIC-NEXT:    callq *(%rbx)
 ; DARWIN-64-PIC-NEXT:    popq %rbx
@@ -12047,7 +12135,7 @@ define void @ditailcaller() nounwind {
 ; LINUX-64-STATIC-LABEL: ditailcaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *difunc(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -12076,7 +12164,7 @@ define void @ditailcaller() nounwind {
 ; LINUX-64-PIC-LABEL: ditailcaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rax
-; LINUX-64-PIC-NEXT:    movq difunc@GOTPCREL(%rip), %rax
+; LINUX-64-PIC-NEXT:    movq difunc@{{.*}}(%rip), %rax
 ; LINUX-64-PIC-NEXT:    callq *(%rax)
 ; LINUX-64-PIC-NEXT:    popq %rax
 ; LINUX-64-PIC-NEXT:    retq
@@ -12108,21 +12196,21 @@ define void @ditailcaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: ditailcaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rax
-; DARWIN-64-STATIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    popq %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: ditailcaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rax
-; DARWIN-64-DYNAMIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: ditailcaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rax
-; DARWIN-64-PIC-NEXT:    callq *_difunc(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    popq %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -12136,7 +12224,7 @@ define void @litailcaller() nounwind {
 ; LINUX-64-STATIC-LABEL: litailcaller:
 ; LINUX-64-STATIC:       # %bb.0: # %entry
 ; LINUX-64-STATIC-NEXT:    pushq %rax
-; LINUX-64-STATIC-NEXT:    callq *lifunc(%rip)
+; LINUX-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-STATIC-NEXT:    popq %rax
 ; LINUX-64-STATIC-NEXT:    retq
 ;
@@ -12164,7 +12252,7 @@ define void @litailcaller() nounwind {
 ; LINUX-64-PIC-LABEL: litailcaller:
 ; LINUX-64-PIC:       # %bb.0: # %entry
 ; LINUX-64-PIC-NEXT:    pushq %rax
-; LINUX-64-PIC-NEXT:    callq *lifunc(%rip)
+; LINUX-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; LINUX-64-PIC-NEXT:    popq %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -12195,21 +12283,21 @@ define void @litailcaller() nounwind {
 ; DARWIN-64-STATIC-LABEL: litailcaller:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
 ; DARWIN-64-STATIC-NEXT:    pushq %rax
-; DARWIN-64-STATIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-STATIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-STATIC-NEXT:    popq %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: litailcaller:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
 ; DARWIN-64-DYNAMIC-NEXT:    pushq %rax
-; DARWIN-64-DYNAMIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-DYNAMIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-DYNAMIC-NEXT:    popq %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: litailcaller:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
 ; DARWIN-64-PIC-NEXT:    pushq %rax
-; DARWIN-64-PIC-NEXT:    callq *_lifunc(%rip)
+; DARWIN-64-PIC-NEXT:    callq *{{.*}}(%rip)
 ; DARWIN-64-PIC-NEXT:    popq %rax
 ; DARWIN-64-PIC-NEXT:    retq
 

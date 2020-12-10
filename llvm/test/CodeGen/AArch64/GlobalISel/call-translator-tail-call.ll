@@ -166,7 +166,7 @@ define void @test_bad_call_conv() {
 }
 
 ; Shouldn't tail call when the caller has byval arguments.
-define void @test_byval(i8* byval %ptr) {
+define void @test_byval(i8* byval(i8) %ptr) {
   ; COMMON-LABEL: name: test_byval
   ; COMMON: bb.1 (%ir-block.0):
   ; COMMON:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0

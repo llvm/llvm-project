@@ -24,8 +24,10 @@ class Function;
 class Module;
 class OptimizationRemarkEmitter;
 
-/// There are 3 scenarios we can use the InlineAdvisor:
+/// There are 4 scenarios we can use the InlineAdvisor:
 /// - Default - use manual heuristics.
+///
+/// - MandatoryOnly - only mandatory inlinings (i.e. AlwaysInline).
 ///
 /// - Release mode, the expected mode for production, day to day deployments.
 /// In this mode, when building the compiler, we also compile a pre-trained ML
@@ -37,7 +39,12 @@ class OptimizationRemarkEmitter;
 /// requires the full C Tensorflow API library, and evaluates models
 /// dynamically. This mode also permits generating training logs, for offline
 /// training.
-enum class InliningAdvisorMode : int { Default, Release, Development };
+enum class InliningAdvisorMode : int {
+  Default,
+  MandatoryOnly,
+  Release,
+  Development
+};
 
 class InlineAdvisor;
 /// Capture state between an inlining decision having had been made, and
@@ -176,6 +183,20 @@ private:
   void onPassExit() override { freeDeletedFunctions(); }
 
   InlineParams Params;
+};
+
+/// Advisor recommending only mandatory (AlwaysInline) cases.
+class MandatoryInlineAdvisor final : public InlineAdvisor {
+  std::unique_ptr<InlineAdvice> getAdvice(CallBase &CB) override;
+
+public:
+  MandatoryInlineAdvisor(FunctionAnalysisManager &FAM) : InlineAdvisor(FAM) {}
+
+  enum class MandatoryInliningKind { NotMandatory, Always, Never };
+
+  static MandatoryInliningKind getMandatoryKind(CallBase &CB,
+                                                FunctionAnalysisManager &FAM,
+                                                OptimizationRemarkEmitter &ORE);
 };
 
 /// The InlineAdvisorAnalysis is a module pass because the InlineAdvisor

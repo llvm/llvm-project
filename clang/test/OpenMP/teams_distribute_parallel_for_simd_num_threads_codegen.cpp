@@ -52,9 +52,9 @@ int tmain() {
 int main() {
   S s(0);
   char a = s;
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 // CHECK: invoke{{.+}} [[TMAIN_5:@.+]]()
 // CHECK: invoke{{.+}} [[TMAIN_1:@.+]]()
@@ -88,16 +88,16 @@ int main() {
 
 // tmain 5
 // CHECK-DAG: define {{.*}}i{{[0-9]+}} [[TMAIN_5]]()
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[T_OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[T_OFFLOADING_FUN_1:@.+]](
 
 // tmain 1
 // CHECK-DAG: define {{.*}}i{{[0-9]+}} [[TMAIN_1]]()
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[T_OFFLOADING_FUN_2:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[T_OFFLOADING_FUN_3:@.+]](
 
 // CHECK: define internal void [[T_OFFLOADING_FUN_0]](

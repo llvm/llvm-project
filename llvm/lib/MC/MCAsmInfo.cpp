@@ -28,6 +28,12 @@ static cl::opt<DefaultOnOff> DwarfExtendedLoc(
                clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
     cl::init(Default));
 
+cl::opt<cl::boolOrDefault> UseLEB128Directives(
+    "use-leb128-directives", cl::Hidden,
+    cl::desc(
+        "Disable the usage of LEB128 directives, and generate .byte instead."),
+    cl::init(cl::BOU_UNSET));
+
 MCAsmInfo::MCAsmInfo() {
   SeparatorString = ";";
   CommentString = "#";
@@ -51,6 +57,8 @@ MCAsmInfo::MCAsmInfo() {
   WeakDirective = "\t.weak\t";
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
+  if (UseLEB128Directives != cl::BOU_UNSET)
+    HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
 
   // FIXME: Clang's logic should be synced with the logic used to initialize
   //        this member and the two implementations should be merged.

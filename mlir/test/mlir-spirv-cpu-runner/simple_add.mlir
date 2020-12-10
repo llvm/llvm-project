@@ -54,8 +54,8 @@ module attributes {
     call @print_memref_f32(%result) : (memref<*xf32>) -> ()
     return
   }
-  func @fillF32Buffer1D(%arg0 : memref<?xf32>, %arg1 : f32)
-  func @fillF32Buffer2D(%arg0 : memref<?x?xf32>, %arg1 : f32)
-  func @fillF32Buffer3D(%arg0 : memref<?x?x?xf32>, %arg1 : f32)
-  func @print_memref_f32(%arg0 : memref<*xf32>)
+  func private @fillF32Buffer1D(%arg0 : memref<?xf32>, %arg1 : f32)
+  func private @fillF32Buffer2D(%arg0 : memref<?x?xf32>, %arg1 : f32)
+  func private @fillF32Buffer3D(%arg0 : memref<?x?x?xf32>, %arg1 : f32)
+  func private @print_memref_f32(%arg0 : memref<*xf32>)
 }

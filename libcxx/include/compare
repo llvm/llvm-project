@@ -701,8 +701,8 @@ constexpr _ClassifyCompCategory __type_to_enum() noexcept {
 
 template <size_t _Size>
 constexpr _ClassifyCompCategory
-__compute_comp_type(std::array<_ClassifyCompCategory, _Size> __types) {
-  std::array<int, _CCC_Size> __seen = {};
+__compute_comp_type(array<_ClassifyCompCategory, _Size> __types) {
+  array<int, _CCC_Size> __seen = {};
   for (auto __type : __types)
     ++__seen[__type];
   if (__seen[_None])

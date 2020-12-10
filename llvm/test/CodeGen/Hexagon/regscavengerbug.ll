@@ -13,7 +13,7 @@ target triple = "hexagon-unknown-linux-gnu"
 %5 = type { i32 (...)** }
 %6 = type { %3, %3 }
 
-declare void @f0(%3* sret, %0*, %3*)
+declare void @f0(%3* sret(%3), %0*, %3*)
 
 ; Function Attrs: nounwind
 define void @f1(%4* %a0, %0* nocapture %a1, %0* nocapture %a2) #0 align 2 {
@@ -98,7 +98,7 @@ b3:                                               ; preds = %b0
   %v50 = load double, double* %v41, align 8, !tbaa !6
   %v51 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 2
   store double %v50, double* %v51, align 8, !tbaa !6
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v24)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v24)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v25, i8* align 8 %v42, i32 24, i1 false)
   %v52 = load double, double* %v39, align 8, !tbaa !6
   %v53 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0
@@ -110,7 +110,7 @@ b3:                                               ; preds = %b0
   %v57 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 0, i32 1, i32 0, i32 2
   store double %v56, double* %v57, align 8, !tbaa !6
   %v58 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 0, i32 1
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v58)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v58)
   %v59 = bitcast %3* %v58 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v59, i8* align 8 %v42, i32 24, i1 false)
   %v60 = load double, double* %v39, align 8, !tbaa !6
@@ -123,7 +123,7 @@ b3:                                               ; preds = %b0
   %v65 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 1, i32 0, i32 0, i32 2
   store double %v64, double* %v65, align 8, !tbaa !6
   %v66 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 1, i32 0
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v66)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v66)
   %v67 = bitcast %3* %v66 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v67, i8* align 8 %v42, i32 24, i1 false)
   %v68 = load double, double* %v39, align 8, !tbaa !6
@@ -136,7 +136,7 @@ b3:                                               ; preds = %b0
   %v73 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 1, i32 1, i32 0, i32 2
   store double %v72, double* %v73, align 8, !tbaa !6
   %v74 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 1, i32 1
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v74)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v74)
   %v75 = bitcast %3* %v74 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v75, i8* align 8 %v42, i32 24, i1 false)
   %v76 = load double, double* %v45, align 8, !tbaa !6
@@ -149,7 +149,7 @@ b3:                                               ; preds = %b0
   %v81 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 2
   store double %v80, double* %v81, align 8, !tbaa !6
   %v82 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 0, i32 0
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v82)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v82)
   %v83 = bitcast %3* %v82 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v83, i8* align 8 %v42, i32 24, i1 false)
   %v84 = load double, double* %v45, align 8, !tbaa !6
@@ -162,7 +162,7 @@ b3:                                               ; preds = %b0
   %v89 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 2
   store double %v88, double* %v89, align 8, !tbaa !6
   %v90 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 0, i32 1
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v90)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v90)
   %v91 = bitcast %3* %v90 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v91, i8* align 8 %v42, i32 24, i1 false)
   %v92 = load double, double* %v45, align 8, !tbaa !6
@@ -175,7 +175,7 @@ b3:                                               ; preds = %b0
   %v97 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 1, i32 0, i32 0, i32 2
   store double %v96, double* %v97, align 8, !tbaa !6
   %v98 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 1, i32 0
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v98)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v98)
   %v99 = bitcast %3* %v98 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v99, i8* align 8 %v42, i32 24, i1 false)
   %v100 = load double, double* %v45, align 8, !tbaa !6
@@ -188,7 +188,7 @@ b3:                                               ; preds = %b0
   %v105 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 1, i32 1, i32 0, i32 2
   store double %v104, double* %v105, align 8, !tbaa !6
   %v106 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 1, i32 1, i32 1
-  call void @f0(%3* sret %v2, %0* %v3, %3* %v106)
+  call void @f0(%3* sret(%3) %v2, %0* %v3, %3* %v106)
   %v107 = bitcast %3* %v106 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %v107, i8* align 8 %v42, i32 24, i1 false)
   %v108 = getelementptr inbounds [2 x [2 x [2 x %3]]], [2 x [2 x [2 x %3]]]* %v1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0

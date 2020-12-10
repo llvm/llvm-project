@@ -183,12 +183,12 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // WIN64:   call void @"??1SmallWithDtor@@QEAA@XZ"
 // WIN64: }
 // WOA64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i64 %s.coerce) {{.*}} {
-// WOA64:   call void @"??1SmallWithDtor@@QEAA@XZ"(%struct.SmallWithDtor* %s)
+// WOA64:   call void @"??1SmallWithDtor@@QEAA@XZ"(%struct.SmallWithDtor* {{[^,]*}} %s)
 // WOA64: }
 
 // FIXME: MSVC incompatible!
 // WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(%struct.SmallWithDtor* %s) {{.*}} {
-// WOA:   call arm_aapcs_vfpcc void @"??1SmallWithDtor@@QAA@XZ"(%struct.SmallWithDtor* %s)
+// WOA:   call arm_aapcs_vfpcc void @"??1SmallWithDtor@@QAA@XZ"(%struct.SmallWithDtor* {{[^,]*}} %s)
 // WOA: }
 
 
@@ -294,52 +294,52 @@ void pass_ref_field() {
 class Class {
  public:
   Small thiscall_method_small() { return Small(); }
-  // LINUX: define {{.*}} void @_ZN5Class21thiscall_method_smallEv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result, %class.Class* %this)
-  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small@Class@@QAE?AUSmall@@XZ"(%class.Class* %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* %this, %struct.Small* inreg noalias sret(%struct.Small) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class21thiscall_method_smallEv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result, %class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small@Class@@QAE?AUSmall@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Small* inreg noalias sret(%struct.Small) align 4 %agg.result)
 
   SmallWithCtor thiscall_method_small_with_ctor() { return SmallWithCtor(); }
-  // LINUX: define {{.*}} void @_ZN5Class31thiscall_method_small_with_ctorEv(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result, %class.Class* %this)
-  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small_with_ctor@Class@@QAE?AUSmallWithCtor@@XZ"(%class.Class* %this, %struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(%class.Class* %this, %struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(%class.Class* %this, %struct.SmallWithCtor* inreg noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class31thiscall_method_small_with_ctorEv(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result, %class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small_with_ctor@Class@@QAE?AUSmallWithCtor@@XZ"(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* inreg noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
 
   Small __cdecl cdecl_method_small() { return Small(); }
-  // LINUX: define {{.*}} void @_ZN5Class18cdecl_method_smallEv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result, %class.Class* %this)
-  // WIN32: define {{.*}} void @"?cdecl_method_small@Class@@QAA?AUSmall@@XZ"(%class.Class* %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class18cdecl_method_smallEv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result, %class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?cdecl_method_small@Class@@QAA?AUSmall@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_small@Class@@QEAA?AUSmall@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
 
   Big __cdecl cdecl_method_big() { return Big(); }
-  // LINUX: define {{.*}} void @_ZN5Class16cdecl_method_bigEv(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result, %class.Class* %this)
-  // WIN32: define {{.*}} void @"?cdecl_method_big@Class@@QAA?AUBig@@XZ"(%class.Class* %this, %struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(%class.Class* %this, %struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(%class.Class* %this, %struct.Big* inreg noalias sret(%struct.Big) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class16cdecl_method_bigEv(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result, %class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?cdecl_method_big@Class@@QAA?AUBig@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(%class.Class* {{[^,]*}} %this, %struct.Big* inreg noalias sret(%struct.Big) align 4 %agg.result)
 
   void thiscall_method_arg(Empty s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Empty(%class.Class* %this)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmpty@@@Z"(%class.Class* %this, %struct.Empty* byval(%struct.Empty) align 4 %s)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmpty@@@Z"(%class.Class* %this, i8 %s.coerce)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Empty(%class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmpty@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Empty* byval(%struct.Empty) align 4 %s)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmpty@@@Z"(%class.Class* {{[^,]*}} %this, i8 %s.coerce)
 
   void thiscall_method_arg(EmptyWithCtor s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13EmptyWithCtor(%class.Class* %this)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmptyWithCtor@@@Z"(%class.Class* %this, %struct.EmptyWithCtor* byval(%struct.EmptyWithCtor) align 4 %s)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmptyWithCtor@@@Z"(%class.Class* %this, i8 %s.coerce)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13EmptyWithCtor(%class.Class* {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmptyWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, %struct.EmptyWithCtor* byval(%struct.EmptyWithCtor) align 4 %s)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmptyWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i8 %s.coerce)
 
   void thiscall_method_arg(Small s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Small(%class.Class* %this, i32 %s.0)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUSmall@@@Z"(%class.Class* %this, i32 %s.0)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmall@@@Z"(%class.Class* %this, i32 %s.coerce)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Small(%class.Class* {{[^,]*}} %this, i32 %s.0)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUSmall@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.0)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmall@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.coerce)
 
   void thiscall_method_arg(SmallWithCtor s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13SmallWithCtor(%class.Class* %this, %struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUSmallWithCtor@@@Z"(%class.Class* %this, i32 %s.0)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmallWithCtor@@@Z"(%class.Class* %this, i32 %s.coerce)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13SmallWithCtor(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUSmallWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.0)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmallWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.coerce)
 
   void thiscall_method_arg(Big s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE3Big(%class.Class* %this, %struct.Big* byval(%struct.Big) align 4 %s)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUBig@@@Z"(%class.Class* %this, %struct.Big* byval(%struct.Big) align 4 %s)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUBig@@@Z"(%class.Class* %this, %struct.Big* %s)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE3Big(%class.Class* {{[^,]*}} %this, %struct.Big* byval(%struct.Big) align 4 %s)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* byval(%struct.Big) align 4 %s)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* %s)
 };
 
 void use_class() {
@@ -460,11 +460,11 @@ struct C final : A, B {
 };
 void C::g() { return h(SmallWithDtor()); }
 
-// WIN32-LABEL: define dso_local x86_thiscallcc void @"?g@C@pr30293@@QAEXXZ"(%"struct.pr30293::C"* %this)
+// WIN32-LABEL: define dso_local x86_thiscallcc void @"?g@C@pr30293@@QAEXXZ"(%"struct.pr30293::C"* {{[^,]*}} %this)
 // WIN32: call x86_thiscallcc %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
 // WIN32: call void @"?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca %{{[^,)]*}})
 // WIN32: declare dso_local void @"?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca)
 
-// WIN64-LABEL: define dso_local void @"?g@C@pr30293@@QEAAXXZ"(%"struct.pr30293::C"* %this)
+// WIN64-LABEL: define dso_local void @"?g@C@pr30293@@QEAAXXZ"(%"struct.pr30293::C"* {{[^,]*}} %this)
 // WIN64: declare dso_local void @"?h@C@pr30293@@UEAAXUSmallWithDtor@@@Z"(i8*, i32)
 }

@@ -312,7 +312,7 @@ define i32 @sub_U320_usubo(%struct.U320* nocapture dereferenceable(40) %0, i64 %
 
 %struct.U192 = type { [3 x i64] }
 
-define void @PR39464(%struct.U192* noalias nocapture sret %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) {
+define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) {
 ; CHECK-LABEL: PR39464:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -366,7 +366,7 @@ define void @PR39464(%struct.U192* noalias nocapture sret %0, %struct.U192* noca
 
 ; The 256-bit subtraction implementation using two inlined usubo procedures for U128 type { i64, i64 }.
 ; This is similar to how LLVM legalize types in CodeGen.
-define void @sub_U256_without_i128_or_recursive(%uint256* sret %0, %uint256* %1, %uint256* %2) nounwind {
+define void @sub_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %uint256* %1, %uint256* %2) nounwind {
 ; CHECK-LABEL: sub_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax

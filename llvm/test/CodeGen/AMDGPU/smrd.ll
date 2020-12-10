@@ -120,7 +120,6 @@ entry:
 ; GCN-DAG: s_mov_b32 s1, 1
 ; GCN-DAG: s_mov_b32 s0, 0
 ; SI-NEXT: nop 3
-; GFX10-NEXT: ; implicit-def: $vcc_hi
 ; GCN-NEXT: s_buffer_load_dword s0, s[0:3], 0x0
 define amdgpu_ps float @smrd_hazard(<4 x i32> inreg %desc) #0 {
 main_body:

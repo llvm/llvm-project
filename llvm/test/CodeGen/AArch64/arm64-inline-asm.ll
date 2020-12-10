@@ -282,3 +282,18 @@ define void @test_no_hash_in_lane_specifier() {
   tail call void asm sideeffect "fmla v2.4s, v0.4s, v1.s[$0]", "I"(i32 1) #1
   ret void
 }
+define void @test_vector_too_large_r_m(<9 x float>* nocapture readonly %0) {
+; CHECK-LABEL: test_vector_too_large_r_m
+; CHECK:      ldr [[S:s[0-9]+]], [x0, #32]
+; CHECK-DAG:  ldp [[Q0:q[0-9]+]], [[Q1:q[0-9]+]], [x0]
+; CHECK:      str [[S]], [sp, #32]
+; CHECK-DAG   stp [[Q0]], [[Q1]], [sp]
+; CHECK:     ; InlineAsm Start
+;
+entry:
+  %m.addr = alloca <9 x float>, align 16
+  %m = load <9 x float>, <9 x float>* %0, align 16
+  store <9 x float> %m, <9 x float>* %m.addr, align 16
+  call void asm sideeffect "", "=*r|m,0,~{memory}"(<9 x float>* nonnull %m.addr, <9 x float> %m)
+  ret void
+}

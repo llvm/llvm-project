@@ -31,8 +31,8 @@ void f() {
   // CHECK: %[[TMP2:.*]] = alloca %struct.S2
   // CHECK: call void (%struct.Base*, %struct.S1*, %struct.S2*, i8*, ...) @_ZN4BaseC2ERK2S1RK2S2PKcz(%struct.Base* {{.*}}, %struct.S1* nonnull align 1 dereferenceable(1) %[[TMP1]], %struct.S2* nonnull align 1 dereferenceable(1) %[[TMP2]], i8* {{.*}})
   // CHECK-NEXT: call void @_ZN9InheritorD1Ev(%struct.Inheritor* {{.*}})
-  // CHECK-NEXT: call void @_ZN2S2D1Ev(%struct.S2* %[[TMP2]])
-  // CHECK-NEXT: call void @_ZN2S1D1Ev(%struct.S1* %[[TMP1]])
+  // CHECK-NEXT: call void @_ZN2S2D1Ev(%struct.S2* {{[^,]*}} %[[TMP2]])
+  // CHECK-NEXT: call void @_ZN2S1D1Ev(%struct.S1* {{[^,]*}} %[[TMP1]])
 
   // EXCEPTIONS-LABEL: define void @_Z1fv
   // EXCEPTIONS: %[[TMP1:.*]] = alloca %struct.S1
@@ -42,11 +42,11 @@ void f() {
 
   // EXCEPTIONS: [[CONT]]:
   // EXCEPTIONS-NEXT: call void @_ZN9InheritorD1Ev(%struct.Inheritor* {{.*}})
-  // EXCEPTIONS-NEXT: call void @_ZN2S2D1Ev(%struct.S2* %[[TMP2]])
-  // EXCEPTIONS-NEXT: call void @_ZN2S1D1Ev(%struct.S1* %[[TMP1]])
+  // EXCEPTIONS-NEXT: call void @_ZN2S2D1Ev(%struct.S2* {{[^,]*}} %[[TMP2]])
+  // EXCEPTIONS-NEXT: call void @_ZN2S1D1Ev(%struct.S1* {{[^,]*}} %[[TMP1]])
 
   // EXCEPTIONS: [[LPAD]]:
   // EXCEPTIONS: call void @_ZN14NonTrivialDtorD2Ev(%struct.NonTrivialDtor* {{.*}})
-  // EXCEPTIONS-NEXT: call void @_ZN2S2D1Ev(%struct.S2* %[[TMP2]])
-  // EXCEPTIONS-NEXT: call void @_ZN2S1D1Ev(%struct.S1* %[[TMP1]])
+  // EXCEPTIONS-NEXT: call void @_ZN2S2D1Ev(%struct.S2* {{[^,]*}} %[[TMP2]])
+  // EXCEPTIONS-NEXT: call void @_ZN2S1D1Ev(%struct.S1* {{[^,]*}} %[[TMP1]])
 }

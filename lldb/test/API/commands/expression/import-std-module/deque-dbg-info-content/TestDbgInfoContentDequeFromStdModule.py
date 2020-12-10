@@ -22,7 +22,7 @@ class TestDbgInfoContentDeque(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        deque_type = "std::deque<Foo, std::allocator<Foo> >"
+        deque_type = "std::deque<Foo>"
         size_type = deque_type + "::size_type"
         value_type = "std::__deque_base<Foo, std::allocator<Foo> >::value_type"
 

@@ -21,8 +21,8 @@ spv.module Logical GLSL450 {
 
   spv.func @kernel() -> () "None" {
     %c0 = spv.constant 0 : i32
-    // CHECK: {{%.*}} = spv._address_of @var0 : !spv.ptr<!spv.struct<(i32 [0], !spv.struct<(f32 [0], i32 [4])> [4], f32 [12])>, Uniform>
-    %0 = spv._address_of @var0 : !spv.ptr<!spv.struct<(i32, !spv.struct<(f32, i32)>, f32)>, Uniform>
+    // CHECK: {{%.*}} = spv.mlir.addressof @var0 : !spv.ptr<!spv.struct<(i32 [0], !spv.struct<(f32 [0], i32 [4])> [4], f32 [12])>, Uniform>
+    %0 = spv.mlir.addressof @var0 : !spv.ptr<!spv.struct<(i32, !spv.struct<(f32, i32)>, f32)>, Uniform>
     // CHECK:  {{%.*}} = spv.AccessChain {{%.*}}[{{%.*}}] : !spv.ptr<!spv.struct<(i32 [0], !spv.struct<(f32 [0], i32 [4])> [4], f32 [12])>, Uniform>
     %1 = spv.AccessChain %0[%c0] : !spv.ptr<!spv.struct<(i32, !spv.struct<(f32, i32)>, f32)>, Uniform>, i32
     spv.Return

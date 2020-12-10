@@ -64,6 +64,7 @@ public:
     Kryo,
     NeoverseE1,
     NeoverseN1,
+    NeoverseN2,
     NeoverseV1,
     Saphira,
     ThunderX2T99,
@@ -195,6 +196,7 @@ protected:
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;
 
+  bool OutlineAtomics = false;
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
@@ -471,6 +473,8 @@ public:
 
   bool useAA() const override { return UseAA; }
 
+  bool outlineAtomics() const { return OutlineAtomics; }
+
   bool hasVH() const { return HasVH; }
   bool hasPAN() const { return HasPAN; }
   bool hasLOR() const { return HasLOR; }
@@ -555,6 +559,7 @@ public:
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const;
   unsigned getMinSVEVectorSizeInBits() const;
+  bool useSVEForFixedLengthVectors() const;
 };
 } // End llvm namespace
 

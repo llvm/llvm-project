@@ -144,6 +144,23 @@ module attributes {gpu.container_module} {
     } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
   }
 
+  func @alloc() {
+    // CHECK-LABEL: func @alloc()
+
+    // CHECK: %[[m0:.*]] = gpu.alloc () : memref<13xf32, 1>
+    %m0 = gpu.alloc () : memref<13xf32, 1>
+    // CHECK: gpu.dealloc %[[m0]] : memref<13xf32, 1>
+    gpu.dealloc %m0 : memref<13xf32, 1>
+
+    %t0 = gpu.wait async
+    // CHECK: %[[m1:.*]], %[[t1:.*]] = gpu.alloc async [{{.*}}] () : memref<13xf32, 1>
+    %m1, %t1 = gpu.alloc async [%t0] () : memref<13xf32, 1>
+    // CHECK: gpu.dealloc async [%[[t1]]] %[[m1]] : memref<13xf32, 1>
+    %t2 = gpu.dealloc async [%t1] %m1 : memref<13xf32, 1>
+
+    return
+  }
+
   func @async_token(%arg0 : !gpu.async.token) -> !gpu.async.token {
     // CHECK-LABEL: func @async_token({{.*}}: !gpu.async.token)
     // CHECK: return {{.*}} : !gpu.async.token

@@ -650,6 +650,7 @@ ALIAS("__volatile__" , volatile   , KEYALL)
 // Type nullability.
 KEYWORD(_Nonnull                 , KEYALL)
 KEYWORD(_Nullable                , KEYALL)
+KEYWORD(_Nullable_result         , KEYALL)
 KEYWORD(_Null_unspecified        , KEYALL)
 
 // Microsoft extensions which should be disabled in strict conformance mode

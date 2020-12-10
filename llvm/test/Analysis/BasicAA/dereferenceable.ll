@@ -24,7 +24,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_1(i32* byval %obj, i64* dereferenceable(8) %arg) {
+define i32 @byval_and_deref_arg_1(i32* byval(i32) %obj, i64* dereferenceable(8) %arg) {
 ; CHECK:     Function: byval_and_deref_arg_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
 bb:
@@ -34,7 +34,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_2(i32* byval %obj, i32* dereferenceable(8) %arg) {
+define i32 @byval_and_deref_arg_2(i32* byval(i32) %obj, i32* dereferenceable(8) %arg) {
 ; CHECK:     Function: byval_and_deref_arg_2: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %arg, i32* %obj
 bb:
@@ -98,7 +98,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_non_deref_1(i32* byval %obj, i64* dereferenceable(2) %arg) {
+define i32 @byval_and_deref_arg_non_deref_1(i32* byval(i32) %obj, i64* dereferenceable(2) %arg) {
 ; CHECK:     Function: byval_and_deref_arg_non_deref_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
 bb:
@@ -108,7 +108,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_non_deref_2(i32* byval %obj, i32* dereferenceable(2) %arg) {
+define i32 @byval_and_deref_arg_non_deref_2(i32* byval(i32) %obj, i32* dereferenceable(2) %arg) {
 ; CHECK:     Function: byval_and_deref_arg_non_deref_2: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %arg, i32* %obj
 bb:

@@ -74,6 +74,7 @@ int main()
     std::u32string u32_string(U"🍄🍅🍆🍌");
     std::u32string u32_empty(U"");
     std::basic_string<unsigned char> uchar(5, 'a');
+    std::string *null_str = nullptr;
 
 #if _LIBCPP_ABI_VERSION == 1
     std::string garbage1, garbage2, garbage3, garbage4, garbage5;

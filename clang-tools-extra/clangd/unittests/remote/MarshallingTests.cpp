@@ -16,6 +16,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
+#include "index/SymbolOrigin.h"
 #include "index/remote/marshalling/Marshalling.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallString.h"
@@ -154,6 +155,8 @@ TEST(RemoteMarshallingTest, SymbolSerialization) {
   ASSERT_TRUE(bool(Serialized));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
   ASSERT_TRUE(bool(Deserialized));
+  // Origin is overwritten when deserializing.
+  Sym.Origin = SymbolOrigin::Remote;
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
   // Serialized paths are relative and have UNIX slashes.
   EXPECT_EQ(convert_to_slash(Serialized->definition().file_path(),
@@ -258,6 +261,7 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
             Sym.IncludeHeaders.size());
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
   ASSERT_TRUE(bool(Deserialized));
+  Sym.Origin = SymbolOrigin::Remote;
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
 
   // This is an absolute path to a header: can not be transmitted over the wire.

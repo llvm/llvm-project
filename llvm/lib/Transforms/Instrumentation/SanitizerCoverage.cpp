@@ -45,49 +45,39 @@ using namespace llvm;
 
 #define DEBUG_TYPE "sancov"
 
-static const char *const SanCovTracePCIndirName =
-    "__sanitizer_cov_trace_pc_indir";
-static const char *const SanCovTracePCName = "__sanitizer_cov_trace_pc";
-static const char *const SanCovTraceCmp1 = "__sanitizer_cov_trace_cmp1";
-static const char *const SanCovTraceCmp2 = "__sanitizer_cov_trace_cmp2";
-static const char *const SanCovTraceCmp4 = "__sanitizer_cov_trace_cmp4";
-static const char *const SanCovTraceCmp8 = "__sanitizer_cov_trace_cmp8";
-static const char *const SanCovTraceConstCmp1 =
-    "__sanitizer_cov_trace_const_cmp1";
-static const char *const SanCovTraceConstCmp2 =
-    "__sanitizer_cov_trace_const_cmp2";
-static const char *const SanCovTraceConstCmp4 =
-    "__sanitizer_cov_trace_const_cmp4";
-static const char *const SanCovTraceConstCmp8 =
-    "__sanitizer_cov_trace_const_cmp8";
-static const char *const SanCovTraceDiv4 = "__sanitizer_cov_trace_div4";
-static const char *const SanCovTraceDiv8 = "__sanitizer_cov_trace_div8";
-static const char *const SanCovTraceGep = "__sanitizer_cov_trace_gep";
-static const char *const SanCovTraceSwitchName = "__sanitizer_cov_trace_switch";
-static const char *const SanCovModuleCtorTracePcGuardName =
+const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
+const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
+const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
+const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
+const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
+const char SanCovTraceCmp8[] = "__sanitizer_cov_trace_cmp8";
+const char SanCovTraceConstCmp1[] = "__sanitizer_cov_trace_const_cmp1";
+const char SanCovTraceConstCmp2[] = "__sanitizer_cov_trace_const_cmp2";
+const char SanCovTraceConstCmp4[] = "__sanitizer_cov_trace_const_cmp4";
+const char SanCovTraceConstCmp8[] = "__sanitizer_cov_trace_const_cmp8";
+const char SanCovTraceDiv4[] = "__sanitizer_cov_trace_div4";
+const char SanCovTraceDiv8[] = "__sanitizer_cov_trace_div8";
+const char SanCovTraceGep[] = "__sanitizer_cov_trace_gep";
+const char SanCovTraceSwitchName[] = "__sanitizer_cov_trace_switch";
+const char SanCovModuleCtorTracePcGuardName[] =
     "sancov.module_ctor_trace_pc_guard";
-static const char *const SanCovModuleCtor8bitCountersName =
+const char SanCovModuleCtor8bitCountersName[] =
     "sancov.module_ctor_8bit_counters";
-static const char *const SanCovModuleCtorBoolFlagName =
-    "sancov.module_ctor_bool_flag";
+const char SanCovModuleCtorBoolFlagName[] = "sancov.module_ctor_bool_flag";
 static const uint64_t SanCtorAndDtorPriority = 2;
 
-static const char *const SanCovTracePCGuardName =
-    "__sanitizer_cov_trace_pc_guard";
-static const char *const SanCovTracePCGuardInitName =
-    "__sanitizer_cov_trace_pc_guard_init";
-static const char *const SanCov8bitCountersInitName =
-    "__sanitizer_cov_8bit_counters_init";
-static const char *const SanCovBoolFlagInitName =
-    "__sanitizer_cov_bool_flag_init";
-static const char *const SanCovPCsInitName = "__sanitizer_cov_pcs_init";
+const char SanCovTracePCGuardName[] = "__sanitizer_cov_trace_pc_guard";
+const char SanCovTracePCGuardInitName[] = "__sanitizer_cov_trace_pc_guard_init";
+const char SanCov8bitCountersInitName[] = "__sanitizer_cov_8bit_counters_init";
+const char SanCovBoolFlagInitName[] = "__sanitizer_cov_bool_flag_init";
+const char SanCovPCsInitName[] = "__sanitizer_cov_pcs_init";
 
-static const char *const SanCovGuardsSectionName = "sancov_guards";
-static const char *const SanCovCountersSectionName = "sancov_cntrs";
-static const char *const SanCovBoolFlagSectionName = "sancov_bools";
-static const char *const SanCovPCsSectionName = "sancov_pcs";
+const char SanCovGuardsSectionName[] = "sancov_guards";
+const char SanCovCountersSectionName[] = "sancov_cntrs";
+const char SanCovBoolFlagSectionName[] = "sancov_bools";
+const char SanCovPCsSectionName[] = "sancov_pcs";
 
-static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
+const char SanCovLowestStackName[] = "__sancov_lowest_stack";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
@@ -519,29 +509,23 @@ bool ModuleSanitizerCoverage::instrumentModule(
 
 // True if block has successors and it dominates all of them.
 static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
-  if (succ_begin(BB) == succ_end(BB))
+  if (succ_empty(BB))
     return false;
 
-  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    if (!DT->dominates(BB, SUCC))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(successors(BB), [&](const BasicBlock *SUCC) {
+    return DT->dominates(BB, SUCC);
+  });
 }
 
 // True if block has predecessors and it postdominates all of them.
 static bool isFullPostDominator(const BasicBlock *BB,
                                 const PostDominatorTree *PDT) {
-  if (pred_begin(BB) == pred_end(BB))
+  if (pred_empty(BB))
     return false;
 
-  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
-    if (!PDT->dominates(BB, PRED))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(predecessors(BB), [&](const BasicBlock *PRED) {
+    return PDT->dominates(BB, PRED);
+  });
 }
 
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,

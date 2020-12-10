@@ -174,9 +174,9 @@ if (LIBCXXABI_ENABLE_SHARED)
                           CXX_EXTENSIONS
                             OFF
                           CXX_STANDARD
-                            17
+                            20
                           CXX_STANDARD_REQUIRED
-                            ON
+                            OFF
                           COMPILE_FLAGS
                             "${LIBCXXABI_COMPILE_FLAGS}"
                           LINK_FLAGS
@@ -241,9 +241,9 @@ if (LIBCXXABI_ENABLE_STATIC)
                           CXX_EXTENSIONS
                             OFF
                           CXX_STANDARD
-                            17
+                            20
                           CXX_STANDARD_REQUIRED
-                            ON
+                            OFF
                           COMPILE_FLAGS
                             "${LIBCXXABI_COMPILE_FLAGS}"
                           LINK_FLAGS

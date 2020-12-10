@@ -1,7 +1,7 @@
 // RUN: not %clang -target powerpc64le-unknown-linux-gnu -fsyntax-only \
-// RUN:   -mcpu=pwr9 -mfloat128 %s 2>&1 | FileCheck %s --check-prefix=HASF128
+// RUN:   -mcpu=pwr9 %s 2>&1 | FileCheck %s --check-prefix=HASF128
 // RUN: not %clang -target powerpc64le-unknown-linux-gnu -fsyntax-only \
-// RUN:   -mcpu=power9 -mfloat128 %s 2>&1 | FileCheck %s --check-prefix=HASF128
+// RUN:   -mcpu=power9 %s 2>&1 | FileCheck %s --check-prefix=HASF128
 
 // RUN: not %clang -target powerpc64le-unknown-linux-gnu -fsyntax-only \
 // RUN:   -mcpu=pwr8 -mfloat128 %s 2>&1 | FileCheck %s --check-prefix=NOF128

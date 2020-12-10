@@ -17,22 +17,22 @@ declare zeroext i1 @f0(i32*) #0 align 2
 declare zeroext i1 @f1(i32*) #0 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f2(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f2(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f3(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f3(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f4(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f4(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f5(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f5(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f6(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f6(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
-declare hidden void @f7(i32* noalias nocapture sret, i32) #1 align 2
+declare hidden void @f7(i32* noalias nocapture sret(i32), i32) #1 align 2
 
 ; Function Attrs: optsize
 declare zeroext i1 @f8(i32*, i32*, i64) #1 align 2

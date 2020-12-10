@@ -33,7 +33,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert($_op.getOperation()->getNumResults() == 1);
+        assert($_op->getNumResults() == 1);
         auto vt = $_op.getResult().getType().
           template dyn_cast<VectorType>();
         if (!vt)

@@ -27,9 +27,16 @@ static llvm::ManagedStatic<llvm::StringMap<PassPipelineInfo>>
 /// Utility to create a default registry function from a pass instance.
 static PassRegistryFunction
 buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
-  return [=](OpPassManager &pm, StringRef options) {
+  return [=](OpPassManager &pm, StringRef options,
+             function_ref<LogicalResult(const Twine &)> errorHandler) {
     std::unique_ptr<Pass> pass = allocator();
     LogicalResult result = pass->initializeOptions(options);
+    if ((pm.getNesting() == OpPassManager::Nesting::Explicit) &&
+        pass->getOpName() && *pass->getOpName() != pm.getOpName())
+      return errorHandler(llvm::Twine("Can't add pass '") + pass->getName() +
+                          "' restricted to '" + *pass->getOpName() +
+                          "' on a PassManager intended to run on '" +
+                          pm.getOpName() + "', did you intend to nest?");
     pm.addPass(std::move(pass));
     return result;
   };
@@ -229,7 +236,9 @@ public:
   LogicalResult initialize(StringRef text, raw_ostream &errorStream);
 
   /// Add the internal pipeline elements to the provided pass manager.
-  LogicalResult addToPipeline(OpPassManager &pm) const;
+  LogicalResult
+  addToPipeline(OpPassManager &pm,
+                function_ref<LogicalResult(const Twine &)> errorHandler) const;
 
 private:
   /// A functor used to emit errors found during pipeline handling. The first
@@ -269,8 +278,9 @@ private:
                                        ErrorHandlerT errorHandler);
 
   /// Add the given pipeline elements to the provided pass manager.
-  LogicalResult addToPipeline(ArrayRef<PipelineElement> elements,
-                              OpPassManager &pm) const;
+  LogicalResult
+  addToPipeline(ArrayRef<PipelineElement> elements, OpPassManager &pm,
+                function_ref<LogicalResult(const Twine &)> errorHandler) const;
 
   std::vector<PipelineElement> pipeline;
 };
@@ -299,8 +309,10 @@ LogicalResult TextualPipeline::initialize(StringRef text,
 }
 
 /// Add the internal pipeline elements to the provided pass manager.
-LogicalResult TextualPipeline::addToPipeline(OpPassManager &pm) const {
-  return addToPipeline(pipeline, pm);
+LogicalResult TextualPipeline::addToPipeline(
+    OpPassManager &pm,
+    function_ref<LogicalResult(const Twine &)> errorHandler) const {
+  return addToPipeline(pipeline, pm, errorHandler);
 }
 
 /// Parse the given pipeline text into the internal pipeline vector. This
@@ -397,7 +409,6 @@ TextualPipeline::resolvePipelineElement(PipelineElement &element,
   // pipeline.
   if (!element.innerPipeline.empty())
     return resolvePipelineElements(element.innerPipeline, errorHandler);
-
   // Otherwise, this must be a pass or pass pipeline.
   // Check to see if a pipeline was registered with this name.
   auto pipelineRegistryIt = passPipelineRegistry->find(element.name);
@@ -422,13 +433,16 @@ TextualPipeline::resolvePipelineElement(PipelineElement &element,
 }
 
 /// Add the given pipeline elements to the provided pass manager.
-LogicalResult TextualPipeline::addToPipeline(ArrayRef<PipelineElement> elements,
-                                             OpPassManager &pm) const {
+LogicalResult TextualPipeline::addToPipeline(
+    ArrayRef<PipelineElement> elements, OpPassManager &pm,
+    function_ref<LogicalResult(const Twine &)> errorHandler) const {
   for (auto &elt : elements) {
     if (elt.registryEntry) {
-      if (failed(elt.registryEntry->addToPipeline(pm, elt.options)))
+      if (failed(
+              elt.registryEntry->addToPipeline(pm, elt.options, errorHandler)))
         return failure();
-    } else if (failed(addToPipeline(elt.innerPipeline, pm.nest(elt.name)))) {
+    } else if (failed(addToPipeline(elt.innerPipeline, pm.nest(elt.name),
+                                    errorHandler))) {
       return failure();
     }
   }
@@ -444,7 +458,11 @@ LogicalResult mlir::parsePassPipeline(StringRef pipeline, OpPassManager &pm,
   TextualPipeline pipelineParser;
   if (failed(pipelineParser.initialize(pipeline, errorStream)))
     return failure();
-  if (failed(pipelineParser.addToPipeline(pm)))
+  auto errorHandler = [&](Twine msg) {
+    errorStream << msg << "\n";
+    return failure();
+  };
+  if (failed(pipelineParser.addToPipeline(pm, errorHandler)))
     return failure();
   return success();
 }
@@ -634,13 +652,21 @@ bool PassPipelineCLParser::contains(const PassRegistryEntry *entry) const {
 }
 
 /// Adds the passes defined by this parser entry to the given pass manager.
-LogicalResult PassPipelineCLParser::addToPipeline(OpPassManager &pm) const {
+LogicalResult PassPipelineCLParser::addToPipeline(
+    OpPassManager &pm,
+    function_ref<LogicalResult(const Twine &)> errorHandler) const {
   for (auto &passIt : impl->passList) {
     if (passIt.registryEntry) {
-      if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options)))
+      if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
+                                                     errorHandler)))
         return failure();
-    } else if (failed(passIt.pipeline.addToPipeline(pm))) {
-      return failure();
+    } else {
+      OpPassManager::Nesting nesting = pm.getNesting();
+      pm.setNesting(OpPassManager::Nesting::Explicit);
+      LogicalResult status = passIt.pipeline.addToPipeline(pm, errorHandler);
+      pm.setNesting(nesting);
+      if (failed(status))
+        return failure();
     }
   }
   return success();

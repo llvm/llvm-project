@@ -41,17 +41,6 @@ namespace orc {
 
 class ObjectLayer;
 
-/// Run a main function, returning the result.
-///
-/// If the optional ProgramName argument is given then it will be inserted
-/// before the strings in Args as the first argument to the called function.
-///
-/// It is legal to have an empty argument list and no program name, however
-/// many main functions will expect a name argument at least, and will fail
-/// if none is provided.
-int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
-              Optional<StringRef> ProgramName = None);
-
 /// This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.
 ///

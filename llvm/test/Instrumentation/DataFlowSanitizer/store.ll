@@ -158,3 +158,9 @@ define void @store64(i64 %v, i64* %p) {
   store i64 %v, i64* %p
   ret void
 }
+
+define void @store_zero(i32* %p) {
+  ;  NO_COMBINE_PTR_LABEL: store i64 0, i64* {{.*}}, align 2
+  store i32 0, i32* %p
+  ret void
+}

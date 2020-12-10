@@ -134,7 +134,8 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // (1) Create LLJIT instance.
-  auto TPC = ExitOnErr(SelfTargetProcessControl::Create());
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto TPC = ExitOnErr(SelfTargetProcessControl::Create(std::move(SSP)));
   auto J = ExitOnErr(LLJITBuilder().setTargetProcessControl(*TPC).create());
 
   // (2) Install transform to print modules as they are compiled:

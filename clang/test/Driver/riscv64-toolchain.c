@@ -1,17 +1,20 @@
 // A basic clang -cc1 command-line, and simple environment check.
-// REQUIRES: platform-linker
 
-// RUN: %clang %s -### -no-canonical-prefixes -target riscv64 2>&1 | FileCheck -check-prefix=CC1 %s
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv64 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
+// RUN:   | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "riscv64"
 
 // Test interaction with -fuse-ld=lld, if lld is available.
-// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 -fuse-ld=lld 2>&1 | FileCheck -check-prefix=LLD %s
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 -fuse-ld=lld \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
+// RUN:   | FileCheck -check-prefix=LLD %s
 // LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv64-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -26,7 +29,7 @@
 // C-RV64-BAREMETAL-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv64-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -40,7 +43,7 @@
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -56,7 +59,7 @@
 // CXX-RV64-BAREMETAL-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -71,7 +74,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld -fuse-ld= \
 // RUN:   -target riscv64-unknown-linux-gnu --rtlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -133,6 +136,7 @@
 
 // Check that --rtlib can be used to override the used runtime library
 // RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   -target riscv64-unknown-elf --rtlib=libgcc 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-LIBGCC-LP64 %s
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crt0.o"
@@ -141,6 +145,7 @@
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   -target riscv64-unknown-elf --rtlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}crt0.o"

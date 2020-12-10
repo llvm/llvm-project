@@ -213,8 +213,9 @@ public:
   /// Equivalent to ::exit(), except when running inside a CrashRecoveryContext.
   /// In that case, the control flow will resume after RunSafely(), like for a
   /// crash, rather than exiting the current process.
+  /// Use \arg NoCleanup for calling _exit() instead of exit().
   LLVM_ATTRIBUTE_NORETURN
-  static void Exit(int RetCode);
+  static void Exit(int RetCode, bool NoCleanup = false);
 };
 
 }

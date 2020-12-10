@@ -37,40 +37,40 @@ class SymbolCache {
   /// an Id.  Id allocation is an implementation, with the only guarantee
   /// being that once an Id is allocated, the symbol can be assumed to be
   /// cached.
-  std::vector<std::unique_ptr<NativeRawSymbol>> Cache;
+  mutable std::vector<std::unique_ptr<NativeRawSymbol>> Cache;
 
   /// For type records from the TPI stream which have been paresd and cached,
   /// stores a mapping to SymIndexId of the cached symbol.
-  DenseMap<codeview::TypeIndex, SymIndexId> TypeIndexToSymbolId;
+  mutable DenseMap<codeview::TypeIndex, SymIndexId> TypeIndexToSymbolId;
 
   /// For field list members which have been parsed and cached, stores a mapping
   /// from (IndexOfClass, MemberIndex) to the corresponding SymIndexId of the
   /// cached symbol.
-  DenseMap<std::pair<codeview::TypeIndex, uint32_t>, SymIndexId>
+  mutable DenseMap<std::pair<codeview::TypeIndex, uint32_t>, SymIndexId>
       FieldListMembersToSymbolId;
 
   /// List of SymIndexIds for each compiland, indexed by compiland index as they
   /// appear in the PDB file.
-  std::vector<SymIndexId> Compilands;
+  mutable std::vector<SymIndexId> Compilands;
 
   /// List of source files, indexed by unique source file index.
   mutable std::vector<std::unique_ptr<NativeSourceFile>> SourceFiles;
+
+  /// Map from string table offset to source file Id.
   mutable DenseMap<uint32_t, SymIndexId> FileNameOffsetToId;
 
   /// Map from global symbol offset to SymIndexId.
-  DenseMap<uint32_t, SymIndexId> GlobalOffsetToSymbolId;
+  mutable DenseMap<uint32_t, SymIndexId> GlobalOffsetToSymbolId;
 
-  /// Map from segment and code offset to SymIndexId.
-  DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToSymbolId;
-  DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToPublicSymId;
+  /// Map from segment and code offset to function symbols.
+  mutable DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToSymbolId;
+  /// Map from segment and code offset to public symbols.
+  mutable DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId>
+      AddressToPublicSymId;
 
-  /// Map from virtual address to module index.
-  using IMap =
-      IntervalMap<uint64_t, uint16_t, 8, IntervalMapHalfOpenInfo<uint64_t>>;
-  IMap::Allocator IMapAllocator;
-  IMap AddrToModuleIndex;
-
-  Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
+  /// Map from module index and symbol table offset to SymIndexId.
+  mutable DenseMap<std::pair<uint16_t, uint32_t>, SymIndexId>
+      SymTabOffsetToSymbolId;
 
   struct LineTableEntry {
     uint64_t Addr;
@@ -83,7 +83,7 @@ class SymbolCache {
   std::vector<LineTableEntry> findLineTable(uint16_t Modi) const;
   mutable DenseMap<uint16_t, std::vector<LineTableEntry>> LineTable;
 
-  SymIndexId createSymbolPlaceholder() {
+  SymIndexId createSymbolPlaceholder() const {
     SymIndexId Id = Cache.size();
     Cache.push_back(nullptr);
     return Id;
@@ -91,7 +91,7 @@ class SymbolCache {
 
   template <typename ConcreteSymbolT, typename CVRecordT, typename... Args>
   SymIndexId createSymbolForType(codeview::TypeIndex TI, codeview::CVType CVT,
-                                 Args &&... ConstructorArgs) {
+                                 Args &&...ConstructorArgs) const {
     CVRecordT Record;
     if (auto EC =
             codeview::TypeDeserializer::deserializeAs<CVRecordT>(CVT, Record)) {
@@ -104,10 +104,10 @@ class SymbolCache {
   }
 
   SymIndexId createSymbolForModifiedType(codeview::TypeIndex ModifierTI,
-                                         codeview::CVType CVT);
+                                         codeview::CVType CVT) const;
 
   SymIndexId createSimpleType(codeview::TypeIndex TI,
-                              codeview::ModifierOptions Mods);
+                              codeview::ModifierOptions Mods) const;
 
   std::unique_ptr<PDBSymbol> findFunctionSymbolBySectOffset(uint32_t Sect,
                                                             uint32_t Offset);
@@ -118,7 +118,7 @@ public:
   SymbolCache(NativeSession &Session, DbiStream *Dbi);
 
   template <typename ConcreteSymbolT, typename... Args>
-  SymIndexId createSymbol(Args &&... ConstructorArgs) {
+  SymIndexId createSymbol(Args &&...ConstructorArgs) const {
     SymIndexId Id = Cache.size();
 
     // Initial construction must not access the cache, since it must be done
@@ -145,7 +145,7 @@ public:
   std::unique_ptr<IPDBEnumSymbols>
   createGlobalsEnumerator(codeview::SymbolKind Kind);
 
-  SymIndexId findSymbolByTypeIndex(codeview::TypeIndex TI);
+  SymIndexId findSymbolByTypeIndex(codeview::TypeIndex TI) const;
 
   template <typename ConcreteSymbolT, typename... Args>
   SymIndexId getOrCreateFieldListMember(codeview::TypeIndex FieldListTI,
@@ -163,6 +163,9 @@ public:
   }
 
   SymIndexId getOrCreateGlobalSymbolByOffset(uint32_t Offset);
+  SymIndexId getOrCreateInlineSymbol(codeview::InlineSiteSym Sym,
+                                     uint64_t ParentAddr, uint16_t Modi,
+                                     uint32_t RecordOffset) const;
 
   std::unique_ptr<PDBSymbol>
   findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type);
@@ -185,9 +188,6 @@ public:
   std::unique_ptr<IPDBSourceFile> getSourceFileById(SymIndexId FileId) const;
   SymIndexId
   getOrCreateSourceFile(const codeview::FileChecksumEntry &Checksum) const;
-
-  void parseSectionContribs();
-  Optional<uint16_t> getModuleIndexForAddr(uint64_t Addr) const;
 };
 
 } // namespace pdb

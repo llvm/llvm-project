@@ -9,13 +9,14 @@ Introduction
 ============
 
 This document aims to provide a high-level overview of the design and
-implementation of the ORC JIT APIs. Except where otherwise stated, all
-discussion applies to the design of the APIs as of LLVM Version 10 (ORCv2).
+implementation of the ORC JIT APIs. Except where otherwise stated all discussion
+refers to the modern ORCv2 APIs (available since LLVM 7). Clients wishing to
+transition from OrcV1 should see Section :ref:`transitioning_orcv1_to_orcv2`.
 
 Use-cases
 =========
 
-ORC provides a modular API for building JIT compilers. There are a range
+ORC provides a modular API for building JIT compilers. There are a number
 of use cases for such an API. For example:
 
 1. The LLVM tutorials use a simple ORC-based JIT class to execute expressions
@@ -39,42 +40,46 @@ Features
 
 ORC provides the following features:
 
-*JIT-linking*
+**JIT-linking**
   ORC provides APIs to link relocatable object files (COFF, ELF, MachO) [1]_
   into a target process at runtime. The target process may be the same process
   that contains the JIT session object and jit-linker, or may be another process
   (even one running on a different machine or architecture) that communicates
   with the JIT via RPC.
 
-*LLVM IR compilation*
+**LLVM IR compilation**
   ORC provides off the shelf components (IRCompileLayer, SimpleCompiler,
   ConcurrentIRCompiler) that make it easy to add LLVM IR to a JIT'd process.
 
-*Eager and lazy compilation*
+**Eager and lazy compilation**
   By default, ORC will compile symbols as soon as they are looked up in the JIT
   session object (``ExecutionSession``). Compiling eagerly by default makes it
-  easy to use ORC as a simple in-memory compiler within an existing JIT
-  infrastructure. However ORC also provides support for lazy compilation via
-  lazy-reexports (see :ref:`Laziness`).
+  easy to use ORC as an in-memory compiler for an existing JIT (similar to how
+  MCJIT is commonly used). However ORC also provides built-in support for lazy
+  compilation via lazy-reexports (see :ref:`Laziness`).
 
-*Support for Custom Compilers and Program Representations*
+**Support for Custom Compilers and Program Representations**
   Clients can supply custom compilers for each symbol that they define in their
   JIT session. ORC will run the user-supplied compiler when the a definition of
   a symbol is needed. ORC is actually fully language agnostic: LLVM IR is not
   treated specially, and is supported via the same wrapper mechanism (the
   ``MaterializationUnit`` class) that is used for custom compilers.
 
-*Concurrent JIT'd code* and *Concurrent Compilation*
-  JIT'd code may spawn multiple threads, and may re-enter the JIT (e.g. for lazy
-  compilation) concurrently from multiple threads. The ORC APIs also support
-  running multiple compilers concurrently. Built-in dependency tracking (via the
-  JIT linker) ensures that ORC does not release code for execution until it is
-  safe to call.
+**Concurrent JIT'd code** and **Concurrent Compilation**
+  JIT'd code may be executed in multiple threads, may spawn new threads, and may
+  re-enter the ORC (e.g. to request lazy compilation) concurrently from multiple
+  threads. Compilers launched my ORC can run concurrently (provided the client
+  sets up an appropriate dispatcher). Built-in dependency tracking ensures that
+  ORC does not release pointers to JIT'd code or data until all dependencies
+  have also been JIT'd and they are safe to call or use.
 
-*Orthogonality* and *Composability*
-  Each of the features above can be used (or not) independently. It is possible
-  to put ORC components together to make a non-lazy, in-process, single threaded
-  JIT or a lazy, out-of-process, concurrent JIT, or anything in between.
+**Removable Code**
+  Resources for JIT'd program representations
+
+**Orthogonality** and **Composability**
+  Each of the features above can be used independently. It is possible to put
+  ORC components together to make a non-lazy, in-process, single threaded JIT
+  or a lazy, out-of-process, concurrent JIT, or anything in between.
 
 LLJIT and LLLazyJIT
 ===================
@@ -153,7 +158,7 @@ found at ``llvm/examples/HowToUseLLJIT``.
 Design Overview
 ===============
 
-ORC's JIT'd program model aims to emulate the linking and symbol resolution
+ORC's JIT program model aims to emulate the linking and symbol resolution
 rules used by the static and dynamic linkers. This allows ORC to JIT
 arbitrary LLVM IR, including IR produced by an ordinary static compiler (e.g.
 clang) that uses constructs like symbol linkage and visibility, and weak [3]_
@@ -170,8 +175,8 @@ program might look like:
   $ clang++ -o myapp myapp.cpp -L. -lA -lB
   $ ./myapp
 
-In ORC, this would translate into API calls on a "CXXCompilingLayer" (with error
-checking omitted for brevity) as:
+In ORC, this would translate into API calls on a hypothetical CXXCompilingLayer
+(with error checking omitted for brevity) as:
 
 .. code-block:: c++
 
@@ -193,7 +198,8 @@ checking omitted for brevity) as:
   // Create and specify the search order for the main JITDylib. This is
   // equivalent to a "links against" relationship in a command-line link.
   auto &MainJD = ES.createJITDylib("main");
-  MainJD.setSearchOrder({{&LibA, false}, {&LibB, false}});
+  MainJD.addToLinkOrder(&LibA);
+  MainJD.addToLinkOrder(&LibB);
   CXXLayer.add(MainJD, MemoryBuffer::getFile("main.cpp"));
 
   // Look up the JIT'd main, cast it to a function pointer, then call it.
@@ -456,6 +462,8 @@ Supporting Custom Compilers
 ===========================
 
 TBD.
+
+.. _transitioning_orcv1_to_orcv2:
 
 Transitioning from ORCv1 to ORCv2
 =================================
@@ -754,10 +762,82 @@ Or, to expose an allowed set of symbols from the main process:
     // and contained in the list.
     CompileLayer.add(JD, loadModule(...));
 
-Future Features
-===============
+Roadmap
+=======
 
-TBD: Speculative compilation. Object Caches.
+ORC is still undergoing active development. Some current and future works are
+listed below.
+
+Current Work
+------------
+
+1. **TargetProcessControl: Improvements to in-tree support for out-of-process
+   execution**
+
+   The ``TargetProcessControl`` API provides various operations on the JIT
+   target process (the one which will execute the JIT'd code), including
+   memory allocation, memory writes, function execution, and process queries
+   (e.g. for the target triple). By targeting this API new components can be
+   developed which will work equally well for in-process and out-of-process
+   JITing.
+
+
+2. **ORC RPC based TargetProcessControl implementation**
+
+   An ORC RPC based implementation of the ``TargetProcessControl`` API is
+   currently under development to enable easy out-of-process JITing via
+   file descriptors / sockets.
+
+3. **Core State Machine Cleanup**
+
+   The core ORC state machine is currently implemented between JITDylib and
+   ExecutionSession. Methods are slowly being moved to `ExecutionSession`. This
+   will tidy up the code base, and also allow us to support asynchronous removal
+   of JITDylibs (in practice deleting an associated state object in
+   ExecutionSession and leaving the JITDylib instance in a defunct state until
+   all references to it have been released).
+
+4. **JITLink improvements**
+
+   TBD. We really need a separate JITLink design document.
+
+Near Future Work
+----------------
+
+1. **ORC JIT Runtime Libraries**
+
+   We need a runtime library for JIT'd code. This would include things like
+   TLS registration, reentry functions, registration code for language runtimes
+   (e.g. Objective C and Swift) and other JIT specific runtime code. This should
+   be built in a similar manner to compiler-rt (possibly even as part of it).
+
+2. **Remote jit_dlopen / jit_dlclose**
+
+   To more fully mimic the environment that static programs operate in we would
+   like JIT'd code to be able to "dlopen" and "dlclose" JITDylibs, running all of
+   their initializers/deinitializers on the current thread. This would require
+   support from the runtime library described above.
+
+3. **Debugging support**
+
+   ORC currently supports the GDBRegistrationListener API when using RuntimeDyld
+   as the underlying JIT linker. We will need a new solution for JITLink based
+   platforms.
+
+Further Future Work
+-------------------
+
+1. **Speculative Compilation**
+
+   ORC's support for concurrent compilation allows us to easily enable
+   *speculative* JIT compilation: compilation of code that is not needed yet,
+   but which we have reason to believe will be needed in the future. This can be
+   used to hide compile latency and improve JIT throughput. A proof-of-concept
+   exmaple of speculative compilation with ORC has already been developed (see
+   ``llvm/examples/SpeculativeJIT``). Future work on this is likely to focus on
+   re-using and improving existing profiling support (currently used by PGO) to
+   feed speculation decisions, as well as built-in tools to simplify use of
+   speculative compilation.
 
 .. [1] Formats/architectures vary in terms of supported features. MachO and
        ELF tend to have better support than COFF. Patches very welcome!

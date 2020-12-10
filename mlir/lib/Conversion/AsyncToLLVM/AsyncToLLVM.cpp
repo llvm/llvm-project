@@ -33,18 +33,36 @@ static constexpr const char kAsyncFnPrefix[] = "async_execute_fn";
 // Async Runtime C API declaration.
 //===----------------------------------------------------------------------===//
 
+static constexpr const char *kAddRef = "mlirAsyncRuntimeAddRef";
+static constexpr const char *kDropRef = "mlirAsyncRuntimeDropRef";
 static constexpr const char *kCreateToken = "mlirAsyncRuntimeCreateToken";
+static constexpr const char *kCreateGroup = "mlirAsyncRuntimeCreateGroup";
 static constexpr const char *kEmplaceToken = "mlirAsyncRuntimeEmplaceToken";
 static constexpr const char *kAwaitToken = "mlirAsyncRuntimeAwaitToken";
+static constexpr const char *kAwaitGroup = "mlirAsyncRuntimeAwaitAllInGroup";
 static constexpr const char *kExecute = "mlirAsyncRuntimeExecute";
+static constexpr const char *kAddTokenToGroup =
+    "mlirAsyncRuntimeAddTokenToGroup";
 static constexpr const char *kAwaitAndExecute =
     "mlirAsyncRuntimeAwaitTokenAndExecute";
+static constexpr const char *kAwaitAllAndExecute =
+    "mlirAsyncRuntimeAwaitAllInGroupAndExecute";
 
 namespace {
 // Async Runtime API function types.
 struct AsyncAPI {
+  static FunctionType addOrDropRefFunctionType(MLIRContext *ctx) {
+    auto ref = LLVM::LLVMType::getInt8PtrTy(ctx);
+    auto count = IntegerType::get(32, ctx);
+    return FunctionType::get({ref, count}, {}, ctx);
+  }
+
   static FunctionType createTokenFunctionType(MLIRContext *ctx) {
     return FunctionType::get({}, {TokenType::get(ctx)}, ctx);
+  }
+
+  static FunctionType createGroupFunctionType(MLIRContext *ctx) {
+    return FunctionType::get({}, {GroupType::get(ctx)}, ctx);
   }
 
   static FunctionType emplaceTokenFunctionType(MLIRContext *ctx) {
@@ -55,16 +73,32 @@ struct AsyncAPI {
     return FunctionType::get({TokenType::get(ctx)}, {}, ctx);
   }
 
+  static FunctionType awaitGroupFunctionType(MLIRContext *ctx) {
+    return FunctionType::get({GroupType::get(ctx)}, {}, ctx);
+  }
+
   static FunctionType executeFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
     auto resume = resumeFunctionType(ctx).getPointerTo();
     return FunctionType::get({hdl, resume}, {}, ctx);
   }
 
+  static FunctionType addTokenToGroupFunctionType(MLIRContext *ctx) {
+    auto i64 = IntegerType::get(64, ctx);
+    return FunctionType::get({TokenType::get(ctx), GroupType::get(ctx)}, {i64},
+                             ctx);
+  }
+
   static FunctionType awaitAndExecuteFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
     auto resume = resumeFunctionType(ctx).getPointerTo();
     return FunctionType::get({TokenType::get(ctx), hdl, resume}, {}, ctx);
+  }
+
+  static FunctionType awaitAllAndExecuteFunctionType(MLIRContext *ctx) {
+    auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
+    auto resume = resumeFunctionType(ctx).getPointerTo();
+    return FunctionType::get({GroupType::get(ctx), hdl, resume}, {}, ctx);
   }
 
   // Auxiliary coroutine resume intrinsic wrapper.
@@ -80,27 +114,25 @@ struct AsyncAPI {
 static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   auto builder = OpBuilder::atBlockTerminator(module.getBody());
 
+  auto addFuncDecl = [&](StringRef name, FunctionType type) {
+    if (module.lookupSymbol(name))
+      return;
+    builder.create<FuncOp>(module.getLoc(), name, type).setPrivate();
+  };
+
   MLIRContext *ctx = module.getContext();
-  Location loc = module.getLoc();
-
-  if (!module.lookupSymbol(kCreateToken))
-    builder.create<FuncOp>(loc, kCreateToken,
-                           AsyncAPI::createTokenFunctionType(ctx));
-
-  if (!module.lookupSymbol(kEmplaceToken))
-    builder.create<FuncOp>(loc, kEmplaceToken,
-                           AsyncAPI::emplaceTokenFunctionType(ctx));
-
-  if (!module.lookupSymbol(kAwaitToken))
-    builder.create<FuncOp>(loc, kAwaitToken,
-                           AsyncAPI::awaitTokenFunctionType(ctx));
-
-  if (!module.lookupSymbol(kExecute))
-    builder.create<FuncOp>(loc, kExecute, AsyncAPI::executeFunctionType(ctx));
-
-  if (!module.lookupSymbol(kAwaitAndExecute))
-    builder.create<FuncOp>(loc, kAwaitAndExecute,
-                           AsyncAPI::awaitAndExecuteFunctionType(ctx));
+  addFuncDecl(kAddRef, AsyncAPI::addOrDropRefFunctionType(ctx));
+  addFuncDecl(kDropRef, AsyncAPI::addOrDropRefFunctionType(ctx));
+  addFuncDecl(kCreateToken, AsyncAPI::createTokenFunctionType(ctx));
+  addFuncDecl(kCreateGroup, AsyncAPI::createGroupFunctionType(ctx));
+  addFuncDecl(kEmplaceToken, AsyncAPI::emplaceTokenFunctionType(ctx));
+  addFuncDecl(kAwaitToken, AsyncAPI::awaitTokenFunctionType(ctx));
+  addFuncDecl(kAwaitGroup, AsyncAPI::awaitGroupFunctionType(ctx));
+  addFuncDecl(kExecute, AsyncAPI::executeFunctionType(ctx));
+  addFuncDecl(kAddTokenToGroup, AsyncAPI::addTokenToGroupFunctionType(ctx));
+  addFuncDecl(kAwaitAndExecute, AsyncAPI::awaitAndExecuteFunctionType(ctx));
+  addFuncDecl(kAwaitAllAndExecute,
+              AsyncAPI::awaitAllAndExecuteFunctionType(ctx));
 }
 
 //===----------------------------------------------------------------------===//
@@ -116,13 +148,21 @@ static constexpr const char *kCoroEnd = "llvm.coro.end";
 static constexpr const char *kCoroFree = "llvm.coro.free";
 static constexpr const char *kCoroResume = "llvm.coro.resume";
 
+/// Adds an LLVM function declaration to a module.
+static void addLLVMFuncDecl(ModuleOp module, OpBuilder &builder, StringRef name,
+                            LLVM::LLVMType ret,
+                            ArrayRef<LLVM::LLVMType> params) {
+  if (module.lookupSymbol(name))
+    return;
+  LLVM::LLVMType type = LLVM::LLVMType::getFunctionTy(ret, params, false);
+  builder.create<LLVM::LLVMFuncOp>(module.getLoc(), name, type);
+}
+
 /// Adds coroutine intrinsics declarations to the module.
 static void addCoroutineIntrinsicsDeclarations(ModuleOp module) {
   using namespace mlir::LLVM;
 
   MLIRContext *ctx = module.getContext();
-  Location loc = module.getLoc();
-
   OpBuilder builder(module.getBody()->getTerminator());
 
   auto token = LLVMTokenType::get(ctx);
@@ -134,38 +174,14 @@ static void addCoroutineIntrinsicsDeclarations(ModuleOp module) {
   auto i64 = LLVMType::getInt64Ty(ctx);
   auto i8Ptr = LLVMType::getInt8PtrTy(ctx);
 
-  if (!module.lookupSymbol(kCoroId))
-    builder.create<LLVMFuncOp>(
-        loc, kCoroId,
-        LLVMType::getFunctionTy(token, {i32, i8Ptr, i8Ptr, i8Ptr}, false));
-
-  if (!module.lookupSymbol(kCoroSizeI64))
-    builder.create<LLVMFuncOp>(loc, kCoroSizeI64,
-                               LLVMType::getFunctionTy(i64, false));
-
-  if (!module.lookupSymbol(kCoroBegin))
-    builder.create<LLVMFuncOp>(
-        loc, kCoroBegin, LLVMType::getFunctionTy(i8Ptr, {token, i8Ptr}, false));
-
-  if (!module.lookupSymbol(kCoroSave))
-    builder.create<LLVMFuncOp>(loc, kCoroSave,
-                               LLVMType::getFunctionTy(token, i8Ptr, false));
-
-  if (!module.lookupSymbol(kCoroSuspend))
-    builder.create<LLVMFuncOp>(loc, kCoroSuspend,
-                               LLVMType::getFunctionTy(i8, {token, i1}, false));
-
-  if (!module.lookupSymbol(kCoroEnd))
-    builder.create<LLVMFuncOp>(loc, kCoroEnd,
-                               LLVMType::getFunctionTy(i1, {i8Ptr, i1}, false));
-
-  if (!module.lookupSymbol(kCoroFree))
-    builder.create<LLVMFuncOp>(
-        loc, kCoroFree, LLVMType::getFunctionTy(i8Ptr, {token, i8Ptr}, false));
-
-  if (!module.lookupSymbol(kCoroResume))
-    builder.create<LLVMFuncOp>(loc, kCoroResume,
-                               LLVMType::getFunctionTy(voidTy, i8Ptr, false));
+  addLLVMFuncDecl(module, builder, kCoroId, token, {i32, i8Ptr, i8Ptr, i8Ptr});
+  addLLVMFuncDecl(module, builder, kCoroSizeI64, i64, {});
+  addLLVMFuncDecl(module, builder, kCoroBegin, i8Ptr, {token, i8Ptr});
+  addLLVMFuncDecl(module, builder, kCoroSave, token, {i8Ptr});
+  addLLVMFuncDecl(module, builder, kCoroSuspend, i8, {token, i1});
+  addLLVMFuncDecl(module, builder, kCoroEnd, i1, {i8Ptr, i1});
+  addLLVMFuncDecl(module, builder, kCoroFree, i8Ptr, {token, i8Ptr});
+  addLLVMFuncDecl(module, builder, kCoroResume, voidTy, {i8Ptr});
 }
 
 //===----------------------------------------------------------------------===//
@@ -180,21 +196,14 @@ static void addCRuntimeDeclarations(ModuleOp module) {
   using namespace mlir::LLVM;
 
   MLIRContext *ctx = module.getContext();
-  Location loc = module.getLoc();
-
   OpBuilder builder(module.getBody()->getTerminator());
 
   auto voidTy = LLVMType::getVoidTy(ctx);
   auto i64 = LLVMType::getInt64Ty(ctx);
   auto i8Ptr = LLVMType::getInt8PtrTy(ctx);
 
-  if (!module.lookupSymbol(kMalloc))
-    builder.create<LLVM::LLVMFuncOp>(
-        loc, kMalloc, LLVMType::getFunctionTy(i8Ptr, {i64}, false));
-
-  if (!module.lookupSymbol(kFree))
-    builder.create<LLVM::LLVMFuncOp>(
-        loc, kFree, LLVMType::getFunctionTy(voidTy, i8Ptr, false));
+  addLLVMFuncDecl(module, builder, kMalloc, i8Ptr, {i64});
+  addLLVMFuncDecl(module, builder, kFree, voidTy, {i8Ptr});
 }
 
 //===----------------------------------------------------------------------===//
@@ -219,13 +228,13 @@ static void addResumeFunction(ModuleOp module) {
   auto i8Ptr = LLVM::LLVMType::getInt8PtrTy(ctx);
 
   auto resumeOp = moduleBuilder.create<LLVM::LLVMFuncOp>(
-      loc, kResume, LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}));
-  SymbolTable::setSymbolVisibility(resumeOp, SymbolTable::Visibility::Private);
+      loc, kResume, LLVM::LLVMType::getFunctionTy(voidTy, {i8Ptr}, false));
+  resumeOp.setPrivate();
 
   auto *block = resumeOp.addEntryBlock();
   OpBuilder blockBuilder = OpBuilder::atBlockEnd(block);
 
-  blockBuilder.create<LLVM::CallOp>(loc, Type(),
+  blockBuilder.create<LLVM::CallOp>(loc, TypeRange(),
                                     blockBuilder.getSymbolRefAttr(kCoroResume),
                                     resumeOp.getArgument(0));
 
@@ -345,7 +354,8 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
       ValueRange({coroId.getResult(0), coroHdl.getResult(0)}));
 
   // Free the memory.
-  builder.create<LLVM::CallOp>(loc, Type(), builder.getSymbolRefAttr(kFree),
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
+                               builder.getSymbolRefAttr(kFree),
                                ValueRange(coroMem.getResult(0)));
   // Branch into the suspend block.
   builder.create<BranchOp>(loc, suspendBlock);
@@ -376,8 +386,10 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
           suspendBlock};
 }
 
-// Adds a suspension point before the `op`, and moves `op` and all operations
-// after it into the resume block. Returns a pointer to the resume block.
+// Add a LLVM coroutine suspension point to the end of suspended block, to
+// resume execution in resume block. The caller is responsible for creating the
+// two suspended/resume blocks with the desired ops contained in each block.
+// This function merely provides the required control flow logic.
 //
 // `coroState` must be a value returned from the call to @llvm.coro.save(...)
 // intrinsic (saved coroutine state).
@@ -389,6 +401,8 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
 //     "op"(...)
 //   ^cleanup: ...
 //   ^suspend: ...
+//   ^resume:
+//     "op"(...)
 //
 // After:
 //
@@ -401,20 +415,17 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
 //   ^cleanup: ...
 //   ^suspend: ...
 //
-static Block *addSuspensionPoint(CoroMachinery coro, Value coroState,
-                                 Operation *op) {
+static void addSuspensionPoint(CoroMachinery coro, Value coroState,
+                               Operation *op, Block *suspended, Block *resume,
+                               OpBuilder &builder) {
+  Location loc = op->getLoc();
   MLIRContext *ctx = op->getContext();
   auto i1 = LLVM::LLVMType::getInt1Ty(ctx);
   auto i8 = LLVM::LLVMType::getInt8Ty(ctx);
 
-  Location loc = op->getLoc();
-  Block *splitBlock = op->getBlock();
-
-  // Split the block before `op`, newly added block is the resume block.
-  Block *resume = splitBlock->splitBlock(op);
-
   // Add a coroutine suspension in place of original `op` in the split block.
-  OpBuilder builder = OpBuilder::atBlockEnd(splitBlock);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(suspended);
 
   auto constFalse =
       builder.create<LLVM::ConstantOp>(loc, i1, builder.getBoolAttr(false));
@@ -435,7 +446,7 @@ static Block *addSuspensionPoint(CoroMachinery coro, Value coroState,
   Block *resumeOrCleanup = builder.createBlock(resume);
 
   // Suspend the coroutine ...?
-  builder.setInsertionPointToEnd(splitBlock);
+  builder.setInsertionPointToEnd(suspended);
   auto isNegOne = builder.create<LLVM::ICmpOp>(
       loc, LLVM::ICmpPredicate::eq, coroSuspend.getResult(0), constNegOne);
   builder.create<LLVM::CondBrOp>(loc, isNegOne, /*trueDest=*/coro.suspend,
@@ -447,15 +458,15 @@ static Block *addSuspensionPoint(CoroMachinery coro, Value coroState,
       loc, LLVM::ICmpPredicate::eq, coroSuspend.getResult(0), constZero);
   builder.create<LLVM::CondBrOp>(loc, isZero, /*trueDest=*/resume,
                                  /*falseDest=*/coro.cleanup);
-
-  return resume;
 }
 
 // Outline the body region attached to the `async.execute` op into a standalone
 // function.
+//
+// Note that this is not reversible transformation.
 static std::pair<FuncOp, CoroMachinery>
 outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
-  ModuleOp module = execute.getParentOfType<ModuleOp>();
+  ModuleOp module = execute->getParentOfType<ModuleOp>();
 
   MLIRContext *ctx = module.getContext();
   Location loc = execute.getLoc();
@@ -505,11 +516,14 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   // Call async runtime API to execute a coroutine in the managed thread.
   SmallVector<Value, 2> executeArgs = {coro.coroHandle, resumePtr.res()};
-  builder.create<CallOp>(loc, Type(), kExecute, executeArgs);
+  builder.create<CallOp>(loc, TypeRange(), kExecute, executeArgs);
 
   // Split the entry block before the terminator.
-  Block *resume = addSuspensionPoint(coro, coroSave.getResult(0),
-                                     entryBlock->getTerminator());
+  auto *terminatorOp = entryBlock->getTerminator();
+  Block *suspended = terminatorOp->getBlock();
+  Block *resume = suspended->splitBlock(terminatorOp);
+  addSuspensionPoint(coro, coroSave.getResult(0), terminatorOp, suspended,
+                     resume, builder);
 
   // Await on all dependencies before starting to execute the body region.
   builder.setInsertionPointToStart(resume);
@@ -526,7 +540,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // to async runtime to emplace the result token.
   for (Operation &op : execute.body().getOps()) {
     if (isa<async::YieldOp>(op)) {
-      builder.create<CallOp>(loc, kEmplaceToken, Type(), coro.asyncToken);
+      builder.create<CallOp>(loc, kEmplaceToken, TypeRange(), coro.asyncToken);
       continue;
     }
     builder.clone(op, valueMapping);
@@ -554,8 +568,8 @@ public:
 
   static Type convertType(Type type) {
     MLIRContext *ctx = type.getContext();
-    // Convert async tokens to opaque pointers.
-    if (type.isa<TokenType>())
+    // Convert async tokens and groups to opaque pointers.
+    if (type.isa<TokenType, GroupType>())
       return LLVM::LLVMType::getInt8PtrTy(ctx);
     return type;
   }
@@ -582,7 +596,7 @@ public:
 
     CallOp call = cast<CallOp>(op);
     rewriter.replaceOpWithNewOp<CallOp>(op, resultTypes, call.callee(),
-                                        call.getOperands());
+                                        operands);
 
     return success();
   }
@@ -590,28 +604,130 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// async.await op lowering to mlirAsyncRuntimeAwaitToken function call.
+// Async reference counting ops lowering (`async.add_ref` and `async.drop_ref`
+// to the corresponding API calls).
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AwaitOpLowering : public ConversionPattern {
+
+template <typename RefCountingOp>
+class RefCountingOpLowering : public ConversionPattern {
 public:
-  explicit AwaitOpLowering(
-      MLIRContext *ctx,
-      const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
-      : ConversionPattern(AwaitOp::getOperationName(), 1, ctx),
-        outlinedFunctions(outlinedFunctions) {}
+  explicit RefCountingOpLowering(MLIRContext *ctx, StringRef apiFunctionName)
+      : ConversionPattern(RefCountingOp::getOperationName(), 1, ctx),
+        apiFunctionName(apiFunctionName) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // We can only await on the token operand. Async valus are not supported.
-    auto await = cast<AwaitOp>(op);
-    if (!await.operand().getType().isa<TokenType>())
+    RefCountingOp refCountingOp = cast<RefCountingOp>(op);
+
+    auto count = rewriter.create<ConstantOp>(
+        op->getLoc(), rewriter.getI32Type(),
+        rewriter.getI32IntegerAttr(refCountingOp.count()));
+
+    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), apiFunctionName,
+                                        ValueRange({operands[0], count}));
+
+    return success();
+  }
+
+private:
+  StringRef apiFunctionName;
+};
+
+// async.drop_ref op lowering to mlirAsyncRuntimeDropRef function call.
+class AddRefOpLowering : public RefCountingOpLowering<AddRefOp> {
+public:
+  explicit AddRefOpLowering(MLIRContext *ctx)
+      : RefCountingOpLowering(ctx, kAddRef) {}
+};
+
+// async.create_group op lowering to mlirAsyncRuntimeCreateGroup function call.
+class DropRefOpLowering : public RefCountingOpLowering<DropRefOp> {
+public:
+  explicit DropRefOpLowering(MLIRContext *ctx)
+      : RefCountingOpLowering(ctx, kDropRef) {}
+};
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// async.create_group op lowering to mlirAsyncRuntimeCreateGroup function call.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class CreateGroupOpLowering : public ConversionPattern {
+public:
+  explicit CreateGroupOpLowering(MLIRContext *ctx)
+      : ConversionPattern(CreateGroupOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto retTy = GroupType::get(op->getContext());
+    rewriter.replaceOpWithNewOp<CallOp>(op, kCreateGroup, retTy);
+    return success();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// async.add_to_group op lowering to runtime function call.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class AddToGroupOpLowering : public ConversionPattern {
+public:
+  explicit AddToGroupOpLowering(MLIRContext *ctx)
+      : ConversionPattern(AddToGroupOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Currently we can only add tokens to the group.
+    auto addToGroup = cast<AddToGroupOp>(op);
+    if (!addToGroup.operand().getType().isa<TokenType>())
       return failure();
 
-    // Check if `async.await` is inside the outlined coroutine function.
-    auto func = await.getParentOfType<FuncOp>();
+    auto i64 = IntegerType::get(64, op->getContext());
+    rewriter.replaceOpWithNewOp<CallOp>(op, kAddTokenToGroup, i64, operands);
+    return success();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// async.await and async.await_all op lowerings to the corresponding async
+// runtime function calls.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+template <typename AwaitType, typename AwaitableType>
+class AwaitOpLoweringBase : public ConversionPattern {
+protected:
+  explicit AwaitOpLoweringBase(
+      MLIRContext *ctx,
+      const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions,
+      StringRef blockingAwaitFuncName, StringRef coroAwaitFuncName)
+      : ConversionPattern(AwaitType::getOperationName(), 1, ctx),
+        outlinedFunctions(outlinedFunctions),
+        blockingAwaitFuncName(blockingAwaitFuncName),
+        coroAwaitFuncName(coroAwaitFuncName) {}
+
+public:
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // We can only await on one the `AwaitableType` (for `await` it can be
+    // only a `token`, for `await_all` it is a `group`).
+    auto await = cast<AwaitType>(op);
+    if (!await.operand().getType().template isa<AwaitableType>())
+      return failure();
+
+    // Check if await operation is inside the outlined coroutine function.
+    auto func = await->template getParentOfType<FuncOp>();
     auto outlined = outlinedFunctions.find(func);
     const bool isInCoroutine = outlined != outlinedFunctions.end();
 
@@ -620,15 +736,15 @@ public:
     // Inside regular function we convert await operation to the blocking
     // async API await function call.
     if (!isInCoroutine)
-      rewriter.create<CallOp>(loc, Type(), kAwaitToken,
-                              ValueRange(op->getOperand(0)));
+      rewriter.create<CallOp>(loc, TypeRange(), blockingAwaitFuncName,
+                              ValueRange(operands[0]));
 
     // Inside the coroutine we convert await operation into coroutine suspension
     // point, and resume execution asynchronously.
     if (isInCoroutine) {
       const CoroMachinery &coro = outlined->getSecond();
 
-      OpBuilder builder(op);
+      OpBuilder builder(op, rewriter.getListener());
       MLIRContext *ctx = op->getContext();
 
       // A pointer to coroutine resume intrinsic wrapper.
@@ -643,13 +759,17 @@ public:
 
       // Call async runtime API to resume a coroutine in the managed thread when
       // the async await argument becomes ready.
-      SmallVector<Value, 3> awaitAndExecuteArgs = {
-          await.getOperand(), coro.coroHandle, resumePtr.res()};
-      builder.create<CallOp>(loc, Type(), kAwaitAndExecute,
+      SmallVector<Value, 3> awaitAndExecuteArgs = {operands[0], coro.coroHandle,
+                                                   resumePtr.res()};
+      builder.create<CallOp>(loc, TypeRange(), coroAwaitFuncName,
                              awaitAndExecuteArgs);
 
+      Block *suspended = op->getBlock();
+
       // Split the entry block before the await operation.
-      addSuspensionPoint(coro, coroSave.getResult(0), op);
+      Block *resume = rewriter.splitBlock(suspended, Block::iterator(op));
+      addSuspensionPoint(coro, coroSave.getResult(0), op, suspended, resume,
+                         builder);
     }
 
     // Original operation was replaced by function call or suspension point.
@@ -660,7 +780,32 @@ public:
 
 private:
   const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions;
+  StringRef blockingAwaitFuncName;
+  StringRef coroAwaitFuncName;
 };
+
+// Lowering for `async.await` operation (only token operands are supported).
+class AwaitOpLowering : public AwaitOpLoweringBase<AwaitOp, TokenType> {
+  using Base = AwaitOpLoweringBase<AwaitOp, TokenType>;
+
+public:
+  explicit AwaitOpLowering(
+      MLIRContext *ctx,
+      const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
+      : Base(ctx, outlinedFunctions, kAwaitToken, kAwaitAndExecute) {}
+};
+
+// Lowering for `async.await_all` operation.
+class AwaitAllOpLowering : public AwaitOpLoweringBase<AwaitAllOp, GroupType> {
+  using Base = AwaitOpLoweringBase<AwaitAllOp, GroupType>;
+
+public:
+  explicit AwaitAllOpLowering(
+      MLIRContext *ctx,
+      const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
+      : Base(ctx, outlinedFunctions, kAwaitGroup, kAwaitAllAndExecute) {}
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -717,9 +862,12 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 
   populateFuncOpTypeConversionPattern(patterns, ctx, converter);
   patterns.insert<CallOpOpConversion>(ctx);
-  patterns.insert<AwaitOpLowering>(ctx, outlinedFunctions);
+  patterns.insert<AddRefOpLowering, DropRefOpLowering>(ctx);
+  patterns.insert<CreateGroupOpLowering, AddToGroupOpLowering>(ctx);
+  patterns.insert<AwaitOpLowering, AwaitAllOpLowering>(ctx, outlinedFunctions);
 
   ConversionTarget target(*ctx);
+  target.addLegalOp<ConstantOp>();
   target.addLegalDialect<LLVM::LLVMDialect>();
   target.addIllegalDialect<AsyncDialect>();
   target.addDynamicallyLegalOp<FuncOp>(

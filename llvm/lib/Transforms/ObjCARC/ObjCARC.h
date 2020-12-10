@@ -23,9 +23,7 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
-#include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/ObjCARC.h"
 
 namespace llvm {
 namespace objcarc {

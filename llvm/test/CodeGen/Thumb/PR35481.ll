@@ -13,7 +13,7 @@ entry:
 ; CHECK-NEXT: mov lr, r7
 ; CHECK-NEXT: pop {r7}
 ; CHECK-NEXT: add sp, #4
-; CHECK-V47: bx lr
+; CHECK-V4T: bx lr
 ; CHECK-V8M: b g
 }
 

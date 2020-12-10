@@ -22,7 +22,7 @@ class PassRegistry;
 class Pass;
 } // namespace llvm
 
-namespace {
+namespace polly {
 class SimplifyVisitor {
 private:
   /// The invocation id (if there are multiple instances in the pass manager's
@@ -114,7 +114,7 @@ public:
 
   void releaseMemory();
 };
-} // namespace
+} // namespace polly
 
 namespace polly {
 

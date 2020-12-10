@@ -15,7 +15,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -89,7 +89,7 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
 
     // Outline before current function.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(ifOp.getParentOfType<FuncOp>());
+    b.setInsertionPoint(ifOp->getParentOfType<FuncOp>());
 
     llvm::SetVector<Value> captures;
     getUsedValuesDefinedAbove(ifOrElseRegion, captures);

@@ -8,6 +8,7 @@
 
 from libcxx.test.dsl import *
 import re
+import shutil
 import sys
 
 _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_build_version__' not in compilerMacros(cfg)
@@ -39,13 +40,23 @@ DEFAULT_FEATURES = [
   Feature(name='has-fobjc-arc',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc') and
                                                                  sys.platform.lower().strip() == 'darwin'), # TODO: this doesn't handle cross-compiling to Apple platforms.
   Feature(name='objective-c++',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc')),
-  Feature(name='modules-support',               when=lambda cfg: hasCompileFlag(cfg, '-fmodules')),
-  Feature(name='non-lockfree-atomics',          when=lambda cfg: sourceBuilds(cfg, """
-                                                                  #include <atomic>
-                                                                  struct Large { int storage[100]; };
-                                                                  std::atomic<Large> x;
-                                                                  int main(int, char**) { return x.load(), x.is_lock_free(); }
-                                                                """)),
+
+  # Note: We use a custom modules cache path to make sure that we don't reuse
+  #       the default one, which can be shared across builds. This is important
+  #       because we define macros in headers files, and a change in these macros
+  #       doesn't seem to invalidate modules cache entries, which means we could
+  #       build against now-invalid cached headers from a previous build.
+  Feature(name='modules-support',
+          when=lambda cfg: hasCompileFlag(cfg, '-fmodules'),
+          actions=lambda cfg: [AddCompileFlag('-fmodules-cache-path=%t/ModuleCache')]),
+
+  Feature(name='non-lockfree-atomics',
+          when=lambda cfg: sourceBuilds(cfg, """
+            #include <atomic>
+            struct Large { int storage[100]; };
+            std::atomic<Large> x;
+            int main(int, char**) { return x.load(), x.is_lock_free(); }
+          """)),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
@@ -128,6 +139,15 @@ DEFAULT_FEATURES += [
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),
   Feature(name='netbsd', when=lambda cfg: '__NetBSD__' in compilerMacros(cfg))
+]
+
+
+# Detect whether GDB is on the system, and if so add a substitution to access it.
+DEFAULT_FEATURES += [
+  Feature(name='host-has-gdb',
+    when=lambda cfg: shutil.which('gdb') is not None,
+    actions=[AddSubstitution('%{gdb}', lambda cfg: shutil.which('gdb'))]
+  )
 ]
 
 

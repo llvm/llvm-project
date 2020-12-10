@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "src/math/sqrt.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include <math.h>
 
 using FPBits = __llvm_libc::fputil::FPBits<double>;
 using UIntType = typename FPBits::UIntType;

@@ -13,11 +13,13 @@ set(LLVM_LINK_COMPONENTS
 if(MLIR_INCLUDE_TESTS)
   set(test_libs
     MLIRAffineTransformsTestPasses
+    MLIRShapeTestPasses
     MLIRSPIRVTestPasses
     MLIRTestDialect
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
+    MLIRTestRewrite
     MLIRTestTransforms
     )
 endif()

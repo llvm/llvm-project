@@ -12,9 +12,9 @@ module real_tests
   real(4), parameter :: r4_nmax = -3.4028235E38
   !WARN: invalid argument on division
   real(4), parameter :: r4_nan = 0._4/0._4
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_pinf = 1._4/0._4
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
   !WARN: invalid argument on intrinsic function

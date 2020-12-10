@@ -28,3 +28,22 @@ func @branch_loop() {
   }
   return
 }
+
+// CHECK-LABEL: @wsloop
+// CHECK: (%[[ARG0:.*]]: !llvm.i64, %[[ARG1:.*]]: !llvm.i64, %[[ARG2:.*]]: !llvm.i64, %[[ARG3:.*]]: !llvm.i64, %[[ARG4:.*]]: !llvm.i64, %[[ARG5:.*]]: !llvm.i64)
+func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) {
+  // CHECK: omp.parallel
+  omp.parallel {
+    // CHECK: omp.wsloop
+    // CHECK: (%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG4]], %[[ARG5]])
+    "omp.wsloop"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5) ( {
+    // CHECK: ^{{.*}}(%[[ARG6:.*]]: !llvm.i64, %[[ARG7:.*]]: !llvm.i64):
+    ^bb0(%arg6: index, %arg7: index):  // no predecessors
+      // CHECK: "test.payload"(%[[ARG6]], %[[ARG7]]) : (!llvm.i64, !llvm.i64) -> ()
+      "test.payload"(%arg6, %arg7) : (index, index) -> ()
+      omp.yield
+    }) {operand_segment_sizes = dense<[2, 2, 2, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (index, index, index, index, index, index) -> ()
+    omp.terminator
+  }
+  return
+}

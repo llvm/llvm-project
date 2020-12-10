@@ -16,8 +16,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
@@ -87,7 +86,8 @@ mlir::translateModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
   // 2. Insert amdgpu-flat-workgroup-size(1, 1024) attribute.
   for (auto func :
        ModuleTranslation::getModuleBody(m).getOps<LLVM::LLVMFuncOp>()) {
-    if (!func.getAttrOfType<UnitAttr>(gpu::GPUDialect::getKernelFuncAttrName()))
+    if (!func->getAttrOfType<UnitAttr>(
+            gpu::GPUDialect::getKernelFuncAttrName()))
       continue;
 
     auto *llvmFunc = llvmModule->getFunction(func.getName());

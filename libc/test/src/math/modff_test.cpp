@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "src/math/modff.h"
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/BitPatterns.h"
@@ -14,6 +13,7 @@
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 using __llvm_libc::fputil::valueAsBits;
 using __llvm_libc::fputil::valueFromBits;

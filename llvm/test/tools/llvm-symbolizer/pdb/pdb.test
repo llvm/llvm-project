@@ -6,26 +6,23 @@ RUN: echo 0x4013D0 >> %t.input
 RUN: echo 0x4013E0 >> %t.input
 RUN: echo 0x4013F0 >> %t.input
 RUN: echo 0x401420 >> %t.input
-RUN: llvm-symbolizer -obj="%p/Inputs/test.exe" < %t.input \
+RUN: llvm-symbolizer --obj="%p/Inputs/test.exe" < %t.input \
 RUN:    | FileCheck %s
 RUN: llvm-symbolizer --obj="%p/Inputs/test.exe" --no-demangle < %t.input \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 
-Test with native pdb reader.
-RUN: llvm-symbolizer -use-native-pdb-reader -obj="%p/Inputs/test.exe" < %t.input \
+; Check that -dia works
+RUN: llvm-symbolizer --dia --obj="%p/Inputs/test.exe" < %t.input \
 RUN:    | FileCheck %s
-RUN: llvm-symbolizer --use-native-pdb-reader --obj="%p/Inputs/test.exe" --no-demangle < %t.input \
+RUN: llvm-symbolizer --dia --obj="%p/Inputs/test.exe" --no-demangle < %t.input \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
+
 
 Subtract ImageBase from all the offsets and run the test again with
 --relative-address.
 
 RUN: %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' < %t.input \
 RUN:    | llvm-symbolizer --obj="%p/Inputs/test.exe" --no-demangle --relative-address \
-RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
-
-RUN: %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' < %t.input \
-RUN:    | llvm-symbolizer --use-native-pdb-reader --obj="%p/Inputs/test.exe" --no-demangle --relative-address \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 
 CHECK: foo(void)

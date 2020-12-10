@@ -132,7 +132,7 @@ run_loop(
       // Guided scheduling uses FP computations, so current chunk may
       // be a bit bigger (+1) than allowed maximum.
       if (!( cur <= max + 1))
-        printf("Error with iter %d, %d, err %d\n", cur, max, ++err);
+        printf("Error with iter %llu, %llu, err %d\n", cur, max, ++err);
       // Update maximum for the next chunk.
       if (last) {
         if (!no_chunk && cur > ch && nthreads > 1)

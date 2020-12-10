@@ -335,13 +335,18 @@ genACCParallelOp(Fortran::lower::AbstractConverter &converter,
                                           firOpBuilder.getI1Type(), cond);
     } else if (const auto *selfClause =
                    std::get_if<Fortran::parser::AccClause::Self>(&clause.u)) {
-      if (selfClause->v) {
-        Value cond = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*(selfClause->v))));
-        selfCond = firOpBuilder.createConvert(currentLocation,
-                                              firOpBuilder.getI1Type(), cond);
-      } else {
-        addSelfAttr = true;
+      const Fortran::parser::AccSelfClause &accSelfClause = selfClause->v;
+      if (const auto *optCondition =
+              std::get_if<std::optional<Fortran::parser::ScalarLogicalExpr>>(
+                  &accSelfClause.u)) {
+        if (*optCondition) {
+          Value cond = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(*optCondition)));
+          selfCond = firOpBuilder.createConvert(currentLocation,
+                                                firOpBuilder.getI1Type(), cond);
+        } else {
+          addSelfAttr = true;
+        }
       }
     } else if (const auto *copyClause =
                    std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {

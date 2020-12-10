@@ -63,7 +63,7 @@ def testUserDialectClass():
 run(testUserDialectClass)
 
 
-# XHECK-LABEL: TEST: testCustomOpView
+# CHECK-LABEL: TEST: testCustomOpView
 # This test uses the standard dialect AddFOp as an example of a user op.
 # TODO: Op creation and access is still quite verbose: simplify this test as
 # additional capabilities come online.
@@ -82,17 +82,17 @@ def testCustomOpView():
       # Create via dialects context collection.
       input1 = createInput()
       input2 = createInput()
-      op1 = ctx.dialects.std.AddFOp(input1, input2)
+      op1 = ctx.dialects.std.AddFOp(input1.type, input1, input2)
 
       # Create via an import
       from mlir.dialects.std import AddFOp
-      AddFOp(input1, op1.result)
+      AddFOp(input1.type, input1, op1.result)
 
-  # XHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
-  # XHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"
-  # XHECK: %[[R0:.*]] = addf %[[INPUT0]], %[[INPUT1]] : f32
-  # XHECK: %[[R1:.*]] = addf %[[INPUT0]], %[[R0]] : f32
+  # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
+  # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"
+  # CHECK: %[[R0:.*]] = addf %[[INPUT0]], %[[INPUT1]] : f32
+  # CHECK: %[[R1:.*]] = addf %[[INPUT0]], %[[R0]] : f32
   m.operation.print()
 
-# TODO: re-enable when constructs are generated again
-# run(testCustomOpView)
+
+run(testCustomOpView)

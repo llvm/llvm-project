@@ -1,4 +1,5 @@
 ; RUN: opt < %s -dce -S | FileCheck %s
+; RUN: opt < %s -passes=dce -S | FileCheck %s
 
 declare double @acos(double) nounwind
 declare double @asin(double) nounwind

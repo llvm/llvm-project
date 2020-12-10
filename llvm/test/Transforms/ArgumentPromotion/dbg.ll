@@ -18,7 +18,7 @@ define internal void @test(i32** %X) !dbg !2 {
 
 %struct.pair = type { i32, i32 }
 
-define internal void @test_byval(%struct.pair* byval %P) {
+define internal void @test_byval(%struct.pair* byval(%struct.pair) %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
 ; CHECK-SAME: (i32 [[P_0:%.*]], i32 [[P_1:%.*]])
 ; CHECK-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]], align 8

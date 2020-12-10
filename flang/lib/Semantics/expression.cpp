@@ -709,8 +709,16 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
   return std::nullopt;
 }
 
-MaybeExpr ExpressionAnalyzer::Analyze(const parser::NullInit &x) {
-  return Expr<SomeType>{NullPointer{}};
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::NullInit &n) {
+  if (MaybeExpr value{Analyze(n.v)}) {
+    // Subtle: when the NullInit is a DataStmtConstant, it might
+    // be a misparse of a structure constructor without parameters
+    // or components (e.g., T()).  Checking the result to ensure
+    // that a "=>" data entity initializer actually resolved to
+    // a null pointer has to be done by the caller.
+    return Fold(std::move(*value));
+  }
+  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::InitialDataTarget &x) {
@@ -1632,7 +1640,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                         GetRank(*valueShape), symbol->name()),
                     *symbol);
               } else if (CheckConformance(messages, *componentShape,
-                             *valueShape, "component", "value")) {
+                             *valueShape, "component", "value", false,
+                             true /* can expand scalar value */)) {
                 if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0 &&
                     !IsExpandableScalar(*converted)) {
                   AttachDeclaration(
@@ -1922,7 +1931,7 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
     if (std::optional<characteristics::Procedure> procedure{
             characteristics::Procedure::Characterize(
-                ProcedureDesignator{specific}, context_.intrinsics())}) {
+                ProcedureDesignator{specific}, context_.foldingContext())}) {
       ActualArguments localActuals{actuals};
       if (specific.has<semantics::ProcBindingDetails>()) {
         if (!adjustActuals.value()(specific, localActuals)) {
@@ -2225,8 +2234,8 @@ static bool IsExternalCalledImplicitly(
 std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     parser::CharBlock callSite, const ProcedureDesignator &proc,
     ActualArguments &arguments) {
-  auto chars{
-      characteristics::Procedure::Characterize(proc, context_.intrinsics())};
+  auto chars{characteristics::Procedure::Characterize(
+      proc, context_.foldingContext())};
   if (chars) {
     bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
     if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
@@ -2450,11 +2459,18 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
                   "operator"_err_en_US);
       return std::nullopt;
     }
-    analyzer.ConvertBOZ(0, analyzer.GetType(1));
-    analyzer.ConvertBOZ(1, analyzer.GetType(0));
+    std::optional<DynamicType> leftType{analyzer.GetType(0)};
+    std::optional<DynamicType> rightType{analyzer.GetType(1)};
+    analyzer.ConvertBOZ(0, rightType);
+    analyzer.ConvertBOZ(1, leftType);
     if (analyzer.IsIntrinsicRelational(opr)) {
       return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
           analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
+    } else if (leftType && leftType->category() == TypeCategory::Logical &&
+        rightType && rightType->category() == TypeCategory::Logical) {
+      context.Say("LOGICAL operands must be compared using .EQV. or "
+                  ".NEQV."_err_en_US);
+      return std::nullopt;
     } else {
       return analyzer.TryDefinedOp(opr,
           "Operands of %s must have comparable types; have %s and %s"_err_en_US);
@@ -2922,7 +2938,8 @@ bool ArgumentAnalyzer::CheckConformance() const {
       auto rhShape{GetShape(foldingContext, *rhs)};
       if (lhShape && rhShape) {
         return evaluate::CheckConformance(foldingContext.messages(), *lhShape,
-            *rhShape, "left operand", "right operand");
+            *rhShape, "left operand", "right operand", true,
+            true /* scalar expansion is allowed */);
       }
     }
   }

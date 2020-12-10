@@ -294,13 +294,13 @@ func @some_func_C(%A: memref<8xf64, #tile>) {
 }
 
 // Test case set #7: Check normalization in case of external functions.
-// CHECK-LABEL: func @external_func_A
+// CHECK-LABEL: func private @external_func_A
 // CHECK-SAME: (memref<4x4xf64>)
-func @external_func_A(memref<16xf64, #tile>) -> ()
+func private @external_func_A(memref<16xf64, #tile>) -> ()
 
-// CHECK-LABEL: func @external_func_B
+// CHECK-LABEL: func private @external_func_B
 // CHECK-SAME: (memref<4x4xf64>, f64) -> memref<2x4xf64>
-func @external_func_B(memref<16xf64, #tile>, f64) -> (memref<8xf64, #tile>)
+func private @external_func_B(memref<16xf64, #tile>, f64) -> (memref<8xf64, #tile>)
 
 // CHECK-LABEL: func @simply_call_external()
 func @simply_call_external() {

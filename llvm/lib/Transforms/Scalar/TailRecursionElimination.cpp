@@ -240,7 +240,11 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
         Escaped = ESCAPED;
 
       CallInst *CI = dyn_cast<CallInst>(&I);
-      if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I))
+      // A PseudoProbeInst has the IntrInaccessibleMemOnly tag hence it is
+      // considered accessing memory and will be marked as a tail call if we
+      // don't bail out here.
+      if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I) ||
+          isa<PseudoProbeInst>(&I))
         continue;
 
       bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();
@@ -282,7 +286,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
       }
     }
 
-    for (auto *SuccBB : make_range(succ_begin(BB), succ_end(BB))) {
+    for (auto *SuccBB : successors(BB)) {
       auto &State = Visited[SuccBB];
       if (State < Escaped) {
         State = Escaped;
@@ -752,7 +756,7 @@ bool TailRecursionEliminator::processBlock(
       return false;
 
     BasicBlock *Succ = BI->getSuccessor(0);
-    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg());
+    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg(true));
 
     if (!Ret)
       return false;

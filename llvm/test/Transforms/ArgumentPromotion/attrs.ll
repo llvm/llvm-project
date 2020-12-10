@@ -5,9 +5,9 @@
 %struct.ss = type { i32, i64 }
 
 ; Don't drop 'byval' on %X here.
-define internal void @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
+define internal void @f(%struct.ss* byval(%struct.ss) %b, i32* byval(i32) %X, i32 %i) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]], i32* byval [[X:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]], i32* byval(i32) [[X:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
@@ -46,7 +46,7 @@ define i32 @test(i32* %X) {
 ; CHECK-NEXT:    [[S_0_VAL:%.*]] = load i32, i32* [[S_0]], align 4
 ; CHECK-NEXT:    [[S_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    [[S_1_VAL:%.*]] = load i64, i64* [[S_1]], align 4
-; CHECK-NEXT:    call void @f(i32 [[S_0_VAL]], i64 [[S_1_VAL]], i32* byval [[X]], i32 zeroext 0)
+; CHECK-NEXT:    call void @f(i32 [[S_0_VAL]], i64 [[S_1_VAL]], i32* byval(i32) [[X]], i32 zeroext 0)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -56,7 +56,7 @@ entry:
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
 
-  call void @f( %struct.ss* byval %S, i32* byval %X, i32 zeroext 0)
+  call void @f(%struct.ss* byval(%struct.ss) %S, i32* byval(i32) %X, i32 zeroext 0)
 
   ret i32 0
 }

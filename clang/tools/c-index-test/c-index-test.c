@@ -1539,10 +1539,20 @@ static void PrintNullabilityKind(CXType T, const char *Format) {
 
   const char *nullability = 0;
   switch (N) {
-    case CXTypeNullability_NonNull: nullability = "nonnull"; break;
-    case CXTypeNullability_Nullable: nullability = "nullable"; break;
-    case CXTypeNullability_Unspecified: nullability = "unspecified"; break;
-    case CXTypeNullability_Invalid: break;
+  case CXTypeNullability_NonNull:
+    nullability = "nonnull";
+    break;
+  case CXTypeNullability_Nullable:
+    nullability = "nullable";
+    break;
+  case CXTypeNullability_NullableResult:
+    nullability = "nullable_result";
+    break;
+  case CXTypeNullability_Unspecified:
+    nullability = "unspecified";
+    break;
+  case CXTypeNullability_Invalid:
+    break;
   }
 
   if (nullability) {

@@ -12,9 +12,10 @@
 
 namespace mlir {
 class AffineForOp;
+class ConversionTarget;
+struct LogicalResult;
 class MLIRContext;
 class OwningRewritePatternList;
-struct LogicalResult;
 class Value;
 
 namespace scf {
@@ -43,6 +44,10 @@ LogicalResult convertAffineLoopNestToGPULaunch(AffineForOp forOp,
 /// provided pattern list.
 void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
                                        MLIRContext *ctx);
+
+/// Configures the rewrite target such that only `scf.parallel` operations that
+/// are not rewritten by the provided patterns are legal.
+void configureParallelLoopToGPULegality(ConversionTarget &target);
 
 } // namespace mlir
 

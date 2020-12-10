@@ -529,6 +529,10 @@ void __sanitizer_set_report_path(const char *path) {
 void __sanitizer_set_report_fd(void *fd) {
   UNREACHABLE("not available on Fuchsia");
 }
+
+const char *__sanitizer_get_report_path() {
+  UNREACHABLE("not available on Fuchsia");
+}
 }  // extern "C"
 
 #endif  // SANITIZER_FUCHSIA

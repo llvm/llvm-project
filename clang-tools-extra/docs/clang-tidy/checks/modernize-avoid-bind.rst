@@ -46,7 +46,7 @@ Options
 
 .. option:: PermissiveParameterList
 
-  If the option is set to non-zero, the check will append ``auto&&...`` to the end
+  If the option is set to `true`, the check will append ``auto&&...`` to the end
   of every placeholder parameter list. Without this, it is possible for a fix-it
   to perform an incorrect transformation in the case where the result of the ``bind``
   is used in the context of a type erased functor such as ``std::function`` which

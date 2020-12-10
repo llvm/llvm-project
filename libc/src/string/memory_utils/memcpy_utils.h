@@ -90,9 +90,10 @@ static void CopyAlignedBlocks(char *__restrict dst, const char *__restrict src,
   CopyBlock<kBlockSize>(dst, src); // Copy first block
 
   // Copy aligned blocks
-  size_t offset = kBlockSize - offset_from_last_aligned<kBlockSize>(dst);
-  for (; offset + kBlockSize < count; offset += kBlockSize)
-    CopyBlock<kBlockSize>(dst + offset, src + offset);
+  const size_t ofla = offset_from_last_aligned<kBlockSize>(dst);
+  const size_t limit = count + ofla - kBlockSize;
+  for (size_t offset = kBlockSize; offset < limit; offset += kBlockSize)
+    CopyBlock<kBlockSize>(dst - ofla + offset, src - ofla + offset);
 
   CopyLastBlock<kBlockSize>(dst, src, count); // Copy last block
 }

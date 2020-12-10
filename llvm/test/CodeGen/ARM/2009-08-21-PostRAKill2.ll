@@ -11,7 +11,7 @@ target triple = "armv7-apple-darwin9"
 
 declare double @floor(double) nounwind readnone
 
-define void @intcoord(%struct.icstruct* noalias nocapture sret %agg.result, i1 %a, double %b) {
+define void @intcoord(%struct.icstruct* noalias nocapture sret(%struct.icstruct) %agg.result, i1 %a, double %b) {
 entry:
   br i1 %a, label %bb3, label %bb1
 

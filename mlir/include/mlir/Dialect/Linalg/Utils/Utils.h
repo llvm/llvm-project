@@ -17,6 +17,7 @@
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 
 using mlir::edsc::intrinsics::AffineIndexedValue;
@@ -82,6 +83,13 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
+using FusableOpDependencesTy = llvm::MapVector<
+    Operation *,
+    SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
+FusableOpDependencesTy
+findAllFusableDependences(ArrayRef<LinalgOp> ops,
+                          const LinalgDependenceGraph &dependenceGraph);
+
 /// Fuses producer into consumer if the producer is structurally feasible and
 /// the fusion would not violate dependencies.
 /// Implements the fusion part of the "tileAndFuse on buffers"
@@ -105,24 +113,16 @@ Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
                                               Operation *consumer,
                                               unsigned consumerIdx);
 
-/// Returns the linearized list of all shape dimensions in a `linalgOp`.
-/// Applying the inverse, concatenated loopToOperandRangeMaps to this list
-/// allows the derivation of loop ranges for any linalgOp.
-SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp);
-template <typename ConcreteOpTy>
-SmallVector<Value, 8> getShape(OpBuilder &builder, ConcreteOpTy linalgOp) {
-  return getShape(builder, cast<linalg::LinalgOp>(linalgOp.getOperation()));
-}
+/// Like `getShape`, but only returns statically-known information, without
+/// generating any new IR. For each shape dimension, returns >=0 if that
+/// dimension is statically known, or -1 otherwise.
+SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp);
 
-/// Returns the loop ranges of the `linalgOp`. Applies the inverse of the
-/// concatenated indexing maps to the result of `getShape`. Returns None if
-/// the bounds computation fails.
-Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
-                                              LinalgOp linalgOp);
-
-/// Returns the values obtained by applying `map` to the list of values.
-SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
-                                       AffineMap map, ValueRange values);
+/// Returns the statically-known loop ranges of the `linalgOp`. Composes
+/// `linalgOp.getShapesToLoopsMap()` with the result of `getStaticShape`.
+/// Returns None if `linalgOp.getShapesToLoopsMap()` fails. Returns -1
+/// for non-statically-known loop ranges.
+Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp);
 
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.

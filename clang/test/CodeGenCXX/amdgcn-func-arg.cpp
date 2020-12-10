@@ -31,13 +31,13 @@ void func_with_indirect_arg(A a) {
 // CHECK:  %[[r0:.+]] = addrspacecast %class.A addrspace(5)* %a to %class.A*
 // CHECK:  %agg.tmp = alloca %class.A, align 4, addrspace(5)
 // CHECK:  %[[r1:.+]] = addrspacecast %class.A addrspace(5)* %agg.tmp to %class.A*
-// CHECK:  call void @_ZN1AC1Ev(%class.A* %[[r0]])
+// CHECK:  call void @_ZN1AC1Ev(%class.A* {{[^,]*}} %[[r0]])
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64
 // CHECK:  %[[r4:.+]] = addrspacecast %class.A* %[[r1]] to %class.A addrspace(5)*
 // CHECK:  call void @_Z22func_with_indirect_arg1A(%class.A addrspace(5)* %[[r4]])
-// CHECK:  call void @_ZN1AD1Ev(%class.A* %[[r1]])
+// CHECK:  call void @_ZN1AD1Ev(%class.A* {{[^,]*}} %[[r1]])
 // CHECK:  call void @_Z17func_with_ref_argR1A(%class.A* nonnull align 4 dereferenceable(4) %[[r0]])
-// CHECK:  call void @_ZN1AD1Ev(%class.A* %[[r0]])
+// CHECK:  call void @_ZN1AD1Ev(%class.A* {{[^,]*}} %[[r0]])
 void test_indirect_arg_auto() {
   A a;
   func_with_indirect_arg(a);
@@ -50,7 +50,7 @@ void test_indirect_arg_auto() {
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64
 // CHECK:  %[[r2:.+]] = addrspacecast %class.A* %[[r0]] to %class.A addrspace(5)*
 // CHECK:  call void @_Z22func_with_indirect_arg1A(%class.A addrspace(5)* %[[r2]])
-// CHECK:  call void @_ZN1AD1Ev(%class.A* %[[r0]])
+// CHECK:  call void @_ZN1AD1Ev(%class.A* {{[^,]*}} %[[r0]])
 // CHECK:  call void @_Z17func_with_ref_argR1A(%class.A* nonnull align 4 dereferenceable(4) addrspacecast (%class.A addrspace(1)* @g_a to %class.A*))
 void test_indirect_arg_global() {
   func_with_indirect_arg(g_a);

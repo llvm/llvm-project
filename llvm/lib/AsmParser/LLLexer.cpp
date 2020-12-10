@@ -531,6 +531,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(undef);
   KEYWORD(null);
   KEYWORD(none);
+  KEYWORD(poison);
   KEYWORD(to);
   KEYWORD(caller);
   KEYWORD(within);
@@ -679,7 +680,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(signext);
   KEYWORD(speculatable);
   KEYWORD(sret);
-  KEYWORD(nossp);
   KEYWORD(ssp);
   KEYWORD(sspreq);
   KEYWORD(sspstrong);
@@ -725,6 +725,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);
+  KEYWORD(dso_local_equivalent);
 
   // Metadata types.
   KEYWORD(distinct);

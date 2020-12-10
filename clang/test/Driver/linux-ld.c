@@ -941,9 +941,6 @@
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu -mabi=elfv1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv1 %s
-// RUN: %clang %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64-linux-gnu -mabi=elfv1-qpx \
-// RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv1 %s
 // CHECK-PPC64-ELFv1: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64-ELFv1: "-m" "elf64ppc"
 // CHECK-PPC64-ELFv1: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
@@ -1282,67 +1279,32 @@
 // CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/../../.."
 // CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
-//
-// Check linker paths on Debian 8 / Sparc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparc-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32 %s
-// CHECK-DEBIAN-SPARC32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-SPARC32: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../sparc-linux-gnu{{/|\\\\}}crt1.o"
-// CHECK-DEBIAN-SPARC32: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../sparc-linux-gnu{{/|\\\\}}crti.o"
-// CHECK-DEBIAN-SPARC32: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../sparc-linux-gnu"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../../lib"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/lib/sparc-linux-gnu"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/usr/lib/sparc-linux-gnu"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-SPARC32: "-L[[SYSROOT]]/usr/lib"
-// CHECK-DEBIAN-SPARC32: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9{{/|\\\\}}crtend.o"
-// CHECK-DEBIAN-SPARC32: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../sparc-linux-gnu{{/|\\\\}}crtn.o"
-//
-// Check linker paths on Debian 8 / Sparc, with the oldstyle multilib packages
-// RUN: %clang -no-canonical-prefixes -m64 %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32-LIB64 %s
-// CHECK-DEBIAN-SPARC32-LIB64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-SPARC32-LIB64: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../../lib64{{/|\\\\}}crt1.o"
-// CHECK-DEBIAN-SPARC32-LIB64: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../../lib64{{/|\\\\}}crti.o"
-// CHECK-DEBIAN-SPARC32-LIB64: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/64{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/64"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../../lib64"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/usr/lib/../lib64"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-SPARC32-LIB64: "-L[[SYSROOT]]/usr/lib"
-// CHECK-DEBIAN-SPARC32-LIB64: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/64{{/|\\\\}}crtend.o"
-// CHECK-DEBIAN-SPARC32-LIB64: "[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.9/../../../../lib64{{/|\\\\}}crtn.o"
-//
-// Check linker paths on Debian 8 / Sparc64
+// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC %s
+// CHECK-DEBIAN-SPARC:      "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-DEBIAN-SPARC-SAME: "{{.*}}/usr/lib/gcc/sparc-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.5"
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.5/../../../sparc-linux-gnu"
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/sparc-linux-gnu"
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.5/../../.."
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/lib"
+// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparc64-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_8_sparc64_tree \
+// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC64 %s
-// CHECK-DEBIAN-SPARC64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-SPARC64: "[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9/../../../sparc64-linux-gnu{{/|\\\\}}crt1.o"
-// CHECK-DEBIAN-SPARC64: "[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9/../../../sparc64-linux-gnu{{/|\\\\}}crti.o"
-// CHECK-DEBIAN-SPARC64: "[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9/../../../sparc64-linux-gnu"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/lib/sparc64-linux-gnu"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/usr/lib/sparc64-linux-gnu"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9/../../.."
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-SPARC64: "-L[[SYSROOT]]/usr/lib"
-// CHECK-DEBIAN-SPARC64: "[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9{{/|\\\\}}crtend.o"
-// CHECK-DEBIAN-SPARC64: "[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.9/../../../sparc64-linux-gnu{{/|\\\\}}crtn.o"
+// CHECK-DEBIAN-SPARC64:      "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-DEBIAN-SPARC64-SAME: "{{.*}}/usr/lib/gcc/sparc64-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.5"
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.5/../../../sparc64-linux-gnu"
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/sparc64-linux-gnu"
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.5/../../.."
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/lib"
+// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib"
 //
 // Test linker invocation on Android.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \

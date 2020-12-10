@@ -108,6 +108,23 @@ const Hierarchy::NodeType &lastConcrete(const Hierarchy::NodeType &N) {
   return N.Derived.empty() ? N : lastConcrete(*N.Derived.back());
 }
 
+struct SyntaxConstraint {
+  SyntaxConstraint(const llvm::Record &R) {
+    if (R.isSubClassOf("Optional")) {
+      *this = SyntaxConstraint(*R.getValueAsDef("inner"));
+    } else if (R.isSubClassOf("AnyToken")) {
+      NodeType = "Leaf";
+    } else if (R.isSubClassOf("NodeType")) {
+      NodeType = R.getName().str();
+    } else {
+      assert(false && "Unhandled Syntax kind");
+    }
+  }
+
+  std::string NodeType;
+  // optional and leaf types also go here, once we want to use them.
+};
+
 } // namespace
 
 void clang::EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
@@ -195,6 +212,21 @@ void clang::EmitClangSyntaxNodeClasses(llvm::RecordKeeper &Records,
     else
       OS << formatv("protected:\n  {0}(NodeKind K) : {1}(K) {{}\npublic:\n",
                     N.name(), N.Base->name());
+
+    if (N.Record->isSubClassOf("Sequence")) {
+      // Getters for sequence elements.
+      for (const auto &C : N.Record->getValueAsListOfDefs("children")) {
+        assert(C->isSubClassOf("Role"));
+        llvm::StringRef Role = C->getValueAsString("role");
+        SyntaxConstraint Constraint(*C->getValueAsDef("syntax"));
+        for (const char *Const : {"", "const "})
+          OS << formatv(
+              "  {2}{1} *get{0}() {2} {{\n"
+              "    return llvm::cast_or_null<{1}>(findChild(NodeRole::{0}));\n"
+              "  }\n",
+              Role, Constraint.NodeType, Const);
+      }
+    }
 
     // classof. FIXME: move definition inline once ~all nodes are generated.
     OS << "  static bool classof(const Node *N);\n";

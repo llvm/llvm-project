@@ -3,35 +3,35 @@
 // RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
 // UNSUPPORTED: !fir
 
-// CHECK-LABEL: func @it1() -> !fir.int<4>
-// CHECK: func @box1() -> !fir.boxchar<2>
-// CHECK: func @box2() -> !fir.boxproc<(i32, i32) -> i64>
-// CHECK: func @box3() -> !fir.box<!fir.type<derived3{f:f32}>>
-func @it1() -> !fir.int<4>
-func @box1() -> !fir.boxchar<2>
-func @box2() -> !fir.boxproc<(i32, i32) -> i64>
-func @box3() -> !fir.box<!fir.type<derived3{f:f32}>>
+// CHECK-LABEL: func private @it1() -> !fir.int<4>
+// CHECK: func private @box1() -> !fir.boxchar<2>
+// CHECK: func private @box2() -> !fir.boxproc<(i32, i32) -> i64>
+// CHECK: func private @box3() -> !fir.box<!fir.type<derived3{f:f32}>>
+func private @it1() -> !fir.int<4>
+func private @box1() -> !fir.boxchar<2>
+func private @box2() -> !fir.boxproc<(i32, i32) -> i64>
+func private @box3() -> !fir.box<!fir.type<derived3{f:f32}>>
 
 // Fortran SUBROUTINE and FUNCTION
-// CHECK-LABEL: func @print_index3(index, index, index)
-// CHECK: func @user_i64(i64)
-// CHECK: func @user_tdesc(!fir.tdesc<!fir.type<x>>)
-func @print_index3(index, index, index)
-func @user_i64(i64)
-func @user_tdesc(!fir.tdesc<!fir.type<x>>)
+// CHECK-LABEL: func private @print_index3(index, index, index)
+// CHECK: func private @user_i64(i64)
+// CHECK: func private @user_tdesc(!fir.tdesc<!fir.type<x>>)
+func private @print_index3(index, index, index)
+func private @user_i64(i64)
+func private @user_tdesc(!fir.tdesc<!fir.type<x>>)
 
 // expect the void return to be omitted
-// CHECK-LABEL: func @store_tuple(tuple<!fir.type<qq1{f1:i32}>>)
-// CHECK: func @get_method_box() -> !fir.box<!fir.type<derived3{f:f32}>>
-// CHECK: func @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
-func @store_tuple(tuple<!fir.type<qq1{f1:i32}>>) -> ()
-func @get_method_box() -> !fir.box<!fir.type<derived3{f:f32}>>
-func @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
+// CHECK-LABEL: func private @store_tuple(tuple<!fir.type<qq1{f1:i32}>>)
+// CHECK: func private @get_method_box() -> !fir.box<!fir.type<derived3{f:f32}>>
+// CHECK: func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
+func private @store_tuple(tuple<!fir.type<qq1{f1:i32}>>) -> ()
+func private @get_method_box() -> !fir.box<!fir.type<derived3{f:f32}>>
+func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
 
-// CHECK-LABEL: func @nop()
-// CHECK-LABEL: func @get_func() -> (() -> ())
-func @nop()
-func @get_func() -> (() -> ())
+// CHECK-LABEL: func private @nop()
+// CHECK-LABEL: func private @get_func() -> (() -> ())
+func private @nop()
+func private @get_func() -> (() -> ())
 
 // CHECK-LABEL:       func @instructions() {
 func @instructions() {
@@ -581,8 +581,8 @@ func @character_literal() -> !fir.array<13 x !fir.char<1>> {
 // CHECK: }
 }
 
-// CHECK-LABEL: func @earlyexit2(i32) -> i1
-func @earlyexit2(%a : i32) -> i1
+// CHECK-LABEL: func private @earlyexit2(i32) -> i1
+func private @earlyexit2(%a : i32) -> i1
 
 // CHECK-LABEL: func @early_exit(
 // CHECK-SAME: [[VAL_186:%.*]]: i1, [[VAL_187:%.*]]: i32) -> i1 {

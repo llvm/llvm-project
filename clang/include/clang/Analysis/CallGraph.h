@@ -91,8 +91,8 @@ public:
   /// Get the number of nodes in the graph.
   unsigned size() const { return FunctionMap.size(); }
 
-  /// \ brief Get the virtual root of the graph, all the functions available
-  /// externally are represented as callees of the node.
+  /// Get the virtual root of the graph, all the functions available externally
+  /// are represented as callees of the node.
   CallGraphNode *getRoot() const { return Root; }
 
   /// Iterators through all the nodes of the graph that have no parent. These

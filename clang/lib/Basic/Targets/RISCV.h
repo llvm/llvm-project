@@ -31,11 +31,13 @@ protected:
   bool HasD;
   bool HasC;
   bool HasB;
+  bool HasV;
+  bool HasZfh;
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), HasM(false), HasA(false), HasF(false),
-        HasD(false), HasC(false), HasB(false) {
+      : TargetInfo(Triple), HasM(false), HasA(false), HasF(false), HasD(false),
+        HasC(false), HasB(false), HasV(false), HasZfh(false) {
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();

@@ -204,7 +204,7 @@ func private @complex_inner_if(%arg0 : i32) -> i32 {
   return %arg_inc : i32
 }
 
-func @complex_cond() -> i1
+func private @complex_cond() -> i1
 
 // CHECK-LABEL: func private @complex_callee(
 func private @complex_callee(%arg0 : i32) -> i32 {

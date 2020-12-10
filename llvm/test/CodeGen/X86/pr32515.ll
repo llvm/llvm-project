@@ -4,7 +4,7 @@
 ; RUN: llc     -mtriple=i686-unknown   -mcpu=skx -o - %s
 ; REQUIRES: asserts
 
-@var_26 = external global i16, align 2
+@var_26 = external dso_local global i16, align 2
 
 define void @foo() #0 {
  %1 = alloca i16, align 2

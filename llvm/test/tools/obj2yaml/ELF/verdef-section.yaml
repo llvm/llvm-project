@@ -6,10 +6,10 @@
 # CHECK:       - Name:            .gnu.version_d
 # CHECK-NEXT:     Type:            SHT_GNU_verdef
 # CHECK-NEXT:     Flags:           [ SHF_ALLOC ]
-# CHECK-NEXT:     Address:         0x0000000000000230
+# CHECK-NEXT:     Address:         0x230
 # CHECK-NEXT:     Link:            .dynstr
-# CHECK-NEXT:     AddressAlign:    0x0000000000000004
-# CHECK-NEXT:     Info:            0x0000000000000004
+# CHECK-NEXT:     AddressAlign:    0x4
+# CHECK-NEXT:     Info:            0x4
 # CHECK-NEXT:     Entries:
 # CHECK-NEXT:       - Version:         1
 # CHECK-NEXT:         Flags:           1
@@ -36,15 +36,15 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_DYN
-  Entry: 0x0000000000001000
+  Entry: 0x1000
 Sections:
   - Name:            .gnu.version_d
     Type:            SHT_GNU_verdef
     Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000000230
+    Address:         0x230
     Link:            .dynstr
-    AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000004
+    AddressAlign:    0x4
+    Info:            0x4
     Entries:
       - Version:         1
         Flags:           1

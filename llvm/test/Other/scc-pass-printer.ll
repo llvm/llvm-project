@@ -1,10 +1,10 @@
-; RUN: opt < %s 2>&1 -disable-output \
+; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
 ; RUN: 	   -inline -print-after-all | FileCheck %s --check-prefix=LEGACY
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=inline -print-after-all | FileCheck %s -check-prefix=INL
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=inliner-wrapper -print-after-all | FileCheck %s -check-prefix=INL
-; RUN: opt < %s 2>&1 -disable-output \
+; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
 ; RUN: 	   -inline -print-after-all -print-module-scope | FileCheck %s -check-prefix=LEGACY-MOD
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=inline -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD

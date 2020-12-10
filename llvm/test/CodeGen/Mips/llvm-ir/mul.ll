@@ -15,11 +15,11 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64 -relocation-model=pic | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r2 -relocation-model=pic | \
-; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64,GP64-NOT-R6
+; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r3 -relocation-model=pic | \
-; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64,GP64-NOT-R6
+; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r5 -relocation-model=pic | \
-; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64,GP64-NOT-R6
+; RUN:   FileCheck %s -check-prefixes=ALL,64R1-R5,GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,64R6
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | \

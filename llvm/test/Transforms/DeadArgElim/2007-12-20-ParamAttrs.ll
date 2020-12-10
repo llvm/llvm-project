@@ -13,7 +13,7 @@ define internal zeroext i8 @foo(i8* inreg %p, i8 signext %y, ... )  nounwind {
 
 define i32 @bar() {
 ; CHECK: call void @foo(i8 signext 1) [[NUW]]
-  %A = call zeroext i8(i8*, i8, ...) @foo(i8* inreg null, i8 signext 1, %struct* byval null ) nounwind
+  %A = call zeroext i8(i8*, i8, ...) @foo(i8* inreg null, i8 signext 1, %struct* byval(%struct) null ) nounwind
   ret i32 0
 }
 

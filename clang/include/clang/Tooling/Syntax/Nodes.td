@@ -23,6 +23,15 @@ def TranslationUnit : Unconstrained {
   }];
 }
 
+def UnqualifiedId : External<Tree> {}
+
+// Lists
+def List : External<Tree> {}
+def DeclaratorList : External<List> {}
+def ParameterDeclarationList : External<List> {}
+def CallArguments : External<List> {}
+def NestedNameSpecifier : External<List> {}
+
 def Expression : Alternatives {
   let documentation = [{
     A base class for all expressions. Note that expressions are not statements,
@@ -34,23 +43,179 @@ def UnaryOperatorExpression : External<Tree> {}
 def PrefixUnaryOperatorExpression : External<UnaryOperatorExpression> {}
 def PostfixUnaryOperatorExpression : External<UnaryOperatorExpression> {}
 def BinaryOperatorExpression : External<Expression> {}
-def ParenExpression : External<Expression> {}
-def LiteralExpression : External<Expression> {}
-def IntegerLiteralExpression : External<LiteralExpression> {}
-def CharacterLiteralExpression : External<LiteralExpression> {}
-def FloatingLiteralExpression : External<LiteralExpression> {}
-def StringLiteralExpression : External<LiteralExpression> {}
-def BoolLiteralExpression : External<LiteralExpression> {}
-def CxxNullPtrExpression : External<LiteralExpression> {}
-def UserDefinedLiteralExpression : External<LiteralExpression> {}
-def IntegerUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
-def FloatUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
-def CharUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
-def StringUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
-def IdExpression : External<Expression> {}
-def MemberExpression : External<Expression> {}
-def ThisExpression : External<Expression> {}
-def CallExpression : External<Expression> {}
+def ParenExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
+    e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
+  }];
+  let children = [
+    Role<"OpenParen", Token<"l_paren">>,
+    Role<"SubExpression", Expression>,
+    Role<"CloseParen", Token<"r_paren">>,
+  ];
+}
+def LiteralExpression : Alternatives<Expression> {
+  let documentation = [{
+    Expression for literals. C++ [lex.literal]
+  }];
+}
+def IntegerLiteralExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for integer literals. C++ [lex.icon]
+  }];
+  let children = [
+    Role<"LiteralToken", Token<"numeric_constant">>,
+  ];
+}
+defvar AnyCharacterLiteral = AnyToken<[
+  "char_constant", "wide_char_constant", "utf8_char_constant",
+  "utf16_char_constant", "utf32_char_constant"
+]>;
+def CharacterLiteralExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for character literals. C++ [lex.ccon]
+  }];
+  let children = [
+    Role<"LiteralToken", AnyCharacterLiteral>,
+  ];
+}
+def FloatingLiteralExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for floating-point literals. C++ [lex.fcon]
+  }];
+  let children = [
+    Role<"LiteralToken", Token<"numeric_constant">>,
+  ];
+}
+defvar AnyStringLiteral = AnyToken<[
+  "string_literal", "wide_string_literal", "utf8_string_literal",
+  "utf16_string_literal", "utf32_string_literal"
+]>;
+def StringLiteralExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for string-literals. C++ [lex.string]
+  }];
+  // FIXME: string literals may consist of multiple tokens.
+  // These are merged in phase 6, but tokens are captured after phase 4.
+  // The child here should be a list of literal tokens instead.
+  let children = [
+    Role<"LiteralToken", AnyStringLiteral>,
+  ];
+}
+def BoolLiteralExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for boolean literals. C++ [lex.bool]
+  }];
+  let children = [
+    Role<"LiteralToken", AnyToken<["kw_false","kw_true"]>>,
+  ];
+}
+def CxxNullPtrExpression : Sequence<LiteralExpression> {
+  let documentation = [{
+    Expression for the `nullptr` literal. C++ [lex.nullptr]
+  }];
+  let children = [
+    Role<"LiteralToken", Keyword<"nullptr">>,
+  ];
+}
+def UserDefinedLiteralExpression : Alternatives<LiteralExpression> {
+  let documentation = [{
+    Expression for user-defined literal. C++ [lex.ext]
+    user-defined-literal:
+      user-defined-integer-literal
+      user-defined-floating-point-literal
+      user-defined-string-literal
+      user-defined-character-literal
+  }];
+}
+def IntegerUserDefinedLiteralExpression : Sequence<UserDefinedLiteralExpression> {
+  let documentation = [{
+    Expression for user-defined-integer-literal. C++ [lex.ext]
+  }];
+  let children = [
+    Role<"LiteralToken", Keyword<"numeric_constant">>,
+  ];
+}
+def FloatUserDefinedLiteralExpression : Sequence<UserDefinedLiteralExpression> {
+  let documentation = [{
+    Expression for user-defined-floating-point-literal. C++ [lex.ext]
+  }];
+  let children = [
+    Role<"LiteralToken", Keyword<"numeric_constant">>,
+  ];
+}
+def CharUserDefinedLiteralExpression : Sequence<UserDefinedLiteralExpression> {
+  let documentation = [{
+    Expression for user-defined-character-literal. C++ [lex.ext]
+  }];
+  let children = [
+    Role<"LiteralToken", AnyCharacterLiteral>,
+  ];
+}
+def StringUserDefinedLiteralExpression : Sequence<UserDefinedLiteralExpression> {
+  let documentation = [{
+    Expression for user-defined-string-literal. C++ [lex.ext]
+  }];
+  let children = [
+    Role<"LiteralToken", AnyStringLiteral>,
+  ];
+}
+def IdExpression : Sequence<Expression> {
+  let documentation = [{
+    Models an `id-expression`, e.g. `std::vector<int>::size`.
+    C++ [expr.prim.id]
+    id-expression:
+      unqualified-id
+      qualified-id
+    qualified-id:
+      nested-name-specifier template_opt unqualified-id
+  }];
+  let children = [
+    Role<"Qualifier", Optional<NestedNameSpecifier>>,
+    Role<"TemplateKeyword", Optional<Keyword<"template">>>,
+    Role<"UnqualifiedId", UnqualifiedId>,
+  ];
+}
+def MemberExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a class member access. C++ [expr.ref]
+    member-expression:
+      expression -> template_opt id-expression
+      expression .  template_opt id-expression
+    e.g. `x.a`, `xp->a`
+
+    Note: An implicit member access inside a class, i.e. `a` instead of
+    `this->a`, is an `id-expression`.
+  }];
+  let children = [
+    Role<"Object", Expression>,
+    Role<"AccessToken", AnyToken<["period","arrow"]>>,
+    Role<"TemplateKeyword", Optional<Keyword<"template">>>,
+    Role<"Member", IdExpression>,
+  ];
+}
+def ThisExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a this expression `this`. C++ [expr.prim.this]
+  }];
+  let children = [
+    Role<"IntroducerKeyword", Keyword<"this">>,
+  ];
+}
+def CallExpression : Sequence<Expression> {
+  let documentation = [{
+    A function call. C++ [expr.call]
+    call-expression:
+      expression '(' call-arguments ')'
+    e.g `f(1, '2')` or `this->Base::f()`
+  }];
+  let children = [
+    Role<"Callee", Expression>,
+    Role<"OpenParen", Token<"l_paren">>,
+    Role<"Arguments", CallArguments>,
+    Role<"CloseParen", Token<"r_paren">>,
+  ];
+}
 
 // Statements.
 def Statement : External<Tree> {}
@@ -94,14 +259,6 @@ def ArraySubscript : External<Tree> {}
 def TrailingReturnType : External<Tree> {}
 def ParametersAndQualifiers : External<Tree> {}
 def MemberPointer : External<Tree> {}
-def UnqualifiedId : External<Tree> {}
-
-// Lists
-def List : External<Tree> {}
-def DeclaratorList : External<List> {}
-def ParameterDeclarationList : External<List> {}
-def CallArguments : External<List> {}
-def NestedNameSpecifier : External<List> {}
 
 // Name Specifiers.
 def NameSpecifier : Alternatives {

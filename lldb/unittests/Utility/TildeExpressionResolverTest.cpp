@@ -31,6 +31,9 @@ TEST(TildeExpressionResolver, ResolveFullPath) {
   EXPECT_EQ("/lars", Result);
 
   ASSERT_FALSE(Resolver.ResolveFullPath("~Jaso", Result));
+  EXPECT_EQ("~Jaso", Result);
   ASSERT_FALSE(Resolver.ResolveFullPath("", Result));
+  EXPECT_EQ("", Result);
   ASSERT_FALSE(Resolver.ResolveFullPath("Jason", Result));
+  EXPECT_EQ("Jason", Result);
 }

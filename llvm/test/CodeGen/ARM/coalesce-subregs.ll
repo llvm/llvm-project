@@ -294,7 +294,7 @@ bb:
 ; The shuffle in if.else3 must be preserved even though adjustCopiesBackFrom
 ; is tempted to remove it.
 ; CHECK: vorr d
-define internal void @adjustCopiesBackFrom(<2 x i64>* noalias nocapture sret %agg.result, <2 x i64> %in) {
+define internal void @adjustCopiesBackFrom(<2 x i64>* noalias nocapture sret(<2 x i64>) %agg.result, <2 x i64> %in) {
 entry:
   %0 = extractelement <2 x i64> %in, i32 0
   %cmp = icmp slt i64 %0, 1

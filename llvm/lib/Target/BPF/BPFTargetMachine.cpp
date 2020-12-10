@@ -136,6 +136,10 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                     PassBuilder::OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
   });
+  PB.registerPipelineEarlySimplificationEPCallback(
+      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
+        MPM.addPass(BPFAdjustOptPass());
+      });
 }
 
 void BPFPassConfig::addIRPasses() {

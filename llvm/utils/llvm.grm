@@ -168,7 +168,6 @@ FuncAttr      ::= noreturn
  | noinline
  | alwaysinline
  | optsize
- | nossp
  | ssp
  | sspreq
  | returns_twice

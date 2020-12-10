@@ -249,8 +249,8 @@ define void @t9(<4 x float>* %r, <2 x i32>* %A) nounwind {
 ; FIXME: This testcase produces icky code. It can be made much better!
 ; PR2585
 
-@g1 = external constant <4 x i32>
-@g2 = external constant <4 x i16>
+@g1 = external dso_local constant <4 x i32>
+@g2 = external dso_local constant <4 x i16>
 
 define void @t10() nounwind {
 ; X86-LABEL: t10:

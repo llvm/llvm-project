@@ -8,7 +8,7 @@
 #ifndef MLIR_INTERFACES_DECODEATTRIBUTESINTERFACES_H_
 #define MLIR_INTERFACES_DECODEATTRIBUTESINTERFACES_H_
 
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/Support/LogicalResult.h"
 

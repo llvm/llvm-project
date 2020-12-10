@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S | FileCheck %s
 ; ModuleID = 'temp.bc'
 source_filename = "temp.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -108,7 +109,7 @@ attributes #4 = { nounwind }
 ; CHECK: [[TOP]] = !{!"function_entry_count", i64 101}
 ; CHECK: [[FOO]] = !{!"function_entry_count", i64 151}
 ; CHECK: [[BAR]] = !{!"function_entry_count", i64 303}
-; CHECK: [[BAZ]] = !{!"branch_weights", i64 303}
+; CHECK: [[BAZ]] = !{!"branch_weights", i32 303}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 8.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: GNU)
 !1 = !DIFile(filename: "temp.c", directory: "llvm/test/Transforms/SampleProfile")

@@ -90,7 +90,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     }
 
     BasicBlock *BB = Call->getParent();
-    IntegerType *VarType = Type::getInt32Ty(BB->getContext());
+    IntegerType *VarType = Type::getInt64Ty(BB->getContext());
     std::string GVName = BaseName + std::to_string(Count) + "$" +
         std::to_string(Reloc);
     GlobalVariable *GV = new GlobalVariable(
@@ -99,8 +99,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
-                                Call);
+    auto *LDInst =
+        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
     Call->replaceAllUsesWith(PassThroughInst);

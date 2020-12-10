@@ -207,8 +207,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
     /// it is intended to be launched from host.
     bool isKernel() {
-      return getAttrOfType<UnitAttr>(GPUDialect::getKernelFuncAttrName()) !=
-             nullptr;
+      return (*this)->getAttrOfType<UnitAttr>(
+          GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 
     /// Change the type of this function in place. This is an extremely
@@ -223,8 +223,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      return getAttrOfType<IntegerAttr>(getNumWorkgroupAttributionsAttrName())
-          .getInt();
+      return (*this)->getAttrOfType<IntegerAttr>(
+          getNumWorkgroupAttributionsAttrName()).getInt();
     }
 
     /// Returns a list of block arguments that correspond to buffers located in
@@ -801,6 +801,81 @@ def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) attr-dict
+  }];
+}
+
+def GPU_AllocOp : GPU_Op<"alloc", [
+    GPU_AsyncOpInterface,
+    AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>
+  ]> {
+
+  let summary = "GPU memory allocation operation.";
+  let description = [{
+    The `gpu.alloc` operation allocates a region of memory on the GPU. It is
+    similar to the `std.alloc` op, but supports asynchronous GPU execution.
+
+    The op does not execute before all async dependencies have finished
+    executing.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it also returns a !gpu.async.token.
+
+    Example:
+
+    ```mlir
+    %memref, %token = gpu.alloc async [%dep] (%width) : memref<64x?xf32, 1>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Variadic<Index>:$dynamicSizes, Variadic<Index>:$symbolOperands);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource>]>:$memref,
+                 Optional<GPU_AsyncToken>:$asyncToken);
+
+  let extraClassDeclaration = [{
+    MemRefType getType() { return memref().getType().cast<MemRefType>(); }
+  }];
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) ` `
+    `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
+  }];
+}
+
+def GPU_DeallocOp : GPU_Op<"dealloc", [
+    GPU_AsyncOpInterface, MemoryEffects<[MemFree]>
+  ]> {
+
+  let summary = "GPU memory deallocation operation";
+
+  let description = [{
+    The `gpu.dealloc` operation frees the region of memory referenced by a
+    memref which was originally created by the `gpu.alloc` operation. It is
+    similar to the `std.dealloc` op, but supports asynchronous GPU execution.
+
+    The op does not execute before all async dependencies have finished
+    executing.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token.
+
+    Example:
+
+    ```mlir
+    %token = gpu.dealloc async [%dep] %memref : memref<8x64xf32, 1>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<AnyMemRef, "", [MemFree]>:$memref);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $memref attr-dict `:` type($memref)
   }];
 }
 

@@ -65,5 +65,8 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertEqual(q_info_reg["set"], xml_info_reg.get("group"))
             self.assertEqual(q_info_reg["format"], xml_info_reg.get("format"))
             self.assertEqual(q_info_reg["bitsize"], xml_info_reg.get("bitsize"))
-            self.assertEqual(q_info_reg["offset"], xml_info_reg.get("offset"))
+
+            if not self.getArchitecture() == 'aarch64':
+                self.assertEqual(q_info_reg["offset"], xml_info_reg.get("offset"))
+
             self.assertEqual(q_info_reg["encoding"], xml_info_reg.get("encoding"))

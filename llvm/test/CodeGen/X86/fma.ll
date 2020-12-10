@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin10  -mattr=+avx,-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMACALL32
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -mattr=+fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMA64
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMACALL64
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512f,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX51264
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512f,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512vl,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512VL
-; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma4 -show-mc-encoding | FileCheck %s --check-prefixes=FMA32,FMA32_BDVER2
+; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMA32
 ; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefixes=FMACALL32,FMACALL32_BDVER2
 
 define float @test_f32(float %a, float %b, float %c) #0 {

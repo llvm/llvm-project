@@ -24,7 +24,7 @@ pair<T1, T2> make_pair(T1 &&t1, T2 &&t2) {
 
 // CHECK-LABEL: @main
 int main(int argc, char **argv) {
-// CHECK: call i32 @__tgt_target_mapper(i64 -1, i8* @{{.+}}.region_id, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null)
+// CHECK: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}.region_id, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i8** null)
 #pragma omp target
  {
     for (int i = 0; i < 64; ++i) {

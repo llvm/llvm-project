@@ -32,7 +32,11 @@ General Options
 
 .. option:: -help
 
- Print a summary of command line options.
+ Print a description of the command line options.
+
+.. option:: -help-list
+
+  Print a description of the command line options in a simple list format.
 
 .. option:: -D=macroname
 
@@ -43,7 +47,7 @@ General Options
 
   Specify the name of the dependency filename.
 
-.. option:: --debug
+.. option:: -debug
 
   Enable debug output.
 
@@ -58,6 +62,11 @@ General Options
  ``directory`` value should be a full or partial path to a directory that
  contains target description files.
 
+.. option:: -null-backend
+
+  Parse the source files and build the records, but do not run any
+  backend. This is useful for timing the frontend.
+
 .. option:: -o filename
 
  Specify the output file name.  If ``filename`` is ``-``, then
@@ -65,21 +74,28 @@ General Options
 
 .. option:: -print-records
 
- Print all classes and records to standard output (default option).
+ Print all classes and records to standard output (default backend option).
 
 .. option:: -print-detailed-records
 
   Print a detailed report of all global variables, classes, and records
   to standard output.
 
-.. option:: --stats
+.. option:: -stats
 
-  Enable statistics output.
+  Print a report with any statistics collected by the backend.
+
+.. option:: -time-phases
+
+  Time the parser and backend phases and print a report.
+
+.. option:: -version
+
+ Show the version number of the program.
 
 .. option:: -write-if-changed
 
-  Write the output file only if it is new or has changed. The default
-  is true.
+  Write the output file only if it is new or has changed.
 
 llvm-tblgen Options
 ~~~~~~~~~~~~~~~~~~~
@@ -292,11 +308,6 @@ llvm-tblgen Options
 .. option:: -print-sets
 
  Print expanded sets for testing DAG exprs.
-
-.. option:: -version
-
- Show the version number of the program.
-
 
 clang-tblgen Options
 ~~~~~~~~~~~~~~~~~~~~

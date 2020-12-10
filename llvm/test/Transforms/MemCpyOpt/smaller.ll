@@ -15,7 +15,7 @@ target datalayout = "e-p:32:32:32"
 @.str = private constant [11 x i8] c"0123456789\00"
 @cell = external global %struct.s
 
-declare void @check(%struct.s* byval %p) nounwind
+declare void @check(%struct.s* byval(%struct.s) %p) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 define void @foo() nounwind {
@@ -26,7 +26,7 @@ define void @foo() nounwind {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i8* align 1 getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 11, i1 false)
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[AGG_TMP]], i32 0, i32 0, i32 0
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP]], i8* align 4 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i32 16, i1 false)
-; CHECK-NEXT:    call void @check(%struct.s* byval [[AGG_TMP]])
+; CHECK-NEXT:    call void @check(%struct.s* byval(%struct.s) [[AGG_TMP]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -35,6 +35,6 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i8* align 1 getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 11, i1 false)
   %tmp = getelementptr inbounds %struct.s, %struct.s* %agg.tmp, i32 0, i32 0, i32 0
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp, i8* align 4 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i32 16, i1 false)
-  call void @check(%struct.s* byval %agg.tmp)
+  call void @check(%struct.s* byval(%struct.s) %agg.tmp)
   ret void
 }

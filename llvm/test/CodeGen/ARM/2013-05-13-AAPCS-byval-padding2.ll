@@ -4,8 +4,8 @@
 %struct4bytes = type { i32 }
 %struct20bytes = type { i32, i32, i32, i32, i32 }
 
-define void @foo(%struct4bytes* byval %p0, ; --> R0
-                 %struct20bytes* byval %p1 ; --> R1,R2,R3, [SP+0 .. SP+8)
+define void @foo(%struct4bytes* byval(%struct4bytes) %p0, ; --> R0
+                 %struct20bytes* byval(%struct20bytes) %p1 ; --> R1,R2,R3, [SP+0 .. SP+8)
 ) {
 ;CHECK:  sub  sp, sp, #16
 ;CHECK:  push  {r11, lr}

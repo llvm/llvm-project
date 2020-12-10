@@ -6,16 +6,16 @@
 #      UNRECOGNIZED: Sections:
 # UNRECOGNIZED-NEXT:   - sectname:        __debug_foo
 # UNRECOGNIZED-NEXT:     segname:         __DWARF
-# UNRECOGNIZED-NEXT:     addr:            0x0000000000000000
+# UNRECOGNIZED-NEXT:     addr:            0x0
 # UNRECOGNIZED-NEXT:     size:            5
-# UNRECOGNIZED-NEXT:     offset:          0x00000210
+# UNRECOGNIZED-NEXT:     offset:          0x210
 # UNRECOGNIZED-NEXT:     align:           0
-# UNRECOGNIZED-NEXT:     reloff:          0x00000000
+# UNRECOGNIZED-NEXT:     reloff:          0x0
 # UNRECOGNIZED-NEXT:     nreloc:          0
-# UNRECOGNIZED-NEXT:     flags:           0x00000000
-# UNRECOGNIZED-NEXT:     reserved1:       0x00000000
-# UNRECOGNIZED-NEXT:     reserved2:       0x00000000
-# UNRECOGNIZED-NEXT:     reserved3:       0x00000000
+# UNRECOGNIZED-NEXT:     flags:           0x0
+# UNRECOGNIZED-NEXT:     reserved1:       0x0
+# UNRECOGNIZED-NEXT:     reserved2:       0x0
+# UNRECOGNIZED-NEXT:     reserved3:       0x0
 # UNRECOGNIZED-NEXT:     content:         '0123456789'
 # UNRECOGNIZED-NEXT: ...
 

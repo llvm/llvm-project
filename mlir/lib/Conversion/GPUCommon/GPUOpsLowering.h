@@ -41,7 +41,7 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
 
       uint64_t numElements = type.getNumElements();
 
-      auto elementType = typeConverter.convertType(type.getElementType())
+      auto elementType = typeConverter->convertType(type.getElementType())
                              .template cast<LLVM::LLVMType>();
       auto arrayType = LLVM::LLVMType::getArrayTy(elementType, numElements);
       std::string name = std::string(
@@ -54,14 +54,14 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
     }
 
     // Rewrite the original GPU function to an LLVM function.
-    auto funcType = typeConverter.convertType(gpuFuncOp.getType())
+    auto funcType = typeConverter->convertType(gpuFuncOp.getType())
                         .template cast<LLVM::LLVMType>()
                         .getPointerElementTy();
 
     // Remap proper input types.
     TypeConverter::SignatureConversion signatureConversion(
         gpuFuncOp.front().getNumArguments());
-    typeConverter.convertFunctionSignature(
+    getTypeConverter()->convertFunctionSignature(
         gpuFuncOp.getType(), /*isVariadic=*/false, signatureConversion);
 
     // Create the new function operation. Only copy those attributes that are
@@ -110,7 +110,7 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
         Value attribution = gpuFuncOp.getWorkgroupAttributions()[en.index()];
         auto type = attribution.getType().cast<MemRefType>();
         auto descr = MemRefDescriptor::fromStaticShape(
-            rewriter, loc, typeConverter, type, memory);
+            rewriter, loc, *getTypeConverter(), type, memory);
         signatureConversion.remapInput(numProperArguments + en.index(), descr);
       }
 
@@ -127,7 +127,7 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
         // Explicitly drop memory space when lowering private memory
         // attributions since NVVM models it as `alloca`s in the default
         // memory space and does not support `alloca`s with addrspace(5).
-        auto ptrType = typeConverter.convertType(type.getElementType())
+        auto ptrType = typeConverter->convertType(type.getElementType())
                            .template cast<LLVM::LLVMType>()
                            .getPointerTo(AllocaAddrSpace);
         Value numElements = rewriter.create<LLVM::ConstantOp>(
@@ -136,7 +136,7 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
         Value allocated = rewriter.create<LLVM::AllocaOp>(
             gpuFuncOp.getLoc(), ptrType, numElements, /*alignment=*/0);
         auto descr = MemRefDescriptor::fromStaticShape(
-            rewriter, loc, typeConverter, type, allocated);
+            rewriter, loc, *getTypeConverter(), type, allocated);
         signatureConversion.remapInput(
             numProperArguments + numWorkgroupAttributions + en.index(), descr);
       }
@@ -145,8 +145,8 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
     // Move the region to the new function, update the entry block signature.
     rewriter.inlineRegionBefore(gpuFuncOp.getBody(), llvmFuncOp.getBody(),
                                 llvmFuncOp.end());
-    if (failed(rewriter.convertRegionTypes(&llvmFuncOp.getBody(), typeConverter,
-                                           &signatureConversion)))
+    if (failed(rewriter.convertRegionTypes(
+            &llvmFuncOp.getBody(), *typeConverter, &signatureConversion)))
       return failure();
 
     rewriter.eraseOp(gpuFuncOp);

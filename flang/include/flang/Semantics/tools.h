@@ -30,9 +30,14 @@ class DerivedTypeSpec;
 class Scope;
 class Symbol;
 
+// Note: Here ProgramUnit includes internal subprograms while TopLevelUnit
+// does not. "program-unit" in the Fortran standard matches TopLevelUnit.
+const Scope &GetTopLevelUnitContaining(const Scope &);
+const Scope &GetTopLevelUnitContaining(const Symbol &);
+const Scope &GetProgramUnitContaining(const Scope &);
+const Scope &GetProgramUnitContaining(const Symbol &);
+
 const Scope *FindModuleContaining(const Scope &);
-const Scope *FindProgramUnitContaining(const Scope &);
-const Scope *FindProgramUnitContaining(const Symbol &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Symbol &);
 const Symbol *FindPointerComponent(const Scope &);
@@ -97,7 +102,8 @@ bool IsIsoCType(const DerivedTypeSpec *);
 bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
-bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false);
+bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false,
+    const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool IsAutomatic(const Symbol &);

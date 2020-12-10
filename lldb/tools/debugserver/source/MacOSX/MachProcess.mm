@@ -2600,7 +2600,8 @@ void *MachProcess::ProfileThread(void *arg) {
   return NULL;
 }
 
-pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
+pid_t MachProcess::AttachForDebug(pid_t pid, bool unmask_signals, char *err_str,
+                                  size_t err_len) {
   // Clear out and clean up from any current state
   Clear();
   if (pid != 0) {
@@ -2617,7 +2618,7 @@ pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
 
     SetState(eStateAttaching);
     m_pid = pid;
-    if (!m_task.StartExceptionThread(err)) {
+    if (!m_task.StartExceptionThread(unmask_signals, err)) {
       const char *err_cstr = err.AsString();
       ::snprintf(err_str, err_len, "%s",
                  err_cstr ? err_cstr : "unable to start the exception thread");
@@ -3077,7 +3078,7 @@ pid_t MachProcess::LaunchForDebug(
                                    // working directory for inferior to this
     const char *stdin_path, const char *stdout_path, const char *stderr_path,
     bool no_stdio, nub_launch_flavor_t launch_flavor, int disable_aslr,
-    const char *event_data, DNBError &launch_err) {
+    const char *event_data, bool unmask_signals, DNBError &launch_err) {
   // Clear out and clean up from any current state
   Clear();
 
@@ -3159,9 +3160,9 @@ pid_t MachProcess::LaunchForDebug(
 
   case eLaunchFlavorPosixSpawn:
     m_pid = MachProcess::PosixSpawnChildForPTraceDebugging(
-        path, DNBArchProtocol::GetArchitecture(), argv, envp, working_directory,
-        stdin_path, stdout_path, stderr_path, no_stdio, this, disable_aslr,
-        launch_err);
+        path, DNBArchProtocol::GetCPUType(), DNBArchProtocol::GetCPUSubType(),
+        argv, envp, working_directory, stdin_path, stdout_path, stderr_path,
+        no_stdio, this, disable_aslr, launch_err);
     break;
 
   default:
@@ -3182,7 +3183,7 @@ pid_t MachProcess::LaunchForDebug(
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
 
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)
         launch_err.SetErrorString("unable to start the exception thread");
@@ -3221,10 +3222,10 @@ pid_t MachProcess::LaunchForDebug(
 }
 
 pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
-    const char *path, cpu_type_t cpu_type, char const *argv[],
-    char const *envp[], const char *working_directory, const char *stdin_path,
-    const char *stdout_path, const char *stderr_path, bool no_stdio,
-    MachProcess *process, int disable_aslr, DNBError &err) {
+    const char *path, cpu_type_t cpu_type, cpu_subtype_t cpu_subtype,
+    char const *argv[], char const *envp[], const char *working_directory,
+    const char *stdin_path, const char *stdout_path, const char *stderr_path,
+    bool no_stdio, MachProcess *process, int disable_aslr, DNBError &err) {
   posix_spawnattr_t attr;
   short flags;
   DNBLogThreadedIf(LOG_PROCESS,
@@ -3267,24 +3268,44 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
 
 // On SnowLeopard we should set "DYLD_NO_PIE" in the inferior environment....
 
-#if !defined(__arm__)
-
-  // We don't need to do this for ARM, and we really shouldn't now that we
-  // have multiple CPU subtypes and no posix_spawnattr call that allows us
-  // to set which CPU subtype to launch...
   if (cpu_type != 0) {
     size_t ocount = 0;
-    err.SetError(::posix_spawnattr_setbinpref_np(&attr, 1, &cpu_type, &ocount),
-                 DNBError::POSIX);
-    if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
-      err.LogThreaded("::posix_spawnattr_setbinpref_np ( &attr, 1, cpu_type = "
-                      "0x%8.8x, count => %llu )",
-                      cpu_type, (uint64_t)ocount);
+    bool slice_preference_set = false;
 
-    if (err.Fail() != 0 || ocount != 1)
-      return INVALID_NUB_PROCESS;
+    if (cpu_subtype != 0) {
+      typedef int (*posix_spawnattr_setarchpref_np_t)(
+          posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
+      posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
+          (posix_spawnattr_setarchpref_np_t)dlsym(
+              RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
+      if (posix_spawnattr_setarchpref_np_fn) {
+        err.SetError((*posix_spawnattr_setarchpref_np_fn)(
+            &attr, 1, &cpu_type, &cpu_subtype, &ocount));
+        slice_preference_set = err.Success();
+        if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+          err.LogThreaded(
+              "::posix_spawnattr_setarchpref_np ( &attr, 1, cpu_type = "
+              "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
+              cpu_type, cpu_subtype, (uint64_t)ocount);
+        if (err.Fail() != 0 || ocount != 1)
+          return INVALID_NUB_PROCESS;
+      }
+    }
+
+    if (!slice_preference_set) {
+      err.SetError(
+          ::posix_spawnattr_setbinpref_np(&attr, 1, &cpu_type, &ocount),
+          DNBError::POSIX);
+      if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+        err.LogThreaded(
+            "::posix_spawnattr_setbinpref_np ( &attr, 1, cpu_type = "
+            "0x%8.8x, count => %llu )",
+            cpu_type, (uint64_t)ocount);
+
+      if (err.Fail() != 0 || ocount != 1)
+        return INVALID_NUB_PROCESS;
+    }
   }
-#endif
 
   PseudoTerminal pty;
 
@@ -3525,7 +3546,8 @@ static CFStringRef CopyBundleIDForPath(const char *app_bundle_path,
 
 pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
                                     char const *envp[], bool no_stdio,
-                                    bool disable_aslr, DNBError &launch_err) {
+                                    bool disable_aslr, bool unmask_signals,
+                                    DNBError &launch_err) {
   // Clear out and clean up from any current state
   Clear();
 
@@ -3541,7 +3563,7 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
     char const *arg;
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
 
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)
@@ -3738,7 +3760,8 @@ pid_t MachProcess::SBForkChildForPTraceDebugging(
 #if defined(WITH_BKS) || defined(WITH_FBS)
 pid_t MachProcess::BoardServiceLaunchForDebug(
     const char *path, char const *argv[], char const *envp[], bool no_stdio,
-    bool disable_aslr, const char *event_data, DNBError &launch_err) {
+    bool disable_aslr, const char *event_data, bool unmask_signals,
+    DNBError &launch_err) {
   DNBLogThreadedIf(LOG_PROCESS, "%s( '%s', argv)", __FUNCTION__, path);
 
   // Fork a child process for debugging
@@ -3751,7 +3774,7 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
     char const *arg;
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
 
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)

@@ -80,7 +80,7 @@ def : WriteRes<WriteID64, [CortexA55UnitDiv]> {
 }
 
 // Load
-def : WriteRes<WriteLD, [CortexA55UnitLd]> { let Latency = 4; }
+def : WriteRes<WriteLD, [CortexA55UnitLd]> { let Latency = 3; }
 def : WriteRes<WriteLDIdx, [CortexA55UnitLd]> { let Latency = 4; }
 def : WriteRes<WriteLDHi, [CortexA55UnitLd]> { let Latency = 5; }
 
@@ -151,17 +151,21 @@ def CortexA55WriteFPALU_F5 : SchedWriteRes<[CortexA55UnitFPALU]> { let Latency =
 
 // FP Mul, Div, Sqrt. Div/Sqrt are not pipelined
 def : WriteRes<WriteFMul, [CortexA55UnitFPMAC]> { let Latency = 4; }
-def : WriteRes<WriteFDiv, [CortexA55UnitFPDIV]> { let Latency = 21;
+def : WriteRes<WriteFDiv, [CortexA55UnitFPDIV]> { let Latency = 22;
                                             let ResourceCycles = [29]; }
 def CortexA55WriteFMAC : SchedWriteRes<[CortexA55UnitFPMAC]> { let Latency = 4; }
-def CortexA55WriteFDivSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 18;
-                                                     let ResourceCycles = [14]; }
-def CortexA55WriteFDivDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 33;
-                                                     let ResourceCycles = [29]; }
-def CortexA55WriteFSqrtSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 17;
-                                                      let ResourceCycles = [13]; }
-def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 32;
-                                                      let ResourceCycles = [28]; }
+def CortexA55WriteFDivHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
+                                                     let ResourceCycles = [5]; }
+def CortexA55WriteFDivSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 13;
+                                                     let ResourceCycles = [10]; }
+def CortexA55WriteFDivDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
+                                                     let ResourceCycles = [19]; }
+def CortexA55WriteFSqrtHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
+                                                      let ResourceCycles = [5]; }
+def CortexA55WriteFSqrtSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 12;
+                                                      let ResourceCycles = [9]; }
+def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
+                                                      let ResourceCycles = [19]; }
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -323,10 +327,13 @@ def : InstRW<[CortexA55WriteFPALU_F4], (instregex "^(S|U)CVTFv")>;
 
 def : InstRW<[CortexA55WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
 def : InstRW<[CortexA55WriteFMAC], (instregex "^FML(A|S).*")>;
+def : InstRW<[CortexA55WriteFDivHP], (instrs FDIVHrr)>;
 def : InstRW<[CortexA55WriteFDivSP], (instrs FDIVSrr)>;
 def : InstRW<[CortexA55WriteFDivDP], (instrs FDIVDrr)>;
+def : InstRW<[CortexA55WriteFDivHP], (instregex "^FDIVv.*16$")>;
 def : InstRW<[CortexA55WriteFDivSP], (instregex "^FDIVv.*32$")>;
 def : InstRW<[CortexA55WriteFDivDP], (instregex "^FDIVv.*64$")>;
+def : InstRW<[CortexA55WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA55WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA55WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 }

@@ -269,7 +269,7 @@ int __kmp_omp_num_threads(ident_t const *ident) {
   if (info->num > 0 && info->array != 0) {
     kmp_omp_nthr_item_t *items =
         (kmp_omp_nthr_item_t *)__kmp_convert_to_ptr(info->array);
-    kmp_str_loc_t loc = __kmp_str_loc_init(ident->psource, 1);
+    kmp_str_loc_t loc = __kmp_str_loc_init(ident->psource, true);
     int i;
     for (i = 0; i < info->num; ++i) {
       if (kmp_location_match(&loc, &items[i])) {

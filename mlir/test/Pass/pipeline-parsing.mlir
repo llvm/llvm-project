@@ -4,12 +4,13 @@
 // RUN: not mlir-opt %s -pass-pipeline='module(test-module-pass))' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_2 %s
 // RUN: not mlir-opt %s -pass-pipeline='module()(' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_3 %s
 // RUN: not mlir-opt %s -pass-pipeline=',' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_4 %s
+// RUN: not mlir-opt %s -pass-pipeline='func(test-module-pass)' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_5 %s
 
 // CHECK_ERROR_1: encountered unbalanced parentheses while parsing pipeline
 // CHECK_ERROR_2: encountered extra closing ')' creating unbalanced parentheses while parsing pipeline
 // CHECK_ERROR_3: expected ',' after parsing pipeline
 // CHECK_ERROR_4: does not refer to a registered pass or pass pipeline
-
+// CHECK_ERROR_5:  Can't add pass '{{.*}}TestModulePass' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
 func @foo() {
   return
 }

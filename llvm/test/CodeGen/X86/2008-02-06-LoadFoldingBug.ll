@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 | FileCheck %s
 
 ; CHECK: xorps {{.*}}{{LCPI0_0|__xmm@}}
-define void @casin({ double, double }* sret  %agg.result, double %z.0, double %z.1) nounwind  {
+define void @casin({ double, double }* sret({ double, double })  %agg.result, double %z.0, double %z.1) nounwind  {
 entry:
 	%memtmp = alloca { double, double }, align 8		; <{ double, double }*> [#uses=3]
 	%tmp4 = fsub double -0.000000e+00, %z.1		; <double> [#uses=1]
-	call void @casinh( { double, double }* sret  %memtmp, double %tmp4, double %z.0 ) nounwind 
+	call void @casinh( { double, double }* sret({ double, double })  %memtmp, double %tmp4, double %z.0 ) nounwind
 	%tmp19 = getelementptr { double, double }, { double, double }* %memtmp, i32 0, i32 0		; <double*> [#uses=1]
 	%tmp20 = load double, double* %tmp19, align 8		; <double> [#uses=1]
 	%tmp22 = getelementptr { double, double }, { double, double }* %memtmp, i32 0, i32 1		; <double*> [#uses=1]
@@ -18,4 +18,4 @@ entry:
 	ret void
 }
 
-declare void @casinh({ double, double }* sret , double, double) nounwind 
+declare void @casinh({ double, double }* sret({ double, double }) , double, double) nounwind

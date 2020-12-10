@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -96,18 +97,28 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   int64_t PtrDiff;
   if (NumBytes0.hasValue() && NumBytes1.hasValue() &&
       BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
+    // If the size of memory access is unknown, do not use it to analysis.
+    // One example of unknown size memory access is to load/store scalable
+    // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    IsAlias = !(
-        // [----BasePtr0----]
-        //                         [---BasePtr1--]
-        // ========PtrDiff========>
-        (*NumBytes0 <= PtrDiff) ||
-        //                     [----BasePtr0----]
-        // [---BasePtr1--]
-        // =====(-PtrDiff)====>
-        (PtrDiff + *NumBytes1 <= 0)); // i.e. *NumBytes1 < -PtrDiff.
-    return true;
+    if (PtrDiff >= 0 &&
+        *NumBytes0 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+      // [----BasePtr0----]
+      //                         [---BasePtr1--]
+      // ========PtrDiff========>
+      IsAlias = !(*NumBytes0 <= PtrDiff);
+      return true;
+    }
+    if (PtrDiff < 0 &&
+        *NumBytes1 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+      //                     [----BasePtr0----]
+      // [---BasePtr1--]
+      // =====(-PtrDiff)====>
+      IsAlias = !((PtrDiff + *NumBytes1) <= 0);
+      return true;
+    }
+    return false;
   }
   // If both BasePtr0 and BasePtr1 are FrameIndexes, we will not be
   // able to calculate their relative offset if at least one arises

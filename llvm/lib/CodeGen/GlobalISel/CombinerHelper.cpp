@@ -2614,9 +2614,7 @@ bool CombinerHelper::matchSimplifyAddToSub(
   // ((0-A) + B) -> B - A
   // (A + (0-B)) -> A - B
   auto CheckFold = [&](Register &MaybeSub, Register &MaybeNewLHS) {
-    int64_t Cst;
-    if (!mi_match(MaybeSub, MRI, m_GSub(m_ICst(Cst), m_Reg(NewRHS))) ||
-        Cst != 0)
+    if (!mi_match(MaybeSub, MRI, m_Neg(m_Reg(NewRHS))))
       return false;
     NewLHS = MaybeNewLHS;
     return true;

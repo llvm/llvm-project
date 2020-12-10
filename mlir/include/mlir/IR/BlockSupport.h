@@ -58,6 +58,7 @@ class SuccessorRange final
           SuccessorRange, BlockOperand *, Block *, Block *, Block *> {
 public:
   using RangeBaseT::RangeBaseT;
+  SuccessorRange();
   SuccessorRange(Block *block);
   SuccessorRange(Operation *term);
 

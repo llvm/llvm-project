@@ -14,8 +14,8 @@ class B : public A<T> {
 public:
 	void z(T a)
     {
-       f(a); // expected-warning 2{{use of identifier 'f' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
-       g(); // expected-warning 2{{use of identifier 'g' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+       f(a); // expected-warning 2{{use of member 'f' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+       g(); // expected-warning 2{{use of member 'g' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
     }
 };
 
@@ -89,8 +89,8 @@ template <class T>
 class B : public A<T> {
 public:
   static void z2(){
-    static_func();  // expected-warning {{use of identifier 'static_func' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
-    func(); // expected-warning {{use of identifier 'func' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-error {{call to non-static member function without an object argument}}
+    static_func();  // expected-warning {{use of member 'static_func' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    func(); // expected-warning {{use of member 'func' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-error {{call to non-static member function without an object argument}}
   }
 };
 template class B<int>; // expected-note {{requested here}}
@@ -111,8 +111,8 @@ public:
 template<class T>
 class B : public A<T> {
 public:
-  void g1(int p = f1());// expected-warning {{use of identifier 'f1' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
-  void g2(int p = f2());// expected-warning {{use of identifier 'f2' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-error {{call to non-static member function without an object argument}}
+  void g1(int p = f1());// expected-warning {{use of member 'f1' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+  void g2(int p = f2());// expected-warning {{use of member 'f2' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-error {{call to non-static member function without an object argument}}
 };
 
 void foo()
@@ -137,7 +137,7 @@ template <class T>
 class A : public B<T> {
 public:
   friend void foo(A<T> p){
-    g(); // expected-warning {{use of identifier 'g' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    g(); // expected-warning {{use of member 'g' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
   }
 };
 
@@ -186,7 +186,7 @@ class Container : public Base<T> {
  public:
   template <typename S>
   bool operator=(const Container<S>& rhs) {
-    return base_fun(rhs);  // expected-warning {{use of identifier 'base_fun' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    return base_fun(rhs);  // expected-warning {{use of member 'base_fun' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
   }
 };
 
@@ -304,10 +304,10 @@ static_assert(sizeof(B<int>) == sizeof(A<int>::NameFromBase), "");
 }
 
 namespace two_types_in_base {
-template <typename T> struct A { typedef T NameFromBase; }; // expected-note {{member found by ambiguous name lookup}}
-template <typename T> struct B { struct NameFromBase { T m; }; }; // expected-note {{member found by ambiguous name lookup}}
+template <typename T> struct A { typedef T NameFromBase; }; // expected-note {{member type 'int' found by ambiguous name lookup}}
+template <typename T> struct B { struct NameFromBase { T m; }; }; // expected-note {{member type 'two_types_in_base::B<int>::NameFromBase' found by ambiguous name lookup}}
 template <typename T> struct C : A<T>, B<T> {
-  NameFromBase m; // expected-error {{member 'NameFromBase' found in multiple base classes of different types}} expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+  NameFromBase m; // expected-error {{member 'NameFromBase' found in multiple base classes of different types}} expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 };
 static_assert(sizeof(C<int>) != 0, ""); // expected-note {{in instantiation of template class 'two_types_in_base::C<int>' requested here}}
 }
@@ -387,7 +387,7 @@ struct A { typedef int NameFromBase; };
 template <typename T>
 struct B : A {};
 template <typename T>
-struct C : B<T> { NameFromBase m; }; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+struct C : B<T> { NameFromBase m; }; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 }
 
 namespace type_in_second_dependent_base {
@@ -396,7 +396,7 @@ struct A {};
 template<typename T>
 struct B { typedef T NameFromBase; };
 template <typename T>
-struct D : A<T>, B<T> { NameFromBase m; }; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+struct D : A<T>, B<T> { NameFromBase m; }; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 }
 
 namespace type_in_second_non_dependent_base {
@@ -405,7 +405,7 @@ struct B { typedef int NameFromBase; };
 template<typename T>
 struct C : A, B {};
 template <typename T>
-struct D : C<T> { NameFromBase m; }; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+struct D : C<T> { NameFromBase m; }; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 }
 
 namespace type_in_virtual_base_of_dependent_base {
@@ -414,7 +414,7 @@ struct A { typedef T NameFromBase; };
 template <typename T>
 struct B : virtual A<T> {};
 template <typename T>
-struct C : B<T>, virtual A<T> { NameFromBase m; }; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+struct C : B<T>, virtual A<T> { NameFromBase m; }; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 C<int> c;
 }
 
@@ -424,7 +424,7 @@ struct A { typedef T NameFromBase; };
 template <typename T>
 struct B : public A<T> {};
 template <typename T>
-struct C : B<T>, public A<T> { NameFromBase m; }; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-warning {{direct base 'A<int>' is inaccessible due to ambiguity:}}
+struct C : B<T>, public A<T> { NameFromBase m; }; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}} expected-warning {{direct base 'A<int>' is inaccessible due to ambiguity:}}
 C<int> c; // expected-note {{in instantiation of template class 'type_in_base_of_multiple_dependent_bases::C<int>' requested here}}
 }
 
@@ -434,14 +434,14 @@ template<typename T> struct B : A<T> {
   struct C;
   template<typename TT>
   struct D : C {
-    NameFromBase m; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    NameFromBase m; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
   };
   struct E : C {
-    NameFromBase m; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+    NameFromBase m; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
   };
 };
 template<typename T> struct B<T>::C : B {
-  NameFromBase m; // expected-warning {{use of identifier 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
+  NameFromBase m; // expected-warning {{use of member 'NameFromBase' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
 };
 template<typename T> struct F : B<T>::C {
   NameFromBase m; // expected-error {{unknown type name 'NameFromBase'}}

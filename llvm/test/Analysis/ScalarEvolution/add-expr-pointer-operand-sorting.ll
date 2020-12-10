@@ -29,7 +29,7 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %idxprom = sext i32 %f.0 to i64
 ; CHECK-NEXT:    --> {(sext i32 %base to i64),+,1}<nsw><%for.cond> U: [-2147483648,-9223372036854775808) S: [-2147483648,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [1 x [1 x i8]], [1 x [1 x i8]]* %e, i64 0, i64 %idxprom
-; CHECK-NEXT:    --> {((sext i32 %base to i64) + %e)<nsw>,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
+; CHECK-NEXT:    --> {((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %1 = load i32*, i32** @c, align 8
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.lhs.cast = ptrtoint i32* %1 to i64
@@ -39,7 +39,7 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
 ; CHECK-NEXT:    --> %sub.ptr.div U: full-set S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [1 x i8], [1 x i8]* %arrayidx, i64 0, i64 %sub.ptr.div
-; CHECK-NEXT:    --> ({((sext i32 %base to i64) + %e)<nsw>,+,1}<nsw><%for.cond> + %sub.ptr.div)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> ({((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> + %sub.ptr.div) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %2 = load i8, i8* %arrayidx1, align 1
 ; CHECK-NEXT:    --> %2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %conv = sext i8 %2 to i32

@@ -55,7 +55,7 @@
 # total of nine builds.  All builds will be run in parallel.
 #
 # The user may control parallelism via the --jobs and --threads
-# switches.  --jobs tells llvm-compilers-checl the maximum total
+# switches.  --jobs tells llvm-compilers-check the maximum total
 # number of builds to activate in parallel.  The user may think of it
 # as equivalent to the GNU make -j switch.  --threads tells
 # llvm-compilers-check how many worker threads to use to accomplish

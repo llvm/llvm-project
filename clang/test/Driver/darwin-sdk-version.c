@@ -30,8 +30,8 @@
 // RUN:   | FileCheck --check-prefixes=NO_VERSION,ERROR %s
 
 // CHECK: -target-sdk-version=10.14
-// INFER_SDK_VERSION: "-triple" "x86_64-apple-macosx10.10.0"
+// INFER_SDK_VERSION: "-triple" "{{arm64|x86_64}}-apple-macosx10.10.0"
 // INFER_SDK_VERSION-SAME: -target-sdk-version=10.10
-// INFER_DEPLOYMENT_TARGET_VERSION: "-triple" "x86_64-apple-macosx10.8.0"
+// INFER_DEPLOYMENT_TARGET_VERSION: "-triple" "{{arm64|x86_64}}-apple-macosx10.8.0"
 // NO_VERSION-NOT: target-sdk-version
 // ERROR: warning: SDK settings were ignored as 'SDKSettings.json' could not be parsed

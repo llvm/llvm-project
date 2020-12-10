@@ -28,7 +28,7 @@ static constexpr double kMemsetGoogleQ[] = {0, 0, 0.0043, 0.0055, 0.0033, 0.0025
 static constexpr double kMemsetGoogleU[] = {0.1064, 0.0986, 0.0201, 0.0042, 0.1506, 0.0276, 0.0028, 0.0033, 0.3233, 0.1282, 0.011, 0.0035, 0.0015, 0.0019, 0.0005, 0.0007, 0.0143, 0.0152, 0.0005, 0.0146, 0.0013, 0.0001, 0.0001, 0.0067, 0.0054, 0, 0.0001, 0, 0.0006, 0, 0.0002, 0.0062, 0.0005, 0, 0, 0, 0.0004, 0, 0, 0.0001, 0.0003, 0, 0.0001, 0, 0.0001, 0.0001, 0, 0.0021, 0.0002, 0, 0, 0.0001, 0.0001, 0.0001, 0, 0, 0.0001, 0.0001, 0, 0.0001, 0.0001, 0, 0.0001, 0, 0.0092, 0, 0, 0, 0.0002, 0, 0, 0, 0.007, 0, 0, 0, 0, 0, 0, 0.0015, 0.0001, 0.0001, 0, 0, 0.0001, 0, 0, 0, 0.0001, 0, 0, 0.0001, 0, 0, 0, 0.0001, 0.0001, 0, 0, 0.0001, 0, 0, 0, 0, 0.0001, 0.0001, 0.0053, 0, 0.0001, 0, 0, 0, 0.0002, 0, 0, 0, 0.0001, 0, 0, 0.0001, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0.0001, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0.0001, 0, 0.0012, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0003, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0002, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0.0006, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0136, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0002, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0.0002, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0.0002, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0001};
 // clang-format on
 
-ArrayRef<MemorySizeDistribution> GetMemcpySizeDistributions() {
+ArrayRef<MemorySizeDistribution> getMemcpySizeDistributions() {
   static constexpr MemorySizeDistribution kDistributions[] = {
       {"memcpy Google A", kMemcpyGoogleA}, {"memcpy Google B", kMemcpyGoogleB},
       {"memcpy Google D", kMemcpyGoogleD}, {"memcpy Google L", kMemcpyGoogleL},
@@ -39,7 +39,7 @@ ArrayRef<MemorySizeDistribution> GetMemcpySizeDistributions() {
   return kDistributions;
 }
 
-ArrayRef<MemorySizeDistribution> GetMemsetSizeDistributions() {
+ArrayRef<MemorySizeDistribution> getMemsetSizeDistributions() {
   static constexpr MemorySizeDistribution kDistributions[] = {
       {"memset Google B", kMemsetGoogleB},
       {"memset Google D", kMemsetGoogleD},
@@ -49,7 +49,7 @@ ArrayRef<MemorySizeDistribution> GetMemsetSizeDistributions() {
   return kDistributions;
 }
 
-ArrayRef<MemorySizeDistribution> GetMemcmpSizeDistributions() {
+ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions() {
   static constexpr MemorySizeDistribution kDistributions[] = {
       {"memcmp Google A", kMemcmpGoogleA}, {"memcmp Google B", kMemcmpGoogleB},
       {"memcmp Google D", kMemcmpGoogleD}, {"memcmp Google L", kMemcmpGoogleL},

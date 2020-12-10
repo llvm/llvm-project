@@ -103,7 +103,7 @@ static Block *getPhiIncomingBlock(Block *block) {
           return incomingBlock;
       // Or the enclosing block itself if no structured control flow ops
       // exists before this loop.
-      return loopOp.getOperation()->getBlock();
+      return loopOp->getBlock();
     }
   }
 
@@ -638,8 +638,8 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  uint32_t mm = module.getAttrOfType<IntegerAttr>("memory_model").getInt();
-  uint32_t am = module.getAttrOfType<IntegerAttr>("addressing_model").getInt();
+  uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
+  uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -656,7 +656,7 @@ LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.default_value(),
                                             /*isSpec=*/true)) {
     // Emit the OpDecorate instruction for SpecId.
-    if (auto specID = op.getAttrOfType<IntegerAttr>("spec_id")) {
+    if (auto specID = op->getAttrOfType<IntegerAttr>("spec_id")) {
       auto val = static_cast<uint32_t>(specID.getInt());
       emitDecoration(resultID, spirv::Decoration::SpecId, {val});
     }
@@ -1748,7 +1748,7 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
     return failure();
 
   // There is nothing to do for the merge block in the selection, which just
-  // contains a spv._merge op, itself. But we need to have an OpLabel
+  // contains a spv.mlir.merge op, itself. But we need to have an OpLabel
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   return encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
@@ -1808,7 +1808,7 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
     return failure();
 
   // There is nothing to do for the merge block in the loop, which just contains
-  // a spv._merge op, itself. But we need to have an OpLabel instruction to
+  // a spv.mlir.merge op, itself. But we need to have an OpLabel instruction to
   // start a new SPIR-V block for ops following this LoopOp. The block should
   // use the <id> for the merge block.
   return encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
@@ -1973,7 +1973,7 @@ Serializer::processOp<spirv::ControlBarrierOp>(spirv::ControlBarrierOp op) {
   SmallVector<uint32_t, 3> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();
@@ -2020,7 +2020,7 @@ Serializer::processOp<spirv::MemoryBarrierOp>(spirv::MemoryBarrierOp op) {
   SmallVector<uint32_t, 2> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();
@@ -2065,7 +2065,7 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   SmallVector<uint32_t, 4> operands;
   SmallVector<StringRef, 2> elidedAttrs;
 
-  for (Value operand : op.getOperation()->getOperands()) {
+  for (Value operand : op->getOperands()) {
     auto id = getValueID(operand);
     assert(id && "use before def!");
     operands.push_back(id);

@@ -140,6 +140,7 @@ def uimm8_lsb000 : Operand<XLenVT>,
 def simm9_lsb0 : Operand<OtherVT>,
                  ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<9, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<9>";
   let MCOperandPredicate = [{
@@ -149,6 +150,7 @@ def simm9_lsb0 : Operand<OtherVT>,
     return MCOp.isBareSymbolRef();
 
   }];
+  let OperandType = "OPERAND_PCREL";
 }
 
 // A 9-bit unsigned immediate where the least significant three bits are zero.
@@ -200,6 +202,7 @@ def simm10_lsb0000nonzero : Operand<XLenVT>,
 def simm12_lsb0 : Operand<XLenVT>,
                   ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<12>";
   let MCOperandPredicate = [{
@@ -208,6 +211,7 @@ def simm12_lsb0 : Operand<XLenVT>,
       return isShiftedInt<11, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_PCREL";
 }
 
 //===----------------------------------------------------------------------===//
@@ -239,7 +243,7 @@ class CStore_rri<bits<3> funct3, string OpcodeStr,
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Bcz<bits<3> funct3, string OpcodeStr, PatFrag CondOp,
+class Bcz<bits<3> funct3, string OpcodeStr,
           RegisterClass cls>
     : RVInst16CB<funct3, 0b01, (outs), (ins cls:$rs1, simm9_lsb0:$imm),
                  OpcodeStr, "$rs1, $imm"> {
@@ -469,8 +473,8 @@ def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins simm12_lsb0:$offset),
   let isBarrier=1;
 }
 
-def C_BEQZ : Bcz<0b110, "c.beqz",  seteq, GPRC>, Sched<[WriteJmp]>;
-def C_BNEZ : Bcz<0b111, "c.bnez",  setne, GPRC>, Sched<[WriteJmp]>;
+def C_BEQZ : Bcz<0b110, "c.beqz", GPRC>, Sched<[WriteJmp]>;
+def C_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),

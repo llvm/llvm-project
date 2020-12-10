@@ -431,6 +431,23 @@ define signext i32 @sraiw(i32 %a) nounwind {
   ret i32 %1
 }
 
+define i64 @sraiw_i64(i64 %a) nounwind {
+; RV64I-LABEL: sraiw_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sraiw a0, a0, 9
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: sraiw_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srai a2, a0, 9
+; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    ret
+  %1 = shl i64 %a, 32
+  %2 = ashr i64 %1, 41
+  ret i64 %2
+}
+
 define signext i32 @sextw(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: sextw:
 ; RV64I:       # %bb.0:

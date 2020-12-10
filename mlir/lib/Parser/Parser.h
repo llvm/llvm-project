@@ -243,12 +243,6 @@ public:
   /// Parse a name or FileLineCol location instance.
   ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
 
-  /// Parse an optional trailing location.
-  ///
-  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
-  ///
-  ParseResult parseOptionalTrailingLocation(Location &loc);
-
   //===--------------------------------------------------------------------===//
   // Affine Parsing
   //===--------------------------------------------------------------------===//

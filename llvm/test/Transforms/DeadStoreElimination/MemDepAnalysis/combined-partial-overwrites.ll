@@ -4,7 +4,7 @@ target triple = "powerpc64le-unknown-linux"
 
 %"struct.std::complex" = type { { float, float } }
 
-define void @_Z4testSt7complexIfE(%"struct.std::complex"* noalias nocapture sret %agg.result, i64 %c.coerce) {
+define void @_Z4testSt7complexIfE(%"struct.std::complex"* noalias nocapture sret(%"struct.std::complex") %agg.result, i64 %c.coerce) {
 entry:
 ; CHECK-LABEL: @_Z4testSt7complexIfE
 
@@ -15,7 +15,7 @@ entry:
   %0 = bitcast i32 %c.sroa.0.0.extract.trunc to float
   %c.sroa.2.0.extract.trunc = trunc i64 %c.coerce to i32
   %1 = bitcast i32 %c.sroa.2.0.extract.trunc to float
-  call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret %tmpcast, i64 %c.coerce)
+  call void @_Z3barSt7complexIfE(%"struct.std::complex"* nonnull sret(%"struct.std::complex") %tmpcast, i64 %c.coerce)
   %2 = bitcast %"struct.std::complex"* %agg.result to i64*
   %3 = load i64, i64* %ref.tmp, align 8
   store i64 %3, i64* %2, align 4
@@ -40,7 +40,7 @@ entry:
 ; CHECK: ret void
 }
 
-declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret, i64)
+declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret(%"struct.std::complex"), i64)
 
 define void @test1(i32 *%ptr) {
 entry:

@@ -58,6 +58,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <memory>
 
 namespace llvm {
 
@@ -70,10 +71,23 @@ namespace llvm {
 template <class Derived> class RefCountedBase {
   mutable unsigned RefCount = 0;
 
-public:
+protected:
   RefCountedBase() = default;
   RefCountedBase(const RefCountedBase &) {}
+  RefCountedBase &operator=(const RefCountedBase &) = delete;
 
+#ifndef NDEBUG
+  ~RefCountedBase() {
+    assert(RefCount == 0 &&
+           "Destruction occured when there are still references to this.");
+  }
+#else
+  // Default the destructor in release builds, A trivial destructor may enable
+  // better codegen.
+  ~RefCountedBase() = default;
+#endif
+
+public:
   void Retain() const { ++RefCount; }
 
   void Release() const {
@@ -85,10 +99,24 @@ public:
 
 /// A thread-safe version of \c RefCountedBase.
 template <class Derived> class ThreadSafeRefCountedBase {
-  mutable std::atomic<int> RefCount;
+  mutable std::atomic<int> RefCount{0};
 
 protected:
-  ThreadSafeRefCountedBase() : RefCount(0) {}
+  ThreadSafeRefCountedBase() = default;
+  ThreadSafeRefCountedBase(const ThreadSafeRefCountedBase &) {}
+  ThreadSafeRefCountedBase &
+  operator=(const ThreadSafeRefCountedBase &) = delete;
+
+#ifndef NDEBUG
+  ~ThreadSafeRefCountedBase() {
+    assert(RefCount == 0 &&
+           "Destruction occured when there are still references to this.");
+  }
+#else
+  // Default the destructor in release builds, A trivial destructor may enable
+  // better codegen.
+  ~ThreadSafeRefCountedBase() = default;
+#endif
 
 public:
   void Retain() const { RefCount.fetch_add(1, std::memory_order_relaxed); }
@@ -146,6 +174,11 @@ public:
   template <class X>
   IntrusiveRefCntPtr(IntrusiveRefCntPtr<X> &&S) : Obj(S.get()) {
     S.Obj = nullptr;
+  }
+
+  template <class X>
+  IntrusiveRefCntPtr(std::unique_ptr<X> S) : Obj(S.release()) {
+    retain();
   }
 
   template <class X>

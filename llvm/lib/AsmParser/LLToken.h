@@ -74,6 +74,7 @@ enum Kind {
   kw_localexec,
   kw_zeroinitializer,
   kw_undef,
+  kw_poison,
   kw_null,
   kw_none,
   kw_to,
@@ -224,7 +225,6 @@ enum Kind {
   kw_returns_twice,
   kw_signext,
   kw_speculatable,
-  kw_nossp,
   kw_ssp,
   kw_sspreq,
   kw_sspstrong,
@@ -361,6 +361,7 @@ enum Kind {
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
+  kw_dso_local_equivalent,
 
   kw_freeze,
 

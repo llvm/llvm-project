@@ -21,6 +21,7 @@ Examples:
 .. code-block:: c++
 
   std::string("test", 200);   // Will include random characters after "test".
+  std::string_view("test", 200);
 
 Creating an empty string from constructors with parameters is considered
 suspicious. The programmer should use the empty constructor instead.
@@ -30,15 +31,25 @@ Examples:
 .. code-block:: c++
 
   std::string("test", 0);   // Creation of an empty string.
+  std::string_view("test", 0);
 
 Options
 -------
 
 .. option::  WarnOnLargeLength
 
-   When non-zero, the check will warn on a string with a length greater than
-   `LargeLengthThreshold`. Default is `1`.
+   When `true`, the check will warn on a string with a length greater than
+   :option:`LargeLengthThreshold`. Default is `true`.
 
 .. option::  LargeLengthThreshold
 
    An integer specifying the large length threshold. Default is `0x800000`.
+
+.. option:: StringNames
+
+    Default is `::std::basic_string;::std::basic_string_view`.
+
+    Semicolon-delimited list of class names to apply this check to.
+    By default `::std::basic_string` applies to ``std::string`` and
+    ``std::wstring``. Set to e.g. `::std::basic_string;llvm::StringRef;QString`
+    to perform this check on custom classes.

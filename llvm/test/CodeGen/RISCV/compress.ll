@@ -50,34 +50,34 @@ define i32 @simple_arith(i32 %a, i32 %b) #0 {
 define i32 @select(i32 %a, i32 *%b) #0 {
 ; RV32IC-LABEL: <select>:
 ; RV32IC:         c.lw a2, 0(a1)
-; RV32IC-NEXT:    c.beqz a2, 4
+; RV32IC-NEXT:    c.beqz a2, 0x18
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    c.bnez a2, 4
+; RV32IC-NEXT:    c.bnez a2, 0x1e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    bltu a2, a0, 6
+; RV32IC-NEXT:    bltu a2, a0, 0x26
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    bgeu a0, a2, 6
+; RV32IC-NEXT:    bgeu a0, a2, 0x2e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    bltu a0, a2, 6
+; RV32IC-NEXT:    bltu a0, a2, 0x36
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    bgeu a2, a0, 6
+; RV32IC-NEXT:    bgeu a2, a0, 0x3e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    blt a2, a0, 6
+; RV32IC-NEXT:    blt a2, a0, 0x46
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    bge a0, a2, 6
+; RV32IC-NEXT:    bge a0, a2, 0x4e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0(a1)
-; RV32IC-NEXT:    blt a0, a2, 6
+; RV32IC-NEXT:    blt a0, a2, 0x56
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a1, 0(a1)
-; RV32IC-NEXT:    bge a1, a0, 6
+; RV32IC-NEXT:    bge a1, a0, 0x5e
 ; RV32IC-NEXT:    c.mv a0, a1
 ; RV32IC-NEXT:    c.jr ra
   %val1 = load volatile i32, i32* %b

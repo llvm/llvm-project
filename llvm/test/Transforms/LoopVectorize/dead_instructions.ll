@@ -40,3 +40,32 @@ for.end:
   %tmp3  = phi i64 [ %tmp2, %for.body ]
   ret i64 %tmp3
 }
+
+
+; CHECK-LABEL: @pr47390
+;
+; This test ensures that the primary induction is not considered dead when
+; acting as the 'add' of another induction, and otherwise feeding only its own
+; 'add' (recognized earlier as 'dead'), when the tail of the loop is folded by
+; masking. Such masking uses the primary induction.
+;
+; CHECK:     vector.body:
+;
+define void @pr47390(i32 *%a) {
+entry:
+  br label %loop
+
+exit:
+  ret void
+
+loop:
+  %primary = phi i32 [ 0, %entry ], [ %primary_add, %loop ]
+  %use_primary = phi i32 [ -1, %entry ], [ %primary, %loop ]
+  %secondary = phi i32 [ 1, %entry ], [ %secondary_add, %loop ]
+  %primary_add = add i32 %primary, 1
+  %secondary_add = add i32 %secondary, 1
+  %gep = getelementptr inbounds i32, i32* %a, i32 %secondary
+  %load = load i32, i32* %gep, align 8
+  %cmp = icmp eq i32 %secondary, 5
+  br i1 %cmp, label %exit, label %loop
+}

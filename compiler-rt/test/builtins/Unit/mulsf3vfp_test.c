@@ -9,7 +9,7 @@
 
 extern COMPILER_RT_ABI float __mulsf3vfp(float a, float b);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x4)
 int test__mulsf3vfp(float a, float b)
 {
     float actual = __mulsf3vfp(a, b);
@@ -23,7 +23,7 @@ int test__mulsf3vfp(float a, float b)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x4)
     if (test__mulsf3vfp(0.5, 10.0))
         return 1;
     if (test__mulsf3vfp(-0.5, -2.0))

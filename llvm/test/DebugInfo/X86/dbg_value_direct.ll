@@ -23,7 +23,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 5 .addr \00", align 1
 
 ; Function Attrs: sanitize_address uwtable
-define void @_Z4funci(%struct.A* noalias sret %agg.result, i32) #0 "stack-protector-buffer-size"="1" !dbg !4 {
+define void @_Z4funci(%struct.A* noalias sret(%struct.A) %agg.result, i32) #0 "stack-protector-buffer-size"="1" !dbg !4 {
 entry:
   %MyAlloca = alloca [96 x i8], align 32
   %1 = ptrtoint [96 x i8]* %MyAlloca to i64

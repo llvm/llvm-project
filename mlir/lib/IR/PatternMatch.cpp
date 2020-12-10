@@ -70,6 +70,84 @@ LogicalResult RewritePattern::match(Operation *op) const {
 void RewritePattern::anchor() {}
 
 //===----------------------------------------------------------------------===//
+// PDLValue
+//===----------------------------------------------------------------------===//
+
+void PDLValue::print(raw_ostream &os) {
+  if (!impl) {
+    os << "<Null-PDLValue>";
+    return;
+  }
+  if (Value val = impl.dyn_cast<Value>()) {
+    os << val;
+    return;
+  }
+  AttrOpTypeImplT aotImpl = impl.get<AttrOpTypeImplT>();
+  if (Attribute attr = aotImpl.dyn_cast<Attribute>())
+    os << attr;
+  else if (Operation *op = aotImpl.dyn_cast<Operation *>())
+    os << *op;
+  else
+    os << aotImpl.get<Type>();
+}
+
+//===----------------------------------------------------------------------===//
+// PDLPatternModule
+//===----------------------------------------------------------------------===//
+
+void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
+  // Ignore the other module if it has no patterns.
+  if (!other.pdlModule)
+    return;
+  // Steal the other state if we have no patterns.
+  if (!pdlModule) {
+    constraintFunctions = std::move(other.constraintFunctions);
+    createFunctions = std::move(other.createFunctions);
+    rewriteFunctions = std::move(other.rewriteFunctions);
+    pdlModule = std::move(other.pdlModule);
+    return;
+  }
+  // Steal the functions of the other module.
+  for (auto &it : constraintFunctions)
+    registerConstraintFunction(it.first(), std::move(it.second));
+  for (auto &it : createFunctions)
+    registerCreateFunction(it.first(), std::move(it.second));
+  for (auto &it : rewriteFunctions)
+    registerRewriteFunction(it.first(), std::move(it.second));
+
+  // Merge the pattern operations from the other module into this one.
+  Block *block = pdlModule->getBody();
+  block->getTerminator()->erase();
+  block->getOperations().splice(block->end(),
+                                other.pdlModule->getBody()->getOperations());
+}
+
+//===----------------------------------------------------------------------===//
+// Function Registry
+
+void PDLPatternModule::registerConstraintFunction(
+    StringRef name, PDLConstraintFunction constraintFn) {
+  auto it = constraintFunctions.try_emplace(name, std::move(constraintFn));
+  (void)it;
+  assert(it.second &&
+         "constraint with the given name has already been registered");
+}
+void PDLPatternModule::registerCreateFunction(StringRef name,
+                                              PDLCreateFunction createFn) {
+  auto it = createFunctions.try_emplace(name, std::move(createFn));
+  (void)it;
+  assert(it.second && "native create function with the given name has "
+                      "already been registered");
+}
+void PDLPatternModule::registerRewriteFunction(StringRef name,
+                                               PDLRewriteFunction rewriteFn) {
+  auto it = rewriteFunctions.try_emplace(name, std::move(rewriteFn));
+  (void)it;
+  assert(it.second && "native rewrite function with the given name has "
+                      "already been registered");
+}
+
+//===----------------------------------------------------------------------===//
 // PatternRewriter
 //===----------------------------------------------------------------------===//
 

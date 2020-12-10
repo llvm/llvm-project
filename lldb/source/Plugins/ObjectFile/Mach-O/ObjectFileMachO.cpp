@@ -3032,12 +3032,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                             // contains just the filename, so here we combine
                             // it with the first one if we are minimizing the
                             // symbol table
-                            const char *so_path =
-                                sym[sym_idx - 1]
-                                    .GetMangled()
-                                    .GetDemangledName(
-                                        lldb::eLanguageTypeUnknown)
-                                    .AsCString();
+                            const char *so_path = sym[sym_idx - 1]
+                                                      .GetMangled()
+                                                      .GetDemangledName()
+                                                      .AsCString();
                             if (so_path && so_path[0]) {
                               std::string full_so_path(so_path);
                               const size_t double_slash_pos =
@@ -3472,8 +3470,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                             const char *gsym_name =
                                 sym[sym_idx]
                                     .GetMangled()
-                                    .GetName(lldb::eLanguageTypeUnknown,
-                                             Mangled::ePreferMangled)
+                                    .GetName(Mangled::ePreferMangled)
                                     .GetCString();
                             if (gsym_name)
                               N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
@@ -3555,10 +3552,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                             for (auto pos = range.first; pos != range.second;
                                  ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
-                                      lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
                                   sym[pos->second].GetMangled().GetName(
-                                      lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled)) {
                                 m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
                                 // We just need the flags from the linker
@@ -3600,10 +3595,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                             for (auto pos = range.first; pos != range.second;
                                  ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
-                                      lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
                                   sym[pos->second].GetMangled().GetName(
-                                      lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled)) {
                                 m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
                                 // We just need the flags from the linker
@@ -3625,8 +3618,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                             const char *gsym_name =
                                 sym[sym_idx]
                                     .GetMangled()
-                                    .GetName(lldb::eLanguageTypeUnknown,
-                                             Mangled::ePreferMangled)
+                                    .GetName(Mangled::ePreferMangled)
                                     .GetCString();
                             if (gsym_name) {
                               // Combine N_GSYM stab entries with the non

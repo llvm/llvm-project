@@ -3,6 +3,8 @@ def StdC : StandardSpec<"stdc"> {
   NamedType FILE = NamedType<"FILE">;
   PtrType FILEPtr = PtrType<FILE>;
   RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
+  NamedType StructTmType = NamedType<"struct tm">;
+  PtrType StructTmPtr = PtrType<StructTmType>;
 
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
@@ -93,7 +95,53 @@ def StdC : StandardSpec<"stdc"> {
           >,
       ]
   >;
-     
+
+  HeaderSpec Fenv = HeaderSpec<
+      "fenv.h",
+      [
+          Macro<"FE_DIVBYZERO">,
+          Macro<"FE_INEXACT">,
+          Macro<"FE_INVALID">,
+          Macro<"FE_OVERFLOW">,
+          Macro<"FE_UNDERFLOW">,
+          Macro<"FE_ALL_EXCEPT">,
+
+          Macro<"FE_DOWNWARD">,
+          Macro<"FE_TONEAREST">,
+          Macro<"FE_TOWARDZERO">,
+          Macro<"FE_UPWARD">
+      ],
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "feclearexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fetestexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "feraiseexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fesetround",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fegetround",
+              RetValSpec<IntType>,
+              []
+          >,
+      ]
+  >;
+ 
   HeaderSpec String = HeaderSpec<
       "string.h",
       [
@@ -258,9 +306,9 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
 
-          FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
-          FunctionSpec<"fdimf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
-          FunctionSpec<"fdiml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fdimf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fdiml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"floor", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"floorf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -278,11 +326,16 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
 
+          FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"ilogb", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ilogbf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ilogbl", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+
+          FunctionSpec<"ldexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
+          FunctionSpec<"ldexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
+          FunctionSpec<"ldexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
 
           FunctionSpec<"logb", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logbf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -463,15 +516,34 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Time = HeaderSpec<
+      "time.h",
+      [], // Macros
+      [ // Types
+       StructTmType,
+       TimeTType,
+      ],
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "mktime",
+              RetValSpec<TimeTType>,
+              [ArgSpec<StructTmPtr>]
+          >,
+      ]
+  >;
+
   let Headers = [
     Assert,
     CType,
     Errno,
+    Fenv,
     Math,
     String,
     StdIO,
     StdLib,
     Signal,
     Threads,
+    Time,
   ];
 }

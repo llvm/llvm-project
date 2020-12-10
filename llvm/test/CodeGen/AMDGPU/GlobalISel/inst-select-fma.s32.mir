@@ -26,7 +26,6 @@ body: |
     ; GFX9-DL: %3:vgpr_32 = nofpexcept V_FMAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %3
     ; GFX10-LABEL: name: fma_f32
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -63,7 +62,6 @@ body: |
     ; GFX9-DL: %4:vgpr_32 = nofpexcept V_FMAC_F32_e64 1, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %4
     ; GFX10-LABEL: name: fma_f32_fneg_src0
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -101,7 +99,6 @@ body: |
     ; GFX9-DL: %4:vgpr_32 = nofpexcept V_FMAC_F32_e64 0, [[COPY]], 1, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %4
     ; GFX10-LABEL: name: fma_f32_fneg_src1
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -139,7 +136,6 @@ body: |
     ; GFX9-DL: %4:vgpr_32 = nofpexcept V_FMA_F32 0, [[COPY]], 0, [[COPY1]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %4
     ; GFX10-LABEL: name: fma_f32_fneg_src2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -177,7 +173,6 @@ body: |
     ; GFX9-DL: %4:vgpr_32 = nofpexcept V_FMA_F32 0, [[COPY]], 0, [[COPY1]], 2, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %4
     ; GFX10-LABEL: name: fma_f32_fabs_src2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -215,7 +210,6 @@ body: |
     ; GFX9-DL: %5:vgpr_32 = nofpexcept V_FMA_F32 0, [[COPY]], 0, [[COPY1]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-DL: S_ENDPGM 0, implicit %5
     ; GFX10-LABEL: name: fma_f32_copy_fneg_src2
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2

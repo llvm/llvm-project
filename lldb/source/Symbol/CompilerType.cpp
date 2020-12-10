@@ -92,9 +92,9 @@ bool CompilerType::IsCStringType(uint32_t &length) const {
   return false;
 }
 
-bool CompilerType::IsFunctionType(bool *is_variadic_ptr) const {
+bool CompilerType::IsFunctionType() const {
   if (IsValid())
-    return m_type_system->IsFunctionType(m_type, is_variadic_ptr);
+    return m_type_system->IsFunctionType(m_type);
   return false;
 }
 

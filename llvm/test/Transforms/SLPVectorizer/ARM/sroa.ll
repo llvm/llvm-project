@@ -9,7 +9,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-
 ; because the scalar version of the shl/or are handled by the
 ; backend and disappear, the vectorized code stays.
 
-define void @SROAed(%class.Complex* noalias nocapture sret %agg.result, [4 x i32] %a.coerce, [4 x i32] %b.coerce) {
+define void @SROAed(%class.Complex* noalias nocapture sret(%class.Complex) %agg.result, [4 x i32] %a.coerce, [4 x i32] %b.coerce) {
 ; CHECK-LABEL: @SROAed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i32] [[A_COERCE:%.*]], 0

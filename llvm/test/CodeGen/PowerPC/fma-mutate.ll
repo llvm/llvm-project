@@ -9,12 +9,8 @@ declare double @llvm.sqrt.f64(double)
 define double @foo3_fmf(double %a) nounwind {
 ; CHECK-LABEL: foo3_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xsabsdp 0, 1
-; CHECK-NEXT:    addis 3, 2, .LCPI0_2@toc@ha
-; CHECK-NEXT:    lfd 2, .LCPI0_2@toc@l(3)
-; CHECK-NEXT:    xscmpudp 0, 0, 2
-; CHECK-NEXT:    xxlxor 0, 0, 0
-; CHECK-NEXT:    blt 0, .LBB0_2
+; CHECK-NEXT:    xstsqrtdp 0, 1
+; CHECK-NEXT:    bc 12, 2, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
@@ -28,9 +24,10 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-NEXT:    xsmaddadp 3, 1, 0
 ; CHECK-NEXT:    xsmuldp 0, 1, 4
-; CHECK-NEXT:    xsmuldp 0, 0, 3
+; CHECK-NEXT:    xsmuldp 1, 0, 3
+; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    xssqrtdp 1, 1
 ; CHECK-NEXT:    blr
   %r = call reassoc afn ninf double @llvm.sqrt.f64(double %a)
   ret double %r

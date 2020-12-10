@@ -250,7 +250,7 @@ define amdgpu_kernel void @store_lds_v4i32_align8(<4 x i32> addrspace(3)* %out, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s7
-; GFX9-NEXT:    ds_write_b128 v4, v[0:3]
+; GFX9-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: store_lds_v4i32_align8:

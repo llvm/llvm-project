@@ -31,11 +31,11 @@ void mlirAffineExprDump(MlirAffineExpr affineExpr) {
   unwrap(affineExpr).dump();
 }
 
-int mlirAffineExprIsSymbolicOrConstant(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsSymbolicOrConstant(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).isSymbolicOrConstant();
 }
 
-int mlirAffineExprIsPureAffine(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsPureAffine(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).isPureAffine();
 }
 
@@ -43,12 +43,12 @@ int64_t mlirAffineExprGetLargestKnownDivisor(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getLargestKnownDivisor();
 }
 
-int mlirAffineExprIsMultipleOf(MlirAffineExpr affineExpr, int64_t factor) {
+bool mlirAffineExprIsMultipleOf(MlirAffineExpr affineExpr, int64_t factor) {
   return unwrap(affineExpr).isMultipleOf(factor);
 }
 
-int mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
-                                  intptr_t position) {
+bool mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
+                                   intptr_t position) {
   return unwrap(affineExpr).isFunctionOfDim(position);
 }
 
@@ -92,7 +92,7 @@ int64_t mlirAffineConstantExprGetValue(MlirAffineExpr affineExpr) {
 // Affine Add Expression.
 //===----------------------------------------------------------------------===//
 
-int mlirAffineExprIsAAdd(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsAAdd(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getKind() == mlir::AffineExprKind::Add;
 }
 
@@ -105,7 +105,7 @@ MlirAffineExpr mlirAffineAddExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs) {
 // Affine Mul Expression.
 //===----------------------------------------------------------------------===//
 
-int mlirAffineExprIsAMul(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsAMul(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getKind() == mlir::AffineExprKind::Mul;
 }
 
@@ -118,7 +118,7 @@ MlirAffineExpr mlirAffineMulExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs) {
 // Affine Mod Expression.
 //===----------------------------------------------------------------------===//
 
-int mlirAffineExprIsAMod(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsAMod(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getKind() == mlir::AffineExprKind::Mod;
 }
 
@@ -131,7 +131,7 @@ MlirAffineExpr mlirAffineModExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs) {
 // Affine FloorDiv Expression.
 //===----------------------------------------------------------------------===//
 
-int mlirAffineExprIsAFloorDiv(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsAFloorDiv(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getKind() == mlir::AffineExprKind::FloorDiv;
 }
 
@@ -145,7 +145,7 @@ MlirAffineExpr mlirAffineFloorDivExprGet(MlirAffineExpr lhs,
 // Affine CeilDiv Expression.
 //===----------------------------------------------------------------------===//
 
-int mlirAffineExprIsACeilDiv(MlirAffineExpr affineExpr) {
+bool mlirAffineExprIsACeilDiv(MlirAffineExpr affineExpr) {
   return unwrap(affineExpr).getKind() == mlir::AffineExprKind::CeilDiv;
 }
 

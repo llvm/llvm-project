@@ -635,6 +635,35 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR_TRUNC, Res, TmpVec);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
+                                                        const SrcOp &Src) {
+  LLT DstTy = Res.getLLTTy(*getMRI());
+  assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
+         "Expected Src to match Dst elt ty");
+  auto UndefVec = buildUndef(DstTy);
+  auto Zero = buildConstant(LLT::scalar(64), 0);
+  auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
+  SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
+  return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
+                                                         const SrcOp &Src1,
+                                                         const SrcOp &Src2,
+                                                         ArrayRef<int> Mask) {
+  LLT DstTy = Res.getLLTTy(*getMRI());
+  LLT Src1Ty = Src1.getLLTTy(*getMRI());
+  LLT Src2Ty = Src2.getLLTTy(*getMRI());
+  assert(Src1Ty.getNumElements() + Src2Ty.getNumElements() >= Mask.size());
+  assert(DstTy.getElementType() == Src1Ty.getElementType() &&
+         DstTy.getElementType() == Src2Ty.getElementType());
+  (void)Src1Ty;
+  (void)Src2Ty;
+  ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);
+  return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {DstTy}, {Src1, Src2})
+      .addShuffleMask(MaskAlloc);
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildConcatVectors(const DstOp &Res, ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,

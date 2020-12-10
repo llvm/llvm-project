@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -123,6 +124,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
@@ -154,7 +156,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_REL_SLEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
-  case R_WASM_MEMORY_ADDR_I64: {
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     if (sym.isUndefined())
       return 0;
@@ -169,7 +172,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
     else
       llvm_unreachable("unknown init expr opcode");
   }
-  case R_WASM_FUNCTION_OFFSET_I32: {
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     InputFunction *f =
         functions[sym.Info.ElementIndex - wasmObj->getNumImportedFunctions()];
@@ -193,17 +197,18 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
 }
 
 // Translate from the relocation's index into the final linked output value.
-uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
+uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) const {
   const Symbol* sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
 
     // We can end up with relocations against non-live symbols.  For example
-    // in debug sections. We return reloc.Addend because always returning zero
-    // causes the generation of spurious range-list terminators in the
-    // .debug_ranges section.
+    // in debug sections. We return a tombstone value in debug symbol sections
+    // so this will not produce a valid range conflicting with ranges of actual
+    // code. In other sections we return reloc.Addend.
+
     if ((isa<FunctionSymbol>(sym) || isa<DataSymbol>(sym)) && !sym->isLive())
-      return reloc.Addend;
+      return tombstone ? tombstone : reloc.Addend;
   }
 
   switch (reloc.Type) {
@@ -227,10 +232,24 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_REL_SLEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
-  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_I64: {
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
-    return cast<DefinedData>(sym)->getVirtualAddress() + reloc.Addend;
+    auto D = cast<DefinedData>(sym);
+    // Treat non-TLS relocation against symbols that live in the TLS segment
+    // like TLS relocations.  This beaviour exists to support older object
+    // files created before we introduced TLS relocations.
+    // TODO(sbc): Remove this legacy behaviour one day.  This will break
+    // backward compat with old object files built with `-fPIC`.
+    if (D->segment && D->segment->outputSeg->name == ".tdata")
+      return D->getOutputSegmentOffset() + reloc.Addend;
+    return D->getVirtualAddress() + reloc.Addend;
+  }
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+    if (isa<UndefinedData>(sym) || sym->isUndefWeak())
+      return 0;
+    // TLS relocations are relative to the start of the TLS output segment
+    return cast<DefinedData>(sym)->getOutputSegmentOffset() + reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:
     return typeMap[reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
@@ -242,7 +261,8 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
     return sym->getGOTIndex();
   case R_WASM_EVENT_INDEX_LEB:
     return getEventSymbol(reloc.Index)->getEventIndex();
-  case R_WASM_FUNCTION_OFFSET_I32: {
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64: {
     auto *f = cast<DefinedFunction>(sym);
     return f->function->outputOffset +
            (f->function->getFunctionCodeOffset() + reloc.Addend);

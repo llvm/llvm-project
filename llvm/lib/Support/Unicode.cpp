@@ -339,11 +339,22 @@ static inline int charWidth(int UCS)
   return 1;
 }
 
+static bool isprintableascii(char c) { return c > 31 && c < 127; }
+
 int columnWidthUTF8(StringRef Text) {
   unsigned ColumnWidth = 0;
   unsigned Length;
   for (size_t i = 0, e = Text.size(); i < e; i += Length) {
     Length = getNumBytesForUTF8(Text[i]);
+
+    // fast path for ASCII characters
+    if (Length == 1) {
+      if (!isprintableascii(Text[i]))
+        return ErrorNonPrintableCharacter;
+      ColumnWidth += 1;
+      continue;
+    }
+
     if (Length <= 0 || i + Length > Text.size())
       return ErrorInvalidUTF8;
     UTF32 buf[1];

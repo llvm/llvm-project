@@ -9,6 +9,8 @@
 #ifndef liblldb_Lua_h_
 #define liblldb_Lua_h_
 
+#include "lldb/API/SBBreakpointLocation.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -29,6 +31,10 @@ public:
   ~Lua();
 
   llvm::Error Run(llvm::StringRef buffer);
+  llvm::Error RegisterBreakpointCallback(void *baton, const char *body);
+  llvm::Expected<bool>
+  CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
+                         lldb::BreakpointLocationSP bp_loc_sp);
   llvm::Error LoadModule(llvm::StringRef filename);
   llvm::Error ChangeIO(FILE *out, FILE *err);
 

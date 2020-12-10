@@ -1,0 +1,11 @@
+static_library("TargetProcess") {
+  output_name = "LLVMOrcTargetProcess"
+  deps = [
+    "//llvm/lib/ExecutionEngine/Orc/Shared",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "RegisterEHFrames.cpp",
+    "TargetExecutionUtils.cpp",
+  ]
+}

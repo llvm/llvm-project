@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=mips-linux -relocation-model=static < %s \
-; RUN:   | FileCheck --check-prefixes=ALL,O32,O32-BE %s
+; RUN:   | FileCheck --check-prefixes=ALL,O32 %s
 ; RUN: llc -mtriple=mipsel-linux -relocation-model=static < %s \
-; RUN:   | FileCheck --check-prefixes=ALL,O32,O32-LE %s
+; RUN:   | FileCheck --check-prefixes=ALL,O32 %s
 
 ; RUN-TODO: llc -march=mips64 -relocation-model=static -target-abi o32 < %s \
 ; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s

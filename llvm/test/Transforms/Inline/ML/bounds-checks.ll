@@ -4,7 +4,7 @@
 ; factor, we don't inline anymore.
 ; REQUIRES: have_tf_aot
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -ml-advisor-size-increase-threshold=10.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOBOUNDS
-; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -ml-advisor-size-increase-threshold=1.0 -disable-always-inliner-in-module-wrapper -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOUNDS
+; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -ml-advisor-size-increase-threshold=1.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOUNDS
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"

@@ -8,7 +8,7 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/options.h"
-#include "gtest/gtest.h"
+#include "gwp_asan/tests/harness.h"
 
 TEST(LateInit, CheckLateInitIsOK) {
   gwp_asan::GuardedPoolAllocator GPA;

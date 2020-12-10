@@ -6,13 +6,13 @@
 ; CHECK-DAG: NoAlias: i8* %gep.inc3, i8* %gep.inc5
 ; CHECK-DAG: NoAlias: i8* %gep.inc4, i8* %gep.inc5
 ;; At limit:
-; CHECK-DAG: MayAlias: i8* %gep.add6, i8* %gep.inc6
-; CHECK-DAG: MayAlias: i8* %gep.inc4, i8* %gep.inc6
-; CHECK-DAG: MayAlias: i8* %gep.inc5, i8* %gep.inc6
+; CHECK-DAG: MustAlias: i8* %gep.add6, i8* %gep.inc6
+; CHECK-DAG: NoAlias: i8* %gep.inc4, i8* %gep.inc6
+; CHECK-DAG: NoAlias: i8* %gep.inc5, i8* %gep.inc6
 ;; After limit:
 ; CHECK-DAG: MayAlias: i8* %gep.add7, i8* %gep.inc7
 ; CHECK-DAG: MayAlias: i8* %gep.inc5, i8* %gep.inc7
-; CHECK-DAG: MayAlias: i8* %gep.inc6, i8* %gep.inc7
+; CHECK-DAG: NoAlias: i8* %gep.inc6, i8* %gep.inc7
 
 define void @test(i8* %base) {
   %gep.add5 = getelementptr i8, i8* %base, i64 5

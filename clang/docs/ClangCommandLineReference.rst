@@ -2945,6 +2945,10 @@ Only supported on X86 and RISC-V. Otherwise accepted for compatibility with GCC.
 
 .. option:: -municode<arg>
 
+.. option:: -mabi=vec-extabi, -mabi=vec-default
+
+Only supported on AIX. Specify usage of the extended vector ABI on AIX and of non-volatile vector registers. Defaults to '-mabi=default' when Altivec is enabled.
+
 .. option:: -mvx, -mno-vx
 
 .. option:: -mwarn-nonportable-cfstrings, -mno-warn-nonportable-cfstrings
@@ -3220,8 +3224,6 @@ PowerPC
 .. option:: -mpower8-vector, -mno-power8-vector
 
 .. option:: -mpower9-vector, -mno-power9-vector
-
-.. option:: -mqpx, -mno-qpx
 
 .. option:: -msecure-plt
 

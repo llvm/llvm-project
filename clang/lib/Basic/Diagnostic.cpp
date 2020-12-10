@@ -55,6 +55,12 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   case NullabilityKind::Unspecified:
     string = nullability.second ? "'null_unspecified'" : "'_Null_unspecified'";
     break;
+
+  case NullabilityKind::NullableResult:
+    assert(!nullability.second &&
+           "_Nullable_result isn't supported as context-sensitive keyword");
+    string = "_Nullable_result";
+    break;
   }
 
   DB.AddString(string);
@@ -808,7 +814,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
   /// QualTypeVals - Pass a vector of arrays so that QualType names can be
   /// compared to see if more information is needed to be printed.
   SmallVector<intptr_t, 2> QualTypeVals;
-  SmallVector<char, 64> Tree;
+  SmallString<64> Tree;
 
   for (unsigned i = 0, e = getNumArgs(); i < e; ++i)
     if (getArgKind(i) == DiagnosticsEngine::ak_qualtype)

@@ -228,7 +228,8 @@ static std::error_code GetExecutableName(SmallVectorImpl<char> &Filename) {
   if (EC)
     return EC;
 
-  StringRef Base = sys::path::filename(Filename.data());
+  // Make a copy of the filename since assign makes the StringRef invalid.
+  std::string Base = sys::path::filename(Filename.data()).str();
   Filename.assign(Base.begin(), Base.end());
   return std::error_code();
 }

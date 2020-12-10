@@ -67,7 +67,7 @@ entry:
 	ret void
 }
 
-define void @_ZNSt3mapIPKc15FlagDescriptionIiE9StringCmpSaISt4pairIKS1_S3_EEE3endEv(%"struct.std::_Rb_tree_const_iterator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >"* sret  %agg.result) {
+define void @_ZNSt3mapIPKc15FlagDescriptionIiE9StringCmpSaISt4pairIKS1_S3_EEE3endEv(%"struct.std::_Rb_tree_const_iterator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >"* sret(%"struct.std::_Rb_tree_const_iterator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >")  %agg.result) {
 entry:
 	unreachable
 }

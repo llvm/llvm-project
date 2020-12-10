@@ -35,60 +35,60 @@ Options
 
 The following options are describe below:
 
- - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`
+ - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`
  - :option:`AggressiveDependentMemberLookup`
- - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`
- - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`
- - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`
- - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`
- - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`
- - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`
- - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`
- - :option:`ConstantPointerParameterCase`, :option:`ConstantPointerParameterPrefix`, :option:`ConstantPointerParameterSuffix`
- - :option:`ConstexprFunctionCase`, :option:`ConstexprFunctionPrefix`, :option:`ConstexprFunctionSuffix`
- - :option:`ConstexprMethodCase`, :option:`ConstexprMethodPrefix`, :option:`ConstexprMethodSuffix`
- - :option:`ConstexprVariableCase`, :option:`ConstexprVariablePrefix`, :option:`ConstexprVariableSuffix`
- - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`
- - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`, :option:`EnumConstantSuffix`
- - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`
+ - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`
+ - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`
+ - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`
+ - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+ - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`, :option:`ConstantIgnoredRegexp`
+ - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`
+ - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`
+ - :option:`ConstantPointerParameterCase`, :option:`ConstantPointerParameterPrefix`, :option:`ConstantPointerParameterSuffix`, :option:`ConstantPointerParameterIgnoredRegexp`
+ - :option:`ConstexprFunctionCase`, :option:`ConstexprFunctionPrefix`, :option:`ConstexprFunctionSuffix`, :option:`ConstexprFunctionIgnoredRegexp`
+ - :option:`ConstexprMethodCase`, :option:`ConstexprMethodPrefix`, :option:`ConstexprMethodSuffix`, :option:`ConstexprMethodIgnoredRegexp`
+ - :option:`ConstexprVariableCase`, :option:`ConstexprVariablePrefix`, :option:`ConstexprVariableSuffix`, :option:`ConstexprVariableIgnoredRegexp`
+ - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`, :option:`EnumIgnoredRegexp`
+ - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`, :option:`EnumConstantSuffix`, :option:`EnumConstantIgnoredRegexp`
+ - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`, :option:`FunctionIgnoredRegexp`
  - :option:`GetConfigPerFile`
- - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`, :option:`GlobalConstantSuffix`
- - :option:`GlobalConstantPointerCase`, :option:`GlobalConstantPointerPrefix`, :option:`GlobalConstantPointerSuffix`
- - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`
- - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`
- - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`
+ - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`, :option:`GlobalConstantSuffix`, :option:`GlobalConstantIgnoredRegexp`
+ - :option:`GlobalConstantPointerCase`, :option:`GlobalConstantPointerPrefix`, :option:`GlobalConstantPointerSuffix`, :option:`GlobalConstantPointerIgnoredRegexp`
+ - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionIgnoredRegexp`
+ - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`, :option:`GlobalPointerIgnoredRegexp`
+ - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`, :option:`GlobalVariableIgnoredRegexp`
  - :option:`IgnoreMainLikeFunctions`
- - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`
- - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`
- - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`
- - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`
- - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`, :option:`LocalVariableSuffix`
- - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`, :option:`MacroDefinitionSuffix`
- - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`
- - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`
- - :option:`NamespaceCase`, :option:`NamespacePrefix`, :option:`NamespaceSuffix`
- - :option:`ParameterCase`, :option:`ParameterPrefix`, :option:`ParameterSuffix`
- - :option:`ParameterPackCase`, :option:`ParameterPackPrefix`, :option:`ParameterPackSuffix`
- - :option:`PointerParameterCase`, :option:`PointerParameterPrefix`, :option:`PointerParameterSuffix`
- - :option:`PrivateMemberCase`, :option:`PrivateMemberPrefix`, :option:`PrivateMemberSuffix`
- - :option:`PrivateMethodCase`, :option:`PrivateMethodPrefix`, :option:`PrivateMethodSuffix`
- - :option:`ProtectedMemberCase`, :option:`ProtectedMemberPrefix`, :option:`ProtectedMemberSuffix`
- - :option:`ProtectedMethodCase`, :option:`ProtectedMethodPrefix`, :option:`ProtectedMethodSuffix`
- - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`, :option:`PublicMemberSuffix`
- - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`, :option:`PublicMethodSuffix`
- - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`, :option:`ScopedEnumConstantSuffix`
- - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`, :option:`StaticConstantSuffix`
- - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`, :option:`StaticVariableSuffix`
- - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`
- - :option:`TemplateParameterCase`, :option:`TemplateParameterPrefix`, :option:`TemplateParameterSuffix`
- - :option:`TemplateTemplateParameterCase`, :option:`TemplateTemplateParameterPrefix`, :option:`TemplateTemplateParameterSuffix`
- - :option:`TypeAliasCase`, :option:`TypeAliasPrefix`, :option:`TypeAliasSuffix`
- - :option:`TypedefCase`, :option:`TypedefPrefix`, :option:`TypedefSuffix`
- - :option:`TypeTemplateParameterCase`, :option:`TypeTemplateParameterPrefix`, :option:`TypeTemplateParameterSuffix`
- - :option:`UnionCase`, :option:`UnionPrefix`, :option:`UnionSuffix`
- - :option:`ValueTemplateParameterCase`, :option:`ValueTemplateParameterPrefix`, :option:`ValueTemplateParameterSuffix`
- - :option:`VariableCase`, :option:`VariablePrefix`, :option:`VariableSuffix`
- - :option:`VirtualMethodCase`, :option:`VirtualMethodPrefix`, :option:`VirtualMethodSuffix`
+ - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+ - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`, :option:`LocalConstantIgnoredRegexp`
+ - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`, :option:`LocalConstantPointerIgnoredRegexp`
+ - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`, :option:`LocalPointerIgnoredRegexp`
+ - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`, :option:`LocalVariableSuffix`, :option:`LocalVariableIgnoredRegexp`
+ - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`, :option:`MacroDefinitionSuffix`, :option:`MacroDefinitionIgnoredRegexp`
+ - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`, :option:`MemberIgnoredRegexp`
+ - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`, :option:`MethodIgnoredRegexp`
+ - :option:`NamespaceCase`, :option:`NamespacePrefix`, :option:`NamespaceSuffix`, :option:`NamespaceIgnoredRegexp`
+ - :option:`ParameterCase`, :option:`ParameterPrefix`, :option:`ParameterSuffix`, :option:`ParameterIgnoredRegexp`
+ - :option:`ParameterPackCase`, :option:`ParameterPackPrefix`, :option:`ParameterPackSuffix`, :option:`ParameterPackIgnoredRegexp`
+ - :option:`PointerParameterCase`, :option:`PointerParameterPrefix`, :option:`PointerParameterSuffix`, :option:`PointerParameterIgnoredRegexp`
+ - :option:`PrivateMemberCase`, :option:`PrivateMemberPrefix`, :option:`PrivateMemberSuffix`, :option:`PrivateMemberIgnoredRegexp`
+ - :option:`PrivateMethodCase`, :option:`PrivateMethodPrefix`, :option:`PrivateMethodSuffix`, :option:`PrivateMethodIgnoredRegexp`
+ - :option:`ProtectedMemberCase`, :option:`ProtectedMemberPrefix`, :option:`ProtectedMemberSuffix`, :option:`ProtectedMemberIgnoredRegexp`
+ - :option:`ProtectedMethodCase`, :option:`ProtectedMethodPrefix`, :option:`ProtectedMethodSuffix`, :option:`ProtectedMethodIgnoredRegexp`
+ - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`, :option:`PublicMemberSuffix`, :option:`PublicMemberIgnoredRegexp`
+ - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`, :option:`PublicMethodSuffix`, :option:`PublicMethodIgnoredRegexp`
+ - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`, :option:`ScopedEnumConstantSuffix`, :option:`ScopedEnumConstantIgnoredRegexp`
+ - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`, :option:`StaticConstantSuffix`, :option:`StaticConstantIgnoredRegexp`
+ - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`, :option:`StaticVariableSuffix`, :option:`StaticVariableIgnoredRegexp`
+ - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`, :option:`StructIgnoredRegexp`
+ - :option:`TemplateParameterCase`, :option:`TemplateParameterPrefix`, :option:`TemplateParameterSuffix`, :option:`TemplateParameterIgnoredRegexp`
+ - :option:`TemplateTemplateParameterCase`, :option:`TemplateTemplateParameterPrefix`, :option:`TemplateTemplateParameterSuffix`, :option:`TemplateTemplateParameterIgnoredRegexp`
+ - :option:`TypeAliasCase`, :option:`TypeAliasPrefix`, :option:`TypeAliasSuffix`, :option:`TypeAliasIgnoredRegexp`
+ - :option:`TypedefCase`, :option:`TypedefPrefix`, :option:`TypedefSuffix`, :option:`TypedefIgnoredRegexp`
+ - :option:`TypeTemplateParameterCase`, :option:`TypeTemplateParameterPrefix`, :option:`TypeTemplateParameterSuffix`, :option:`TypeTemplateParameterIgnoredRegexp`
+ - :option:`UnionCase`, :option:`UnionPrefix`, :option:`UnionSuffix`, :option:`UnionIgnoredRegexp`
+ - :option:`ValueTemplateParameterCase`, :option:`ValueTemplateParameterPrefix`, :option:`ValueTemplateParameterSuffix`, :option:`ValueTemplateParameterIgnoredRegexp`
+ - :option:`VariableCase`, :option:`VariablePrefix`, :option:`VariableSuffix`, :option:`VariableIgnoredRegexp`
+ - :option:`VirtualMethodCase`, :option:`VirtualMethodPrefix`, :option:`VirtualMethodSuffix`, :option:`VirtualMethodIgnoredRegexp`
 
 .. option:: AbstractClassCase
 
@@ -99,6 +99,11 @@ The following options are describe below:
 
     When defined, the check will ensure abstract class names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: AbstractClassIgnoredRegexp
+
+    Identifier naming checks won't be enforced for abstract class names
+    matching this regular expression.
 
 .. option:: AbstractClassSuffix
 
@@ -133,9 +138,9 @@ After:
 
 .. option:: AggressiveDependentMemberLookup
 
-    When set to `1` the check will look in dependent base classes for dependent
+    When set to `true` the check will look in dependent base classes for dependent
     member references that need changing. This can lead to errors with template
-    specializations so the default value is `0`.
+    specializations so the default value is `false`.
 
 For example using values of:
 
@@ -157,7 +162,7 @@ Before:
       }
     };
 
-After if AggressiveDependentMemberLookup is ``0``:
+After if AggressiveDependentMemberLookup is `false`:
 
 .. code-block:: c++
 
@@ -173,7 +178,7 @@ After if AggressiveDependentMemberLookup is ``0``:
       }
     };
 
-After if AggressiveDependentMemberLookup is ``1``:
+After if AggressiveDependentMemberLookup is `true`:
 
 .. code-block:: c++
 
@@ -198,6 +203,11 @@ After if AggressiveDependentMemberLookup is ``1``:
 
     When defined, the check will ensure class names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ClassIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class names matching
+    this regular expression.
 
 .. option:: ClassSuffix
 
@@ -242,6 +252,11 @@ After:
     When defined, the check will ensure class constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ClassConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class constant names
+    matching this regular expression.
+
 .. option:: ClassConstantSuffix
 
     When defined, the check will ensure class constant names will add the
@@ -282,6 +297,11 @@ After:
 
     When defined, the check will ensure class member names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ClassMemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class member names
+    matching this regular expression.
 
 .. option:: ClassMemberSuffix
 
@@ -324,6 +344,11 @@ After:
     When defined, the check will ensure class method names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ClassMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class method names
+    matching this regular expression.
+
 .. option:: ClassMethodSuffix
 
     When defined, the check will ensure class method names will add the
@@ -365,6 +390,11 @@ After:
     When defined, the check will ensure constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constant names
+    matching this regular expression.
+
 .. option:: ConstantSuffix
 
     When defined, the check will ensure constant names will add the
@@ -399,6 +429,11 @@ After:
 
     When defined, the check will ensure constant member names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ConstantMemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constant member names
+    matching this regular expression.
 
 .. option:: ConstantMemberSuffix
 
@@ -439,6 +474,11 @@ After:
     When defined, the check will ensure constant parameter names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ConstantParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constant parameter names
+    matching this regular expression.
+
 .. option:: ConstantParameterSuffix
 
     When defined, the check will ensure constant parameter names will add the
@@ -473,6 +513,11 @@ After:
 
     When defined, the check will ensure constant pointer parameter names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ConstantPointerParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constant pointer parameter
+    names matching this regular expression.
 
 .. option:: ConstantPointerParameterSuffix
 
@@ -509,6 +554,11 @@ After:
     When defined, the check will ensure constexpr function names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ConstexprFunctionIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constexpr function names
+    matching this regular expression.
+
 .. option:: ConstexprFunctionSuffix
 
     When defined, the check will ensure constexpr function names will add the
@@ -543,6 +593,11 @@ After:
 
     When defined, the check will ensure constexpr method names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ConstexprMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constexpr method names
+    matching this regular expression.
 
 .. option:: ConstexprMethodSuffix
 
@@ -585,6 +640,11 @@ After:
     When defined, the check will ensure constexpr variable names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for constexpr variable names
+    matching this regular expression.
+
 .. option:: ConstexprVariableSuffix
 
     When defined, the check will ensure constexpr variable names will add the
@@ -619,6 +679,11 @@ After:
 
     When defined, the check will ensure enumeration names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: EnumIgnoredRegexp
+
+    Identifier naming checks won't be enforced for enumeration names
+    matching this regular expression.
 
 .. option:: EnumSuffix
 
@@ -655,6 +720,11 @@ After:
     When defined, the check will ensure enumeration constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: EnumConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for enumeration constant names
+    matching this regular expression.
+
 .. option:: EnumConstantSuffix
 
     When defined, the check will ensure enumeration constant names will add the
@@ -689,6 +759,11 @@ After:
 
     When defined, the check will ensure function names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: FunctionIgnoredRegexp
+
+    Identifier naming checks won't be enforced for function names
+    matching this regular expression.
 
 .. option:: FunctionSuffix
 
@@ -732,6 +807,11 @@ After:
     When defined, the check will ensure global constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: GlobalConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global constant names
+    matching this regular expression.
+
 .. option:: GlobalConstantSuffix
 
     When defined, the check will ensure global constant names will add the
@@ -766,6 +846,11 @@ After:
 
     When defined, the check will ensure global constant pointer names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: GlobalConstantPointerIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global constant pointer
+    names matching this regular expression.
 
 .. option:: GlobalConstantPointerSuffix
 
@@ -802,6 +887,11 @@ After:
     When defined, the check will ensure global function names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: GlobalFunctionIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global function names
+    matching this regular expression.
+
 .. option:: GlobalFunctionSuffix
 
     When defined, the check will ensure global function names will add the
@@ -836,6 +926,11 @@ After:
 
     When defined, the check will ensure global pointer names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: GlobalPointerIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global pointer names
+    matching this regular expression.
 
 .. option:: GlobalPointerSuffix
 
@@ -872,6 +967,11 @@ After:
     When defined, the check will ensure global variable names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: GlobalVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global variable names
+    matching this regular expression.
+
 .. option:: GlobalVariableSuffix
 
     When defined, the check will ensure global variable names will add the
@@ -899,9 +999,9 @@ After:
 
 .. option:: IgnoreMainLikeFunctions
 
-    When set to `1` functions that have a similar signature to ``main`` or 
+    When set to `true` functions that have a similar signature to ``main`` or 
     ``wmain`` won't enforce checks on the names of their parameters.
-    Default value is `0`.
+    Default value is `false`.
 
 .. option:: InlineNamespaceCase
 
@@ -912,6 +1012,11 @@ After:
 
     When defined, the check will ensure inline namespaces names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: InlineNamespaceIgnoredRegexp
+
+    Identifier naming checks won't be enforced for inline namespaces names
+    matching this regular expression.
 
 .. option:: InlineNamespaceSuffix
 
@@ -956,6 +1061,11 @@ After:
     When defined, the check will ensure local constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: LocalConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local constant names
+    matching this regular expression.
+
 .. option:: LocalConstantSuffix
 
     When defined, the check will ensure local constant names will add the
@@ -990,6 +1100,11 @@ After:
 
     When defined, the check will ensure local constant pointer names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: LocalConstantPointerIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local constant pointer names
+    matching this regular expression.
 
 .. option:: LocalConstantPointerSuffix
 
@@ -1026,6 +1141,11 @@ After:
     When defined, the check will ensure local pointer names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: LocalPointerIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local pointer names
+    matching this regular expression.
+
 .. option:: LocalPointerSuffix
 
     When defined, the check will ensure local pointer names will add the
@@ -1061,6 +1181,19 @@ After:
     When defined, the check will ensure local variable names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: LocalVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local variable names
+    matching this regular expression.
+
+For example using values of:
+
+   - LocalVariableCase of ``CamelCase``
+   - LocalVariableIgnoredRegexp of ``\w{1,2}``
+
+Will exclude variables with a length less than or equal to 2 from the
+camel case check applied to other variables.
+
 .. option:: LocalVariableSuffix
 
     When defined, the check will ensure local variable names will add the
@@ -1095,6 +1228,11 @@ After:
 
     When defined, the check will ensure macro definitions will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: MacroDefinitionIgnoredRegexp
+
+    Identifier naming checks won't be enforced for macro definitions
+    matching this regular expression.
 
 .. option:: MacroDefinitionSuffix
 
@@ -1133,6 +1271,11 @@ using the ``-D`` flag.
 
     When defined, the check will ensure member names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: MemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for member names
+    matching this regular expression.
 
 .. option:: MemberSuffix
 
@@ -1173,6 +1316,11 @@ After:
     When defined, the check will ensure method names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: MethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for method names
+    matching this regular expression.
+
 .. option:: MethodSuffix
 
     When defined, the check will ensure method names will add the
@@ -1211,6 +1359,11 @@ After:
 
     When defined, the check will ensure namespace names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: NamespaceIgnoredRegexp
+
+    Identifier naming checks won't be enforced for namespace names
+    matching this regular expression.
 
 .. option:: NamespaceSuffix
 
@@ -1251,6 +1404,11 @@ After:
     When defined, the check will ensure parameter names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for parameter names
+    matching this regular expression.
+
 .. option:: ParameterSuffix
 
     When defined, the check will ensure parameter names will add the
@@ -1285,6 +1443,11 @@ After:
 
     When defined, the check will ensure parameter pack names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ParameterPackIgnoredRegexp
+
+    Identifier naming checks won't be enforced for parameter pack names
+    matching this regular expression.
 
 .. option:: ParameterPackSuffix
 
@@ -1325,6 +1488,11 @@ After:
     When defined, the check will ensure pointer parameter names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: PointerParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for pointer parameter names
+    matching this regular expression.
+
 .. option:: PointerParameterSuffix
 
     When defined, the check will ensure pointer parameter names will add the
@@ -1359,6 +1527,11 @@ After:
 
     When defined, the check will ensure private member names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: PrivateMemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for private member names
+    matching this regular expression.
 
 .. option:: PrivateMemberSuffix
 
@@ -1401,6 +1574,11 @@ After:
     When defined, the check will ensure private method names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: PrivateMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for private method names
+    matching this regular expression.
+
 .. option:: PrivateMethodSuffix
 
     When defined, the check will ensure private method names will add the
@@ -1442,6 +1620,11 @@ After:
     When defined, the check will ensure protected member names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ProtectedMemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for protected member names
+    matching this regular expression.
+
 .. option:: ProtectedMemberSuffix
 
     When defined, the check will ensure protected member names will add the
@@ -1475,17 +1658,22 @@ After:
 
 .. option:: ProtectedMethodCase
 
-    When defined, the check will ensure protect method names conform to the
+    When defined, the check will ensure protected method names conform to the
     selected casing.
 
 .. option:: ProtectedMethodPrefix
 
-    When defined, the check will ensure protect method names will add the
+    When defined, the check will ensure protected method names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: ProtectedMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for protected method names
+    matching this regular expression.
 
 .. option:: ProtectedMethodSuffix
 
-    When defined, the check will ensure protect method names will add the
+    When defined, the check will ensure protected method names will add the
     suffix with the given value (regardless of casing).
 
 For example using values of:
@@ -1523,6 +1711,11 @@ After:
 
     When defined, the check will ensure public member names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: PublicMemberIgnoredRegexp
+
+    Identifier naming checks won't be enforced for public member names
+    matching this regular expression.
 
 .. option:: PublicMemberSuffix
 
@@ -1565,6 +1758,11 @@ After:
     When defined, the check will ensure public method names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: PublicMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for public method names
+    matching this regular expression.
+
 .. option:: PublicMethodSuffix
 
     When defined, the check will ensure public method names will add the
@@ -1606,6 +1804,11 @@ After:
     When defined, the check will ensure scoped enum constant names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ScopedEnumConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for scoped enum constant names
+    matching this regular expression.
+
 .. option:: ScopedEnumConstantSuffix
 
     When defined, the check will ensure scoped enum constant names will add the
@@ -1640,6 +1843,11 @@ After:
 
     When defined, the check will ensure static constant names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: StaticConstantIgnoredRegexp
+
+    Identifier naming checks won't be enforced for static constant names
+    matching this regular expression.
 
 .. option:: StaticConstantSuffix
 
@@ -1676,6 +1884,11 @@ After:
     When defined, the check will ensure static variable names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: StaticVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for static variable names
+    matching this regular expression.
+
 .. option:: StaticVariableSuffix
 
     When defined, the check will ensure static variable names will add the
@@ -1710,6 +1923,11 @@ After:
 
     When defined, the check will ensure struct names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: StructIgnoredRegexp
+
+    Identifier naming checks won't be enforced for struct names
+    matching this regular expression.
 
 .. option:: StructSuffix
 
@@ -1752,6 +1970,11 @@ After:
     When defined, the check will ensure template parameter names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: TemplateParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for template parameter names
+    matching this regular expression.
+
 .. option:: TemplateParameterSuffix
 
     When defined, the check will ensure template parameter names will add the
@@ -1786,6 +2009,11 @@ After:
 
     When defined, the check will ensure template template parameter names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: TemplateTemplateParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for template template parameter
+    names matching this regular expression.
 
 .. option:: TemplateTemplateParameterSuffix
 
@@ -1824,6 +2052,11 @@ After:
     When defined, the check will ensure type alias names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: TypeAliasIgnoredRegexp
+
+    Identifier naming checks won't be enforced for type alias names
+    matching this regular expression.
+
 .. option:: TypeAliasSuffix
 
     When defined, the check will ensure type alias names will add the
@@ -1859,6 +2092,11 @@ After:
     When defined, the check will ensure typedef names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: TypedefIgnoredRegexp
+
+    Identifier naming checks won't be enforced for typedef names
+    matching this regular expression.
+
 .. option:: TypedefSuffix
 
     When defined, the check will ensure typedef names will add the
@@ -1893,6 +2131,11 @@ After:
 
     When defined, the check will ensure type template parameter names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: TypeTemplateParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for type template names
+    matching this regular expression.
 
 .. option:: TypeTemplateParameterSuffix
 
@@ -1930,6 +2173,11 @@ After:
 
     When defined, the check will ensure union names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: UnionIgnoredRegexp
+
+    Identifier naming checks won't be enforced for union names
+    matching this regular expression.
 
 .. option:: UnionSuffix
 
@@ -1972,6 +2220,11 @@ After:
     When defined, the check will ensure value template parameter names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: ValueTemplateParameterIgnoredRegexp
+
+    Identifier naming checks won't be enforced for value template parameter
+    names matching this regular expression.
+
 .. option:: ValueTemplateParameterSuffix
 
     When defined, the check will ensure value template parameter names will add the
@@ -2009,6 +2262,11 @@ After:
     When defined, the check will ensure variable names will add the
     prefixed with the given value (regardless of casing).
 
+.. option:: VariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for variable names
+    matching this regular expression.
+
 .. option:: VariableSuffix
 
     When defined, the check will ensure variable names will add the
@@ -2043,6 +2301,11 @@ After:
 
     When defined, the check will ensure virtual method names will add the
     prefixed with the given value (regardless of casing).
+
+.. option:: VirtualMethodIgnoredRegexp
+
+    Identifier naming checks won't be enforced for virtual method names
+    matching this regular expression.
 
 .. option:: VirtualMethodSuffix
 

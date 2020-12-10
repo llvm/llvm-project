@@ -5,14 +5,14 @@
 
 %struct.AA = type { i24, [4 x i8] }
 
-@obj = external local_unnamed_addr global %struct.AA, align 8
-@var_27 = external local_unnamed_addr constant i8, align 1
-@var_2 = external local_unnamed_addr constant i16, align 2
-@var_24 = external local_unnamed_addr constant i64, align 8
-@var_310 = external local_unnamed_addr global i64, align 8
-@var_50 = external local_unnamed_addr global i64, align 8
-@var_205 = external local_unnamed_addr global i8, align 1
-@var_218 = external local_unnamed_addr global i8, align 1
+@obj = external dso_local local_unnamed_addr global %struct.AA, align 8
+@var_27 = external dso_local local_unnamed_addr constant i8, align 1
+@var_2 = external dso_local local_unnamed_addr constant i16, align 2
+@var_24 = external dso_local local_unnamed_addr constant i64, align 8
+@var_310 = external dso_local local_unnamed_addr global i64, align 8
+@var_50 = external dso_local local_unnamed_addr global i64, align 8
+@var_205 = external dso_local local_unnamed_addr global i8, align 1
+@var_218 = external dso_local local_unnamed_addr global i8, align 1
 
 define void @foo() local_unnamed_addr {
 ; X86-LABEL: foo:

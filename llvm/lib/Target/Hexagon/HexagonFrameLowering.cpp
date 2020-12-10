@@ -306,7 +306,7 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
           Register R = MO.getReg();
           // Virtual registers will need scavenging, which then may require
           // a stack slot.
-          if (Register::isVirtualRegister(R))
+          if (R.isVirtual())
             return true;
           for (MCSubRegIterator S(R, &HRI, true); S.isValid(); ++S)
             if (CSR[*S])

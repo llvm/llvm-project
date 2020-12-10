@@ -107,7 +107,7 @@ extern "C" int call_deduced_return_operator() {
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
 
-// CHECK-LABEL: define internal i32* @_ZZL14deduced_returnvEN1SclEv(%struct.S* %this)
+// CHECK-LABEL: define internal i32* @_ZZL14deduced_returnvEN1SclEv(%struct.S* {{[^,]*}} %this)
 // CHECK: ret i32* @_ZZL14deduced_returnvE1n
 
 static auto block_deduced_return() {
@@ -127,7 +127,7 @@ extern "C" int call_block_deduced_return() {
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
 
-// CHECK-LABEL: define internal i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(%struct.S.6* %this) #1 align 2 {
+// CHECK-LABEL: define internal i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(%struct.S.6* {{[^,]*}} %this) #1 align 2 {
 // CHECK: ret i32* @_ZZZL20block_deduced_returnvEUb_E1n
 
 inline auto static_local_label(void *p) {

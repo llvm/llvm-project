@@ -44,17 +44,17 @@ Sections:
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:   - Type:            DATA
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:      - Type:            R_WASM_MEMORY_ADDR_I32
 # CHECK-NEXT:        Index:           0
-# CHECK-NEXT:        Offset:          0x00000006
+# CHECK-NEXT:        Offset:          0x6
 # CHECK-NEXT:        Addend:          8
 # CHECK-NEXT:      - Type:            R_WASM_MEMORY_ADDR_I32
 # CHECK-NEXT:        Index:           0
-# CHECK-NEXT:        Offset:          0x00000006
+# CHECK-NEXT:        Offset:          0x6
 # CHECK-NEXT:        Addend:          -6
 # CHECK-NEXT:     Segments:
 # CHECK-NEXT:       - SectionOffset:  6

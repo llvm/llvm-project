@@ -36,9 +36,24 @@ typedef NS_ERROR_ENUM(unsigned char, MyTypedefErrorEnum, MyTypedefErrorDomain) {
   MyTypedefErrSecond,
 };
 
+typedef const struct __CFString * CFStringRef;
+
+extern CFStringRef const MyCFErrorDomain;
+typedef NS_ERROR_ENUM(unsigned char, MyCFErrorEnum, MyCFErrorDomain) {
+  MyCFErrFirst,
+  MyCFErrSecond,
+};
+
+typedef CFStringRef CFErrorDomain;
+extern CFErrorDomain const MyCFTypedefErrorDomain;
+typedef NS_ERROR_ENUM(unsigned char, MyCFTypedefErrorEnum, MyCFTypedefErrorDomain) {
+  MyCFTypedefErrFirst,
+  MyCFTypedefErrSecond,
+};
+
 extern char *const WrongErrorDomainType;
 enum __attribute__((ns_error_domain(WrongErrorDomainType))) MyWrongErrorDomainType { MyWrongErrorDomain };
-// expected-error@-1{{domain argument 'WrongErrorDomainType' does not point to an NSString constant}}
+// expected-error@-1{{domain argument 'WrongErrorDomainType' does not point to an NSString or CFString constant}}
 
 struct __attribute__((ns_error_domain(MyErrorDomain))) MyStructWithErrorDomain {};
 // expected-error@-1{{'ns_error_domain' attribute only applies to enums}}

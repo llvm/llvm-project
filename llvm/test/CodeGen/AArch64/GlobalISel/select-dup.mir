@@ -310,3 +310,28 @@ body:             |
     $q0 = COPY %dup(<16 x s8>)
     RET_ReallyLR implicit $q0
 ...
+---
+name:            dup_v2p0
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: dup_v2p0
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY1]]
+    ; CHECK: $q0 = COPY [[DUPv2i64gpr]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:gpr(p0) = COPY $x0
+    %4:fpr(<2 x p0>) = G_DUP %0(p0)
+    $q0 = COPY %4(<2 x p0>)
+    RET_ReallyLR implicit $q0
+
+...

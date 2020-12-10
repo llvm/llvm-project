@@ -571,10 +571,10 @@ let Predicates = [FeatureVector] in {
 
   // Load positive.
   def VLP  : UnaryVRRaGeneric<"vlp", 0xE7DF>;
-  def VLPB : UnaryVRRa<"vlpb", 0xE7DF, z_viabs8,  v128b, v128b, 0>;
-  def VLPH : UnaryVRRa<"vlph", 0xE7DF, z_viabs16, v128h, v128h, 1>;
-  def VLPF : UnaryVRRa<"vlpf", 0xE7DF, z_viabs32, v128f, v128f, 2>;
-  def VLPG : UnaryVRRa<"vlpg", 0xE7DF, z_viabs64, v128g, v128g, 3>;
+  def VLPB : UnaryVRRa<"vlpb", 0xE7DF, abs, v128b, v128b, 0>;
+  def VLPH : UnaryVRRa<"vlph", 0xE7DF, abs, v128h, v128h, 1>;
+  def VLPF : UnaryVRRa<"vlpf", 0xE7DF, abs, v128f, v128f, 2>;
+  def VLPG : UnaryVRRa<"vlpg", 0xE7DF, abs, v128g, v128g, 3>;
 
   let isCommutable = 1 in {
     // Maximum.

@@ -15,10 +15,10 @@
 #define MLIR_DIALECT_ASYNC_IR_ASYNC_H
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -46,6 +46,22 @@ public:
 
   Type getValueType();
 };
+
+/// The group type to represent async tokens or values grouped together.
+class GroupType : public Type::TypeBase<GroupType, Type, TypeStorage> {
+public:
+  using Base::Base;
+};
+
+// -------------------------------------------------------------------------- //
+// Helper functions of Async dialect transformations.
+// -------------------------------------------------------------------------- //
+
+/// Returns true if the type is reference counted. All async dialect types are
+/// reference counted at runtime.
+inline bool isRefCounted(Type type) {
+  return type.isa<TokenType, ValueType, GroupType>();
+}
 
 } // namespace async
 } // namespace mlir

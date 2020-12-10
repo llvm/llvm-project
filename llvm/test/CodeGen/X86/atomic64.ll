@@ -2,8 +2,8 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
 ; RUN: llc < %s -O0 -mtriple=i386-- -mcpu=i486 -verify-machineinstrs | FileCheck %s --check-prefix I486
 
-@sc64 = external global i64
-@fsc64 = external global double
+@sc64 = external dso_local global i64
+@fsc64 = external dso_local global double
 
 define void @atomic_fetch_add64() nounwind {
 ; X64-LABEL: atomic_fetch_add64:

@@ -22,7 +22,6 @@ define amdgpu_ps float @add_shl(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: add_shl:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c
@@ -46,7 +45,6 @@ define amdgpu_ps float @add_shl_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; GFX10-LABEL: add_shl_vgpr_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_add_i32 s2, s2, s3
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_lshlrev_b32_e64 v0, v0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
@@ -70,7 +68,6 @@ define amdgpu_ps float @add_shl_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 ; GFX10-LABEL: add_shl_vgpr_ac:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, s2, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c
@@ -93,7 +90,6 @@ define amdgpu_ps float @add_shl_vgpr_const(i32 %a, i32 %b) {
 ; GFX10-LABEL: add_shl_vgpr_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, v1, 9
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, 9
@@ -117,7 +113,6 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ; GFX10-LABEL: add_shl_vgpr_const_inline_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, 0x3f4, 9
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 1012
   %result = shl i32 %x, 9
@@ -140,7 +135,6 @@ define amdgpu_ps float @add_shl_vgpr_inline_const_x2(i32 %a) {
 ; GFX10-LABEL: add_shl_vgpr_inline_const_x2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, 3, 9
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 3
   %result = shl i32 %x, 9

@@ -172,7 +172,7 @@ int bar(int n){
 }
 
 //
-// CHECK: define {{.*}}[[FS1]]([[S1]]* {{%.+}}, i32 {{[^%]*}}[[PARM:%.+]])
+// CHECK: define {{.*}}[[FS1]]([[S1]]* {{[^,]*}} {{%.+}}, i32 {{[^%]*}}[[PARM:%.+]])
 //
 // CHECK-DAG:   store i32 [[PARM]], i32* [[N_ADDR:%.+]], align
 // CHECK:       [[NV:%.+]] = load i32, i32* [[N_ADDR]], align
@@ -186,7 +186,7 @@ int bar(int n){
 // CHECK:       store i8 [[FB]], i8* [[CONV]], align
 // CHECK:       [[ARG:%.+]] = load i[[SZ]], i[[SZ]]* [[CAPEC_ADDR]], align
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 4, {{.*}}, i8** null, i32 1, i32 [[NT:%.+]])
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i8** null, i8** null, i32 1, i32 [[NT:%.+]])
 // CHECK-DAG:   [[NT]] = select i1 %{{.+}}, i32 0, i32 1
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK:       br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
@@ -213,7 +213,7 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i8** null, i32 1, i32 [[NT:%.+]])
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i8** null, i8** null, i32 1, i32 [[NT:%.+]])
 // CHECK-DAG:   [[NT]] = select i1 %{{.+}}, i32 0, i32 1
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
@@ -246,7 +246,7 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i8** null, i32 1, i32 [[NT:%.+]])
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i8** null, i8** null, i32 1, i32 [[NT:%.+]])
 // CHECK-DAG:   [[NT]] = select i1 %{{.+}}, i32 0, i32 1
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
@@ -268,7 +268,7 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 0, {{.*}}, i8** null, i32 1, i32 0)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 0, {{.*}}, i8** null, i8** null, i32 1, i32 0)
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
@@ -289,7 +289,7 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FTEMPLATE]]
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i8** null, i32 1, i32 1)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i8** null, i8** null, i32 1, i32 1)
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 //
@@ -301,7 +301,7 @@ int bar(int n){
 //
 //
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i8** null, i32 1, i32 0)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i8** null, i8** null, i32 1, i32 0)
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 //

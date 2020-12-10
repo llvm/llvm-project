@@ -1075,9 +1075,9 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; "%sub = i64 %i, %j, ret i64 %sub"
 ; gep1 and gep2 have only one use
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add i64 [[I:%.*]], 4200
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[I:%.*]], 4200
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[J:%.*]], 4200
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
@@ -1459,4 +1459,118 @@ define i8 @sub_add_sub_reassoc_use2(i8 %w, i8 %x, i8 %y, i8 %z) {
   call void @use8(i8 %a)
   %s2 = sub i8 %a, %z
   ret i8 %s2
+}
+
+define i8 @sub_mask_lowbits(i8 %x) {
+; CHECK-LABEL: @sub_mask_lowbits(
+; CHECK-NEXT:    [[A1:%.*]] = add i8 [[X:%.*]], -108
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A1]], -4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a1 = add i8 %x, 148 ; 0x94
+  %a2 = and i8 %x, 3
+  %r = sub i8 %a1, %a2
+  ret i8 %r
+}
+
+; Negative test - low-bit mask must not overlap with offset
+
+define i8 @sub_not_mask_lowbits(i8 %x) {
+; CHECK-LABEL: @sub_not_mask_lowbits(
+; CHECK-NEXT:    [[A1:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[A2:%.*]] = and i8 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a1 = add i8 %x, 4
+  %a2 = and i8 %x, 7
+  %r = sub i8 %a1, %a2
+  ret i8 %r
+}
+
+define <2 x i8> @sub_mask_lowbits_splat_extra_use(<2 x i8> %x, <2 x i8>* %p) {
+; CHECK-LABEL: @sub_mask_lowbits_splat_extra_use(
+; CHECK-NEXT:    [[A1:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[A2:%.*]] = and <2 x i8> [[X]], <i8 10, i8 10>
+; CHECK-NEXT:    store <2 x i8> [[A2]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A1]], <i8 -11, i8 -11>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a1 = add <2 x i8> %x, <i8 192, i8 192> ; 0xc0
+  %a2 = and <2 x i8> %x, <i8 10, i8 10>   ; 0x0a
+  store <2 x i8> %a2, <2 x i8>* %p
+  %r = sub <2 x i8> %a1, %a2
+  ret <2 x i8> %r
+}
+
+define i16 @sub_nsw_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nsw_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i16 [[TMP1]], 3
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 8
+  %y8 = mul nsw i16 %y, 8
+  %r = sub nsw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nuw_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nuw_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 2
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 4
+  %y8 = mul nsw i16 %y, 4
+  %r = sub nuw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_mul_nsw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_mul_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nsw i16 %x, 16
+  %y8 = mul nsw i16 %y, 16
+  %r = sub i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nsw_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nsw_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 3
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 8
+  %y8 = mul nuw i16 %y, 8
+  %r = sub nsw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_nuw_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_nuw_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i16 [[TMP1]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 16
+  %y8 = mul nuw i16 %y, 16
+  %r = sub nuw i16 %x8, %y8
+  ret i16 %r
+}
+
+define i16 @sub_mul_nuw(i16 %x, i16 %y) {
+; CHECK-LABEL: @sub_mul_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i16 [[TMP1]], 5
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %x8 = mul nuw i16 %x, 32
+  %y8 = mul nuw i16 %y, 32
+  %r = sub i16 %x8, %y8
+  ret i16 %r
 }

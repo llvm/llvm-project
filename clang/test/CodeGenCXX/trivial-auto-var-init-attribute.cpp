@@ -11,9 +11,11 @@ extern "C" {
 // UNINIT-NEXT: call void
 // ZERO-LABEL:    test_attribute_uninitialized(
 // ZERO:      alloca
+// ZERO-NOT:  !annotation
 // ZERO-NEXT: call void
 // PATTERN-LABEL: test_attribute_uninitialized(
 // PATTERN:      alloca
+// PATTERN-NOT:  !annotation
 // PATTERN-NEXT: call void
 void test_attribute_uninitialized() {
   [[clang::uninitialized]] int i;

@@ -94,11 +94,11 @@ ret i32 0
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-declare void @free(i8* nocapture) nounwind
+declare dso_local void @free(i8* nocapture) nounwind
 
 %struct.obj2 = type { i64, i32, i16, i8 }
 
-declare void @other(%struct.obj2* ) nounwind;
+declare dso_local void @other(%struct.obj2* ) nounwind;
 
 define void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
 ; 64 bit dec
@@ -226,7 +226,7 @@ return:
 
 ; Deal with TokenFactor chain
 ; rdar://11236106
-@foo = external global i64*, align 8
+@foo = external dso_local global i64*, align 8
 
 define void @test3() nounwind ssp {
 ; CHECK-LABEL: test3:
@@ -255,15 +255,15 @@ if.end:
   ret void
 }
 
-declare void @baz()
+declare dso_local void @baz()
 
 ; Avoid creating a cycle in the DAG which would trigger an assert in the
 ; scheduler.
 ; PR12565
 ; rdar://11451474
-@x = external global i32, align 4
-@y = external global i32, align 4
-@z = external global i32, align 4
+@x = external dso_local global i32, align 4
+@y = external dso_local global i32, align 4
+@z = external dso_local global i32, align 4
 
 define void @test4() nounwind uwtable ssp {
 ; CHECK-LABEL: test4:

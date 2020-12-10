@@ -1,5 +1,5 @@
 # Default ABI for MIPS32 is O32.
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips1                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips1                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985 %s
 # RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips2                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
 # RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
 # RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
@@ -16,7 +16,7 @@
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r6                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R6 %s
 
 # Selected ABI O32 takes precedence over target triple.
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips1    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips1    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985 %s
 # FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips2    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
 # FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
 # FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
@@ -139,5 +139,6 @@
 
 # OCTEON-NEXT:    EF_MIPS_MACH_OCTEON
 
+# NAN1985-NOT:    EF_MIPS_NAN2008
 # NAN2008-NEXT:   EF_MIPS_NAN2008
 # ALL-NEXT:     ]

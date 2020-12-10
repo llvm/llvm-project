@@ -11,8 +11,8 @@
 # REQUIRES: x86
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-# RUN: yaml2obj %t/fat.dylib.yaml > fat.dylib
-# RUN: %lld -lSystem %t/test.o fat.dylib -o %t/test
+# RUN: yaml2obj %t/fat.dylib.yaml > %t/fat.dylib
+# RUN: %lld -lSystem %t/test.o %t/fat.dylib -o %t/test
 # RUN: llvm-objdump --macho --lazy-bind %t/test | FileCheck %s
 # CHECK: __DATA   __la_symbol_ptr    0x100001008 foo  _foo
 

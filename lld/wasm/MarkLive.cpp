@@ -43,7 +43,6 @@ public:
 private:
   void enqueue(Symbol *sym);
   void enqueueInitFunctions(const ObjFile *sym);
-  void markSymbol(Symbol *sym);
   void mark();
   bool isCallCtorsLive();
 
@@ -96,15 +95,13 @@ void MarkLive::run() {
     if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 
-  // If we'll be calling the user's `__wasm_call_dtors` function, mark it live.
-  if (Symbol *callDtors = WasmSym::callDtors)
-    enqueue(callDtors);
+  if (WasmSym::callDtors)
+    enqueue(WasmSym::callDtors);
 
-  // In Emscripten-style PIC, `__wasm_call_ctors` calls `__wasm_apply_relocs`.
-  if (config->isPic)
+  if (WasmSym::applyRelocs)
     enqueue(WasmSym::applyRelocs);
 
-  if (config->sharedMemory && !config->shared)
+  if (WasmSym::initMemory)
     enqueue(WasmSym::initMemory);
 
   // Enqueue constructors in objects explicitly live from the command-line.
@@ -142,7 +139,7 @@ void MarkLive::mark() {
           reloc.Type == R_WASM_TABLE_INDEX_I32 ||
           reloc.Type == R_WASM_TABLE_INDEX_I64) {
         auto *funcSym = cast<FunctionSymbol>(sym);
-        if (funcSym->hasTableIndex() && funcSym->getTableIndex() == 0)
+        if (funcSym->isStub)
           continue;
       }
 

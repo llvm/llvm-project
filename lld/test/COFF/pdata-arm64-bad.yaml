@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.obj
-# RUN: not lld-link /out:%t.exe /entry:func1 /subsystem:console %t.obj 2>&1 | FileCheck %s
+# RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:func1 /subsystem:console %t.obj 2>&1 | FileCheck %s
 
 # This file is like pdata-arm64.yaml, except that .pdata has been extended with
 # 4 bytes. This can happen due to for example bad assembler input. Check that

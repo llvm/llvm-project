@@ -134,3 +134,16 @@ a:
 b:
   ret void
 }
+
+; CHECK-LABEL: @ifThen_trunc(
+; CHECK: trunc
+; CHECK: br i1 true
+define void @ifThen_trunc() {
+  br i1 true, label %a, label %b
+a:
+  %x = trunc i32 undef to i16
+  br label %b
+
+b:
+  ret void
+}

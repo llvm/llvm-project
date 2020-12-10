@@ -1,3 +1,4 @@
+add_subdirectory(Bindings)
 add_subdirectory(CAPI)
 add_subdirectory(EDSC)
 add_subdirectory(mlir-cpu-runner)
@@ -100,6 +101,7 @@ endif()
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRBindingsPythonExtension
+    MLIRBindingsPythonTestOps
     MLIRTransformsBindingsPythonExtension
   )
 endif()

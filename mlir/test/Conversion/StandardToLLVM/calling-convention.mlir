@@ -10,7 +10,7 @@
 // CHECK-LABEL: @external
 // CHECK: %[[ALLOC0:.*]]: !llvm.ptr<float>, %[[ALIGN0:.*]]: !llvm.ptr<float>, %[[OFFSET0:.*]]: !llvm.i64, %[[SIZE00:.*]]: !llvm.i64, %[[SIZE01:.*]]: !llvm.i64, %[[STRIDE00:.*]]: !llvm.i64, %[[STRIDE01:.*]]: !llvm.i64,
 // CHECK: %[[ALLOC1:.*]]: !llvm.ptr<float>, %[[ALIGN1:.*]]: !llvm.ptr<float>, %[[OFFSET1:.*]]: !llvm.i64)
-func @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
+func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
   // Populate the descriptor for arg0.
   // CHECK: %[[DESC00:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: %[[DESC01:.*]] = llvm.insertvalue %arg0, %[[DESC00]][0]
@@ -47,7 +47,7 @@ func @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
 // Verify that the return value is not affected.
 // CHECK-LABEL: @returner
 // CHECK: -> !llvm.struct<(struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>, struct<(ptr<float>, ptr<float>, i64)>)>
-func @returner() -> (memref<?x?xf32>, memref<f32>)
+func private @returner() -> (memref<?x?xf32>, memref<f32>)
 
 // CHECK-LABEL: @caller
 func @caller() {

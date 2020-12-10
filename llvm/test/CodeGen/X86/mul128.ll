@@ -100,8 +100,8 @@ define i128 @foo(i128 %t, i128 %u) {
   ret i128 %k
 }
 
-@aaa = external global i128
-@bbb = external global i128
+@aaa = external dso_local global i128
+@bbb = external dso_local global i128
 
 define void @PR13897() nounwind {
 ; X64-LABEL: PR13897:

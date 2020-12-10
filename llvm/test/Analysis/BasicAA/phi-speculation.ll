@@ -6,6 +6,8 @@ target datalayout =
 ; ptr_phi and ptr2_phi do not alias.
 ; CHECK: test_noalias_1
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
+; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
+; TODO: The incs should also be NoAlias.
 define i32 @test_noalias_1(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -34,7 +36,10 @@ the_exit:
 
 ; CHECK: test_noalias_2
 ; CHECK: NoAlias: i32* %ptr_outer_phi, i32* %ptr_outer_phi2
+; CHECK: MayAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
+; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
+; TODO: The incs should also be NoAlias.
 define i32 @test_noalias_2(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -91,4 +96,86 @@ while.body:
 
 the_exit:
   ret i32 1
+}
+
+; CHECK-LABEL: test_different_stride_noalias
+; CHECK: NoAlias: i16* %y.base, i8* %x.base
+; CHECK: NoAlias: i16* %y, i8* %x
+; CHECK: NoAlias: i16* %y.next, i8* %x.next
+define void @test_different_stride_noalias(i1 %c, i8* noalias %x.base, i16* noalias %y.base) {
+entry:
+  br label %loop
+
+loop:
+  %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
+  %y = phi i16* [ %y.base, %entry ], [ %y.next, %loop ]
+  %x.next = getelementptr i8, i8* %x, i64 1
+  %y.next = getelementptr i16, i16* %y, i64 1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: test_no_loop_mustalias
+; CHECK: MayAlias: i16* %z16, i8* %z8
+; TODO: (z8, z16) could be MustAlias
+define void @test_no_loop_mustalias(i1 %c, i8* noalias %x8, i8* noalias %y8) {
+  br i1 %c, label %if, label %else
+
+if:
+  %x16 = bitcast i8* %x8 to i16*
+  br label %end
+
+else:
+  %y16 = bitcast i8* %y8 to i16*
+  br label %end
+
+end:
+  %z8 = phi i8* [ %x8, %if ], [ %y8, %else ]
+  %z16 = phi i16* [ %x16, %if ], [ %y16, %else ]
+  ret void
+}
+
+; CHECK-LABEL: test_same_stride_mustalias
+; CHECK: MustAlias: i4* %y.base, i8* %x.base
+; CHECK: MayAlias: i4* %y, i8* %x
+; CHECK: MayAlias: i4* %y.next, i8* %x.next
+; TODO: (x, y) could be MustAlias
+define void @test_same_stride_mustalias(i1 %c, i8* noalias %x.base) {
+entry:
+  %y.base = bitcast i8* %x.base to i4*
+  br label %loop
+
+loop:
+  %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
+  %y = phi i4* [ %y.base, %entry ], [ %y.next, %loop ]
+  %x.next = getelementptr i8, i8* %x, i64 1
+  %y.next = getelementptr i4, i4* %y, i64 1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: test_different_stride_mustalias
+; CHECK: MustAlias: i16* %y.base, i8* %x.base
+; CHECK: MayAlias: i16* %y, i8* %x
+; CHECK: MayAlias: i16* %y.next, i8* %x.next
+; Even though the base pointers MustAlias, the different strides don't preserve
+; this property across iterations.
+define void @test_different_stride_mustalias(i1 %c, i8* noalias %x.base) {
+entry:
+  %y.base = bitcast i8* %x.base to i16*
+  br label %loop
+
+loop:
+  %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
+  %y = phi i16* [ %y.base, %entry ], [ %y.next, %loop ]
+  %x.next = getelementptr i8, i8* %x, i64 1
+  %y.next = getelementptr i16, i16* %y, i64 1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
 }

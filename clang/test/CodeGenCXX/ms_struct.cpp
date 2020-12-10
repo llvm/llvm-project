@@ -27,7 +27,7 @@ struct ATTR Derived : Base {
 // CHECK: define void @_ZN7DerivedC2Ev
 // CHECK:   [[SELF:%.*]] = load [[DERIVED]]*
 // CHECK:   [[T0:%.*]] = bitcast [[DERIVED]]* [[SELF]] to [[BASE]]*
-// CHECK:   call void @_ZN4BaseC2Ev([[BASE]]* [[T0]], i8**
+// CHECK:   call void @_ZN4BaseC2Ev([[BASE]]* {{[^,]*}} [[T0]], i8**
 // CHECK:   [[T0:%.*]] = getelementptr inbounds {{.*}} [[SELF]], i32 0, i32 1
 // CHECK:   store i32 20, i32* [[T0]],
 Derived::Derived() : value(20) {}

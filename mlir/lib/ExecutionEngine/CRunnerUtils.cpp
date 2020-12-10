@@ -32,4 +32,4 @@ extern "C" void printClose() { fputs(" )", stdout); }
 extern "C" void printComma() { fputs(", ", stdout); }
 extern "C" void printNewline() { fputc('\n', stdout); }
 
-#endif
+#endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

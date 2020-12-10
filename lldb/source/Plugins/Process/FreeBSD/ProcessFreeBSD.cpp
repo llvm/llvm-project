@@ -70,9 +70,10 @@ UnixSignalsSP &GetFreeBSDSignals() {
 lldb::ProcessSP
 ProcessFreeBSD::CreateInstance(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
-                               const FileSpec *crash_file_path) {
+                               const FileSpec *crash_file_path,
+                               bool can_connect) {
   lldb::ProcessSP process_sp;
-  if (crash_file_path == NULL)
+  if (crash_file_path == NULL && !can_connect)
     process_sp.reset(
         new ProcessFreeBSD(target_sp, listener_sp, GetFreeBSDSignals()));
   return process_sp;

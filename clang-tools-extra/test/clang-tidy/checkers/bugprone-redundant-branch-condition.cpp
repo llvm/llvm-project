@@ -1073,6 +1073,34 @@ void positive_comma_after_condition() {
   }
 }
 
+// ExprWithCleanups doesn't crash
+int positive_expr_with_cleanups() {
+  class RetT {
+  public:
+    RetT(const int _code) : code_(_code) {}
+    bool Ok() const { return code_ == 0; }
+    static RetT Test(bool &_isSet) { return 0; }
+
+  private:
+    int code_;
+  };
+
+  bool isSet = false;
+  if (RetT::Test(isSet).Ok() && isSet) {
+    if (RetT::Test(isSet).Ok() && isSet) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'isSet' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: if (RetT::Test(isSet).Ok() ) {
+    }
+  }
+  if (isSet) {
+    if ((RetT::Test(isSet).Ok() && isSet)) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'isSet' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: if ((RetT::Test(isSet).Ok() )) {
+    }
+  }
+  return 0;
+}
+
 //===--- Special Negatives ------------------------------------------------===//
 
 // Aliasing

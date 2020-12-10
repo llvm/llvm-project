@@ -393,6 +393,9 @@ on_ompt_callback_nest_lock(
              ", codeptr_ra=%p \n",
              ompt_get_thread_data()->value, wait_id, codeptr_ra);
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -411,6 +414,9 @@ on_ompt_callback_sync_region(
       {
         case ompt_sync_region_barrier:
         case ompt_sync_region_barrier_implicit:
+        case ompt_sync_region_barrier_implicit_workshare:
+        case ompt_sync_region_barrier_implicit_parallel:
+        case ompt_sync_region_barrier_teams:
         case ompt_sync_region_barrier_explicit:
         case ompt_sync_region_barrier_implementation:
           printf("%" PRIu64 ":" _TOOL_PREFIX
@@ -447,6 +453,9 @@ on_ompt_callback_sync_region(
         case ompt_sync_region_barrier:
         case ompt_sync_region_barrier_implicit:
         case ompt_sync_region_barrier_explicit:
+        case ompt_sync_region_barrier_implicit_workshare:
+        case ompt_sync_region_barrier_implicit_parallel:
+        case ompt_sync_region_barrier_teams:
         case ompt_sync_region_barrier_implementation:
           printf("%" PRIu64 ":" _TOOL_PREFIX
                  " ompt_event_barrier_end: parallel_id=%" PRIu64
@@ -478,6 +487,9 @@ on_ompt_callback_sync_region(
           break;
       }
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -496,6 +508,9 @@ on_ompt_callback_sync_region_wait(
       {
         case ompt_sync_region_barrier:
         case ompt_sync_region_barrier_implicit:
+        case ompt_sync_region_barrier_implicit_workshare:
+        case ompt_sync_region_barrier_implicit_parallel:
+        case ompt_sync_region_barrier_teams:
         case ompt_sync_region_barrier_explicit:
         case ompt_sync_region_barrier_implementation:
           printf("%" PRIu64 ":" _TOOL_PREFIX
@@ -530,6 +545,9 @@ on_ompt_callback_sync_region_wait(
       {
         case ompt_sync_region_barrier:
         case ompt_sync_region_barrier_implicit:
+        case ompt_sync_region_barrier_implicit_workshare:
+        case ompt_sync_region_barrier_implicit_parallel:
+        case ompt_sync_region_barrier_teams:
         case ompt_sync_region_barrier_explicit:
         case ompt_sync_region_barrier_implementation:
           printf("%" PRIu64 ":" _TOOL_PREFIX
@@ -562,6 +580,9 @@ on_ompt_callback_sync_region_wait(
           break;
       }
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -587,6 +608,9 @@ static void on_ompt_callback_reduction(ompt_sync_region_t kind,
            (parallel_data) ? parallel_data->value : 0, task_data->value,
            codeptr_ra);
     break;
+  case ompt_scope_beginend:
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
   }
 }
 
@@ -691,6 +715,9 @@ on_ompt_callback_implicit_task(
                team_size, thread_num);
       }
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -810,6 +837,14 @@ on_ompt_callback_work(
                  ompt_get_thread_data()->value, parallel_data->value,
                  task_data->value, codeptr_ra, count);
           break;
+        case ompt_work_scope:
+          printf("%" PRIu64 ":" _TOOL_PREFIX
+                 " ompt_event_scope_begin: parallel_id=%" PRIu64
+                 ", parent_task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64
+                 "\n",
+                 ompt_get_thread_data()->value, parallel_data->value,
+                 task_data->value, codeptr_ra, count);
+          break;
       }
       break;
     case ompt_scope_end:
@@ -863,34 +898,45 @@ on_ompt_callback_work(
                  ompt_get_thread_data()->value, parallel_data->value,
                  task_data->value, codeptr_ra, count);
           break;
+        case ompt_work_scope:
+          printf("%" PRIu64 ":" _TOOL_PREFIX
+                 " ompt_event_scope_end: parallel_id=%" PRIu64
+                 ", parent_task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64
+                 "\n",
+                 ompt_get_thread_data()->value, parallel_data->value,
+                 task_data->value, codeptr_ra, count);
+          break;
       }
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
-static void
-on_ompt_callback_master(
-  ompt_scope_endpoint_t endpoint,
-  ompt_data_t *parallel_data,
-  ompt_data_t *task_data,
-  const void *codeptr_ra)
-{
+static void on_ompt_callback_masked(ompt_scope_endpoint_t endpoint,
+                                    ompt_data_t *parallel_data,
+                                    ompt_data_t *task_data,
+                                    const void *codeptr_ra) {
   switch(endpoint)
   {
     case ompt_scope_begin:
       printf("%" PRIu64 ":" _TOOL_PREFIX
-             " ompt_event_master_begin: parallel_id=%" PRIu64
+             " ompt_event_masked_begin: parallel_id=%" PRIu64
              ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
              ompt_get_thread_data()->value, parallel_data->value,
              task_data->value, codeptr_ra);
       break;
     case ompt_scope_end:
       printf("%" PRIu64 ":" _TOOL_PREFIX
-             " ompt_event_master_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+             " ompt_event_masked_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64
              ", codeptr_ra=%p\n",
              ompt_get_thread_data()->value, parallel_data->value,
              task_data->value, codeptr_ra);
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -1093,6 +1139,8 @@ int ompt_initialize(
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
   ompt_finalize_tool = (ompt_finalize_tool_t)lookup("ompt_finalize_tool");
 
+  ompt_get_unique_id();
+
   ompt_get_num_procs = (ompt_get_num_procs_t) lookup("ompt_get_num_procs");
   ompt_get_num_places = (ompt_get_num_places_t) lookup("ompt_get_num_places");
   ompt_get_place_proc_ids = (ompt_get_place_proc_ids_t) lookup("ompt_get_place_proc_ids");
@@ -1116,7 +1164,7 @@ int ompt_initialize(
   register_callback_t(ompt_callback_lock_init, ompt_callback_mutex_acquire_t);
   register_callback_t(ompt_callback_lock_destroy, ompt_callback_mutex_t);
   register_callback(ompt_callback_work);
-  register_callback(ompt_callback_master);
+  register_callback(ompt_callback_masked);
   register_callback(ompt_callback_parallel_begin);
   register_callback(ompt_callback_parallel_end);
   register_callback(ompt_callback_task_create);

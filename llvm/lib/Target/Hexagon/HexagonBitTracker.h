@@ -36,9 +36,9 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
   bool evaluate(const MachineInstr &BI, const CellMapType &Inputs,
                 BranchTargetList &Targets, bool &FallsThru) const override;
 
-  BitTracker::BitMask mask(unsigned Reg, unsigned Sub) const override;
+  BitTracker::BitMask mask(Register Reg, unsigned Sub) const override;
 
-  uint16_t getPhysRegBitWidth(unsigned Reg) const override;
+  uint16_t getPhysRegBitWidth(MCRegister Reg) const override;
 
   const TargetRegisterClass &composeWithSubRegIndex(
         const TargetRegisterClass &RC, unsigned Idx) const override;

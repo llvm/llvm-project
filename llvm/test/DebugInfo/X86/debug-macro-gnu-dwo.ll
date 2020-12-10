@@ -3,7 +3,7 @@
 ; -gdwarf-4 -gsplit-dwarf -fdebug-macro is specified, regardless of the GNU
 ; extension being requested.
 
-; RUN: %llc_dwarf -dwarf-version=4 -O0 -filetype=obj -use-gnu-debug-macro \
+; RUN: llc -dwarf-version=4 -O0 -filetype=obj -use-gnu-debug-macro \
 ; RUN: -split-dwarf-file=foo.dwo < %s | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK: .debug_info.dwo contents:

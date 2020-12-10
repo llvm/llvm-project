@@ -16,10 +16,13 @@
 # CHECK-EMPTY:
 # CHECK-NEXT:  Disassembly of section __DATA,__thread_data:
 # CHECK-EMPTY:
-# CHECK-NEXT:  <__thread_data>:
-# CHECK-NEXT:  ef
-# CHECK-NEXT:  be ad de be ba
-# CHECK-NEXT:  fe ca
+# CHECK-NEXT:  <_foo$tlv$init>:
+# CHECK-NEXT:  00 00
+# CHECK-NEXT:  00 00
+# CHECK-EMPTY:
+# CHECK-NEXT:  <_bar$tlv$init>:
+# CHECK-NEXT:  00 00
+# CHECK-NEXT:  00 00
 # CHECK-EMPTY:
 # CHECK-NEXT:  Disassembly of section __DATA,__thread_vars:
 # CHECK-EMPTY:
@@ -41,9 +44,9 @@ _main:
 
 .section	__DATA,__thread_data,thread_local_regular
 _foo$tlv$init:
-  .long	0xdeadbeef
+  .space 4
 _bar$tlv$init:
-  .long	0xcafebabe
+  .space 4
 
 .section	__DATA,__thread_vars,thread_local_variables
 .globl	_foo, _bar

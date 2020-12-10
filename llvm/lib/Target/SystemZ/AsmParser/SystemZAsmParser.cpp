@@ -1322,6 +1322,11 @@ OperandMatchResultTy SystemZAsmParser::tryParseRegister(unsigned &RegNo,
 bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
+
+  // Apply mnemonic aliases first, before doing anything else, in
+  // case the target uses it.
+  applyMnemonicAliases(Name, getAvailableFeatures(), 0 /*VariantID*/);
+
   Operands.push_back(SystemZOperand::createToken(Name, NameLoc));
 
   // Read the remaining operands.

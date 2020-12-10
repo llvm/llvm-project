@@ -4,7 +4,7 @@ struct S { S(); ~S(); };
 
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK-NOT: br
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @global)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @global)
 S global;
 
 // CHECK-LABEL: define {{.*}}global_var_init
@@ -15,12 +15,12 @@ S global;
 // CHECK: icmp eq i8 {{.*}}, 0
 // CHECK: br i1
 // CHECK-NOT: !prof
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @inline_global)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @inline_global)
 inline S inline_global;
 
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK-NOT: br
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @thread_local_global)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @thread_local_global)
 thread_local S thread_local_global;
 
 // CHECK-LABEL: define {{.*}}global_var_init
@@ -28,7 +28,7 @@ thread_local S thread_local_global;
 // CHECK: icmp eq i8 {{.*}}, 0
 // CHECK: br i1
 // CHECK-NOT: !prof
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @thread_local_inline_global)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @thread_local_inline_global)
 thread_local inline S thread_local_inline_global;
 
 struct A {
@@ -40,7 +40,7 @@ struct A {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1A13inline_memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1A13inline_memberE)
   static inline S inline_member;
 
   // CHECK-LABEL: define {{.*}}global_var_init
@@ -48,7 +48,7 @@ struct A {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1A26thread_local_inline_memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1A26thread_local_inline_memberE)
   static thread_local inline S thread_local_inline_member;
 };
 
@@ -67,12 +67,12 @@ void f() {
 
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK-NOT: br
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1A6memberE)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1A6memberE)
 S A::member;
 
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK-NOT: br
-// CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1A19thread_local_memberE)
+// CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1A19thread_local_memberE)
 thread_local S A::thread_local_member;
 
 template <typename T> struct B {
@@ -81,7 +81,7 @@ template <typename T> struct B {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1BIiE6memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1BIiE6memberE)
   static S member;
 
   // CHECK-LABEL: define {{.*}}global_var_init
@@ -89,7 +89,7 @@ template <typename T> struct B {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1BIiE13inline_memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1BIiE13inline_memberE)
   static inline S inline_member;
 
   // CHECK-LABEL: define {{.*}}global_var_init
@@ -97,7 +97,7 @@ template <typename T> struct B {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1BIiE19thread_local_memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1BIiE19thread_local_memberE)
   static thread_local S thread_local_member;
 
   // CHECK-LABEL: define {{.*}}global_var_init
@@ -105,7 +105,7 @@ template <typename T> struct B {
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
-  // CHECK: call void @_ZN1SC1Ev({{.*}}* @_ZN1BIiE26thread_local_inline_memberE)
+  // CHECK: call void @_ZN1SC1Ev({{.*}}* {{[^,]*}} @_ZN1BIiE26thread_local_inline_memberE)
   static thread_local inline S thread_local_inline_member;
 };
 template<typename T> S B<T>::member;

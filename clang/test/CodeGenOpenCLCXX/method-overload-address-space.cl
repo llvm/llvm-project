@@ -26,10 +26,10 @@ __kernel void k() {
   // CHECK: spir_func void @_ZNU3AS11C3fooEv(%struct.C addrspace(1)*
   c_ref.foo();
 
-  // CHECK: call spir_func void @_ZNU3AS41C3barEv(%struct.C addrspace(4)* addrspacecast (%struct.C addrspace(1)* @c1 to %struct.C addrspace(4)*))
+  // CHECK: call spir_func void @_ZNU3AS41C3barEv(%struct.C addrspace(4)* {{[^,]*}} addrspacecast (%struct.C addrspace(1)* @c1 to %struct.C addrspace(4)*))
   c1.bar();
   //FIXME: Doesn't compile yet
   //c_ptr->bar();
-  // CHECK: call spir_func void @_ZNU3AS41C3barEv(%struct.C addrspace(4)* addrspacecast (%struct.C addrspace(1)* @c1 to %struct.C addrspace(4)*))
+  // CHECK: call spir_func void @_ZNU3AS41C3barEv(%struct.C addrspace(4)* {{[^,]*}} addrspacecast (%struct.C addrspace(1)* @c1 to %struct.C addrspace(4)*))
   c_ref.bar();
 }

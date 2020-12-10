@@ -9,6 +9,7 @@
 // Static declaration checking
 
 #include "check-declarations.h"
+#include "pointer-assignment.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -45,13 +46,11 @@ public:
   void Check(const DeclTypeSpec &, bool canHaveAssumedTypeParameters);
   void Check(const Symbol &);
   void Check(const Scope &);
-  void CheckInitialization(const Symbol &);
   const Procedure *Characterize(const Symbol &);
 
 private:
   template <typename A> void CheckSpecExpr(const A &x) {
-    evaluate::CheckSpecificationExpr(
-        x, messages_, DEREF(scope_), context_.intrinsics());
+    evaluate::CheckSpecificationExpr(x, DEREF(scope_), foldingContext_);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(
@@ -61,6 +60,7 @@ private:
       const Symbol &proc, const Symbol *interface, const WithPassArg &);
   void CheckProcBinding(const Symbol &, const ProcBindingDetails &);
   void CheckObjectEntity(const Symbol &, const ObjectEntityDetails &);
+  void CheckPointerInitialization(const Symbol &);
   void CheckArraySpec(const Symbol &, const ArraySpec &);
   void CheckProcEntity(const Symbol &, const ProcEntityDetails &);
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
@@ -101,14 +101,12 @@ private:
     }
   }
   bool IsResultOkToDiffer(const FunctionResult &);
-  bool IsScopePDT() const {
-    return scope_ && scope_->IsParameterizedDerivedType();
-  }
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
   parser::ContextualMessages &messages_{foldingContext_.messages()};
   const Scope *scope_{nullptr};
+  bool scopeIsUninstantiatedPDT_{false};
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
@@ -120,11 +118,12 @@ class DistinguishabilityHelper {
 public:
   DistinguishabilityHelper(SemanticsContext &context) : context_{context} {}
   void Add(const Symbol &, GenericKind, const Symbol &, const Procedure &);
-  void Check();
+  void Check(const Scope &);
 
 private:
-  void SayNotDistinguishable(
-      const SourceName &, GenericKind, const Symbol &, const Symbol &);
+  void SayNotDistinguishable(const Scope &, const SourceName &, GenericKind,
+      const Symbol &, const Symbol &);
+  void AttachDeclaration(parser::Message &, const Scope &, const Symbol &);
 
   SemanticsContext &context_;
   struct ProcedureInfo {
@@ -169,10 +168,10 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (context_.HasError(symbol)) {
     return;
   }
-  const DeclTypeSpec *type{symbol.GetType()};
-  const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
   auto restorer{messages_.SetLocation(symbol.name())};
   context_.set_location(symbol.name());
+  const DeclTypeSpec *type{symbol.GetType()};
+  const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
   bool isAssociated{symbol.has<UseDetails>() || symbol.has<HostAssocDetails>()};
   if (symbol.attrs().test(Attr::VOLATILE)) {
     CheckVolatile(symbol, isAssociated, derived);
@@ -481,30 +480,25 @@ void CheckHelper::CheckObjectEntity(
       }
     }
   }
-  bool badInit{false};
-  if (symbol.owner().kind() != Scope::Kind::DerivedType &&
-      IsInitialized(symbol, true /*ignore DATA, already caught*/)) { // C808
+  if (IsInitialized(symbol, true /* ignore DATA inits */)) { // C808
+    CheckPointerInitialization(symbol);
     if (IsAutomatic(symbol)) {
-      badInit = true;
-      messages_.Say("An automatic variable must not be initialized"_err_en_US);
+      messages_.Say(
+          "An automatic variable or component must not be initialized"_err_en_US);
     } else if (IsDummy(symbol)) {
-      badInit = true;
       messages_.Say("A dummy argument must not be initialized"_err_en_US);
     } else if (IsFunctionResult(symbol)) {
-      badInit = true;
       messages_.Say("A function result must not be initialized"_err_en_US);
     } else if (IsInBlankCommon(symbol)) {
-      badInit = true;
       messages_.Say(
           "A variable in blank COMMON should not be initialized"_en_US);
     }
   }
-  if (symbol.owner().kind() == Scope::Kind::BlockData &&
-      IsInitialized(symbol)) {
+  if (symbol.owner().kind() == Scope::Kind::BlockData) {
     if (IsAllocatable(symbol)) {
       messages_.Say(
           "An ALLOCATABLE variable may not appear in a BLOCK DATA subprogram"_err_en_US);
-    } else if (!FindCommonBlockContaining(symbol)) {
+    } else if (IsInitialized(symbol) && !FindCommonBlockContaining(symbol)) {
       messages_.Say(
           "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
     }
@@ -518,47 +512,39 @@ void CheckHelper::CheckObjectEntity(
           symbol.name());
     }
   }
-  if (!badInit && !IsScopePDT()) {
-    CheckInitialization(symbol);
-  }
 }
 
-void CheckHelper::CheckInitialization(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!details) {
-    // not an object
-  } else if (const auto &init{details->init()}) { // 8.2 para 4
-    int initRank{init->Rank()};
-    int symbolRank{details->shape().Rank()};
-    if (IsPointer(symbol)) {
-      // Pointer initialization rank/shape errors are caught earlier in
-      // name resolution
-    } else if (details->shape().IsImpliedShape() ||
-        details->shape().IsDeferredShape()) {
-      if (symbolRank != initRank) {
-        messages_.Say(
-            "%s-shape array '%s' has rank %d, but its initializer has rank %d"_err_en_US,
-            details->shape().IsImpliedShape() ? "Implied" : "Deferred",
-            symbol.name(), symbolRank, initRank);
+void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
+  if (IsPointer(symbol) && !context_.HasError(symbol) &&
+      !scopeIsUninstantiatedPDT_) {
+    if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (object->init()) { // C764, C765; C808
+        if (auto dyType{evaluate::DynamicType::From(symbol)}) {
+          if (auto designator{evaluate::TypedWrapper<evaluate::Designator>(
+                  *dyType, evaluate::DataRef{symbol})}) {
+            auto restorer{messages_.SetLocation(symbol.name())};
+            context_.set_location(symbol.name());
+            CheckInitialTarget(foldingContext_, *designator, *object->init());
+          }
+        }
       }
-    } else if (symbolRank != initRank && initRank != 0) {
-      // Pointer initializer rank errors are caught elsewhere
-      messages_.Say(
-          "'%s' has rank %d, but its initializer has rank %d"_err_en_US,
-          symbol.name(), symbolRank, initRank);
-    } else if (auto symbolShape{evaluate::GetShape(foldingContext_, symbol)}) {
-      if (!evaluate::AsConstantExtents(foldingContext_, *symbolShape)) {
-        // C762
-        messages_.Say(
-            "Shape of '%s' is not implied, deferred, nor constant"_err_en_US,
-            symbol.name());
-      } else if (auto initShape{evaluate::GetShape(foldingContext_, *init)}) {
-        if (initRank == symbolRank) {
-          evaluate::CheckConformance(
-              messages_, *symbolShape, *initShape, "object", "initializer");
+    } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+      if (proc->init() && *proc->init()) {
+        // C1519 - must be nonelemental external or module procedure,
+        // or an unrestricted specific intrinsic function.
+        const Symbol &ultimate{(*proc->init())->GetUltimate()};
+        if (ultimate.attrs().test(Attr::INTRINSIC)) {
+        } else if (!ultimate.attrs().test(Attr::EXTERNAL) &&
+            ultimate.owner().kind() != Scope::Kind::Module) {
+          context_.Say("Procedure pointer '%s' initializer '%s' is neither "
+                       "an external nor a module procedure"_err_en_US,
+              symbol.name(), ultimate.name());
+        } else if (ultimate.attrs().test(Attr::ELEMENTAL)) {
+          context_.Say("Procedure pointer '%s' cannot be initialized with the "
+                       "elemental procedure '%s"_err_en_US,
+              symbol.name(), ultimate.name());
         } else {
-          CHECK(initRank == 0);
-          // TODO: expand scalar now, or in lowering?
+          // TODO: Check the "shalls" in the 15.4.3.6 paragraphs 7-10.
         }
       }
     }
@@ -626,7 +612,7 @@ void CheckHelper::CheckArraySpec(
     }
   } else if (IsNamedConstant(symbol)) {
     if (!isExplicit && !isImplied) {
-      msg = "Named constant '%s' array must have explicit or"
+      msg = "Named constant '%s' array must have constant or"
             " implied shape"_err_en_US;
     }
   } else if (!IsAllocatableOrPointer(symbol) && !isExplicit) {
@@ -669,6 +655,7 @@ void CheckHelper::CheckProcEntity(
     CheckPassArg(symbol, details.interface().symbol(), details);
   }
   if (symbol.attrs().test(Attr::POINTER)) {
+    CheckPointerInitialization(symbol);
     if (const Symbol * interface{details.interface().symbol()}) {
       if (interface->attrs().test(Attr::ELEMENTAL) &&
           !interface->attrs().test(Attr::INTRINSIC)) {
@@ -767,9 +754,9 @@ void CheckHelper::CheckSubprogram(
     } else if (subprogramDetails && details.isFunction() &&
         subprogramDetails->isFunction()) {
       auto result{FunctionResult::Characterize(
-          details.result(), context_.intrinsics())};
+          details.result(), context_.foldingContext())};
       auto subpResult{FunctionResult::Characterize(
-          subprogramDetails->result(), context_.intrinsics())};
+          subprogramDetails->result(), context_.foldingContext())};
       if (result && subpResult && *result != *subpResult &&
           (!IsResultOkToDiffer(*result) || !IsResultOkToDiffer(*subpResult))) {
         error =
@@ -948,16 +935,14 @@ bool CheckHelper::CheckFinal(
     ok = false;
   } else { // check that all LEN type parameters are assumed
     for (auto ref : OrderParameterDeclarations(derivedType)) {
-      if (const auto *paramDetails{ref->detailsIf<TypeParamDetails>()}) {
-        if (paramDetails->attr() == common::TypeParamAttr::Len) {
-          const auto *value{
-              ddo->type.type().GetDerivedTypeSpec().FindParameter(ref->name())};
-          if (!value || !value->isAssumed()) {
-            SayWithDeclaration(*errSym, finalName,
-                "FINAL subroutine '%s' of derived type '%s' must have a dummy argument with an assumed LEN type parameter '%s=*'"_err_en_US,
-                subroutine.name(), derivedType.name(), ref->name());
-            ok = false;
-          }
+      if (IsLenTypeParameter(*ref)) {
+        const auto *value{
+            ddo->type.type().GetDerivedTypeSpec().FindParameter(ref->name())};
+        if (!value || !value->isAssumed()) {
+          SayWithDeclaration(*errSym, finalName,
+              "FINAL subroutine '%s' of derived type '%s' must have a dummy argument with an assumed LEN type parameter '%s=*'"_err_en_US,
+              subroutine.name(), derivedType.name(), ref->name());
+          ok = false;
         }
       }
     }
@@ -1020,7 +1005,7 @@ void CheckHelper::CheckSpecificsAreDistinguishable(
       helper.Add(generic, kind, specific, *procedure);
     }
   }
-  helper.Check();
+  helper.Check(generic.owner());
 }
 
 static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
@@ -1280,7 +1265,7 @@ const Procedure *CheckHelper::Characterize(const Symbol &symbol) {
   auto it{characterizeCache_.find(symbol)};
   if (it == characterizeCache_.end()) {
     auto pair{characterizeCache_.emplace(SymbolRef{symbol},
-        Procedure::Characterize(symbol, context_.intrinsics()))};
+        Procedure::Characterize(symbol, context_.foldingContext()))};
     it = pair.first;
   }
   return common::GetPtrFromOptional(it->second);
@@ -1516,23 +1501,31 @@ void CheckHelper::Check(const Scope &scope) {
   common::Restorer<const Symbol *> restorer{innermostSymbol_};
   if (const Symbol * symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
-  } else if (scope.IsDerivedType()) {
-    // PDT instantiations have no symbol.
-    return;
   }
-  for (const auto &set : scope.equivalenceSets()) {
-    CheckEquivalenceSet(set);
+  if (scope.IsParameterizedDerivedTypeInstantiation()) {
+    auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
+    auto restorer2{context_.foldingContext().messages().SetContext(
+        scope.instantiationContext().get())};
+    for (const auto &pair : scope) {
+      CheckPointerInitialization(*pair.second);
+    }
+  } else {
+    auto restorer{common::ScopedSet(
+        scopeIsUninstantiatedPDT_, scope.IsParameterizedDerivedType())};
+    for (const auto &set : scope.equivalenceSets()) {
+      CheckEquivalenceSet(set);
+    }
+    for (const auto &pair : scope) {
+      Check(*pair.second);
+    }
+    for (const Scope &child : scope.children()) {
+      Check(child);
+    }
+    if (scope.kind() == Scope::Kind::BlockData) {
+      CheckBlockData(scope);
+    }
+    CheckGenericOps(scope);
   }
-  for (const auto &pair : scope) {
-    Check(*pair.second);
-  }
-  for (const Scope &child : scope.children()) {
-    Check(child);
-  }
-  if (scope.kind() == Scope::Kind::BlockData) {
-    CheckBlockData(scope);
-  }
-  CheckGenericOps(scope);
 }
 
 void CheckHelper::CheckEquivalenceSet(const EquivalenceSet &set) {
@@ -1637,7 +1630,7 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
       }
     }
   }
-  helper.Check();
+  helper.Check(scope);
 }
 
 void SubprogramMatchHelper::Check(
@@ -1859,7 +1852,7 @@ void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
   }
 }
 
-void DistinguishabilityHelper::Check() {
+void DistinguishabilityHelper::Check(const Scope &scope) {
   for (const auto &[name, info] : nameToInfo_) {
     auto count{info.size()};
     for (std::size_t i1{0}; i1 < count - 1; ++i1) {
@@ -1870,15 +1863,17 @@ void DistinguishabilityHelper::Check() {
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
         if (!distinguishable(proc1, proc2)) {
-          SayNotDistinguishable(name, kind1, symbol1, symbol2);
+          SayNotDistinguishable(
+              GetTopLevelUnitContaining(scope), name, kind1, symbol1, symbol2);
         }
       }
     }
   }
 }
 
-void DistinguishabilityHelper::SayNotDistinguishable(const SourceName &name,
-    GenericKind kind, const Symbol &proc1, const Symbol &proc2) {
+void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
+    const SourceName &name, GenericKind kind, const Symbol &proc1,
+    const Symbol &proc2) {
   std::string name1{proc1.name().ToString()};
   std::string name2{proc2.name().ToString()};
   if (kind.IsOperator() || kind.IsAssignment()) {
@@ -1890,26 +1885,37 @@ void DistinguishabilityHelper::SayNotDistinguishable(const SourceName &name,
       name2 = proc2.owner().GetName()->ToString() + '%' + name2;
     }
   }
-  auto &msg{context_.Say(name,
-      "Generic '%s' may not have specific procedures '%s' and '%s'"
-      " as their interfaces are not distinguishable"_err_en_US,
-      MakeOpName(name), name1, name2)};
-  evaluate::AttachDeclaration(msg, proc1);
-  evaluate::AttachDeclaration(msg, proc2);
+  parser::Message *msg;
+  if (scope.sourceRange().Contains(name)) {
+    msg = &context_.Say(name,
+        "Generic '%s' may not have specific procedures '%s' and"
+        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        MakeOpName(name), name1, name2);
+  } else {
+    msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
+        "USE-associated generic '%s' may not have specific procedures '%s' and"
+        " '%s' as their interfaces are not distinguishable"_err_en_US,
+        MakeOpName(name), name1, name2);
+  }
+  AttachDeclaration(*msg, scope, proc1);
+  AttachDeclaration(*msg, scope, proc2);
+}
+
+// `evaluate::AttachDeclaration` doesn't handle the generic case where `proc`
+// comes from a different module but is not necessarily use-associated.
+void DistinguishabilityHelper::AttachDeclaration(
+    parser::Message &msg, const Scope &scope, const Symbol &proc) {
+  const Scope &unit{GetTopLevelUnitContaining(proc)};
+  if (unit == scope) {
+    evaluate::AttachDeclaration(msg, proc);
+  } else {
+    msg.Attach(unit.GetName().value(),
+        "'%s' is USE-associated from module '%s'"_en_US, proc.name(),
+        unit.GetName().value());
+  }
 }
 
 void CheckDeclarations(SemanticsContext &context) {
   CheckHelper{context}.Check();
 }
-
-void CheckInstantiatedDerivedType(
-    SemanticsContext &context, const DerivedTypeSpec &type) {
-  if (const Scope * scope{type.scope()}) {
-    CheckHelper checker{context};
-    for (const auto &pair : *scope) {
-      checker.CheckInitialization(*pair.second);
-    }
-  }
-}
-
 } // namespace Fortran::semantics

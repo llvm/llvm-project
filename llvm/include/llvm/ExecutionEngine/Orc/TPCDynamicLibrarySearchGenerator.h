@@ -31,7 +31,7 @@ public:
   /// will be searched for. If the predicate is not given then all symbols will
   /// be searched for.
   TPCDynamicLibrarySearchGenerator(TargetProcessControl &TPC,
-                                   TargetProcessControl::DylibHandle H,
+                                   tpctypes::DylibHandle H,
                                    SymbolPredicate Allow = SymbolPredicate())
       : TPC(TPC), H(H), Allow(std::move(Allow)) {}
 
@@ -47,7 +47,7 @@ public:
   static Expected<std::unique_ptr<TPCDynamicLibrarySearchGenerator>>
   GetForTargetProcess(TargetProcessControl &TPC,
                       SymbolPredicate Allow = SymbolPredicate()) {
-    return Load(TPC, nullptr);
+    return Load(TPC, nullptr, std::move(Allow));
   }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
@@ -56,7 +56,7 @@ public:
 
 private:
   TargetProcessControl &TPC;
-  TargetProcessControl::DylibHandle H;
+  tpctypes::DylibHandle H;
   SymbolPredicate Allow;
 };
 

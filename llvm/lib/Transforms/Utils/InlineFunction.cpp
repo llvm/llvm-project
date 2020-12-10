@@ -785,7 +785,9 @@ static void PropagateCallSiteMetadata(CallBase &CB, ValueToValueMapTy &VMap) {
 
   for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
        VMI != VMIE; ++VMI) {
-    if (!VMI->second)
+    // Check that key is an instruction, to skip the Argument mapping, which
+    // points to an instruction in the original function, not the inlined one.
+    if (!VMI->second || !isa<Instruction>(VMI->first))
       continue;
 
     Instruction *NI = dyn_cast<Instruction>(VMI->second);
@@ -890,7 +892,9 @@ static void CloneAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap) {
   // repacements from the map.
   for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
        VMI != VMIE; ++VMI) {
-    if (!VMI->second)
+    // Check that key is an instruction, to skip the Argument mapping, which
+    // points to an instruction in the original function, not the inlined one.
+    if (!VMI->second || !isa<Instruction>(VMI->first))
       continue;
 
     Instruction *NI = dyn_cast<Instruction>(VMI->second);
@@ -1666,22 +1670,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     else if (CalledFunc->getGC() != Caller->getGC())
       return InlineResult::failure("incompatible GC");
   }
-
-  // Inlining a function that explicitly should not have a stack protector may
-  // break the code if inlined into a function that does have a stack
-  // protector.
-  if (LLVM_UNLIKELY(Caller->hasFnAttribute(Attribute::NoStackProtect)))
-    if (CalledFunc->hasFnAttribute(Attribute::StackProtect) ||
-        CalledFunc->hasFnAttribute(Attribute::StackProtectStrong) ||
-        CalledFunc->hasFnAttribute(Attribute::StackProtectReq))
-      return InlineResult::failure(
-          "stack protected callee but caller requested no stack protector");
-  if (LLVM_UNLIKELY(CalledFunc->hasFnAttribute(Attribute::NoStackProtect)))
-    if (Caller->hasFnAttribute(Attribute::StackProtect) ||
-        Caller->hasFnAttribute(Attribute::StackProtectStrong) ||
-        Caller->hasFnAttribute(Attribute::StackProtectReq))
-      return InlineResult::failure(
-          "stack protected caller but callee requested no stack protector");
 
   // Get the personality function from the callee if it contains a landing pad.
   Constant *CalledPersonality =
@@ -2471,7 +2459,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // If we inlined any musttail calls and the original return is now
   // unreachable, delete it.  It can only contain a bitcast and ret.
-  if (InlinedMustTailCalls && pred_begin(AfterCallBB) == pred_end(AfterCallBB))
+  if (InlinedMustTailCalls && pred_empty(AfterCallBB))
     AfterCallBB->eraseFromParent();
 
   // We should always be able to fold the entry block of the function into the

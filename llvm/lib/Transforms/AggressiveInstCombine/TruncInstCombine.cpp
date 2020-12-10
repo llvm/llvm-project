@@ -289,11 +289,8 @@ Type *TruncInstCombine::getBestTruncatedType() {
 /// version of \p Ty, otherwise return \p Ty.
 static Type *getReducedType(Value *V, Type *Ty) {
   assert(Ty && !Ty->isVectorTy() && "Expect Scalar Type");
-  if (auto *VTy = dyn_cast<VectorType>(V->getType())) {
-    // FIXME: should this handle scalable vectors?
-    return FixedVectorType::get(Ty,
-                                cast<FixedVectorType>(VTy)->getNumElements());
-  }
+  if (auto *VTy = dyn_cast<VectorType>(V->getType()))
+    return VectorType::get(Ty, VTy->getElementCount());
   return Ty;
 }
 

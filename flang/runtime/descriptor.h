@@ -18,7 +18,6 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "derived-type.h"
 #include "memory.h"
 #include "type-code.h"
 #include "flang/ISO_Fortran_binding.h"
@@ -27,6 +26,11 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+
+namespace Fortran::runtime::typeInfo {
+using TypeParameterValue = std::int64_t;
+class DerivedType;
+} // namespace Fortran::runtime::typeInfo
 
 namespace Fortran::runtime {
 
@@ -44,6 +48,16 @@ public:
   SubscriptValue UpperBound() const { return LowerBound() + Extent() - 1; }
   SubscriptValue ByteStride() const { return raw_.sm; }
 
+  Dimension &SetBounds(SubscriptValue lower, SubscriptValue upper) {
+    raw_.lower_bound = lower;
+    raw_.extent = upper >= lower ? upper - lower + 1 : 0;
+    return *this;
+  }
+  Dimension &SetByteStride(SubscriptValue bytes) {
+    raw_.sm = bytes;
+    return *this;
+  }
+
 private:
   ISO::CFI_dim_t raw_;
 };
@@ -53,7 +67,7 @@ private:
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
 // instances.  The presence of this structure is implied by the flag
 // CFI_cdesc_t.f18Addendum, and the number of elements in the len_[]
-// array is determined by DerivedType::lenParameters().
+// array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
   enum Flags {
@@ -64,41 +78,38 @@ public:
   };
 
   explicit DescriptorAddendum(
-      const DerivedType *dt = nullptr, std::uint64_t flags = 0)
+      const typeInfo::DerivedType *dt = nullptr, std::uint64_t flags = 0)
       : derivedType_{dt}, flags_{flags} {}
 
-  const DerivedType *derivedType() const { return derivedType_; }
-  DescriptorAddendum &set_derivedType(const DerivedType *dt) {
+  const typeInfo::DerivedType *derivedType() const { return derivedType_; }
+  DescriptorAddendum &set_derivedType(const typeInfo::DerivedType *dt) {
     derivedType_ = dt;
     return *this;
   }
   std::uint64_t &flags() { return flags_; }
   const std::uint64_t &flags() const { return flags_; }
 
-  std::size_t LenParameters() const {
-    if (derivedType_) {
-      return derivedType_->lenParameters();
-    }
-    return 0;
-  }
+  std::size_t LenParameters() const;
 
-  TypeParameterValue LenParameterValue(int which) const { return len_[which]; }
+  typeInfo::TypeParameterValue LenParameterValue(int which) const {
+    return len_[which];
+  }
   static constexpr std::size_t SizeInBytes(int lenParameters) {
-    return sizeof(DescriptorAddendum) - sizeof(TypeParameterValue) +
-        lenParameters * sizeof(TypeParameterValue);
+    return sizeof(DescriptorAddendum) - sizeof(typeInfo::TypeParameterValue) +
+        lenParameters * sizeof(typeInfo::TypeParameterValue);
   }
   std::size_t SizeInBytes() const;
 
-  void SetLenParameterValue(int which, TypeParameterValue x) {
+  void SetLenParameterValue(int which, typeInfo::TypeParameterValue x) {
     len_[which] = x;
   }
 
   void Dump(FILE * = stdout) const;
 
 private:
-  const DerivedType *derivedType_{nullptr};
+  const typeInfo::DerivedType *derivedType_;
   std::uint64_t flags_{0};
-  TypeParameterValue len_[1]; // must be the last component
+  typeInfo::TypeParameterValue len_[1]; // must be the last component
   // The LEN type parameter values can also include captured values of
   // specification expressions that were used for bounds and for LEN type
   // parameters of components.  The values have been truncated to the LEN
@@ -145,8 +156,8 @@ public:
       int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
       bool addendum = false);
-  void Establish(const DerivedType &dt, void *p = nullptr, int rank = maxRank,
-      const SubscriptValue *extent = nullptr,
+  void Establish(const typeInfo::DerivedType &dt, void *p = nullptr,
+      int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
@@ -161,8 +172,9 @@ public:
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const DerivedType &dt, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
+  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   ISO::CFI_cdesc_t &raw() { return raw_; }
@@ -271,9 +283,10 @@ public:
   std::size_t Elements() const;
 
   // TODO: SOURCE= and MOLD=
+  int Allocate();
   int Allocate(const SubscriptValue lb[], const SubscriptValue ub[]);
   int Deallocate(bool finalize = true);
-  void Destroy(char *data, bool finalize = true) const;
+  void Destroy(bool finalize = true) const;
 
   bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};
@@ -330,11 +343,7 @@ public:
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {
       assert(hasAddendum);
-      if (const DerivedType * dt{addendum->derivedType()}) {
-        assert(dt->lenParameters() <= maxLengthTypeParameters);
-      } else {
-        assert(maxLengthTypeParameters == 0);
-      }
+      assert(addendum->LenParameters() <= maxLengthTypeParameters);
     } else {
       assert(!hasAddendum);
       assert(maxLengthTypeParameters == 0);

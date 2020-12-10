@@ -153,7 +153,7 @@ cond_false:
 }
 
 ; Don't tail call if a byval arg is captured.
-define void @test9(i32* byval %a) {
+define void @test9(i32* byval(i32) %a) {
 ; CHECK-LABEL: define void @test9(
 ; CHECK: {{^ *}}call void @use(
   call void @use(i32* %a)
@@ -163,7 +163,7 @@ define void @test9(i32* byval %a) {
 %struct.X = type { i8* }
 
 declare void @ctor(%struct.X*)
-define void @test10(%struct.X* noalias sret %agg.result, i1 zeroext %b) {
+define void @test10(%struct.X* noalias sret(%struct.X) %agg.result, i1 zeroext %b) {
 ; CHECK-LABEL: @test10
 entry:
   %x = alloca %struct.X, align 8
@@ -213,27 +213,27 @@ entry:
 ; point, and both calls below can be marked tail.
 define void @test13() {
 ; CHECK-LABEL: @test13
-; CHECK: tail call void @bar(%struct.foo* byval %f)
+; CHECK: tail call void @bar(%struct.foo* byval(%struct.foo) %f)
 ; CHECK: tail call void @bar(%struct.foo* null)
 entry:
   %f = alloca %struct.foo
-  call void @bar(%struct.foo* byval %f)
+  call void @bar(%struct.foo* byval(%struct.foo) %f)
   call void @bar(%struct.foo* null)
   ret void
 }
 
 ; A call which passes a byval parameter using byval can be marked tail.
-define void @test14(%struct.foo* byval %f) {
+define void @test14(%struct.foo* byval(%struct.foo) %f) {
 ; CHECK-LABEL: @test14
 ; CHECK: tail call void @bar
 entry:
-  call void @bar(%struct.foo* byval %f)
+  call void @bar(%struct.foo* byval(%struct.foo) %f)
   ret void
 }
 
 ; If a byval parameter is copied into an alloca and passed byval the call can
 ; be marked tail.
-define void @test15(%struct.foo* byval %f) {
+define void @test15(%struct.foo* byval(%struct.foo) %f) {
 ; CHECK-LABEL: @test15
 ; CHECK: tail call void @bar
 entry:
@@ -241,9 +241,9 @@ entry:
   %0 = bitcast %struct.foo* %agg.tmp to i8*
   %1 = bitcast %struct.foo* %f to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 40, i1 false)
-  call void @bar(%struct.foo* byval %agg.tmp)
+  call void @bar(%struct.foo* byval(%struct.foo) %agg.tmp)
   ret void
 }
 
-declare void @bar(%struct.foo* byval)
+declare void @bar(%struct.foo* byval(%struct.foo))
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)

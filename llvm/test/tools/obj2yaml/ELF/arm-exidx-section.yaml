@@ -13,7 +13,7 @@
 # LE-NEXT:   Type: SHT_ARM_EXIDX
 # LE-NEXT:   Entries:
 # LE-NEXT:     - Offset: 0xDDCCBBAA
-# LE-NEXT:       Value:  0x01000000
+# LE-NEXT:       Value:  0x1000000
 # LE-NEXT:     - Offset: 0x9988FFEE
 # LE-NEXT:       Value:  EXIDX_CANTUNWIND
 # LE-NEXT: ...
@@ -24,7 +24,7 @@
 # BE-NEXT:     - Offset: 0xAABBCCDD
 # BE-NEXT:       Value:  EXIDX_CANTUNWIND
 # BE-NEXT:     - Offset: 0xEEFF8899
-# BE-NEXT:       Value:  0x01000000
+# BE-NEXT:       Value:  0x1000000
 # BE-NEXT: ...
 
 --- !ELF

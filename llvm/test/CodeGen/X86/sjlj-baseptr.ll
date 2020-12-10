@@ -11,7 +11,7 @@ declare void @whatever(i64, %Foo*, i8**, i8*, i8*, i32)  #0
 
 attributes #0 = { nounwind uwtable "frame-pointer"="all" }
 
-define i32 @test1(i64 %n, %Foo* byval nocapture readnone align 8 %f) #0 {
+define i32 @test1(i64 %n, %Foo* byval(%Foo) nocapture readnone align 8 %f) #0 {
 entry:
   %buf = alloca [5 x i8*], align 16
   %p = alloca i8*, align 8

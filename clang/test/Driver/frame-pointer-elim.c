@@ -97,6 +97,8 @@
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target x86_64-scei-ps4 -S -O2 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### -target aarch64-apple-darwin -arch arm64_32 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
 // RUN: %clang -### -target powerpc64 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s

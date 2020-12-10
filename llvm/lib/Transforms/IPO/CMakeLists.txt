@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
+  Annotation2Metadata.cpp
   ArgumentPromotion.cpp
   Attributor.cpp
   AttributorAttributes.cpp
@@ -30,7 +31,9 @@ add_llvm_component_library(LLVMipo
   PartialInlining.cpp
   PassManagerBuilder.cpp
   PruneEH.cpp
+  SampleContextTracker.cpp
   SampleProfile.cpp
+  SampleProfileProbe.cpp
   SCCP.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
@@ -45,4 +48,25 @@ add_llvm_component_library(LLVMipo
   DEPENDS
   intrinsics_gen
   omp_gen
+
+  COMPONENT_NAME
+  IPO
+
+  LINK_COMPONENTS
+  AggressiveInstCombine
+  Analysis
+  BitReader
+  BitWriter
+  Core
+  FrontendOpenMP
+  InstCombine
+  IRReader
+  Linker
+  Object
+  ProfileData
+  Scalar
+  Support
+  TransformUtils
+  Vectorize
+  Instrumentation
   )

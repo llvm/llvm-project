@@ -5,7 +5,7 @@ func @empty() {
   return     // CHECK:  return
 }            // CHECK: }
 
-func @body(index) -> ()
+func private @body(index) -> ()
 
 // Simple loops are properly converted.
 // CHECK-LABEL: func @simple_loop
@@ -26,9 +26,9 @@ func @simple_loop() {
 
 /////////////////////////////////////////////////////////////////////
 
-func @pre(index) -> ()
-func @body2(index, index) -> ()
-func @post(index) -> ()
+func private @pre(index) -> ()
+func private @body2(index, index) -> ()
+func private @post(index) -> ()
 
 // CHECK-LABEL: func @imperfectly_nested_loops
 // CHECK-NEXT:   %[[c0:.*]] = constant 0 : index
@@ -59,8 +59,8 @@ func @imperfectly_nested_loops() {
 
 /////////////////////////////////////////////////////////////////////
 
-func @mid(index) -> ()
-func @body3(index, index) -> ()
+func private @mid(index) -> ()
+func private @body3(index, index) -> ()
 
 // CHECK-LABEL: func @more_imperfectly_nested_loops
 // CHECK-NEXT:   %[[c0:.*]] = constant 0 : index
@@ -123,7 +123,7 @@ func @affine_apply_loops_shorthand(%N : index) {
 
 /////////////////////////////////////////////////////////////////////
 
-func @get_idx() -> (index)
+func private @get_idx() -> (index)
 
 #set1 = affine_set<(d0) : (20 - d0 >= 0)>
 #set2 = affine_set<(d0) : (d0 - 10 >= 0)>

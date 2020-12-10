@@ -43,7 +43,7 @@ void ParamPassing(_ExtInt(129) a, _ExtInt(128) b, _ExtInt(64) c) {}
 // SPARC: define void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // MIPS64: define void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128 signext  %{{.+}}, i64 signext %{{.+}})
 // MIPS: define void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 signext %{{.+}})
-// SPIR64: define spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128 %{{.+}}, i64 %{{.+}})
+// SPIR64: define spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // SPIR: define spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // HEX: define void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // LANAI: define void @ParamPassing(i129* byval(i129) align 4 %{{.+}}, i128* byval(i128) align 4 %{{.+}}, i64 %{{.+}})
@@ -72,7 +72,7 @@ void ParamPassing2(_ExtInt(129) a, _ExtInt(127) b, _ExtInt(63) c) {}
 // SPARC: define void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // MIPS64: define void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127 signext  %{{.+}}, i63 signext %{{.+}})
 // MIPS: define void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 signext %{{.+}})
-// SPIR64: define spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127 %{{.+}}, i63 %{{.+}})
+// SPIR64: define spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // SPIR: define spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // HEX: define void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // LANAI: define void @ParamPassing2(i129* byval(i129) align 4 %{{.+}}, i127* byval(i127) align 4 %{{.+}}, i63 %{{.+}})
@@ -191,7 +191,7 @@ _ExtInt(127) ReturnPassing3(){}
 // SPARC: define void @ReturnPassing3(i127* noalias sret
 // MIPS64: define i127 @ReturnPassing3(
 // MIPS: define void @ReturnPassing3(i127* noalias sret
-// SPIR64: define spir_func i127 @ReturnPassing3(
+// SPIR64: define spir_func void @ReturnPassing3(i127* noalias sret
 // SPIR: define spir_func void @ReturnPassing3(i127* noalias sret
 // HEX: define void @ReturnPassing3(i127* noalias sret
 // LANAI: define void @ReturnPassing3(i127* noalias sret
@@ -220,7 +220,7 @@ _ExtInt(128) ReturnPassing4(){}
 // SPARC: define void @ReturnPassing4(i128* noalias sret
 // MIPS64: define i128 @ReturnPassing4(
 // MIPS: define void @ReturnPassing4(i128* noalias sret
-// SPIR64: define spir_func i128 @ReturnPassing4(
+// SPIR64: define spir_func void @ReturnPassing4(i128* noalias sret
 // SPIR: define spir_func void @ReturnPassing4(i128* noalias sret
 // HEX: define void @ReturnPassing4(i128* noalias sret
 // LANAI: define void @ReturnPassing4(i128* noalias sret

@@ -1,0 +1,64 @@
+add_entrypoint_object(
+  fegetround
+  SRCS
+    fegetround.cpp
+  HDRS
+    fegetround.h
+  DEPENDS
+    libc.include.fenv
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fesetround
+  SRCS
+    fesetround.cpp
+  HDRS
+    fesetround.h
+  DEPENDS
+    libc.include.fenv
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  feclearexcept
+  SRCS
+    feclearexcept.cpp
+  HDRS
+    feclearexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  feraiseexcept
+  SRCS
+    feraiseexcept.cpp
+  HDRS
+    feraiseexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fetestexcept
+  SRCS
+    fetestexcept.cpp
+  HDRS
+    fetestexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)

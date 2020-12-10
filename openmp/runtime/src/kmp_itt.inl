@@ -115,7 +115,8 @@ LINKAGE void __kmp_itt_region_forking(int gtid, int team_size, int barriers) {
         // that the tools more or less standardized on:
         //   "<func>$omp$parallel@[file:]<line>[:<col>]"
         char *buff = NULL;
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+        kmp_str_loc_t str_loc =
+            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
                                 team_size, str_loc.file, str_loc.line,
                                 str_loc.col);
@@ -155,7 +156,8 @@ LINKAGE void __kmp_itt_region_forking(int gtid, int team_size, int barriers) {
       if ((frm < KMP_MAX_FRAME_DOMAINS) &&
           (__kmp_itt_region_team_size[frm] != team_size)) {
         char *buff = NULL;
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+        kmp_str_loc_t str_loc = 
+            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
                                 team_size, str_loc.file, str_loc.line,
                                 str_loc.col);
@@ -212,7 +214,8 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
         // that the tools more or less standardized on:
         //   "<func>$omp$parallel:team_size@[file:]<line>[:<col>]"
         char *buff = NULL;
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+        kmp_str_loc_t str_loc = 
+            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
                                 team_size, str_loc.file, str_loc.line,
                                 str_loc.col);
@@ -234,7 +237,8 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
         return; // something's gone wrong, returning
       if (__kmp_itt_region_team_size[frm] != team_size) {
         char *buff = NULL;
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+        kmp_str_loc_t str_loc = 
+            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
                                 team_size, str_loc.file, str_loc.line,
                                 str_loc.col);
@@ -273,7 +277,8 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
           // Transform compiler-generated region location into the format
           // that the tools more or less standardized on:
           //   "<func>$omp$frame@[file:]<line>[:<col>]"
-          kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+          kmp_str_loc_t str_loc = 
+              __kmp_str_loc_init(loc->psource, /* init_fname */ false);
           if (imbalance) {
             char *buff_imb = NULL;
             buff_imb = __kmp_str_format("%s$omp$barrier-imbalance:%d@%s:%d",
@@ -365,25 +370,12 @@ LINKAGE void __kmp_itt_metadata_loop(ident_t *loc, kmp_uint64 sched_type,
   }
 
   // Parse line and column from psource string: ";file;func;line;col;;"
-  char *s_line;
-  char *s_col;
   KMP_DEBUG_ASSERT(loc->psource);
-#ifdef __cplusplus
-  s_line = strchr(CCAST(char *, loc->psource), ';');
-#else
-  s_line = strchr(loc->psource, ';');
-#endif
-  KMP_DEBUG_ASSERT(s_line);
-  s_line = strchr(s_line + 1, ';'); // 2-nd semicolon
-  KMP_DEBUG_ASSERT(s_line);
-  s_line = strchr(s_line + 1, ';'); // 3-rd semicolon
-  KMP_DEBUG_ASSERT(s_line);
-  s_col = strchr(s_line + 1, ';'); // 4-th semicolon
-  KMP_DEBUG_ASSERT(s_col);
-
   kmp_uint64 loop_data[5];
-  loop_data[0] = atoi(s_line + 1); // read line
-  loop_data[1] = atoi(s_col + 1); // read column
+  int line, col;
+  __kmp_str_loc_numbers(loc->psource, &line, &col);
+  loop_data[0] = line;
+  loop_data[1] = col;
   loop_data[2] = sched_type;
   loop_data[3] = iterations;
   loop_data[4] = chunk;
@@ -409,12 +401,11 @@ LINKAGE void __kmp_itt_metadata_single(ident_t *loc) {
     __kmp_release_bootstrap_lock(&metadata_lock);
   }
 
-  kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
+  int line, col;
+  __kmp_str_loc_numbers(loc->psource, &line, &col);
   kmp_uint64 single_data[2];
-  single_data[0] = str_loc.line;
-  single_data[1] = str_loc.col;
-
-  __kmp_str_loc_free(&str_loc);
+  single_data[0] = line;
+  single_data[1] = col;
 
   __itt_metadata_add(metadata_domain, __itt_null, string_handle_sngl,
                      __itt_metadata_u64, 2, single_data);
@@ -630,7 +621,7 @@ void __kmp_itt_barrier_finished(int gtid, void *object) {
 void *__kmp_itt_taskwait_object(int gtid) {
   void *object = NULL;
 #if USE_ITT_NOTIFY
-  if (__itt_sync_create_ptr) {
+  if (UNLIKELY(__itt_sync_create_ptr)) {
     kmp_info_t *thread = __kmp_thread_from_gtid(gtid);
     kmp_taskdata_t *taskdata = thread->th.th_current_task;
     object = reinterpret_cast<void *>(kmp_uintptr_t(taskdata) +
@@ -677,7 +668,7 @@ void __kmp_itt_task_starting(
     void *object // ITT sync object: barrier or taskwait.
     ) {
 #if USE_ITT_NOTIFY
-  if (object != NULL) {
+  if (UNLIKELY(object != NULL)) {
     KMP_ITT_DEBUG_LOCK();
     __itt_sync_cancel(object);
     KMP_ITT_DEBUG_PRINT("[tsk sta] scan( %p )\n", object);

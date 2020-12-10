@@ -59,7 +59,6 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
 ; GFX10-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
 ; GFX10: s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX10-NEXT:                                 ; implicit-def: $vcc_hi
 ; GFX10: s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
 
@@ -140,7 +139,6 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: v_mov_b32_e32 v42, v14
 ; GFX10-NEXT: v_mov_b32_e32 v43, v13
 ; GFX10-NEXT: v_mov_b32_e32 v44, v12
-; GFX10-NEXT: ; implicit-def: $vcc_hi
 ; GFX10-NEXT: s_waitcnt vmcnt(0)
 ; GFX10-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX10-NEXT: s_waitcnt lgkmcnt(0)

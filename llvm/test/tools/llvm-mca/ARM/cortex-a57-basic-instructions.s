@@ -874,7 +874,7 @@
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.50                        adc	r1, r2, #15
-# CHECK-NEXT:  1      1     0.50                        adc	pc, r2, #16
+# CHECK-NEXT:  2      3     1.00                        adc	pc, r2, #16
 # CHECK-NEXT:  1      1     0.50                        adc	r1, r2, #240
 # CHECK-NEXT:  1      1     0.50                        adc	r1, r2, #3840
 # CHECK-NEXT:  1      1     0.50                        adc	r1, r2, #61440
@@ -890,9 +890,9 @@
 # CHECK-NEXT:  1      1     0.50                        adcseq	r1, r2, #3840
 # CHECK-NEXT:  1      1     0.50                        adceq	r1, r2, #3840
 # CHECK-NEXT:  1      1     0.50                        adc	r4, r5, r6
-# CHECK-NEXT:  1      1     0.50                        adc	pc, r5, r6
+# CHECK-NEXT:  2      3     1.00                        adc	pc, r5, r6
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, lsl #1
-# CHECK-NEXT:  1      2     1.00                        adc	pc, r5, r6, lsl #4
+# CHECK-NEXT:  2      4     1.00                        adc	pc, r5, r6, lsl #4
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, lsl #31
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, lsr #1
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, lsr #31
@@ -901,7 +901,7 @@
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, asr #31
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, asr #32
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, ror #1
-# CHECK-NEXT:  1      2     1.00                        adc	pc, r5, r6, ror #2
+# CHECK-NEXT:  2      4     1.00                        adc	pc, r5, r6, ror #2
 # CHECK-NEXT:  1      2     1.00                        adc	r4, r5, r6, ror #31
 # CHECK-NEXT:  1      2     1.00                        adc	r6, r7, r8, lsl r9
 # CHECK-NEXT:  1      2     1.00                        adc	r6, r7, r8, lsr r9
@@ -954,10 +954,10 @@
 # CHECK-NEXT:  1      1     0.50                        adds	r7, r8, #-2147483638
 # CHECK-NEXT:  1      1     0.50                        adds	r7, r8, #40, #2
 # CHECK-NEXT:  1      1     0.50                        adr	r2, #3
-# CHECK-NEXT:  1      1     0.50                        and	pc, pc, #8
+# CHECK-NEXT:  2      3     1.00                        and	pc, pc, #8
 # CHECK-NEXT:  1      1     0.50                        sub	r2, pc, #3
 # CHECK-NEXT:  1      1     0.50                        sub	r1, pc, #0
-# CHECK-NEXT:  1      1     0.50                        sub	pc, r2, #8
+# CHECK-NEXT:  2      3     1.00                        sub	pc, r2, #8
 # CHECK-NEXT:  1      1     0.50                        sub	r1, pc, #301989888
 # CHECK-NEXT:  1      1     0.50                        adr	r1, #301989888
 # CHECK-NEXT:  1      1     0.50                        and	r10, r1, #15
@@ -1005,7 +1005,7 @@
 # CHECK-NEXT:  1      2     1.00                        bic	r6, r7, r8, ror r2
 # CHECK-NEXT:  1      2     1.00                        bic	r10, r1, r6, rrx
 # CHECK-NEXT:  1      1     0.50                        bic	r1, r1, #15
-# CHECK-NEXT:  1      1     0.50                        bic	pc, r1, #15
+# CHECK-NEXT:  2      3     1.00                        bic	pc, r1, #15
 # CHECK-NEXT:  1      1     0.50                        bic	r10, r10, r1
 # CHECK-NEXT:  1      2     1.00                        bic	r10, r10, r1, lsl #10
 # CHECK-NEXT:  1      2     1.00                        bic	r10, r10, r1, lsr #10
@@ -1102,7 +1102,7 @@
 # CHECK-NEXT:  1      1     0.50                        eor	r7, r8, #-2147483638
 # CHECK-NEXT:  1      1     0.50                        eor	r7, r8, #40, #2
 # CHECK-NEXT:  1      1     0.50                        eor	r4, r5, r6
-# CHECK-NEXT:  1      1     0.50                        eor	pc, r5, r6
+# CHECK-NEXT:  2      3     1.00                        eor	pc, r5, r6
 # CHECK-NEXT:  1      2     1.00                        eor	r4, r5, r6, lsl #5
 # CHECK-NEXT:  1      2     1.00                        eor	r4, r5, r6, lsr #5
 # CHECK-NEXT:  1      2     1.00                        eor	r4, r5, r6, lsr #5
@@ -1746,12 +1746,12 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 8.00   144.50 144.50 53.00  524.00 12.00   -      -
+# CHECK-NEXT: 16.00  144.50 144.50 53.00  524.00 12.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	r1, r2, #15
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	pc, r2, #16
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     adc	pc, r2, #16
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	r1, r2, #240
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	r1, r2, #3840
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	r1, r2, #61440
@@ -1767,9 +1767,9 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adcseq	r1, r2, #3840
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adceq	r1, r2, #3840
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	r4, r5, r6
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adc	pc, r5, r6
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     adc	pc, r5, r6
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, lsl #1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	pc, r5, r6, lsl #4
+# CHECK-NEXT: 1.00    -      -      -     1.00    -      -      -     adc	pc, r5, r6, lsl #4
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, lsl #31
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, lsr #1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, lsr #31
@@ -1778,7 +1778,7 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, asr #31
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, asr #32
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, ror #1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	pc, r5, r6, ror #2
+# CHECK-NEXT: 1.00    -      -      -     1.00    -      -      -     adc	pc, r5, r6, ror #2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r4, r5, r6, ror #31
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r6, r7, r8, lsl r9
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     adc	r6, r7, r8, lsr r9
@@ -1831,10 +1831,10 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adds	r7, r8, #-2147483638
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adds	r7, r8, #40, #2
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adr	r2, #3
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     and	pc, pc, #8
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     and	pc, pc, #8
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sub	r2, pc, #3
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sub	r1, pc, #0
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sub	pc, r2, #8
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     sub	pc, r2, #8
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sub	r1, pc, #301989888
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     adr	r1, #301989888
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     and	r10, r1, #15
@@ -1882,7 +1882,7 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bic	r6, r7, r8, ror r2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bic	r10, r1, r6, rrx
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     bic	r1, r1, #15
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     bic	pc, r1, #15
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     bic	pc, r1, #15
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     bic	r10, r10, r1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bic	r10, r10, r1, lsl #10
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bic	r10, r10, r1, lsr #10
@@ -1979,7 +1979,7 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     eor	r7, r8, #-2147483638
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     eor	r7, r8, #40, #2
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     eor	r4, r5, r6
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     eor	pc, r5, r6
+# CHECK-NEXT: 1.00   0.50   0.50    -      -      -      -      -     eor	pc, r5, r6
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     eor	r4, r5, r6, lsl #5
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     eor	r4, r5, r6, lsr #5
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     eor	r4, r5, r6, lsr #5

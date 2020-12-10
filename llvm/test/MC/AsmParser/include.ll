@@ -3,7 +3,7 @@
 
 module asm ".include \22module.x\22"
 
-define arm_aapcscc void @f() {
+define void @f() {
 entry:
   call void asm sideeffect ".include \22function.x\22", ""()
   ret void

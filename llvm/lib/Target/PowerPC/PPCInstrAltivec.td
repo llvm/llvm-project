@@ -933,6 +933,18 @@ def : Pat<(v1i128 (bitconvert (v4i32 VRRC:$src))), (v1i128 VRRC:$src)>;
 def : Pat<(v1i128 (bitconvert (v4f32 VRRC:$src))), (v1i128 VRRC:$src)>;
 def : Pat<(v1i128 (bitconvert (v2i64 VRRC:$src))), (v1i128 VRRC:$src)>;
 
+def : Pat<(f128 (bitconvert (v16i8 VRRC:$src))), (f128 VRRC:$src)>;
+def : Pat<(f128 (bitconvert (v8i16 VRRC:$src))), (f128 VRRC:$src)>;
+def : Pat<(f128 (bitconvert (v4i32 VRRC:$src))), (f128 VRRC:$src)>;
+def : Pat<(f128 (bitconvert (v4f32 VRRC:$src))), (f128 VRRC:$src)>;
+def : Pat<(f128 (bitconvert (v2f64 VRRC:$src))), (f128 VRRC:$src)>;
+
+def : Pat<(v16i8 (bitconvert (f128 VRRC:$src))), (v16i8 VRRC:$src)>;
+def : Pat<(v8i16 (bitconvert (f128 VRRC:$src))), (v8i16 VRRC:$src)>;
+def : Pat<(v4i32 (bitconvert (f128 VRRC:$src))), (v4i32 VRRC:$src)>;
+def : Pat<(v4f32 (bitconvert (f128 VRRC:$src))), (v4f32 VRRC:$src)>;
+def : Pat<(v2f64 (bitconvert (f128 VRRC:$src))), (v2f64 VRRC:$src)>;
+
 // Max/Min
 def : Pat<(v16i8 (umax v16i8:$src1, v16i8:$src2)),
           (v16i8 (VMAXUB $src1, $src2))>;

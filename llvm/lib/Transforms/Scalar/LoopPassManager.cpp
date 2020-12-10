@@ -88,6 +88,152 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 }
 }
 
+PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+  // Before we even compute any loop analyses, first run a miniature function
+  // pass pipeline to put loops into their canonical form. Note that we can
+  // directly build up function analyses after this as the function pass
+  // manager handles all the invalidation at that layer.
+  PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(F);
+
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  // Check the PassInstrumentation's BeforePass callbacks before running the
+  // canonicalization pipeline.
+  if (PI.runBeforePass<Function>(LoopCanonicalizationFPM, F)) {
+    PA = LoopCanonicalizationFPM.run(F, AM);
+    PI.runAfterPass<Function>(LoopCanonicalizationFPM, F, PA);
+  }
+
+  // Get the loop structure for this function
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+
+  // If there are no loops, there is nothing to do here.
+  if (LI.empty())
+    return PA;
+
+  // Get the analysis results needed by loop passes.
+  MemorySSA *MSSA =
+      UseMemorySSA ? (&AM.getResult<MemorySSAAnalysis>(F).getMSSA()) : nullptr;
+  BlockFrequencyInfo *BFI = UseBlockFrequencyInfo && F.hasProfileData()
+                                ? (&AM.getResult<BlockFrequencyAnalysis>(F))
+                                : nullptr;
+  LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
+                                     AM.getResult<AssumptionAnalysis>(F),
+                                     AM.getResult<DominatorTreeAnalysis>(F),
+                                     AM.getResult<LoopAnalysis>(F),
+                                     AM.getResult<ScalarEvolutionAnalysis>(F),
+                                     AM.getResult<TargetLibraryAnalysis>(F),
+                                     AM.getResult<TargetIRAnalysis>(F),
+                                     BFI,
+                                     MSSA};
+
+  // Setup the loop analysis manager from its proxy. It is important that
+  // this is only done when there are loops to process and we have built the
+  // LoopStandardAnalysisResults object. The loop analyses cached in this
+  // manager have access to those analysis results and so it must invalidate
+  // itself when they go away.
+  auto &LAMFP = AM.getResult<LoopAnalysisManagerFunctionProxy>(F);
+  if (UseMemorySSA)
+    LAMFP.markMSSAUsed();
+  LoopAnalysisManager &LAM = LAMFP.getManager();
+
+  // A postorder worklist of loops to process.
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+
+  // Register the worklist and loop analysis manager so that loop passes can
+  // update them when they mutate the loop nest structure.
+  LPMUpdater Updater(Worklist, LAM);
+
+  // Add the loop nests in the reverse order of LoopInfo. See method
+  // declaration.
+  appendLoopsToWorklist(LI, Worklist);
+
+#ifndef NDEBUG
+  PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
+    if (isSpecialPass(PassID, {"PassManager"}))
+      return;
+    assert(any_isa<const Loop *>(IR));
+    const Loop *L = any_cast<const Loop *>(IR);
+    assert(L && "Loop should be valid for printing");
+
+    // Verify the loop structure and LCSSA form before visiting the loop.
+    L->verifyLoop();
+    assert(L->isRecursivelyLCSSAForm(LAR.DT, LI) &&
+           "Loops must remain in LCSSA form!");
+  });
+#endif
+
+  do {
+    Loop *L = Worklist.pop_back_val();
+
+    // Reset the update structure for this loop.
+    Updater.CurrentL = L;
+    Updater.SkipCurrentLoop = false;
+
+#ifndef NDEBUG
+    // Save a parent loop pointer for asserts.
+    Updater.ParentL = L->getParentLoop();
+#endif
+    // Check the PassInstrumentation's BeforePass callbacks before running the
+    // pass, skip its execution completely if asked to (callback returns
+    // false).
+    if (!PI.runBeforePass<Loop>(*Pass, *L))
+      continue;
+
+    PreservedAnalyses PassPA;
+    {
+      TimeTraceScope TimeScope(Pass->name());
+      PassPA = Pass->run(*L, LAM, LAR, Updater);
+    }
+
+    // Do not pass deleted Loop into the instrumentation.
+    if (Updater.skipCurrentLoop())
+      PI.runAfterPassInvalidated<Loop>(*Pass, PassPA);
+    else
+      PI.runAfterPass<Loop>(*Pass, *L, PassPA);
+
+    // FIXME: We should verify the set of analyses relevant to Loop passes
+    // are preserved.
+
+    // If the loop hasn't been deleted, we need to handle invalidation here.
+    if (!Updater.skipCurrentLoop())
+      // We know that the loop pass couldn't have invalidated any other
+      // loop's analyses (that's the contract of a loop pass), so directly
+      // handle the loop analysis manager's invalidation here.
+      LAM.invalidate(*L, PassPA);
+
+    // Then intersect the preserved set so that invalidation of module
+    // analyses will eventually occur when the module pass completes.
+    PA.intersect(std::move(PassPA));
+  } while (!Worklist.empty());
+
+#ifndef NDEBUG
+  PI.popBeforeNonSkippedPassCallback();
+#endif
+
+  // By definition we preserve the proxy. We also preserve all analyses on
+  // Loops. This precludes *any* invalidation of loop analyses by the proxy,
+  // but that's OK because we've taken care to invalidate analyses in the
+  // loop analysis manager incrementally above.
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  PA.preserve<LoopAnalysisManagerFunctionProxy>();
+  // We also preserve the set of standard analyses.
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  if (UseBlockFrequencyInfo && F.hasProfileData())
+    PA.preserve<BlockFrequencyAnalysis>();
+  if (UseMemorySSA)
+    PA.preserve<MemorySSAAnalysis>();
+  // FIXME: What we really want to do here is preserve an AA category, but
+  // that concept doesn't exist yet.
+  PA.preserve<AAManager>();
+  PA.preserve<BasicAA>();
+  PA.preserve<GlobalsAA>();
+  PA.preserve<SCEVAA>();
+  return PA;
+}
+
 PrintLoopPass::PrintLoopPass() : OS(dbgs()) {}
 PrintLoopPass::PrintLoopPass(raw_ostream &OS, const std::string &Banner)
     : OS(OS), Banner(Banner) {}

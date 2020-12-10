@@ -315,7 +315,7 @@ define fp128 @TestI128_4(fp128 %x) #0 {
 ; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    jmp __addtf3 # TAILCALL
+; SSE-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; AVX-LABEL: TestI128_4:
 ; AVX:       # %bb.0: # %entry
@@ -325,7 +325,7 @@ define fp128 @TestI128_4(fp128 %x) #0 {
 ; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    jmp __addtf3 # TAILCALL
+; AVX-NEXT:    jmp __addtf3@PLT # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616
@@ -370,7 +370,7 @@ define fp128 @acosl(fp128 %x) #0 {
 ; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    jmp __addtf3 # TAILCALL
+; SSE-NEXT:    jmp __addtf3@PLT # TAILCALL
 ;
 ; AVX-LABEL: acosl:
 ; AVX:       # %bb.0: # %entry
@@ -380,7 +380,7 @@ define fp128 @acosl(fp128 %x) #0 {
 ; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    jmp __addtf3 # TAILCALL
+; AVX-NEXT:    jmp __addtf3@PLT # TAILCALL
 entry:
   %0 = bitcast fp128 %x to i128
   %bf.clear = and i128 %0, -18446744073709551616
@@ -417,7 +417,7 @@ entry:
   ret fp128 %cond
 }
 
-declare void @foo(fp128) #1
+declare dso_local void @foo(fp128) #1
 
 ; Test logical operations on fp128 values.
 define fp128 @TestFABS_LD(fp128 %x) #0 {
@@ -440,7 +440,7 @@ declare fp128 @fabsl(fp128) #1
 declare fp128 @copysignl(fp128, fp128) #1
 
 ; Test more complicated logical operations generated from copysignl.
-define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret %agg.result, { fp128, fp128 }* byval nocapture readonly align 16 %z) #0 {
+define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ fp128, fp128 }) %agg.result, { fp128, fp128 }* byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
 ; SSE-LABEL: TestCopySign:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rbp

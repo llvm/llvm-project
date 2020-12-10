@@ -9,7 +9,6 @@
 ; RUN: opt < %s -cost-model -mtriple=x86_64-apple-darwin -analyze -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512
 ; RUN: opt < %s -cost-model -mtriple=x86_64-apple-darwin -analyze -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512
 
-; CHECK: {{^}}
 define void @reduce_f64(double %arg) {
 ; SSE2-LABEL: 'reduce_f64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call double @llvm.vector.reduce.fmul.v1f64(double %arg, <1 x double> undef)

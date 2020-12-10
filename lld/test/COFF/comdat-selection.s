@@ -32,11 +32,11 @@ symbol:
 # RUN: cp %t.same_size.obj %t.obj && lld-link /dll /noentry /nodefaultlib %t.same_size.obj %t.obj
 # RUN: cp %t.same_contents.obj %t.obj && lld-link /dll /noentry /nodefaultlib %t.same_contents.obj %t.obj
 # RUN: cp %t.largest.obj %t.obj && lld-link /dll /noentry /nodefaultlib %t.largest.obj %t.obj
-# RUN: cp %t.newest.obj %t.obj && not lld-link /dll /noentry /nodefaultlib %t.newest.obj %t.obj 2>&1 | FileCheck --check-prefix=NEWNEW %s
+# RUN: cp %t.newest.obj %t.obj && env LLD_IN_TEST=1 not lld-link /dll /noentry /nodefaultlib %t.newest.obj %t.obj 2>&1 | FileCheck --check-prefix=NEWNEW %s
 # NEWNEW: lld-link: error: unknown comdat type 7 for symbol
 
 # /force doesn't affect errors about unknown comdat types.
-# RUN: cp %t.newest.obj %t.obj && not lld-link /force /dll /noentry /nodefaultlib %t.newest.obj %t.obj 2>&1 | FileCheck --check-prefix=NEWNEWFORCE %s
+# RUN: cp %t.newest.obj %t.obj && env LLD_IN_TEST=1 not lld-link /force /dll /noentry /nodefaultlib %t.newest.obj %t.obj 2>&1 | FileCheck --check-prefix=NEWNEWFORCE %s
 # NEWNEWFORCE: lld-link: error: unknown comdat type 7 for symbol
 
 # Check that same_size, same_contents, largest do what they're supposed to.

@@ -37,7 +37,8 @@
 // CK25: [[CA01:%.+]] = type { i32* }
 
 // CK25-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK25: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710657]
+// CK25: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK25: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
 // CK25-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK25: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
@@ -52,29 +53,17 @@ struct CC {
 
   int foo(T arg) {
     // Region 00
-    // CK25-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+    // CK25-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]]{{.+}}, {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
     // CK25-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK25-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-    // CK25-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
     // CK25-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
     // CK25-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK25-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
     // CK25-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
     // CK25-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
     // CK25-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
     // CK25-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
-    // CK25-DAG: store i64 {{%.+}}, i64* [[S0]]
     // CK25-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0:%.+]], i{{.+}} 0, i{{.+}} 0
-
-    // CK25-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-    // CK25-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK25-DAG: [[S1:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 1
-    // CK25-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
-    // CK25-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-    // CK25-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CBP1]]
-    // CK25-DAG: store i32* [[SEC0]], i32** [[CP1]]
-    // CK25-DAG: store i64 {{.+}}, i64* [[S1]]
 
     // CK25: call void [[CALL00:@.+]]([[ST]]* {{[^,]+}})
     #pragma omp target map(to:A)
@@ -85,7 +74,7 @@ struct CC {
     }
 
     // Region 01
-    // CK25-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null)
+    // CK25-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null)
     // CK25-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK25-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -118,7 +107,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: [[VAL1:%.+]] = load [[ST]]*, [[ST]]** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA00]], [[CA00]]* [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store [[ST]]* [[VAL1]], [[ST]]** [[VALADDR1]],
-// CK25: call void {{.*}}[[LAMBDA:@.+]]{{.*}}([[CA00]]* [[CA]])
+// CK25: call void {{.*}}[[LAMBDA:@.+]]{{.*}}([[CA00]]* {{[^,]*}} [[CA]])
 
 // CK25: define {{.+}}[[LAMBDA]]
 
@@ -127,7 +116,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: [[VAL1:%.+]] = load i32*, i32** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA01]], [[CA01]]* [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store i32* [[VAL1]], i32** [[VALADDR1]],
-// CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}([[CA01]]* [[CA]])
+// CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}([[CA01]]* {{[^,]*}} [[CA]])
 
 // CK25: define {{.+}}[[LAMBDA2]]
 #endif // CK25

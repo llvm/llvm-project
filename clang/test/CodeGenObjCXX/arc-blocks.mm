@@ -31,12 +31,12 @@ namespace test0 {
   // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[V]], i32 0, i32 6
   // CHECK-NEXT: store i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[LAYOUT0]], i32 0, i32 0), i8** [[T0]]
   // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[V]], i32 0, i32 7
-  // CHECK-NEXT: call void @_ZN5test01AC1Ev([[A]]* [[T0]])
+  // CHECK-NEXT: call void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} [[T0]])
   // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[V]], i32 0, i32 7
   // CHECK: bitcast [[BYREF_A]]* [[V]] to i8*
   // CHECK: [[T1:%.*]] = bitcast [[BYREF_A]]* [[V]] to i8*
   // CHECK-NEXT: call void @_Block_object_dispose(i8* [[T1]], i32 8)
-  // CHECK-NEXT: call void @_ZN5test01AD1Ev([[A]]* [[T0]])
+  // CHECK-NEXT: call void @_ZN5test01AD1Ev([[A]]* {{[^,]*}} [[T0]])
   // CHECK-NEXT: ret void
 
   // CHECK:    define internal void [[COPY_HELPER]](
@@ -45,13 +45,13 @@ namespace test0 {
   // CHECK-NEXT: load
   // CHECK-NEXT: [[T2:%.*]] = bitcast i8* {{.*}} to [[BYREF_A]]*
   // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[T2]], i32 0, i32 7
-  // CHECK-NEXT: call void @_ZN5test01AC1ERKS0_([[A]]* [[T1]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T3]])
+  // CHECK-NEXT: call void @_ZN5test01AC1ERKS0_([[A]]* {{[^,]*}} [[T1]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T3]])
   // CHECK-NEXT: ret void
 
   // CHECK:    define internal void [[DISPOSE_HELPER]](
   // CHECK:      [[T0:%.*]] = bitcast i8* {{.*}} to [[BYREF_A]]*
   // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[T0]], i32 0, i32 7
-  // CHECK-NEXT: call void @_ZN5test01AD1Ev([[A]]* [[T1]])
+  // CHECK-NEXT: call void @_ZN5test01AD1Ev([[A]]* {{[^,]*}} [[T1]])
   // CHECK-NEXT: ret void
 }
 
@@ -86,13 +86,13 @@ namespace test1 {
 
 // CHECK: %[[V11:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 8
 // CHECK: %[[V12:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 8
-// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V12]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V11]])
+// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V12]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V11]])
 // CHECK: to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 
 // CHECK: [[INVOKE_CONT]]:
 // CHECK: %[[V13:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 9
 // CHECK: %[[V14:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 9
-// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V14]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V13]])
+// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V14]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V13]])
 // CHECK: to label %[[INVOKE_CONT4:.*]] unwind label %[[LPAD3:.*]]
 
 // CHECK: [[INVOKE_CONT4]]:
@@ -102,7 +102,7 @@ namespace test1 {
 // CHECK: br label %[[EHCLEANUP:.*]]
 
 // CHECK: [[LPAD3]]:
-// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* %[[V12]])
+// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V12]])
 // CHECK: to label %[[INVOKE_CONT5:.*]] unwind label %[[TERMINATE_LPAD:.*]]
 
 // CHECK: [[INVOKE_CONT5]]:
@@ -132,11 +132,11 @@ namespace test1 {
 // CHECK: %[[V3:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK]], i32 0, i32 7
 // CHECK: %[[V5:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK]], i32 0, i32 8
 // CHECK: %[[V6:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK]], i32 0, i32 9
-// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* %[[V6]])
+// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V6]])
 // CHECK: to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 
 // CHECK: [[INVOKE_CONT]]:
-// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* %[[V5]])
+// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V5]])
 // CHECK: to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD1:.*]]
 
 // CHECK: [[INVOKE_CONT2]]:
@@ -147,7 +147,7 @@ namespace test1 {
 // CHECK: ret void
 
 // CHECK: [[LPAD]]:
-// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* %[[V5]])
+// CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* {{[^,]*}} %[[V5]])
 // CHECK: to label %[[INVOKE_CONT3:.*]] unwind label %[[TERMINATE_LPAD:.*]]
 
 // CHECK: [[LPAD1]]

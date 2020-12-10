@@ -413,6 +413,48 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ldexp_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexp_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexp
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpf_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpl_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   logb_test
   SUITE
     libc_math_unittests
@@ -644,6 +686,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquof_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquof
@@ -657,6 +701,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquo_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquo
@@ -670,6 +716,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     remquol_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
     libc.src.math.remquol
@@ -686,5 +734,18 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.hypotf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  hypot_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    hypot_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.hypot
     libc.utils.FPUtil.fputil
 )

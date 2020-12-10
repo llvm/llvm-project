@@ -166,9 +166,9 @@ define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: mismatched_byval:
 ; CHECK: i32.store
 ; CHECK: return_call quux, $pop{{[0-9]+}}{{$}}
-declare i32 @quux(i32* byval)
+declare i32 @quux(i32* byval(i32))
 define i32 @mismatched_byval(i32* %x) {
-  %v = tail call i32 @quux(i32* byval %x)
+  %v = tail call i32 @quux(i32* byval(i32) %x)
   ret i32 %v
 }
 

@@ -4,11 +4,11 @@
 // RUN: llvm-objdump -r %t | FileCheck --check-prefixes=RELOC,RELOC5 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 4 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefixes=DWARF,DWARF34,DWARF4 %s
-// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -check-prefix DWARF-DL-4 -DDWVER=4 -DDWFILE=1 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck --check-prefixes=DWARF-DL,DWARF-DL-3 -DDWVER=4 -DDWFILE=1 %s
 // RUN: llvm-objdump -r %t | FileCheck --check-prefixes=RELOC,RELOC34,RELOC4 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 3 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck --check-prefixes=DWARF,DWARF34,DWARF3 %s
-// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -DDWVER=3 -DDWFILE=1 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck --check-prefixes=DWARF-DL,DWARF-DL-3 -DDWVER=3 -DDWFILE=1 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 2 2>&1 | FileCheck -check-prefix VERSION %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 1 2>&1 | FileCheck -check-prefix DWARF1 %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 6 2>&1 | FileCheck -check-prefix DWARF6 %s
@@ -19,6 +19,16 @@ a:
   .section foo, "ax"
 b:
   mov r1, r1
+
+// Non-executable sections do not contribute address ranges.
+  .section .rodata, "a"
+c:
+  mov r2, r2
+
+// Non-SHF_ALLOC sections do not contribute address ranges.
+  .section nonalloc, "x"
+d:
+  mov r3, r3
 
 // DWARF: .debug_abbrev contents:
 // DWARF: Abbrev table for offset: 0x00000000
@@ -47,11 +57,14 @@ b:
 // DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2]
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("b")
 
+// DWARF-NOT: DW_TAG_label
+
 
 // DWARF: .debug_aranges contents:
 // DWARF-NEXT: Address Range Header: length = 0x00000024, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
 // DWARF-NEXT: [0x00000000, 0x00000004)
 // DWARF-NEXT: [0x00000000, 0x00000004)
+// DWARF-EMPTY:
 
 
 // DWARF-DL: .debug_line contents:
@@ -64,10 +77,11 @@ b:
 // DWARF-DL-5-NEXT: 0x0000000000000004     17      0      0   0   0  is_stmt end_sequence
 // DWARF-DL-5-NEXT: 0x0000000000000000     21      0      0   0   0  is_stmt
 // DWARF-DL-5-NEXT: 0x0000000000000004     21      0      0   0   0  is_stmt end_sequence
-// DWARF-DL-4:      0x0000000000000000     17      0      1   0   0  is_stmt
-// DWARF-DL-4-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
-// DWARF-DL-4-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
-// DWARF-DL-4-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-3:      0x0000000000000000     17      0      1   0   0  is_stmt
+// DWARF-DL-3-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-3-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
+// DWARF-DL-3-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-EMPTY:
 
 
 // DWARF34:      .debug_ranges contents:

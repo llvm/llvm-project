@@ -26,8 +26,8 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
 }
 
 namespace {
-struct ConvertStdElementwiseOpOnRankedTensors : public RewritePattern {
-  ConvertStdElementwiseOpOnRankedTensors()
+struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
+  ConvertAnyElementwiseMappableOpOnRankedTensors()
       : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
@@ -68,7 +68,7 @@ struct ConvertStdElementwiseOpOnRankedTensors : public RewritePattern {
 
 void mlir::populateElementwiseToLinalgConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *) {
-  patterns.insert<ConvertStdElementwiseOpOnRankedTensors>();
+  patterns.insert<ConvertAnyElementwiseMappableOpOnRankedTensors>();
 }
 
 namespace {

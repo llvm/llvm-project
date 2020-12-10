@@ -15,11 +15,11 @@ FileHeader:
 # CHECK: --- !mach-o
 # CHECK: FileHeader:      
 # CHECK:   magic:           0xFEEDFACF
-# CHECK:   cputype:         0x01000007
+# CHECK:   cputype:         0x1000007
 # CHECK:   cpusubtype:      0x80000003
-# CHECK:   filetype:        0x00000002
+# CHECK:   filetype:        0x2
 # CHECK:   ncmds:           0
 # CHECK:   sizeofcmds:      0
-# CHECK:   flags:           0x00218085
-# CHECK:   reserved:        0x00000000
+# CHECK:   flags:           0x218085
+# CHECK:   reserved:        0x0
 # CHECK: ...

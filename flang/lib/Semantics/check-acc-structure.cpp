@@ -23,13 +23,10 @@
 namespace Fortran::semantics {
 
 static constexpr inline AccClauseSet
-    parallelAndKernelsOnlyAllowedAfterDeviceTypeClauses{
+    computeConstructOnlyAllowedAfterDeviceTypeClauses{
         llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,
         llvm::acc::Clause::ACCC_num_gangs, llvm::acc::Clause::ACCC_num_workers,
         llvm::acc::Clause::ACCC_vector_length};
-
-static constexpr inline AccClauseSet serialOnlyAllowedAfterDeviceTypeClauses{
-    llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait};
 
 static constexpr inline AccClauseSet loopOnlyAllowedAfterDeviceTypeClauses{
     llvm::acc::Clause::ACCC_auto, llvm::acc::Clause::ACCC_collapse,
@@ -57,6 +54,35 @@ bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
   return false;
 }
 
+bool AccStructureChecker::IsComputeConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::ACCD_parallel ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  if (dirContext_.size() <= 1)
+    return false;
+
+  // Check all nested context skipping the first one.
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return true;
+  }
+  return false;
+}
+
+void AccStructureChecker::CheckNotInComputeConstruct() {
+  if (IsInsideComputeConstruct())
+    context_.Say(GetContext().directiveSource,
+        "Directive %s may not be called within a compute region"_err_en_US,
+        ContextDirectiveAsFortran());
+}
+
 void AccStructureChecker::Enter(const parser::AccClause &x) {
   SetContextClause(x);
 }
@@ -80,27 +106,19 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
   switch (blockDir.v) {
   case llvm::acc::Directive::ACCD_kernels:
   case llvm::acc::Directive::ACCD_parallel:
-    // Restriction - 880-881 (KERNELS)
-    // Restriction - 843-844 (PARALLEL)
+  case llvm::acc::Directive::ACCD_serial:
+    // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        parallelAndKernelsOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 877 (KERNELS)
-    // Restriction - 840 (PARALLEL)
+        computeConstructOnlyAllowedAfterDeviceTypeClauses);
+    // Restriction - line 1001
     CheckNoBranching(block, GetContext().directive, blockDir.source);
     break;
-  case llvm::acc::Directive::ACCD_serial:
-    // Restriction - 919
-    CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        serialOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 916
-    CheckNoBranching(block, llvm::acc::Directive::ACCD_serial, blockDir.source);
-    break;
   case llvm::acc::Directive::ACCD_data:
-    // Restriction - 1117-1118
+    // Restriction - line 1249-1250
     CheckRequireAtLeastOneOf();
     break;
   case llvm::acc::Directive::ACCD_host_data:
-    // Restriction - 1578
+    // Restriction - line 1746
     CheckRequireAtLeastOneOf();
     break;
   default:
@@ -117,7 +135,7 @@ void AccStructureChecker::Enter(
 
 void AccStructureChecker::Leave(
     const parser::OpenACCStandaloneDeclarativeConstruct &) {
-  // Restriction - 2075
+  // Restriction - line 2409
   CheckAtLeastOneClause();
   dirContext_.pop_back();
 }
@@ -144,18 +162,10 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   switch (combinedDir.v) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
-    // Restriction - 1962 -> (880-881) (KERNELS LOOP)
-    // Restriction - 1962 -> (843-844) (PARALLEL LOOP)
-    CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        {llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,
-            llvm::acc::Clause::ACCC_num_gangs,
-            llvm::acc::Clause::ACCC_num_workers,
-            llvm::acc::Clause::ACCC_vector_length});
-    break;
   case llvm::acc::Directive::ACCD_serial_loop:
-    // Restriction - 1962 -> (919) (SERIAL LOOP)
+    // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        {llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait});
+        computeConstructOnlyAllowedAfterDeviceTypeClauses);
     break;
   default:
     break;
@@ -173,10 +183,10 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
   if (loopDir.v == llvm::acc::Directive::ACCD_loop) {
-    // Restriction - 1615-1616
+    // Restriction - line 1818-1819
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         loopOnlyAllowedAfterDeviceTypeClauses);
-    // Restriction - 1622
+    // Restriction - line 1834
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
@@ -194,16 +204,28 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
   switch (standaloneDir.v) {
   case llvm::acc::Directive::ACCD_enter_data:
   case llvm::acc::Directive::ACCD_exit_data:
-  case llvm::acc::Directive::ACCD_set:
-    // Restriction - 1117-1118 (ENTER DATA)
-    // Restriction - 1161-1162 (EXIT DATA)
-    // Restriction - 2254 (SET)
+    // Restriction - line 1310-1311 (ENTER DATA)
+    // Restriction - line 1312-1313 (EXIT DATA)
     CheckRequireAtLeastOneOf();
     break;
+  case llvm::acc::Directive::ACCD_set:
+    // Restriction - line 2610
+    CheckRequireAtLeastOneOf();
+    // Restriction - line 2602
+    CheckNotInComputeConstruct();
+    break;
   case llvm::acc::Directive::ACCD_update:
-    // Restriction - 2301
+    // Restriction - line 2636
+    CheckRequireAtLeastOneOf();
+    // Restriction - line 2669
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
+    break;
+  case llvm::acc::Directive::ACCD_init:
+  case llvm::acc::Directive::ACCD_shutdown:
+    // Restriction - line 2525 (INIT)
+    // Restriction - line 2561 (SHUTDOWN)
+    CheckNotInComputeConstruct();
     break;
   default:
     break;
@@ -215,9 +237,9 @@ void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
 }
 void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
-  // Restriction - 2409
+  // Restriction - line 2790
   CheckRequireAtLeastOneOf();
-  // Restriction - 2407-2408
+  // Restriction - line 2788-2789
   CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
       routineOnlyAllowedAfterDeviceTypeClauses);
   dirContext_.pop_back();
@@ -235,6 +257,15 @@ void AccStructureChecker::Enter(const parser::OpenACCAtomicConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_atomic);
 }
 void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
+  dirContext_.pop_back();
+}
+
+void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
+  const auto &verbatim = std::get<parser::Verbatim>(x.t);
+  PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
+  SetContextDirectiveSource(verbatim.source);
+}
+void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
   dirContext_.pop_back();
 }
 
@@ -272,7 +303,6 @@ CHECK_SIMPLE_CLAUSE(Present, ACCC_present)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
 CHECK_SIMPLE_CLAUSE(Reduction, ACCC_reduction)
-CHECK_SIMPLE_CLAUSE(Self, ACCC_self)
 CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
 CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
@@ -332,6 +362,28 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
           parser::ToUpperCaseLetters(
               llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_copyout)
                   .str()),
+          ContextDirectiveAsFortran());
+    }
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
+  CheckAllowed(llvm::acc::Clause::ACCC_self);
+  const parser::AccSelfClause &accSelfClause = x.v;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_update &&
+      std::holds_alternative<std::optional<parser::ScalarLogicalExpr>>(
+          accSelfClause.u)) {
+    context_.Say(GetContext().clauseSource,
+        "SELF clause on the %s directive must have a var-list"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (GetContext().directive != llvm::acc::Directive::ACCD_update &&
+      std::holds_alternative<parser::AccObjectList>(accSelfClause.u)) {
+    const auto &accObjectList =
+        std::get<parser::AccObjectList>(accSelfClause.u);
+    if (accObjectList.v.size() != 1) {
+      context_.Say(GetContext().clauseSource,
+          "SELF clause on the %s directive only accepts optional scalar logical"
+          " expression"_err_en_US,
           ContextDirectiveAsFortran());
     }
   }

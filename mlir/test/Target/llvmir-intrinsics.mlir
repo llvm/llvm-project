@@ -293,6 +293,59 @@ llvm.func @memcpy_test(%arg0: !llvm.i32, %arg1: !llvm.i1, %arg2: !llvm.ptr<i8>, 
   llvm.return
 }
 
+// CHECK-LABEL: @sadd_with_overflow_test
+llvm.func @sadd_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.sadd.with.overflow.i32
+  "llvm.intr.sadd.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.sadd.with.overflow.v8i32
+  "llvm.intr.sadd.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @uadd_with_overflow_test
+llvm.func @uadd_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.uadd.with.overflow.i32
+  "llvm.intr.uadd.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.uadd.with.overflow.v8i32
+  "llvm.intr.uadd.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @ssub_with_overflow_test
+llvm.func @ssub_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.ssub.with.overflow.i32
+  "llvm.intr.ssub.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.ssub.with.overflow.v8i32
+  "llvm.intr.ssub.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @usub_with_overflow_test
+llvm.func @usub_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.usub.with.overflow.i32
+  "llvm.intr.usub.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32
+  "llvm.intr.usub.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @smul_with_overflow_test
+llvm.func @smul_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.smul.with.overflow.i32
+  "llvm.intr.smul.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.smul.with.overflow.v8i32
+  "llvm.intr.smul.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @umul_with_overflow_test
+llvm.func @umul_with_overflow_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i32>, %arg3: !llvm.vec<8 x i32>) {
+  // CHECK: call { i32, i1 } @llvm.umul.with.overflow.i32
+  "llvm.intr.umul.with.overflow"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
+  // CHECK: call { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32
+  "llvm.intr.umul.with.overflow"(%arg2, %arg3) : (!llvm.vec<8 x i32>, !llvm.vec<8 x i32>) -> !llvm.struct<(vec<8 x i32>, vec<8 x i1>)>
+  llvm.return
+}
 
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
@@ -330,3 +383,13 @@ llvm.func @memcpy_test(%arg0: !llvm.i32, %arg1: !llvm.i1, %arg2: !llvm.ptr<i8>, 
 // CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, float*, <7 x i1>)
 // CHECK-DAG: declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64 immarg, i1 immarg)
+// CHECK-DAG: declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
+// CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.sadd.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
+// CHECK-DAG: declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
+// CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.uadd.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
+// CHECK-DAG: declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+// CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.ssub.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
+// CHECK-DAG: declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
+// CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
+// CHECK-DAG: declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
+// CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0

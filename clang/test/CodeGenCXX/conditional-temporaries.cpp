@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 -fno-experimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT,CHECK-LEGACY-OPT
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fexperimental-new-pass-manager -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT,X64-NEWPM-OPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT,CHECK-OPT-NEWPM,AMDGCN-NEWPM-OPT
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgcn-amd-amdhsa -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-OPT,AMDGCN-NEWPM-OPT
 
 namespace {
 

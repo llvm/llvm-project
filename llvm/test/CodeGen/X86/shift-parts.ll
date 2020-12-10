@@ -4,7 +4,7 @@
 
 %0 = type { i32, i8, [35 x i8] }
 
-@g_144 = external global %0, align 8              ; <%0*> [#uses=1]
+@g_144 = external dso_local global %0, align 8              ; <%0*> [#uses=1]
 
 define i32 @int87(i32 %uint64p_8, i1 %cond) nounwind {
 ; CHECK-LABEL: int87:

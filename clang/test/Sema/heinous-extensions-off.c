@@ -3,8 +3,8 @@
 int foo() {
         int a;
         // PR3788
-        asm("nop" : : "m"((int)(a))); // expected-error {{cast in a inline asm context requiring an l-value}}
+        asm("nop" : : "m"((int)(a))); // expected-error {{cast in a inline asm context requiring an lvalue}}
         // PR3794
-        asm("nop" : "=r"((unsigned)a)); // expected-error {{cast in a inline asm context requiring an l-value}}
+        asm("nop" : "=r"((unsigned)a)); // expected-error {{cast in a inline asm context requiring an lvalue}}
 }
 

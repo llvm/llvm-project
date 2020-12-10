@@ -130,7 +130,8 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     SymbolContext sym_ctx =
         prev_frame_sp->GetSymbolContext(eSymbolContextEverything);
 
-    if (!sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
+    if (!sym_ctx.module_sp ||
+        !sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
       continue;
 
     ConstString func_name = sym_ctx.GetFunctionName();

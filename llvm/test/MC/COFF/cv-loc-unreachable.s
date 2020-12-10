@@ -34,7 +34,7 @@
 
 # CODEVIEW:      S_INLINESITE [size = 26]
 # CODEVIEW-NEXT: inlinee = 0x1002 (do_exit), parent = 0, end = 0
-# CODEVIEW-NEXT:   0602      line 1 (+1)
+# CODEVIEW-NEXT:   0B20      code 0x0 (+0x0) line 1 (+1)
 # CODEVIEW-NEXT:   0409      code end 0x9 (+0x9)
 # CODEVIEW-NEXT:   0B21      code 0xA (+0x1) line 2 (+1)
 # CODEVIEW-NEXT:   0B28      code 0x12 (+0x8) line 3 (+1)

@@ -54,6 +54,11 @@ void Terminator::RegisterCrashHandler(
       line);
 }
 
+[[noreturn]] void Terminator::CheckFailed(const char *predicate) const {
+  Crash("Internal error: RUNTIME_CHECK(%s) failed at %s(%d)", predicate,
+      sourceFileName_, sourceLine_);
+}
+
 // TODO: These will be defined in the coarray runtime library
 void NotifyOtherImagesOfNormalEnd() {}
 void NotifyOtherImagesOfFailImageStatement() {}

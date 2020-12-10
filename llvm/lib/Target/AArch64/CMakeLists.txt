@@ -1,3 +1,5 @@
+add_llvm_component_group(AArch64 HAS_JIT)
+
 set(LLVM_TARGET_DEFINITIONS AArch64.td)
 
 tablegen(LLVM AArch64GenAsmMatcher.inc -gen-asm-matcher)
@@ -78,6 +80,26 @@ add_llvm_target(AArch64CodeGen
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  AArch64Desc
+  AArch64Info
+  AArch64Utils
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  GlobalISel
+  CFGuard
+
+  ADD_TO_COMPONENT
+  AArch64
 )
 
 add_subdirectory(AsmParser)

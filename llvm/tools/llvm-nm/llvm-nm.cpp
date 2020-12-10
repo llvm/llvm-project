@@ -316,18 +316,20 @@ struct NMSymbol {
 static bool compareSymbolAddress(const NMSymbol &A, const NMSymbol &B) {
   bool ADefined;
   // Symbol flags have been checked in the caller.
-  uint32_t AFlags = cantFail(A.Sym.getFlags());
-  if (A.Sym.getRawDataRefImpl().p)
+  if (A.Sym.getRawDataRefImpl().p) {
+    uint32_t AFlags = cantFail(A.Sym.getFlags());
     ADefined = !(AFlags & SymbolRef::SF_Undefined);
-  else
+  } else {
     ADefined = A.TypeChar != 'U';
+  }
   bool BDefined;
   // Symbol flags have been checked in the caller.
-  uint32_t BFlags = cantFail(B.Sym.getFlags());
-  if (B.Sym.getRawDataRefImpl().p)
+  if (B.Sym.getRawDataRefImpl().p) {
+    uint32_t BFlags = cantFail(B.Sym.getFlags());
     BDefined = !(BFlags & SymbolRef::SF_Undefined);
-  else
+  } else {
     BDefined = B.TypeChar != 'U';
+  }
   return std::make_tuple(ADefined, A.Address, A.Name, A.Size) <
          std::make_tuple(BDefined, B.Address, B.Name, B.Size);
 }

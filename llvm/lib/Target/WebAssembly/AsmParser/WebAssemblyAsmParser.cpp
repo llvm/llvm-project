@@ -339,6 +339,8 @@ public:
         .Case("f32", WebAssembly::BlockType::F32)
         .Case("f64", WebAssembly::BlockType::F64)
         .Case("v128", WebAssembly::BlockType::V128)
+        .Case("funcref", WebAssembly::BlockType::Funcref)
+        .Case("externref", WebAssembly::BlockType::Externref)
         .Case("exnref", WebAssembly::BlockType::Exnref)
         .Case("void", WebAssembly::BlockType::Void)
         .Default(WebAssembly::BlockType::Invalid);

@@ -753,10 +753,6 @@ namespace rdf {
 
     NodeAddr<RefNode*> getNextRelated(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA) const;
-    NodeAddr<RefNode*> getNextImp(NodeAddr<InstrNode*> IA,
-        NodeAddr<RefNode*> RA, bool Create);
-    NodeAddr<RefNode*> getNextImp(NodeAddr<InstrNode*> IA,
-        NodeAddr<RefNode*> RA) const;
     NodeAddr<RefNode*> getNextShadow(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA, bool Create);
     NodeAddr<RefNode*> getNextShadow(NodeAddr<InstrNode*> IA,

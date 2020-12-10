@@ -99,7 +99,7 @@ int main(void) {
 
   C1 c1(f1l);
 // CHECK-DAG:  [[F1L:%[a-z0-9]+]] = load half, half* %{{.*}}, align 2
-// CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* %{{.*}}, half %{{.*}})
+// CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* {{[^,]*}} %{{.*}}, half %{{.*}})
 
   S1<_Float16> s1 = { 132.f16 };
 // CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2

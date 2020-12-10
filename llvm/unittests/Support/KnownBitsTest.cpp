@@ -251,6 +251,36 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, UnaryExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits KnownAbs(Bits);
+    KnownAbs.Zero.setAllBits();
+    KnownAbs.One.setAllBits();
+    KnownBits KnownAbsPoison(KnownAbs);
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      APInt Res = N.abs();
+      KnownAbs.One &= Res;
+      KnownAbs.Zero &= ~Res;
+
+      if (!N.isMinSignedValue()) {
+        KnownAbsPoison.One &= Res;
+        KnownAbsPoison.Zero &= ~Res;
+      }
+    });
+
+    // abs() is conservatively correct, but not guaranteed to be precise.
+    KnownBits ComputedAbs = Known.abs();
+    EXPECT_TRUE(ComputedAbs.Zero.isSubsetOf(KnownAbs.Zero));
+    EXPECT_TRUE(ComputedAbs.One.isSubsetOf(KnownAbs.One));
+
+    KnownBits ComputedAbsPoison = Known.abs(true);
+    EXPECT_TRUE(ComputedAbsPoison.Zero.isSubsetOf(KnownAbsPoison.Zero));
+    EXPECT_TRUE(ComputedAbsPoison.One.isSubsetOf(KnownAbsPoison.One));
+  });
+}
+
 TEST(KnownBitsTest, GetMinMaxVal) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {

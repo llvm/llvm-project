@@ -6,7 +6,7 @@
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
 #map1 = affine_map<(d0, d1) -> (d1)>
 
-func @print_memref_f32(memref<*xf32>)
+func private @print_memref_f32(memref<*xf32>)
 
 func @alloc_2d_filled_f32(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %c0 = constant 0 : index

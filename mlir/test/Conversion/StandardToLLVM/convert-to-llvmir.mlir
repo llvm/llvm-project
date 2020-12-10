@@ -9,8 +9,8 @@ func @empty() {
   return
 }
 
-// CHECK-LABEL: func @body(!llvm.i64)
-func @body(index)
+// CHECK-LABEL: llvm.func @body(!llvm.i64)
+func private @body(index)
 
 // CHECK-LABEL: func @simple_loop() {
 // CHECK32-LABEL: func @simple_loop() {
@@ -155,12 +155,12 @@ func @ml_caller() {
   return
 }
 
-// CHECK-LABEL: func @body_args(!llvm.i64) -> !llvm.i64
-// CHECK32-LABEL: func @body_args(!llvm.i32) -> !llvm.i32
-func @body_args(index) -> index
-// CHECK-LABEL: func @other(!llvm.i64, !llvm.i32) -> !llvm.i32
-// CHECK32-LABEL: func @other(!llvm.i32, !llvm.i32) -> !llvm.i32
-func @other(index, i32) -> i32
+// CHECK-LABEL: llvm.func @body_args(!llvm.i64) -> !llvm.i64
+// CHECK32-LABEL: llvm.func @body_args(!llvm.i32) -> !llvm.i32
+func private @body_args(index) -> index
+// CHECK-LABEL: llvm.func @other(!llvm.i64, !llvm.i32) -> !llvm.i32
+// CHECK32-LABEL: llvm.func @other(!llvm.i32, !llvm.i32) -> !llvm.i32
+func private @other(index, i32) -> i32
 
 // CHECK-LABEL: func @func_args(%arg0: !llvm.i32, %arg1: !llvm.i32) -> !llvm.i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : !llvm.i32
@@ -235,17 +235,17 @@ func @func_args(i32, i32) -> i32 {
   return %7 : i32
 }
 
-// CHECK-LABEL: func @pre(!llvm.i64)
-// CHECK32-LABEL: func @pre(!llvm.i32)
-func @pre(index)
+// CHECK-LABEL: llvm.func @pre(!llvm.i64)
+// CHECK32-LABEL: llvm.func @pre(!llvm.i32)
+func private @pre(index)
 
-// CHECK-LABEL: func @body2(!llvm.i64, !llvm.i64)
-// CHECK32-LABEL: func @body2(!llvm.i32, !llvm.i32)
-func @body2(index, index)
+// CHECK-LABEL: llvm.func @body2(!llvm.i64, !llvm.i64)
+// CHECK32-LABEL: llvm.func @body2(!llvm.i32, !llvm.i32)
+func private @body2(index, index)
 
-// CHECK-LABEL: func @post(!llvm.i64)
-// CHECK32-LABEL: func @post(!llvm.i32)
-func @post(index)
+// CHECK-LABEL: llvm.func @post(!llvm.i64)
+// CHECK32-LABEL: llvm.func @post(!llvm.i32)
+func private @post(index)
 
 // CHECK-LABEL: func @imperfectly_nested_loops() {
 // CHECK-NEXT:  llvm.br ^bb1
@@ -320,11 +320,11 @@ func @imperfectly_nested_loops() {
   return
 }
 
-// CHECK-LABEL: func @mid(!llvm.i64)
-func @mid(index)
+// CHECK-LABEL: llvm.func @mid(!llvm.i64)
+func private @mid(index)
 
-// CHECK-LABEL: func @body3(!llvm.i64, !llvm.i64)
-func @body3(index, index)
+// CHECK-LABEL: llvm.func @body3(!llvm.i64, !llvm.i64)
+func private @body3(index, index)
 
 // A complete function transformation check.
 // CHECK-LABEL: func @more_imperfectly_nested_loops() {
@@ -423,22 +423,22 @@ func @more_imperfectly_nested_loops() {
   return
 }
 
-// CHECK-LABEL: func @get_i64() -> !llvm.i64
-func @get_i64() -> (i64)
-// CHECK-LABEL: func @get_f32() -> !llvm.float
-func @get_f32() -> (f32)
-// CHECK-LABEL: func @get_c16() -> !llvm.struct<(half, half)>
-func @get_c16() -> (complex<f16>)
-// CHECK-LABEL: func @get_c32() -> !llvm.struct<(float, float)>
-func @get_c32() -> (complex<f32>)
-// CHECK-LABEL: func @get_c64() -> !llvm.struct<(double, double)>
-func @get_c64() -> (complex<f64>)
-// CHECK-LABEL: func @get_memref() -> !llvm.struct<(ptr<float>, ptr<float>, i64, array<4 x i64>, array<4 x i64>)>
-// CHECK32-LABEL: func @get_memref() -> !llvm.struct<(ptr<float>, ptr<float>, i32, array<4 x i32>, array<4 x i32>)>
-func @get_memref() -> (memref<42x?x10x?xf32>)
+// CHECK-LABEL: llvm.func @get_i64() -> !llvm.i64
+func private @get_i64() -> (i64)
+// CHECK-LABEL: llvm.func @get_f32() -> !llvm.float
+func private @get_f32() -> (f32)
+// CHECK-LABEL: llvm.func @get_c16() -> !llvm.struct<(half, half)>
+func private @get_c16() -> (complex<f16>)
+// CHECK-LABEL: llvm.func @get_c32() -> !llvm.struct<(float, float)>
+func private @get_c32() -> (complex<f32>)
+// CHECK-LABEL: llvm.func @get_c64() -> !llvm.struct<(double, double)>
+func private @get_c64() -> (complex<f64>)
+// CHECK-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<float>, ptr<float>, i64, array<4 x i64>, array<4 x i64>)>
+// CHECK32-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<float>, ptr<float>, i32, array<4 x i32>, array<4 x i32>)>
+func private @get_memref() -> (memref<42x?x10x?xf32>)
 
-// CHECK-LABEL: func @multireturn() -> !llvm.struct<(i64, float, struct<(ptr<float>, ptr<float>, i64, array<4 x i64>, array<4 x i64>)>)> {
-// CHECK32-LABEL: func @multireturn() -> !llvm.struct<(i64, float, struct<(ptr<float>, ptr<float>, i32, array<4 x i32>, array<4 x i32>)>)> {
+// CHECK-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, float, struct<(ptr<float>, ptr<float>, i64, array<4 x i64>, array<4 x i64>)>)> {
+// CHECK32-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, float, struct<(ptr<float>, ptr<float>, i32, array<4 x i32>, array<4 x i32>)>)> {
 func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @get_i64() : () -> !llvm.i64
@@ -464,8 +464,8 @@ func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 }
 
 
-// CHECK-LABEL: func @multireturn_caller() {
-// CHECK32-LABEL: func @multireturn_caller() {
+// CHECK-LABEL: llvm.func @multireturn_caller() {
+// CHECK32-LABEL: llvm.func @multireturn_caller() {
 func @multireturn_caller() {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, float, struct<(ptr<float>, ptr<float>, i64, array<4 x i64>, array<4 x i64>)>)>
@@ -487,7 +487,7 @@ func @multireturn_caller() {
   return
 }
 
-// CHECK-LABEL: func @vector_ops(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>, %arg3: !llvm.vec<4 x i64>) -> !llvm.vec<4 x float> {
+// CHECK-LABEL: llvm.func @vector_ops(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>, %arg3: !llvm.vec<4 x i64>) -> !llvm.vec<4 x float> {
 func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
 // CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : !llvm.vec<4 x float>
   %0 = constant dense<42.> : vector<4xf32>

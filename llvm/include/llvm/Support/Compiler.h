@@ -146,7 +146,7 @@
 /// LLVM_NODISCARD - Warn if a type or return value is discarded.
 
 // Use the 'nodiscard' attribute in C++17 or newer mode.
-#if __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
+#if defined(__cplusplus) && __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
 #define LLVM_NODISCARD [[nodiscard]]
 #elif LLVM_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
 #define LLVM_NODISCARD [[clang::warn_unused_result]]
@@ -234,11 +234,11 @@
 /// 3.4 supported this but is buggy in various cases and produces unimplemented
 /// errors, just use it in GCC 4.0 and later.
 #if __has_attribute(always_inline) || LLVM_GNUC_PREREQ(4, 0, 0)
-#define LLVM_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE inline __attribute__((always_inline))
 #elif defined(_MSC_VER)
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
-#define LLVM_ATTRIBUTE_ALWAYS_INLINE
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
 #ifdef __GNUC__
@@ -268,7 +268,7 @@
 #endif
 
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
-#if __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(fallthrough)
+#if defined(__cplusplus) && __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
 #elif LLVM_HAS_CPP_ATTRIBUTE(gnu::fallthrough)
 #define LLVM_FALLTHROUGH [[gnu::fallthrough]]

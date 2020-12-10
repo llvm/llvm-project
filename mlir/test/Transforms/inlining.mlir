@@ -64,8 +64,8 @@ func @inline_with_locations(%arg0 : i32) -> i32 {
 }
 
 
-// Check that external functions are not inlined.
-func @func_external()
+// Check that external function declarations are not inlined.
+func private @func_external()
 
 // CHECK-LABEL: func @no_inline_external
 func @no_inline_external() {

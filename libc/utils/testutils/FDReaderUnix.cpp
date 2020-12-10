@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "FDReader.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 #include <unistd.h>
 
 namespace __llvm_libc {
 namespace testutils {
 
 FDReader::FDReader() {
-  if (::pipe(pipefd))
-    llvm::report_fatal_error("pipe(2) failed");
+  if (::pipe(pipefd)) {
+    std::cerr << "pipe(2) failed";
+    abort();
+  }
 }
 
 FDReader::~FDReader() {
@@ -26,15 +28,25 @@ FDReader::~FDReader() {
 }
 
 bool FDReader::matchWritten(const char *str) {
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> bufOrErr =
-      llvm::MemoryBuffer::getOpenFile(pipefd[0], "<pipe>",
-                                      /* FileSize (irrelevant) */ 0);
-  if (!bufOrErr) {
-    assert(0 && "Error reading from pipe");
-    return false;
+
+  ::close(pipefd[1]);
+
+  constexpr ssize_t ChunkSize = 4096 * 4;
+
+  char Buffer[ChunkSize];
+  std::string PipeStr;
+  std::string InputStr(str);
+
+  for (int BytesRead; (BytesRead = ::read(pipefd[0], Buffer, ChunkSize));) {
+    if (BytesRead > 0) {
+      PipeStr.insert(PipeStr.size(), Buffer, BytesRead);
+    } else {
+      assert(0 && "Error reading from pipe");
+      return false;
+    }
   }
-  const llvm::MemoryBuffer &buf = **bufOrErr;
-  return !std::strncmp(buf.getBufferStart(), str, buf.getBufferSize());
+
+  return PipeStr == InputStr;
 }
 
 } // namespace testutils

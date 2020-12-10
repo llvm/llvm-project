@@ -6,7 +6,9 @@
 
 define i32 @func() {
 ; CHECK-LABEL: func:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    st %s15, 24(, %s11)
+; CHECK-NEXT:    st %s16, 32(, %s11)
 ; CHECK-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; CHECK-NEXT:    and %s15, %s15, (32)0
 ; CHECK-NEXT:    sic %s16
@@ -27,7 +29,9 @@ define i32 @func() {
 ; CHECK-NEXT:    st %s1, (, %s0)
 ; CHECK-NEXT:    or %s0, 1, (0)1
 ; CHECK-NEXT:    stl %s2, (, %s1)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld %s16, 32(, %s11)
+; CHECK-NEXT:    ld %s15, 24(, %s11)
+; CHECK-NEXT:    b.l.t (, %s10)
 
   store i32* @dst, i32** @ptr, align 8
   %1 = load i32, i32* @src, align 4

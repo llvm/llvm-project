@@ -34,7 +34,7 @@ system](#type-system).  [Operations](#operations) are contained in
 [Blocks](#blocks) and Blocks are contained in [Regions](#regions). Operations
 are also ordered within their containing block and Blocks are ordered in their
 containing region, although this order may or may not be semantically
-meaningful in a given [kind of region](Interfaces.md#regionkindinterface)).
+meaningful in a given [kind of region](Interfaces.md#regionkindinterfaces)).
 Operations may also contain regions, enabling hierarchical structures to be
 represented.
 
@@ -55,8 +55,8 @@ allowing operation semantics to be described abstractly using
 [Traits](Traits.md) and [Interfaces](Interfaces.md), enabling transformations
 to operate on operations more generically.  Traits often describe verification
 constraints on valid IR, enabling complex invariants to be captured and
-checked. (see
-[docs/Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations])
+checked. (see [Op vs
+Operation](docs/Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations))
 
 One obvious application of MLIR is to represent an
 [SSA-based](https://en.wikipedia.org/wiki/Static_single_assignment_form) IR,
@@ -438,7 +438,7 @@ block-arg-list ::= `(` value-id-and-type-list? `)`
 A *Block* is an ordered list of operations, concluding with a single
 [terminator operation](#terminator-operations). In [SSACFG
 regions](#control-flow-and-ssacfg-regions), each block represents a compiler
-[basic block] (https://en.wikipedia.org/wiki/Basic_block) where instructions
+[basic block](https://en.wikipedia.org/wiki/Basic_block) where instructions
 inside the block are executed in order and terminator operations implement
 control flow branches between basic blocks.
 
@@ -505,7 +505,7 @@ regions: [SSACFG regions](#control-flow-and-ssacfg-regions), which describe
 control flow between blocks, and [Graph regions](#graph-regions), which do not
 require control flow between block. The kinds of regions within an operation
 are described using the
-[RegionKindInterface](Interfaces.md#regionkindinterface).
+[RegionKindInterface](Interfaces.md#regionkindinterfaces).
 
 Regions do not have a name or an address, only the blocks contained in a
 region do. Regions must be contained within operations and have no type or
@@ -561,7 +561,7 @@ defined in a region can never be used outside of the region.
 ### Control Flow and SSACFG Regions
 
 In MLIR, control flow semantics of a region is indicated by
-[RegionKind::SSACFG](Interfaces.md#regionkindinterface).  Informally, these
+[RegionKind::SSACFG](Interfaces.md#regionkindinterfaces).  Informally, these
 regions support semantics where operations in a region 'execute
 sequentially'. Before an operation executes, its operands have well-defined
 values. After an operation executes, the operands have the same values and
@@ -647,7 +647,7 @@ directly used values remain live.
 ### Graph Regions
 
 In MLIR, graph-like semantics in a region is indicated by
-[RegionKind::Graph](Interfaces.md#regionkindinterface). Graph regions are
+[RegionKind::Graph](Interfaces.md#regionkindinterfaces). Graph regions are
 appropriate for concurrent semantics without control flow, or for modeling
 generic directed graph data structures. Graph regions are appropriate for
 representing cyclic relationships between coupled values where there is no
@@ -702,7 +702,7 @@ defines the relation between the region results and the operation results.
 
 Each value in MLIR has a type defined by the type system below. There are a
 number of primitive types (like integers) and also aggregate types for tensors
-and memory buffers. MLIR [standard types](#standard-types) do not include
+and memory buffers. MLIR [builtin types](#builtin-types) do not include
 structures, arrays, or dictionaries.
 
 MLIR has an open type system (i.e. there is no fixed list of types), and types
@@ -710,7 +710,7 @@ may have application-specific semantics. For example, MLIR supports a set of
 [dialect types](#dialect-types).
 
 ```
-type ::= type-alias | dialect-type | standard-type
+type ::= type-alias | dialect-type | builtin-type
 
 type-list-no-parens ::=  type (`,` type)*
 type-list-parens ::= `(` `)`
@@ -807,13 +807,13 @@ characters.
 
 See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
-### Standard Types
+### Builtin Types
 
-Standard types are a core set of [dialect types](#dialect-types) that are
-defined in a builtin dialect and thus available to all users of MLIR.
+Builtin types are a core set of [dialect types](#dialect-types) that are defined
+in a builtin dialect and thus available to all users of MLIR.
 
 ```
-standard-type ::=     complex-type
+builtin-type ::=      complex-type
                     | float-type
                     | function-type
                     | index-type
@@ -869,7 +869,7 @@ function-type ::= type-list-parens `->` function-result-type
 ```
 
 MLIR supports first-class functions: for example, the
-[`constant` operation](Dialects/Standard.md#constant-operation) produces the
+[`constant` operation](Dialects/Standard.md#stdconstant-constantop) produces the
 address of a function as a value. This value may be passed to and
 returned from functions, merged across control flow boundaries with
 [block arguments](#blocks), and called with the
@@ -888,10 +888,11 @@ index-type ::= `index`
 ```
 
 The `index` type is a signless integer whose size is equal to the natural
-machine word of the target ([rationale](Rationale/Rationale.md#signless-types)) and is
-used by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be
-used as an element of vector, tensor or memref type
-([rationale](Rationale/Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
+machine word of the target
+([rationale](Rationale/Rationale.md#integer-signedness-semantics)) and is used
+by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be used
+as an element of vector
+([rationale](Rationale/Rationale.md#index-type-disallowed-in-vector-types)).
 
 **Rationale:** integers of platform-specific bit widths are practical to express
 sizes, dimensionalities and subscripts.
@@ -1319,7 +1320,7 @@ dependent-attribute-name ::= ((letter|[_]) (letter|digit|[_$])*)
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the index of a
-[`dim` operation](Dialects/Standard.md#dim-operation), or the stride of a
+[`dim` operation](Dialects/Standard.md#stddim-dimop), or the stride of a
 convolution. They consist of a name and a concrete attribute value. The set of
 expected attributes, their structure, and their interpretation are all
 contextually dependent on what they are attached to.
@@ -1336,7 +1337,7 @@ dialect and not the function argument.
 Attribute values are represented by the following forms:
 
 ```
-attribute-value ::= attribute-alias | dialect-attribute | standard-attribute
+attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 ```
 
 ### Attribute Value Aliases
@@ -1368,49 +1369,49 @@ Example:
 
 Similarly to operations, dialects may define custom attribute values. The
 syntactic structure of these values is identical to custom dialect type values,
-except that dialect attributes values are distinguished with a leading '#',
-while dialect types are distinguished with a leading '!'.
+except that dialect attribute values are distinguished with a leading '#', while
+dialect types are distinguished with a leading '!'.
 
 ```
-dialect-attribute ::= '#' opaque-dialect-item
-dialect-attribute ::= '#' pretty-dialect-item
+dialect-attribute-value ::= '#' opaque-dialect-item
+dialect-attribute-value ::= '#' pretty-dialect-item
 ```
 
-Dialect attributes can be specified in a verbose form, e.g. like this:
+Dialect attribute values can be specified in a verbose form, e.g. like this:
 
 ```mlir
-// Complex attribute
+// Complex attribute value.
 #foo<"something<abcd>">
 
-// Even more complex attribute
+// Even more complex attribute value.
 #foo<"something<a%%123^^^>>>">
 ```
 
-Dialect attributes that are simple enough can use the pretty format, which is a
-lighter weight syntax that is equivalent to the above forms:
+Dialect attribute values that are simple enough can use the pretty format, which
+is a lighter weight syntax that is equivalent to the above forms:
 
 ```mlir
 // Complex attribute
 #foo.something<abcd>
 ```
 
-Sufficiently complex dialect attributes are required to use the verbose form for
-generality. For example, the more complex type shown above wouldn't be valid in
-the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
-that are not allowed in the lighter syntax, as well as unbalanced `<>`
-characters.
+Sufficiently complex dialect attribute values are required to use the verbose
+form for generality. For example, the more complex type shown above would not be
+valid in the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains
+characters that are not allowed in the lighter syntax, as well as unbalanced
+`<>` characters.
 
-See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) on how to define dialect
 attribute values.
 
-### Standard Attribute Values
+### Builtin Attribute Values
 
-Standard attributes are a core set of
+Builtin attributes are a core set of
 [dialect attributes](#dialect-attribute-values) that are defined in a builtin
 dialect and thus available to all users of MLIR.
 
 ```
-standard-attribute ::=   affine-map-attribute
+builtin-attribute ::=    affine-map-attribute
                        | array-attribute
                        | bool-attribute
                        | dictionary-attribute

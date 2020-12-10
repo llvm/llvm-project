@@ -9,7 +9,6 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase,
 ; GCN-LABEL: global_csub_saddr_i32_rtn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] glc
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
@@ -24,7 +23,6 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg 
 ; GCN-LABEL: global_csub_saddr_i32_rtn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:-128 glc
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64

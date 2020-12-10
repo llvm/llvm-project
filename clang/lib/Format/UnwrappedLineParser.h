@@ -88,7 +88,7 @@ private:
   void parseBlock(bool MustBeDeclaration, bool AddLevel = true,
                   bool MunchSemi = true);
   void parseChildBlock();
-  void parsePPDirective();
+  void parsePPDirective(unsigned Level);
   void parsePPDefine();
   void parsePPIf(bool IfDef);
   void parsePPElIf();
@@ -113,6 +113,10 @@ private:
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
+  void parseConcept();
+  void parseRequires();
+  void parseRequiresExpression(unsigned int OriginalLevel);
+  void parseConstraintExpression(unsigned int OriginalLevel);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an

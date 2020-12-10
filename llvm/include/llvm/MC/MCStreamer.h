@@ -206,6 +206,7 @@ class MCStreamer {
   std::vector<std::unique_ptr<WinEH::FrameInfo>> WinFrameInfos;
 
   WinEH::FrameInfo *CurrentWinFrameInfo;
+  size_t CurrentProcWinFrameInfoStartIndex;
 
   /// Tracks an index to represent the order a symbol was emitted in.
   /// Zero means we did not emit that symbol.
@@ -243,6 +244,8 @@ protected:
   WinEH::FrameInfo *getCurrentWinFrameInfo() {
     return CurrentWinFrameInfo;
   }
+
+  virtual void EmitWindowsUnwindTables(WinEH::FrameInfo *Frame);
 
   virtual void EmitWindowsUnwindTables();
 
@@ -451,6 +454,10 @@ public:
   /// Each emitted symbol will be tracked in the ordering table,
   /// so we can sort on them later.
   void AssignFragment(MCSymbol *Symbol, MCFragment *Fragment);
+
+  /// Returns the mnemonic for \p MI, if the streamer has access to a
+  /// instruction printer and returns an empty string otherwise.
+  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
 
   /// Emit a label for \p Symbol into the current section.
   ///
@@ -1066,7 +1073,7 @@ public:
   /// Streamer specific finalization.
   virtual void finishImpl();
   /// Finish emission of machine code.
-  void Finish();
+  void Finish(SMLoc EndLoc = SMLoc());
 
   virtual bool mayHaveInstructions(MCSection &Sec) const { return true; }
 };
@@ -1074,28 +1081,6 @@ public:
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
 MCStreamer *createNullStreamer(MCContext &Ctx);
-
-/// Create a machine code streamer which will print out assembly for the native
-/// target, suitable for compiling with a native assembler.
-///
-/// \param InstPrint - If given, the instruction printer to use. If not given
-/// the MCInst representation will be printed.  This method takes ownership of
-/// InstPrint.
-///
-/// \param CE - If given, a code emitter to use to show the instruction
-/// encoding inline with the assembly. This method takes ownership of \p CE.
-///
-/// \param TAB - If given, a target asm backend to use to show the fixup
-/// information in conjunction with encoding information. This method takes
-/// ownership of \p TAB.
-///
-/// \param ShowInst - Whether to show the MCInst representation inline with
-/// the assembly.
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              bool isVerboseAsm, bool useDwarfDirectory,
-                              MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                              MCAsmBackend *TAB, bool ShowInst);
 
 } // end namespace llvm
 

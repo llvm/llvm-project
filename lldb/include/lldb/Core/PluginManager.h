@@ -333,11 +333,16 @@ public:
   // Trace
   static bool RegisterPlugin(ConstString name, const char *description,
                              TraceCreateInstance create_callback,
-                             llvm::StringRef schema);
+                             llvm::StringRef schema,
+                             TraceGetStartCommand get_start_command);
 
   static bool UnregisterPlugin(TraceCreateInstance create_callback);
 
   static TraceCreateInstance GetTraceCreateCallback(ConstString plugin_name);
+
+  static lldb::CommandObjectSP
+  GetTraceStartCommand(llvm::StringRef plugin_name,
+                       CommandInterpreter &interpreter);
 
   /// Get the JSON schema for a trace session file corresponding to the given
   /// plugin.

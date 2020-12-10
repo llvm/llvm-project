@@ -23,6 +23,7 @@ constexpr const char data[] = "__DATA";
 constexpr const char linkEdit[] = "__LINKEDIT";
 constexpr const char dataConst[] = "__DATA_CONST";
 constexpr const char ld[] = "__LD"; // output only with -r
+constexpr const char dwarf[] = "__DWARF";
 
 } // namespace segment_names
 

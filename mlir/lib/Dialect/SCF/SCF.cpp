@@ -305,7 +305,7 @@ void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
               step.getValue().getSExtValue());
 }
 
-ValueVector mlir::scf::buildLoopNest(
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
     function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
@@ -323,7 +323,7 @@ ValueVector mlir::scf::buildLoopNest(
     assert(results.size() == iterArgs.size() &&
            "loop nest body must return as many values as loop has iteration "
            "arguments");
-    return results;
+    return LoopNest();
   }
 
   // First, create the loop structure iteratively using the body-builder
@@ -372,11 +372,13 @@ ValueVector mlir::scf::buildLoopNest(
   builder.setInsertionPointToEnd(loops.back().getBody());
   builder.create<scf::YieldOp>(loc, results);
 
-  // Return the results of the outermost loop.
-  return ValueVector(loops.front().result_begin(), loops.front().result_end());
+  // Return the loops.
+  LoopNest res;
+  res.loops.assign(loops.begin(), loops.end());
+  return res;
 }
 
-ValueVector mlir::scf::buildLoopNest(
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
@@ -389,6 +391,19 @@ ValueVector mlir::scf::buildLoopNest(
                            bodyBuilder(nestedBuilder, nestedLoc, ivs);
                          return {};
                        });
+}
+
+/// Replaces the given op with the contents of the given single-block region,
+/// using the operands of the block terminator to replace operation results.
+static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
+                                Region &region, ValueRange blockArgs = {}) {
+  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  Block *block = &region.front();
+  Operation *terminator = block->getTerminator();
+  ValueRange results = terminator->getOperands();
+  rewriter.mergeBlockBefore(block, op, blockArgs);
+  rewriter.replaceOp(op, results);
+  rewriter.eraseOp(terminator);
 }
 
 namespace {
@@ -498,11 +513,58 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     return success();
   }
 };
+
+/// Rewriting pattern that erases loops that are known not to iterate and
+/// replaces single-iteration loops with their bodies.
+struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
+  using OpRewritePattern<ForOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForOp op,
+                                PatternRewriter &rewriter) const override {
+    // If the upper bound is the same as the lower bound, the loop does not
+    // iterate, just remove it.
+    if (op.lowerBound() == op.upperBound()) {
+      rewriter.replaceOp(op, op.getIterOperands());
+      return success();
+    }
+
+    auto lb = op.lowerBound().getDefiningOp<ConstantOp>();
+    auto ub = op.upperBound().getDefiningOp<ConstantOp>();
+    if (!lb || !ub)
+      return failure();
+
+    // If the loop is known to have 0 iterations, remove it.
+    llvm::APInt lbValue = lb.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt ubValue = ub.getValue().cast<IntegerAttr>().getValue();
+    if (lbValue.sge(ubValue)) {
+      rewriter.replaceOp(op, op.getIterOperands());
+      return success();
+    }
+
+    auto step = op.step().getDefiningOp<ConstantOp>();
+    if (!step)
+      return failure();
+
+    // If the loop is known to have 1 iteration, inline its body and remove the
+    // loop.
+    llvm::APInt stepValue = lb.getValue().cast<IntegerAttr>().getValue();
+    if ((lbValue + stepValue).sge(ubValue)) {
+      SmallVector<Value, 4> blockArgs;
+      blockArgs.reserve(op.getNumIterOperands() + 1);
+      blockArgs.push_back(op.lowerBound());
+      llvm::append_range(blockArgs, op.getIterOperands());
+      replaceOpWithRegion(rewriter, op, op.getLoopBody(), blockArgs);
+      return success();
+    }
+
+    return failure();
+  }
+};
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                         MLIRContext *context) {
-  results.insert<ForOpIterArgsFolder>(context);
+  results.insert<ForOpIterArgsFolder, SimplifyTrivialLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -670,8 +732,8 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
                     [&](OpResult result) {
                       return yieldOp.getOperand(result.getResultNumber());
                     });
-    rewriter.updateRootInPlace(
-        yieldOp, [&]() { yieldOp.getOperation()->setOperands(usedOperands); });
+    rewriter.updateRootInPlace(yieldOp,
+                               [&]() { yieldOp->setOperands(usedOperands); });
   }
 
   LogicalResult matchAndRewrite(IfOp op,
@@ -708,11 +770,31 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
     return success();
   }
 };
+
+struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    auto constant = op.condition().getDefiningOp<ConstantOp>();
+    if (!constant)
+      return failure();
+
+    if (constant.getValue().cast<BoolAttr>().getValue())
+      replaceOpWithRegion(rewriter, op, op.thenRegion());
+    else if (!op.elseRegion().empty())
+      replaceOpWithRegion(rewriter, op, op.elseRegion());
+    else
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
 } // namespace
 
 void IfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                        MLIRContext *context) {
-  results.insert<RemoveUnusedResults>(context);
+  results.insert<RemoveUnusedResults, RemoveStaticCondition>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -991,11 +1073,30 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
     return success();
   }
 };
+
+/// Removes parallel loops in which at least one lower/upper bound pair consists
+/// of the same values - such loops have an empty iteration domain.
+struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
+  using OpRewritePattern<ParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    for (auto dim : llvm::zip(op.lowerBound(), op.upperBound())) {
+      if (std::get<0>(dim) == std::get<1>(dim)) {
+        rewriter.replaceOp(op, op.initVals());
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                              MLIRContext *context) {
-  results.insert<CollapseSingleIterationLoops>(context);
+  results.insert<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1071,7 +1172,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
 static LogicalResult verify(ReduceReturnOp op) {
   // The type of the return value should be the same type as the type of the
   // operand of the enclosing ReduceOp.
-  auto reduceOp = cast<ReduceOp>(op.getParentOp());
+  auto reduceOp = cast<ReduceOp>(op->getParentOp());
   Type reduceType = reduceOp.operand().getType();
   if (reduceType != op.result().getType())
     return op.emitOpError() << "needs to have type " << reduceType

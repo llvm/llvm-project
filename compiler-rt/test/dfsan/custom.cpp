@@ -22,8 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -335,6 +337,41 @@ void test_calloc() {
   free(crv);
 }
 
+void test_recvmsg() {
+  int sockfds[2];
+  int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
+  assert(ret != -1);
+
+  char sbuf[] = "abcdefghijkl";
+  struct iovec siovs[2] = {{&sbuf[0], 4}, {&sbuf[4], 4}};
+  struct msghdr smsg = {};
+  smsg.msg_iov = siovs;
+  smsg.msg_iovlen = 2;
+
+  ssize_t sent = sendmsg(sockfds[0], &smsg, 0);
+  assert(sent > 0);
+
+  char rbuf[128];
+  struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
+  struct msghdr rmsg = {};
+  rmsg.msg_iov = riovs;
+  rmsg.msg_iovlen = 2;
+
+  dfsan_set_label(i_label, rbuf, sizeof(rbuf));
+  dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+
+  ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
+  assert(received == sent);
+  assert(memcmp(sbuf, rbuf, 8) == 0);
+  ASSERT_ZERO_LABEL(received);
+  ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
+  ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
+  ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+
+  close(sockfds[0]);
+  close(sockfds[1]);
+}
+
 void test_read() {
   char buf[16];
   dfsan_set_label(i_label, buf, 1);
@@ -638,6 +675,46 @@ void test_getpwuid_r() {
   ASSERT_READ_ZERO_LABEL(&pwd, 4);
 }
 
+void test_epoll_wait() {
+  // Set up a pipe to monitor with epoll.
+  int pipe_fds[2];
+  int ret = pipe(pipe_fds);
+  assert(ret != -1);
+
+  // Configure epoll to monitor the pipe.
+  int epfd = epoll_create1(0);
+  assert(epfd != -1);
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.fd = pipe_fds[0];
+  ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_fds[0], &event);
+  assert(ret != -1);
+
+  // Test epoll_wait when no events have occurred.
+  event = {};
+  dfsan_set_label(i_label, &event, sizeof(event));
+  ret = epoll_wait(epfd, &event, /*maxevents=*/1, /*timeout=*/0);
+  assert(ret == 0);
+  assert(event.events == 0);
+  assert(event.data.fd == 0);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_LABEL(&event, sizeof(event), i_label);
+
+  // Test epoll_wait when an event occurs.
+  write(pipe_fds[1], "x", 1);
+  ret = epoll_wait(epfd, &event, /*maxevents=*/1, /*timeout=*/0);
+  assert(ret == 1);
+  assert(event.events == EPOLLIN);
+  assert(event.data.fd == pipe_fds[0]);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_ZERO_LABEL(&event, sizeof(event));
+
+  // Clean up.
+  close(epfd);
+  close(pipe_fds[0]);
+  close(pipe_fds[1]);
+}
+
 void test_poll() {
   struct pollfd fd;
   fd.fd = 0;
@@ -854,6 +931,27 @@ void test_socketpair() {
   ASSERT_READ_ZERO_LABEL(fd, sizeof(fd));
 }
 
+void test_getsockopt() {
+  int sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+  assert(sockfd != -1);
+
+  int optval[2] = {-1, -1};
+  socklen_t optlen = sizeof(optval);
+  dfsan_set_label(i_label, &optval, sizeof(optval));
+  dfsan_set_label(i_label, &optlen, sizeof(optlen));
+  int ret = getsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &optval, &optlen);
+  assert(ret != -1);
+  assert(optlen == sizeof(int));
+  assert(optval[0] == 0);
+  assert(optval[1] == -1);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(optlen);
+  ASSERT_ZERO_LABEL(optval[0]);
+  ASSERT_LABEL(optval[1], i_label);
+
+  close(sockfd);
+}
+
 void test_write() {
   int fd = open("/dev/null", O_WRONLY);
 
@@ -1027,6 +1125,7 @@ int main(void) {
   test_dfsan_set_write_callback();
   test_dl_iterate_phdr();
   test_dlopen();
+  test_epoll_wait();
   test_fgets();
   test_fstat();
   test_get_current_dir_name();
@@ -1035,6 +1134,7 @@ int main(void) {
   test_getpwuid_r();
   test_getrlimit();
   test_getrusage();
+  test_getsockopt();
   test_gettimeofday();
   test_inet_pton();
   test_localtime_r();
@@ -1047,6 +1147,7 @@ int main(void) {
   test_pread();
   test_pthread_create();
   test_read();
+  test_recvmsg();
   test_sched_getaffinity();
   test_select();
   test_sigaction();

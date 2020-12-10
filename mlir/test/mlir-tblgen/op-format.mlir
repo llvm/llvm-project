@@ -2,11 +2,13 @@
 
 // CHECK: %[[I64:.*]] =
 %i64 = "foo.op"() : () -> (i64)
+// CHECK: %[[I32:.*]] =
+%i32 = "foo.op"() : () -> (i32)
 // CHECK: %[[MEMREF:.*]] =
 %memref = "foo.op"() : () -> (memref<1xf64>)
 
-// CHECK: test.format_literal_op keyword_$. -> :, = <> () []( ) {foo.some_attr}
-test.format_literal_op keyword_$. -> :, = <> () []( ) {foo.some_attr}
+// CHECK: test.format_literal_op keyword_$. -> :, = <> () []( ) ? + * {foo.some_attr}
+test.format_literal_op keyword_$. -> :, = <> () []( ) ? + * {foo.some_attr}
 
 // CHECK: test.format_attr_op 10
 // CHECK-NOT: {attr
@@ -119,6 +121,12 @@ test.format_implicit_terminator_region_a_op {
 // CHECK: test.format_result_c_op (i64) -> memref<1xf64>
 %ignored_c:2 = test.format_result_c_op (i64) -> memref<1xf64>
 
+// CHECK: test.format_variadic_result : i64, i64, i64
+%ignored_v:3 = test.format_variadic_result : i64, i64, i64
+
+// CHECK: test.format_multiple_variadic_results : (i64, i64, i64), (i32, i32)
+%ignored_mv:5 = test.format_multiple_variadic_results : (i64, i64, i64), (i32, i32)
+
 //===----------------------------------------------------------------------===//
 // Format operands
 //===----------------------------------------------------------------------===//
@@ -137,6 +145,12 @@ test.format_operand_d_op %i64, %memref : memref<1xf64>
 
 // CHECK: test.format_operand_e_op %[[I64]], %[[MEMREF]] : i64, memref<1xf64>
 test.format_operand_e_op %i64, %memref : i64, memref<1xf64>
+
+// CHECK: test.format_variadic_operand %[[I64]], %[[I64]], %[[I64]] : i64, i64, i64
+test.format_variadic_operand %i64, %i64, %i64 : i64, i64, i64
+
+// CHECK: test.format_multiple_variadic_operands (%[[I64]], %[[I64]], %[[I64]]), (%[[I64]], %[[I32]] : i64, i32)
+test.format_multiple_variadic_operands (%i64, %i64, %i64), (%i64, %i32 : i64, i32)
 
 //===----------------------------------------------------------------------===//
 // Format successors
@@ -170,6 +184,13 @@ test.format_optional_unit_attribute
 
 // CHECK: test.format_optional_unit_attribute_no_elide unit
 test.format_optional_unit_attribute_no_elide unit
+
+// CHECK: test.format_optional_enum_attr "case5"
+test.format_optional_enum_attr "case5"
+
+// CHECK: test.format_optional_enum_attr
+// CHECK-NOT: "case5"
+test.format_optional_enum_attr
 
 //===----------------------------------------------------------------------===//
 // Format optional operands and results

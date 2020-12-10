@@ -226,13 +226,13 @@ static cl::alias MachOm("m", cl::desc("Alias for --macho"), cl::NotHidden,
                         cl::Grouping, cl::aliasopt(MachOOpt));
 
 cl::opt<std::string> objdump::MCPU(
-    "mcpu", cl::desc("Target a specific cpu type (-mcpu=help for details)"),
+    "mcpu", cl::desc("Target a specific cpu type (--mcpu=help for details)"),
     cl::value_desc("cpu-name"), cl::init(""), cl::cat(ObjdumpCat));
 
-cl::list<std::string> objdump::MAttrs("mattr", cl::CommaSeparated,
-                                      cl::desc("Target specific attributes"),
-                                      cl::value_desc("a1,+a2,-a3,..."),
-                                      cl::cat(ObjdumpCat));
+cl::list<std::string> objdump::MAttrs(
+    "mattr", cl::CommaSeparated,
+    cl::desc("Target specific attributes (--mattr=help for details)"),
+    cl::value_desc("a1,+a2,-a3,..."), cl::cat(ObjdumpCat));
 
 cl::opt<bool> objdump::NoShowRawInsn(
     "no-show-raw-insn",

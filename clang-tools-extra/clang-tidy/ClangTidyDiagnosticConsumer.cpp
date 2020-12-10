@@ -177,6 +177,21 @@ DiagnosticBuilder ClangTidyContext::diag(
   return DiagEngine->Report(Loc, ID);
 }
 
+DiagnosticBuilder ClangTidyContext::diag(
+    StringRef CheckName, StringRef Description,
+    DiagnosticIDs::Level Level /* = DiagnosticIDs::Warning*/) {
+  unsigned ID = DiagEngine->getDiagnosticIDs()->getCustomDiagID(
+      Level, (Description + " [" + CheckName + "]").str());
+  CheckNamesByDiagnosticID.try_emplace(ID, CheckName);
+  return DiagEngine->Report(ID);
+}
+
+DiagnosticBuilder ClangTidyContext::configurationDiag(
+    StringRef Message,
+    DiagnosticIDs::Level Level /* = DiagnosticIDs::Warning*/) {
+  return diag("clang-tidy-config", Message, Level);
+}
+
 void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
   DiagEngine->setSourceManager(SourceMgr);
 }
@@ -205,7 +220,7 @@ const ClangTidyOptions &ClangTidyContext::getOptions() const {
 ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
   // Merge options on top of getDefaults() as a safeguard against options with
   // unset values.
-  return ClangTidyOptions::getDefaults().mergeWith(
+  return ClangTidyOptions::getDefaults().merge(
       OptionsProvider->getOptions(File), 0);
 }
 
@@ -256,8 +271,10 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
     ClangTidyError &Error = Errors.back();
-    if (!Context.isCheckEnabled(Error.DiagnosticName) &&
-        Error.DiagLevel != ClangTidyError::Error) {
+    if (Error.DiagnosticName == "clang-tidy-config") {
+      // Never ignore these.
+    } else if (!Context.isCheckEnabled(Error.DiagnosticName) &&
+               Error.DiagLevel != ClangTidyError::Error) {
       ++Context.Stats.ErrorsIgnoredCheckFilter;
       Errors.pop_back();
     } else if (!LastErrorRelatesToUserCode) {

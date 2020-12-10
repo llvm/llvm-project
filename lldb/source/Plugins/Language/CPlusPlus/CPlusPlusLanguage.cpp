@@ -1134,6 +1134,15 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
   return g_formatters;
 }
 
+bool CPlusPlusLanguage::IsNilReference(ValueObject &valobj) {
+  if (!Language::LanguageIsCPlusPlus(valobj.GetObjectRuntimeLanguage()) ||
+      !valobj.IsPointerType())
+    return false;
+  bool canReadValue = true;
+  bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
+  return canReadValue && isZero;
+}
+
 bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".cpp", ".cxx", ".c++", ".cc",  ".c",
                          ".h",   ".hh",  ".hpp", ".hxx", ".h++"};

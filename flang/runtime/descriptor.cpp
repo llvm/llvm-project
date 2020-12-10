@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "descriptor.h"
+#include "derived.h"
 #include "memory.h"
 #include "terminator.h"
+#include "type-info.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -54,10 +56,9 @@ void Descriptor::Establish(int characterKind, std::size_t characters, void *p,
       characterKind * characters, p, rank, extent, attribute, addendum);
 }
 
-void Descriptor::Establish(const DerivedType &dt, void *p, int rank,
+void Descriptor::Establish(const typeInfo::DerivedType &dt, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  Establish(
-      CFI_type_struct, dt.SizeInBytes(), p, rank, extent, attribute, true);
+  Establish(CFI_type_struct, dt.sizeInBytes, p, rank, extent, attribute, true);
   DescriptorAddendum *a{Addendum()};
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, a != nullptr);
@@ -88,10 +89,11 @@ OwningPtr<Descriptor> Descriptor::Create(int characterKind,
       characterKind * characters, p, rank, extent, attribute);
 }
 
-OwningPtr<Descriptor> Descriptor::Create(const DerivedType &dt, void *p,
-    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  return Create(TypeCode{CFI_type_struct}, dt.SizeInBytes(), p, rank, extent,
-      attribute, dt.lenParameters());
+OwningPtr<Descriptor> Descriptor::Create(const typeInfo::DerivedType &dt,
+    void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute) {
+  return Create(TypeCode{CFI_type_struct}, dt.sizeInBytes, p, rank, extent,
+      attribute, dt.LenParameters());
 }
 
 std::size_t Descriptor::SizeInBytes() const {
@@ -109,6 +111,26 @@ std::size_t Descriptor::Elements() const {
   return elements;
 }
 
+int Descriptor::Allocate() {
+  std::size_t byteSize{Elements() * ElementBytes()};
+  void *p{std::malloc(byteSize)};
+  if (!p && byteSize) {
+    return CFI_ERROR_MEM_ALLOCATION;
+  }
+  // TODO: image synchronization
+  // TODO: derived type initialization
+  raw_.base_addr = p;
+  if (int dims{rank()}) {
+    std::size_t stride{ElementBytes()};
+    for (int j{0}; j < dims; ++j) {
+      auto &dimension{GetDimension(j)};
+      dimension.SetByteStride(stride);
+      stride *= dimension.Extent();
+    }
+  }
+  return 0;
+}
+
 int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
   int result{ISO::CFI_allocate(&raw_, lb, ub, ElementBytes())};
   if (result == CFI_SUCCESS) {
@@ -118,25 +140,17 @@ int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
 }
 
 int Descriptor::Deallocate(bool finalize) {
-  if (raw_.base_addr) {
-    Destroy(static_cast<char *>(raw_.base_addr), finalize);
-  }
+  Destroy(finalize);
   return ISO::CFI_deallocate(&raw_);
 }
 
-void Descriptor::Destroy(char *data, bool finalize) const {
-  if (data) {
-    if (const DescriptorAddendum * addendum{Addendum()}) {
+void Descriptor::Destroy(bool finalize) const {
+  if (const DescriptorAddendum * addendum{Addendum()}) {
+    if (const typeInfo::DerivedType * dt{addendum->derivedType()}) {
       if (addendum->flags() & DescriptorAddendum::DoNotFinalize) {
         finalize = false;
       }
-      if (const DerivedType * dt{addendum->derivedType()}) {
-        std::size_t elements{Elements()};
-        std::size_t elementBytes{ElementBytes()};
-        for (std::size_t j{0}; j < elements; ++j) {
-          dt->Destroy(data + j * elementBytes, finalize);
-        }
-      }
+      runtime::Destroy(*this, finalize, *dt);
     }
   }
 }
@@ -232,6 +246,11 @@ void Descriptor::Dump(FILE *f) const {
 
 std::size_t DescriptorAddendum::SizeInBytes() const {
   return SizeInBytes(LenParameters());
+}
+
+std::size_t DescriptorAddendum::LenParameters() const {
+  const auto *type{derivedType()};
+  return type ? type->LenParameters() : 0;
 }
 
 void DescriptorAddendum::Dump(FILE *f) const {

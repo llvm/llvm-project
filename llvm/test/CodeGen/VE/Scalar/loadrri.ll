@@ -12,10 +12,10 @@
 ; Function Attrs: norecurse nounwind readonly
 define signext i8 @func_rr(%struct.data* nocapture readonly %0, i32 signext %1) {
 ; CHECK-LABEL: func_rr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s1, %s1, 2
 ; CHECK-NEXT:    ld1b.sx %s0, (%s1, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = sext i32 %1 to i64
   %4 = getelementptr inbounds %struct.data, %struct.data* %0, i64 %3, i32 0, i64 0
   %5 = load i8, i8* %4, align 1
@@ -28,9 +28,10 @@ define signext i8 @func_fr(%struct.data* readonly %0, i32 signext %1) {
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    sll %s1, %s1, 2
 ; CHECK-NEXT:    ldl.sx %s0, (%s1, %s0)
-; CHECK-NEXT:    stl %s0, 184(%s1, %s11)
-; CHECK-NEXT:    ld1b.sx %s0, 184(%s1, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    stl %s0, 8(%s1, %s11)
+; CHECK-NEXT:    ld1b.sx %s0, 8(%s1, %s11)
+; CHECK-NEXT:    adds.l %s11, 48, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = alloca [10 x %struct.data], align 1
   %4 = getelementptr inbounds [10 x %struct.data], [10 x %struct.data]* %3, i64 0, i64 0, i32 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 40, i8* nonnull %4)
@@ -53,8 +54,9 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 define signext i8 @func_rf(i8* readonly %0, i64 %1, i32 signext %2) {
 ; CHECK-LABEL: func_rf:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    ld1b.sx %s0, 184(%s1, %s11)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    ld1b.sx %s0, 8(%s1, %s11)
+; CHECK-NEXT:    adds.l %s11, 32, %s11
+; CHECK-NEXT:    b.l.t (, %s10)
   %buf = alloca %"basic_string", align 8
 
   %sub631 = add nsw i64 %1, -1

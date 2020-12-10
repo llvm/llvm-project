@@ -41,3 +41,14 @@ def _equally_sized_accessor(elements, n_variadic, n_preceding_simple,
   elements_per_group = total_variadic_length // n_variadic
   start = n_preceding_simple + n_preceding_variadic * elements_per_group
   return start, elements_per_group
+
+def _get_default_loc_context(location = None):
+  """
+  Returns a context in which the defaulted location is created. If the location
+  is None, takes the current location from the stack, raises ValueError if there
+  is no location on the stack.
+  """
+  if location is None:
+    # Location.current raises ValueError if there is no current location.
+    return _cext.ir.Location.current.context
+  return location.context

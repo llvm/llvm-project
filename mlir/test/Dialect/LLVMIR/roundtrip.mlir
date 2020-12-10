@@ -333,3 +333,23 @@ func @useFenceInst() {
   llvm.fence release
   return
 }
+
+// CHECK-LABEL: @useInlineAsm
+llvm.func @useInlineAsm(%arg0: !llvm.i32) {
+  //      CHECK:  llvm.inline_asm {{.*}} (!llvm.i32) -> !llvm.i8
+  %0 = llvm.inline_asm "bswap $0", "=r,r" %arg0 : (!llvm.i32) -> !llvm.i8
+
+  // CHECK-NEXT:  llvm.inline_asm {{.*}} (!llvm.i32, !llvm.i32) -> !llvm.i8
+  %1 = llvm.inline_asm "foo", "bar" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
+
+  // CHECK-NEXT:  llvm.inline_asm has_side_effects {{.*}} (!llvm.i32, !llvm.i32) -> !llvm.i8
+  %2 = llvm.inline_asm has_side_effects "foo", "bar" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
+
+  // CHECK-NEXT:  llvm.inline_asm is_align_stack {{.*}} (!llvm.i32, !llvm.i32) -> !llvm.i8
+  %3 = llvm.inline_asm is_align_stack "foo", "bar" %arg0, %arg0 : (!llvm.i32, !llvm.i32) -> !llvm.i8
+
+  // CHECK-NEXT:  llvm.inline_asm "foo", "=r,=r,r" {{.*}} : (!llvm.i32) -> !llvm.struct<(i8, i8)>
+  %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (!llvm.i32) -> !llvm.struct<(i8, i8)>
+
+  llvm.return
+}

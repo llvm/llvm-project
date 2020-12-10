@@ -57,15 +57,29 @@ int test() {
   p = &*(p + 1);
 
   // Struct member access
-  struct S NODEREF *s;  // expected-note 2 {{s declared here}}
+  struct S NODEREF *s; // expected-note 3 {{s declared here}}
   x = s->a;   // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
   x = (*s).b; // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
   p = &s->a;
   p = &(*s).b;
 
+  // Most things in sizeof() can't actually access memory
+  x = sizeof(s->a);          // ok
+  x = sizeof(*s);            // ok
+  x = sizeof(s[0]);          // ok
+  x = sizeof(s->a + (s->b)); // ok
+  x = sizeof(int[++s->a]);   // expected-warning{{dereferencing s; was declared with a 'noderef' type}}
+
+  // Struct member access should carry NoDeref type information through to an
+  // enclosing AddrOf.
+  p2 = &s->a;   // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
+  p2 = &(*s).a; // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
+  x = *&s->a;   // expected-warning{{dereferencing expression marked as 'noderef'}}
+
   // Nested struct access
   struct S2 NODEREF *s2_noderef;    // expected-note 5 {{s2_noderef declared here}}
   p = s2_noderef->a;  // ok since result is an array in a struct
+  p = (*s2_noderef).a; // ok since result is an array in a struct
   p = s2_noderef->a2; // ok
   p = s2_noderef->b;  // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}
   p = s2_noderef->b2; // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}
@@ -105,7 +119,7 @@ int test() {
 
   p = s2_arr[1]->a;
   p = s2_arr[1]->b; // expected-warning{{dereferencing expression marked as 'noderef'}}
-  int **bptr = &s2_arr[1]->b;
+  int *NODEREF *bptr = &s2_arr[1]->b;
 
   x = s2->s2->a;        // expected-warning{{dereferencing expression marked as 'noderef'}}
   x = s2_noderef->a[1]; // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}

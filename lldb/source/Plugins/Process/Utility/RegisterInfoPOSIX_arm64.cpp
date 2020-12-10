@@ -288,8 +288,10 @@ RegisterInfoPOSIX_arm64::ConfigureVectorRegisterInfos(uint32_t sve_vq) {
 
     uint32_t offset = SVE_REGS_DEFAULT_OFFSET_LINUX;
 
-    reg_info_ref[sve_vg].byte_offset = offset;
-    offset += reg_info_ref[sve_vg].byte_size;
+    reg_info_ref[fpu_fpsr].byte_offset = offset;
+    reg_info_ref[fpu_fpcr].byte_offset = offset + 4;
+    reg_info_ref[sve_vg].byte_offset = offset + 8;
+    offset += 16;
 
     // Update Z registers size and offset
     uint32_t s_reg_base = fpu_s0;
@@ -314,8 +316,7 @@ RegisterInfoPOSIX_arm64::ConfigureVectorRegisterInfos(uint32_t sve_vq) {
       offset += reg_info_ref[it].byte_size;
     }
 
-    reg_info_ref[fpu_fpsr].byte_offset = offset;
-    reg_info_ref[fpu_fpcr].byte_offset = offset + 4;
+    m_per_vq_reg_infos[sve_vq] = reg_info_ref;
   }
 
   m_register_info_p = reg_info_ref.data();
@@ -341,3 +342,5 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }

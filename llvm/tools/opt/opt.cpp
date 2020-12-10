@@ -38,6 +38,7 @@
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -262,11 +263,13 @@ static cl::opt<bool> RemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
-static cl::opt<unsigned>
-    RemarksHotnessThreshold("pass-remarks-hotness-threshold",
-                            cl::desc("Minimum profile count required for "
-                                     "an optimization remark to be output"),
-                            cl::Hidden);
+static cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+    RemarksHotnessThreshold(
+        "pass-remarks-hotness-threshold",
+        cl::desc("Minimum profile count required for "
+                 "an optimization remark to be output. "
+                 "Use 'auto' to apply the threshold from profile summary."),
+        cl::value_desc("N or 'auto'"), cl::init(0), cl::Hidden);
 
 static cl::opt<std::string>
     RemarksFilename("pass-remarks-output",
@@ -454,26 +457,36 @@ struct TimeTracerRAII {
   }
 };
 
-// For use in NPM transition.
+// For use in NPM transition. Currently this contains most codegen-specific
+// passes. Remove passes from here when porting to the NPM.
 // TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
 // it exists.
-static bool IsCodegenPass(StringRef Pass) {
+static bool shouldPinPassToLegacyPM(StringRef Pass) {
   std::vector<StringRef> PassNamePrefix = {
       "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",   "nvvm-",   "nvptx-",
       "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",   "thumb2-", "arm-",
       "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-"};
   std::vector<StringRef> PassNameContain = {"ehprepare"};
-  std::vector<StringRef> PassNameExact = {
-      "safe-stack",           "cost-model",
-      "codegenprepare",       "interleaved-load-combine",
-      "unreachableblockelim", "scalarize-masked-mem-intrin",
-      "verify-safepoint-ir",  "divergence",
-      "infer-address-spaces", "atomic-expand",
-      "hardware-loops",       "type-promotion",
-      "mve-tail-predication", "interleaved-access",
-      "global-merge",         "pre-isel-intrinsic-lowering",
-      "expand-reductions",    "indirectbr-expand",
-      "generic-to-nvvm",      "expandmemcmp"};
+  std::vector<StringRef> PassNameExact = {"safe-stack",
+                                          "cost-model",
+                                          "codegenprepare",
+                                          "interleaved-load-combine",
+                                          "unreachableblockelim",
+                                          "verify-safepoint-ir",
+                                          "divergence",
+                                          "infer-address-spaces",
+                                          "atomic-expand",
+                                          "hardware-loops",
+                                          "type-promotion",
+                                          "mve-tail-predication",
+                                          "interleaved-access",
+                                          "global-merge",
+                                          "pre-isel-intrinsic-lowering",
+                                          "expand-reductions",
+                                          "indirectbr-expand",
+                                          "generic-to-nvvm",
+                                          "expandmemcmp",
+                                          "loop-reduce"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -487,10 +500,10 @@ static bool IsCodegenPass(StringRef Pass) {
 }
 
 // For use in NPM transition.
-static bool CodegenPassSpecifiedInPassList() {
+static bool shouldForceLegacyPM() {
   for (const auto &P : PassList) {
     StringRef Arg = P->getPassArgument();
-    if (IsCodegenPass(Arg))
+    if (shouldPinPassToLegacyPM(Arg))
       return true;
   }
   return false;
@@ -529,7 +542,7 @@ int main(int argc, char **argv) {
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandMemCmpPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinPass(Registry);
+  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
   initializeRewriteSymbolsLegacyPassPass(Registry);
@@ -719,7 +732,7 @@ int main(int argc, char **argv) {
   // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
   // e.g. `-enable-new-pm -sroa` will use NPM.
   // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
-  if ((EnableNewPassManager && !CodegenPassSpecifiedInPassList()) ||
+  if ((EnableNewPassManager && !shouldForceLegacyPM()) ||
       PassPipeline.getNumOccurrences() > 0) {
     if (AnalyzeOnly) {
       errs() << "Cannot specify -analyze under new pass manager\n";

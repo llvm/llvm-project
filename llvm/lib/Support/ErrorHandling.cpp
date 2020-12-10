@@ -170,9 +170,9 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
   // an OOM to stderr and abort.
   const char *OOMMessage = "LLVM ERROR: out of memory\n";
   const char *Newline = "\n";
-  (void)::write(2, OOMMessage, strlen(OOMMessage));
-  (void)::write(2, Reason, strlen(Reason));
-  (void)::write(2, Newline, strlen(Newline));
+  (void)!::write(2, OOMMessage, strlen(OOMMessage));
+  (void)!::write(2, Reason, strlen(Reason));
+  (void)!::write(2, Newline, strlen(Newline));
   abort();
 #endif
 }

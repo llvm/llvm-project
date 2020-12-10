@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=penryn | FileCheck %s
 ; PR2647
 
-@0 = external global float, align 16         ; <float*>:0 [#uses=2]
+@0 = external dso_local global float, align 16         ; <float*>:0 [#uses=2]
 
 define internal void @a() nounwind {
 ; CHECK-LABEL: a:

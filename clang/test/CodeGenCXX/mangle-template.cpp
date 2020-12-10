@@ -212,3 +212,12 @@ __make_integer_seq<std::integer_sequence, int, N> make() {}
 template __make_integer_seq<std::integer_sequence, int, 5> make<5>();
 // CHECK: define weak_odr {{.*}} @_ZN6test154makeILi5EEE18__make_integer_seqISt16integer_sequenceiXT_EEv(
 }
+
+namespace test16 {
+  // Ensure we properly form substitutions for template names in prefixes.
+  // CHECK: @_ZN6test161fINS_1TEEEvNT_1UIiE1VIiEENS5_IfEE
+  template<typename T> void f(typename T::template U<int>::template V<int>, typename T::template U<int>::template V<float>);
+  struct T { template<typename I> struct U { template<typename J> using V = int; }; };
+  void g() { f<T>(1, 2); }
+}
+

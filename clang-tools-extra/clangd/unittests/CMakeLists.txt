@@ -36,6 +36,7 @@ add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   ASTTests.cpp
   BackgroundIndexTests.cpp
+  CallHierarchyTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
   ClangdLSPServerTests.cpp
@@ -51,6 +52,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DexTests.cpp
   DiagnosticsTests.cpp
   DraftStoreTests.cpp
+  DumpASTTests.cpp
   ExpectedTypeTest.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
@@ -73,6 +75,7 @@ add_unittest(ClangdUnitTests ClangdTests
   PathMappingTests.cpp
   PreambleTests.cpp
   PrintASTTests.cpp
+  ProjectAwareIndexTests.cpp
   QualityTests.cpp
   RenameTests.cpp
   RIFFTests.cpp
@@ -90,8 +93,6 @@ add_unittest(ClangdUnitTests ClangdTests
   TestTU.cpp
   TestWorkspace.cpp
   TypeHierarchyTests.cpp
-  TweakTests.cpp
-  TweakTesting.cpp
   URITests.cpp
   XRefsTests.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DecisionForestRuntimeTest.cpp
@@ -104,6 +105,26 @@ add_unittest(ClangdUnitTests ClangdTests
   support/ThreadingTests.cpp
   support/TestTracer.cpp
   support/TraceTests.cpp
+
+  tweaks/AddUsingTests.cpp
+  tweaks/AnnotateHighlightingsTests.cpp
+  tweaks/DefineInlineTests.cpp
+  tweaks/DefineOutlineTests.cpp
+  tweaks/DumpASTTests.cpp
+  tweaks/DumpRecordLayoutTests.cpp
+  tweaks/DumpSymbolTests.cpp
+  tweaks/ExpandAutoTypeTests.cpp
+  tweaks/ExpandMacroTests.cpp
+  tweaks/ExtractFunctionTests.cpp
+  tweaks/ExtractVariableTests.cpp
+  tweaks/ObjCLocalizeStringLiteralTests.cpp
+  tweaks/PopulateSwitchTests.cpp
+  tweaks/RawStringLiteralTests.cpp
+  tweaks/RemoveUsingNamespaceTests.cpp
+  tweaks/ShowSelectionTreeTests.cpp
+  tweaks/SwapIfBranchesTests.cpp
+  tweaks/TweakTesting.cpp
+  tweaks/TweakTests.cpp
 
   ${REMOTE_TEST_SOURCES}
 
@@ -143,7 +164,8 @@ target_link_libraries(ClangdTests
 if (CLANGD_ENABLE_REMOTE)
   target_link_libraries(ClangdTests
     PRIVATE
-    clangdRemoteMarshalling)
+    clangdRemoteMarshalling
+    RemoteIndexProto)
 endif()
 
 if (CLANGD_BUILD_XPC)

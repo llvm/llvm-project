@@ -109,7 +109,8 @@ int main() {
   return 0;
 }
 
-int ompt_initialize(ompt_function_lookup_t lookup, ompt_data_t *tool_data) {
+int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
+                    ompt_data_t *tool_data) {
   ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
   ompt_get_callback = (ompt_get_callback_t)lookup("ompt_get_callback");
   ompt_get_state = (ompt_get_state_t)lookup("ompt_get_state");

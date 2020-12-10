@@ -29,7 +29,7 @@ void pass_vec_128() {
 }
 // CHECK-LABEL: define dso_local void @"?pass_vec_128@@YAXXZ"()
 // CHECK: getelementptr inbounds <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>, <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* %{{[^,]*}}, i32 0, i32 0
-// CHECK: call x86_thiscallcc %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* %{{.*}})
+// CHECK: call x86_thiscallcc %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* {{[^,]*}} %{{.*}})
 
 // Store q, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, <4 x float>* %{{[^,]*}}, align 16

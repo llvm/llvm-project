@@ -1347,7 +1347,7 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
       //  the previous level.
       bool parentFound = false;
       for (AffineForOp maybeParent : loops[i - 1]) {
-        if (maybeParent.getOperation()->isProperAncestor(loop)) {
+        if (maybeParent->isProperAncestor(loop)) {
           parentFound = true;
           break;
         }
@@ -1358,7 +1358,7 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
       //  this level.
 #ifndef NDEBUG
       for (AffineForOp sibling : loops[i])
-        assert(!sibling.getOperation()->isProperAncestor(loop) &&
+        assert(!sibling->isProperAncestor(loop) &&
                "Loops at the same level are nested");
 #endif
     }

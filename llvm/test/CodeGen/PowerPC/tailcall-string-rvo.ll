@@ -16,15 +16,15 @@ target triple = "powerpc64le-linux-gnu"
 %"struct.__gnu_cxx::__vstring_utility<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider.7.38.69" = type { i8* }
 %union.anon.8.39.70 = type { i64, [8 x i8] }
 
-declare void @TestBaz(%class.basic_string.11.42.73* noalias sret %arg)
+declare void @TestBaz(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg)
 
-define void @TestBar(%class.basic_string.11.42.73* noalias sret %arg) {
+define void @TestBar(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
 bb:
-  call void @TestBaz(%class.basic_string.11.42.73* noalias sret %arg)
+  call void @TestBaz(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg)
   ret void
 }
 
-define void @TestFoo(%class.basic_string.11.42.73* noalias sret %arg) {
+define void @TestFoo(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
 ; CHECK-LABEL: TestFoo:
 ; CHECK: #TC_RETURNd8 TestBar 0
 bb:
@@ -37,7 +37,7 @@ bb:
   store i64 13, i64* %tmp3, align 8
   %tmp4 = getelementptr inbounds %class.basic_string.11.42.73, %class.basic_string.11.42.73* %arg, i64 0, i32 0, i32 0, i32 2, i32 1, i64 5
   store i8 0, i8* %tmp4, align 1
-  tail call void @TestBar(%class.basic_string.11.42.73* noalias sret %arg)
+  tail call void @TestBar(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg)
   ret void
 }
 

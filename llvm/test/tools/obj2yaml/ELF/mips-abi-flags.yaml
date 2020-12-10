@@ -6,10 +6,10 @@
 # CHECK:      Sections:
 # CHECK-NEXT:   - Name:         .MIPS.abiflags
 # CHECK-NEXT:     Type:         SHT_MIPS_ABIFLAGS
-# CHECK-NEXT:     AddressAlign: 0x0000000000000008
-# CHECK-NEXT:     EntSize:      0x0000000000000018
+# CHECK-NEXT:     AddressAlign: 0x8
+# CHECK-NEXT:     EntSize:      0x18
 # CHECK-NEXT:     ISA:          MIPS64
-# CHECK-NEXT:     ISARevision:  0x05
+# CHECK-NEXT:     ISARevision:  0x5
 # CHECK-NEXT:     ISAExtension: EXT_OCTEON3
 # CHECK-NEXT:     ASEs:         [ DSP, DSPR2, VIRT ]
 # CHECK-NEXT:     FpABI:        FP_DOUBLE
@@ -52,7 +52,7 @@ Sections:
 
 # MIPS:      - Name: .MIPS.abiflags
 # MIPS-NEXT:   Type: SHT_MIPS_ABIFLAGS
-# MIPS-NEXT:   ISA:  0x00000000
+# MIPS-NEXT:   ISA:  0x0
 # MIPS-NEXT: ...
 
 # NOT-MIPS:      - Name:    .MIPS.abiflags

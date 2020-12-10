@@ -38,11 +38,14 @@ struct Configuration {
   bool staticLink = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
+  bool printEachFile = false;
+  bool printWhyLoad = false;
   bool searchDylibsFirst = false;
   bool saveTemps = false;
   uint32_t headerPad;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
+  bool demangle = false;
   llvm::MachO::Architecture arch;
   PlatformInfo platform;
   llvm::MachO::HeaderFileType outputType;

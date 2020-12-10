@@ -7,7 +7,7 @@
 // CHECK-DAG: private unnamed_addr constant [95 x i8] c"void SpecializedClassTemplate<char>::memberFunctionTemplate(T, U) const [T = char, U = double]\00"
 // CHECK-DAG: private unnamed_addr constant [85 x i8] c"void SpecializedClassTemplate<int>::memberFunctionTemplate(int, U) const [U = float]\00"
 // CHECK-DAG: private unnamed_addr constant [57 x i8] c"void NonTypeTemplateParam<42>::size() const [Count = 42]\00"
-// CHECK-DAG: private unnamed_addr constant [122 x i8] c"static void ClassWithTemplateTemplateParam<char, NS::ClassTemplate>::staticMember() [T = char, Param = NS::ClassTemplate]\00"
+// CHECK-DAG: private unnamed_addr constant [103 x i8] c"static void ClassWithTemplateTemplateParam<char>::staticMember() [T = char, Param = NS::ClassTemplate]\00"
 // CHECK-DAG: private unnamed_addr constant [106 x i8] c"void OuterClass<int *>::MiddleClass::InnerClass<float>::memberFunction(T, U) const [T = int *, U = float]\00"
 // CHECK-DAG: private unnamed_addr constant [51 x i8] c"void functionTemplateWithCapturedStmt(T) [T = int]\00"
 // CHECK-DAG: private unnamed_addr constant [76 x i8] c"auto functionTemplateWithLambda(int)::(anonymous class)::operator()() const\00"

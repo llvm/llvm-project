@@ -110,14 +110,11 @@ static cl::opt<bool> PrintChangedLoops("irce-print-changed-loops", cl::Hidden,
 static cl::opt<bool> PrintRangeChecks("irce-print-range-checks", cl::Hidden,
                                       cl::init(false));
 
-static cl::opt<int> MaxExitProbReciprocal("irce-max-exit-prob-reciprocal",
-                                          cl::Hidden, cl::init(10));
-
 static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
                                              cl::Hidden, cl::init(false));
 
-static cl::opt<unsigned> MinRuntimeIterations("min-runtime-iterations",
-                                              cl::Hidden, cl::init(3));
+static cl::opt<unsigned> MinRuntimeIterations("irce-min-runtime-iterations",
+                                              cl::Hidden, cl::init(10));
 
 static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
                                                  cl::Hidden, cl::init(true));
@@ -149,7 +146,6 @@ class InductiveRangeCheck {
   const SCEV *Step = nullptr;
   const SCEV *End = nullptr;
   Use *CheckUse = nullptr;
-  bool IsSigned = true;
 
   static bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, ScalarEvolution &SE,
                                   Value *&Index, Value *&Length,
@@ -164,7 +160,6 @@ public:
   const SCEV *getBegin() const { return Begin; }
   const SCEV *getStep() const { return Step; }
   const SCEV *getEnd() const { return End; }
-  bool isSigned() const { return IsSigned; }
 
   void print(raw_ostream &OS) const {
     OS << "InductiveRangeCheck:\n";
@@ -408,7 +403,6 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   IRC.Begin = IndexAddRec->getStart();
   IRC.Step = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
-  IRC.IsSigned = IsSigned;
   Checks.push_back(IRC);
 }
 
@@ -1871,7 +1865,7 @@ InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
     return true;
   BranchProbability ExitProbability =
       BPI->getEdgeProbability(LS.Latch, LS.LatchBrExitIdx);
-  if (ExitProbability > BranchProbability(1, MaxExitProbReciprocal)) {
+  if (ExitProbability > BranchProbability(1, MinRuntimeIterations)) {
     LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
                       << "the exit probability is too big " << ExitProbability
                       << "\n";);

@@ -11,7 +11,13 @@
 
 #include <stdarg.h>
 
+#if defined(__Fuchsia__)
+#include <zxtest/zxtest.h>
+using Test = ::zxtest::Test;
+#else
 #include "gtest/gtest.h"
+using Test = ::testing::Test;
+#endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/optional/backtrace.h"
@@ -32,7 +38,7 @@ bool OnlyOnce();
 }; // namespace test
 }; // namespace gwp_asan
 
-class DefaultGuardedPoolAllocator : public ::testing::Test {
+class DefaultGuardedPoolAllocator : public Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
@@ -51,7 +57,7 @@ protected:
       MaxSimultaneousAllocations;
 };
 
-class CustomGuardedPoolAllocator : public ::testing::Test {
+class CustomGuardedPoolAllocator : public Test {
 public:
   void
   InitNumSlots(decltype(gwp_asan::options::Options::MaxSimultaneousAllocations)
@@ -74,7 +80,7 @@ protected:
       MaxSimultaneousAllocations;
 };
 
-class BacktraceGuardedPoolAllocator : public ::testing::Test {
+class BacktraceGuardedPoolAllocator : public Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;

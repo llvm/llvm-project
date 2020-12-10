@@ -15,8 +15,8 @@
 #ifndef MLIR_MATCHERS_H
 #define MLIR_MATCHERS_H
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/StandardTypes.h"
 
 namespace mlir {
 

@@ -24,7 +24,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define void @test2(i64 %d1, i64 %d2, i64 %d3, i64 %d4, i64 %d5, i64 %d6, i64 %d7, i64 %d8, %struct.s2* byval nocapture readonly %vs) #0 {
+define void @test2(i64 %d1, i64 %d2, i64 %d3, i64 %d4, i64 %d5, i64 %d6, i64 %d7, i64 %d8, %struct.s2* byval(%struct.s2) nocapture readonly %vs) #0 {
 entry:
   %m = getelementptr inbounds %struct.s2, %struct.s2* %vs, i64 0, i32 0
   %0 = load i64, i64* %m, align 8
@@ -50,7 +50,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define void @test3(i64 %d1, i64 %d2, i64 %d3, i64 %d4, i64 %d5, i64 %d6, i64 %d7, i64 %d8, i64 %d9, %struct.s2* byval nocapture readonly %vs) #0 {
+define void @test3(i64 %d1, i64 %d2, i64 %d3, i64 %d4, i64 %d5, i64 %d6, i64 %d7, i64 %d8, i64 %d9, %struct.s2* byval(%struct.s2) nocapture readonly %vs) #0 {
 entry:
   %m = getelementptr inbounds %struct.s2, %struct.s2* %vs, i64 0, i32 0
   %0 = load i64, i64* %m, align 8

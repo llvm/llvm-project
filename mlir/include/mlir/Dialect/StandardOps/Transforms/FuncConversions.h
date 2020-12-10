@@ -26,6 +26,13 @@ void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
                                          MLIRContext *ctx,
                                          TypeConverter &converter);
 
+/// Add a pattern to the given pattern list to rewrite branch operations and
+/// `return` to use operands that have been legalized by the conversion
+/// framework. This can only be done if the branch operation implements the
+/// BranchOpInterface. Only needed for partial conversions.
+void populateBranchOpInterfaceAndReturnOpTypeConversionPattern(
+    OwningRewritePatternList &patterns, MLIRContext *ctx,
+    TypeConverter &converter);
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_

@@ -121,6 +121,7 @@ struct AlphaNum {
   AlphaNum &operator=(const AlphaNum &);
 };
 
+string StrCat();
 string StrCat(const AlphaNum &A);
 string StrCat(const AlphaNum &A, const AlphaNum &B);
 string StrCat(const AlphaNum &A, const AlphaNum &B, const AlphaNum &C);
@@ -154,9 +155,11 @@ using absl::StrCat;
 void Positives() {
   string S = StrCat(1, StrCat("A", StrCat(1.1)));
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
+  // CHECK-FIXES: string S = StrCat(1, "A", 1.1);
 
   S = StrCat(StrCat(StrCat(StrCat(StrCat(1)))));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
+  // CHECK-FIXES: S = StrCat(1);
 
   // TODO: should trigger. The issue here is that in the current
   // implementation we ignore any StrCat with StrCat ancestors. Therefore
@@ -166,9 +169,11 @@ void Positives() {
 
   StrAppend(&S, 001, StrCat(1, 2, "3"), StrCat("FOO"));
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
+  // CHECK-FIXES: StrAppend(&S, 001, 1, 2, "3", "FOO");
 
   StrAppend(&S, 001, StrCat(StrCat(1, 2), "3"), StrCat("FOO"));
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
+  // CHECK-FIXES: StrAppend(&S, 001, 1, 2, "3", "FOO");
 
   // Too many args. Ignore for now.
   S = StrCat(1, 2, StrCat(3, 4, 5, 6, 7), 8, 9, 10,
@@ -176,6 +181,10 @@ void Positives() {
              26, 27);
   // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
   StrAppend(&S, StrCat(1, 2, 3, 4, 5), StrCat(6, 7, 8, 9, 10));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
+  // CHECK-FIXES: StrAppend(&S, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+
+  StrCat(1, StrCat());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
 }
 

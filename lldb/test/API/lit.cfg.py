@@ -191,9 +191,6 @@ if is_configured('test_arch'):
 if is_configured('lldb_build_directory'):
   dotest_cmd += ['--build-dir', config.lldb_build_directory]
 
-if is_configured('lldb_trace_directory'):
-  dotest_cmd += ['-s', config.lldb_trace_directory]
-
 if is_configured('lldb_module_cache'):
   delete_module_cache(config.lldb_module_cache)
   dotest_cmd += ['--lldb-module-cache-dir', config.lldb_module_cache]

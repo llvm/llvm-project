@@ -379,6 +379,8 @@ extern array_alias<int> *array_alias_int_ptr;
 extern array_alias<svint8_t> *array_alias_int8_ptr; // expected-note {{in instantiation of template type alias 'array_alias' requested here}}
 #endif
 
+extern "C" svint8_t c_return_int8();
+
 void cxx_only(int sel) {
   svint8_t local_int8;
   svint16_t local_int16;

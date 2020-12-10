@@ -221,3 +221,13 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
   }
   return false;
 }
+
+Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
+  LiveInterval *VRegInterval = nullptr;
+  for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid(); ++Unit) {
+    if ((VRegInterval = Matrix[*Unit].getOneVReg()))
+      return VRegInterval->reg();
+  }
+
+  return MCRegister::NoRegister;
+}

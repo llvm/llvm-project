@@ -49,3 +49,16 @@ API Changes
   in both libc++ and libc++abi, which is technically an ODR violation. Also
   note that we couldn't decide to put the operators in libc++ only, because
   they are needed from libc++abi (which would create a circular dependency).
+- During the C++20 standardization process some new low-level bit functions
+  have been renamed. Libc++ has renamed these functions to match the C++20
+  Standard.
+  - ``ispow2`` has been renamed to ``has_single_bit``
+  - ``ceil2`` has been renamed to ``bit_ceil``
+  - ``floor2`` has been renamed to ``bit_floor``
+  - ``log2p1`` has been renamed to ``bit_width``
+
+- In C++20 mode, ``std::filesystem::path::u8string()`` and
+  ``generic_u8string()`` now return ``std::u8string`` according to P0428,
+  while they return ``std::string`` in C++17. This can cause source
+  incompatibility, which is discussed and acknowledged in P1423, but that
+  paper doesn't suggest any remediation for this incompatibility.

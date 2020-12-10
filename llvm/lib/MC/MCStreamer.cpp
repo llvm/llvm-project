@@ -90,7 +90,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -273,9 +273,9 @@ bool MCStreamer::hasUnfinishedDwarfFrameInfo() {
 
 MCDwarfFrameInfo *MCStreamer::getCurrentDwarfFrameInfo() {
   if (!hasUnfinishedDwarfFrameInfo()) {
-    getContext().reportError(SMLoc(), "this directive must appear between "
-                                      ".cfi_startproc and .cfi_endproc "
-                                      "directives");
+    getContext().reportError(getStartTokLoc(),
+                             "this directive must appear between "
+                             ".cfi_startproc and .cfi_endproc directives");
     return nullptr;
   }
   return &DwarfFrameInfos.back();
@@ -704,6 +704,7 @@ void MCStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
 
   MCSymbol *StartProc = emitCFILabel();
 
+  CurrentProcWinFrameInfoStartIndex = WinFrameInfos.size();
   WinFrameInfos.emplace_back(
       std::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
@@ -721,6 +722,11 @@ void MCStreamer::EmitWinCFIEndProc(SMLoc Loc) {
   CurFrame->End = Label;
   if (!CurFrame->FuncletOrFuncEnd)
     CurFrame->FuncletOrFuncEnd = CurFrame->End;
+
+  for (size_t I = CurrentProcWinFrameInfoStartIndex, E = WinFrameInfos.size();
+       I != E; ++I)
+    EmitWindowsUnwindTables(WinFrameInfos[I].get());
+  SwitchSection(CurFrame->TextSection);
 }
 
 void MCStreamer::EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
@@ -979,10 +985,13 @@ void MCStreamer::emitRawText(const Twine &T) {
 void MCStreamer::EmitWindowsUnwindTables() {
 }
 
-void MCStreamer::Finish() {
+void MCStreamer::EmitWindowsUnwindTables(WinEH::FrameInfo *Frame) {
+}
+
+void MCStreamer::Finish(SMLoc EndLoc) {
   if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
-    getContext().reportError(SMLoc(), "Unfinished frame!");
+    getContext().reportError(EndLoc, "Unfinished frame!");
     return;
   }
 

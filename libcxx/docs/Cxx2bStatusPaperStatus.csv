@@ -1,0 +1,6 @@
+"Paper #","Group","Paper Name","Meeting","Status","First released version"
+"`P0881R7 <https://wg21.link/P0881R7>`__","LWG","A Proposal to add stacktrace library","Autumn 2020","",""
+"`P0943R6 <https://wg21.link/P0943R6>`__","LWG","Support C atomics in C++","Autumn 2020","",""
+"`P1048R1 <https://wg21.link/P1048R1>`__","LWG","A proposal for a type trait to detect scoped enumerations","Autumn 2020","",""
+"`P1679R3 <https://wg21.link/P1679R3>`__","LWG","string contains function","Autumn 2020","",""
+"","","","","",""

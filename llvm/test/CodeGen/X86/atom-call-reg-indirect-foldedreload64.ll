@@ -22,11 +22,11 @@
 ;   }
 ;   
 
-@sum = external global i32
+@sum = external dso_local global i32
 @a = common global i32 0, align 4
 @i = common global i32 0, align 4
 @b = common global i32 0, align 4
-@funcp = external global i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)*
+@funcp = external dso_local global i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)*
 @c = common global i32 0, align 4
 @d = common global i32 0, align 4
 @e = common global i32 0, align 4

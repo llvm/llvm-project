@@ -1087,6 +1087,7 @@ TEST(StringRefTest, GTestPrinter) {
   EXPECT_EQ(R"("foo")", ::testing::PrintToString(StringRef("foo")));
 }
 
-static_assert(is_trivially_copyable<StringRef>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<StringRef>::value,
+              "trivially copyable");
 
 } // end anonymous namespace

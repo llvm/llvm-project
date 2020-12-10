@@ -109,7 +109,7 @@ void Value::copyFrom(const Value &M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
-    memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
+    memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
     create<StringRef>(M.as<StringRef>());
@@ -133,7 +133,7 @@ void Value::moveFrom(const Value &&M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
-    memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
+    memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
     create<StringRef>(M.as<StringRef>());

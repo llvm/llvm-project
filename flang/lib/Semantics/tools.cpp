@@ -37,13 +37,24 @@ static const Scope *FindScopeContaining(
   }
 }
 
+const Scope &GetTopLevelUnitContaining(const Scope &start) {
+  CHECK(!start.IsGlobal());
+  return DEREF(FindScopeContaining(
+      start, [](const Scope &scope) { return scope.parent().IsGlobal(); }));
+}
+
+const Scope &GetTopLevelUnitContaining(const Symbol &symbol) {
+  return GetTopLevelUnitContaining(symbol.owner());
+}
+
 const Scope *FindModuleContaining(const Scope &start) {
   return FindScopeContaining(
       start, [](const Scope &scope) { return scope.IsModule(); });
 }
 
-const Scope *FindProgramUnitContaining(const Scope &start) {
-  return FindScopeContaining(start, [](const Scope &scope) {
+const Scope &GetProgramUnitContaining(const Scope &start) {
+  CHECK(!start.IsGlobal());
+  return DEREF(FindScopeContaining(start, [](const Scope &scope) {
     switch (scope.kind()) {
     case Scope::Kind::Module:
     case Scope::Kind::MainProgram:
@@ -53,23 +64,19 @@ const Scope *FindProgramUnitContaining(const Scope &start) {
     default:
       return false;
     }
-  });
+  }));
 }
 
-const Scope *FindProgramUnitContaining(const Symbol &symbol) {
-  return FindProgramUnitContaining(symbol.owner());
+const Scope &GetProgramUnitContaining(const Symbol &symbol) {
+  return GetProgramUnitContaining(symbol.owner());
 }
 
 const Scope *FindPureProcedureContaining(const Scope &start) {
   // N.B. We only need to examine the innermost containing program unit
   // because an internal subprogram of a pure subprogram must also
   // be pure (C1592).
-  if (const Scope * scope{FindProgramUnitContaining(start)}) {
-    if (IsPureProcedure(*scope)) {
-      return scope;
-    }
-  }
-  return nullptr;
+  const Scope &scope{GetProgramUnitContaining(start)};
+  return IsPureProcedure(scope) ? &scope : nullptr;
 }
 
 Tristate IsDefinedAssignment(
@@ -176,9 +183,9 @@ bool IsCommonBlockContaining(const Symbol &block, const Symbol &object) {
 }
 
 bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
-  const Scope *owner{FindProgramUnitContaining(symbol.GetUltimate().owner())};
-  return owner && owner->kind() == Scope::Kind::Module &&
-      owner != FindProgramUnitContaining(scope);
+  const Scope &owner{GetProgramUnitContaining(symbol.GetUltimate().owner())};
+  return owner.kind() == Scope::Kind::Module &&
+      owner != GetProgramUnitContaining(scope);
 }
 
 bool DoesScopeContain(
@@ -203,10 +210,9 @@ static const Symbol &FollowHostAssoc(const Symbol &symbol) {
 }
 
 bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
-  const Scope *subprogram{FindProgramUnitContaining(scope)};
-  return subprogram &&
-      DoesScopeContain(
-          FindProgramUnitContaining(FollowHostAssoc(symbol)), *subprogram);
+  const Scope &subprogram{GetProgramUnitContaining(scope)};
+  return DoesScopeContain(
+      &GetProgramUnitContaining(FollowHostAssoc(symbol)), subprogram);
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
@@ -484,7 +490,8 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
   } else {
     const auto &symbol{derived->typeSymbol()};
     return symbol.owner().IsModule() &&
-        symbol.owner().GetName().value() == "__fortran_builtins" &&
+        (symbol.owner().GetName().value() == "__fortran_builtins" ||
+            symbol.owner().GetName().value() == "__fortran_type_info") &&
         symbol.name() == "__builtin_"s + name;
   }
 }
@@ -534,7 +541,8 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
+    const Symbol *derivedTypeSymbol) {
   if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
@@ -548,7 +556,10 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
       return true;
     } else if (!IsPointer(symbol) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
-        if (derived->HasDefaultInitialization()) {
+        if (&derived->typeSymbol() == derivedTypeSymbol) {
+          // error recovery: avoid infinite recursion on invalid
+          // recursive usage of a derived type
+        } else if (derived->HasDefaultInitialization()) {
           return true;
         }
       }
@@ -628,10 +639,16 @@ bool IsAutomatic(const Symbol &symbol) {
 }
 
 bool IsFinalizable(const Symbol &symbol) {
-  if (const DeclTypeSpec * type{symbol.GetType()}) {
-    if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-      return IsFinalizable(*derived);
+  if (IsPointer(symbol)) {
+    return false;
+  }
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (object->isDummy() && !IsIntentOut(symbol)) {
+      return false;
     }
+    const DeclTypeSpec *type{object->type()};
+    const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+    return derived && IsFinalizable(*derived);
   }
   return false;
 }

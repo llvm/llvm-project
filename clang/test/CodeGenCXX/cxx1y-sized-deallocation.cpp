@@ -110,5 +110,5 @@ D::D() {}
 // CHECK: call void @_ZN1FdaEPvm(i8* %{{[^ ]*}}, i64 %{{[^ ]*}})
 
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1DD0Ev(%{{[^ ]*}}* %this)
+// CHECK-LABEL: define linkonce_odr void @_ZN1DD0Ev(%{{[^ ]*}}* {{[^,]*}} %this)
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 8)

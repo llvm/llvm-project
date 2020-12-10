@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-windows-gnu %s -o %t.obj
-// RUN: not lld-link -entry:_start -subsystem:console %t.obj -out:%t.exe 2>&1 | FileCheck %s
+// RUN: env LLD_IN_TEST=1 not lld-link -entry:_start -subsystem:console %t.obj -out:%t.exe 2>&1 | FileCheck %s
  .syntax unified
  .globl _start
 _start:

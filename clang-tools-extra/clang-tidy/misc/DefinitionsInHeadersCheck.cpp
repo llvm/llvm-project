@@ -36,10 +36,8 @@ DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
                                   HeaderFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    // FIXME: Find a more suitable way to handle invalid configuration
-    // options.
-    llvm::errs() << "Invalid header file extension: "
-                 << RawStringHeaderFileExtensions << "\n";
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
   }
 }
 

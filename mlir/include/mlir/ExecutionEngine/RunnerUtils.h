@@ -225,6 +225,8 @@ _mlir_ciface_print_memref_f64(UnrankedMemRefType<double> *M);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_i32(int64_t rank,
                                                          void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_i64(int64_t rank,
+                                                         void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f32(int64_t rank,
                                                          void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f64(int64_t rank,

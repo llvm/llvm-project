@@ -90,13 +90,13 @@ public:
   ///     if module A #defines a macro and module B #undefs it.
   ///
   /// \param[in] handler
-  ///     A function to call with the text of each #define (including the
-  ///     #define directive).  #undef directives are not included; we simply
-  ///     elide any corresponding #define.  If this function returns true,
-  ///     we stop the iteration immediately.
-  virtual void
-  ForEachMacro(const ModuleVector &modules,
-               std::function<bool(const std::string &)> handler) = 0;
+  ///     A function to call with the identifier of this macro and the text of
+  ///     each #define (including the #define directive). #undef directives are
+  ///     not included; we simply elide any corresponding #define. If this
+  ///     function returns true, we stop the iteration immediately.
+  virtual void ForEachMacro(
+      const ModuleVector &modules,
+      std::function<bool(llvm::StringRef, llvm::StringRef)> handler) = 0;
 
   /// Query whether Clang supports modules for a particular language.
   /// LLDB uses this to decide whether to try to find the modules loaded

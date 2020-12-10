@@ -1,6 +1,6 @@
-; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump - \
+; RUN: llc -mtriple=x86_64 -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s --check-prefix=DW5 "--implicit-check-not={{DW_TAG|NULL}}"
-; RUN: %llc_dwarf -dwarf-version=4 -filetype=obj -O0 < %s | llvm-dwarfdump - \
+; RUN: llc -mtriple=x86_64 -dwarf-version=4 -filetype=obj -O0 < %s | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s --check-prefix=DW4 "--implicit-check-not={{DW_TAG|NULL}}"
 
 ; DW5: .debug_info contents:

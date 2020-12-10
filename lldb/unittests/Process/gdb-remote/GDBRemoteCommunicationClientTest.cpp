@@ -343,6 +343,25 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetWritable());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
+  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.GetMemoryTagged());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;flags:;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;flags: mt  zz mt  ;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -360,6 +379,66 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
     HandlePacket(server, testing::StartsWith("qSupported:"), "");
   }
   EXPECT_FALSE(result.get().Success());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedTypePacket) {
+  TraceTypeInfo trace_type;
+  std::string error_message;
+  auto callback = [&] {
+    if (llvm::Expected<TraceTypeInfo> trace_type_or_err =
+            client.SendGetSupportedTraceType()) {
+      trace_type = *trace_type_or_err;
+      error_message = "";
+      return true;
+    } else {
+      trace_type = {};
+      error_message = llvm::toString(trace_type_or_err.takeError());
+      return false;
+    }
+  };
+
+  // Success response
+  {
+    std::future<bool> result = std::async(std::launch::async, callback);
+
+    HandlePacket(
+        server, "jLLDBTraceSupportedType",
+        R"({"name":"intel-pt","description":"Intel Processor Trace"}])");
+
+    EXPECT_TRUE(result.get());
+    ASSERT_STREQ(trace_type.name.c_str(), "intel-pt");
+    ASSERT_STREQ(trace_type.description.c_str(), "Intel Processor Trace");
+  }
+
+  // Error response - wrong json
+  {
+    std::future<bool> result = std::async(std::launch::async, callback);
+
+    HandlePacket(server, "jLLDBTraceSupportedType", R"({"type":"intel-pt"}])");
+
+    EXPECT_FALSE(result.get());
+    ASSERT_STREQ(error_message.c_str(), "missing value at (root).name");
+  }
+
+  // Error response
+  {
+    std::future<bool> result = std::async(std::launch::async, callback);
+
+    HandlePacket(server, "jLLDBTraceSupportedType", "E23");
+
+    EXPECT_FALSE(result.get());
+  }
+
+  // Error response with error message
+  {
+    std::future<bool> result = std::async(std::launch::async, callback);
+
+    HandlePacket(server, "jLLDBTraceSupportedType",
+                 "E23;50726F63657373206E6F742072756E6E696E672E");
+
+    EXPECT_FALSE(result.get());
+    ASSERT_STREQ(error_message.c_str(), "Process not running.");
+  }
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {

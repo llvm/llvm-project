@@ -2,7 +2,7 @@
 ; RUN: llc -O0 -mtriple=mipsel-unknown-linux-gnu -mcpu=mips32r2 -target-abi=o32 < %s -filetype=asm -o - \
 ; RUN:   | FileCheck -check-prefixes=O32 %s
 ; RUN: llc -O0 -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n32 < %s -filetype=asm -o - \
-; RUN:   | FileCheck  -check-prefixes=N32,ALL %s
+; RUN:   | FileCheck  -check-prefixes=N32 %s
 ; RUN: llc -O0 -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n64 < %s -filetype=asm -o - \
 ; RUN:   | FileCheck -check-prefixes=N64 %s
 

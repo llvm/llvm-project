@@ -123,10 +123,10 @@ LinkEditData:
 
 #CHECK: FileHeader:      
 #CHECK: magic:           0xFEEDFACF
-#CHECK:   cputype:         0x01000007
-#CHECK:   cpusubtype:      0x00000003
-#CHECK:   filetype:        0x00000001
+#CHECK:   cputype:         0x1000007
+#CHECK:   cpusubtype:      0x3
+#CHECK:   filetype:        0x1
 #CHECK:   ncmds:           4
 #CHECK:   sizeofcmds:      512
-#CHECK:   flags:           0x00002000
-#CHECK:   reserved:        0x00000000
+#CHECK:   flags:           0x2000
+#CHECK:   reserved:        0x0

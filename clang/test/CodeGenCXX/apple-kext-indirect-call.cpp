@@ -38,5 +38,5 @@ void f(SubTempl<int>* t) {
 }
 
 // CHECK: getelementptr inbounds (void (%struct.Templ*)*, void (%struct.Templ*)** bitcast ({ [5 x i8*] }* @_ZTV5TemplIiE to void (%struct.Templ*)**), i64 2)
-// CHECK: define internal void @_ZN5TemplIiE1fEv(%struct.Templ* %this)
-// CHECK: define internal void @_ZN5TemplIiE1gEv(%struct.Templ* %this)
+// CHECK: define internal void @_ZN5TemplIiE1fEv(%struct.Templ* {{[^,]*}} %this)
+// CHECK: define internal void @_ZN5TemplIiE1gEv(%struct.Templ* {{[^,]*}} %this)

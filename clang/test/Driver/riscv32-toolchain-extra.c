@@ -11,7 +11,6 @@
 // The test below checks that the driver correctly finds the linker and
 // runtime if and only if they exist.
 //
-// REQUIRES: platform-linker
 // RUN: rm -rf %T/testroot-riscv32-baremetal-nogcc
 // RUN: mkdir -p %T/testroot-riscv32-baremetal-nogcc/bin
 // RUN: ln -s %clang %T/testroot-riscv32-baremetal-nogcc/bin/clang
@@ -19,7 +18,11 @@
 // RUN: ln -s %S/Inputs/basic_riscv32_nogcc_tree/riscv32-unknown-elf %T/testroot-riscv32-baremetal-nogcc/riscv32-unknown-elf
 // RUN: %T/testroot-riscv32-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%T/testroot-riscv32-baremetal-nogcc/invalid \
-// RUN:    -target riscv32-unknown-elf --rtlib=platform 2>&1 \
+// RUN:    -target riscv32-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
+
+// RUN: %T/testroot-riscv32-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    -target riscv32-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
 // C-RV32-BAREMETAL-ILP32-NOGCC: "-internal-isystem" "{{.*}}Output/testroot-riscv32-baremetal-nogcc/bin/../riscv32-unknown-elf/include"

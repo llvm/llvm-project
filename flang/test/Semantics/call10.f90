@@ -157,8 +157,9 @@ module m
     close(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram
     backspace(1) ! C1597
+    !Also checks parsing of variant END FILE spelling
     !ERROR: External I/O is not allowed in a pure subprogram
-    endfile(1) ! C1597
+    end file(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram
     rewind(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram

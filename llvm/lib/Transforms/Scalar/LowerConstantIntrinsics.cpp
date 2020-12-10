@@ -78,7 +78,7 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
       Other->removePredecessor(Source);
       BI->eraseFromParent();
       BranchInst::Create(Target, Source);
-      if (pred_begin(Other) == pred_end(Other))
+      if (pred_empty(Other))
         HasDeadBlocks = true;
     }
   }

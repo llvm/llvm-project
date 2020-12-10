@@ -116,6 +116,7 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   return UResult;
 }
+} // namespace
 
 /// Return whether at least one simplification has been applied.
 bool SimplifyVisitor::isModified() const {
@@ -678,6 +679,7 @@ void SimplifyVisitor::releaseMemory() {
   StmtsRemoved = 0;
 }
 
+namespace {
 class SimplifyLegacyPass : public ScopPass {
 public:
   static char ID;

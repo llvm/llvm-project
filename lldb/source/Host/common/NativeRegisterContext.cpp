@@ -424,3 +424,32 @@ NativeRegisterContext::ConvertRegisterKindToRegisterNumber(uint32_t kind,
 
   return LLDB_INVALID_REGNUM;
 }
+
+std::vector<uint32_t>
+NativeRegisterContext::GetExpeditedRegisters(ExpeditedRegs expType) const {
+  if (expType == ExpeditedRegs::Minimal) {
+    // Expedite only a minimum set of important generic registers.
+    static const uint32_t k_expedited_registers[] = {
+        LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP, LLDB_REGNUM_GENERIC_FP,
+        LLDB_REGNUM_GENERIC_RA};
+
+    std::vector<uint32_t> expedited_reg_nums;
+    for (uint32_t gen_reg : k_expedited_registers) {
+      uint32_t reg_num =
+          ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric, gen_reg);
+      if (reg_num == LLDB_INVALID_REGNUM)
+        continue; // Target does not support the given register.
+      else
+        expedited_reg_nums.push_back(reg_num);
+    }
+
+    return expedited_reg_nums;
+  }
+
+  if (GetRegisterSetCount() > 0 && expType == ExpeditedRegs::Full)
+    return std::vector<uint32_t>(GetRegisterSet(0)->registers,
+                                 GetRegisterSet(0)->registers +
+                                     GetRegisterSet(0)->num_registers);
+
+  return std::vector<uint32_t>();
+}

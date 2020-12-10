@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=stack-protector -stop-after=stack-protector -o - < %s | FileCheck %s
-; Bugs 42238/43308/47479: Test some additional situations not caught previously.
+; Bugs 42238/43308: Test some additional situations not caught previously.
 
 define void @store_captures() #0 {
 ; CHECK-LABEL: @store_captures(
@@ -162,10 +162,13 @@ entry:
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
 
-
-; Test that the same function does not get a canary if nossp fn attr is set.
+; Intentionally does not have any fn attrs.
 declare dso_local void @foo(i8*)
 
+; @bar_sspstrong and @bar_nossp are the same function, but differ only in
+; function attributes. Test that a callee without stack protector function
+; attribute does not trigger a stack guard slot in a caller that also does not
+; have a stack protector slot.
 define dso_local void @bar_sspstrong(i64 %0) #0 {
 ; CHECK-LABEL: @bar_sspstrong
 ; CHECK-NEXT: %StackGuardSlot = alloca i8*
@@ -177,7 +180,8 @@ define dso_local void @bar_sspstrong(i64 %0) #0 {
   ret void
 }
 
-define dso_local void @bar_nossp(i64 %0) #1 {
+; Intentionally does not have any fn attrs.
+define dso_local void @bar_nossp(i64 %0) {
 ; CHECK-LABEL: @bar_nossp
 ; CHECK-NEXT: %2 = alloca i64
   %2 = alloca i64, align 8
@@ -189,4 +193,3 @@ define dso_local void @bar_nossp(i64 %0) #1 {
 }
 
 attributes #0 = { sspstrong }
-attributes #1 = { nossp }

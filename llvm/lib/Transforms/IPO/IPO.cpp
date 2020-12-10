@@ -25,6 +25,7 @@ using namespace llvm;
 void llvm::initializeIPO(PassRegistry &Registry) {
   initializeOpenMPOptLegacyPassPass(Registry);
   initializeArgPromotionPass(Registry);
+  initializeAnnotation2MetadataLegacyPass(Registry);
   initializeCalledValuePropagationLegacyPassPass(Registry);
   initializeConstantMergeLegacyPassPass(Registry);
   initializeCrossDSOCFIPass(Registry);

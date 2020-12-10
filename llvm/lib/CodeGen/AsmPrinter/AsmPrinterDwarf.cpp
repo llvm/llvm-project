@@ -98,6 +98,12 @@ static const char *DecodeDWARFEncoding(unsigned Encoding) {
   case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8
       :
     return "indirect pcrel sdata8";
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_datarel |
+      dwarf::DW_EH_PE_sdata4:
+    return "indirect datarel sdata4";
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_datarel |
+      dwarf::DW_EH_PE_sdata8:
+    return "indirect datarel sdata8";
   }
 
   return "<unknown encoding>";
@@ -138,8 +144,7 @@ unsigned AsmPrinter::GetSizeOfEncodedValue(unsigned Encoding) const {
   }
 }
 
-void AsmPrinter::emitTTypeReference(const GlobalValue *GV,
-                                    unsigned Encoding) const {
+void AsmPrinter::emitTTypeReference(const GlobalValue *GV, unsigned Encoding) {
   if (GV) {
     const TargetLoweringObjectFile &TLOF = getObjFileLowering();
 

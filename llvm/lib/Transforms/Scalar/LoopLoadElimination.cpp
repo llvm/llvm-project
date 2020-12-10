@@ -56,6 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -610,6 +611,7 @@ private:
 static bool
 eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
                           BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+                          ScalarEvolution *SE, AssumptionCache *AC,
                           function_ref<const LoopAccessInfo &(Loop &)> GetLAI) {
   // Build up a worklist of inner-loops to transform to avoid iterator
   // invalidation.
@@ -618,14 +620,17 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
   // which merely optimizes the use of loads in a loop.
   SmallVector<Loop *, 8> Worklist;
 
+  bool Changed = false;
+
   for (Loop *TopLevelLoop : LI)
-    for (Loop *L : depth_first(TopLevelLoop))
+    for (Loop *L : depth_first(TopLevelLoop)) {
+      Changed |= simplifyLoop(L, &DT, &LI, SE, AC, /*MSSAU*/ nullptr, false);
       // We only handle inner-most loops.
       if (L->isInnermost())
         Worklist.push_back(L);
+    }
 
   // Now walk the identified inner loops.
-  bool Changed = false;
   for (Loop *L : Worklist) {
     // The actual work is performed by LoadEliminationForLoop.
     LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT, BFI, PSI);
@@ -660,7 +665,7 @@ public:
 
     // Process each loop nest in the function.
     return eliminateLoadsAcrossLoops(
-        F, LI, DT, BFI, PSI,
+        F, LI, DT, BFI, PSI, /*SE*/ nullptr, /*AC*/ nullptr,
         [&LAA](Loop &L) -> const LoopAccessInfo & { return LAA.getInfo(&L); });
   }
 
@@ -717,7 +722,7 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
-      F, LI, DT, BFI, PSI, [&](Loop &L) -> const LoopAccessInfo & {
+      F, LI, DT, BFI, PSI, &SE, &AC, [&](Loop &L) -> const LoopAccessInfo & {
         LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
                                           TLI, TTI, nullptr, MSSA};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);

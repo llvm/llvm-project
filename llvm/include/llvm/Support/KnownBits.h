@@ -179,6 +179,10 @@ public:
     return *this;
   }
 
+  /// Return known bits for a in-register sign extension of the value we're
+  /// tracking.
+  KnownBits sextInReg(unsigned SrcBitWidth) const;
+
   /// Return a KnownBits with the extracted bits
   /// [bitPosition,bitPosition+numBits).
   KnownBits extractBits(unsigned NumBits, unsigned BitPosition) const {
@@ -250,6 +254,16 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  /// Create known bits from a known constant.
+  static KnownBits makeConstant(const APInt &C) {
+    return KnownBits(~C, C);
+  }
+
+  /// Compute known bits common to LHS and RHS.
+  static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
+    return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
+  }
+
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
   static KnownBits computeForAddCarry(
       const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
@@ -316,7 +330,7 @@ public:
   KnownBits &operator^=(const KnownBits &RHS);
 
   /// Compute known bits for the absolute value.
-  KnownBits abs() const;
+  KnownBits abs(bool IntMinIsPoison = false) const;
 
   KnownBits byteSwap() {
     return KnownBits(Zero.byteSwap(), One.byteSwap());

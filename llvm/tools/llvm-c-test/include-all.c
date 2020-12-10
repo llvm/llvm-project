@@ -29,7 +29,6 @@
 #include "llvm-c/Initialization.h"
 #include "llvm-c/IRReader.h"
 #include "llvm-c/Linker.h"
-#include "llvm-c/LinkTimeOptimizer.h"
 #include "llvm-c/Object.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/Remarks.h"

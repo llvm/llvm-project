@@ -441,7 +441,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = TypeSystemClang::GetScratch(
+    auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
     if (clang_ast_context)
       m_id_type = CompilerType(
@@ -589,7 +589,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = TypeSystemClang::GetScratch(
+      auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
       if (clang_ast_context)
         m_id_type = clang_ast_context->GetType(
@@ -758,7 +758,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
 
   if (idx == 0) {
     auto *clang_ast_context =
-        TypeSystemClang::GetScratch(*m_backend.GetTargetSP());
+        ScratchTypeSystemClang::GetForTarget(*m_backend.GetTargetSP());
     if (clang_ast_context) {
       CompilerType id_type(
           clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));

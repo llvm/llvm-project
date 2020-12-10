@@ -44,7 +44,7 @@ func @module_op() {
 
 // -----
 
-// expected-error@+1 {{can only contain dialect-specific attributes}}
+// expected-error@+1 {{can only contain attributes with dialect-prefixed names}}
 module attributes {attr} {
 }
 

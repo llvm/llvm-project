@@ -439,11 +439,11 @@ private:
   /// Add a copy instruction copying \p FromReg to \p ToReg before
   /// \p InsertBefore. This can be invoked with a \p LaneMask which may make it
   /// necessary to construct a sequence of copies to cover it exactly.
-  SlotIndex buildCopy(unsigned FromReg, unsigned ToReg, LaneBitmask LaneMask,
+  SlotIndex buildCopy(Register FromReg, Register ToReg, LaneBitmask LaneMask,
       MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
       bool Late, unsigned RegIdx);
 
-  SlotIndex buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
+  SlotIndex buildSingleSubRegCopy(Register FromReg, Register ToReg,
       MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
       unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def);
 

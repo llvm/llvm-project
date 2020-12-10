@@ -9,9 +9,9 @@ namespace test0 {
   };
   class B : public A {
   };
-  class C : protected A { // expected-note {{declared}}
+  class C : protected A {
   };
-  class D : private B { // expected-note 3 {{constrained}}
+  class D : private B { // expected-note 2 {{constrained}}
   };
 
   void test(A &a) {
@@ -23,11 +23,11 @@ namespace test0 {
     (void) b.sx; // expected-error {{'sx' is a protected member}}
   }
   void test(C &c) {
-    (void) c.x; // expected-error {{'x' is a protected member}} expected-error {{protected base class}}
+    (void) c.x; // expected-error {{'x' is a protected member}}
     (void) c.sx; // expected-error {{'sx' is a protected member}}
   }
   void test(D &d) {
-    (void) d.x; // expected-error {{'x' is a private member}} expected-error {{private base class}}
+    (void) d.x; // expected-error {{'x' is a private member}}
     (void) d.sx; // expected-error {{'sx' is a private member}}
   }
 }
@@ -145,7 +145,7 @@ namespace test4 {
   class B : public A {
     static void test(C&);
   };
-  class C : protected A { // expected-note 4 {{constrained}} expected-note 3 {{declared}}
+  class C : protected A { // expected-note 4 {{constrained}}
     static void test(C&);
   };
   class D : private B {
@@ -153,13 +153,11 @@ namespace test4 {
   };
 
   void A::test(C &c) {
-    (void) c.x;  // expected-error {{'x' is a protected member}} \
-                 // expected-error {{protected base class}}
+    (void) c.x;  // expected-error {{'x' is a protected member}}
     (void) c.sx; // expected-error {{'sx' is a protected member}}
   }
   void B::test(C &c) {
-    (void) c.x;  // expected-error {{'x' is a protected member}} \
-                 // expected-error {{protected base class}}
+    (void) c.x;  // expected-error {{'x' is a protected member}}
     (void) c.sx; // expected-error {{'sx' is a protected member}}
   }
   void C::test(C &c) {
@@ -167,8 +165,7 @@ namespace test4 {
     (void) c.sx;
   }
   void D::test(C &c) {
-    (void) c.x;  // expected-error {{'x' is a protected member}} \
-                 // expected-error {{protected base class}}
+    (void) c.x;  // expected-error {{'x' is a protected member}}
     (void) c.sx; // expected-error {{'sx' is a protected member}}
   }
 }
@@ -186,23 +183,20 @@ namespace test5 {
   class C : protected A {
     static void test(D&);
   };
-  class D : private B { // expected-note 9 {{constrained}}
+  class D : private B { // expected-note 6 {{constrained}}
     static void test(D&);
   };
 
   void A::test(D &d) {
-    (void) d.x;  // expected-error {{'x' is a private member}} \
-                 // expected-error {{cannot cast}}
+    (void) d.x;  // expected-error {{'x' is a private member}}
     (void) d.sx; // expected-error {{'sx' is a private member}}
   }
   void B::test(D &d) {
-    (void) d.x;  // expected-error {{'x' is a private member}} \
-                 // expected-error {{cannot cast}}
+    (void) d.x;  // expected-error {{'x' is a private member}}
     (void) d.sx; // expected-error {{'sx' is a private member}}
   }
   void C::test(D &d) {
-    (void) d.x;  // expected-error {{'x' is a private member}} \
-                 // expected-error {{cannot cast}}
+    (void) d.x;  // expected-error {{'x' is a private member}}
     (void) d.sx; // expected-error {{'sx' is a private member}}
   }
   void D::test(D &d) {
@@ -337,7 +331,7 @@ namespace test9 {
   };
 
   class C : protected B { // expected-note {{declared}} \
-                          // expected-note 9 {{constrained}}
+                          // expected-note 7 {{constrained}}
   };
 
   class D : public A {
@@ -357,14 +351,12 @@ namespace test9 {
     }
 
     static void test(C &c) {
-      c.foo();    // expected-error {{'foo' is a protected member}} \
-                  // expected-error {{cannot cast}}
+      c.foo();    // expected-error {{'foo' is a protected member}}
       c.A::foo(); // expected-error {{'A' is a protected member}} \
                   // expected-error {{cannot cast}}
       c.B::foo(); // expected-error {{'B' is a protected member}} \
                   // expected-error {{cannot cast}}
-      c.C::foo(); // expected-error {{'foo' is a protected member}} \
-                  // expected-error {{cannot cast}}
+      c.C::foo(); // expected-error {{'foo' is a protected member}}
     }
 
     static void test(D &d) {

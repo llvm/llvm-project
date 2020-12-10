@@ -8,18 +8,18 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 %"class.std::auto_ptr" = type { i32* }
 
-define void @_Z3foov(%"class.std::auto_ptr"* noalias nocapture sret %agg.result) ssp {
+define void @_Z3foov(%"class.std::auto_ptr"* noalias nocapture sret(%"class.std::auto_ptr") %agg.result) ssp {
 ; CHECK-LABEL: @_Z3foov(
 ; CHECK-NEXT:  _ZNSt8auto_ptrIiED1Ev.exit:
 ; CHECK-NEXT:    [[TEMP_LVALUE:%.*]] = alloca %"class.std::auto_ptr", align 8
-; CHECK-NEXT:    call void @_Z3barv(%"class.std::auto_ptr"* sret [[AGG_RESULT:%.*]])
+; CHECK-NEXT:    call void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr") [[AGG_RESULT:%.*]])
 ; CHECK-NEXT:    [[TMP_I_I:%.*]] = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* [[TEMP_LVALUE]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP_I_I4:%.*]] = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* [[AGG_RESULT]], i64 0, i32 0
 ; CHECK-NEXT:    ret void
 ;
 _ZNSt8auto_ptrIiED1Ev.exit:
   %temp.lvalue = alloca %"class.std::auto_ptr", align 8
-  call void @_Z3barv(%"class.std::auto_ptr"* sret %temp.lvalue)
+  call void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr") %temp.lvalue)
   %tmp.i.i = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* %temp.lvalue, i64 0, i32 0
   %tmp2.i.i = load i32*, i32** %tmp.i.i, align 8
   %tmp.i.i4 = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* %agg.result, i64 0, i32 0
@@ -27,4 +27,4 @@ _ZNSt8auto_ptrIiED1Ev.exit:
   ret void
 }
 
-declare void @_Z3barv(%"class.std::auto_ptr"* nocapture sret) nounwind
+declare void @_Z3barv(%"class.std::auto_ptr"* nocapture sret(%"class.std::auto_ptr")) nounwind

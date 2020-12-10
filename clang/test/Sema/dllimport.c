@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple aarch64-win32          -fsyntax-only -fms-extensions -verify -std=c99 -DMS %s
 // RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c99 -DWI %s
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c11 -DWI %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fms-extensions -verify -std=c11 -DWI %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fms-extensions -verify -std=c99 -DWI %s
 
 // Invalid usage.
 __declspec(dllimport) typedef int typedef1;

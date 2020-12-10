@@ -133,7 +133,7 @@ define void @f10(i64 %x, i64 %y) nounwind {
 }
 
 ; CHECK: @f11
-define void @f11(i128* byval %x) nounwind {
+define void @f11(i128* byval(i128) %x) nounwind {
   %1 = bitcast i128* %x to i8*
   %2 = getelementptr inbounds i8, i8* %1, i64 16
 ; CHECK: br label
@@ -142,7 +142,7 @@ define void @f11(i128* byval %x) nounwind {
 }
 
 ; CHECK: @f11_as1
-define void @f11_as1(i128 addrspace(1)* byval %x) nounwind {
+define void @f11_as1(i128 addrspace(1)* byval(i128) %x) nounwind {
   %1 = bitcast i128 addrspace(1)* %x to i8 addrspace(1)*
   %2 = getelementptr inbounds i8, i8 addrspace(1)* %1, i16 16
 ; CHECK: br label

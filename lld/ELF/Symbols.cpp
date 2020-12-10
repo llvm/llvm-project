@@ -37,11 +37,9 @@ std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = demangle(name);
 
-  // If sym has a non-default version, its name may have been truncated at '@'
-  // by Symbol::parseSymbolVersion(). Add the trailing part. This check is safe
-  // because every symbol name ends with '\0'.
-  if (name.data()[name.size()] == '@')
-    ret += name.data() + name.size();
+  const char *suffix = sym.getVersionSuffix();
+  if (*suffix == '@')
+    ret += suffix;
   return ret;
 }
 
@@ -691,7 +689,33 @@ void Symbol::resolveDefined(const Defined &other) {
                     other.value);
 }
 
+template <class LazyT>
+static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
+  backwardReferences.erase(&oldSym);
+  oldSym.replace(newSym);
+  newSym.fetch();
+}
+
 template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
+  // For common objects, we want to look for global or weak definitions that
+  // should be fetched as the cannonical definition instead.
+  if (isCommon() && elf::config->fortranCommon) {
+    if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
+      ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
+      const Archive::Symbol &archiveSym = laSym->sym;
+      if (archive->shouldFetchForCommon(archiveSym)) {
+        replaceCommon(*this, other);
+        return;
+      }
+    } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
+      LazyObjFile *obj = cast<LazyObjFile>(loSym->file);
+      if (obj->shouldFetchForCommon(loSym->getName())) {
+        replaceCommon(*this, other);
+        return;
+      }
+    }
+  }
+
   if (!isUndefined()) {
     // See the comment in resolveUndefined().
     if (isDefined())

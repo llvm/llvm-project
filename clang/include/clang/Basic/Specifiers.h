@@ -29,32 +29,15 @@ namespace clang {
   };
 
   /// Define the kind of constexpr specifier.
-  enum ConstexprSpecKind {
-    CSK_unspecified,
-    CSK_constexpr,
-    CSK_consteval,
-    CSK_constinit
-  };
+  enum class ConstexprSpecKind { Unspecified, Constexpr, Consteval, Constinit };
 
   /// Specifies the width of a type, e.g., short, long, or long long.
-  enum TypeSpecifierWidth {
-    TSW_unspecified,
-    TSW_short,
-    TSW_long,
-    TSW_longlong
-  };
+  enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };
 
   /// Specifies the signedness of a type, e.g., signed or unsigned.
-  enum TypeSpecifierSign {
-    TSS_unspecified,
-    TSS_signed,
-    TSS_unsigned
-  };
+  enum class TypeSpecifierSign { Unspecified, Signed, Unsigned };
 
-  enum TypeSpecifiersPipe {
-    TSP_unspecified,
-    TSP_pipe
-  };
+  enum class TypeSpecifiersPipe { Unspecified, Pipe };
 
   /// Specifies the kind of type.
   enum TypeSpecifierType {
@@ -106,7 +89,7 @@ namespace clang {
     static_assert(TST_error < 1 << 6, "Type bitfield not wide enough for TST");
     /*DeclSpec::TST*/ unsigned Type  : 6;
     /*DeclSpec::TSS*/ unsigned Sign  : 2;
-    /*DeclSpec::TSW*/ unsigned Width : 2;
+    /*TypeSpecifierWidth*/ unsigned Width : 2;
     unsigned ModeAttr : 1;
   };
 
@@ -326,7 +309,12 @@ namespace clang {
     /// unspecified. This captures a (fairly rare) case where we
     /// can't conclude anything about the nullability of the type even
     /// though it has been considered.
-    Unspecified
+    Unspecified,
+    // Generally behaves like Nullable, except when used in a block parameter
+    // that was imported into a swift async method. There, swift will assume
+    // that the parameter can get null even if no error occured. _Nullable
+    // parameters are assumed to only get null on error.
+    NullableResult,
   };
 
   /// Return true if \p L has a weaker nullability annotation than \p R. The

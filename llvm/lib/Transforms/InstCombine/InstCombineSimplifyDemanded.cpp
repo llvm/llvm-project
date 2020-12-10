@@ -367,8 +367,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
 
     // Only known if known in both the LHS and RHS.
-    Known.One = RHSKnown.One & LHSKnown.One;
-    Known.Zero = RHSKnown.Zero & LHSKnown.Zero;
+    Known = KnownBits::commonBits(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::ZExt:
@@ -897,6 +896,33 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return I->getOperand(0);
     if (DemandedMask.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
+
+    break;
+  }
+  case Instruction::AShr: {
+    // Compute the Known bits to simplify things downstream.
+    computeKnownBits(I, Known, Depth, CxtI);
+
+    // If this user is only demanding bits that we know, return the known
+    // constant.
+    if (DemandedMask.isSubsetOf(Known.Zero | Known.One))
+      return Constant::getIntegerValue(ITy, Known.One);
+
+    // If the right shift operand 0 is a result of a left shift by the same
+    // amount, this is probably a zero/sign extension, which may be unnecessary,
+    // if we do not demand any of the new sign bits. So, return the original
+    // operand instead.
+    const APInt *ShiftRC;
+    const APInt *ShiftLC;
+    Value *X;
+    unsigned BitWidth = DemandedMask.getBitWidth();
+    if (match(I,
+              m_AShr(m_Shl(m_Value(X), m_APInt(ShiftLC)), m_APInt(ShiftRC))) &&
+        ShiftLC == ShiftRC &&
+        DemandedMask.isSubsetOf(APInt::getLowBitsSet(
+            BitWidth, BitWidth - ShiftRC->getZExtValue()))) {
+      return X;
+    }
 
     break;
   }

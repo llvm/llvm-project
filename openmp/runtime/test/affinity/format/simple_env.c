@@ -13,4 +13,4 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECK-8: num_threads=8 TESTER-ENV: tl:1 tn:[0-7] nt:8
+// CHECK-8: num_threads=8 TESTER-ENV: tl:1 tn:[0-7] nt:8$

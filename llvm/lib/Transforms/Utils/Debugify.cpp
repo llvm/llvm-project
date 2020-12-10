@@ -20,6 +20,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -530,9 +531,18 @@ PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
+static bool isIgnoredPass(StringRef PassID) {
+  return isSpecialPass(PassID, {"PassManager", "PassAdaptor",
+                                "AnalysisManagerProxy", "PrintFunctionPass",
+                                "PrintModulePass", "BitcodeWriterPass",
+                                "ThinLTOBitcodeWriterPass", "VerifierPass"});
+}
+
 void DebugifyEachInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   PIC.registerBeforeNonSkippedPassCallback([](StringRef P, Any IR) {
+    if (isIgnoredPass(P))
+      return;
     if (any_isa<const Function *>(IR))
       applyDebugify(*const_cast<Function *>(any_cast<const Function *>(IR)));
     else if (any_isa<const Module *>(IR))
@@ -540,6 +550,8 @@ void DebugifyEachInstrumentation::registerCallbacks(
   });
   PIC.registerAfterPassCallback([this](StringRef P, Any IR,
                                        const PreservedAnalyses &PassPA) {
+    if (isIgnoredPass(P))
+      return;
     if (any_isa<const Function *>(IR)) {
       auto &F = *const_cast<Function *>(any_cast<const Function *>(IR));
       Module &M = *F.getParent();

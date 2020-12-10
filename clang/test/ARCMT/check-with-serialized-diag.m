@@ -35,7 +35,7 @@ void test1(A *a, struct UnsafeS *unsafeS) {
   [a retainCount];
 }
 
-// RUN: not %clang_cc1 -arcmt-check -triple x86_64-apple-darwin10 %s -serialize-diagnostic-file %t.diag
+// RUN: not %clang_cc1 -arcmt-action=check -triple x86_64-apple-darwin10 %s -serialize-diagnostic-file %t.diag
 // RUN: c-index-test -read-diagnostics %t.diag > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 

@@ -76,10 +76,6 @@ public:
   /// Return metadata containing the section prefix for a function.
   MDNode *createFunctionSectionPrefix(StringRef Prefix);
 
-  /// return metadata containing expected value
-  MDNode *createMisExpect(uint64_t Index, uint64_t LikelyWeight,
-                          uint64_t UnlikelyWeight);
-
   //===------------------------------------------------------------------===//
   // Range metadata.
   //===------------------------------------------------------------------===//

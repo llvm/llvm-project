@@ -233,11 +233,11 @@ bb13:
 
 ; GFX1032: s_or_b32 [[MASK0:s[0-9]+]], [[MASK0]], vcc_lo
 ; GFX1064: s_or_b64 [[MASK0:s\[[0-9:]+\]]], [[MASK0]], vcc
+; GCN:     global_store_dword
 ; GFX1032: s_andn2_b32 [[MASK1:s[0-9]+]], [[MASK1]], exec_lo
 ; GFX1064: s_andn2_b64 [[MASK1:s\[[0-9:]+\]]], [[MASK1]], exec
 ; GFX1032: s_and_b32 [[MASK0]], [[MASK0]], exec_lo
 ; GFX1064: s_and_b64 [[MASK0]], [[MASK0]], exec
-; GCN:     global_store_dword
 ; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GCN:   BB{{.*}}: ; %Flow
@@ -476,9 +476,12 @@ exit:
 }
 
 ; GCN-LABEL: {{^}}fdiv_f32:
+; GFX1032: v_div_scale_f32 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GFX1064: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_rcp_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1032: v_div_scale_f32 v{{[0-9]+}}, vcc_lo, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX1064: v_div_scale_f32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN: v_rcp_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+
 ; GCN-NOT: vcc
 ; GCN: v_div_fmas_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @fdiv_f32(float addrspace(1)* %out, float %a, float %b) #0 {
@@ -774,7 +777,7 @@ main_body:
 ; GFX1064:     v_cmp_eq_f32_e64 s{{\[}}[[C_LO:[0-9]+]]:[[C_HI:[0-9]+]]], {{s[0-9]+}}, |{{[vs][0-9]+}}|
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[C_HI]]
-; GCN:         store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[V_LO]]:[[V_HI]]],
+; GCN:         store_dwordx2 v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]], s
 define amdgpu_kernel void @test_intr_fcmp_i64(i64 addrspace(1)* %out, float %src, float %a) {
   %temp = call float @llvm.fabs.f32(float %a)
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float %src, float %temp, i32 1)
@@ -789,7 +792,7 @@ define amdgpu_kernel void @test_intr_fcmp_i64(i64 addrspace(1)* %out, float %src
 ; GFX1064:     v_cmp_eq_u32_e64 s{{\[}}[[C_LO:[0-9]+]]:[[C_HI:[0-9]+]]], 0x64, {{s[0-9]+}}
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[C_HI]]
-; GCN:         store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[V_LO]]:[[V_HI]]],
+; GCN:         store_dwordx2 v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]], s
 define amdgpu_kernel void @test_intr_icmp_i64(i64 addrspace(1)* %out, i32 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %src, i32 100, i32 32)
   store i64 %result, i64 addrspace(1)* %out
@@ -801,7 +804,7 @@ define amdgpu_kernel void @test_intr_icmp_i64(i64 addrspace(1)* %out, i32 %src) 
 ; GFX1032-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]
 ; GFX1064:     v_cmp_eq_f32_e64 s{{\[}}[[C_LO:[0-9]+]]:[[C_HI:[0-9]+]]], {{s[0-9]+}}, |{{[vs][0-9]+}}|
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]
-; GCN:         store_dword v[{{[0-9:]+}}], v[[V_LO]],
+; GCN:         store_dword v{{[0-9]+}}, v[[V_LO]], s
 define amdgpu_kernel void @test_intr_fcmp_i32(i32 addrspace(1)* %out, float %src, float %a) {
   %temp = call float @llvm.fabs.f32(float %a)
   %result = call i32 @llvm.amdgcn.fcmp.i32.f32(float %src, float %temp, i32 1)
@@ -814,7 +817,7 @@ define amdgpu_kernel void @test_intr_fcmp_i32(i32 addrspace(1)* %out, float %src
 ; GFX1032-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]{{$}}
 ; GFX1064:     v_cmp_eq_u32_e64 s{{\[}}[[C_LO:[0-9]+]]:{{[0-9]+}}], 0x64, {{s[0-9]+}}
 ; GFX1064-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[C_LO]]{{$}}
-; GCN:         store_dword v[{{[0-9:]+}}], v[[V_LO]],
+; GCN:         store_dword v{{[0-9]+}}, v[[V_LO]], s
 define amdgpu_kernel void @test_intr_icmp_i32(i32 addrspace(1)* %out, i32 %src) {
   %result = call i32 @llvm.amdgcn.icmp.i32.i32(i32 %src, i32 100, i32 32)
   store i32 %result, i32 addrspace(1)* %out

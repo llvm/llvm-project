@@ -60,7 +60,7 @@ declare fastcc void
 
 define internal fastcc void @CallPassByValue(%"myClass::Mem"* %E) align 2 {
 entry:
-  call fastcc void @PassByValue(%"myClass::Mem"* byval nonnull align 8 undef);
+  call fastcc void @PassByValue(%"myClass::Mem"* byval(%"myClass::Mem") nonnull align 8 undef);
   ret void
 
 ; CHECK-LABEL: PassByValue
@@ -69,7 +69,7 @@ entry:
 }
 
 declare dso_local fastcc void
-    @PassByValue(%"myClass::Mem"* byval nocapture readonly align 8) align 2
+    @PassByValue(%"myClass::Mem"* byval(%"myClass::Mem") nocapture readonly align 8) align 2
 
 ; Verify Paramater Save Area is allocated if parameter exceed the number that
 ; can be passed via registers
@@ -127,8 +127,8 @@ declare fastcc void
 
 define internal fastcc void @AggMemExprEmitter(%"myClass::MemK"* %E) align 2 {
 entry:
-  call fastcc void @MemExprEmitterInitialization(%"myClass::MemK" *
-                                               byval nonnull align 8 undef);
+  call fastcc void @MemExprEmitterInitialization(%"myClass::MemK"*
+                                               byval(%"myClass::MemK") nonnull align 8 undef);
   ret void
 
 ; CHECK-LABEL: AggMemExprEmitter
@@ -137,5 +137,5 @@ entry:
 }
 
 declare dso_local fastcc void
-    @MemExprEmitterInitialization(%"myClass::MemK" *
-                                  byval nocapture readonly align 8) align 2
+    @MemExprEmitterInitialization(%"myClass::MemK"*
+                                  byval(%"myClass::MemK") nocapture readonly align 8) align 2

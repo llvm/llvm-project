@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
+def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
 
   let description = [{
@@ -37,14 +37,14 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-address-of-op ::= ssa-id `=` `spv._address_of` symbol-ref-id
+    spv-address-of-op ::= ssa-id `=` `spv.mlir.addressof` symbol-ref-id
                                      `:` spirv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv._address_of @global_var : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @global_var : !spv.ptr<f32, Input>
     ```
   }];
 
@@ -373,7 +373,7 @@ def SPV_ModuleOp : SPV_Op<"module",
     implicitly capture values from the enclosing environment.
 
     This op has only one region, which only contains one block. The block
-    must be terminated via the `spv._module_end` op.
+    must be terminated via the `spv.mlir.endmodule` op.
 
     <!-- End of AutoGen section -->
 
@@ -443,7 +443,7 @@ def SPV_ModuleOp : SPV_Op<"module",
 
 // -----
 
-def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
+def SPV_ModuleEndOp : SPV_Op<"mlir.endmodule", [InModuleScope, Terminator]> {
   let summary = "The pseudo op that ends a SPIR-V module";
 
   let description = [{
@@ -468,7 +468,7 @@ def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
 
 // -----
 
-def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
+def SPV_ReferenceOfOp : SPV_Op<"mlir.referenceof", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -482,14 +482,14 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-reference-of-op ::= ssa-id `=` `spv._reference_of` symbol-ref-id
+    spv-reference-of-op ::= ssa-id `=` `spv.mlir.referenceof` symbol-ref-id
                                        `:` spirv-scalar-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv._reference_of @spec_const : f32
+    %0 = spv.mlir.referenceof @spec_const : f32
     ```
 
     TODO Add support for composite specialization constants.
@@ -607,6 +607,130 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [InModuleScope
 
   let autogenSerialization = 0;
 }
+
+def SPV_YieldOp : SPV_Op<"mlir.yield", [NoSideEffect, Terminator]> {
+  let summary = "Yields the result computed in `spv.SpecConstantOperation`'s"
+                "region back to the parent op.";
+
+  let description = [{
+    This op is a special terminator whose only purpose is to terminate
+    an `spv.SpecConstantOperation`'s enclosed region. It accepts a
+    single operand produced by the preceeding (and only other) instruction
+    in its parent block (see SPV_SpecConstantOperation for further
+    details). This op has no corresponding SPIR-V instruction.
+
+    ```
+    spv.mlir.yield ::= `spv.mlir.yield` ssa-id : spirv-type
+    ```
+
+    #### Example:
+    ```mlir
+    %0 = ... (some op supported by SPIR-V OpSpecConstantOp)
+    spv.mlir.yield %0
+    ```
+  }];
+
+  let arguments = (ins AnyType:$operand);
+
+  let results = (outs);
+
+  let hasOpcode = 0;
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = "attr-dict $operand `:` type($operand)";
+}
+
+def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
+                                         InFunctionScope, NoSideEffect,
+                                         IsolatedFromAbove]> {
+  let summary = "Declare a new specialization constant that results from doing an operation.";
+
+  let description = [{
+    This op declares a SPIR-V specialization constant that results from
+    doing an operation on other constants (specialization or otherwise).
+
+    In the `spv` dialect, this op is modelled as follows:
+
+    ```
+    spv-spec-constant-operation-op ::= `"spv.SpecConstantOperation"`
+                                         `(`ssa-id (`, ` ssa-id)`)`
+                                       `({`
+                                         ssa-id = spirv-op
+                                         `spv.mlir.yield` ssa-id
+                                       `})` `:` function-type
+    ```
+
+    In particular, an `spv.SpecConstantOperation` contains exactly one
+    region. In turn, that region, contains exactly 2 instructions:
+    - One of SPIR-V's instructions that are allowed within an
+    OpSpecConstantOp.
+    - An `spv.mlir.yield` instruction as the terminator.
+
+    The following SPIR-V instructions are valid:
+    - OpSConvert,
+    - OpUConvert,
+    - OpFConvert,
+    - OpSNegate,
+    - OpNot,
+    - OpIAdd,
+    - OpISub,
+    - OpIMul,
+    - OpUDiv,
+    - OpSDiv,
+    - OpUMod,
+    - OpSRem,
+    - OpSMod
+    - OpShiftRightLogical,
+    - OpShiftRightArithmetic,
+    - OpShiftLeftLogical
+    - OpBitwiseOr,
+    - OpBitwiseXor,
+    - OpBitwiseAnd
+    - OpVectorShuffle,
+    - OpCompositeExtract,
+    - OpCompositeInsert
+    - OpLogicalOr,
+    - OpLogicalAnd,
+    - OpLogicalNot,
+    - OpLogicalEqual,
+    - OpLogicalNotEqual
+    - OpSelect
+    - OpIEqual,
+    - OpINotEqual
+    - OpULessThan,
+    - OpSLessThan
+    - OpUGreaterThan,
+    - OpSGreaterThan
+    - OpULessThanEqual,
+    - OpSLessThanEqual
+    - OpUGreaterThanEqual,
+    - OpSGreaterThanEqual
+
+    TODO Add capability-specific ops when supported.
+
+    #### Example:
+    ```mlir
+    %0 = spv.constant 1: i32
+
+    %1 = "spv.SpecConstantOperation"(%0) ({
+      %ret = spv.IAdd %0, %0 : i32
+      spv.mlir.yield %ret : i32
+    }) : (i32) -> i32
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let results = (outs AnyType:$results);
+
+  let regions = (region SizedRegion<1>:$body);
+
+  let hasOpcode = 0;
+
+  let autogenSerialization = 0;
+}
+
 // -----
 
 #endif // SPIRV_STRUCTURE_OPS

@@ -4105,13 +4105,22 @@ static void __kmp_stg_parse_lock_kind(char const *name, char const *value,
   }
 #endif // KMP_USE_ADAPTIVE_LOCKS
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
-  else if (__kmp_str_match("rtm", 1, value)) {
+  else if (__kmp_str_match("rtm_queuing", 1, value)) {
     if (__kmp_cpuinfo.rtm) {
-      __kmp_user_lock_kind = lk_rtm;
-      KMP_STORE_LOCK_SEQ(rtm);
+      __kmp_user_lock_kind = lk_rtm_queuing;
+      KMP_STORE_LOCK_SEQ(rtm_queuing);
     } else {
       KMP_WARNING(AdaptiveNotSupported, name, value);
       __kmp_user_lock_kind = lk_queuing;
+      KMP_STORE_LOCK_SEQ(queuing);
+    }
+  } else if (__kmp_str_match("rtm_spin", 1, value)) {
+    if (__kmp_cpuinfo.rtm) {
+      __kmp_user_lock_kind = lk_rtm_spin;
+      KMP_STORE_LOCK_SEQ(rtm_spin);
+    } else {
+      KMP_WARNING(AdaptiveNotSupported, name, value);
+      __kmp_user_lock_kind = lk_tas;
       KMP_STORE_LOCK_SEQ(queuing);
     }
   } else if (__kmp_str_match("hle", 1, value)) {
@@ -4144,8 +4153,12 @@ static void __kmp_stg_print_lock_kind(kmp_str_buf_t *buffer, char const *name,
 #endif
 
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
-  case lk_rtm:
-    value = "rtm";
+  case lk_rtm_queuing:
+    value = "rtm_queuing";
+    break;
+
+  case lk_rtm_spin:
+    value = "rtm_spin";
     break;
 
   case lk_hle:
@@ -4624,6 +4637,35 @@ static void __kmp_stg_print_task_throttling(kmp_str_buf_t *buffer,
   __kmp_stg_print_bool(buffer, name, __kmp_enable_task_throttling);
 } // __kmp_stg_print_task_throttling
 
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+// -----------------------------------------------------------------------------
+// KMP_USER_LEVEL_MWAIT
+
+static void __kmp_stg_parse_user_level_mwait(char const *name,
+                                             char const *value, void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_user_level_mwait);
+} // __kmp_stg_parse_user_level_mwait
+
+static void __kmp_stg_print_user_level_mwait(kmp_str_buf_t *buffer,
+                                             char const *name, void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_user_level_mwait);
+} // __kmp_stg_print_user_level_mwait
+
+// -----------------------------------------------------------------------------
+// KMP_MWAIT_HINTS
+
+static void __kmp_stg_parse_mwait_hints(char const *name, char const *value,
+                                        void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_mwait_hints);
+} // __kmp_stg_parse_mwait_hints
+
+static void __kmp_stg_print_mwait_hints(kmp_str_buf_t *buffer, char const *name,
+                                        void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_mwait_hints);
+} // __kmp_stg_print_mwait_hints
+
+#endif // KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+
 // -----------------------------------------------------------------------------
 // OMP_DISPLAY_ENV
 
@@ -4697,6 +4739,27 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
     __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
   }
 } // __kmp_stg_print_omp_tool_libraries
+
+static char *__kmp_tool_verbose_init = NULL;
+
+static void __kmp_stg_parse_omp_tool_verbose_init(char const *name,
+                                                  char const *value, void *data) {
+  __kmp_stg_parse_str(name, value, &__kmp_tool_verbose_init);
+} // __kmp_stg_parse_omp_tool_libraries
+
+static void __kmp_stg_print_omp_tool_verbose_init(kmp_str_buf_t *buffer,
+                                                  char const *name, void *data) {
+  if (__kmp_tool_verbose_init)
+    __kmp_stg_print_str(buffer, name, __kmp_tool_libraries);
+  else {
+    if (__kmp_env_format) {
+      KMP_STR_BUF_PRINT_NAME;
+    } else {
+      __kmp_str_buf_print(buffer, "   %s", name);
+    }
+    __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
+  }
+} // __kmp_stg_print_omp_tool_verbose_init
 
 #endif
 
@@ -4940,8 +5003,16 @@ static kmp_setting_t __kmp_stg_table[] = {
      0},
     {"OMP_TOOL_LIBRARIES", __kmp_stg_parse_omp_tool_libraries,
      __kmp_stg_print_omp_tool_libraries, NULL, 0, 0},
+    {"OMP_TOOL_VERBOSE_INIT", __kmp_stg_parse_omp_tool_verbose_init,
+     __kmp_stg_print_omp_tool_verbose_init, NULL, 0, 0},
 #endif
 
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+    {"KMP_USER_LEVEL_MWAIT", __kmp_stg_parse_user_level_mwait,
+     __kmp_stg_print_user_level_mwait, NULL, 0, 0},
+    {"KMP_MWAIT_HINTS", __kmp_stg_parse_mwait_hints,
+     __kmp_stg_print_mwait_hints, NULL, 0, 0},
+#endif
     {"", NULL, NULL, NULL, 0, 0}}; // settings
 
 static int const __kmp_stg_count =

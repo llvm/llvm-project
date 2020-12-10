@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -29,6 +28,7 @@
 
 namespace llvm {
 
+class AAResults;
 class BasicBlock;
 class BinaryOperator;
 class BranchInst;
@@ -41,6 +41,8 @@ class IntrinsicInst;
 class LazyValueInfo;
 class LoadInst;
 class PHINode;
+class SelectInst;
+class SwitchInst;
 class TargetLibraryInfo;
 class Value;
 
@@ -77,7 +79,7 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   TargetLibraryInfo *TLI;
   LazyValueInfo *LVI;
-  AliasAnalysis *AA;
+  AAResults *AA;
   DomTreeUpdater *DTU;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
@@ -97,10 +99,10 @@ public:
   JumpThreadingPass(bool InsertFreezeWhenUnfoldingSelect = false, int T = -1);
 
   // Glue for old PM.
-  bool runImpl(Function &F, TargetLibraryInfo *TLI_, LazyValueInfo *LVI_,
-               AliasAnalysis *AA_, DomTreeUpdater *DTU_, bool HasProfileData_,
-               std::unique_ptr<BlockFrequencyInfo> BFI_,
-               std::unique_ptr<BranchProbabilityInfo> BPI_);
+  bool runImpl(Function &F, TargetLibraryInfo *TLI, LazyValueInfo *LVI,
+               AAResults *AA, DomTreeUpdater *DTU, bool HasProfileData,
+               std::unique_ptr<BlockFrequencyInfo> BFI,
+               std::unique_ptr<BranchProbabilityInfo> BPI);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

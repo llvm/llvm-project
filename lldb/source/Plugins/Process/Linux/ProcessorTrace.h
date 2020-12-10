@@ -93,6 +93,10 @@ class ProcessorTraceMonitor {
   void SetThreadID(lldb::tid_t tid) { m_thread_id = tid; }
 
 public:
+  static llvm::Expected<uint32_t> GetOSEventType();
+
+  static bool IsSupported();
+
   static Status GetCPUType(TraceOptions &config);
 
   static llvm::Expected<ProcessorTraceMonitorUP>

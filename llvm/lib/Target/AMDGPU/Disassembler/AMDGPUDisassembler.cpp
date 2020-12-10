@@ -52,8 +52,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-disassembler"
 
-#define SGPR_MAX (isGFX10() ? AMDGPU::EncValues::SGPR_MAX_GFX10 \
-                            : AMDGPU::EncValues::SGPR_MAX_SI)
+#define SGPR_MAX                                                               \
+  (isGFX10Plus() ? AMDGPU::EncValues::SGPR_MAX_GFX10                           \
+                 : AMDGPU::EncValues::SGPR_MAX_SI)
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
@@ -64,7 +65,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
   TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
 
   // ToDo: AMDGPUDisassembler supports only VI ISA.
-  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10())
+  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
 }
 
@@ -1016,10 +1017,8 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   using namespace AMDGPU::EncValues;
 
-  unsigned TTmpMin =
-      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
-  unsigned TTmpMax =
-      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
+  unsigned TTmpMin = isGFX9Plus() ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
+  unsigned TTmpMax = isGFX9Plus() ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
 
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
@@ -1157,8 +1156,8 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
                               Val - SDWA9EncValues::SRC_VGPR_MIN);
     }
     if (SDWA9EncValues::SRC_SGPR_MIN <= Val &&
-        Val <= (isGFX10() ? SDWA9EncValues::SRC_SGPR_MAX_GFX10
-                          : SDWA9EncValues::SRC_SGPR_MAX_SI)) {
+        Val <= (isGFX10Plus() ? SDWA9EncValues::SRC_SGPR_MAX_GFX10
+                              : SDWA9EncValues::SRC_SGPR_MAX_SI)) {
       return createSRegOperand(getSgprClassId(Width),
                                Val - SDWA9EncValues::SRC_SGPR_MIN);
     }
@@ -1227,12 +1226,14 @@ bool AMDGPUDisassembler::isVI() const {
   return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
 }
 
-bool AMDGPUDisassembler::isGFX9() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
-}
+bool AMDGPUDisassembler::isGFX9() const { return AMDGPU::isGFX9(STI); }
 
-bool AMDGPUDisassembler::isGFX10() const {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+bool AMDGPUDisassembler::isGFX9Plus() const { return AMDGPU::isGFX9Plus(STI); }
+
+bool AMDGPUDisassembler::isGFX10() const { return AMDGPU::isGFX10(STI); }
+
+bool AMDGPUDisassembler::isGFX10Plus() const {
+  return AMDGPU::isGFX10Plus(STI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1287,7 +1288,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
       (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) >>
       COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT;
 
-  if (isGFX10() && GranulatedWavefrontSGPRCount)
+  if (isGFX10Plus() && GranulatedWavefrontSGPRCount)
     return MCDisassembler::Fail;
 
   uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
@@ -1331,7 +1332,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED0)
     return MCDisassembler::Fail;
 
-  if (isGFX10()) {
+  if (isGFX10Plus()) {
     PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
                     COMPUTE_PGM_RSRC1_WGP_MODE);
     PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_MEM_ORDERED);
@@ -1456,7 +1457,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     //  - Only set for GFX10, GFX6-9 have this to be 0.
     //  - Currently no directives directly control this.
     FourByteBuffer = DE.getU32(Cursor);
-    if (!isGFX10() && FourByteBuffer) {
+    if (!isGFX10Plus() && FourByteBuffer) {
       return MCDisassembler::Fail;
     }
     return MCDisassembler::Success;
@@ -1503,7 +1504,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     if (isGFX9() &&
         (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
       return MCDisassembler::Fail;
-    } else if (isGFX10()) {
+    } else if (isGFX10Plus()) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }

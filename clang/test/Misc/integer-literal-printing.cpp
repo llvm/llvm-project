@@ -2,10 +2,10 @@
 
 // PR11179
 template <short T> class Type1 {};
-template <short T> void Function1(Type1<T>& x) {} // expected-note{{candidate function [with T = -42] not viable: expects an l-value for 1st argument}}
+template <short T> void Function1(Type1<T>& x) {} // expected-note{{candidate function [with T = -42] not viable: expects an lvalue for 1st argument}}
 
 template <unsigned short T> class Type2 {};
-template <unsigned short T> void Function2(Type2<T>& x) {} // expected-note{{candidate function [with T = 42] not viable: expects an l-value for 1st argument}}
+template <unsigned short T> void Function2(Type2<T>& x) {} // expected-note{{candidate function [with T = 42] not viable: expects an lvalue for 1st argument}}
 
 enum class boolTy : bool {
   b = 0,

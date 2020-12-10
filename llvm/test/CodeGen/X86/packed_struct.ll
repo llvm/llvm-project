@@ -8,7 +8,7 @@
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"
 	%struct.anon = type <{ i8, i32, i32, i32 }>
-@foos = external global %struct.anon		; <%struct.anon*> [#uses=3]
+@foos = external dso_local global %struct.anon		; <%struct.anon*> [#uses=3]
 @bara = weak global [4 x <{ i32, i8 }>] zeroinitializer		; <[4 x <{ i32, i8 }>]*> [#uses=2]
 
 define i32 @foo() nounwind {

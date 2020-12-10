@@ -3,8 +3,8 @@
 ; RUN: llc -pre-RA-sched=source < %s -mtriple=i686-unknown-linux -mcpu=corei7 | FileCheck %s --check-prefix=SOURCE-SCHED
 ; PR2748
 
-@g_73 = external global i32
-@g_5 = external global i32
+@g_73 = external dso_local global i32
+@g_5 = external dso_local global i32
 
 define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-LABEL: func_44:

@@ -15,14 +15,14 @@ public:
 
 // CHECK-LABEL: define void @_Z1gv()
 void g() {
-  // CHECK:      call void @_ZN1TC1Ev([[T:%.*]]* [[AGG1:%.*]])
+  // CHECK:      call void @_ZN1TC1Ev([[T:%.*]]* {{[^,]*}} [[AGG1:%.*]])
   // CHECK-NEXT: call void @_Z1fRK1T([[T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AGG1]])
-  // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* [[AGG1]])
+  // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* {{[^,]*}} [[AGG1]])
   f();
 
-  // CHECK-NEXT: call void @_ZN1TC1Ev([[T:%.*]]* [[AGG2:%.*]])
+  // CHECK-NEXT: call void @_ZN1TC1Ev([[T:%.*]]* {{[^,]*}} [[AGG2:%.*]])
   // CHECK-NEXT: call void @_Z1fRK1T([[T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AGG2]])
-  // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* [[AGG2]])
+  // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* {{[^,]*}} [[AGG2]])
   f();
 
   // CHECK-NEXT: call void @_ZN1XC1Ev(
@@ -61,7 +61,7 @@ namespace test1 {
     C c;
     A a;
 
-    // CHECK-LABEL: define linkonce_odr void @_ZN5test11DC2Ev(%"struct.test1::D"* %this) unnamed_addr
+    // CHECK-LABEL: define linkonce_odr void @_ZN5test11DC2Ev(%"struct.test1::D"* {{[^,]*}} %this) unnamed_addr
     // CHECK:      call void @_ZN5test11BC1Ev(
     // CHECK-NEXT: call void @_ZN5test11CC1ERKNS_1BE(
     // CHECK-NEXT: call void @_ZN5test11BD1Ev(

@@ -3,6 +3,7 @@ add_mlir_library(MLIRTestTransforms
   TestAffineLoopParametricTiling.cpp
   TestExpandTanh.cpp
   TestCallGraph.cpp
+  TestDecomposeCallGraphTypes.cpp
   TestConstantFold.cpp
   TestConvVectorization.cpp
   TestConvertCallOp.cpp
@@ -10,7 +11,6 @@ add_mlir_library(MLIRTestTransforms
   TestConvertGPUKernelToHsaco.cpp
   TestDominance.cpp
   TestDynamicPipeline.cpp
-  TestFinalizingBufferize.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
   TestGpuParallelLoopMapping.cpp
@@ -30,6 +30,7 @@ add_mlir_library(MLIRTestTransforms
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
   TestSCFUtils.cpp
+  TestSparsification.cpp
   TestVectorTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR

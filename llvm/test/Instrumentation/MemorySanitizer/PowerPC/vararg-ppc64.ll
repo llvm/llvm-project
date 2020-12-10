@@ -77,7 +77,7 @@ define i32 @bar5() {
 
 ; Check 8-aligned byval.
 define i32 @bar6([2 x i64]* %arg) {
-  %1 = call i32 (i32, ...) @foo(i32 0, [2 x i64]* byval align 8 %arg)
+  %1 = call i32 (i32, ...) @foo(i32 0, [2 x i64]* byval([2 x i64]) align 8 %arg)
   ret i32 %1
 }
 
@@ -87,7 +87,7 @@ define i32 @bar6([2 x i64]* %arg) {
 
 ; Check 16-aligned byval.
 define i32 @bar7([4 x i64]* %arg) {
-  %1 = call i32 (i32, ...) @foo(i32 0, [4 x i64]* byval align 16 %arg)
+  %1 = call i32 (i32, ...) @foo(i32 0, [4 x i64]* byval([4 x i64]) align 16 %arg)
   ret i32 %1
 }
 

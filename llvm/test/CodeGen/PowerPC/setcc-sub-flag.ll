@@ -10,7 +10,7 @@ define void @f(i64 %a, i64 %b) {
   ; CHECK:   liveins: $x3, $x4
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc = COPY $x4
   ; CHECK:   [[COPY1:%[0-9]+]]:g8rc = COPY $x3
-  ; CHECK:   [[SUBF8_:%[0-9]+]]:g8rc = SUBF8 [[COPY1]], [[COPY]]
+  ; CHECK:   [[SUBF8_:%[0-9]+]]:g8rc = nsw SUBF8 [[COPY1]], [[COPY]]
   %c = sub nsw i64 %b, %a
   call void @foo(i64 %c)
   %d = icmp slt i64 %a, %b

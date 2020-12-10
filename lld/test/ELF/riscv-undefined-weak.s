@@ -52,15 +52,14 @@ relative:
 # PC-LABEL:    <branch>:
 # PC-NEXT:     auipc ra, 1048559
 # PC-NEXT:     jalr -368(ra)
-## FIXME: llvm-objdump -d should print the address, instead of the offset.
-# PC-NEXT:     j -70008
+# PC-NEXT:     j 0x0
 
 ## If .dynsym exists, an undefined weak symbol is preemptible.
 ## We create a PLT entry and redirect the reference to it.
 # PLT-LABEL:   <branch>:
 # PLT-NEXT:    auipc ra, 0
 # PLT-NEXT:    jalr 56(ra)
-# PLT-NEXT:    j -70448
+# PLT-NEXT:    j 0x0
 branch:
   call target
   jal x0, target

@@ -11,7 +11,7 @@
 ; CHECK-TWO:    memw(r29+#52) = r2
 ; CHECK-THREE:  memw(r29+#56) = r2
 
-define void @f0(%s.0* noalias nocapture sret %a0, i32 %a1, i8 zeroext %a2, %s.0* byval nocapture readnone align 8 %a3, %s.1* byval nocapture readnone align 8 %a4) #0 {
+define void @f0(%s.0* noalias nocapture sret(%s.0) %a0, i32 %a1, i8 zeroext %a2, %s.0* byval(%s.0) nocapture readnone align 8 %a3, %s.1* byval(%s.1) nocapture readnone align 8 %a4) #0 {
 b0:
   %v0 = alloca %s.0, align 8
   %v1 = load %s.0*, %s.0** @g0, align 4
@@ -19,7 +19,7 @@ b0:
   %v3 = add nsw i64 %v2, 1
   %v4 = add nsw i32 %a1, 2
   %v5 = add nsw i64 %v2, 3
-  call void @f1(%s.0* sret %v0, i32 45, %s.0* byval align 8 %v1, %s.0* byval align 8 %v1, i8 zeroext %a2, i64 %v3, i32 %v4, i64 %v5, i8 zeroext %a2, i8 zeroext %a2, i8 zeroext %a2, i32 45)
+  call void @f1(%s.0* sret(%s.0) %v0, i32 45, %s.0* byval(%s.0) align 8 %v1, %s.0* byval(%s.0) align 8 %v1, i8 zeroext %a2, i64 %v3, i32 %v4, i64 %v5, i8 zeroext %a2, i8 zeroext %a2, i8 zeroext %a2, i32 45)
   %v6 = bitcast %s.0* %v0 to i32*
   store i32 20, i32* %v6, align 8
   %v7 = bitcast %s.0* %a0 to i8*
@@ -28,7 +28,7 @@ b0:
   ret void
 }
 
-declare void @f1(%s.0* sret, i32, %s.0* byval align 8, %s.0* byval align 8, i8 zeroext, i64, i32, i64, i8 zeroext, i8 zeroext, i8 zeroext, i32)
+declare void @f1(%s.0* sret(%s.0), i32, %s.0* byval(%s.0) align 8, %s.0* byval(%s.0) align 8, i8 zeroext, i64, i32, i64, i8 zeroext, i8 zeroext, i8 zeroext, i32)
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #1

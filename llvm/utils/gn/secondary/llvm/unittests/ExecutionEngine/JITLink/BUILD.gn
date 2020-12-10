@@ -3,6 +3,8 @@ import("//llvm/utils/unittest/unittest.gni")
 unittest("JITLinkTests") {
   deps = [
     "//llvm/lib/ExecutionEngine/JITLink",
+    "//llvm/lib/ExecutionEngine/Orc/Shared",
+    "//llvm/lib/ExecutionEngine/Orc/TargetProcess",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/Object",
     "//llvm/lib/Support",

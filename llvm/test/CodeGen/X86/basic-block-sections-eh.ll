@@ -1,7 +1,7 @@
 ; Check if landing pads are kept in a separate eh section
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu  -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 
-@_ZTIb = external constant i8*
+@_ZTIb = external dso_local constant i8*
 define i32 @_Z3foob(i1 zeroext %0) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %2 = alloca i32, align 4
   %3 = alloca i8, align 1

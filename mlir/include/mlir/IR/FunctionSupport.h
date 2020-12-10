@@ -14,6 +14,7 @@
 #ifndef MLIR_IR_FUNCTIONSUPPORT_H
 #define MLIR_IR_FUNCTIONSUPPORT_H
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/SmallString.h"
 

@@ -110,7 +110,7 @@ bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
     m_parser_vars->m_persistent_vars = llvm::cast<ClangPersistentVariables>(
         target->GetPersistentExpressionStateForLanguage(eLanguageTypeC));
 
-    if (!TypeSystemClang::GetScratch(*target))
+    if (!ScratchTypeSystemClang::GetForTarget(*target))
       return false;
   }
 
@@ -184,7 +184,7 @@ ClangExpressionDeclMap::TargetInfo ClangExpressionDeclMap::GetTargetInfo() {
 TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
                                                 TypeSystemClang &source,
                                                 TypeFromParser parser_type) {
-  assert(&target == TypeSystemClang::GetScratch(*m_target));
+  assert(&target == ScratchTypeSystemClang::GetForTarget(*m_target));
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(&source.getASTContext() == m_ast_context);
 
@@ -222,7 +222,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     if (target == nullptr)
       return false;
 
-    auto *clang_ast_context = TypeSystemClang::GetScratch(*target);
+    auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(*target);
     if (!clang_ast_context)
       return false;
 
@@ -260,7 +260,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   if (target == nullptr)
     return false;
 
-  TypeSystemClang *context = TypeSystemClang::GetScratch(*target);
+  TypeSystemClang *context = ScratchTypeSystemClang::GetForTarget(*target);
   if (!context)
     return false;
 
@@ -721,7 +721,7 @@ clang::NamedDecl *ClangExpressionDeclMap::GetPersistentDecl(ConstString name) {
   if (!target)
     return nullptr;
 
-  TypeSystemClang::GetScratch(*target);
+  ScratchTypeSystemClang::GetForTarget(*target);
 
   if (!m_parser_vars->m_persistent_vars)
     return nullptr;
@@ -1638,7 +1638,8 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   if (target == nullptr)
     return;
 
-  TypeSystemClang *scratch_ast_context = TypeSystemClang::GetScratch(*target);
+  TypeSystemClang *scratch_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target);
   if (!scratch_ast_context)
     return;
 

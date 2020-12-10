@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -68,7 +68,7 @@ struct TestFuncSetType
     SymbolTable symbolTable(module);
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      auto sym = func.getAttrOfType<FlatSymbolRefAttr>("test.set_type_from");
+      auto sym = func->getAttrOfType<FlatSymbolRefAttr>("test.set_type_from");
       if (!sym)
         continue;
       func.setType(symbolTable.lookup<FuncOp>(sym.getValue()).getType());

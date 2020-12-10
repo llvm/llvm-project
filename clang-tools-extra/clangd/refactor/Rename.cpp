@@ -18,7 +18,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
@@ -76,6 +75,81 @@ llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
   return OtherFile;
 }
 
+// Canonical declarations help simplify the process of renaming. Examples:
+// - Template's canonical decl is the templated declaration (i.e.
+//   ClassTemplateDecl is canonicalized to its child CXXRecordDecl,
+//   FunctionTemplateDecl - to child FunctionDecl)
+// - Given a constructor/destructor, canonical declaration is the parent
+//   CXXRecordDecl because we want to rename both type name and its ctor/dtor.
+// - All specializations are canonicalized to the primary template. For example:
+//
+//    template <typename T, int U>
+//    bool Foo = true; (1)
+//
+//    template <typename T>
+//    bool Foo<T, 0> = true; (2)
+//
+//    template <>
+//    bool Foo<int, 0> = true; (3)
+//
+// Here, both partial (2) and full (3) specializations are canonicalized to (1)
+// which ensures all three of them are renamed.
+const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
+  if (const auto *VarTemplate = dyn_cast<VarTemplateSpecializationDecl>(D))
+    return canonicalRenameDecl(
+        VarTemplate->getSpecializedTemplate()->getTemplatedDecl());
+  if (const auto *Template = dyn_cast<TemplateDecl>(D))
+    if (const NamedDecl *TemplatedDecl = Template->getTemplatedDecl())
+      return canonicalRenameDecl(TemplatedDecl);
+  if (const auto *ClassTemplateSpecialization =
+          dyn_cast<ClassTemplateSpecializationDecl>(D))
+    return canonicalRenameDecl(
+        ClassTemplateSpecialization->getSpecializedTemplate()
+            ->getTemplatedDecl());
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
+    if (Method->getDeclKind() == Decl::Kind::CXXConstructor ||
+        Method->getDeclKind() == Decl::Kind::CXXDestructor)
+      return canonicalRenameDecl(Method->getParent());
+    if (const FunctionDecl *InstantiatedMethod =
+            Method->getInstantiatedFromMemberFunction())
+      Method = cast<CXXMethodDecl>(InstantiatedMethod);
+    // FIXME(kirillbobyrev): For virtual methods with
+    // size_overridden_methods() > 1, this will not rename all functions it
+    // overrides, because this code assumes there is a single canonical
+    // declaration.
+    while (Method->isVirtual() && Method->size_overridden_methods())
+      Method = *Method->overridden_methods().begin();
+    return dyn_cast<NamedDecl>(Method->getCanonicalDecl());
+  }
+  if (const auto *Function = dyn_cast<FunctionDecl>(D))
+    if (const FunctionTemplateDecl *Template = Function->getPrimaryTemplate())
+      return canonicalRenameDecl(Template);
+  if (const auto *Field = dyn_cast<FieldDecl>(D)) {
+    // This is a hacky way to do something like
+    // CXXMethodDecl::getInstantiatedFromMemberFunction for the field because
+    // Clang AST does not store relevant information about the field that is
+    // instantiated.
+    const auto *FieldParent =
+        dyn_cast_or_null<CXXRecordDecl>(Field->getParent());
+    if (!FieldParent)
+      return Field->getCanonicalDecl();
+    FieldParent = FieldParent->getTemplateInstantiationPattern();
+    // Field is not instantiation.
+    if (!FieldParent || Field->getParent() == FieldParent)
+      return Field->getCanonicalDecl();
+    for (const FieldDecl *Candidate : FieldParent->fields())
+      if (Field->getDeclName() == Candidate->getDeclName())
+        return Candidate->getCanonicalDecl();
+    elog("FieldParent should have field with the same name as Field.");
+  }
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const VarDecl *OriginalVD = VD->getInstantiatedFromStaticDataMember())
+      VD = OriginalVD;
+    return VD->getCanonicalDecl();
+  }
+  return dyn_cast<NamedDecl>(D->getCanonicalDecl());
+}
+
 llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
                                                SourceLocation TokenStartLoc) {
   unsigned Offset =
@@ -91,9 +165,7 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   for (const NamedDecl *D :
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern)) {
-    // Get to CXXRecordDecl from constructor or destructor.
-    D = tooling::getCanonicalSymbolDeclaration(D);
-    Result.insert(D);
+    Result.insert(canonicalRenameDecl(D));
   }
   return Result;
 }
@@ -226,19 +298,8 @@ llvm::Error makeError(ReasonToReject Reason) {
 std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
                                                       const NamedDecl &ND) {
   trace::Span Tracer("FindOccurrencesWithinFile");
-  // If the cursor is at the underlying CXXRecordDecl of the
-  // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
-  // get the primary template manually.
-  // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
-  // overriddens, primary template and all explicit specializations.
-  // FIXME: Get rid of the remaining tooling APIs.
-  const auto *RenameDecl =
-      ND.getDescribedTemplate() ? ND.getDescribedTemplate() : &ND;
-  std::vector<std::string> RenameUSRs =
-      tooling::getUSRsForDeclaration(RenameDecl, AST.getASTContext());
-  llvm::DenseSet<SymbolID> TargetIDs;
-  for (auto &USR : RenameUSRs)
-    TargetIDs.insert(SymbolID(USR));
+  assert(canonicalRenameDecl(&ND) == &ND &&
+         "ND should be already canonicalized.");
 
   std::vector<SourceLocation> Results;
   for (Decl *TopLevelDecl : AST.getLocalTopLevelDecls()) {
@@ -246,11 +307,11 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
       if (Ref.Targets.empty())
         return;
       for (const auto *Target : Ref.Targets) {
-        auto ID = getSymbolID(Target);
-        if (!ID || TargetIDs.find(ID) == TargetIDs.end())
+        if (canonicalRenameDecl(Target) == &ND) {
+          Results.push_back(Ref.NameLoc);
           return;
+        }
       }
-      Results.push_back(Ref.NameLoc);
     });
   }
 
@@ -262,6 +323,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
 const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
                                        const NamedDecl &RenamedDecl,
                                        llvm::StringRef Name) {
+  trace::Span Tracer("LookupSiblingWithName");
   const auto &II = Ctx.Idents.get(Name);
   DeclarationName LookupName(&II);
   DeclContextLookupResult LookupResult;
@@ -302,6 +364,15 @@ struct InvalidName {
   Kind K;
   std::string Details;
 };
+std::string toString(InvalidName::Kind K) {
+  switch (K) {
+  case InvalidName::Keywords:
+    return "Keywords";
+  case InvalidName::Conflict:
+    return "Conflict";
+  }
+  llvm_unreachable("unhandled InvalidName kind");
+}
 
 llvm::Error makeError(InvalidName Reason) {
   auto Message = [](InvalidName Reason) {
@@ -321,18 +392,26 @@ llvm::Error makeError(InvalidName Reason) {
 // Return details if the rename would produce a conflict.
 llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
                                       llvm::StringRef NewName) {
+  trace::Span Tracer("CheckName");
+  static constexpr trace::Metric InvalidNameMetric(
+      "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
   auto &ASTCtx = RenameDecl.getASTContext();
+  llvm::Optional<InvalidName> Result;
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
-    return InvalidName{InvalidName::Keywords, NewName.str()};
-  // Name conflict detection.
-  // Function conflicts are subtle (overloading), so ignore them.
-  if (RenameDecl.getKind() != Decl::Function) {
-    if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
-      return InvalidName{
-          InvalidName::Conflict,
-          Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+    Result = InvalidName{InvalidName::Keywords, NewName.str()};
+  else {
+    // Name conflict detection.
+    // Function conflicts are subtle (overloading), so ignore them.
+    if (RenameDecl.getKind() != Decl::Function) {
+      if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
+        Result = InvalidName{
+            InvalidName::Conflict,
+            Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+    }
   }
-  return llvm::None;
+  if (Result)
+    InvalidNameMetric.record(1, toString(Result->K));
+  return Result;
 }
 
 // AST-based rename, it renames all occurrences in the main file.
@@ -557,9 +636,11 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
-  const auto &RenameDecl =
-      llvm::cast<NamedDecl>(*(*DeclsUnderCursor.begin())->getCanonicalDecl());
-  if (RenameDecl.getName() == RInputs.NewName)
+  const auto &RenameDecl = **DeclsUnderCursor.begin();
+  const auto *ID = RenameDecl.getIdentifier();
+  if (!ID)
+    return makeError(ReasonToReject::UnsupportedSymbol);
+  if (ID->getName() == RInputs.NewName)
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)

@@ -97,18 +97,20 @@ void BasicBlock::setParent(Function *parent) {
 
 iterator_range<filter_iterator<BasicBlock::const_iterator,
                                std::function<bool(const Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() const {
-  std::function<bool(const Instruction &)> Fn = [](const Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
+BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) const {
+  std::function<bool(const Instruction &)> Fn = [=](const Instruction &I) {
+    return !isa<DbgInfoIntrinsic>(I) &&
+           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
   };
   return make_filter_range(*this, Fn);
 }
 
-iterator_range<filter_iterator<BasicBlock::iterator,
-                               std::function<bool(Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() {
-  std::function<bool(Instruction &)> Fn = [](Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
+iterator_range<
+    filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
+BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) {
+  std::function<bool(Instruction &)> Fn = [=](Instruction &I) {
+    return !isa<DbgInfoIntrinsic>(I) &&
+           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
   };
   return make_filter_range(*this, Fn);
 }
@@ -128,15 +130,11 @@ iplist<BasicBlock>::iterator BasicBlock::eraseFromParent() {
   return getParent()->getBasicBlockList().erase(getIterator());
 }
 
-/// Unlink this basic block from its current function and
-/// insert it into the function that MovePos lives in, right before MovePos.
 void BasicBlock::moveBefore(BasicBlock *MovePos) {
   MovePos->getParent()->getBasicBlockList().splice(
       MovePos->getIterator(), getParent()->getBasicBlockList(), getIterator());
 }
 
-/// Unlink this basic block from its current function and
-/// insert it into the function that MovePos lives in, right after MovePos.
 void BasicBlock::moveAfter(BasicBlock *MovePos) {
   MovePos->getParent()->getBasicBlockList().splice(
       ++MovePos->getIterator(), getParent()->getBasicBlockList(),
@@ -218,19 +216,29 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHIOrDbg() const {
-  for (const Instruction &I : *this)
-    if (!isa<PHINode>(I) && !isa<DbgInfoIntrinsic>(I))
-      return &I;
+const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
+  for (const Instruction &I : *this) {
+    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
+      continue;
+
+    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+      continue;
+
+    return &I;
+  }
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() const {
+const Instruction *
+BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
 
     if (I.isLifetimeStartOrEnd())
+      continue;
+
+    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
       continue;
 
     return &I;
@@ -253,8 +261,6 @@ void BasicBlock::dropAllReferences() {
     I.dropAllReferences();
 }
 
-/// If this basic block has a single predecessor block,
-/// return the block, otherwise return a null pointer.
 const BasicBlock *BasicBlock::getSinglePredecessor() const {
   const_pred_iterator PI = pred_begin(this), E = pred_end(this);
   if (PI == E) return nullptr;         // No preds.
@@ -263,11 +269,6 @@ const BasicBlock *BasicBlock::getSinglePredecessor() const {
   return (PI == E) ? ThePred : nullptr /*multiple preds*/;
 }
 
-/// If this basic block has a unique predecessor block,
-/// return the block, otherwise return a null pointer.
-/// Note that unique predecessor doesn't mean single edge, there can be
-/// multiple edges from the unique predecessor to this block (for example
-/// a switch statement with multiple cases having the same destination).
 const BasicBlock *BasicBlock::getUniquePredecessor() const {
   const_pred_iterator PI = pred_begin(this), E = pred_end(this);
   if (PI == E) return nullptr; // No preds.
@@ -317,38 +318,31 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
   return make_range<phi_iterator>(P, nullptr);
 }
 
-/// Update PHI nodes in this BasicBlock before removal of predecessor \p Pred.
-/// Note that this function does not actually remove the predecessor.
-///
-/// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
-/// zero or one incoming values, and don't simplify PHIs with all incoming
-/// values the same.
 void BasicBlock::removePredecessor(BasicBlock *Pred,
                                    bool KeepOneInputPHIs) {
   // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
-  assert((hasNUsesOrMore(16) ||
-          find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
+  assert((hasNUsesOrMore(16) || llvm::is_contained(predecessors(this), Pred)) &&
          "Pred is not a predecessor!");
 
   // Return early if there are no PHI nodes to update.
   if (!isa<PHINode>(begin()))
     return;
-  unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
 
-  // Update all PHI nodes.
-  for (iterator II = begin(); isa<PHINode>(II);) {
-    PHINode *PN = cast<PHINode>(II++);
-    PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
-    if (!KeepOneInputPHIs) {
-      // If we have a single predecessor, removeIncomingValue erased the PHI
-      // node itself.
-      if (NumPreds > 1) {
-        if (Value *PNV = PN->hasConstantValue()) {
-          // Replace the PHI node with its constant value.
-          PN->replaceAllUsesWith(PNV);
-          PN->eraseFromParent();
-        }
-      }
+  unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
+  for (PHINode &Phi : make_early_inc_range(phis())) {
+    Phi.removeIncomingValue(Pred, !KeepOneInputPHIs);
+    if (KeepOneInputPHIs)
+      continue;
+
+    // If we have a single predecessor, removeIncomingValue may have erased the
+    // PHI node itself.
+    if (NumPreds == 1)
+      continue;
+
+    // Try to replace the PHI node with a constant value.
+    if (Value *PhiConstant = Phi.hasConstantValue()) {
+      Phi.replaceAllUsesWith(PhiConstant);
+      Phi.eraseFromParent();
     }
   }
 }
@@ -378,17 +372,6 @@ bool BasicBlock::isLegalToHoistInto() const {
   return !Term->isExceptionalTerminator();
 }
 
-/// This splits a basic block into two at the specified
-/// instruction.  Note that all instructions BEFORE the specified iterator stay
-/// as part of the original basic block, an unconditional branch is added to
-/// the new BB, and the rest of the instructions in the BB are moved to the new
-/// BB, including the old terminator.  This invalidates the iterator.
-///
-/// Note that this only works on well formed basic blocks (must have a
-/// terminator), and 'I' must not be the end of instruction list (which would
-/// cause a degenerate basic block to be formed, having a terminator inside of
-/// the basic block).
-///
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
@@ -443,13 +426,10 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
   this->replaceSuccessorsPhiUsesWith(this, New);
 }
 
-/// Return true if this basic block is a landing pad. I.e., it's
-/// the destination of the 'unwind' edge of an invoke instruction.
 bool BasicBlock::isLandingPad() const {
   return isa<LandingPadInst>(getFirstNonPHI());
 }
 
-/// Return the landingpad instruction associated with the landing pad.
 const LandingPadInst *BasicBlock::getLandingPadInst() const {
   return dyn_cast<LandingPadInst>(getFirstNonPHI());
 }

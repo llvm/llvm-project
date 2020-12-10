@@ -49,7 +49,7 @@ class PCHContainerGenerator : public ASTConsumer {
   const PreprocessorOptions &PreprocessorOpts;
   CodeGenOptions CodeGenOpts;
   const TargetOptions TargetOpts;
-  const LangOptions LangOpts;
+  LangOptions LangOpts;
   std::unique_ptr<llvm::LLVMContext> VMContext;
   std::unique_ptr<llvm::Module> M;
   std::unique_ptr<CodeGen::CodeGenModule> Builder;
@@ -147,7 +147,7 @@ public:
     // The debug info output isn't affected by CodeModel and
     // ThreadModel, but the backend expects them to be nonempty.
     CodeGenOpts.CodeModel = "default";
-    CodeGenOpts.ThreadModel = "single";
+    LangOpts.setThreadModel(LangOptions::ThreadModelKind::Single);
     CodeGenOpts.DebugTypeExtRefs = true;
     // When building a module MainFileName is the name of the modulemap file.
     CodeGenOpts.MainFileName =

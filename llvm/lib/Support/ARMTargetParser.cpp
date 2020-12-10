@@ -280,6 +280,8 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   // Begins with "arm" / "thumb", move past it.
   if (A.startswith("arm64_32"))
     offset = 8;
+  else if (A.startswith("arm64e"))
+    offset = 6;
   else if (A.startswith("arm64"))
     offset = 5;
   else if (A.startswith("aarch64_32"))

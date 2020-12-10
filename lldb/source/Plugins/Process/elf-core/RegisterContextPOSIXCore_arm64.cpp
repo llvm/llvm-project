@@ -89,7 +89,7 @@ uint32_t RegisterContextCorePOSIX_arm64::CalculateSVEOffset(
     const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
     sve_reg_offset = sve::ptrace_fpsimd_offset + (reg - GetRegNumSVEZ0()) * 16;
   } else if (m_sve_state == SVEState::Full) {
-    uint32_t sve_z0_offset = GetGPRSize() + 8;
+    uint32_t sve_z0_offset = GetGPRSize() + 16;
     sve_reg_offset =
         sve::SigRegsOffset() + reg_info->byte_offset - sve_z0_offset;
   }

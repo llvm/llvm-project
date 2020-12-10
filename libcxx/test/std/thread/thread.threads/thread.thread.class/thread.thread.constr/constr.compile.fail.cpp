@@ -16,12 +16,10 @@
 
 
 #include <thread>
-#include <cassert>
 
 int main(int, char**)
 {
     volatile std::thread t1;
     std::thread t2 ( t1, 1, 2.0 );
-
-  return 0;
+    return 0;
 }

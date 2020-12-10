@@ -302,13 +302,15 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 // SuccessorRange
 //===----------------------------------------------------------------------===//
 
-SuccessorRange::SuccessorRange(Block *block) : SuccessorRange(nullptr, 0) {
+SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
+
+SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
   if (Operation *term = block->getTerminator())
     if ((count = term->getNumSuccessors()))
       base = term->getBlockOperands().data();
 }
 
-SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange(nullptr, 0) {
+SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
 }

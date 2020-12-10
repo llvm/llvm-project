@@ -28,6 +28,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
+#include <climits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -331,7 +332,14 @@ public:
 
   /// Returns the linker path, respecting the -fuse-ld= argument to determine
   /// the linker suffix or name.
-  std::string GetLinkerPath() const;
+  /// If LinkerIsLLD is non-nullptr, it is set to true if the returned linker
+  /// is LLD. If it's set, it can be assumed that the linker is LLD built
+  /// at the same revision as clang, and clang can make assumptions about
+  /// LLD's supported flags, error output, etc.
+  /// If LinkerIsLLDDarwinNew is non-nullptr, it's set if the linker is
+  /// the new version in lld/MachO.
+  std::string GetLinkerPath(bool *LinkerIsLLD = nullptr,
+                            bool *LinkerIsLLDDarwinNew = nullptr) const;
 
   /// Returns the linker path for emitting a static library.
   std::string GetStaticLibToolPath() const;
@@ -485,6 +493,11 @@ public:
   // Return the DWARF version to emit, in the absence of arguments
   // to the contrary.
   virtual unsigned GetDefaultDwarfVersion() const { return 4; }
+
+  // Some toolchains may have different restrictions on the DWARF version and
+  // may need to adjust it. E.g. NVPTX may need to enforce DWARF2 even when host
+  // compilation uses DWARF5.
+  virtual unsigned getMaxDwarfVersion() const { return UINT_MAX; }
 
   // True if the driver should assume "-fstandalone-debug"
   // in the absence of an option specifying otherwise,

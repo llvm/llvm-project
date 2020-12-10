@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -emit-llvm -O2 \
-// RUN:   < %s | FileCheck %s --check-prefixes=X64,CHECK
-// RUN: %clang_cc1 -triple i386-pc-win32 -fms-extensions -emit-llvm -O2 \
-// RUN:   < %s | FileCheck %s --check-prefixes=X86,CHECK
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -emit-llvm -O2 < %s | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -triple i386-pc-win32 -fms-extensions -emit-llvm -O2 < %s | FileCheck %s --check-prefix=X86
 
 struct Foo {
   int * __ptr32 p32;

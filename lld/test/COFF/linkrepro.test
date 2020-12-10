@@ -1,7 +1,7 @@
 # REQUIRES: x86, shell
 
 # RUN: rm -rf %t.dir
-# RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3
+# RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3 %t.dir/build4
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 
 # RUN: cd %t.dir/build1
@@ -21,6 +21,14 @@
 # RUN: FileCheck %s --check-prefix=RSP < repro2/response.txt
 
 # RUN: cd %t.dir/build2
+# RUN: env LLD_REPRODUCE=repro.tar lld-link %t.obj %p/Inputs/std32.lib \
+# RUN:    /subsystem:console /entry:main@0 /out:%t.exe
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
+# RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
+
+# RUN: cd %t.dir/build3
 # RUN: lld-link %t.obj /libpath:%p/Inputs /defaultlib:std32 /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
 # RUN: tar xf repro.tar
@@ -28,7 +36,7 @@
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
 
-# RUN: cd %t.dir/build3
+# RUN: cd %t.dir/build4
 # RUN: env LIB=%p/Inputs lld-link %t.obj /defaultlib:std32 /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
 # RUN: tar xf repro.tar

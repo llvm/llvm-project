@@ -1,4 +1,5 @@
 add_mlir_library(MLIRRewrite
+  ByteCode.cpp
   FrozenRewritePatternList.cpp
   PatternApplicator.cpp
 
@@ -10,4 +11,8 @@ add_mlir_library(MLIRRewrite
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRPDL
+  MLIRPDLInterp
+  MLIRPDLToPDLInterp
+  MLIRSideEffectInterfaces
   )

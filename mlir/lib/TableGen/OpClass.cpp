@@ -303,9 +303,10 @@ void OpClass::writeDeclTo(raw_ostream &os) const {
   os << "class " << className << " : public ::mlir::Op<" << className;
   for (const auto &trait : traitsVec)
     os << ", " << trait;
-  os << "> {\npublic:\n";
-  os << "  using Op::Op;\n";
-  os << "  using Adaptor = " << className << "Adaptor;\n";
+  os << "> {\npublic:\n"
+     << "  using Op::Op;\n"
+     << "  using Op::print;\n"
+     << "  using Adaptor = " << className << "Adaptor;\n";
 
   bool hasPrivateMethod = false;
   forAllMethods([&](const OpMethod &method) {

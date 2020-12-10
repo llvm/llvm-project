@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR3241
 
-@g_620 = external global i32
+@g_620 = external dso_local global i32
 
 define void @func_18(i32 %p_21) nounwind {
 entry:

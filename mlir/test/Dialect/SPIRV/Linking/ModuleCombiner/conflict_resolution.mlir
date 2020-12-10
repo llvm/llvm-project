@@ -39,10 +39,12 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:     spv.func @foo_1
+// CHECK-NEXT:       spv.FAdd
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:     spv.func @foo_2
+// CHECK-NEXT:       spv.ISub
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -57,13 +59,15 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+    %0 = spv.FAdd %arg0, %arg0 : f32
+    spv.ReturnValue %0 : f32
   }
 }
 
 spv.module Logical GLSL450 {
   spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+    %0 = spv.ISub %arg0, %arg0 : i32
+    spv.ReturnValue %0 : i32
   }
 }
 }
@@ -264,7 +268,7 @@ spv.module Logical GLSL450 {
 
 // CHECK-NEXT:     spv.globalVariable @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._address_of @foo_1
+// CHECK-NEXT:       spv.mlir.addressof @foo_1
 // CHECK-NEXT:       spv.Load
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -281,7 +285,7 @@ spv.module Logical GLSL450 {
   spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @bar() -> f32 "None" {
-    %0 = spv._address_of @foo : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
     spv.ReturnValue %1 : f32
   }
@@ -297,7 +301,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.globalVariable @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._address_of @foo_1
+// CHECK-NEXT:       spv.mlir.addressof @foo_1
 // CHECK-NEXT:       spv.Load
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -312,7 +316,7 @@ spv.module Logical GLSL450 {
   spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @bar() -> f32 "None" {
-    %0 = spv._address_of @foo : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
     spv.ReturnValue %1 : f32
   }
@@ -363,7 +367,7 @@ spv.module Logical GLSL450 {
 
 // CHECK-NEXT:     spv.specConstant @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._reference_of @foo_1
+// CHECK-NEXT:       spv.mlir.referenceof @foo_1
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
@@ -379,7 +383,7 @@ spv.module Logical GLSL450 {
   spv.specConstant @foo = -5 : i32
 
   spv.func @bar() -> i32 "None" {
-    %0 = spv._reference_of @foo : i32 
+    %0 = spv.mlir.referenceof @foo : i32 
     spv.ReturnValue %0 : i32
   }
 }
@@ -394,7 +398,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.specConstant @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._reference_of @foo_1
+// CHECK-NEXT:       spv.mlir.referenceof @foo_1
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 
@@ -408,7 +412,7 @@ spv.module Logical GLSL450 {
   spv.specConstant @foo = -5 : i32
 
   spv.func @bar() -> i32 "None" {
-    %0 = spv._reference_of @foo : i32
+    %0 = spv.mlir.referenceof @foo : i32
     spv.ReturnValue %0 : i32
   }
 }
@@ -461,7 +465,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.specConstant @bar
 // CHECK-NEXT:     spv.specConstantComposite @foo_1 (@bar, @bar)
 // CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv._reference_of @foo_1
+// CHECK-NEXT:       spv.mlir.referenceof @foo_1
 // CHECK-NEXT:       spv.CompositeExtract
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -479,7 +483,7 @@ spv.module Logical GLSL450 {
   spv.specConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
 
   spv.func @baz() -> i32 "None" {
-    %0 = spv._reference_of @foo : !spv.array<2 x i32>
+    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
     %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
     spv.ReturnValue %1 : i32
   }
@@ -496,7 +500,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.specConstant @bar
 // CHECK-NEXT:     spv.specConstantComposite @foo_1 (@bar, @bar)
 // CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv._reference_of @foo_1
+// CHECK-NEXT:       spv.mlir.referenceof @foo_1
 // CHECK-NEXT:       spv.CompositeExtract
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -512,7 +516,7 @@ spv.module Logical GLSL450 {
   spv.specConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
 
   spv.func @baz() -> i32 "None" {
-    %0 = spv._reference_of @foo : !spv.array<2 x i32>
+    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
     %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
     spv.ReturnValue %1 : i32
   }
@@ -535,7 +539,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.specConstant @bar_1
 // CHECK-NEXT:     spv.specConstantComposite @foo_2 (@bar_1, @bar_1)
 // CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv._reference_of @foo_2
+// CHECK-NEXT:       spv.mlir.referenceof @foo_2
 // CHECK-NEXT:       spv.CompositeExtract
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -555,7 +559,7 @@ spv.module Logical GLSL450 {
   spv.specConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
 
   spv.func @baz() -> i32 "None" {
-    %0 = spv._reference_of @foo : !spv.array<2 x i32>
+    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
     %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
     spv.ReturnValue %1 : i32
   }
@@ -578,9 +582,9 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.globalVariable @foo_1
+// CHECK-NEXT:     spv.globalVariable @foo_1 bind(1, 0)
 
-// CHECK-NEXT:     spv.globalVariable @foo
+// CHECK-NEXT:     spv.globalVariable @foo bind(2, 0)
 // CHECK-NEXT: }
 
 module {
@@ -589,7 +593,26 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+  spv.globalVariable @foo bind(2, 0) : !spv.ptr<f32, Input>
+}
+}
+
+// -----
+
+// CHECK:      module {
+// CHECK-NEXT:   spv.module Logical GLSL450 {
+// CHECK-NEXT:     spv.globalVariable @foo_1 built_in("GlobalInvocationId")
+
+// CHECK-NEXT:     spv.globalVariable @foo built_in("LocalInvocationId")
+// CHECK-NEXT: }
+
+module {
+spv.module Logical GLSL450 {
+  spv.globalVariable @foo built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+}
+
+spv.module Logical GLSL450 {
+  spv.globalVariable @foo built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
 }
 }
 

@@ -547,6 +547,13 @@ struct __can_convert_char<wchar_t> {
   static const bool value = true;
   using __char_type = wchar_t;
 };
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+template <>
+struct __can_convert_char<char8_t> {
+  static const bool value = true;
+  using __char_type = char8_t;
+};
+#endif
 template <>
 struct __can_convert_char<char16_t> {
   static const bool value = true;
@@ -933,9 +940,8 @@ public:
   template <class _ECharT>
   typename enable_if<__can_convert_char<_ECharT>::value, path&>::type
   operator+=(_ECharT __x) {
-    basic_string<_ECharT> __tmp;
-    __tmp += __x;
-    _PathCVT<_ECharT>::__append_source(__pn_, __tmp);
+    _PathCVT<_ECharT>::__append_source(__pn_,
+                                       basic_string_view<_ECharT>(&__x, 1));
     return *this;
   }
 
@@ -994,8 +1000,12 @@ public:
 
   _LIBCPP_INLINE_VISIBILITY operator string_type() const { return __pn_; }
 
-  _LIBCPP_INLINE_VISIBILITY std::string string() const { return __pn_; }
-  _LIBCPP_INLINE_VISIBILITY std::string u8string() const { return __pn_; }
+  _LIBCPP_INLINE_VISIBILITY _VSTD::string string() const { return __pn_; }
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+  _LIBCPP_INLINE_VISIBILITY _VSTD::u8string u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
+#else
+  _LIBCPP_INLINE_VISIBILITY _VSTD::string u8string() const { return __pn_; }
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
@@ -1010,20 +1020,24 @@ public:
     return __s;
   }
 
-  _LIBCPP_INLINE_VISIBILITY std::wstring wstring() const {
+  _LIBCPP_INLINE_VISIBILITY _VSTD::wstring wstring() const {
     return string<wchar_t>();
   }
-  _LIBCPP_INLINE_VISIBILITY std::u16string u16string() const {
+  _LIBCPP_INLINE_VISIBILITY _VSTD::u16string u16string() const {
     return string<char16_t>();
   }
-  _LIBCPP_INLINE_VISIBILITY std::u32string u32string() const {
+  _LIBCPP_INLINE_VISIBILITY _VSTD::u32string u32string() const {
     return string<char32_t>();
   }
 #endif
 
   // generic format observers
-  std::string generic_string() const { return __pn_; }
-  std::string generic_u8string() const { return __pn_; }
+  _VSTD::string generic_string() const { return __pn_; }
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+  _VSTD::u8string generic_u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
+#else
+  _VSTD::string generic_u8string() const { return __pn_; }
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
@@ -1033,9 +1047,9 @@ public:
     return string<_ECharT, _Traits, _Allocator>(__a);
   }
 
-  std::wstring generic_wstring() const { return string<wchar_t>(); }
-  std::u16string generic_u16string() const { return string<char16_t>(); }
-  std::u32string generic_u32string() const { return string<char32_t>(); }
+  _VSTD::wstring generic_wstring() const { return string<wchar_t>(); }
+  _VSTD::u16string generic_u16string() const { return string<char16_t>(); }
+  _VSTD::u32string generic_u32string() const { return string<char32_t>(); }
 #endif
 
 private:
@@ -1147,7 +1161,7 @@ public:
                              is_same<_Traits, char_traits<char> >::value,
                          basic_ostream<_CharT, _Traits>&>::type
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.native());
+    __os << _VSTD::__quoted(__p.native());
     return __os;
   }
 
@@ -1157,7 +1171,7 @@ public:
                              !is_same<_Traits, char_traits<char> >::value,
                          basic_ostream<_CharT, _Traits>&>::type
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.string<_CharT, _Traits>());
+    __os << _VSTD::__quoted(__p.string<_CharT, _Traits>());
     return __os;
   }
 
@@ -1213,23 +1227,37 @@ _LIBCPP_FUNC_VIS
 size_t hash_value(const path& __p) noexcept;
 
 template <class _Source>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
     typename enable_if<__is_pathable<_Source>::value, path>::type
     u8path(const _Source& __s) {
   static_assert(
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+      is_same<typename __is_pathable<_Source>::__char_type, char8_t>::value ||
+#endif
       is_same<typename __is_pathable<_Source>::__char_type, char>::value,
       "u8path(Source const&) requires Source have a character type of type "
-      "'char'");
+      "'char'"
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+      " or 'char8_t'"
+#endif
+      );
   return path(__s);
 }
 
 template <class _InputIt>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
     typename enable_if<__is_pathable<_InputIt>::value, path>::type
     u8path(_InputIt __f, _InputIt __l) {
   static_assert(
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+      is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
+#endif
       is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
-      "u8path(Iter, Iter) requires Iter have a value_type of type 'char'");
+      "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+      " or 'char8_t'"
+#endif
+      );
   return path(__f, __l);
 }
 
@@ -1249,7 +1277,7 @@ public:
   typedef bidirectional_iterator_tag iterator_category;
 
   typedef path value_type;
-  typedef std::ptrdiff_t difference_type;
+  typedef ptrdiff_t difference_type;
   typedef const path* pointer;
   typedef const path& reference;
 
@@ -1393,7 +1421,7 @@ template <class... _Args>
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_NO_EXCEPTIONS
 void __throw_filesystem_error(_Args&&... __args) {
-  throw filesystem_error(std::forward<_Args>(__args)...);
+  throw filesystem_error(_VSTD::forward<_Args>(__args)...);
 }
 #else
 void __throw_filesystem_error(_Args&&...) {
@@ -2223,7 +2251,7 @@ private:
 
   _LIBCPP_INLINE_VISIBILITY
   void __assign_iter_entry(_Path&& __p, __cached_data __dt) {
-    __p_ = std::move(__p);
+    __p_ = _VSTD::move(__p);
     __data_ = __dt;
   }
 
@@ -2524,10 +2552,10 @@ end(const directory_iterator&) noexcept {
 class recursive_directory_iterator {
 public:
   using value_type = directory_entry;
-  using difference_type = std::ptrdiff_t;
+  using difference_type = ptrdiff_t;
   using pointer = directory_entry const*;
   using reference = directory_entry const&;
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = input_iterator_tag;
 
 public:
   // constructors and destructor

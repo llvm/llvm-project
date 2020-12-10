@@ -39,5 +39,5 @@ if.end:
 ; CHECK-NOT:  Type:            DATA
 ; CHECK-DATA: Type:            DATA
 
-; CHECK: Name: 'undefined:ret32'
+; CHECK: Name: 'undefined_weak:ret32'
 ; CHECK-NOT: Name: ret32

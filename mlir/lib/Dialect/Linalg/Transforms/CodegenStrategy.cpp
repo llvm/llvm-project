@@ -67,7 +67,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   // Post staged patterns transforms
   //===--------------------------------------------------------------------===//
 
-  ModuleOp module = func.getParentOfType<ModuleOp>();
+  ModuleOp module = func->getParentOfType<ModuleOp>();
 
   // Programmatic splitting of slow/fast path vector transfers.
   OwningRewritePatternList patterns;

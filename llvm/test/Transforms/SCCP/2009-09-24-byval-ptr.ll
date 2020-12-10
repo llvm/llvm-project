@@ -3,7 +3,7 @@
 ; PR5038
 %struct.MYstr = type { i8, i32 }
 @mystr = internal global %struct.MYstr zeroinitializer ; <%struct.MYstr*> [#uses=3]
-define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
+define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwind {
 entry:
   %0 = getelementptr %struct.MYstr, %struct.MYstr* %u, i32 0, i32 1 ; <i32*> [#uses=1]
   store i32 99, i32* %0, align 4
@@ -17,7 +17,7 @@ return:                                           ; preds = %entry
   ret void
 }
 
-define internal i32 @vfu2(%struct.MYstr* byval align 4 %u) nounwind readonly {
+define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwind readonly {
 entry:
   %0 = getelementptr %struct.MYstr, %struct.MYstr* %u, i32 0, i32 1 ; <i32*> [#uses=1]
   %1 = load i32, i32* %0
@@ -32,8 +32,8 @@ entry:
 
 define i32 @unions() nounwind {
 entry:
-  call void @vfu1(%struct.MYstr* byval align 4 @mystr) nounwind
-  %result = call i32 @vfu2(%struct.MYstr* byval align 4 @mystr) nounwind
+  call void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 @mystr) nounwind
+  %result = call i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 @mystr) nounwind
 ; CHECK: ret i32 %result
   ret i32 %result
 }

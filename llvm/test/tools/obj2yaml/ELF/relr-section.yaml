@@ -21,7 +21,7 @@
 # ELF32LE:      Sections:
 # ELF32LE-NEXT:   - Name:    .relr.dyn
 # ELF32LE-NEXT:     Type:    SHT_RELR
-# ELF32LE-NEXT:     Entries: [ 0x0000000044332211, 0x0000000088776655 ]
+# ELF32LE-NEXT:     Entries: [ 0x44332211, 0x88776655 ]
 
 # ELF64BE:      Sections:
 # ELF64BE-NEXT:   - Name:    .relr.dyn
@@ -31,7 +31,7 @@
 # ELF32BE:      Sections:
 # ELF32BE-NEXT:  - Name:    .relr.dyn
 # ELF32BE-NEXT:    Type:    SHT_RELR
-# ELF32BE-NEXT:    Entries: [ 0x0000000011223344, 0x0000000055667788 ]
+# ELF32BE-NEXT:    Entries: [ 0x11223344, 0x55667788 ]
 
 --- !ELF
 FileHeader:
@@ -70,7 +70,7 @@ Sections:
 
 # ENTSIZE:        - Name:    .relr.dyn
 # ENTSIZE-NEXT:     Type:    SHT_RELR
-# ENTSIZE-NEXT:     EntSize: 0x00000000000000FE
+# ENTSIZE-NEXT:     EntSize: 0xFE
 # ENTSIZE-NEXT:     Content: '1122334455667788'
 # ENTSIZE-NEXT: ...
 

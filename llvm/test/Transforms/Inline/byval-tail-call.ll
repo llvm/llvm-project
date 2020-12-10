@@ -10,7 +10,7 @@ target triple = "i386-pc-linux-gnu"
 
 declare void @ext(i32*)
 
-define void @bar(i32* byval %x) {
+define void @bar(i32* byval(i32) %x) {
   call void @ext(i32* %x)
   ret void
 }
@@ -19,11 +19,11 @@ define void @foo(i32* %x) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK: llvm.lifetime.start
 ; CHECK: store i32 %2, i32* %x
-  call void @bar(i32* byval %x)
+  call void @bar(i32* byval(i32) %x)
   ret void
 }
 
-define internal void @qux(i32* byval %x) {
+define internal void @qux(i32* byval(i32) %x) {
   call void @ext(i32* %x)
   tail call void @ext(i32* null)
   ret void
@@ -37,17 +37,17 @@ define void @frob(i32* %x) {
 ; CHECK: {{^ *}}call void @ext(i32* nonnull %[[POS]]
 ; CHECK: tail call void @ext(i32* null)
 ; CHECK: ret void
-  tail call void @qux(i32* byval %x)
+  tail call void @qux(i32* byval(i32) %x)
   ret void
 }
 
 ; A byval parameter passed into a function which is passed out as byval does
 ; not block the call from being marked as tail.
 
-declare void @ext2(i32* byval)
+declare void @ext2(i32* byval(i32))
 
-define void @bar2(i32* byval %x) {
-  call void @ext2(i32* byval %x)
+define void @bar2(i32* byval(i32) %x) {
+  call void @ext2(i32* byval(i32) %x)
   ret void
 }
 
@@ -56,9 +56,9 @@ define void @foobar(i32* %x) {
 ; CHECK: %[[POS:.*]] = alloca i32
 ; CHECK: %[[VAL:.*]] = load i32, i32* %x
 ; CHECK: store i32 %[[VAL]], i32* %[[POS]]
-; CHECK: tail call void @ext2(i32* nonnull byval %[[POS]]
+; CHECK: tail call void @ext2(i32* nonnull byval(i32) %[[POS]]
 ; CHECK: ret void
-  tail call void @bar2(i32* byval %x)
+  tail call void @bar2(i32* byval(i32) %x)
   ret void
 }
 
@@ -67,9 +67,9 @@ define void @barfoo() {
 ; CHECK: %[[POS:.*]] = alloca i32
 ; CHECK: %[[VAL:.*]] = load i32, i32* %x
 ; CHECK: store i32 %[[VAL]], i32* %[[POS]]
-; CHECK: tail call void @ext2(i32* nonnull byval %[[POS]]
+; CHECK: tail call void @ext2(i32* nonnull byval(i32) %[[POS]]
 ; CHECK: ret void
   %x = alloca i32
-  tail call void @bar2(i32* byval %x)
+  tail call void @bar2(i32* byval(i32) %x)
   ret void
 }

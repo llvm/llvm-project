@@ -217,8 +217,6 @@ std::string getRSTStringWithTextFallback(const Record *R, StringRef Primary,
       StringRef Value;
       if (auto *SV = dyn_cast_or_null<StringInit>(V->getValue()))
         Value = SV->getValue();
-      else if (auto *CV = dyn_cast_or_null<CodeInit>(V->getValue()))
-        Value = CV->getValue();
       if (!Value.empty())
         return Field == Primary ? Value.str() : escapeRST(Value);
     }

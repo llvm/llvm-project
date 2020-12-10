@@ -64,10 +64,10 @@ s_sub_u32 s0, u, u1
 // NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, 123, u
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u1
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed

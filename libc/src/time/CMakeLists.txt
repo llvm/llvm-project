@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  mktime
+  SRCS
+    mktime.cpp
+  HDRS
+    mktime.h
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.errno.__errno_location
+)

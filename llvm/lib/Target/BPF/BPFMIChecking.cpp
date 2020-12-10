@@ -41,7 +41,7 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  void checkingIllegalXADD(void);
+  bool processAtomicInsts(void);
 
 public:
 
@@ -49,7 +49,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!skipFunction(MF.getFunction())) {
       initialize(MF);
-      checkingIllegalXADD();
+      return processAtomicInsts();
     }
     return false;
   }
@@ -151,7 +151,7 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   return false;
 }
 
-void BPFMIPreEmitChecking::checkingIllegalXADD(void) {
+bool BPFMIPreEmitChecking::processAtomicInsts(void) {
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != BPF::XADDW &&
@@ -172,7 +172,71 @@ void BPFMIPreEmitChecking::checkingIllegalXADD(void) {
     }
   }
 
-  return;
+  // Check return values of atomic_fetch_and_{add,and,or,xor}.
+  // If the return is not used, the atomic_fetch_and_<op> instruction
+  // is replaced with atomic_<op> instruction.
+  MachineInstr *ToErase = nullptr;
+  bool Changed = false;
+  const BPFInstrInfo *TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      if (ToErase) {
+        ToErase->eraseFromParent();
+        ToErase = nullptr;
+      }
+
+      if (MI.getOpcode() != BPF::XFADDW32 && MI.getOpcode() != BPF::XFADDD &&
+          MI.getOpcode() != BPF::XFANDW32 && MI.getOpcode() != BPF::XFANDD &&
+          MI.getOpcode() != BPF::XFXORW32 && MI.getOpcode() != BPF::XFXORD &&
+          MI.getOpcode() != BPF::XFORW32 && MI.getOpcode() != BPF::XFORD)
+        continue;
+
+      if (hasLiveDefs(MI, TRI))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Transforming "; MI.dump());
+      unsigned newOpcode;
+      switch (MI.getOpcode()) {
+      case BPF::XFADDW32:
+        newOpcode = BPF::XADDW32;
+        break;
+      case BPF::XFADDD:
+        newOpcode = BPF::XADDD;
+        break;
+      case BPF::XFANDW32:
+        newOpcode = BPF::XANDW32;
+        break;
+      case BPF::XFANDD:
+        newOpcode = BPF::XANDD;
+        break;
+      case BPF::XFXORW32:
+        newOpcode = BPF::XXORW32;
+        break;
+      case BPF::XFXORD:
+        newOpcode = BPF::XXORD;
+        break;
+      case BPF::XFORW32:
+        newOpcode = BPF::XORW32;
+        break;
+      case BPF::XFORD:
+        newOpcode = BPF::XORD;
+        break;
+      default:
+        llvm_unreachable("Incorrect Atomic Instruction Opcode");
+      }
+
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(newOpcode))
+          .add(MI.getOperand(0))
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(3));
+
+      ToErase = &MI;
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 } // end default namespace

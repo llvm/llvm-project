@@ -25,7 +25,7 @@ Sections:
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:   - Type:            FUNCTION
 # CHECK:     FunctionTypes: [ 1, 0 ]

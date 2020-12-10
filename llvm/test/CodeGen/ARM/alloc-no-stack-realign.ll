@@ -5,7 +5,7 @@
 ; objects that are assumed to be 64-byte aligned.
 @T3_retval = common global <16 x float> zeroinitializer, align 16
 
-define void @test1(<16 x float>* noalias sret %agg.result) nounwind ssp "no-realign-stack" {
+define void @test1(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwind ssp "no-realign-stack" {
 entry:
 ; CHECK-LABEL: test1:
 ; CHECK: ldr     r[[R1:[0-9]+]], [pc, r[[R1]]]
@@ -42,7 +42,7 @@ entry:
  ret void
 }
 
-define void @test2(<16 x float>* noalias sret %agg.result) nounwind ssp {
+define void @test2(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwind ssp {
 entry:
 ; CHECK-LABEL: test2:
 ; CHECK: ldr     r[[R1:[0-9]+]], [pc, r[[R1]]]

@@ -1,5 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
-# RUN: llc -march=amdgcn -mattr=+unaligned-buffer-access -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
+# RUN: llc -march=amdgcn -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
 
 # FIXME: This overrides attributes that already are present. It should probably
 # only touch functions without an existing attribute.
@@ -10,8 +10,8 @@
 # MCPU: attributes #0 = { "target-cpu"="fiji" }
 # MCPU: attributes #1 = { "target-cpu"="hawaii" }
 
-# MATTR:  attributes #0 = { "target-cpu"="fiji" "target-features"="+unaligned-buffer-access" }
-# MATTR: attributes #1 = { "target-features"="+unaligned-buffer-access" }
+# MATTR:  attributes #0 = { "target-cpu"="fiji" "target-features"="+unaligned-access-mode" }
+# MATTR: attributes #1 = { "target-features"="+unaligned-access-mode" }
 
 --- |
   define amdgpu_kernel void @with_cpu_attr() #0 {

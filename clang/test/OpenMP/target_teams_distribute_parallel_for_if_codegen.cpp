@@ -49,11 +49,11 @@ int Arg;
 
 // CHECK-LABEL: define {{.*}}void @{{.+}}gtid_test
 void gtid_test() {
-// CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 100)
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 100)
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 #pragma omp target teams distribute parallel for
   for(int i = 0 ; i < 100; i++) {}
@@ -107,13 +107,13 @@ int tmain(T Arg) {
 
 // CHECK-LABEL: define {{.*}}i{{[0-9]+}} @main()
 int main() {
-// CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 100)
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK-NOT: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
+// CHECK-NOT: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 100)
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
-// CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
+// CHECK: call void @__kmpc_push_target_tripcount(%struct.ident_t* @{{.+}}, i64 -1, i64 100)
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CHECK: call void [[OFFLOADING_FUN_2:@.+]](
 // CHECK: = call {{.*}}i{{.+}} @{{.+}}tmain
 #pragma omp target teams distribute parallel for if (true)

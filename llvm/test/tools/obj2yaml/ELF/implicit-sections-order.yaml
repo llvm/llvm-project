@@ -43,15 +43,15 @@
 # OUTPUT-NEXT:   - Name:    .dynsym
 # OUTPUT-NEXT:     Type:    SHT_DYNSYM
 # OUTPUT-NEXT:     Flags:   [ SHF_ALLOC ]
-# OUTPUT-NEXT:     Address: 0x0000000000001000
+# OUTPUT-NEXT:     Address: 0x1000
 # OUTPUT-NEXT:     Link:    .dynstr
-# OUTPUT-NEXT:     EntSize: 0x0000000000000018
+# OUTPUT-NEXT:     EntSize: 0x18
 # OUTPUT-NEXT:   - Name: .foo.2
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
 # OUTPUT-NEXT:   - Name:    .dynstr
 # OUTPUT-NEXT:     Type:    SHT_STRTAB
 # OUTPUT-NEXT:     Flags:   [ SHF_ALLOC ]
-# OUTPUT-NEXT:     Address: 0x0000000000002000
+# OUTPUT-NEXT:     Address: 0x2000
 # OUTPUT-NEXT:   - Name: .foo.3
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
 # OUTPUT-NEXT:   - Name: .foo.4
@@ -136,21 +136,21 @@ DynamicSymbols:
 # OUTPUT2-NEXT:   - Name:    .symtab
 # OUTPUT2-NEXT:     Type:    SHT_SYMTAB
 # OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
-# OUTPUT2-NEXT:     Address: 0x0000000000003000
+# OUTPUT2-NEXT:     Address: 0x3000
 # OUTPUT2-NEXT:     Link:    .strtab
-# OUTPUT2-NEXT:     EntSize: 0x0000000000000018
+# OUTPUT2-NEXT:     EntSize: 0x18
 # OUTPUT2-NEXT:   - Name: .foo.4
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS
 # OUTPUT2-NEXT:   - Name:    .strtab
 # OUTPUT2-NEXT:     Type:    SHT_STRTAB
 # OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
-# OUTPUT2-NEXT:     Address: 0x0000000000004000
+# OUTPUT2-NEXT:     Address: 0x4000
 # OUTPUT2-NEXT:   - Name: .foo.5
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS
 # OUTPUT2-NEXT:   - Name:    .shstrtab
 # OUTPUT2-NEXT:     Type:    SHT_STRTAB
 # OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
-# OUTPUT2-NEXT:     Address: 0x0000000000005000
+# OUTPUT2-NEXT:     Address: 0x5000
 # OUTPUT2-NEXT:   - Name:    .foo.6
 # OUTPUT2-NEXT:     Type:    SHT_PROGBITS
 # OUTPUT2-NEXT: Symbols:

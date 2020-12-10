@@ -766,7 +766,7 @@ def LLVM_LLVMFuncOp
     Block *addEntryBlock();
 
     LLVMType getType() {
-      return getAttrOfType<TypeAttr>(getTypeAttrName())
+      return (*this)->getAttrOfType<TypeAttr>(getTypeAttrName())
           .getValue().cast<LLVMType>();
     }
     bool isVarArg() {
@@ -888,6 +888,33 @@ def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
 def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
+}
+
+// Intrinsics with multiple returns.
+
+def LLVM_SAddWithOverflowOp
+    : LLVM_IntrOp<"sadd.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_UAddWithOverflowOp
+    : LLVM_IntrOp<"uadd.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_SSubWithOverflowOp
+    : LLVM_IntrOp<"ssub.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_USubWithOverflowOp
+    : LLVM_IntrOp<"usub.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_SMulWithOverflowOp
+    : LLVM_IntrOp<"smul.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
+}
+def LLVM_UMulWithOverflowOp
+    : LLVM_IntrOp<"umul.with.overflow", [0], [], [], 2> {
+  let arguments = (ins LLVM_Type, LLVM_Type);
 }
 
 //
@@ -1163,5 +1190,49 @@ def LLVM_FenceOp : LLVM_ZeroResultOp<"fence", []> {
   let parser = [{ return parseFenceOp(parser, result); }];
   let printer = [{ printFenceOp(p, *this); }];
   let verifier = "return ::verify(*this);";
+}
+
+def AsmATT : LLVM_EnumAttrCase<
+  /*string cppSym=*/"AD_ATT", /*string irSym=*/"att",
+  /*string llvmSym=*/"AD_ATT", /*int val=*/0>;
+def AsmIntel : LLVM_EnumAttrCase<
+  /*string cppSym=*/"AD_Intel", /*string irSym=*/"intel",
+  /*string llvmSym=*/"AD_Intel", /*int val=*/1>;
+def AsmATTOrIntel : LLVM_EnumAttr<
+  /*string name=*/"AsmDialect",
+  /*string llvmName=*/"::llvm::InlineAsm::AsmDialect",
+  /*string description=*/"ATT (0) or Intel (1) asm dialect",
+  /*list<LLVM_EnumAttrCase> cases=*/[AsmATT, AsmIntel]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
+  let description = [{
+    The InlineAsmOp mirrors the underlying LLVM semantics with a notable
+    exception: the embedded `asm_string` is not allowed to define or reference
+    any symbol or any global variable: only the operands of the op may be read,
+    written, or referenced.
+    Attempting to define or reference any symbol or any global behavior is
+    considered undefined behavior at this time.
+  }];
+  let arguments = (
+    ins Variadic<LLVM_Type>:$operands,
+        StrAttr:$asm_string,
+        StrAttr:$constraints,
+        UnitAttr:$has_side_effects,
+        UnitAttr:$is_align_stack,
+        OptionalAttr<
+          DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect);
+
+  let results = (outs Optional<LLVM_Type>:$res);
+
+  let assemblyFormat = [{
+    (`has_side_effects` $has_side_effects^)?
+    (`is_align_stack` $is_align_stack^)?
+    (`asm_dialect` `=` $asm_dialect^)?
+    attr-dict
+    $asm_string `,` $constraints
+    operands `:` functional-type(operands, results)
+   }];
 }
 #endif // LLVMIR_OPS

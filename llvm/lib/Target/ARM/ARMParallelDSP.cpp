@@ -22,6 +22,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -374,7 +375,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
   DepMap RAWDeps;
 
   // Record any writes that may alias a load.
-  const auto Size = LocationSize::unknown();
+  const auto Size = LocationSize::beforeOrAfterPointer();
   for (auto Write : Writes) {
     for (auto Read : Loads) {
       MemoryLocation ReadLoc =

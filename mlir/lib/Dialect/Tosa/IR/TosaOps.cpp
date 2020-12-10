@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -87,6 +87,24 @@ void TosaDialect::initialize() {
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
       >();
   addInterfaces<TosaInlinerInterface>();
+}
+
+Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
+                                            Type type, Location loc) {
+  // Tosa dialect constants only support ElementsAttr unlike standard dialect
+  // constant which supports all attributes.
+  if (value.isa<ElementsAttr>())
+    return builder.create<tosa::ConstOp>(loc, type, value.cast<ElementsAttr>());
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator Folders.
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.empty() && "constant has no operands");
+  return valueAttr();
 }
 
 //===----------------------------------------------------------------------===//

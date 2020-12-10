@@ -102,14 +102,37 @@ void VEToolChain::addClangTargetOptions(const ArgList &DriverArgs,
 
 void VEToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  // TODO upstream VE libc++ patches
-  llvm_unreachable("The VE target has no C++ stdlib for Clang yet");
+  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+  if (const char *cl_include_dir = getenv("NCC_CPLUS_INCLUDE_PATH")) {
+    SmallVector<StringRef, 4> Dirs;
+    const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
+    StringRef(cl_include_dir).split(Dirs, StringRef(EnvPathSeparatorStr));
+    ArrayRef<StringRef> DirVec(Dirs);
+    addSystemIncludes(DriverArgs, CC1Args, DirVec);
+  } else {
+    SmallString<128> P(getDriver().ResourceDir);
+    llvm::sys::path::append(P, "include/c++/v1");
+    addSystemInclude(DriverArgs, CC1Args, P);
+  }
 }
 
 void VEToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                       ArgStringList &CmdArgs) const {
-  // TODO upstream VE libc++ patches
-  llvm_unreachable("The VE target has no C++ stdlib for Clang yet");
+  assert((GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) &&
+         "Only -lc++ (aka libxx) is supported in this toolchain.");
+
+  tools::addArchSpecificRPath(*this, Args, CmdArgs);
+
+  CmdArgs.push_back("-lc++");
+  CmdArgs.push_back("-lc++abi");
+  CmdArgs.push_back("-lunwind");
+  // libc++ requires -lpthread under glibc environment
+  CmdArgs.push_back("-lpthread");
+  // libunwind requires -ldl under glibc environment
+  CmdArgs.push_back("-ldl");
 }
 
 llvm::ExceptionHandling

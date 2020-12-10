@@ -25,6 +25,7 @@ static_library("MachO2") {
     "Arch/X86_64.cpp",
     "Driver.cpp",
     "DriverUtils.cpp",
+    "Dwarf.cpp",
     "ExportTrie.cpp",
     "InputFiles.cpp",
     "InputSection.cpp",

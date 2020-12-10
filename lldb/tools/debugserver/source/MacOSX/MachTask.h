@@ -67,7 +67,7 @@ public:
   kern_return_t RestoreExceptionPortInfo();
   kern_return_t ShutDownExcecptionThread();
 
-  bool StartExceptionThread(DNBError &err);
+  bool StartExceptionThread(bool unmask_signals, DNBError &err);
   nub_addr_t GetDYLDAllImageInfosAddress(DNBError &err);
   kern_return_t BasicInfo(struct task_basic_info *info);
   static kern_return_t BasicInfo(task_t task, struct task_basic_info *info);

@@ -1,3 +1,4 @@
+// REQUIRES: amdgpu-registered-target
 // Begin X86/GCC/Linux tests ----------------
 
 // RUN: %clang -march=i386 -m32 -E -dM %s -o - 2>&1 \

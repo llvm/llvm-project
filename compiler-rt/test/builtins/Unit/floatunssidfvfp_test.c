@@ -9,7 +9,7 @@
 
 extern COMPILER_RT_ABI double __floatunssidfvfp(unsigned int a);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
 int test__floatunssidfvfp(unsigned int a)
 {
     double actual = __floatunssidfvfp(a);
@@ -23,7 +23,7 @@ int test__floatunssidfvfp(unsigned int a)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
     if (test__floatunssidfvfp(0))
         return 1;
     if (test__floatunssidfvfp(1))

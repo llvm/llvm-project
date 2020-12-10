@@ -224,6 +224,7 @@ public:
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 
     VK_X86_ABS8,
+    VK_X86_PLTOFF,
 
     VK_ARM_NONE,
     VK_ARM_GOT_PREL,
@@ -321,8 +322,9 @@ public:
     VK_Hexagon_IE_GOT,
 
     VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
-    VK_WASM_MBREL,     // Memory address relative to memory base
-    VK_WASM_TBREL,     // Table index relative to table bare
+    VK_WASM_TLSREL,    // Memory address relative to __tls_base
+    VK_WASM_MBREL,     // Memory address relative to __memory_base
+    VK_WASM_TBREL,     // Table index relative to __table_base
 
     VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
     VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi

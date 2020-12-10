@@ -710,7 +710,7 @@ void TargetPassConfig::addIRPasses() {
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
   // that stores/loads element one-by-one if the appropriate mask bit is set.
-  addPass(createScalarizeMaskedMemIntrinPass());
+  addPass(createScalarizeMaskedMemIntrinLegacyPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
   // Allow disabling it for testing purposes.
@@ -735,6 +735,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     LLVM_FALLTHROUGH;
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
+  case ExceptionHandling::AIX:
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
@@ -1038,6 +1039,10 @@ void TargetPassConfig::addMachinePasses() {
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
+
+  // Insert pseudo probe annotation for callsite profiling
+  if (TM->Options.PseudoProbeForProfiling)
+    addPass(createPseudoProbeInserter());
 
   AddingMachinePasses = false;
 }

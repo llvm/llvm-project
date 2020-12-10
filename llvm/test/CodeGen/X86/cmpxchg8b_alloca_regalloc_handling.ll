@@ -69,7 +69,7 @@ done:
 ; - base pointer for stack frame (VLA + alignment)
 ; - cmpxchg8b global + index reg
 
-@Counters = external global [19 x i64]
+@Counters = external dso_local global [19 x i64]
 
 define void @foo_alloca_index_global(i32 %i, i64 %val) {
 entry:

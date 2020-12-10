@@ -61,9 +61,10 @@ void ProcessMachCore::Terminate() {
 
 lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
                                                 ListenerSP listener_sp,
-                                                const FileSpec *crash_file) {
+                                                const FileSpec *crash_file,
+                                                bool can_connect) {
   lldb::ProcessSP process_sp;
-  if (crash_file) {
+  if (crash_file && !can_connect) {
     const size_t header_size = sizeof(llvm::MachO::mach_header);
     auto data_sp = FileSystem::Instance().CreateDataBuffer(
         crash_file->GetPath(), header_size, 0);
@@ -110,8 +111,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
                                  const FileSpec &core_file)
-    : Process(target_sp, listener_sp), m_core_aranges(), m_core_range_infos(),
-      m_core_module_sp(), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
+      m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS), m_dyld_plugin_name() {}
 

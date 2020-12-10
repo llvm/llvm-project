@@ -356,8 +356,7 @@ const char *CodeCompletionAllocator::CopyString(const Twine &String) {
 }
 
 StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
-  if (!ND)
+  if (!isa<NamedDecl>(DC))
     return {};
 
   // Check whether we've already cached the parent name.
@@ -470,8 +469,7 @@ void CodeCompletionBuilder::addParentContext(const DeclContext *DC) {
   if (DC->isFunctionOrMethod())
     return;
 
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
-  if (!ND)
+  if (!isa<NamedDecl>(DC))
     return;
 
   ParentName = getCodeCompletionTUInfo().getParentName(DC);

@@ -156,7 +156,7 @@ OPTIONS
 
 .. option:: --mattr=<a1,+a2,-a3,...>
 
-  Enable/disable target-specific attributes. Specify ``--mcpu=help`` to display
+  Enable/disable target-specific attributes. Specify ``--mattr=help`` to display
   the available attributes.
 
 .. option:: --no-leading-addr

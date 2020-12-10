@@ -4,6 +4,7 @@
 // expected-remark@below {{'!test.test_type' - TestB}}
 // expected-remark@below {{'!test.test_type' - TestC}}
 // expected-remark@below {{'!test.test_type' - TestD}}
+// expected-remark@below {{'!test.test_type' - TestRet}}
 // expected-remark@below {{'!test.test_type' - TestE}}
 %foo0 = "foo.test"() : () -> (!test.test_type)
 

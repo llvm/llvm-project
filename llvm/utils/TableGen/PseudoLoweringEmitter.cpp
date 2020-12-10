@@ -298,11 +298,13 @@ void PseudoLoweringEmitter::run(raw_ostream &o) {
       Records.getAllDerivedDefinitions(makeArrayRef(Classes));
 
   // Process the pseudo expansion definitions, validating them as we do so.
+  Records.startTimer("Process definitions");
   for (unsigned i = 0, e = Insts.size(); i != e; ++i)
     evaluateExpansion(Insts[i]);
 
   // Generate expansion code to lower the pseudo to an MCInst of the real
   // instruction.
+  Records.startTimer("Emit expansion code");
   emitLoweringEmitter(o);
 }
 

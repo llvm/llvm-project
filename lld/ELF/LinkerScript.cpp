@@ -409,15 +409,16 @@ static void sortSections(MutableArrayRef<InputSectionBase *> vec,
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
 static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
-                              const SectionPattern &pat) {
-  if (pat.sortOuter == SortSectionPolicy::None)
+                              SortSectionPolicy outer,
+                              SortSectionPolicy inner) {
+  if (outer == SortSectionPolicy::None)
     return;
 
-  if (pat.sortInner == SortSectionPolicy::Default)
+  if (inner == SortSectionPolicy::Default)
     sortSections(vec, config->sortSection);
   else
-    sortSections(vec, pat.sortInner);
-  sortSections(vec, pat.sortOuter);
+    sortSections(vec, inner);
+  sortSections(vec, outer);
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
@@ -425,13 +426,27 @@ std::vector<InputSectionBase *>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
                                    ArrayRef<InputSectionBase *> sections) {
   std::vector<InputSectionBase *> ret;
+  std::vector<size_t> indexes;
+  DenseSet<size_t> seen;
+  auto sortByPositionThenCommandLine = [&](size_t begin, size_t end) {
+    llvm::sort(MutableArrayRef<size_t>(indexes).slice(begin, end - begin));
+    for (size_t i = begin; i != end; ++i)
+      ret[i] = sections[indexes[i]];
+    sortInputSections(
+        MutableArrayRef<InputSectionBase *>(ret).slice(begin, end - begin),
+        config->sortSection, SortSectionPolicy::None);
+  };
 
   // Collects all sections that satisfy constraints of Cmd.
+  size_t sizeAfterPrevSort = 0;
   for (const SectionPattern &pat : cmd->sectionPatterns) {
-    size_t sizeBefore = ret.size();
+    size_t sizeBeforeCurrPat = ret.size();
 
-    for (InputSectionBase *sec : sections) {
-      if (!sec->isLive() || sec->parent)
+    for (size_t i = 0, e = sections.size(); i != e; ++i) {
+      // Skip if the section is dead or has been matched by a previous input
+      // section description or a previous pattern.
+      InputSectionBase *sec = sections[i];
+      if (!sec->isLive() || sec->parent || seen.contains(i))
         continue;
 
       // For -emit-relocs we have to ignore entries like
@@ -453,11 +468,31 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         continue;
 
       ret.push_back(sec);
+      indexes.push_back(i);
+      seen.insert(i);
     }
 
+    if (pat.sortOuter == SortSectionPolicy::Default)
+      continue;
+
+    // Matched sections are ordered by radix sort with the keys being (SORT*,
+    // --sort-section, input order), where SORT* (if present) is most
+    // significant.
+    //
+    // Matched sections between the previous SORT* and this SORT* are sorted by
+    // (--sort-alignment, input order).
+    sortByPositionThenCommandLine(sizeAfterPrevSort, sizeBeforeCurrPat);
+    // Matched sections by this SORT* pattern are sorted using all 3 keys.
+    // ret[sizeBeforeCurrPat,ret.size()) are already in the input order, so we
+    // just sort by sortOuter and sortInner.
     sortInputSections(
-        MutableArrayRef<InputSectionBase *>(ret).slice(sizeBefore), pat);
+        MutableArrayRef<InputSectionBase *>(ret).slice(sizeBeforeCurrPat),
+        pat.sortOuter, pat.sortInner);
+    sizeAfterPrevSort = ret.size();
   }
+  // Matched sections after the last SORT* are sorted by (--sort-alignment,
+  // input order).
+  sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
   return ret;
 }
 
@@ -767,6 +802,8 @@ void LinkerScript::addOrphanSections() {
 
 void LinkerScript::diagnoseOrphanHandling() const {
   llvm::TimeTraceScope timeScope("Diagnose orphan sections");
+  if (config->orphanHandling == OrphanHandlingPolicy::Place)
+    return;
   for (const InputSectionBase *sec : orphanSections) {
     // Input SHT_REL[A] retained by --emit-relocs are ignored by
     // computeInputSections(). Don't warn/error.
@@ -777,7 +814,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
     StringRef name = getOutputSectionName(sec);
     if (config->orphanHandling == OrphanHandlingPolicy::Error)
       error(toString(sec) + " is being placed in '" + name + "'");
-    else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
+    else
       warn(toString(sec) + " is being placed in '" + name + "'");
   }
 }
@@ -950,11 +987,6 @@ static bool isDiscardable(OutputSection &sec) {
   if (sec.name == "/DISCARD/")
     return true;
 
-  // We do not remove empty sections that are explicitly
-  // assigned to any segment.
-  if (!sec.phdrs.empty())
-    return false;
-
   // We do not want to remove OutputSections with expressions that reference
   // symbols even if the OutputSection is empty. We want to ensure that the
   // expressions can be evaluated and report an error if they cannot.
@@ -980,6 +1012,18 @@ static bool isDiscardable(OutputSection &sec) {
   return true;
 }
 
+static void maybePropagatePhdrs(OutputSection &sec,
+                                std::vector<StringRef> &phdrs) {
+  if (sec.phdrs.empty()) {
+    // To match the bfd linker script behaviour, only propagate program
+    // headers to sections that are allocated.
+    if (sec.flags & SHF_ALLOC)
+      sec.phdrs = phdrs;
+  } else {
+    phdrs = sec.phdrs;
+  }
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -1003,6 +1047,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t flags = SHF_ALLOC;
 
+  std::vector<StringRef> defPhdrs;
   for (BaseCommand *&cmd : sectionCommands) {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
@@ -1024,6 +1069,18 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (isEmpty)
       sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
                             SHF_WRITE | SHF_EXECINSTR);
+
+    // The code below may remove empty output sections. We should save the
+    // specified program headers (if exist) and propagate them to subsequent
+    // sections which do not specify program headers.
+    // An example of such a linker script is:
+    // SECTIONS { .empty : { *(.empty) } :rw
+    //            .foo : { *(.foo) } }
+    // Note: at this point the order of output sections has not been finalized,
+    // because orphans have not been inserted into their expected positions. We
+    // will handle them in adjustSectionsAfterSorting().
+    if (sec->sectionIndex != UINT32_MAX)
+      maybePropagatePhdrs(*sec, defPhdrs);
 
     if (isEmpty && isDiscardable(*sec)) {
       sec->markDead();
@@ -1069,20 +1126,9 @@ void LinkerScript::adjustSectionsAfterSorting() {
 
   // Walk the commands and propagate the program headers to commands that don't
   // explicitly specify them.
-  for (BaseCommand *base : sectionCommands) {
-    auto *sec = dyn_cast<OutputSection>(base);
-    if (!sec)
-      continue;
-
-    if (sec->phdrs.empty()) {
-      // To match the bfd linker script behaviour, only propagate program
-      // headers to sections that are allocated.
-      if (sec->flags & SHF_ALLOC)
-        sec->phdrs = defPhdrs;
-    } else {
-      defPhdrs = sec->phdrs;
-    }
-  }
+  for (BaseCommand *base : sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(base))
+      maybePropagatePhdrs(*sec, defPhdrs);
 }
 
 static uint64_t computeBase(uint64_t min, bool allocateHeaders) {

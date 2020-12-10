@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetStreamer.h"
-#include "RISCVSubtarget.h"
+#include "RISCVMCTargetDesc.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
 

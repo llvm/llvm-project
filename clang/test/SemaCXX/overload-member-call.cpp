@@ -83,6 +83,9 @@ namespace test1 {
     void baz(A &d); // expected-note {{candidate function not viable: 1st argument ('const test1::A') would lose const qualifier}}
     void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const test1::A' to 'int' for 1st argument}} 
 
+    void ref() &&;   // expected-note {{expects an rvalue for object argument}} expected-note {{requires 0 arguments, but 1 was provided}}
+    void ref(int) &; // expected-note {{expects an lvalue for object argument}} expected-note {{requires 1 argument, but 0 were provided}}
+
     // PR 11857
     void foo(int n); // expected-note {{candidate function not viable: requires single argument 'n', but 2 arguments were provided}}
     void foo(unsigned n = 10); // expected-note {{candidate function not viable: allows at most single argument 'n', but 2 arguments were provided}}
@@ -103,6 +106,9 @@ namespace test1 {
 
     a.rab(); //expected-error {{no matching member function for call to 'rab'}}
     a.zab(3, 4, 5); //expected-error {{no matching member function for call to 'zab'}}
+
+    a.ref();    // expected-error {{no matching member function for call to 'ref'}}
+    A().ref(1); // expected-error {{no matching member function for call to 'ref'}}
   }
 }
 

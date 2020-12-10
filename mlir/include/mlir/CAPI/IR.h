@@ -16,9 +16,9 @@
 #define MLIR_CAPI_IR_H
 
 #include "mlir/CAPI/Wrap.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 
 DEFINE_C_API_PTR_METHODS(MlirContext, mlir::MLIRContext)

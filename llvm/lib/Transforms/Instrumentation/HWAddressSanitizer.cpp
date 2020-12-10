@@ -55,13 +55,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hwasan"
 
-static const char *const kHwasanModuleCtorName = "hwasan.module_ctor";
-static const char *const kHwasanNoteName = "hwasan.note";
-static const char *const kHwasanInitName = "__hwasan_init";
-static const char *const kHwasanPersonalityThunkName =
-    "__hwasan_personality_thunk";
+const char kHwasanModuleCtorName[] = "hwasan.module_ctor";
+const char kHwasanNoteName[] = "hwasan.note";
+const char kHwasanInitName[] = "__hwasan_init";
+const char kHwasanPersonalityThunkName[] = "__hwasan_personality_thunk";
 
-static const char *const kHwasanShadowMemoryDynamicAddress =
+const char kHwasanShadowMemoryDynamicAddress[] =
     "__hwasan_shadow_memory_dynamic_address";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
@@ -213,7 +212,6 @@ public:
   Value *getShadowNonTls(IRBuilder<> &IRB);
 
   void untagPointerOperand(Instruction *I, Value *Addr);
-  Value *shadowBase();
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,

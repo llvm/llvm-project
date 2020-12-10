@@ -22,7 +22,7 @@ class TestBasicVector(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        vector_type = "std::vector<int, std::allocator<int> >"
+        vector_type = "std::vector<int>"
         size_type = vector_type + "::size_type"
         value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
         iterator = vector_type + "::iterator"
@@ -86,4 +86,14 @@ class TestBasicVector(TestBase):
                              ValueCheck(value="2"),
                              ValueCheck(value="4"),
                              ValueCheck(value="5")
+                         ])
+
+        # Test that the typedef'd vector type can be substituted.
+        self.expect("expr b.emplace_back(6)")
+        self.expect_expr("b", result_type="vector_long",
+                         result_children=[
+                             ValueCheck(value="3"),
+                             ValueCheck(value="1"),
+                             ValueCheck(value="2"),
+                             ValueCheck(value="6"),
                          ])

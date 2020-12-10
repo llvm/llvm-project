@@ -104,7 +104,7 @@ define void @set_global(i32 %v) {
 ; GENDYN-NEXT:    R_VE_PLT_HI32 __tls_get_addr
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
 ; GENDYN-NEXT:    stl %s18, (, %s0)
-; GENDYN-NEXT:    ld %s18, 48(, %s9)
+; GENDYN-NEXT:    ld %s18, 288(, %s11)
 ; GENDYN-NEXT:    or %s11, 0, %s9
 ;
 ; GENDYNPIC:         lea %s15, (-24)
@@ -126,7 +126,7 @@ define void @set_global(i32 %v) {
 ; GENDYNPIC-NEXT:    R_VE_PLT_HI32 __tls_get_addr
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    stl %s18, (, %s0)
-; GENDYNPIC-NEXT:    ld %s18, 48(, %s9)
+; GENDYNPIC-NEXT:    ld %s18, 288(, %s11)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
   store i32 %v, i32* @x, align 4
@@ -148,7 +148,7 @@ define void @set_local(i32 %v) {
 ; GENDYN-NEXT:    R_VE_PLT_HI32 __tls_get_addr
 ; GENDYN-NEXT:    bsic %s10, (, %s12)
 ; GENDYN-NEXT:    stl %s18, (, %s0)
-; GENDYN-NEXT:    ld %s18, 48(, %s9)
+; GENDYN-NEXT:    ld %s18, 288(, %s11)
 ; GENDYN-NEXT:    or %s11, 0, %s9
 ;
 ; GENDYNPIC:         lea %s15, (-24)
@@ -170,7 +170,7 @@ define void @set_local(i32 %v) {
 ; GENDYNPIC-NEXT:    R_VE_PLT_HI32 __tls_get_addr
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    stl %s18, (, %s0)
-; GENDYNPIC-NEXT:    ld %s18, 48(, %s9)
+; GENDYNPIC-NEXT:    ld %s18, 288(, %s11)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
   store i32 %v, i32* @y, align 4

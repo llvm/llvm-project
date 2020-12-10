@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -801,5 +805,145 @@ TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   // There are three functions and we count them four times for each of the
   // three functions.
   EXPECT_EQ(3 * 4 * 3, FunctionCount);
+}
+
+// Run SimplifyCFGPass that makes CFG changes and reports PreservedAnalyses
+// without CFGAnalyses. So the CFGChecker does not complain.
+TEST_F(PassManagerTest, FunctionPassCFGChecker) {
+  LLVMContext Context;
+  // SimplifyCFG changes this function to
+  // define void @foo {next: ret void}
+  auto M = parseIR(Context, "define void @foo() {\n"
+                            "  br label %next\n"
+                            "next:\n"
+                            "  br label %exit\n"
+                            "exit:\n"
+                            "  ret void\n"
+                            "}\n");
+
+  auto *F = M->getFunction("foo");
+  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionPassManager FPM(/*DebugLogging*/ true);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(/*DebugLogging*/ true);
+  SI.registerCallbacks(PIC);
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] { return TargetIRAnalysis(); });
+
+  FPM.addPass(SimplifyCFGPass());
+  FPM.run(*F, FAM);
+}
+
+// FunctionPass that manually invalidates analyses and always returns
+// PreservedAnalyses::all().
+struct TestSimplifyCFGInvalidatingAnalysisPass
+    : PassInfoMixin<TestSimplifyCFGInvalidatingAnalysisPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    // Run SimplifyCFG and if it changes CFG then invalidate the CFG analysis.
+    // This allows to return PreserveAnalysis::all().
+    PreservedAnalyses PA = CFGSimplifier.run(F, FAM);
+    FAM.invalidate(F, PA);
+    return PreservedAnalyses::all();
+  }
+
+  SimplifyCFGPass CFGSimplifier;
+};
+
+// Run TestSimplifyCFGInvalidatingAnalysisPass which changes CFG by running
+// SimplifyCFGPass then manually invalidates analyses and always returns
+// PreservedAnalyses::all(). CFGChecker does not complain because it resets
+// its saved CFG snapshot when the analyses are invalidated manually.
+TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
+  LLVMContext Context;
+  // SimplifyCFG changes this function to
+  // define void @foo {next: ret void}
+  auto M = parseIR(Context, "define void @foo() {\n"
+                            "  br label %next\n"
+                            "next:\n"
+                            "  br label %exit\n"
+                            "exit:\n"
+                            "  ret void\n"
+                            "}\n");
+
+  auto *F = M->getFunction("foo");
+  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionPassManager FPM(/*DebugLogging*/ true);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(/*DebugLogging*/ true);
+  SI.registerCallbacks(PIC);
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] { return TargetIRAnalysis(); });
+
+  FPM.addPass(TestSimplifyCFGInvalidatingAnalysisPass());
+  FPM.run(*F, FAM);
+}
+
+// Wrap a FunctionPassManager running SimplifyCFG pass with another
+// FunctionPassManager.
+struct TestSimplifyCFGWrapperPass : PassInfoMixin<TestSimplifyCFGWrapperPass> {
+  TestSimplifyCFGWrapperPass(FunctionPassManager &InnerPM) : InnerPM(InnerPM) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    // Here we simulate exactly what FunctionPassManager::run() does but
+    // instead of running all passes from InnerPM.Passes we run them in bulk
+    // by calling InnerPM.run().
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PassInstrumentation PI = FAM.getResult<PassInstrumentationAnalysis>(F);
+
+    if (!PI.runBeforePass<Function>(InnerPM, F))
+      return PreservedAnalyses::all();
+
+    PreservedAnalyses PassPA = InnerPM.run(F, FAM);
+    PI.runAfterPass(InnerPM, F, PassPA);
+    FAM.invalidate(F, PassPA);
+    PA.intersect(PassPA);
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    return PA;
+  }
+
+  FunctionPassManager &InnerPM;
+};
+
+// Run TestSimplifyCFGWrapperPass which simulates behavior of
+// FunctionPassManager::run() except that it runs all passes at once by calling
+// an inner pass manager's passes with PassManager::run(). This is how one pass
+// manager is expected to wrap another pass manager.
+// SimplifyCFGPass, which is called by the inner pass manager, changes the CFG.
+// The CFGChecker's AfterPassCallback, run right after SimplifyCFGPass, does not
+// complain because CFGAnalyses is not in the PreservedAnalises set returned by
+// SimplifyCFGPass. Then the CFG analysis is invalidated by the analysis manager
+// according to the PreservedAnalises set. Further calls to CFGChecker's
+// AfterPassCallback see that all analyses for the current function are
+// preserved but there is no CFG snapshot available (i.e.
+// AM.getCachedResult<PreservedCFGCheckerAnalysis>(F) returns nullptr).
+TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
+  LLVMContext Context;
+  // SimplifyCFG changes this function to
+  // define void @foo {next: ret void}
+  auto M = parseIR(Context, "define void @foo() {\n"
+                            "  br label %next\n"
+                            "next:\n"
+                            "  br label %exit\n"
+                            "exit:\n"
+                            "  ret void\n"
+                            "}\n");
+
+  auto *F = M->getFunction("foo");
+  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionPassManager FPM(/*DebugLogging*/ true);
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(/*DebugLogging*/ true);
+  SI.registerCallbacks(PIC);
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] { return TargetIRAnalysis(); });
+
+  FunctionPassManager InnerFPM(/*DebugLogging*/ true);
+  InnerFPM.addPass(SimplifyCFGPass());
+
+  FPM.addPass(TestSimplifyCFGWrapperPass(InnerFPM));
+  FPM.run(*F, FAM);
 }
 }

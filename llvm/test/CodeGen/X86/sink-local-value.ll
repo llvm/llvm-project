@@ -5,7 +5,7 @@ target triple = "i386-linux-gnu"
 
 ; Try some simple cases that show how local value sinking improves line tables.
 
-@sink_across = external global i32
+@sink_across = external dso_local global i32
 
 declare void @simple_callee(i32, i32)
 

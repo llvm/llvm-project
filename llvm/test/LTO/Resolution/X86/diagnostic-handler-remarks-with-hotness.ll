@@ -9,12 +9,48 @@
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
 
+; Check low threshold allows remarks to emit.
+; RUN: rm -f %t.t300.yaml
+; RUN: llvm-lto2 run -pass-remarks-output=%t.t300.yaml \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -pass-remarks-hotness-threshold=300 \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc
+; RUN: FileCheck %s -check-prefix=YAML < %t.t300.yaml
+
+; Check high threshold disallows remarks to emit.
+; RUN: rm -f %t.t301.yaml
+; RUN: llvm-lto2 run -pass-remarks-output=%t.t301.yaml \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -pass-remarks-hotness-threshold=301 \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc
+; RUN: count 0 < %t.t301.yaml
+
 ; Check pass remarks emitted to stderr
 ; RUN: llvm-lto2 run -pass-remarks=inline \
 ; RUN:           -pass-remarks-with-hotness \
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc 2>&1 | FileCheck %s
+
+; Check low threshold allows remarks to emit.
+; RUN: llvm-lto2 run -pass-remarks=inline \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -pass-remarks-hotness-threshold=300 \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc 2>&1 | FileCheck %s
+
+; Check high threshold disallows remarks to emit.
+; RUN: llvm-lto2 run -pass-remarks=inline \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -pass-remarks-hotness-threshold=301 \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc 2>&1 | count 0
 
 ; YAML: --- !Passed
 ; YAML-NEXT: Pass:            inline

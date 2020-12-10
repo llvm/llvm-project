@@ -72,3 +72,60 @@ body:             |
     %3:fpr(<2 x p0>) = G_PTR_ADD %0, %1(<2 x s64>)
     $q0 = COPY %3(<2 x p0>)
 ...
+---
+name:            ptr_add_neg_imm
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0
+    ; CHECK-LABEL: name: ptr_add_neg_imm
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY1]], 10, 0, implicit-def $nzcv
+    ; CHECK: $x0 = COPY [[SUBSXri]]
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = G_CONSTANT i64 -10
+    %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
+    $x0 = COPY %2(p0)
+...
+---
+name:            ptr_add_arith_extended
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0
+    ; CHECK-LABEL: name: ptr_add_arith_extended
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %ptr:gpr64 = COPY $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY %ptr
+    ; CHECK: %ptr_add:gpr64sp = ADDXrx [[COPY]], %reg0, 18
+    ; CHECK: $x0 = COPY %ptr_add
+    %reg0:gpr(s32) = COPY $w0
+    %ptr:gpr(p0) = COPY $x1
+    %ext:gpr(s64) = G_ZEXT %reg0(s32)
+    %cst:gpr(s64) = G_CONSTANT i64 2
+    %shift:gpr(s64) = G_SHL %ext, %cst(s64)
+    %ptr_add:gpr(p0) = G_PTR_ADD %ptr, %shift(s64)
+    $x0 = COPY %ptr_add(p0)
+...
+---
+name:            ptr_add_negated_reg
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0, $x1
+    ; CHECK-LABEL: name: ptr_add_negated_reg
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: %src:gpr64 = COPY $x1
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], %src, implicit-def $nzcv
+    ; CHECK: $x0 = COPY [[SUBSXrr]]
+    %0:gpr(p0) = COPY $x0
+    %src:gpr(s64) = COPY $x1
+    %1:gpr(s64) = G_CONSTANT i64 0
+    %neg:gpr(s64) = G_SUB %1, %src
+    %2:gpr(p0) = G_PTR_ADD %0, %neg(s64)
+    $x0 = COPY %2(p0)
+...

@@ -75,12 +75,10 @@ mlirStringRefCreateFromCString(const char *str);
  *
  * This function is called back by the functions that need to return a reference
  * to the portion of the string with the following arguments:
- *   - a pointer to the beginning of a string;
- *   - the length of the string (the pointer may point to a larger buffer, not
- *     necessarily null-terminated);
+ *   - an MlirStringRef represening the current portion of the string
  *   - a pointer to user data forwarded from the printing call.
  */
-typedef void (*MlirStringCallback)(const char *, intptr_t, void *);
+typedef void (*MlirStringCallback)(MlirStringRef, void *);
 
 //===----------------------------------------------------------------------===//
 // MlirLogicalResult.
@@ -97,12 +95,12 @@ struct MlirLogicalResult {
 typedef struct MlirLogicalResult MlirLogicalResult;
 
 /// Checks if the given logical result represents a success.
-inline static int mlirLogicalResultIsSuccess(MlirLogicalResult res) {
+inline static bool mlirLogicalResultIsSuccess(MlirLogicalResult res) {
   return res.value != 0;
 }
 
 /// Checks if the given logical result represents a failure.
-inline static int mlirLogicalResultIsFailure(MlirLogicalResult res) {
+inline static bool mlirLogicalResultIsFailure(MlirLogicalResult res) {
   return res.value == 0;
 }
 

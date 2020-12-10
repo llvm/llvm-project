@@ -533,10 +533,6 @@ bool StructType::isLayoutIdentical(StructType *Other) const {
   return elements() == Other->elements();
 }
 
-StructType *Module::getTypeByName(StringRef Name) const {
-  return getContext().pImpl->NamedStructTypes.lookup(Name);
-}
-
 Type *StructType::getTypeAtIndex(const Value *V) const {
   unsigned Idx = (unsigned)cast<Constant>(V)->getUniqueInteger().getZExtValue();
   assert(indexValid(Idx) && "Invalid structure index!");
@@ -555,6 +551,10 @@ bool StructType::indexValid(const Value *V) const {
     C = C->getSplatValue();
   const ConstantInt *CU = dyn_cast_or_null<ConstantInt>(C);
   return CU && CU->getZExtValue() < getNumElements();
+}
+
+StructType *StructType::getTypeByName(LLVMContext &C, StringRef Name) {
+  return C.pImpl->NamedStructTypes.lookup(Name);
 }
 
 //===----------------------------------------------------------------------===//

@@ -19,6 +19,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -30,6 +31,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx11"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -41,6 +43,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx14"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -52,6 +55,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx17"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -63,6 +67,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx2a"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -184,6 +189,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot generic-cxx2a"
     artifact_paths:
       - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-macos-builders"
     retry:
@@ -261,6 +267,17 @@ steps:
   # Test back-deployment to older Apple platforms
   - label: "Apple back-deployment macosx10.9"
     command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Apple back-deployment macosx10.15"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.15"
     artifact_paths:
       - "**/test-results.xml"
     agents:

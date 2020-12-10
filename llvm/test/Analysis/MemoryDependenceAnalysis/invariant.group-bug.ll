@@ -17,7 +17,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 %4 = type { i8* }
 %5 = type { i64, [8 x i8] }
 
-define void @fail(i1* noalias sret, %0*, %1*, i8*) local_unnamed_addr #0 {
+define void @fail(i1* noalias sret(i1), %0*, %1*, i8*) local_unnamed_addr #0 {
 ; CHECK-LABEL: @fail(
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %0* [[TMP1:%.*]] to i64 (%0*)***
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64 (%0*)**, i64 (%0*)*** [[TMP5]], align 8, !invariant.group !6

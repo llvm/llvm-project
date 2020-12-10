@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
+#include "gwp_asan/tests/harness.h"
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);

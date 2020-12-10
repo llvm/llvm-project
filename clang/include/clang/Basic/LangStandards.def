@@ -152,6 +152,16 @@ LANGSTANDARD(gnucxx20, "gnu++20",
              CPlusPlus20 | Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx20, "gnu++2a")
 
+LANGSTANDARD(cxx2b, "c++2b",
+             CXX, "Working draft for ISO C++ 2023 DIS",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat)
+
+LANGSTANDARD(gnucxx2b, "gnu++2b",
+             CXX, "Working draft for ISO C++ 2023 DIS with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat | GNUMode)
+
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",

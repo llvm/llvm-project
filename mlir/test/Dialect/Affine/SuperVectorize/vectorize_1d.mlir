@@ -397,6 +397,33 @@ func @vec_rejected_10(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
+// CHECK-LABEL: func @vec_rejected_11
+func @vec_rejected_11(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
+  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
+  // CHECK-DAG: %[[C2:.*]] = constant 2 : index
+  // CHECK-DAG: [[ARG_M:%[0-9]+]] = dim %{{.*}}, %[[C0]] : memref<?x?xf32>
+  // CHECK-DAG: [[ARG_N:%[0-9]+]] = dim %{{.*}}, %[[C1]] : memref<?x?xf32>
+  // CHECK-DAG: [[ARG_P:%[0-9]+]] = dim %{{.*}}, %[[C2]] : memref<?x?x?xf32>
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %M = dim %A, %c0 : memref<?x?xf32>
+  %N = dim %A, %c1 : memref<?x?xf32>
+  %P = dim %B, %c2 : memref<?x?x?xf32>
+
+  // CHECK: for [[IV10:%[arg0-9]*]] = 0 to %{{[0-9]*}} {
+  // CHECK:   for [[IV11:%[arg0-9]*]] = 0 to %{{[0-9]*}} {
+  // This is similar to vec_rejected_5, but the order of indices is different.
+  affine.for %i10 = 0 to %M { // not vectorized
+    affine.for %i11 = 0 to %N { // not vectorized
+      %a11 = affine.load %A[%i11, %i10] : memref<?x?xf32>
+      affine.store %a11, %A[%i10, %i11] : memref<?x?xf32>
+    }
+  }
+  return
+}
+
 // This should not vectorize due to the sequential dependence in the scf.
 // CHECK-LABEL: @vec_rejected_sequential
 func @vec_rejected_sequential(%A : memref<?xf32>) {

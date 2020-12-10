@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"

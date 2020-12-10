@@ -7,80 +7,73 @@
 ## the address_size of debug_info is 4.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DLOWOFFSET=0xFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x04 \
-# RUN:     -DOFFSET=0x0000000000000018 -DLOWOFFSET=0x00000000FFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x4 \
+# RUN:     -DOFFSET=0x18 -DLOWOFFSET=0xFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 32-bit big endian object file where the
 ## address_size of debug_info is 4.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DENDIAN=MSB -DLOWOFFSET=0xFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x04 \
-# RUN:     -DOFFSET=0x0000000000000018 -DLOWOFFSET=0x00000000FFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x4 \
+# RUN:     -DOFFSET=0x18 -DLOWOFFSET=0xFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 32-bit little endian object file where
 ## the address_size of debug_info is 8.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DADDRSIZE1=8 \
 # RUN:   -DADDRSIZE2=8 -DADDRSIZE3=8 -DADDRSIZE4=8 \
 # RUN:   -DLOWOFFSET=0xFFFFFFFFFFFFFFFF -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x08 \
-# RUN:     -DOFFSET=0x0000000000000030 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x8 \
+# RUN:     -DOFFSET=0x30 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
+# RUN:     -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 32-bit big endian object file where the
 ## address_size of debug_info is 8.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DENDIAN=MSB -DADDRSIZE1=8 \
 # RUN:   -DADDRSIZE2=8 -DADDRSIZE3=8 -DADDRSIZE4=8 \
 # RUN:   -DLOWOFFSET=0xFFFFFFFFFFFFFFFF -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x08 \
-# RUN:     -DOFFSET=0x0000000000000030 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x8 \
+# RUN:     -DOFFSET=0x30 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 64-bit little endian object file where
 ## the address_size of debug_info is 8.
 # RUN: yaml2obj --docnum=1 %s -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x08 \
-# RUN:     -DOFFSET=0x0000000000000030 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x8 \
+# RUN:     -DOFFSET=0x30 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 64-bit big endian object file where the
 ## address_size of debug_info is 8.
 # RUN: yaml2obj --docnum=1 %s -DENDIAN=MSB -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x08 \
-# RUN:     -DOFFSET=0x0000000000000030 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x8 \
+# RUN:     -DOFFSET=0x30 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 64-bit little endian object file where
 ## the address_size of debug_info is 4.
 # RUN: yaml2obj --docnum=1 %s -DADDRSIZE1=4 -DADDRSIZE2=4 -DADDRSIZE3=4 \
 # RUN:   -DADDRSIZE4=4 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x04 \
-# RUN:     -DOFFSET=0x0000000000000018 -DLOWOFFSET=0x00000000FFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x4 \
+# RUN:     -DOFFSET=0x18 -DLOWOFFSET=0xFFFFFFFF -DHIGHOFFSET=0x10
 
 ## Dump the .debug_ranges section from a 64-bit big endian object file where the
 ## address_size of debug_info is 4.
 # RUN: yaml2obj --docnum=1 %s -DADDRSIZE1=4 -DADDRSIZE2=4 -DADDRSIZE3=4 \
 # RUN:   -DADDRSIZE4=4 -DLOWOFFSET=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DHIGHOFFSET=0x10 | obj2yaml | \
-# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x04 \
-# RUN:     -DOFFSET=0x0000000000000018 -DLOWOFFSET=0x00000000FFFFFFFF \
-# RUN:     -DHIGHOFFSET=0x0000000000000010
+# RUN:   FileCheck %s --check-prefix=BASIC -DADDRSIZE=0x4 \
+# RUN:     -DOFFSET=0x18 -DLOWOFFSET=0xFFFFFFFF -DHIGHOFFSET=0x10
 
 
 #  BASIC-NOT: debug_ranges
 #      BASIC: debug_ranges:
-# BASIC-NEXT:   - Offset:   0x0000000000000000
+# BASIC-NEXT:   - Offset:   0x0
 # BASIC-NEXT:     AddrSize: [[ADDRSIZE]]
 # BASIC-NEXT:     Entries:
-# BASIC-NEXT:       - LowOffset:  0x0000000000000010
-# BASIC-NEXT:         HighOffset: 0x0000000000000020
-# BASIC-NEXT:       - LowOffset:  0x0000000000000030
-# BASIC-NEXT:         HighOffset: 0x0000000000000040
+# BASIC-NEXT:       - LowOffset:  0x10
+# BASIC-NEXT:         HighOffset: 0x20
+# BASIC-NEXT:       - LowOffset:  0x30
+# BASIC-NEXT:         HighOffset: 0x40
 # BASIC-NEXT:   - Offset:   [[OFFSET]]
 # BASIC-NEXT:     AddrSize: [[ADDRSIZE]]
 # BASIC-NEXT:     Entries:
@@ -122,7 +115,7 @@ DWARF:
 
 #      RAW: - Name:         .debug_ranges
 # RAW-NEXT:   Type:         SHT_PROGBITS
-# RAW-NEXT:   AddressAlign: 0x0000000000000001
+# RAW-NEXT:   AddressAlign: 0x1
 # RAW-NEXT:   Content:      '1000000000000000
 ##                           ^--------------- LowOffset
 # RAW-SAME:             {{^}}2000000000000000
@@ -195,17 +188,17 @@ DWARF:
 #    COMMON-NEXT:   Type:         SHT_[[TYPE]]
 #     FLAGS-NEXT:   Flags:        [ SHF_ALLOC ]
 #      LINK-NEXT:   Link:         .sec
-#   ENTSIZE-NEXT:   EntSize:      0x0000000000000003
-#      INFO-NEXT:   Info:         0x0000000000000003
-# ADDRALIGN-NEXT:   AddressAlign: 0x0000000000000003
-#   ADDRESS-NEXT:   Address:      0x0000000000002020
+#   ENTSIZE-NEXT:   EntSize:      0x3
+#      INFO-NEXT:   Info:         0x3
+# ADDRALIGN-NEXT:   AddressAlign: 0x3
+#   ADDRESS-NEXT:   Address:      0x2020
 
 #         COMMON: debug_ranges:
-#    COMMON-NEXT:   - Offset:   0x0000000000000000
-#    COMMON-NEXT:     AddrSize: 0x08
+#    COMMON-NEXT:   - Offset:   0x0
+#    COMMON-NEXT:     AddrSize: 0x8
 #    COMMON-NEXT:     Entries:
-#    COMMON-NEXT:       - LowOffset:  0x0000000000000010
-#    COMMON-NEXT:         HighOffset: 0x0000000000000020
+#    COMMON-NEXT:       - LowOffset:  0x10
+#    COMMON-NEXT:         HighOffset: 0x20
 
 --- !ELF
 FileHeader:

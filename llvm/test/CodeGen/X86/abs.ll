@@ -397,10 +397,9 @@ define <8 x i32> @test_v8i32(<8 x i32> %a) nounwind {
 define <8 x i16> @test_v8i16(<8 x i16> %a) nounwind {
 ; SSE-LABEL: test_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psraw $15, %xmm1
-; SSE-NEXT:    paddw %xmm1, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    psubw %xmm0, %xmm1
+; SSE-NEXT:    pmaxsw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8i16:
@@ -475,9 +474,8 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; SSE-LABEL: test_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtb %xmm0, %xmm1
-; SSE-NEXT:    paddb %xmm1, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubb %xmm0, %xmm1
+; SSE-NEXT:    pminub %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8:

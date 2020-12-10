@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -arcmt-check -verify -triple x86_64-apple-darwin10 -fobjc-gc-only %s
-// RUN: %clang_cc1 -arcmt-check -verify -triple x86_64-apple-darwin10 -fobjc-gc-only -x objective-c++ %s
+// RUN: %clang_cc1 -arcmt-action=check -verify -triple x86_64-apple-darwin10 -fobjc-gc-only %s
+// RUN: %clang_cc1 -arcmt-action=check -verify -triple x86_64-apple-darwin10 -fobjc-gc-only -x objective-c++ %s
 
 #define CF_AUTOMATED_REFCOUNT_UNAVAILABLE __attribute__((unavailable("not available in automatic reference counting mode")))
 typedef unsigned NSUInteger;

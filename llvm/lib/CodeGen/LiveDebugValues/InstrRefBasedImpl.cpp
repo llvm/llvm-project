@@ -1968,13 +1968,6 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     if (TTracker)
       TTracker->transferMlocs(MTracker->getRegMLoc(Reg), SpillLocIdx,
                               MI.getIterator());
-
-    // VarLocBasedImpl would, at this point, stop tracking the source
-    // register of the store.
-    if (EmulateOldLDV) {
-      for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
-        MTracker->defReg(*RAI, CurBB, CurInst);
-    }
   } else {
     if (!(Loc = isRestoreInstruction(MI, MF, Reg)))
       return false;

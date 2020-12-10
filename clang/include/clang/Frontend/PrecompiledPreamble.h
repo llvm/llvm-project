@@ -17,7 +17,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
 #include <cstddef>
 #include <memory>
@@ -41,7 +40,7 @@ class PCHContainerOperations;
 
 /// Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
-                                     const llvm::MemoryBuffer *Buffer,
+                                     const llvm::MemoryBufferRef &Buffer,
                                      unsigned MaxLines);
 
 class PreambleCallbacks;
@@ -198,7 +197,7 @@ private:
 
   private:
     Kind StorageKind = Kind::Empty;
-    llvm::AlignedCharArrayUnion<TempPCHFile, InMemoryPreamble> Storage = {};
+    std::aligned_union_t<1, TempPCHFile, InMemoryPreamble> Storage = {};
   };
 
   /// Data used to determine if a file used in the preamble has been changed.

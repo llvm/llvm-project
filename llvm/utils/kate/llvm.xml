@@ -93,7 +93,6 @@
       <item> optsize </item>
       <item> readnone </item>
       <item> readonly </item>
-      <item> nossp </item>
       <item> ssp </item>
       <item> sspreq </item>
       <item> sspstrong </item>

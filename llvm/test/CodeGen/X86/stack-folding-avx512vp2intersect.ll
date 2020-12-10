@@ -89,9 +89,13 @@ define void @stack_fold_vp2intersectq_256(<4 x i64>* %a, <4 x i64> %b, <4 x i1>*
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 # 32-byte Folded Reload
-; CHECK-NEXT:    kmovw %k1, %eax
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, (%rsi)
+; CHECK-NEXT:    kshiftlw $12, %k0, %k2
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    movb %al, (%rsi)
+; CHECK-NEXT:    kshiftlw $12, %k1, %k0
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    movb %al, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -115,9 +119,13 @@ define void @stack_fold_vp2intersectd_128(<4 x i32>* %a, <4 x i32> %b, <4 x i1>*
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    vp2intersectd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 # 16-byte Folded Reload
-; CHECK-NEXT:    kmovw %k1, %eax
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, (%rsi)
+; CHECK-NEXT:    kshiftlw $12, %k0, %k2
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    movb %al, (%rsi)
+; CHECK-NEXT:    kshiftlw $12, %k1, %k0
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    movb %al, (%rdx)
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -140,9 +148,13 @@ define void @stack_fold_vp2intersectq_128(<2 x i64>* %a, <2 x i64> %b, <2 x i1>*
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 # 16-byte Folded Reload
-; CHECK-NEXT:    kmovw %k1, %eax
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, (%rsi)
+; CHECK-NEXT:    kshiftlw $14, %k0, %k2
+; CHECK-NEXT:    kshiftrw $14, %k2, %k2
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    movb %al, (%rsi)
+; CHECK-NEXT:    kshiftlw $14, %k1, %k0
+; CHECK-NEXT:    kshiftrw $14, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    movb %al, (%rdx)
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()

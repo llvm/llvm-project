@@ -17,28 +17,28 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // CHECK-LABEL: @use
   spv.func @use() -> (i32) "None" {
-    // We materialize a `spv._reference_of` op at every use of a
+    // We materialize a `spv.mlir.referenceof` op at every use of a
     // specialization constant in the deserializer. So two ops here.
-    // CHECK: %[[USE1:.*]] = spv._reference_of @sc_int : i32
-    // CHECK: %[[USE2:.*]] = spv._reference_of @sc_int : i32
+    // CHECK: %[[USE1:.*]] = spv.mlir.referenceof @sc_int : i32
+    // CHECK: %[[USE2:.*]] = spv.mlir.referenceof @sc_int : i32
     // CHECK: spv.IAdd %[[USE1]], %[[USE2]]
 
-    %0 = spv._reference_of @sc_int : i32
+    %0 = spv.mlir.referenceof @sc_int : i32
     %1 = spv.IAdd %0, %0 : i32
     spv.ReturnValue %1 : i32
   }
 
   // CHECK-LABEL: @use
   spv.func @use_composite() -> (i32) "None" {
-    // We materialize a `spv._reference_of` op at every use of a
+    // We materialize a `spv.mlir.referenceof` op at every use of a
     // specialization constant in the deserializer. So two ops here.
-    // CHECK: %[[USE1:.*]] = spv._reference_of @scc : !spv.array<2 x i32>
+    // CHECK: %[[USE1:.*]] = spv.mlir.referenceof @scc : !spv.array<2 x i32>
     // CHECK: %[[ITM0:.*]] = spv.CompositeExtract %[[USE1]][0 : i32] : !spv.array<2 x i32>
-    // CHECK: %[[USE2:.*]] = spv._reference_of @scc : !spv.array<2 x i32>
+    // CHECK: %[[USE2:.*]] = spv.mlir.referenceof @scc : !spv.array<2 x i32>
     // CHECK: %[[ITM1:.*]] = spv.CompositeExtract %[[USE2]][1 : i32] : !spv.array<2 x i32>
     // CHECK: spv.IAdd %[[ITM0]], %[[ITM1]]
 
-    %0 = spv._reference_of @scc : !spv.array<2 x i32>
+    %0 = spv.mlir.referenceof @scc : !spv.array<2 x i32>
     %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
     %2 = spv.CompositeExtract %0[1 : i32] : !spv.array<2 x i32>
     %3 = spv.IAdd %1, %2 : i32

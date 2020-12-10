@@ -452,14 +452,14 @@ following cases, based on the value of the attribute:
 Otherwise the conversion fails as other cases (`MakePointerAvailable`,
 `MakePointerVisible`, `NonPrivatePointer`) are not supported yet.
 
-#### `spv.globalVariable` and `spv._address_of`
+#### `spv.globalVariable` and `spv.mlir.addressof`
 
 `spv.globalVariable` is modelled with `llvm.mlir.global` op. However, there
 is a difference that has to be pointed out.
 
 In SPIR-V dialect, the global variable returns a pointer, whereas in LLVM
 dialect the global holds an actual value. This difference is handled by
-`spv._address_of` and `llvm.mlir.addressof` ops that both return a pointer and
+`spv.mlir.addressof` and `llvm.mlir.addressof` ops that both return a pointer and
 are used to reference the global.
 
 ```mlir
@@ -467,7 +467,7 @@ are used to reference the global.
 spv.module Logical GLSL450 {
   spv.globalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
   spv.func @func() -> () "None" {
-    %0 = spv._address_of @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+    %0 = spv.mlir.addressof @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
     spv.Return
   }
 }
@@ -618,7 +618,7 @@ As well as:
 *   spv.GLSL.SSign
 *   spv.GLSL.FSign
 *   spv.MemoryBarrier
-*   spv._reference_of
+*   spv.mlir.referenceof
 *   spv.SMod
 *   spv.specConstant
 *   spv.SubgroupBallotKHR
@@ -665,7 +665,7 @@ spv.selection {
   spv.Branch ^merge                                     llvm.br ^merge
 
 ^merge:                                               ^merge:
-  spv._merge                                            llvm.br ^continue
+  spv.mlir.merge                                            llvm.br ^continue
 }
 // Remaining code																			^continue:
                                                         // Remaining code
@@ -690,7 +690,7 @@ spv.loop {
   spv.Branch ^header                                    llvm.br ^header
 
 ^merge:                                               ^merge:
-  spv._merge                                            llvm.br ^remaining
+  spv.mlir.merge                                            llvm.br ^remaining
 }
 // Remaining code                                     ^remaining:
                                                         // Remaining code
@@ -787,7 +787,7 @@ Module in SPIR-V has one region that contains one block. It is defined via
 `spv.module` is converted into `ModuleOp`. This plays a role of enclosing scope
 to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
-`spv._module_end` is mapped to an equivalent terminator `ModuleTerminatorOp`.
+`spv.mlir.endmodule` is mapped to an equivalent terminator `ModuleTerminatorOp`.
 
 ## `mlir-spirv-cpu-runner`
 

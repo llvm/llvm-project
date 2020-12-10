@@ -11,9 +11,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 declare i8* @foo(%pair*)
 
-define internal void @bar(%pair* byval %Data) {
+define internal void @bar(%pair* byval(%pair) %Data) {
 ; IS________OPM-LABEL: define {{[^@]+}}@bar
-; IS________OPM-SAME: (%pair* noalias nonnull byval dereferenceable(8) [[DATA:%.*]]) {
+; IS________OPM-SAME: (%pair* noalias nonnull byval(%pair) dereferenceable(8) [[DATA:%.*]]) {
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = tail call i8* @foo(%pair* nonnull dereferenceable(8) [[DATA]])
 ; IS________OPM-NEXT:    ret void
 ;
@@ -41,14 +41,14 @@ define internal void @bar(%pair* byval %Data) {
   ret void
 }
 
-define void @zed(%pair* byval %Data) {
+define void @zed(%pair* byval(%pair) %Data) {
 ; IS________OPM-LABEL: define {{[^@]+}}@zed
-; IS________OPM-SAME: (%pair* noalias nocapture nonnull readonly byval dereferenceable(8) [[DATA:%.*]]) {
-; IS________OPM-NEXT:    call void @bar(%pair* noalias nocapture nonnull readonly byval dereferenceable(8) [[DATA]])
+; IS________OPM-SAME: (%pair* noalias nocapture nonnull readonly byval(%pair) dereferenceable(8) [[DATA:%.*]]) {
+; IS________OPM-NEXT:    call void @bar(%pair* noalias nocapture nonnull readonly byval(%pair) dereferenceable(8) [[DATA]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@zed
-; IS________NPM-SAME: (%pair* noalias nocapture nonnull readonly byval dereferenceable(8) [[DATA:%.*]]) {
+; IS________NPM-SAME: (%pair* noalias nocapture nonnull readonly byval(%pair) dereferenceable(8) [[DATA:%.*]]) {
 ; IS________NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
 ; IS________NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR:%.*]], %pair* [[DATA]], i32 0, i32 1
@@ -56,6 +56,6 @@ define void @zed(%pair* byval %Data) {
 ; IS________NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
 ; IS________NPM-NEXT:    ret void
 ;
-  call void @bar(%pair* byval %Data)
+  call void @bar(%pair* byval(%pair) %Data)
   ret void
 }

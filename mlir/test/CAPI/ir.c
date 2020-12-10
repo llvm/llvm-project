@@ -13,11 +13,11 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Registration.h"
-#include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardDialect.h"
-#include "mlir-c/StandardTypes.h"
 
 #include <assert.h>
 #include <math.h>
@@ -30,23 +30,27 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   MlirValue iv = mlirBlockGetArgument(loopBody, 0);
   MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
   MlirValue funcArg1 = mlirBlockGetArgument(funcBody, 1);
-  MlirType f32Type = mlirTypeParseGet(ctx, "f32");
+  MlirType f32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("f32"));
 
-  MlirOperationState loadLHSState = mlirOperationStateGet("std.load", location);
+  MlirOperationState loadLHSState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.load"), location);
   MlirValue loadLHSOperands[] = {funcArg0, iv};
   mlirOperationStateAddOperands(&loadLHSState, 2, loadLHSOperands);
   mlirOperationStateAddResults(&loadLHSState, 1, &f32Type);
   MlirOperation loadLHS = mlirOperationCreate(&loadLHSState);
   mlirBlockAppendOwnedOperation(loopBody, loadLHS);
 
-  MlirOperationState loadRHSState = mlirOperationStateGet("std.load", location);
+  MlirOperationState loadRHSState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.load"), location);
   MlirValue loadRHSOperands[] = {funcArg1, iv};
   mlirOperationStateAddOperands(&loadRHSState, 2, loadRHSOperands);
   mlirOperationStateAddResults(&loadRHSState, 1, &f32Type);
   MlirOperation loadRHS = mlirOperationCreate(&loadRHSState);
   mlirBlockAppendOwnedOperation(loopBody, loadRHS);
 
-  MlirOperationState addState = mlirOperationStateGet("std.addf", location);
+  MlirOperationState addState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.addf"), location);
   MlirValue addOperands[] = {mlirOperationGetResult(loadLHS, 0),
                              mlirOperationGetResult(loadRHS, 0)};
   mlirOperationStateAddOperands(&addState, 2, addOperands);
@@ -54,13 +58,15 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   MlirOperation add = mlirOperationCreate(&addState);
   mlirBlockAppendOwnedOperation(loopBody, add);
 
-  MlirOperationState storeState = mlirOperationStateGet("std.store", location);
+  MlirOperationState storeState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.store"), location);
   MlirValue storeOperands[] = {mlirOperationGetResult(add, 0), funcArg0, iv};
   mlirOperationStateAddOperands(&storeState, 3, storeOperands);
   MlirOperation store = mlirOperationCreate(&storeState);
   mlirBlockAppendOwnedOperation(loopBody, store);
 
-  MlirOperationState yieldState = mlirOperationStateGet("scf.yield", location);
+  MlirOperationState yieldState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("scf.yield"), location);
   MlirOperation yield = mlirOperationCreate(&yieldState);
   mlirBlockAppendOwnedOperation(loopBody, yield);
 }
@@ -69,31 +75,39 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirModule moduleOp = mlirModuleCreateEmpty(location);
   MlirBlock moduleBody = mlirModuleGetBody(moduleOp);
 
-  MlirType memrefType = mlirTypeParseGet(ctx, "memref<?xf32>");
+  MlirType memrefType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("memref<?xf32>"));
   MlirType funcBodyArgTypes[] = {memrefType, memrefType};
   MlirRegion funcBodyRegion = mlirRegionCreate();
   MlirBlock funcBody = mlirBlockCreate(
       sizeof(funcBodyArgTypes) / sizeof(MlirType), funcBodyArgTypes);
   mlirRegionAppendOwnedBlock(funcBodyRegion, funcBody);
 
-  MlirAttribute funcTypeAttr =
-      mlirAttributeParseGet(ctx, "(memref<?xf32>, memref<?xf32>) -> ()");
-  MlirAttribute funcNameAttr = mlirAttributeParseGet(ctx, "\"add\"");
+  MlirAttribute funcTypeAttr = mlirAttributeParseGet(
+      ctx,
+      mlirStringRefCreateFromCString("(memref<?xf32>, memref<?xf32>) -> ()"));
+  MlirAttribute funcNameAttr =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
-      mlirNamedAttributeGet("type", funcTypeAttr),
-      mlirNamedAttributeGet("sym_name", funcNameAttr)};
-  MlirOperationState funcState = mlirOperationStateGet("func", location);
+      mlirNamedAttributeGet(mlirStringRefCreateFromCString("type"),
+                            funcTypeAttr),
+      mlirNamedAttributeGet(mlirStringRefCreateFromCString("sym_name"),
+                            funcNameAttr)};
+  MlirOperationState funcState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
   mlirOperationStateAddOwnedRegions(&funcState, 1, &funcBodyRegion);
   MlirOperation func = mlirOperationCreate(&funcState);
   mlirBlockInsertOwnedOperation(moduleBody, 0, func);
 
-  MlirType indexType = mlirTypeParseGet(ctx, "index");
-  MlirAttribute indexZeroLiteral = mlirAttributeParseGet(ctx, "0 : index");
-  MlirNamedAttribute indexZeroValueAttr =
-      mlirNamedAttributeGet("value", indexZeroLiteral);
-  MlirOperationState constZeroState =
-      mlirOperationStateGet("std.constant", location);
+  MlirType indexType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("index"));
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
+      mlirStringRefCreateFromCString("value"), indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
   mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
   MlirOperation constZero = mlirOperationCreate(&constZeroState);
@@ -102,7 +116,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
   MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
   MlirValue dimOperands[] = {funcArg0, constZeroValue};
-  MlirOperationState dimState = mlirOperationStateGet("std.dim", location);
+  MlirOperationState dimState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.dim"), location);
   mlirOperationStateAddOperands(&dimState, 2, dimOperands);
   mlirOperationStateAddResults(&dimState, 1, &indexType);
   MlirOperation dim = mlirOperationCreate(&dimState);
@@ -112,11 +127,12 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirBlock loopBody = mlirBlockCreate(/*nArgs=*/1, &indexType);
   mlirRegionAppendOwnedBlock(loopBodyRegion, loopBody);
 
-  MlirAttribute indexOneLiteral = mlirAttributeParseGet(ctx, "1 : index");
-  MlirNamedAttribute indexOneValueAttr =
-      mlirNamedAttributeGet("value", indexOneLiteral);
-  MlirOperationState constOneState =
-      mlirOperationStateGet("std.constant", location);
+  MlirAttribute indexOneLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
+  MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
+      mlirStringRefCreateFromCString("value"), indexOneLiteral);
+  MlirOperationState constOneState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
   mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
   MlirOperation constOne = mlirOperationCreate(&constOneState);
@@ -125,7 +141,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirValue dimValue = mlirOperationGetResult(dim, 0);
   MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
   MlirValue loopOperands[] = {constZeroValue, dimValue, constOneValue};
-  MlirOperationState loopState = mlirOperationStateGet("scf.for", location);
+  MlirOperationState loopState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("scf.for"), location);
   mlirOperationStateAddOperands(&loopState, 3, loopOperands);
   mlirOperationStateAddOwnedRegions(&loopState, 1, &loopBodyRegion);
   MlirOperation loop = mlirOperationCreate(&loopState);
@@ -133,7 +150,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
 
   populateLoopBody(ctx, loopBody, location, funcBody);
 
-  MlirOperationState retState = mlirOperationStateGet("std.return", location);
+  MlirOperationState retState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.return"), location);
   MlirOperation ret = mlirOperationCreate(&retState);
   mlirBlockAppendOwnedOperation(funcBody, ret);
 
@@ -280,9 +298,9 @@ int collectStats(MlirOperation operation) {
   return 0;
 }
 
-static void printToStderr(const char *str, intptr_t len, void *userData) {
+static void printToStderr(MlirStringRef str, void *userData) {
   (void)userData;
-  fwrite(str, 1, len, stderr);
+  fwrite(str.data, 1, str.length, stderr);
 }
 
 static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
@@ -366,8 +384,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Get a non-existing attribute and assert that it is null (sanity).
   fprintf(stderr, "does_not_exist is null: %d\n",
-          mlirAttributeIsNull(
-              mlirOperationGetAttributeByName(operation, "does_not_exist")));
+          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+              operation, mlirStringRefCreateFromCString("does_not_exist"))));
   // CHECK: does_not_exist is null: 1
 
   // Get result 0 and its type.
@@ -386,7 +404,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // CHECK: Result 0 type: index
 
   // Set a custom attribute.
-  mlirOperationSetAttributeByName(operation, "custom_attr",
+  mlirOperationSetAttributeByName(operation,
+                                  mlirStringRefCreateFromCString("custom_attr"),
                                   mlirBoolAttrGet(ctx, 1));
   fprintf(stderr, "Op with set attr: ");
   mlirOperationPrint(operation, printToStderr, NULL);
@@ -395,12 +414,14 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Remove the attribute.
   fprintf(stderr, "Remove attr: %d\n",
-          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+          mlirOperationRemoveAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Remove attr again: %d\n",
-          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+          mlirOperationRemoveAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Removed attr is null: %d\n",
-          mlirAttributeIsNull(
-              mlirOperationGetAttributeByName(operation, "custom_attr")));
+          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+              operation, mlirStringRefCreateFromCString("custom_attr"))));
   // CHECK: Remove attr: 1
   // CHECK: Remove attr again: 0
   // CHECK: Removed attr is null: 1
@@ -409,7 +430,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   int64_t eltsShape[] = {4};
   int32_t eltsData[] = {1, 2, 3, 4};
   mlirOperationSetAttributeByName(
-      operation, "elts",
+      operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
           mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32)), 4,
           eltsData));
@@ -421,7 +442,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Op print with all flags: ");
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // clang-format on
 
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -450,7 +473,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
 
   MlirRegion owningRegion = mlirRegionCreate();
   MlirBlock nullBlock = mlirRegionGetFirstBlock(owningRegion);
-  MlirOperationState state = mlirOperationStateGet("insertion.order.test", loc);
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("insertion.order.test"), loc);
   mlirOperationStateAddOwnedRegions(&state, 1, &owningRegion);
   MlirOperation op = mlirOperationCreate(&state);
   MlirRegion region = mlirOperationGetRegion(op, 0);
@@ -471,13 +495,20 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   mlirRegionInsertOwnedBlockAfter(region, nullBlock, block1);
   mlirRegionInsertOwnedBlockAfter(region, block3, block4);
 
-  MlirOperationState op1State = mlirOperationStateGet("dummy.op1", loc);
-  MlirOperationState op2State = mlirOperationStateGet("dummy.op2", loc);
-  MlirOperationState op3State = mlirOperationStateGet("dummy.op3", loc);
-  MlirOperationState op4State = mlirOperationStateGet("dummy.op4", loc);
-  MlirOperationState op5State = mlirOperationStateGet("dummy.op5", loc);
-  MlirOperationState op6State = mlirOperationStateGet("dummy.op6", loc);
-  MlirOperationState op7State = mlirOperationStateGet("dummy.op7", loc);
+  MlirOperationState op1State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op1"), loc);
+  MlirOperationState op2State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op2"), loc);
+  MlirOperationState op3State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op3"), loc);
+  MlirOperationState op4State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op4"), loc);
+  MlirOperationState op5State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op5"), loc);
+  MlirOperationState op6State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op6"), loc);
+  MlirOperationState op7State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op7"), loc);
   MlirOperation op1 = mlirOperationCreate(&op1State);
   MlirOperation op2 = mlirOperationCreate(&op2State);
   MlirOperation op3 = mlirOperationCreate(&op3State);
@@ -518,12 +549,12 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // clang-format on
 }
 
-/// Dumps instances of all standard types to check that C API works correctly.
-/// Additionally, performs simple identity checks that a standard type
+/// Dumps instances of all builtin types to check that C API works correctly.
+/// Additionally, performs simple identity checks that a builtin type
 /// constructed with C API can be inspected and has the expected type. The
-/// latter achieves full coverage of C API for standard types. Returns 0 on
+/// latter achieves full coverage of C API for builtin types. Returns 0 on
 /// success and a non-zero error code on failure.
-static int printStandardTypes(MlirContext ctx) {
+static int printBuiltinTypes(MlirContext ctx) {
   // Integer types.
   MlirType i32 = mlirIntegerTypeGet(ctx, 32);
   MlirType si32 = mlirIntegerTypeSignedGet(ctx, 32);
@@ -701,7 +732,14 @@ void callbackSetFixedLengthString(const char *data, intptr_t len,
   strncpy(userData, data, len);
 }
 
-int printStandardAttributes(MlirContext ctx) {
+bool stringIsEqual(const char *lhs, MlirStringRef rhs) {
+  if (strlen(lhs) != rhs.length) {
+    return false;
+  }
+  return !strncmp(lhs, rhs.data, rhs.length);
+}
+
+int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute floating =
       mlirFloatAttrDoubleGet(ctx, mlirF64TypeGet(ctx), 2.0);
   if (!mlirAttributeIsAFloat(floating) ||
@@ -732,9 +770,10 @@ int printStandardAttributes(MlirContext ctx) {
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
-      mlirOpaqueAttrGet(ctx, "std", 3, data, mlirNoneTypeGet(ctx));
+      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("std"), 3, data,
+                        mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
-      strcmp("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
+      !stringIsEqual("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
 
   MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
@@ -744,7 +783,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(opaque);
   // CHECK: #std.abc
 
-  MlirAttribute string = mlirStringAttrGet(ctx, 2, data + 3);
+  MlirAttribute string =
+      mlirStringAttrGet(ctx, mlirStringRefCreate(data + 3, 2));
   if (!mlirAttributeIsAString(string))
     return 6;
 
@@ -755,7 +795,8 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(string);
   // CHECK: "de"
 
-  MlirAttribute flatSymbolRef = mlirFlatSymbolRefAttrGet(ctx, 3, data + 5);
+  MlirAttribute flatSymbolRef =
+      mlirFlatSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 5, 3));
   if (!mlirAttributeIsAFlatSymbolRef(flatSymbolRef))
     return 8;
 
@@ -768,7 +809,8 @@ int printStandardAttributes(MlirContext ctx) {
   // CHECK: @fgh
 
   MlirAttribute symbols[] = {flatSymbolRef, flatSymbolRef};
-  MlirAttribute symbolRef = mlirSymbolRefAttrGet(ctx, 2, data + 8, 2, symbols);
+  MlirAttribute symbolRef =
+      mlirSymbolRefAttrGet(ctx, mlirStringRefCreate(data + 8, 2), 2, symbols);
   if (!mlirAttributeIsASymbolRef(symbolRef) ||
       mlirSymbolRefAttrGetNumNestedReferences(symbolRef) != 2 ||
       !mlirAttributeEqual(mlirSymbolRefAttrGetNestedReference(symbolRef, 0),
@@ -902,6 +944,26 @@ int printStandardAttributes(MlirContext ctx) {
           1E-6f ||
       fabs(mlirDenseElementsAttrGetDoubleSplatValue(splatDouble) - 1.0) > 1E-6)
     return 17;
+
+  uint32_t *uint32RawData =
+      (uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
+  int32_t *int32RawData =
+      (int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
+  uint64_t *uint64RawData =
+      (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
+  int64_t *int64RawData =
+      (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
+  float *floatRawData =
+      (float *)mlirDenseElementsAttrGetRawData(floatElements);
+  double *doubleRawData =
+      (double *)mlirDenseElementsAttrGetRawData(doubleElements);
+  if (uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
+      int32RawData[0] != 0 || int32RawData[1] != 1 ||
+      uint64RawData[0] != 0u || uint64RawData[1] != 1u ||
+      int64RawData[0] != 0 || int64RawData[1] != 1 ||
+      floatRawData[0] != 0.0f || floatRawData[1] != 1.0f ||
+      doubleRawData[0] != 0.0 || doubleRawData[1] != 1.0)
+    return 18;
 
   mlirAttributeDump(splatBool);
   mlirAttributeDump(splatUInt32);
@@ -1228,31 +1290,37 @@ int registerOnlyStd() {
 }
 
 // Wraps a diagnostic into additional text we can match against.
-MlirLogicalResult errorHandler(MlirDiagnostic diagnostic) {
-  fprintf(stderr, "processing diagnostic <<\n");
+MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
+  fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   mlirLocationPrint(loc, printToStderr, NULL);
   assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
-  fprintf(stderr, ">> end of diagnostic\n");
+  fprintf(stderr, ">> end of diagnostic (userData: %ld)\n", (long)userData);
   return mlirLogicalResultSuccess();
+}
+
+// Logs when the delete user data callback is called
+static void deleteUserData(void *userData) {
+  fprintf(stderr, "deleting user data (userData: %ld)\n", (long)userData);
 }
 
 void testDiagnostics() {
   MlirContext ctx = mlirContextCreate();
-  MlirDiagnosticHandlerID id =
-      mlirContextAttachDiagnosticHandler(ctx, errorHandler);
+  MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
+      ctx, errorHandler, (void *)42, deleteUserData);
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   fprintf(stderr, "@test_diagnostics\n");
   mlirEmitError(loc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(loc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
-  // CHECK: processing diagnostic <<
+  // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
-  // CHECK: >> end of diagnostic
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
 }
@@ -1264,9 +1332,9 @@ int main() {
     return 1;
   buildWithInsertionsAndPrint(ctx);
 
-  if (printStandardTypes(ctx))
+  if (printBuiltinTypes(ctx))
     return 2;
-  if (printStandardAttributes(ctx))
+  if (printBuiltinAttributes(ctx))
     return 3;
   if (printAffineMap(ctx))
     return 4;

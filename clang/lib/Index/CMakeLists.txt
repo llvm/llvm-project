@@ -16,7 +16,6 @@ add_clang_library(clangIndex
 
   ADDITIONAL_HEADERS
   IndexingContext.h
-  SimpleFormatContext.h
 
   LINK_LIBS
   clangAST

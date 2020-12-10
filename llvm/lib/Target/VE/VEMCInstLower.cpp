@@ -63,7 +63,8 @@ static MCOperand LowerOperand(const MachineInstr *MI, const MachineOperand &MO,
     return LowerSymbolOperand(MI, MO, AP.getSymbol(MO.getGlobal()), AP);
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
-
+  case MachineOperand::MO_JumpTableIndex:
+    return LowerSymbolOperand(MI, MO, AP.GetJTISymbol(MO.getIndex()), AP);
   case MachineOperand::MO_MachineBasicBlock:
     return LowerSymbolOperand(MI, MO, MO.getMBB()->getSymbol(), AP);
 

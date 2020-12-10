@@ -47,7 +47,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 %0 = type { i32*, i32, i32, i32 }
 
-define dso_local void @_Z3gen1S(%0* noalias sret align 8 %arg, %0* byval(%0) align 8 %arg1) {
+define dso_local void @_Z3gen1S(%0* noalias sret(%0) align 8 %arg, %0* byval(%0) align 8 %arg1) {
 ; CHECK-LABEL: @_Z3gen1S(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[ARG1:%.*]], i64 0, i32 0
@@ -84,7 +84,7 @@ bb:
   %i4 = bitcast %0* %i1 to i8*
   %i5 = bitcast %0* %arg to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %i4, i8* align 8 %i5, i64 24, i1 false)
-  call void @_Z3gen1S(%0* sret align 8 %i, %0* byval(%0) align 8 %i1)
+  call void @_Z3gen1S(%0* sret(%0) align 8 %i, %0* byval(%0) align 8 %i1)
   %i6 = bitcast %0* %i2 to i8*
   %i7 = bitcast %0* %i to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %i6, i8* align 8 %i7, i64 24, i1 false)
@@ -131,7 +131,7 @@ bb:
   %i3 = bitcast %0* %i1 to i8*
   %i4 = bitcast %0* %arg to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %i3, i8* align 8 %i4, i64 24, i1 false)
-  call void @_Z3gen1S(%0* sret align 8 %i, %0* byval(%0) align 8 %i1)
+  call void @_Z3gen1S(%0* sret(%0) align 8 %i, %0* byval(%0) align 8 %i1)
   %i5 = call i32 @_Z4condv()
   %i6 = icmp ne i32 %i5, 0
   br i1 %i6, label %bb7, label %bb10

@@ -36,7 +36,7 @@ void test2(const char *msg) {
 // SSPREQ: attributes #[[A]] = {{.*}} sspreq
 
 // SAFESTACK-NOSSP: attributes #[[A]] = {{.*}} safestack
-// SAFESTACK-NOSSP-NOT: attributes #[[A]] = {{.*}} ssp
+// SAFESTACK-NOSSP-NOT: ssp
 
 // SAFESTACK-SSP: attributes #[[A]] = {{.*}} safestack ssp{{ }}
 // SAFESTACK-SSPSTRONG: attributes #[[A]] = {{.*}} safestack sspstrong
@@ -46,11 +46,6 @@ void test2(const char *msg) {
 // SSP-NOT: attributes #[[B]] = {{.*}} ssp{{ }}
 // SSPSTRONG-NOT: attributes #[[B]] = {{.*}} sspstrong
 // SSPREQ-NOT: attributes #[[B]] = {{.*}} sspreq
-
-// NOSSP: attributes #[[B]] = {{.*}} nossp
-// SSP: attributes #[[B]] = {{.*}} nossp
-// SSPSTRONG: attributes #[[B]] = {{.*}} nossp
-// SSPREQ: attributes #[[B]] = {{.*}} nossp
 
 // SAFESTACK-SSP: attributes #[[B]] = {{.*}} safestack
 // SAFESTACK-SSP-NOT: attributes #[[B]] = {{.*}} safestack ssp{{ }}

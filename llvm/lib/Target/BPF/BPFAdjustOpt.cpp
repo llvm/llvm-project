@@ -39,6 +39,14 @@ static cl::opt<bool> DisableBPFavoidSpeculation(
 namespace {
 
 class BPFAdjustOpt final : public ModulePass {
+public:
+  static char ID;
+
+  BPFAdjustOpt() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override;
+};
+
+class BPFAdjustOptImpl {
   struct PassThroughInfo {
     Instruction *Input;
     Instruction *UsedInst;
@@ -48,13 +56,12 @@ class BPFAdjustOpt final : public ModulePass {
   };
 
 public:
-  static char ID;
-  Module *Mod;
+  BPFAdjustOptImpl(Module *M) : M(M) {}
 
-  BPFAdjustOpt() : ModulePass(ID) {}
-  bool runOnModule(Module &M) override;
+  bool run();
 
 private:
+  Module *M;
   SmallVector<PassThroughInfo, 16> PassThroughs;
 
   void adjustBasicBlock(BasicBlock &BB);
@@ -73,9 +80,10 @@ INITIALIZE_PASS(BPFAdjustOpt, "bpf-adjust-opt", "BPF Adjust Optimization",
 
 ModulePass *llvm::createBPFAdjustOpt() { return new BPFAdjustOpt(); }
 
-bool BPFAdjustOpt::runOnModule(Module &M) {
-  Mod = &M;
-  for (Function &F : M)
+bool BPFAdjustOpt::runOnModule(Module &M) { return BPFAdjustOptImpl(&M).run(); }
+
+bool BPFAdjustOptImpl::run() {
+  for (Function &F : *M)
     for (auto &BB : F) {
       adjustBasicBlock(BB);
       for (auto &I : BB)
@@ -85,10 +93,10 @@ bool BPFAdjustOpt::runOnModule(Module &M) {
   return insertPassThrough();
 }
 
-bool BPFAdjustOpt::insertPassThrough() {
+bool BPFAdjustOptImpl::insertPassThrough() {
   for (auto &Info : PassThroughs) {
     auto *CI = BPFCoreSharedInfo::insertPassThrough(
-        Mod, Info.UsedInst->getParent(), Info.Input, Info.UsedInst);
+        M, Info.UsedInst->getParent(), Info.Input, Info.UsedInst);
     Info.UsedInst->setOperand(Info.OpIdx, CI);
   }
 
@@ -97,7 +105,7 @@ bool BPFAdjustOpt::insertPassThrough() {
 
 // To avoid combining conditionals in the same basic block by
 // instrcombine optimization.
-bool BPFAdjustOpt::serializeICMPInBB(Instruction &I) {
+bool BPFAdjustOptImpl::serializeICMPInBB(Instruction &I) {
   // For:
   //   comp1 = icmp <opcode> ...;
   //   comp2 = icmp <opcode> ...;
@@ -130,7 +138,7 @@ bool BPFAdjustOpt::serializeICMPInBB(Instruction &I) {
 
 // To avoid combining conditionals in the same basic block by
 // instrcombine optimization.
-bool BPFAdjustOpt::serializeICMPCrossBB(BasicBlock &BB) {
+bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
   // For:
   //   B1:
   //     comp1 = icmp <opcode> ...;
@@ -204,7 +212,7 @@ bool BPFAdjustOpt::serializeICMPCrossBB(BasicBlock &BB) {
 
 // To avoid speculative hoisting certain computations out of
 // a basic block.
-bool BPFAdjustOpt::avoidSpeculation(Instruction &I) {
+bool BPFAdjustOptImpl::avoidSpeculation(Instruction &I) {
   if (auto *LdInst = dyn_cast<LoadInst>(&I)) {
     if (auto *GV = dyn_cast<GlobalVariable>(LdInst->getOperand(0))) {
       if (GV->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
@@ -297,14 +305,19 @@ bool BPFAdjustOpt::avoidSpeculation(Instruction &I) {
   return true;
 }
 
-void BPFAdjustOpt::adjustBasicBlock(BasicBlock &BB) {
+void BPFAdjustOptImpl::adjustBasicBlock(BasicBlock &BB) {
   if (!DisableBPFserializeICMP && serializeICMPCrossBB(BB))
     return;
 }
 
-void BPFAdjustOpt::adjustInst(Instruction &I) {
+void BPFAdjustOptImpl::adjustInst(Instruction &I) {
   if (!DisableBPFserializeICMP && serializeICMPInBB(I))
     return;
   if (!DisableBPFavoidSpeculation && avoidSpeculation(I))
     return;
+}
+
+PreservedAnalyses BPFAdjustOptPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return BPFAdjustOptImpl(&M).run() ? PreservedAnalyses::none()
+                                    : PreservedAnalyses::all();
 }

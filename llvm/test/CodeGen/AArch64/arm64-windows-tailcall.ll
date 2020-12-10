@@ -4,7 +4,7 @@
 
 %class.C = type { [1 x i32] }
 
-define dso_local void @"?bar"(%class.C* inreg noalias sret %agg.result) {
+define dso_local void @"?bar"(%class.C* inreg noalias sret(%class.C) %agg.result) {
 entry:
 ; CHECK-LABEL: bar
 ; CHECK: mov x19, x0

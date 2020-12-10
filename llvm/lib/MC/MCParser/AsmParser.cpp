@@ -998,7 +998,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
   if (!HadError && !NoFinalize)
-    Out.Finish();
+    Out.Finish(Lexer.getLoc());
 
   return HadError || getContext().hadError();
 }
@@ -4083,6 +4083,9 @@ bool AsmParser::parseDirectiveCFISections() {
       Debug = true;
   }
 
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.cfi_sections' directive");
+
   getStreamer().emitCFISections(EH, Debug);
   return false;
 }
@@ -4110,6 +4113,8 @@ bool AsmParser::parseDirectiveCFIStartProc() {
 /// parseDirectiveCFIEndProc
 /// ::= .cfi_endproc
 bool AsmParser::parseDirectiveCFIEndProc() {
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.cfi_endproc' directive");
   getStreamer().emitCFIEndProc();
   return false;
 }

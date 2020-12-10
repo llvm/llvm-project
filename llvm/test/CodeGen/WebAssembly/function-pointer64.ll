@@ -45,14 +45,14 @@ entry:
 
 ; YAML:      Memory:
 ; YAML-NEXT:   Flags:   [ IS_64 ]
-; YAML-NEXT:   Initial: 0x00000001
+; YAML-NEXT:   Initial: 0x1
 
 ; YAML:      - Type:   CODE
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x00000016
+; YAML-NEXT:   Offset: 0x16
 
 ; YAML:      - Type:   DATA
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_I64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x00000006
+; YAML-NEXT:   Offset: 0x6

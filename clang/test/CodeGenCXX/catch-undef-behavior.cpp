@@ -631,7 +631,7 @@ struct ThisAlign {
 };
 void ThisAlign::this_align_lambda() {
   // CHECK-LABEL: define internal %struct.ThisAlign* @"_ZZN9ThisAlign17this_align_lambdaEvENK3$_0clEv"
-  // CHECK-SAME: (%{{.*}}* %[[this:[^)]*]])
+  // CHECK-SAME: (%{{.*}}* {{[^,]*}} %[[this:[^)]*]])
   // CHECK: %[[this_addr:.*]] = alloca
   // CHECK: store %{{.*}}* %[[this]], %{{.*}}** %[[this_addr]],
   // CHECK: %[[this_inner:.*]] = load %{{.*}}*, %{{.*}}** %[[this_addr]],
@@ -732,7 +732,7 @@ namespace CopyValueRepresentation {
 
 void ThisAlign::this_align_lambda_2() {
   // CHECK-LABEL: define internal void @"_ZZN9ThisAlign19this_align_lambda_2EvENK3$_1clEv"
-  // CHECK-SAME: (%{{.*}}* %[[this:[^)]*]])
+  // CHECK-SAME: (%{{.*}}* {{[^,]*}} %[[this:[^)]*]])
   // CHECK: %[[this_addr:.*]] = alloca
   // CHECK: store %{{.*}}* %[[this]], %{{.*}}** %[[this_addr]],
   // CHECK: %[[this_inner:.*]] = load %{{.*}}*, %{{.*}}** %[[this_addr]],

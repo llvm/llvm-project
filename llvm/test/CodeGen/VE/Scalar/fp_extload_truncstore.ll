@@ -67,7 +67,7 @@ define double @func_fp16fp64(half* %a) {
 define void @func_fp32i16(i16* %fl.ptr, float %val) {
 ; CHECK-LABEL: func_fp32i16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
+; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __gnu_f2h_ieee@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -75,7 +75,7 @@ define void @func_fp32i16(i16* %fl.ptr, float %val) {
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s0, (, %s18)
-; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %s18, 288(, %s11) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
   %val.asf = call i16 @llvm.convert.to.fp16.f32(float %val)
   store i16 %val.asf, i16* %fl.ptr
@@ -85,8 +85,8 @@ define void @func_fp32i16(i16* %fl.ptr, float %val) {
 define half @func_fp32fp16(half* %fl.ptr, float %a) {
 ; CHECK-LABEL: func_fp32fp16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
-; CHECK-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
+; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
+; CHECK-NEXT:    st %s19, 296(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __gnu_f2h_ieee@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -100,8 +100,8 @@ define half @func_fp32fp16(half* %fl.ptr, float %a) {
 ; CHECK-NEXT:    or %s0, 0, %s19
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s19, (, %s18)
-; CHECK-NEXT:    ld %s19, 56(, %s9) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %s19, 296(, %s11) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %s18, 288(, %s11) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a.asd = fptrunc float %a to half
   store half %a.asd, half* %fl.ptr
@@ -110,10 +110,10 @@ define half @func_fp32fp16(half* %fl.ptr, float %a) {
 
 define double @func_fp32fp64(float* %a) {
 ; CHECK-LABEL: func_fp32fp64:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ldu %s0, (, %s0)
 ; CHECK-NEXT:    cvt.d.s %s0, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %a.val = load float, float* %a, align 4
   %a.asd = fpext float %a.val to double
   ret double %a.asd
@@ -122,7 +122,7 @@ define double @func_fp32fp64(float* %a) {
 define void @func_fp64i16(i16* %fl.ptr, double %val) {
 ; CHECK-LABEL: func_fp64i16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
+; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __truncdfhf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -130,7 +130,7 @@ define void @func_fp64i16(i16* %fl.ptr, double %val) {
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s0, (, %s18)
-; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %s18, 288(, %s11) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
   %val.asf = call i16 @llvm.convert.to.fp16.f64(double %val)
   store i16 %val.asf, i16* %fl.ptr
@@ -140,7 +140,7 @@ define void @func_fp64i16(i16* %fl.ptr, double %val) {
 define void @func_fp64fp16(half* %fl.ptr, double %val) {
 ; CHECK-LABEL: func_fp64fp16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
+; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __truncdfhf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -148,7 +148,7 @@ define void @func_fp64fp16(half* %fl.ptr, double %val) {
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s0, (, %s18)
-; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %s18, 288(, %s11) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
   %val.asf = fptrunc double %val to half
   store half %val.asf, half* %fl.ptr
@@ -157,10 +157,10 @@ define void @func_fp64fp16(half* %fl.ptr, double %val) {
 
 define void @func_fp64fp32(float* %fl.ptr, double %val) {
 ; CHECK-LABEL: func_fp64fp32:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cvt.s.d %s1, %s1
 ; CHECK-NEXT:    stu %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %val.asf = fptrunc double %val to float
   store float %val.asf, float* %fl.ptr
   ret void

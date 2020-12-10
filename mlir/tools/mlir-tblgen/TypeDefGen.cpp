@@ -133,6 +133,15 @@ private:
 // GEN: TypeDef declarations
 //===----------------------------------------------------------------------===//
 
+/// Print this above all the other declarations. Contains type declarations used
+/// later on.
+static const char *const typeDefDeclHeader = R"(
+namespace mlir {
+class DialectAsmParser;
+class DialectAsmPrinter;
+} // namespace mlir
+)";
+
 /// The code block for the start of a typeDef class declaration -- singleton
 /// case.
 ///
@@ -174,8 +183,8 @@ static const char *const typeDefParsePrint = R"(
 ///
 /// {0}: List of parameters, parameters style.
 static const char *const typeDefDeclVerifyStr = R"(
-    static ::mlir::LogicalResult verifyConstructionInvariants(Location loc{0});
-    static ::mlir::Type getChecked(Location loc{0});
+    static ::mlir::LogicalResult verifyConstructionInvariants(::mlir::Location loc{0});
+    static ::mlir::Type getChecked(::mlir::Location loc{0});
 )";
 
 /// Generate the declaration for the given typeDef class.
@@ -239,6 +248,10 @@ static bool emitTypeDefDecls(const llvm::RecordKeeper &recordKeeper,
   findAllTypeDefs(recordKeeper, typeDefs);
 
   IfDefScope scope("GET_TYPEDEF_CLASSES", os);
+
+  // Output the common "header".
+  os << typeDefDeclHeader;
+
   if (typeDefs.size() > 0) {
     NamespaceEmitter nsEmitter(os, typeDefs.begin()->getDialect());
 

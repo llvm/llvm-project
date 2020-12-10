@@ -186,6 +186,7 @@
 ; CHECK-NEXT:     Eliminate Available Externally Globals
 ; CHECK-NEXT:     Dead Global Elimination
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Annotation Remarks
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
 ; CHECK-NEXT: Pass Arguments:

@@ -181,3 +181,9 @@ lw a2, zero
 # CHECK: auipc a4, %pcrel_hi(zero)
 # CHECK: sw  a3, %pcrel_lo(.Lpcrel_hi29)(a4)
 sw a3, zero, a4
+
+## Check that a complex expression can be simplified and matched.
+# CHECK: .Lpcrel_hi30:
+# CHECK: auipc a5, %pcrel_hi((255+a_symbol)-4)
+# CHECK: addi  a5, a5, %pcrel_lo(.Lpcrel_hi30)
+lla a5, (0xFF + a_symbol) - 4

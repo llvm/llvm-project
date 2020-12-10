@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -151,7 +152,7 @@ ThreadSP CreateThread(ProcessSP &process_sp, bool should_stop,
 TEST_F(ProcessEventDataTest, DoOnRemoval) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(PlatformMacOSX::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
@@ -191,7 +192,7 @@ TEST_F(ProcessEventDataTest, DoOnRemoval) {
 TEST_F(ProcessEventDataTest, ShouldStop) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(PlatformMacOSX::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

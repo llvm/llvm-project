@@ -1,10 +1,6 @@
 ; RUN: opt -inline %s -S | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' %s -S | FileCheck %s
 ; Ensure SSP attributes are propagated correctly when inlining.
-; This test case covers callers that are unspecified in their level of stack
-; protection. See also llvm/test/Transforms/Inline/inline_nossp.ll
-; which tests callers with ``nossp`` function attribute which is stack
-; protection explicitly disabled.
 
 @.str = private unnamed_addr constant [11 x i8] c"fun_nossp\0A\00", align 1
 @.str1 = private unnamed_addr constant [9 x i8] c"fun_ssp\0A\00", align 1
@@ -65,7 +61,7 @@ entry:
 
 define void @inline_req_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_req_nossp() #0
+; CHECK: @inline_req_nossp() #3
   call void @fun_sspreq()
   ret void
 }
@@ -94,7 +90,7 @@ entry:
 
 define void @inline_strong_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_strong_nossp() #1
+; CHECK: @inline_strong_nossp() #3
   call void @fun_sspstrong()
   ret void
 }
@@ -123,7 +119,7 @@ entry:
 
 define void @inline_ssp_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_ssp_nossp() #2
+; CHECK: @inline_ssp_nossp() #3
   call void @fun_ssp()
   ret void
 }

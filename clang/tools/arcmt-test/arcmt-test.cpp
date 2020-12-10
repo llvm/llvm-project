@@ -139,11 +139,10 @@ static bool checkForMigration(StringRef resourcesPath,
 }
 
 static void printResult(FileRemapper &remapper, raw_ostream &OS) {
-  PreprocessorOptions PPOpts;
-  remapper.applyMappings(PPOpts);
-  // The changed files will be in memory buffers, print them.
-  for (const auto &RB : PPOpts.RemappedFileBuffers)
-    OS << RB.second->getBuffer();
+  remapper.forEachMapping([](StringRef, StringRef) {},
+                          [&](StringRef, const llvm::MemoryBufferRef &Buffer) {
+                            OS << Buffer.getBuffer();
+                          });
 }
 
 static bool performTransformations(StringRef resourcesPath,

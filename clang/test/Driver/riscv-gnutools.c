@@ -5,15 +5,15 @@
 // 32-bit checks
 
 // Check default on riscv32-unknown-elf
-// RUN: %clang -target riscv32-unknown-elf -fno-integrated-as %s -### -c \
+// RUN: %clang -target riscv32-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV32IMAC-ILP32 %s
 
 // Check default on riscv32-unknown-linux-gnu
-// RUN: %clang -target riscv32-unknown-linux-gnu -fno-integrated-as %s -### -c \
+// RUN: %clang -target riscv32-unknown-linux-gnu --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV32IMAFDC-ILP32D %s
 
 // Check default when -march=rv32g specified
-// RUN: %clang -target riscv32 -fno-integrated-as %s -### -c -march=rv32g \
+// RUN: %clang -target riscv32 --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fno-integrated-as %s -### -c -march=rv32g \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV32G-ILP32D %s
 
 // CHECK-RV32IMAC-ILP32: "{{.*}}as{{(.exe)?}}" "-mabi" "ilp32" "-march" "rv32imac"
@@ -24,15 +24,15 @@
 // 64-bit checks
 
 // Check default on riscv64-unknown-elf
-// RUN: %clang -target riscv64-unknown-elf -fno-integrated-as %s -### -c \
+// RUN: %clang -target riscv64-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv64_tree -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV64IMAC-LP64 %s
 
 // Check default on riscv64-unknown-linux-gnu
-// RUN: %clang -target riscv64-unknown-linux-gnu -fno-integrated-as %s -### -c \
+// RUN: %clang -target riscv64-unknown-linux-gnu --gcc-toolchain=%S/Inputs/basic_riscv64_tree -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV64IMAFDC-LP64D %s
 
 // Check default when -march=rv64g specified
-// RUN: %clang -target riscv64 -fno-integrated-as %s -### -c -march=rv64g \
+// RUN: %clang -target riscv64 --gcc-toolchain=%S/Inputs/basic_riscv64_tree -fno-integrated-as %s -### -c -march=rv64g \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV64G-LP64D %s
 
 // CHECK-RV64IMAC-LP64: "{{.*}}as{{(.exe)?}}" "-mabi" "lp64" "-march" "rv64imac"

@@ -432,12 +432,17 @@ func @expand_and_compress(%base: memref<?xf32>, %mask: vector<16xi1>, %passthru:
 }
 
 // CHECK-LABEL: @extract_insert_map
-func @extract_insert_map(%v: vector<32xf32>, %id : index) -> vector<32xf32> {
+func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
+  %id0 : index, %id1 : index) -> (vector<32xf32>, vector<16x32xf32>) {
   // CHECK: %[[V:.*]] = vector.extract_map %{{.*}}[%{{.*}}] : vector<32xf32> to vector<2xf32>
-  %vd = vector.extract_map %v[%id] : vector<32xf32> to vector<2xf32>
+  %vd = vector.extract_map %v[%id0] : vector<32xf32> to vector<2xf32>
+  // CHECK: %[[V1:.*]] = vector.extract_map %{{.*}}[%{{.*}}, %{{.*}}] : vector<16x32xf32> to vector<4x2xf32>
+  %vd2 = vector.extract_map %v2[%id0, %id1] : vector<16x32xf32> to vector<4x2xf32>
   // CHECK: %[[R:.*]] = vector.insert_map %[[V]], %{{.*}}[%{{.*}}] : vector<2xf32> into vector<32xf32>
-  %r = vector.insert_map %vd, %v[%id] : vector<2xf32> into vector<32xf32>
-  // CHECK: return %[[R]] : vector<32xf32>
-  return %r : vector<32xf32>
+  %r = vector.insert_map %vd, %v[%id0] : vector<2xf32> into vector<32xf32>
+  // CHECK: %[[R1:.*]] = vector.insert_map %[[V1]], %{{.*}}[%{{.*}}, %{{.*}}] : vector<4x2xf32> into vector<16x32xf32>
+  %r2 = vector.insert_map %vd2, %v2[%id0, %id1] : vector<4x2xf32> into vector<16x32xf32>
+  // CHECK: return %[[R]], %[[R1]] : vector<32xf32>, vector<16x32xf32>
+  return %r, %r2 : vector<32xf32>, vector<16x32xf32>
 }
 

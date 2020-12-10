@@ -84,7 +84,7 @@ Symbols:
 # CASE2:      Relocations:
 # CASE2-NEXT:  - Symbol: 'foo (1)'
 # CASE2-NEXT:    Type:   R_X86_64_PC32
-# CASE2-NEXT:  - Offset: 0x0000000000000004
+# CASE2-NEXT:  - Offset: 0x4
 # CASE2-NEXT:    Symbol: foo
 # CASE2-NEXT:    Type:   R_X86_64_PC32
 # CASE2-NEXT: Symbols:

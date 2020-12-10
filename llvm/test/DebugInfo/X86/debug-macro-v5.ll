@@ -1,7 +1,7 @@
 ; This test checks emission of .debug_macro section when
 ; -gdwarf-5 -fdebug-macro is specified.
 
-; RUN: %llc_dwarf -dwarf-version=5 -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -dwarf-version=5 -O0 -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK-LABEL:  .debug_info contents:
 ; CHECK: DW_AT_macros [DW_FORM_sec_offset] (0x00000000)

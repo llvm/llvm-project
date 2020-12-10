@@ -74,6 +74,20 @@ def testAttrEqDoesNotRaise():
 run(testAttrEqDoesNotRaise)
 
 
+# CHECK-LABEL: TEST: testAttrCapsule
+def testAttrCapsule():
+  with Context() as ctx:
+    a1 = Attribute.parse('"attr1"')
+  # CHECK: mlir.ir.Attribute._CAPIPtr
+  attr_capsule = a1._CAPIPtr
+  print(attr_capsule)
+  a2 = Attribute._CAPICreate(attr_capsule)
+  assert a2 == a1
+  assert a2.context is ctx
+
+run(testAttrCapsule)
+
+
 # CHECK-LABEL: TEST: testStandardAttrCasts
 def testStandardAttrCasts():
   with Context():
@@ -141,7 +155,7 @@ run(testIntegerAttr)
 def testBoolAttr():
   with Context() as ctx:
     battr = BoolAttr(Attribute.parse("true"))
-    # CHECK: iattr value: 1
+    # CHECK: iattr value: True
     print("iattr value:", battr.value)
 
     # Test factory methods.
@@ -241,3 +255,17 @@ def testDenseFPAttr():
 
 
 run(testDenseFPAttr)
+
+
+# CHECK-LABEL: TEST: testTypeAttr
+def testTypeAttr():
+  with Context():
+    raw = Attribute.parse("vector<4xf32>")
+    # CHECK: attr: vector<4xf32>
+    print("attr:", raw)
+    type_attr = TypeAttr(raw)
+    # CHECK: f32
+    print(ShapedType(type_attr.value).element_type)
+
+
+run(testTypeAttr)

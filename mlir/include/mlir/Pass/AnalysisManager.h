@@ -9,7 +9,7 @@
 #ifndef MLIR_PASS_ANALYSISMANAGER_H
 #define MLIR_PASS_ANALYSISMANAGER_H
 
-#include "mlir/IR/Module.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Pass/PassInstrumentation.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -177,8 +177,8 @@ private:
     bool wasInserted;
     std::tie(it, wasInserted) = analyses.try_emplace(id);
 
-    // If we don't have a cached analysis for this function, compute it directly
-    // and add it to the cache.
+    // If we don't have a cached analysis for this operation, compute it
+    // directly and add it to the cache.
     if (wasInserted) {
       if (pi)
         pi->runBeforeAnalysis(getAnalysisName<AnalysisT>(), id, ir);
@@ -321,14 +321,14 @@ private:
   friend class ModuleAnalysisManager;
 };
 
-/// An analysis manager class specifically for the top-level module operation.
-/// This class contains the memory allocations for all nested analysis managers,
-/// and provides an anchor point. This is necessary because AnalysisManager is
+/// An analysis manager class specifically for the top-level operation. This
+/// class contains the memory allocations for all nested analysis managers, and
+/// provides an anchor point. This is necessary because AnalysisManager is
 /// designed to be a thin wrapper around an existing analysis map instance.
 class ModuleAnalysisManager {
 public:
-  ModuleAnalysisManager(ModuleOp module, PassInstrumentor *passInstrumentor)
-      : analyses(module), passInstrumentor(passInstrumentor) {}
+  ModuleAnalysisManager(Operation *op, PassInstrumentor *passInstrumentor)
+      : analyses(op), passInstrumentor(passInstrumentor) {}
   ModuleAnalysisManager(const ModuleAnalysisManager &) = delete;
   ModuleAnalysisManager &operator=(const ModuleAnalysisManager &) = delete;
 

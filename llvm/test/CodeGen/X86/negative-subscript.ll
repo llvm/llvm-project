@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i686--
 ; rdar://6559995
 
-@a = external global [255 x i8*], align 32
+@a = external dso_local global [255 x i8*], align 32
 
 define i32 @main() nounwind {
 entry:

@@ -19,6 +19,8 @@
 #include "llvm/ADT/MapVector.h"
 
 namespace mlir {
+class ModuleOp;
+
 namespace pdl_to_pdl_interp {
 
 class MatcherNode;

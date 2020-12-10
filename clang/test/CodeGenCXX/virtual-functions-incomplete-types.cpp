@@ -9,7 +9,7 @@ struct B {
 
 void B::f() { }
 
-// CHECK-LABEL: define i32 @_ZN1D1gEv(%struct.D* %this)
+// CHECK-LABEL: define i32 @_ZN1D1gEv(%struct.D* {{[^,]*}} %this)
 // CHECK: declare void @_ZN1B1gEv()
 
 struct C;

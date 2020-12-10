@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -23,8 +24,6 @@
 #include "clang/Lex/Token.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -58,17 +57,18 @@ using namespace ento;
 namespace {
 
 class HTMLDiagnostics : public PathDiagnosticConsumer {
+  PathDiagnosticConsumerOptions DiagOpts;
   std::string Directory;
   bool createdDir = false;
   bool noDir = false;
   const Preprocessor &PP;
-  AnalyzerOptions &AnalyzerOpts;
   const bool SupportsCrossFileDiagnostics;
 
 public:
-  HTMLDiagnostics(AnalyzerOptions &AnalyzerOpts, const std::string &OutputDir,
-                  const Preprocessor &pp, bool supportsMultipleFiles)
-      : Directory(OutputDir), PP(pp), AnalyzerOpts(AnalyzerOpts),
+  HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
+                  const std::string &OutputDir, const Preprocessor &pp,
+                  bool supportsMultipleFiles)
+      : DiagOpts(std::move(DiagOpts)), Directory(OutputDir), PP(pp),
         SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
 
   ~HTMLDiagnostics() override { FlushDiagnostics(nullptr); }
@@ -133,7 +133,7 @@ private:
 } // namespace
 
 void ento::createHTMLDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
@@ -142,37 +142,38 @@ void ento::createHTMLDiagnosticConsumer(
   // output mode. This doesn't make much sense, we should have the minimal text
   // as our default. In the case of backward compatibility concerns, this could
   // be preserved with -analyzer-config-compatibility-mode=true.
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputDir, PP, CTU);
+  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU);
 
   // TODO: Emit an error here.
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(AnalyzerOpts, OutputDir, PP, true));
+  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
+  createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU);
 
   // TODO: Emit an error here.
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(AnalyzerOpts, OutputDir, PP, false));
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputDir, PP, CTU);
+  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
   createHTMLDiagnosticConsumer(
-      AnalyzerOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
+      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
       CTU);
-  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
+  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU);
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, prefix, PP,
+                                          CTU);
 }
 
 //===----------------------------------------------------------------------===//
@@ -245,7 +246,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   int FD;
   SmallString<128> Model, ResultPath;
 
-  if (!AnalyzerOpts.ShouldWriteStableReportFilename) {
+  if (!DiagOpts.ShouldWriteStableReportFilename) {
       llvm::sys::path::append(Model, Directory, "report-%%%%%%.html");
       if (std::error_code EC =
           llvm::sys::fs::make_absolute(Model)) {
@@ -535,7 +536,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 <input type="checkbox" class="spoilerhider" id="showinvocation" />
 <label for="showinvocation" >Show analyzer invocation</label>
 <div class="spoiler">clang -cc1 )<<<";
-    os << html::EscapeText(AnalyzerOpts.FullCompilerInvocation);
+    os << html::EscapeText(DiagOpts.ToolInvocation);
     os << R"<<<(
 </div>
 <div id='tooltiphint' hidden="true">
@@ -582,8 +583,8 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << GetIssueHash(SMgr, L, D.getCheckerName(), D.getBugType(),
-                       DeclWithIssue, PP.getLangOpts())
+       << getIssueHash(L, D.getCheckerName(), D.getBugType(), DeclWithIssue,
+                       PP.getLangOpts())
        << " -->\n";
 
     os << "\n<!-- BUGLINE "

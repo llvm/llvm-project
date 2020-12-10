@@ -245,6 +245,7 @@ def fplomsbzero : PatLeaf<(fpimm), [{ return (getFpImmVal(N) & 0x80000000)
                                         == 0; }]>;
 def fplozero    : PatLeaf<(fpimm), [{ return (getFpImmVal(N) & 0xffffffff)
                                         == 0; }]>;
+def nonzero     : PatLeaf<(imm), [{ return N->getSExtValue() !=0 ; }]>;
 
 def CCSIOp : PatLeaf<(cond), [{
   switch (N->get()) {
@@ -1603,7 +1604,7 @@ def vehi_lo : OutPatFrag<(ops node:$hi, node:$lo),
 def vehi_baselo : OutPatFrag<(ops node:$base, node:$hi, node:$lo),
                              (LEASLrri $base, $lo, $hi)>;
 foreach type = [ "tblockaddress", "tconstpool", "texternalsym", "tglobaladdr",
-                 "tglobaltlsaddr" ] in {
+                 "tglobaltlsaddr", "tjumptable" ] in {
   def : Pat<(VElo !cast<SDNode>(type):$lo), (velo_only $lo)>;
   def : Pat<(VEhi !cast<SDNode>(type):$hi), (vehi_only $hi)>;
   def : Pat<(add (VEhi !cast<SDNode>(type):$hi), I64:$lo), (vehi_lo $hi, $lo)>;
@@ -1655,7 +1656,7 @@ def : Pat<(i32 (and (trunc i64:$src), 0xffff)),
 
 // Cast to i32
 def : Pat<(i32 (trunc i64:$src)),
-          (ADDSWSXrm (EXTRACT_SUBREG $src, sub_i32), 0)>;
+          (EXTRACT_SUBREG (ANDrm $src, !add(32, 64)), sub_i32)>;
 def : Pat<(i32 (fp_to_sint f32:$src)), (CVTWSSXr RD_RZ, $src)>;
 def : Pat<(i32 (fp_to_sint f64:$src)), (CVTWDSXr RD_RZ, $src)>;
 def : Pat<(i32 (fp_to_sint f128:$src)), (CVTWDSXr RD_RZ, (CVTDQr $src))>;
@@ -2219,5 +2220,30 @@ def : Pat<(i32 (and i32:$val, 0xffff)),
 def : Pat<(i64 (and i64:$val, 0xffffffff)),
           (ANDrm $val, !add(32, 64))>;
 
+//===----------------------------------------------------------------------===//
+// Vector Instruction Pattern Stuff
+//===----------------------------------------------------------------------===//
+
+// Custom intermediate ISDs.
+class IsVLVT<int OpIdx> : SDTCisVT<OpIdx,i32>;
+def vec_broadcast       : SDNode<"VEISD::VEC_BROADCAST", SDTypeProfile<1, 2,
+                                 [SDTCisVec<0>, IsVLVT<2>]>>;
+
+// Whether this is an all-true mask (assuming undef-bits above VL are all-true).
+def true_mask           : PatLeaf<
+                            (vec_broadcast (i32 nonzero), (i32 srcvalue))>;
+// Match any broadcast (ignoring VL).
+def any_broadcast       : PatFrag<(ops node:$sx),
+                                  (vec_broadcast node:$sx, (i32 srcvalue))>;
+
 // Vector instructions.
 include "VEInstrVec.td"
+
+// The vevlintrin
+include "VEInstrIntrinsicVL.td"
+
+// Patterns and intermediate SD nodes (VEC_*).
+include "VEInstrPatternsVec.td"
+
+// Patterns and intermediate SD nodes (VVP_*).
+include "VVPInstrPatternsVec.td"

@@ -220,12 +220,26 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(Operation *op,
                                    const FrozenRewritePatternList &patterns) {
-  return applyPatternsAndFoldGreedily(op->getRegions(), patterns);
+  return applyPatternsAndFoldGreedily(op, patterns, maxPatternMatchIterations);
+}
+LogicalResult
+mlir::applyPatternsAndFoldGreedily(Operation *op,
+                                   const FrozenRewritePatternList &patterns,
+                                   unsigned maxIterations) {
+  return applyPatternsAndFoldGreedily(op->getRegions(), patterns,
+                                      maxIterations);
 }
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
                                    const FrozenRewritePatternList &patterns) {
+  return applyPatternsAndFoldGreedily(regions, patterns,
+                                      maxPatternMatchIterations);
+}
+LogicalResult
+mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
+                                   const FrozenRewritePatternList &patterns,
+                                   unsigned maxIterations) {
   if (regions.empty())
     return success();
 
@@ -241,10 +255,10 @@ mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
 
   // Start the pattern driver.
   GreedyPatternRewriteDriver driver(regions[0].getContext(), patterns);
-  bool converged = driver.simplify(regions, maxPatternMatchIterations);
+  bool converged = driver.simplify(regions, maxIterations);
   LLVM_DEBUG(if (!converged) {
     llvm::dbgs() << "The pattern rewrite doesn't converge after scanning "
-                 << maxPatternMatchIterations << " times";
+                 << maxIterations << " times";
   });
   return success(converged);
 }

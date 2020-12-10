@@ -9,12 +9,8 @@ f:
 
 // ASM: f:
 // ASM-NEXT: .cfi_sections .debug_frame
-// FIXME Why emit an extra empty line?
-// ASM-EMPTY:
 // ASM-NEXT: .cfi_startproc
 // ASM-NEXT: s_nop 0
-// FIXME Why emit an extra empty line?
-// ASM-EMPTY:
 // ASM-NEXT: .cfi_endproc
 
 // READOBJ:        Section {

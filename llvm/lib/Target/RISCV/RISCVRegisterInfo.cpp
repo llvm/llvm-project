@@ -29,6 +29,9 @@ using namespace llvm;
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
+static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
+static_assert(RISCV::F31_H == RISCV::F0_H + 31,
+              "Register list not consecutive");
 static_assert(RISCV::F1_F == RISCV::F0_F + 1, "Register list not consecutive");
 static_assert(RISCV::F31_F == RISCV::F0_F + 31,
               "Register list not consecutive");
@@ -45,6 +48,8 @@ RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
 const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+    return CSR_NoRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
@@ -89,6 +94,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
+
+  // V registers for code generation. We handle them manually.
+  markSuperRegs(Reserved, RISCV::VL);
+  markSuperRegs(Reserved, RISCV::VTYPE);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -191,9 +201,11 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
-                                        CallingConv::ID /*CC*/) const {
+                                        CallingConv::ID CC) const {
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  if (CC == CallingConv::GHC)
+    return CSR_NoRegs_RegMask;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");

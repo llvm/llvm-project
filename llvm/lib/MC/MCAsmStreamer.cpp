@@ -144,6 +144,11 @@ public:
                               const MCSymbol *Aliasee) override;
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
+
+  StringRef getMnemonic(MCInst &MI) override {
+    return InstPrinter->getMnemonic(&MI).first;
+  }
+
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;

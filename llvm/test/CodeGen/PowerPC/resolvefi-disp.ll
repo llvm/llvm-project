@@ -20,7 +20,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 @s2760 = external global %struct.S2760
 @fails = external global i32
 
-define void @check2760(%struct.S2760* noalias sret %agg.result, %struct.S2760* byval align 16, %struct.S2760* %arg1, %struct.S2760* byval align 16) {
+define void @check2760(%struct.S2760* noalias sret(%struct.S2760) %agg.result, %struct.S2760* byval(%struct.S2760) align 16, %struct.S2760* %arg1, %struct.S2760* byval(%struct.S2760) align 16) {
 entry:
   %arg0 = alloca %struct.S2760, align 32
   %arg2 = alloca %struct.S2760, align 32

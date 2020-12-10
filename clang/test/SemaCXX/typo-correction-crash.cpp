@@ -16,7 +16,8 @@ template <class A> struct is_same<A,A> { static constexpr bool value = true; };
 
 auto L1 = [] { return s; }; // expected-error {{use of undeclared identifier 's'}}
 using T1 = decltype(L1());
-static_assert(is_same<T1, void>::value, "Return statement should be discarded");
+// FIXME: Suppress the 'undeclared identifier T1' diagnostic, the UsingDecl T1 is discarded because of an invalid L1().
+static_assert(is_same<T1, void>::value, "Return statement should be discarded"); // expected-error {{use of undeclared identifier 'T1'}}
 auto L2 = [] { return tes; }; // expected-error {{use of undeclared identifier 'tes'; did you mean 'test'?}}
 using T2 = decltype(L2());
 static_assert(is_same<T2, int>::value, "Return statement was corrected");

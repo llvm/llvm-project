@@ -427,6 +427,7 @@ static void analysisMain() {
   }
 
   std::unique_ptr<MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
+  assert(InstrInfo && "Unable to create instruction info!");
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,

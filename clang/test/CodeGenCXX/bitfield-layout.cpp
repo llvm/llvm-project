@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK-LP64 -check-prefix=CHECK %s
-// RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix CHECK-LP32 -check-prefix=CHECK %s
-// RUN: %clang_cc1 %s -triple=aarch64_be-none-eabi -emit-llvm -o - -O3 | FileCheck -check-prefix CHECK-A64BE -check-prefix=CHECK %s
-// RUN: %clang_cc1 %s -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck -check-prefix CHECK-A32BE -check-prefix=CHECK %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 %s
+// RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64_be-none-eabi -emit-llvm -o - -O3 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck %s
 
 // CHECK-LP64: %union.Test1 = type { i32, [4 x i8] }
 union Test1 {

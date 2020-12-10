@@ -27,4 +27,13 @@ add_llvm_component_library(LLVMSelectionDAG
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  CodeGen
+  Core
+  MC
+  Support
+  Target
+  TransformUtils
   )

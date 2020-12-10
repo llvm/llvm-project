@@ -2,8 +2,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@data = external global [3 x i32], align 4
-@store = external global i32, align 4
+@data = external dso_local global [3 x i32], align 4
+@store = external dso_local global i32, align 4
 
 ; %else1 and %then2 end up lowering to identical blocks. These blocks should be
 ; merged during tail-merging.

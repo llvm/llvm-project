@@ -83,7 +83,7 @@ test0:
     i32.trunc_f32_s
     try         exnref
     i32.atomic.load 0
-    atomic.notify 0
+    memory.atomic.notify 0
 .LBB0_3:
     catch
     local.set   0
@@ -201,7 +201,7 @@ empty_fref_table:
 # CHECK-NEXT:      i32.trunc_f32_s
 # CHECK-NEXT:      try         exnref
 # CHECK-NEXT:      i32.atomic.load 0
-# CHECK-NEXT:      atomic.notify 0
+# CHECK-NEXT:      memory.atomic.notify 0
 # CHECK-NEXT:  .LBB0_3:
 # CHECK-NEXT:      catch
 # CHECK-NEXT:      local.set   0

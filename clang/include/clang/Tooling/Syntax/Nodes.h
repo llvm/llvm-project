@@ -135,36 +135,12 @@ public:
   static bool classof(const Node *N);
 };
 
-/// Models an `id-expression`, e.g. `std::vector<int>::size`.
-/// C++ [expr.prim.id]
-/// id-expression:
-///   unqualified-id
-///   qualified-id
-/// qualified-id:
-///   nested-name-specifier template_opt unqualified-id
-class IdExpression final : public Expression {
-public:
-  IdExpression() : Expression(NodeKind::IdExpression) {}
-  static bool classof(const Node *N);
-  NestedNameSpecifier *getQualifier();
-  Leaf *getTemplateKeyword();
-  UnqualifiedId *getUnqualifiedId();
-};
-
 /// An expression of an unknown kind, i.e. one not currently handled by the
 /// syntax tree.
 class UnknownExpression final : public Expression {
 public:
   UnknownExpression() : Expression(NodeKind::UnknownExpression) {}
   static bool classof(const Node *N);
-};
-
-/// Models a this expression `this`. C++ [expr.prim.this]
-class ThisExpression final : public Expression {
-public:
-  ThisExpression() : Expression(NodeKind::ThisExpression) {}
-  static bool classof(const Node *N);
-  Leaf *getThisKeyword();
 };
 
 /// Models arguments of a function call.
@@ -178,156 +154,6 @@ public:
   static bool classof(const Node *N);
   std::vector<Expression *> getArguments();
   std::vector<List::ElementAndDelimiter<Expression>> getArgumentsAndCommas();
-};
-
-/// A function call. C++ [expr.call]
-/// call-expression:
-///   expression '(' call-arguments ')'
-/// e.g `f(1, '2')` or `this->Base::f()`
-class CallExpression final : public Expression {
-public:
-  CallExpression() : Expression(NodeKind::CallExpression) {}
-  static bool classof(const Node *N);
-  Expression *getCallee();
-  Leaf *getOpenParen();
-  CallArguments *getArguments();
-  Leaf *getCloseParen();
-};
-
-/// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
-/// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
-class ParenExpression final : public Expression {
-public:
-  ParenExpression() : Expression(NodeKind::ParenExpression) {}
-  static bool classof(const Node *N);
-  Leaf *getOpenParen();
-  Expression *getSubExpression();
-  Leaf *getCloseParen();
-};
-
-/// Models a class member access. C++ [expr.ref]
-/// member-expression:
-///   expression -> template_opt id-expression
-///   expression .  template_opt id-expression
-/// e.g. `x.a`, `xp->a`
-///
-/// Note: An implicit member access inside a class, i.e. `a` instead of
-/// `this->a`, is an `id-expression`.
-class MemberExpression final : public Expression {
-public:
-  MemberExpression() : Expression(NodeKind::MemberExpression) {}
-  static bool classof(const Node *N);
-  Expression *getObject();
-  Leaf *getAccessToken();
-  Leaf *getTemplateKeyword();
-  IdExpression *getMember();
-};
-
-/// Expression for literals. C++ [lex.literal]
-class LiteralExpression : public Expression {
-public:
-  LiteralExpression(NodeKind K) : Expression(K) {}
-  static bool classof(const Node *N);
-  Leaf *getLiteralToken();
-};
-
-/// Expression for integer literals. C++ [lex.icon]
-class IntegerLiteralExpression final : public LiteralExpression {
-public:
-  IntegerLiteralExpression()
-      : LiteralExpression(NodeKind::IntegerLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for character literals. C++ [lex.ccon]
-class CharacterLiteralExpression final : public LiteralExpression {
-public:
-  CharacterLiteralExpression()
-      : LiteralExpression(NodeKind::CharacterLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for floating-point literals. C++ [lex.fcon]
-class FloatingLiteralExpression final : public LiteralExpression {
-public:
-  FloatingLiteralExpression()
-      : LiteralExpression(NodeKind::FloatingLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for string-literals. C++ [lex.string]
-class StringLiteralExpression final : public LiteralExpression {
-public:
-  StringLiteralExpression()
-      : LiteralExpression(NodeKind::StringLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for boolean literals. C++ [lex.bool]
-class BoolLiteralExpression final : public LiteralExpression {
-public:
-  BoolLiteralExpression()
-      : LiteralExpression(NodeKind::BoolLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for the `nullptr` literal. C++ [lex.nullptr]
-class CxxNullPtrExpression final : public LiteralExpression {
-public:
-  CxxNullPtrExpression() : LiteralExpression(NodeKind::CxxNullPtrExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for user-defined literal. C++ [lex.ext]
-/// user-defined-literal:
-///   user-defined-integer-literal
-///   user-defined-floating-point-literal
-///   user-defined-string-literal
-///   user-defined-character-literal
-class UserDefinedLiteralExpression : public LiteralExpression {
-public:
-  UserDefinedLiteralExpression(NodeKind K) : LiteralExpression(K) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for user-defined-integer-literal. C++ [lex.ext]
-class IntegerUserDefinedLiteralExpression final
-    : public UserDefinedLiteralExpression {
-public:
-  IntegerUserDefinedLiteralExpression()
-      : UserDefinedLiteralExpression(
-            NodeKind::IntegerUserDefinedLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for user-defined-floating-point-literal. C++ [lex.ext]
-class FloatUserDefinedLiteralExpression final
-    : public UserDefinedLiteralExpression {
-public:
-  FloatUserDefinedLiteralExpression()
-      : UserDefinedLiteralExpression(
-            NodeKind::FloatUserDefinedLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for user-defined-character-literal. C++ [lex.ext]
-class CharUserDefinedLiteralExpression final
-    : public UserDefinedLiteralExpression {
-public:
-  CharUserDefinedLiteralExpression()
-      : UserDefinedLiteralExpression(
-            NodeKind::CharUserDefinedLiteralExpression) {}
-  static bool classof(const Node *N);
-};
-
-/// Expression for user-defined-string-literal. C++ [lex.ext]
-class StringUserDefinedLiteralExpression final
-    : public UserDefinedLiteralExpression {
-public:
-  StringUserDefinedLiteralExpression()
-      : UserDefinedLiteralExpression(
-            NodeKind::StringUserDefinedLiteralExpression) {}
-  static bool classof(const Node *N);
 };
 
 /// An abstract class for prefix and postfix unary operators.

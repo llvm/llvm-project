@@ -64,7 +64,7 @@ int main() {
 // CHECK-SAME: task_id=[[_FIRST_MASTER_IMPLICIT_TASK_ID:[0-9]+]], team_size=2,
 // CHECK-SAME: thread_num=0
 
-// CHECK: {{^}}[[_1ST_MSTR_TID]]: _first_tool: ompt_event_master_begin:
+// CHECK: {{^}}[[_1ST_MSTR_TID]]: _first_tool: ompt_event_masked_begin:
 // CHECK-SAME: parallel_id=[[_FIRST_PARALLEL_ID]],
 // CHECK-SAME: task_id=[[_FIRST_MASTER_IMPLICIT_TASK_ID]],
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}
@@ -77,7 +77,7 @@ int main() {
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}, task_type=ompt_task_explicit=4,
 // CHECK-SAME: has_dependences=no
 
-// CHECK: {{^}}[[_1ST_MSTR_TID]]: _first_tool: ompt_event_master_end:
+// CHECK: {{^}}[[_1ST_MSTR_TID]]: _first_tool: ompt_event_masked_end:
 // CHECK-SAME: parallel_id=[[_FIRST_PARALLEL_ID]],
 // CHECK-SAME: task_id=[[_FIRST_MASTER_IMPLICIT_TASK_ID]],
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}
@@ -166,7 +166,7 @@ int main() {
 // CHECK-SAME: task_id=[[SECOND_MASTER_IMPLICIT_TASK_ID:[0-9]+]], team_size=2,
 // CHECK-SAME: thread_num=0
 
-// CHECK: {{^}}[[_2ND_MSTR_TID]]: second_tool: ompt_event_master_begin:
+// CHECK: {{^}}[[_2ND_MSTR_TID]]: second_tool: ompt_event_masked_begin:
 // CHECK-SAME: parallel_id=[[SECOND_PARALLEL_ID]],
 // CHECK-SAME: task_id=[[SECOND_MASTER_IMPLICIT_TASK_ID]],
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}
@@ -179,7 +179,7 @@ int main() {
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}, task_type=ompt_task_explicit=4,
 // CHECK-SAME: has_dependences=no
 
-// CHECK: {{^}}[[_2ND_MSTR_TID]]: second_tool: ompt_event_master_end:
+// CHECK: {{^}}[[_2ND_MSTR_TID]]: second_tool: ompt_event_masked_end:
 // CHECK-SAME: parallel_id=[[SECOND_PARALLEL_ID]],
 // CHECK-SAME: task_id=[[SECOND_MASTER_IMPLICIT_TASK_ID]],
 // CHECK-SAME: codeptr_ra={{0x[0-f]+}}

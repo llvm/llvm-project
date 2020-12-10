@@ -30,7 +30,7 @@ extern inline S &f() {
 // CHECK:     [[init]]:
 // CHECK-NEXT:  %[[or:.*]] = or i32 %[[guard]], 1
 // CHECK-NEXT:  store i32 %[[or]], i32* @"??__J?1??f@@YAAAUS@@XZ@51"
-// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
 // CHECK-NEXT:    to label %[[invoke_cont:.*]] unwind label %[[lpad:.*]]
 //
 // CHECK:     [[invoke_cont]]:
@@ -65,7 +65,7 @@ extern inline S &g() {
 // CHECK-NEXT:  br i1 %[[cmp2]], label %[[init:.*]], label %[[init_end:.*]]
 //
 // CHECK:     [[init]]:
-// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* @"?s@?1??g@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  invoke {{.*}} @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?s@?1??g@@YAAAUS@@XZ@4U2@A")
 // CHECK-NEXT:    to label %[[invoke_cont:.*]] unwind label %[[lpad:.*]]
 //
 // CHECK:     [[invoke_cont]]:

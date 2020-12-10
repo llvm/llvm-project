@@ -368,19 +368,13 @@ DynamicSymbols: []
 ## Check we report errors when dynamic tags, needed for dumping GOT, are missing.
 
 # RUN: yaml2obj --docnum=4 -DTAG1=DT_MIPS_LOCAL_GOTNO -DTAG2=DT_MIPS_GOTSYM %s -o %t.err1.o
-# RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o -check-prefix ERR1
-
-# ERR1: error: '[[FILE]]': cannot find PLTGOT dynamic tag
+# RUN: llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o -check-prefixes=NO-OUTPUT,ERR1
 
 # RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_GOTSYM %s -o %t.err2.o
-# RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o -check-prefix ERR2
-
-# ERR2: error: '[[FILE]]': cannot find MIPS_LOCAL_GOTNO dynamic tag
+# RUN: llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o -check-prefixes=NO-OUTPUT,ERR2
 
 # RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_LOCAL_GOTNO %s -o %t.err3.o
-# RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
-
-# ERR3: error: '[[FILE]]': cannot find MIPS_GOTSYM dynamic tag
+# RUN: llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefixes=NO-OUTPUT,ERR3
 
 --- !ELF
 FileHeader:
@@ -401,14 +395,10 @@ Sections:
 DynamicSymbols: []
 
 # RUN: yaml2obj --docnum=5 -DVAL1=0xffff %s -o %t.err4.o
-# RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix=ERR4
-
-# ERR4: error: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
+# RUN: llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefixes=NO-OUTPUT,ERR4
 
 # RUN: yaml2obj --docnum=5 -DVAL2=0xffff %s -o %t.err5.o
-# RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix=ERR5
-
-# ERR5: error: '[[FILE]]': there is no non-empty GOT section at 0xffff
+# RUN: llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefixes=NO-OUTPUT,ERR5
 
 --- !ELF
 FileHeader:
@@ -427,6 +417,20 @@ Sections:
       - Tag:   DT_PLTGOT
         Value: [[VAL2=0]]
 DynamicSymbols: []
+
+# NO-OUTPUT:      LoadName: <Not found>
+# NO-OUTPUT-NEXT: There is no .MIPS.abiflags section in the file.
+# NO-OUTPUT-NEXT: There is no .MIPS.options section in the file.
+# NO-OUTPUT-NEXT: There is no .reginfo section in the file.
+
+# ERR1-NEXT: warning: '[[FILE]]': cannot find PLTGOT dynamic tag
+# ERR2-NEXT: warning: '[[FILE]]': cannot find MIPS_LOCAL_GOTNO dynamic tag
+# ERR3-NEXT: warning: '[[FILE]]': cannot find MIPS_GOTSYM dynamic tag
+# ERR4-NEXT: warning: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
+# ERR5-NEXT: warning: '[[FILE]]': there is no non-empty GOT section at 0xffff
+
+# NO-OUTPUT-EMPTY:
+# NO-OUTPUT-NOT: {{.}}
 
 ## Check that we do not report a warning about the .got section when we are able to locate it by name.
 # RUN: yaml2obj --docnum=6 -DNAME=0xffff %s -o %t.err6.o

@@ -729,15 +729,7 @@ static int __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     __kmp_ncores = nPackages = 1;
     __kmp_nThreadsPerCore = nCoresPerPkg = 1;
     if (__kmp_affinity_verbose) {
-      char buf[KMP_AFFIN_MASK_PRINT_LEN];
-      __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-
       KMP_INFORM(AffUsingHwloc, "KMP_AFFINITY");
-      if (__kmp_affinity_respect_mask) {
-        KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-      } else {
-        KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-      }
       KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
       KMP_INFORM(Uniform, "KMP_AFFINITY");
       KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
@@ -791,13 +783,6 @@ static int __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
 
   // Print the machine topology summary.
   if (__kmp_affinity_verbose) {
-    char mask[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(mask, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-    if (__kmp_affinity_respect_mask) {
-      KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", mask);
-    } else {
-      KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", mask);
-    }
     KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
     if (uniform) {
       KMP_INFORM(Uniform, "KMP_AFFINITY");
@@ -898,16 +883,7 @@ static int __kmp_affinity_create_flat_map(AddrUnsPair **address2os,
   __kmp_ncores = nPackages = __kmp_avail_proc;
   __kmp_nThreadsPerCore = nCoresPerPkg = 1;
   if (__kmp_affinity_verbose) {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              __kmp_affin_fullMask);
-
     KMP_INFORM(AffCapableUseFlat, "KMP_AFFINITY");
-    if (__kmp_affinity_respect_mask) {
-      KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-    } else {
-      KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-    }
     KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
     KMP_INFORM(Uniform, "KMP_AFFINITY");
     KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
@@ -1273,15 +1249,7 @@ static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
     __kmp_ncores = nPackages = 1;
     __kmp_nThreadsPerCore = nCoresPerPkg = 1;
     if (__kmp_affinity_verbose) {
-      char buf[KMP_AFFIN_MASK_PRINT_LEN];
-      __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-
       KMP_INFORM(AffUseGlobCpuid, "KMP_AFFINITY");
-      if (__kmp_affinity_respect_mask) {
-        KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-      } else {
-        KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-      }
       KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
       KMP_INFORM(Uniform, "KMP_AFFINITY");
       KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
@@ -1406,15 +1374,7 @@ static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
   // not enabled.
   __kmp_ncores = nCores;
   if (__kmp_affinity_verbose) {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-
     KMP_INFORM(AffUseGlobCpuid, "KMP_AFFINITY");
-    if (__kmp_affinity_respect_mask) {
-      KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-    } else {
-      KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-    }
     KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
     if (__kmp_affinity_uniform_topology()) {
       KMP_INFORM(Uniform, "KMP_AFFINITY");
@@ -1689,15 +1649,7 @@ static int __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
     __kmp_ncores = nPackages = 1;
     __kmp_nThreadsPerCore = nCoresPerPkg = 1;
     if (__kmp_affinity_verbose) {
-      char buf[KMP_AFFIN_MASK_PRINT_LEN];
-      __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-
       KMP_INFORM(AffUseGlobCpuidL11, "KMP_AFFINITY");
-      if (__kmp_affinity_respect_mask) {
-        KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-      } else {
-        KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-      }
       KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
       KMP_INFORM(Uniform, "KMP_AFFINITY");
       KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
@@ -1813,15 +1765,7 @@ static int __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
 
   // Print the machine topology summary.
   if (__kmp_affinity_verbose) {
-    char mask[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(mask, KMP_AFFIN_MASK_PRINT_LEN, oldMask);
-
     KMP_INFORM(AffUseGlobCpuidL11, "KMP_AFFINITY");
-    if (__kmp_affinity_respect_mask) {
-      KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", mask);
-    } else {
-      KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", mask);
-    }
     KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
     if (uniform) {
       KMP_INFORM(Uniform, "KMP_AFFINITY");
@@ -2332,15 +2276,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
         KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
         KMP_INFORM(Uniform, "KMP_AFFINITY");
       } else {
-        char buf[KMP_AFFIN_MASK_PRINT_LEN];
-        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                                  __kmp_affin_fullMask);
         KMP_INFORM(AffCapableUseCpuinfo, "KMP_AFFINITY");
-        if (__kmp_affinity_respect_mask) {
-          KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-        } else {
-          KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-        }
         KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
         KMP_INFORM(Uniform, "KMP_AFFINITY");
       }
@@ -2541,15 +2477,7 @@ restart_radix_check:
         KMP_INFORM(NonUniform, "KMP_AFFINITY");
       }
     } else {
-      char buf[KMP_AFFIN_MASK_PRINT_LEN];
-      __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                                __kmp_affin_fullMask);
       KMP_INFORM(AffCapableUseCpuinfo, "KMP_AFFINITY");
-      if (__kmp_affinity_respect_mask) {
-        KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
-      } else {
-        KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
-      }
       KMP_INFORM(AvailableOSProc, "KMP_AFFINITY", __kmp_avail_proc);
       if (uniform) {
         KMP_INFORM(Uniform, "KMP_AFFINITY");
@@ -3987,14 +3915,6 @@ static void __kmp_apply_thread_places(AddrUnsPair **pAddr, int depth) {
     *pAddr = newAddr; // replace old topology with new one
   }
   if (__kmp_affinity_verbose) {
-    char m[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(m, KMP_AFFIN_MASK_PRINT_LEN,
-                              __kmp_affin_fullMask);
-    if (__kmp_affinity_respect_mask) {
-      KMP_INFORM(InitOSProcSetRespect, "KMP_HW_SUBSET", m);
-    } else {
-      KMP_INFORM(InitOSProcSetNotRespect, "KMP_HW_SUBSET", m);
-    }
     KMP_INFORM(AvailableOSProc, "KMP_HW_SUBSET", __kmp_avail_proc);
     kmp_str_buf_t buf;
     __kmp_str_buf_init(&buf);
@@ -4156,9 +4076,8 @@ static void __kmp_aux_affinity_initialize(void) {
     KMP_CPU_ALLOC(__kmp_affin_fullMask);
   }
   if (KMP_AFFINITY_CAPABLE()) {
+    __kmp_get_system_affinity(__kmp_affin_fullMask, TRUE);
     if (__kmp_affinity_respect_mask) {
-      __kmp_get_system_affinity(__kmp_affin_fullMask, TRUE);
-
       // Count the number of available processors.
       unsigned i;
       __kmp_avail_proc = 0;
@@ -4178,9 +4097,27 @@ static void __kmp_aux_affinity_initialize(void) {
         KMP_AFFINITY_DISABLE();
         return;
       }
+
+      if (__kmp_affinity_verbose) {
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  __kmp_affin_fullMask);
+        KMP_INFORM(InitOSProcSetRespect, "KMP_AFFINITY", buf);
+      }
     } else {
+      if (__kmp_affinity_verbose) {
+        char buf[KMP_AFFIN_MASK_PRINT_LEN];
+        __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
+                                  __kmp_affin_fullMask);
+        KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
+      }
       __kmp_affinity_entire_machine_mask(__kmp_affin_fullMask);
       __kmp_avail_proc = __kmp_xproc;
+#if KMP_OS_WINDOWS
+      // Set the process affinity mask since threads' affinity
+      // masks must be subset of process mask in Windows* OS
+      __kmp_affin_fullMask->set_process_affinity(true);
+#endif
     }
   }
 

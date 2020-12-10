@@ -143,6 +143,9 @@ class Command {
   /// Dependent actions
   llvm::SmallVector<const Action *, 4> DependentActions;
 
+  /// Information on executable run provided by OS.
+  mutable Optional<llvm::sys::ProcessStatistics> ProcStat;
+
   /// When a response file is needed, we try to put most arguments in an
   /// exclusive file, while others remains as regular command line arguments.
   /// This functions fills a vector with the regular command line arguments,
@@ -217,6 +220,10 @@ public:
 
   const std::vector<std::string> &getOutputFilenames() const {
     return OutputFilenames;
+  }
+
+  Optional<llvm::sys::ProcessStatistics> getProcessStatistics() const {
+    return ProcStat;
   }
 
 protected:

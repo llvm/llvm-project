@@ -773,6 +773,10 @@ static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::COPY_F64;
   if (RC == &WebAssembly::V128RegClass)
     return WebAssembly::COPY_V128;
+  if (RC == &WebAssembly::FUNCREFRegClass)
+    return WebAssembly::COPY_FUNCREF;
+  if (RC == &WebAssembly::EXTERNREFRegClass)
+    return WebAssembly::COPY_EXTERNREF;
   if (RC == &WebAssembly::EXNREFRegClass)
     return WebAssembly::COPY_EXNREF;
   llvm_unreachable("Unexpected register class");

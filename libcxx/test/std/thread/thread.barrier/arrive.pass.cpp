@@ -25,6 +25,7 @@
 #include <barrier>
 #include <thread>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
@@ -32,7 +33,7 @@ int main(int, char**)
   std::barrier<> b(2);
 
   auto tok = b.arrive();
-  std::thread t([&](){
+  std::thread t = support::make_test_thread([&](){
     (void)b.arrive();
   });
   b.wait(std::move(tok));

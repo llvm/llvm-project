@@ -165,7 +165,10 @@ enum class SecCommonFlags : uint32_t {
 // a new check in verifySecFlag.
 enum class SecNameTableFlags : uint32_t {
   SecFlagInValid = 0,
-  SecFlagMD5Name = (1 << 0)
+  SecFlagMD5Name = (1 << 0),
+  // Store MD5 in fixed length instead of ULEB128 so NameTable can be
+  // accessed like an array.
+  SecFlagFixedLengthMD5 = (1 << 1)
 };
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,
@@ -240,6 +243,14 @@ struct LineLocation {
   bool operator<(const LineLocation &O) const {
     return LineOffset < O.LineOffset ||
            (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+  }
+
+  bool operator==(const LineLocation &O) const {
+    return LineOffset == O.LineOffset && Discriminator == O.Discriminator;
+  }
+
+  bool operator!=(const LineLocation &O) const {
+    return LineOffset != O.LineOffset || Discriminator != O.Discriminator;
   }
 
   uint32_t LineOffset;
@@ -339,6 +350,129 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 
+// State of context associated with FunctionSamples
+enum ContextStateMask {
+  UnknownContext = 0x0,   // Profile without context
+  RawContext = 0x1,       // Full context profile from input profile
+  SyntheticContext = 0x2, // Synthetic context created for context promotion
+  InlinedContext = 0x4,   // Profile for context that is inlined into caller
+  MergedContext = 0x8     // Profile for context merged into base profile
+};
+
+// Sample context for FunctionSamples. It consists of the calling context,
+// the function name and context state. Internally sample context is represented
+// using StringRef, which is also the input for constructing a `SampleContext`.
+// It can accept and represent both full context string as well as context-less
+// function name.
+// Example of full context string (note the wrapping `[]`):
+//    `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
+// Example of context-less function name (same as AutoFDO):
+//    `_Z8funcLeafi`
+class SampleContext {
+public:
+  SampleContext() : State(UnknownContext) {}
+  SampleContext(StringRef ContextStr,
+                ContextStateMask CState = UnknownContext) {
+    setContext(ContextStr, CState);
+  }
+
+  // Promote context by removing top frames (represented by `ContextStrToRemove`).
+  // Note that with string representation of context, the promotion is effectively
+  // a substr operation with `ContextStrToRemove` removed from left.
+  void promoteOnPath(StringRef ContextStrToRemove) {
+    assert(FullContext.startswith(ContextStrToRemove));
+
+    // Remove leading context and frame separator " @ ".
+    FullContext = FullContext.substr(ContextStrToRemove.size() + 3);
+    CallingContext = CallingContext.substr(ContextStrToRemove.size() + 3);
+  }
+
+  // Split the top context frame (left-most substr) from context.
+  static std::pair<StringRef, StringRef>
+  splitContextString(StringRef ContextStr) {
+    return ContextStr.split(" @ ");
+  }
+
+  // Decode context string for a frame to get function name and location.
+  // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
+  static void decodeContextString(StringRef ContextStr, StringRef &FName,
+                                  LineLocation &LineLoc) {
+    // Get function name
+    auto EntrySplit = ContextStr.split(':');
+    FName = EntrySplit.first;
+
+    LineLoc = {0, 0};
+    if (!EntrySplit.second.empty()) {
+      // Get line offset, use signed int for getAsInteger so string will
+      // be parsed as signed.
+      int LineOffset = 0;
+      auto LocSplit = EntrySplit.second.split('.');
+      LocSplit.first.getAsInteger(10, LineOffset);
+      LineLoc.LineOffset = LineOffset;
+
+      // Get discriminator
+      if (!LocSplit.second.empty())
+        LocSplit.second.getAsInteger(10, LineLoc.Discriminator);
+    }
+  }
+
+  operator StringRef() const { return FullContext; }
+  bool hasState(ContextStateMask S) { return State & (uint32_t)S; }
+  void setState(ContextStateMask S) { State |= (uint32_t)S; }
+  void clearState(ContextStateMask S) { State &= (uint32_t)~S; }
+  bool hasContext() const { return State != UnknownContext; }
+  bool isBaseContext() const { return CallingContext.empty(); }
+  StringRef getName() const { return Name; }
+  StringRef getCallingContext() const { return CallingContext; }
+  StringRef getNameWithContext() const { return FullContext; }
+
+private:
+  // Give a context string, decode and populate internal states like
+  // Function name, Calling context and context state. Example of input
+  // `ContextStr`: `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
+  void setContext(StringRef ContextStr, ContextStateMask CState) {
+    assert(!ContextStr.empty());
+    // Note that `[]` wrapped input indicates a full context string, otherwise
+    // it's treated as context-less function name only.
+    bool HasContext = ContextStr.startswith("[");
+    if (!HasContext && CState == UnknownContext) {
+      State = UnknownContext;
+      Name = FullContext = ContextStr;
+    } else {
+      // Assume raw context profile if unspecified
+      if (CState == UnknownContext)
+        State = RawContext;
+      else
+        State = CState;
+
+      // Remove encapsulating '[' and ']' if any
+      if (HasContext)
+        FullContext = ContextStr.substr(1, ContextStr.size() - 2);
+      else
+        FullContext = ContextStr;
+
+      // Caller is to the left of callee in context string
+      auto NameContext = FullContext.rsplit(" @ ");
+      if (NameContext.second.empty()) {
+        Name = NameContext.first;
+        CallingContext = NameContext.second;
+      } else {
+        Name = NameContext.second;
+        CallingContext = NameContext.first;
+      }
+    }
+  }
+
+  // Full context string including calling context and leaf function name
+  StringRef FullContext;
+  // Function name for the associated sample profile
+  StringRef Name;
+  // Calling context (leaf function excluded) for the associated sample profile
+  StringRef CallingContext;
+  // State of the associated sample profile
+  uint32_t State;
+};
+
 class FunctionSamples;
 class SampleProfileReaderItaniumRemapper;
 
@@ -396,10 +530,16 @@ public:
   ErrorOr<uint64_t> findSamplesAt(uint32_t LineOffset,
                                   uint32_t Discriminator) const {
     const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
-    if (ret == BodySamples.end())
+    if (ret == BodySamples.end()) {
+      // For CSSPGO, in order to conserve profile size, we no longer write out
+      // locations profile for those not hit during training, so we need to
+      // treat them as zero instead of error here.
+      if (ProfileIsCS)
+        return 0;
       return std::error_code();
-    else
+    } else {
       return ret->second.getSamples();
+    }
   }
 
   /// Returns the call target map collected at a given location.
@@ -452,6 +592,11 @@ public:
   /// Return the sample count of the first instruction of the function.
   /// The function can be either a standalone symbol or an inlined function.
   uint64_t getEntrySamples() const {
+    if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
+      // For CS profile, if we already have more accurate head samples
+      // counted by branch sample from caller, use them as entry samples.
+      return getHeadSamples();
+    }
     uint64_t Count = 0;
     // Use either BodySamples or CallsiteSamples which ever has the smaller
     // lineno.
@@ -547,19 +692,28 @@ public:
   /// Return the function name.
   StringRef getName() const { return Name; }
 
+  /// Return function name with context.
+  StringRef getNameWithContext() const {
+    return FunctionSamples::ProfileIsCS ? Context.getNameWithContext() : Name;
+  }
+
   /// Return the original function name.
   StringRef getFuncName() const { return getFuncName(Name); }
 
   /// Return the canonical name for a function, taking into account
   /// suffix elision policy attributes.
   static StringRef getCanonicalFnName(const Function &F) {
-    static const char *knownSuffixes[] = { ".llvm.", ".part." };
     auto AttrName = "sample-profile-suffix-elision-policy";
     auto Attr = F.getFnAttribute(AttrName).getValueAsString();
+    return getCanonicalFnName(F.getName(), Attr);
+  }
+
+  static StringRef getCanonicalFnName(StringRef FnName, StringRef Attr = "") {
+    static const char *knownSuffixes[] = { ".llvm.", ".part." };
     if (Attr == "" || Attr == "all") {
-      return F.getName().split('.').first;
+      return FnName.split('.').first;
     } else if (Attr == "selected") {
-      StringRef Cand(F.getName());
+      StringRef Cand(FnName);
       for (const auto &Suf : knownSuffixes) {
         StringRef Suffix(Suf);
         auto It = Cand.rfind(Suffix);
@@ -571,11 +725,11 @@ public:
       }
       return Cand;
     } else if (Attr == "none") {
-      return F.getName();
+      return FnName;
     } else {
       assert(false && "internal error: unknown suffix elision policy");
     }
-    return F.getName();
+    return FnName;
   }
 
   /// Translate \p Name into its original name.
@@ -615,6 +769,12 @@ public:
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
 
+  static bool ProfileIsCS;
+
+  SampleContext &getContext() const { return Context; }
+
+  void setContext(const SampleContext &FContext) { Context = FContext; }
+
   static SampleProfileFormat Format;
 
   /// Whether the profile uses MD5 to represent string.
@@ -638,6 +798,9 @@ public:
 private:
   /// Mangled name of the function.
   StringRef Name;
+
+  /// Calling context for function profile
+  mutable SampleContext Context;
 
   /// Total number of samples collected inside this function.
   ///

@@ -6,6 +6,7 @@
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=cortex-a76ae < %s | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=neoverse-e1 < %s  | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=neoverse-n1 < %s  | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding -mcpu=neoverse-n2 < %s  | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-ssbs  < %s 2>&1 | FileCheck %s --check-prefix=NOSPECID
 
 mrs x2, SSBS

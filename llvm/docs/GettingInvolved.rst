@@ -65,7 +65,6 @@ Information about LLVM's development process.
    :hidden:
 
    Projects
-   LLVMBuild
    HowToReleaseLLVM
    Packaging
    ReleaseProcess
@@ -77,10 +76,6 @@ Information about LLVM's development process.
   infrastructure.  The templates (directory organization, Makefiles, and test
   tree) allow the project code to be located outside (or inside) the ``llvm/``
   tree, while using LLVM header files and libraries.
-
-:doc:`LLVMBuild`
-  Describes the LLVMBuild organization and files used by LLVM to specify
-  component descriptions.
 
 :doc:`HowToReleaseLLVM`
   This is a guide to preparing LLVM releases. Most developers can ignore it.

@@ -200,7 +200,7 @@ namespace test15 {
   // CHECK-NOT:  icmp eq i8* [[P]], null
   // CHECK-NOT:  br i1
   // CHECK:      [[T0:%.*]] = bitcast i8* [[P]] to [[A:%.*]]*
-  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* [[T0]])
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* {{[^,]*}} [[T0]])
   void test0a(void *p) {
     new (p) A();
   }
@@ -211,7 +211,7 @@ namespace test15 {
   // CHECK-NEXT: icmp eq i8* [[P]], null
   // CHECK-NEXT: br i1
   // CHECK:      [[T0:%.*]] = bitcast i8* [[P]] to [[A:%.*]]*
-  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* [[T0]])
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* {{[^,]*}} [[T0]])
   void test0b(void *p) {
     new (p, true) A();
   }
@@ -224,7 +224,7 @@ namespace test15 {
   // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[BEGIN]], i64 5
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi [[A]]* [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
-  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* [[CUR]])
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* {{[^,]*}} [[CUR]])
   // CHECK-NEXT: [[NEXT]] = getelementptr inbounds [[A]], [[A]]* [[CUR]], i64 1
   // CHECK-NEXT: [[DONE:%.*]] = icmp eq [[A]]* [[NEXT]], [[END]]
   // CHECK-NEXT: br i1 [[DONE]]
@@ -242,7 +242,7 @@ namespace test15 {
   // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[BEGIN]], i64 5
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi [[A]]* [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
-  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* [[CUR]])
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* {{[^,]*}} [[CUR]])
   // CHECK-NEXT: [[NEXT]] = getelementptr inbounds [[A]], [[A]]* [[CUR]], i64 1
   // CHECK-NEXT: [[DONE:%.*]] = icmp eq [[A]]* [[NEXT]], [[END]]
   // CHECK-NEXT: br i1 [[DONE]]
@@ -262,7 +262,7 @@ namespace test15 {
   // CHECK:      [[END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[BEGIN]], i64 [[T0]]
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi [[A]]* [ [[BEGIN]],
-  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* [[CUR]])
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev([[A]]* {{[^,]*}} [[CUR]])
   void test2(void *p, int n) {
     new (p) A[n];
   }
@@ -296,7 +296,7 @@ namespace PR11757 {
   // CHECK: define {{.*}} @_ZN7PR117571aEPNS_1XE
   // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
   // CHECK-NEXT: [[CASTED:%.*]] = bitcast i8* [[CALL]] to
-  // CHECK-NEXT: call void @_ZN7PR117571XC1Ev({{.*}}* [[CASTED]])
+  // CHECK-NEXT: call void @_ZN7PR117571XC1Ev({{.*}}* {{[^,]*}} [[CASTED]])
   // CHECK-NEXT: ret {{.*}} [[CASTED]]
 }
 

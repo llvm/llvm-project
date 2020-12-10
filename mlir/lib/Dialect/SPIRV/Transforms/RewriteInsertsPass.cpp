@@ -16,7 +16,7 @@
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 
 using namespace mlir;
 
@@ -63,7 +63,7 @@ void RewriteInsertsPass::runOnOperation() {
         location, compositeType, operands);
 
     lastCompositeInsertOp.replaceAllUsesWith(
-        compositeConstructOp.getOperation()->getResult(0));
+        compositeConstructOp->getResult(0));
 
     // Erase ops.
     for (auto insertOp : llvm::reverse(insertions)) {

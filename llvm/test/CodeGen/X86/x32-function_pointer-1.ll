@@ -3,8 +3,8 @@
 
 ; Test for x32 function pointer tail call
 
-@foo1 = external global void (i8*)*
-@foo2 = external global void (i8*)*
+@foo1 = external dso_local global void (i8*)*
+@foo2 = external dso_local global void (i8*)*
 
 define void @bar(i8* %h) nounwind uwtable {
 entry:

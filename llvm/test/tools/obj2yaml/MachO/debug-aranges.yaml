@@ -7,27 +7,27 @@
 #      ARANGES: Sections:
 # ARANGES-NEXT:   - sectname:        __debug_aranges
 # ARANGES-NEXT:     segname:         __[[SEGNAME]]
-# ARANGES-NEXT:     addr:            0x0000000000000000
+# ARANGES-NEXT:     addr:            0x0
 # ARANGES-NEXT:     size:            64
-# ARANGES-NEXT:     offset:          0x00000210
+# ARANGES-NEXT:     offset:          0x210
 # ARANGES-NEXT:     align:           0
-# ARANGES-NEXT:     reloff:          0x00000000
+# ARANGES-NEXT:     reloff:          0x0
 # ARANGES-NEXT:     nreloc:          0
-# ARANGES-NEXT:     flags:           0x00000000
-# ARANGES-NEXT:     reserved1:       0x00000000
-# ARANGES-NEXT:     reserved2:       0x00000000
-# ARANGES-NEXT:     reserved3:       0x00000000
+# ARANGES-NEXT:     flags:           0x0
+# ARANGES-NEXT:     reserved1:       0x0
+# ARANGES-NEXT:     reserved2:       0x0
+# ARANGES-NEXT:     reserved3:       0x0
 # ARANGES-NEXT: DWARF:
 # ARANGES-NEXT:   debug_aranges:
-# ARANGES-NEXT:     - Length:          0x000000000000003C
+# ARANGES-NEXT:     - Length:          0x3C
 # ARANGES-NEXT:       Version:         2
-# ARANGES-NEXT:       CuOffset:        0x0000000000001234
-# ARANGES-NEXT:       AddressSize:     0x08
+# ARANGES-NEXT:       CuOffset:        0x1234
+# ARANGES-NEXT:       AddressSize:     0x8
 # ARANGES-NEXT:       Descriptors:
-# ARANGES-NEXT:         - Address:         0x0000000000001234
-# ARANGES-NEXT:           Length:          0x0000000000005678
-# ARANGES-NEXT:         - Address:         0x0000000000001234
-# ARANGES-NEXT:           Length:          0x0000000000005678
+# ARANGES-NEXT:         - Address:         0x1234
+# ARANGES-NEXT:           Length:          0x5678
+# ARANGES-NEXT:         - Address:         0x1234
+# ARANGES-NEXT:           Length:          0x5678
 
 --- !mach-o
 IsLittleEndian: true
@@ -83,16 +83,16 @@ DWARF:
 
 #      RAW-CONTENT: - sectname:        __debug_aranges
 # RAW-CONTENT-NEXT:   segname:         __DWARF
-# RAW-CONTENT-NEXT:   addr:            0x0000000000000000
+# RAW-CONTENT-NEXT:   addr:            0x0
 # RAW-CONTENT-NEXT:   size:            64
-# RAW-CONTENT-NEXT:   offset:          0x00000210
+# RAW-CONTENT-NEXT:   offset:          0x210
 # RAW-CONTENT-NEXT:   align:           0
-# RAW-CONTENT-NEXT:   reloff:          0x00000000
+# RAW-CONTENT-NEXT:   reloff:          0x0
 # RAW-CONTENT-NEXT:   nreloc:          0
-# RAW-CONTENT-NEXT:   flags:           0x00000000
-# RAW-CONTENT-NEXT:   reserved1:       0x00000000
-# RAW-CONTENT-NEXT:   reserved2:       0x00000000
-# RAW-CONTENT-NEXT:   reserved3:       0x00000000
+# RAW-CONTENT-NEXT:   flags:           0x0
+# RAW-CONTENT-NEXT:   reserved1:       0x0
+# RAW-CONTENT-NEXT:   reserved2:       0x0
+# RAW-CONTENT-NEXT:   reserved3:       0x0
 # RAW-CONTENT-NEXT:   content:         '02000000020034120000080000000000341200000000000078560000000000003412000000000000785600000000000000000000000000000000000000000000'
 # RAW-CONTENT-NEXT: ...
 

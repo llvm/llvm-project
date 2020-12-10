@@ -533,14 +533,11 @@ static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
 static void printPredicates(std::vector<const Record *> &Predicates,
                             StringRef Name, raw_ostream &o) {
   for (unsigned i = 0; i < Predicates.size(); ++i) {
-    Init *Pred = Predicates[i]->getValueInit(Name);
-    if (CodeInit *SI = dyn_cast<CodeInit>(Pred))
-      o << "  case " << i + 1 << ": {\n"
-        << "  // " << Predicates[i]->getName().str() << "\n"
-        << "  " << SI->getValue() << "\n"
-        << "  }\n";
-    else
-      llvm_unreachable("Unexpected predicate field!");
+    StringRef Pred = Predicates[i]->getValueAsString(Name);
+    o << "  case " << i + 1 << ": {\n"
+      << "  // " << Predicates[i]->getName().str() << "\n"
+      << "  " << Pred.data() << "\n"
+      << "  }\n";
   }
 }
 

@@ -107,7 +107,6 @@ int __attribute__((target("arch=sandybridge"))) diff_mangle(void) { return 0; }
 
 // expected-error@+1 {{multiversioned functions do not yet support deduced return types}}
 auto __attribute__((target("default"))) deduced_return(void) { return 0; }
-// expected-error@-1 {{cannot initialize return object of type 'auto' with an rvalue of type 'int'}}
 
 auto __attribute__((target("default"))) trailing_return(void)-> int { return 0; }
 

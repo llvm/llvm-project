@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; Bug in FindModifiedNodeSlot cause tmp14 load to become a zextload and shr 31
 ; is then optimized away.
-@tree_code_type = external global [0 x i32]		; <[0 x i32]*> [#uses=1]
+@tree_code_type = external dso_local global [0 x i32]		; <[0 x i32]*> [#uses=1]
 
 define void @copy_if_shared_r() {
 ; CHECK-LABEL: copy_if_shared_r:

@@ -55,6 +55,7 @@ add_subdirectory(altera)
 add_subdirectory(boost)
 add_subdirectory(bugprone)
 add_subdirectory(cert)
+add_subdirectory(concurrency)
 add_subdirectory(cppcoreguidelines)
 add_subdirectory(darwin)
 add_subdirectory(fuchsia)
@@ -81,6 +82,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyBoostModule
   clangTidyBugproneModule
   clangTidyCERTModule
+  clangTidyConcurrencyModule
   clangTidyCppCoreGuidelinesModule
   clangTidyDarwinModule
   clangTidyFuchsiaModule

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98 %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20 %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}
@@ -87,7 +88,9 @@ namespace rdar9357400 {
 
   typedef vector< float,  fixed<4> > vector4f;
 
-  // CHECK: @_ZN11rdar93574002ggE = constant [49 x i8] c"{vector<float, rdar9357400::fixed<4, -1> >=[4f]}\00"
+  // FIXME: This difference is due to D76801. It was probably an unintentional change. Maybe we want to undo it?
+  // CHECKCXX98: @_ZN11rdar93574002ggE = constant [49 x i8] c"{vector<float, rdar9357400::fixed<4, -1> >=[4f]}\00"
+  // CHECKCXX20: @_ZN11rdar93574002ggE = constant [48 x i8] c"{vector<float, rdar9357400::fixed<4, -1>>=[4f]}\00"
   extern const char gg[] = @encode(vector4f);
 }
 
@@ -170,21 +173,21 @@ extern const char g5[] = @encode(basic_string);
 
 
 // PR10990
-class CefBase {
+struct CefBase {
   virtual ~CefBase() {}
 };
-class CefBrowser : public virtual CefBase {};
-class CefBrowserImpl : public CefBrowser {};
+struct CefBrowser : public virtual CefBase {};
+struct CefBrowserImpl : public CefBrowser {};
 // CHECK: @g6 = constant [21 x i8] c"{CefBrowserImpl=^^?}\00"
 extern const char g6[] = @encode(CefBrowserImpl);
 
 // PR10990_2
-class CefBase2 {
+struct CefBase2 {
   virtual ~CefBase2() {}
   int i;
 };
-class CefBrowser2 : public virtual CefBase2 {};
-class CefBrowserImpl2 : public CefBrowser2 {};
+struct CefBrowser2 : public virtual CefBase2 {};
+struct CefBrowserImpl2 : public CefBrowser2 {};
 // CHECK: @g7 = constant [26 x i8] c"{CefBrowserImpl2=^^?^^?i}\00"
 extern const char g7[] = @encode(CefBrowserImpl2);
 
@@ -245,3 +248,15 @@ const char *expand_struct() {
   // CHECK: @{{.*}} = private unnamed_addr constant [13 x i8] c"{N={S<N>=@}}\00"
   return @encode(N);
 }
+
+#if __cplusplus >= 202002L
+namespace PR48048 {
+  struct F {};
+  struct I {
+    int m;
+    [[no_unique_address]] F n;
+  };
+  // CHECKCXX20: @_ZN7PR480481xE = constant [6 x i8] c"{I=i}\00"
+  extern const char x[] = @encode(I);
+}
+#endif

@@ -1731,4 +1731,39 @@ exit:
   ret i32 %sum.1
 }
 
+; Make sure we do not crash or infinite loop on ill-formed IR.
+
+define void @unreachable_block() {
+; CHECK-LABEL: @unreachable_block(
+; CHECK-NEXT:  bb.0:
+; CHECK-NEXT:    br label [[BB_1:%.*]]
+; CHECK:       dead:
+; CHECK-NEXT:    [[T0:%.*]] = add i16 [[T0]], undef
+; CHECK-NEXT:    br label [[BB_1]]
+; CHECK:       bb.1:
+; CHECK-NEXT:    [[T1:%.*]] = phi i16 [ undef, [[BB_0:%.*]] ], [ [[T0]], [[DEAD:%.*]] ]
+; CHECK-NEXT:    ret void
+;
+; STORE-LABEL: @unreachable_block(
+; STORE-NEXT:  bb.0:
+; STORE-NEXT:    br label [[BB_1:%.*]]
+; STORE:       dead:
+; STORE-NEXT:    [[T0:%.*]] = add i16 [[T0]], undef
+; STORE-NEXT:    br label [[BB_1]]
+; STORE:       bb.1:
+; STORE-NEXT:    [[T1:%.*]] = phi i16 [ undef, [[BB_0:%.*]] ], [ [[T0]], [[DEAD:%.*]] ]
+; STORE-NEXT:    ret void
+;
+bb.0:
+  br label %bb.1
+
+dead:
+  %t0 = add i16 %t0, undef ; unreachable IR may depend on itself
+  br label %bb.1
+
+bb.1:
+  %t1 = phi i16 [ undef, %bb.0 ], [ %t0, %dead ]
+  ret void
+}
+
 declare i32 @__gxx_personality_v0(...)

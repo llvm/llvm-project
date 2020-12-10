@@ -46,7 +46,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_WITH_Z3=",  # Must be empty, not 0.
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
-    "CLANG_DEFAULT_LINKER=",
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
 
@@ -58,7 +57,7 @@ write_lit_config("lit_site_cfg") {
     # builds exist, to make sure it's a toolchain var.
     "CMAKE_CXX_COMPILER=c++",
     "ENABLE_BACKTRACES=1",
-    "ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=0",
+    "LLVM_ENABLE_NEW_PASS_MANAGER=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_USE_SANITIZER=",
@@ -164,6 +163,8 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
+    "//llvm/tools/split-file",
+    "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",

@@ -43,6 +43,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -86,6 +87,14 @@ cl::opt<bool> RemarksWithHotness(
     "lto-pass-remarks-with-hotness",
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
+
+cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+    RemarksHotnessThreshold(
+        "lto-pass-remarks-hotness-threshold",
+        cl::desc("Minimum profile count required for an "
+                 "optimization remark to be output."
+                 " Use 'auto' to apply the threshold from profile summary."),
+        cl::value_desc("uint or 'auto'"), cl::init(0), cl::Hidden);
 
 cl::opt<std::string>
     RemarksFilename("lto-pass-remarks-output",
@@ -368,16 +377,21 @@ bool LTOCodeGenerator::determineTarget() {
       MCpu = "core2";
     else if (Triple.getArch() == llvm::Triple::x86)
       MCpu = "yonah";
+    else if (Triple.isArm64e())
+      MCpu = "apple-a12";
     else if (Triple.getArch() == llvm::Triple::aarch64 ||
              Triple.getArch() == llvm::Triple::aarch64_32)
       MCpu = "cyclone";
   }
 
   TargetMach = createTargetMachine();
+  assert(TargetMach && "Unable to create target machine");
+
   return true;
 }
 
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
+  assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
       TripleStr, MCpu, FeatureStr, Options, RelocModel, None, CGOptLevel));
 }
@@ -526,9 +540,9 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   if (!this->determineTarget())
     return false;
 
-  auto DiagFileOrErr =
-      lto::setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
-                                        RemarksFormat, RemarksWithHotness);
+  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
+      Context, RemarksFilename, RemarksPasses, RemarksFormat,
+      RemarksWithHotness, RemarksHotnessThreshold);
   if (!DiagFileOrErr) {
     errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
     report_fatal_error("Can't get an output file for the remarks");

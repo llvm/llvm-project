@@ -15,6 +15,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -96,9 +97,17 @@ OptimizationRemarkEmitterWrapperPass::OptimizationRemarkEmitterWrapperPass()
 bool OptimizationRemarkEmitterWrapperPass::runOnFunction(Function &Fn) {
   BlockFrequencyInfo *BFI;
 
-  if (Fn.getContext().getDiagnosticsHotnessRequested())
+  auto &Context = Fn.getContext();
+  if (Context.getDiagnosticsHotnessRequested()) {
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
-  else
+    // Get hotness threshold from PSI. This should only happen once.
+    if (Context.isDiagnosticsHotnessThresholdSetFromPSI()) {
+      if (ProfileSummaryInfo *PSI =
+              &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI())
+        Context.setDiagnosticsHotnessThreshold(
+            PSI->getOrCompHotCountThreshold());
+    }
+  } else
     BFI = nullptr;
 
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn, BFI);
@@ -108,6 +117,7 @@ bool OptimizationRemarkEmitterWrapperPass::runOnFunction(Function &Fn) {
 void OptimizationRemarkEmitterWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -117,10 +127,19 @@ OptimizationRemarkEmitter
 OptimizationRemarkEmitterAnalysis::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   BlockFrequencyInfo *BFI;
+  auto &Context = F.getContext();
 
-  if (F.getContext().getDiagnosticsHotnessRequested())
+  if (Context.getDiagnosticsHotnessRequested()) {
     BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-  else
+    // Get hotness threshold from PSI. This should only happen once.
+    if (Context.isDiagnosticsHotnessThresholdSetFromPSI()) {
+      auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+      if (ProfileSummaryInfo *PSI =
+              MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent()))
+        Context.setDiagnosticsHotnessThreshold(
+            PSI->getOrCompHotCountThreshold());
+    }
+  } else
     BFI = nullptr;
 
   return OptimizationRemarkEmitter(&F, BFI);
@@ -133,5 +152,6 @@ static const char ore_name[] = "Optimization Remark Emitter";
 INITIALIZE_PASS_BEGIN(OptimizationRemarkEmitterWrapperPass, ORE_NAME, ore_name,
                       false, true)
 INITIALIZE_PASS_DEPENDENCY(LazyBFIPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(OptimizationRemarkEmitterWrapperPass, ORE_NAME, ore_name,
                     false, true)

@@ -7,7 +7,7 @@
 	%struct.Results = type { float, float, float }
 	%struct.Village = type { [4 x %struct.Village*], %struct.Village*, %struct.List, %struct.Hosp, i32, i32 }
 
-define void @get_results(%struct.Results* noalias nocapture sret %agg.result, %struct.Village* %village) nounwind {
+define void @get_results(%struct.Results* noalias nocapture sret(%struct.Results) %agg.result, %struct.Village* %village) nounwind {
 entry:
 	br i1 undef, label %bb, label %bb6.preheader
 

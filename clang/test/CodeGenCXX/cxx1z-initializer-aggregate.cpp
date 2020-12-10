@@ -119,7 +119,7 @@ namespace Instantiated1 {
   template<int> B v({});
   template B v<0>;
   // CHECK-LABEL: define {{.*}}global_var_init{{.*}} comdat($_ZN13Instantiated11vILi0EEE) {
-  // CHECK: call void @_ZN13Instantiated11BC1Ev(%{{.*}}* @_ZN13Instantiated11vILi0EEE)
+  // CHECK: call void @_ZN13Instantiated11BC1Ev(%{{.*}}* {{[^,]*}} @_ZN13Instantiated11vILi0EEE)
 }
 
 namespace Instantiated2 {

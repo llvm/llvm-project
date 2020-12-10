@@ -113,7 +113,7 @@ public:
     Reset();
   }
 
-  HazardType getHazardType(SUnit *m, int Stalls = 0) override;
+  HazardType getHazardType(SUnit *SU, int Stalls = 0) override;
   void Reset() override;
   void EmitInstruction(SUnit *SU) override;
 

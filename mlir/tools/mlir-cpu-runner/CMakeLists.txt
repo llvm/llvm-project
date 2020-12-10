@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Support
   nativecodegen
+  native
   )
 
 add_llvm_tool(mlir-cpu-runner

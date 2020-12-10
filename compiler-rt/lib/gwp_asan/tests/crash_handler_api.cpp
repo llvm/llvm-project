@@ -16,7 +16,7 @@ using GuardedPoolAllocator = gwp_asan::GuardedPoolAllocator;
 using AllocationMetadata = gwp_asan::AllocationMetadata;
 using AllocatorState = gwp_asan::AllocatorState;
 
-class CrashHandlerAPITest : public ::testing::Test {
+class CrashHandlerAPITest : public Test {
 public:
   void SetUp() override { setupState(); }
 

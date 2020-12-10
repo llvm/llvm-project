@@ -15,9 +15,9 @@
 #define MLIR_DIALECT_STANDARDOPS_IR_OPS_H
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -33,16 +33,13 @@ class Builder;
 class FuncOp;
 class OpBuilder;
 
-/// Auxiliary range data structure to unpack the offset, size and stride
-/// operands of the SubViewOp / SubTensorOp into a list of triples.
-/// Such a list of triple is sometimes more convenient to manipulate.
-struct Range {
-  Value offset;
-  Value size;
-  Value stride;
-};
-
 raw_ostream &operator<<(raw_ostream &os, Range &range);
+
+/// Return the list of Range (i.e. offset, size, stride). Each Range
+/// entry contains either the dynamic value or a ConstantIndexOp constructed
+/// with `b` at location `loc`.
+SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
+                                        OpBuilder &b, Location loc);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
@@ -62,7 +59,9 @@ public:
   static void build(OpBuilder &builder, OperationState &result,
                     const APFloat &value, FloatType type);
 
-  APFloat getValue() { return getAttrOfType<FloatAttr>("value").getValue(); }
+  APFloat getValue() {
+    return (*this)->getAttrOfType<FloatAttr>("value").getValue();
+  }
 
   static bool classof(Operation *op);
 };
@@ -84,7 +83,9 @@ public:
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
                     Type type);
 
-  int64_t getValue() { return getAttrOfType<IntegerAttr>("value").getInt(); }
+  int64_t getValue() {
+    return (*this)->getAttrOfType<IntegerAttr>("value").getInt();
+  }
 
   static bool classof(Operation *op);
 };
@@ -101,7 +102,9 @@ public:
   /// Build a constant int op producing an index.
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
 
-  int64_t getValue() { return getAttrOfType<IntegerAttr>("value").getInt(); }
+  int64_t getValue() {
+    return (*this)->getAttrOfType<IntegerAttr>("value").getInt();
+  }
 
   static bool classof(Operation *op);
 };
@@ -162,8 +165,8 @@ public:
   }
   // Returns the source memref indices for this DMA operation.
   operand_range getSrcIndices() {
-    return {getOperation()->operand_begin() + 1,
-            getOperation()->operand_begin() + 1 + getSrcMemRefRank()};
+    return {(*this)->operand_begin() + 1,
+            (*this)->operand_begin() + 1 + getSrcMemRefRank()};
   }
 
   // Returns the destination MemRefType for this DMA operations.
@@ -181,8 +184,8 @@ public:
 
   // Returns the destination memref indices for this DMA operation.
   operand_range getDstIndices() {
-    return {getOperation()->operand_begin() + 1 + getSrcMemRefRank() + 1,
-            getOperation()->operand_begin() + 1 + getSrcMemRefRank() + 1 +
+    return {(*this)->operand_begin() + 1 + getSrcMemRefRank() + 1,
+            (*this)->operand_begin() + 1 + getSrcMemRefRank() + 1 +
                 getDstMemRefRank()};
   }
 
@@ -204,9 +207,8 @@ public:
   operand_range getTagIndices() {
     unsigned tagIndexStartPos =
         1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1 + 1;
-    return {getOperation()->operand_begin() + tagIndexStartPos,
-            getOperation()->operand_begin() + tagIndexStartPos +
-                getTagMemRefRank()};
+    return {(*this)->operand_begin() + tagIndexStartPos,
+            (*this)->operand_begin() + tagIndexStartPos + getTagMemRefRank()};
   }
 
   /// Returns true if this is a DMA from a faster memory space to a slower one.
@@ -282,8 +284,8 @@ public:
 
   // Returns the tag memref index for this DMA operation.
   operand_range getTagIndices() {
-    return {getOperation()->operand_begin() + 1,
-            getOperation()->operand_begin() + 1 + getTagMemRefRank()};
+    return {(*this)->operand_begin() + 1,
+            (*this)->operand_begin() + 1 + getTagMemRefRank()};
   }
 
   // Returns the rank (number of indices) of the tag memref.

@@ -6,13 +6,13 @@
 %struct.a.0.4.8.12.36.68.72.88.92.96.104.120.360 = type <{ i8, i16 }>
 %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363 = type <{ %struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, %struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, i8, i8 }>
 
-@var_46 = external local_unnamed_addr global i8, align 1
-@var_44 = external local_unnamed_addr global i8, align 1
-@var_163 = external local_unnamed_addr global i8, align 1
-@struct_obj_12 = external local_unnamed_addr global %struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, align 2
-@struct_obj_3 = external local_unnamed_addr global %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, align 2
-@struct_obj_8 = external local_unnamed_addr global %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, align 2
-@var_49 = external local_unnamed_addr constant i8, align 1
+@var_46 = external dso_local local_unnamed_addr global i8, align 1
+@var_44 = external dso_local local_unnamed_addr global i8, align 1
+@var_163 = external dso_local local_unnamed_addr global i8, align 1
+@struct_obj_12 = external dso_local local_unnamed_addr global %struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, align 2
+@struct_obj_3 = external dso_local local_unnamed_addr global %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, align 2
+@struct_obj_8 = external dso_local local_unnamed_addr global %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, align 2
+@var_49 = external dso_local local_unnamed_addr constant i8, align 1
 
 ; Function Attrs: norecurse nounwind uwtable
 define void @_Z1av() local_unnamed_addr #0 {

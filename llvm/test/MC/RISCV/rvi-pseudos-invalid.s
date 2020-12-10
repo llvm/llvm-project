@@ -27,3 +27,5 @@ sw a2, %lo(a_symbol)(a4), a3 # CHECK: :[[@LINE]]:27: error: invalid operand for 
 
 # Too few operands must be rejected
 sw a2, a_symbol # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+
+la a1, foo+foo # CHECK: :[[@LINE]]:8: error: operand must be a bare symbol name

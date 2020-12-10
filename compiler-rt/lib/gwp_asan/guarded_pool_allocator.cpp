@@ -148,6 +148,7 @@ void GuardedPoolAllocator::uninitTestOnly() {
                     State.PageSize));
     FreeSlots = nullptr;
   }
+  *getThreadLocals() = ThreadLocalPackedVariables();
 }
 
 void *GuardedPoolAllocator::allocate(size_t Size) {

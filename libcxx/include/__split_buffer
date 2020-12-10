@@ -266,7 +266,7 @@ typename enable_if
 >::type
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
-    _ConstructTransaction __tx(&this->__end_, std::distance(__first, __last));
+    _ConstructTransaction __tx(&this->__end_, _VSTD::distance(__first, __last));
     for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, ++__first) {
         __alloc_traits::construct(this->__alloc(),
             _VSTD::__to_address(__tx.__pos_), *__first);
@@ -279,7 +279,7 @@ void
 __split_buffer<_Tp, _Allocator>::__destruct_at_begin(pointer __new_begin, false_type)
 {
     while (__begin_ != __new_begin)
-        __alloc_traits::destroy(__alloc(), __to_address(__begin_++));
+        __alloc_traits::destroy(__alloc(), _VSTD::__to_address(__begin_++));
 }
 
 template <class _Tp, class _Allocator>
@@ -296,7 +296,7 @@ void
 __split_buffer<_Tp, _Allocator>::__destruct_at_end(pointer __new_last, false_type) _NOEXCEPT
 {
     while (__new_last != __end_)
-        __alloc_traits::destroy(__alloc(), __to_address(--__end_));
+        __alloc_traits::destroy(__alloc(), _VSTD::__to_address(--__end_));
 }
 
 template <class _Tp, class _Allocator>
@@ -416,7 +416,7 @@ __split_buffer<_Tp, _Allocator>::swap(__split_buffer& __x)
     _VSTD::swap(__begin_, __x.__begin_);
     _VSTD::swap(__end_, __x.__end_);
     _VSTD::swap(__end_cap(), __x.__end_cap());
-    __swap_allocator(__alloc(), __x.__alloc());
+    _VSTD::__swap_allocator(__alloc(), __x.__alloc());
 }
 
 template <class _Tp, class _Allocator>

@@ -27,7 +27,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:     popq    %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-define void @spam(%struct.snork* noalias sret %arg, %struct.snork* %arg2) {
+define void @spam(%struct.snork* noalias sret(%struct.snork) %arg, %struct.snork* %arg2) {
 bb:
   %tmp = alloca i8, i64 66112, align 32
   %tmp7 = ptrtoint i8* %tmp to i64

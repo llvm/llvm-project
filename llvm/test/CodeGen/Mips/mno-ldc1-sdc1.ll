@@ -55,7 +55,7 @@
 ; RUN:   -mcpu=mips32r6 < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,32R6,32R6-LE,32R6-LE-STATIC
 ; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r3 \
-; RUN:   -mattr=+micromips < %s | FileCheck %s -check-prefixes=ALL,MM-STATIC_PIC
+; RUN:   -mattr=+micromips < %s | FileCheck %s -check-prefixes=ALL,MM-STATIC-PIC
 ; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
 ; RUN:   -mattr=+micromips < %s | FileCheck %s -check-prefixes=ALL,MM-STATIC-PIC
 

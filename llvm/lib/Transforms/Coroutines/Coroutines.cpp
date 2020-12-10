@@ -683,11 +683,12 @@ static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
 }
 
 void CoroIdAsyncInst::checkWellFormed() const {
-  // TODO: check that the StorageArg is a parameter of this function.
   checkConstantInt(this, getArgOperand(SizeArg),
                    "size argument to coro.id.async must be constant");
   checkConstantInt(this, getArgOperand(AlignArg),
                    "alignment argument to coro.id.async must be constant");
+  checkConstantInt(this, getArgOperand(StorageArg),
+                   "storage argument offset to coro.id.async must be constant");
   checkAsyncFuncPointer(this, getArgOperand(AsyncFuncPtrArg));
 }
 

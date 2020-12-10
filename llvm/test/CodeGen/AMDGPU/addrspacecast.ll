@@ -133,9 +133,12 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(4)* 
 
 ; HSA-LABEl: {{^}}use_constant_to_global_addrspacecast:
 ; HSA: s_load_dwordx2 s{{\[}}[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]{{\]}}
-; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
-; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
-; HSA: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}
+; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
+; CI-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
+; CI: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}
+
+; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GFX9: global_load_dword v{{[0-9]+}}, [[ZERO:v[0-9]+]], s{{\[}}[[PTRLO]]:[[PTRHI]]{{\]}}
 define amdgpu_kernel void @use_constant_to_global_addrspacecast(i32 addrspace(4)* %ptr) #0 {
   %stof = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(1)*
   %ld = load volatile i32, i32 addrspace(1)* %stof
@@ -186,10 +189,13 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32* %ptr) #0 {
 ; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s{{\[}}[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]{{\]}}, s[4:5], 0x0
-; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
-; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
-; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0
-; HSA: {{flat|global}}_store_dword v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}, [[K]]
+; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
+; CI-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
+; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0
+; CI: flat_store_dword v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}, [[K]]
+
+; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; GFX9: global_store_dword [[ZERO]], [[ZERO]], s{{\[}}[[PTRLO]]:[[PTRHI]]{{\]$}}
 define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32* %ptr) #0 {
   %ftos = addrspacecast i32* %ptr to i32 addrspace(1)*
   store volatile i32 0, i32 addrspace(1)* %ftos

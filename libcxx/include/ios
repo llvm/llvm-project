@@ -710,7 +710,7 @@ void
 basic_ios<_CharT, _Traits>::init(basic_streambuf<char_type, traits_type>* __sb)
 {
     ios_base::init(__sb);
-    __tie_ = 0;
+    __tie_ = nullptr;
     __fill_ = traits_type::eof();
 }
 
@@ -821,7 +821,7 @@ basic_ios<_CharT, _Traits>::move(basic_ios& __rhs)
 {
     ios_base::move(__rhs);
     __tie_ = __rhs.__tie_;
-    __rhs.__tie_ = 0;
+    __rhs.__tie_ = nullptr;
     __fill_ = __rhs.__fill_;
 }
 

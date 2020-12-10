@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -mtriple=i386-pc-win32 -mattr=+avx | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx | FileCheck -check-prefix=X86 %s
+; RUN: llc < %s -mtriple=i386-pc-win32 -mattr=+avx | FileCheck -check-prefix=X86 %s
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx | FileCheck -check-prefix=WIN64 %s
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx | FileCheck -check-prefix=X64 %s
 
@@ -14,13 +14,13 @@ declare i32 @func_int(i32, i32)
 ; WIN64: call
 ; WIN64: ret
 
-; X32-LABEL: testf16_inp
-; X32: vaddps  {{.*}}, {{%ymm[0-1]}}
-; X32: vaddps  {{.*}}, {{%ymm[0-1]}}
+; X86-LABEL: testf16_inp
+; X86: vaddps  {{.*}}, {{%ymm[0-1]}}
+; X86: vaddps  {{.*}}, {{%ymm[0-1]}}
 ; Push is not deemed profitable if we're realigning the stack.
-; X32: {{pushl|movl}}   %eax
-; X32: call
-; X32: ret
+; X86: {{pushl|movl}}   %eax
+; X86: call
+; X86: ret
 
 ; X64-LABEL: testf16_inp
 ; X64: vaddps  {{.*}}, {{%ymm[0-1]}}
@@ -114,11 +114,11 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 
 ; test functions with integer parameters
 ; pass parameters on stack for 32-bit platform
-; X32-LABEL: test_int
-; X32: pushl {{.*}}
-; X32: pushl {{.*}}
-; X32: call
-; X32: addl {{.*}}, %eax
+; X86-LABEL: test_int
+; X86: pushl {{.*}}
+; X86: pushl {{.*}}
+; X86: call
+; X86: addl {{.*}}, %eax
 
 ; pass parameters in registers for 64-bit platform
 ; X64-LABEL: test_int
@@ -147,12 +147,12 @@ define i32 @test_int(i32 %a, i32 %b) nounwind {
 ; X64: call
 ; X64: ret
 
-; X32-LABEL: test_float4
-; X32: vzeroupper
-; X32: call
-; X32: vzeroupper
-; X32: call
-; X32: ret
+; X86-LABEL: test_float4
+; X86: vzeroupper
+; X86: call
+; X86: vzeroupper
+; X86: call
+; X86: ret
 
 declare <4 x float> @func_float4(<4 x float>, <4 x float>, <4 x float>)
 

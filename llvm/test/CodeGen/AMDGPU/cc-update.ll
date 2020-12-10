@@ -50,7 +50,6 @@ define amdgpu_kernel void @test_kern_stack() local_unnamed_addr #0 {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1010-NEXT:    s_add_u32 s0, s0, s7
 ; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX1010-NEXT:    s_endpgm
 entry:
@@ -99,7 +98,6 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX1010-NEXT:    s_getpc_b64 s[4:5]
 ; GFX1010-NEXT:    s_add_u32 s4, s4, ex@rel32@lo+4
 ; GFX1010-NEXT:    s_addc_u32 s5, s5, ex@rel32@hi+12
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX1010-NEXT:    s_endpgm
 entry:
@@ -152,7 +150,6 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1010-NEXT:    s_getpc_b64 s[4:5]
 ; GFX1010-NEXT:    s_add_u32 s4, s4, ex@rel32@lo+4
 ; GFX1010-NEXT:    s_addc_u32 s5, s5, ex@rel32@hi+12
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX1010-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX1010-NEXT:    s_endpgm
@@ -216,7 +213,6 @@ define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1010-NEXT:    s_add_u32 s0, s0, s7
 ; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:4
 ; GFX1010-NEXT:    s_endpgm
 entry:
@@ -268,7 +264,6 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX1010-NEXT:    s_getpc_b64 s[4:5]
 ; GFX1010-NEXT:    s_add_u32 s4, s4, ex@rel32@lo+4
 ; GFX1010-NEXT:    s_addc_u32 s5, s5, ex@rel32@hi+12
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX1010-NEXT:    s_endpgm
 entry:
@@ -324,7 +319,6 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1010-NEXT:    s_getpc_b64 s[4:5]
 ; GFX1010-NEXT:    s_add_u32 s4, s4, ex@rel32@lo+4
 ; GFX1010-NEXT:    s_addc_u32 s5, s5, ex@rel32@hi+12
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:4
 ; GFX1010-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX1010-NEXT:    s_endpgm
@@ -383,7 +377,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX1010-NEXT:    s_mov_b32 s6, 0x20000
 ; GFX1010-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8
-; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3

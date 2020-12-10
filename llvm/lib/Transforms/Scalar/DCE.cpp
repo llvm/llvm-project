@@ -69,6 +69,18 @@ Pass *llvm::createRedundantDbgInstEliminationPass() {
   return new RedundantDbgInstElimination();
 }
 
+PreservedAnalyses
+RedundantDbgInstEliminationPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = false;
+  for (auto &BB : F)
+    Changed |= RemoveRedundantDbgInstrs(&BB);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 //===--------------------------------------------------------------------===//
 // DeadCodeElimination pass implementation
 //
@@ -131,7 +143,7 @@ static bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
 }
 
 PreservedAnalyses DCEPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (!eliminateDeadCode(F, AM.getCachedResult<TargetLibraryAnalysis>(F)))
+  if (!eliminateDeadCode(F, &AM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -150,13 +162,14 @@ struct DCELegacyPass : public FunctionPass {
     if (skipFunction(F))
       return false;
 
-    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
+    TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
     return eliminateDeadCode(F, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 };

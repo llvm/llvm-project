@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::shared_timed_mutex m;
@@ -76,7 +77,7 @@ int main(int, char**)
   m.lock();
   std::vector<std::thread> v;
   for (int i = 0; i < threads; ++i)
-    v.push_back(std::thread(readerMustWait));
+    v.push_back(support::make_test_thread(readerMustWait));
   while (countDown > 0)
     std::this_thread::yield();
   readerStart = Clock::now();
@@ -88,8 +89,8 @@ int main(int, char**)
   countDown.store(threads + 1);
   m.lock_shared();
   for (auto& t : v)
-    t = std::thread(reader);
-  std::thread q(writerMustWait);
+    t = support::make_test_thread(reader);
+  std::thread q = support::make_test_thread(writerMustWait);
   while (countDown > 0)
     std::this_thread::yield();
   writerStart = Clock::now();

@@ -90,7 +90,7 @@ func @unknown_terminator(%arg0 : i32, %arg1 : i1) -> i32 {
 
 /// Check that arguments are properly merged across loop-like control flow.
 
-func @ext_cond_fn() -> i1
+func private @ext_cond_fn() -> i1
 
 // CHECK-LABEL: func @simple_loop
 func @simple_loop(%arg0 : i32, %cond1 : i1) -> i32 {
@@ -161,7 +161,7 @@ func @simple_loop_inner_control_flow(%arg0 : i32) -> i32 {
 /// Check that arguments go to overdefined when loop backedges produce a
 /// conflicting value.
 
-func @ext_cond_and_value_fn() -> (i1, i32)
+func private @ext_cond_and_value_fn() -> (i1, i32)
 
 // CHECK-LABEL: func @simple_loop_overdefined
 func @simple_loop_overdefined(%arg0 : i32, %cond1 : i1) -> i32 {

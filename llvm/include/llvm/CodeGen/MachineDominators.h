@@ -23,7 +23,6 @@
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include <cassert>
 #include <memory>
-#include <vector>
 
 namespace llvm {
 
