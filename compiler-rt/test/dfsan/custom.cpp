@@ -800,6 +800,10 @@ void test_pthread_create() {
   ASSERT_ZERO_LABEL(cbrv);
 }
 
+// Tested by test_pthread_create().  This empty function is here to appease the
+// check-wrappers script.
+void test_pthread_join() {}
+
 int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                             void *data) {
   assert(data == (void *)3);
@@ -1220,6 +1224,7 @@ int main(void) {
   test_poll();
   test_pread();
   test_pthread_create();
+  test_pthread_join();
   test_read();
   test_recvmsg();
   test_sched_getaffinity();
