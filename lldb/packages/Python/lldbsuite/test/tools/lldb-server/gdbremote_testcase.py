@@ -27,9 +27,7 @@ class _ConnectionRefused(IOError):
     pass
 
 
-class GdbRemoteTestCaseBase(TestBase):
-
-    NO_DEBUG_INFO_TESTCASE = True
+class GdbRemoteTestCaseBase(Base):
 
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
@@ -83,7 +81,7 @@ class GdbRemoteTestCaseBase(TestBase):
                    for channel in lldbtest_config.channels)
 
     def setUp(self):
-        TestBase.setUp(self)
+        super(GdbRemoteTestCaseBase, self).setUp()
 
         self.setUpBaseLogging()
         self.debug_monitor_extra_args = []
@@ -120,6 +118,9 @@ class GdbRemoteTestCaseBase(TestBase):
         self.logger.removeHandler(self._verbose_log_handler)
         self._verbose_log_handler = None
         TestBase.tearDown(self)
+
+    def build(self, *args, **kwargs):
+        self.buildDefault(*args, **kwargs)
 
     def getLocalServerLogFile(self):
         return self.log_basename + "-server.log"

@@ -1785,6 +1785,12 @@ class Base(unittest2.TestCase):
         else:
             return ['libc++.1.dylib', 'libc++abi.']
 
+    def run_platform_command(self, cmd):
+        platform = self.dbg.GetSelectedPlatform()
+        shell_command = lldb.SBPlatformShellCommand(cmd)
+        err = platform.Run(shell_command)
+        return (err, shell_command.GetStatus(), shell_command.GetOutput())
+
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are
 # testing. The name of the new test method will be '<original-name>_<debug-info>' and with adding
@@ -2655,12 +2661,6 @@ FileCheck output:
             return self.buildGModules(architecture, compiler, dictionary)
         else:
             self.fail("Can't build for debug info: %s" % self.getDebugInfo())
-
-    def run_platform_command(self, cmd):
-        platform = self.dbg.GetSelectedPlatform()
-        shell_command = lldb.SBPlatformShellCommand(cmd)
-        err = platform.Run(shell_command)
-        return (err, shell_command.GetStatus(), shell_command.GetOutput())
 
     """Assert that an lldb.SBError is in the "success" state."""
     def assertSuccess(self, obj, msg=None):
