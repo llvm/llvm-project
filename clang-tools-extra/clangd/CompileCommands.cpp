@@ -367,7 +367,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     for (unsigned ID = 1 /*Skip INVALID */; ID < DriverID::LastOption; ++ID) {
       if (PrevAlias[ID] || ID == DriverID::OPT_Xclang)
         continue; // Not canonical, or specially handled.
-      llvm::SmallVector<Rule, 8> Rules;
+      llvm::SmallVector<Rule> Rules;
       // Iterate over each alias, to add rules for parsing it.
       for (unsigned A = ID; A != DriverID::OPT_INVALID; A = NextAlias[A]) {
         if (Prefixes[A] == nullptr) // option groups.

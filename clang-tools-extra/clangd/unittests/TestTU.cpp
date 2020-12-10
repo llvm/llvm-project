@@ -187,7 +187,7 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
 }
 
 const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
-  llvm::SmallVector<llvm::StringRef, 4> Components;
+  llvm::SmallVector<llvm::StringRef> Components;
   QName.split(Components, "::");
 
   auto &Ctx = AST.getASTContext();

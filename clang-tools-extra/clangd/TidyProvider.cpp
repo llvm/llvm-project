@@ -81,7 +81,7 @@ public:
     // Compute absolute paths to all ancestors (substrings of P.Path).
     // Ensure cache entries for each ancestor exist in the map.
     llvm::StringRef Parent = path::parent_path(AbsPath);
-    llvm::SmallVector<DotClangTidyCache *, 8> Caches;
+    llvm::SmallVector<DotClangTidyCache *> Caches;
     {
       std::lock_guard<std::mutex> Lock(Mu);
       for (auto I = path::begin(Parent, path::Style::posix),
@@ -105,7 +105,7 @@ public:
     // This will take a (per-file) lock for each file that actually exists.
     std::chrono::steady_clock::time_point FreshTime =
         std::chrono::steady_clock::now() - MaxStaleness;
-    llvm::SmallVector<std::shared_ptr<const tidy::ClangTidyOptions>, 4>
+    llvm::SmallVector<std::shared_ptr<const tidy::ClangTidyOptions>>
         OptionStack;
     for (const DotClangTidyCache *Cache : Caches)
       if (auto Config = Cache->get(FS, FreshTime)) {
