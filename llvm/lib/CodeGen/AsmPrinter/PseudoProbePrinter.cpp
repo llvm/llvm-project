@@ -62,7 +62,7 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     uint64_t CallerGuid = Names[Name];
     uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
         InlinedAt->getDiscriminator());
-    ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
+    ReversedInlineStack.push_back({CallerGuid, CallerProbeId});
     InlinedAt = InlinedAt->getInlinedAt();
   }
 
