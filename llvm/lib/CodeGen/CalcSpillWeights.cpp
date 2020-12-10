@@ -142,6 +142,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
                                        SlotIndex *End) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineBasicBlock *MBB = nullptr;
   MachineLoop *Loop = nullptr;
   bool IsExiting = false;
@@ -220,6 +221,13 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       continue;
     if (!Visited.insert(MI).second)
       continue;
+
+    // For terminators that produce values, ask the backend if the register is
+    // not spillable.
+    if (TII.isUnspillableTerminator(MI) && MI->definesRegister(LI.reg())) {
+      LI.markNotSpillable();
+      return -1.0f;
+    }
 
     float Weight = 1.0f;
     if (IsSpillable) {

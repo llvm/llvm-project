@@ -143,8 +143,7 @@ body:             |
   ; CHECK:   [[COPY8:%[0-9]+]]:gpr = COPY [[MVE_VMLADAVas16_]]
   ; CHECK:   [[COPY9:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post2]]
   ; CHECK:   [[COPY10:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post]]
-  ; CHECK:   [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[PHI3]], 1
-  ; CHECK:   t2LoopEnd [[t2LoopDec]], %bb.3, implicit-def dead $cpsr
+  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI3]], %bb.3, implicit-def $cpsr
   ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK: bb.4.for.cond.cleanup:
   ; CHECK:   [[PHI5:%[0-9]+]]:gpr = PHI [[COPY3]], %bb.1, [[COPY8]], %bb.3

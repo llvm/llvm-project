@@ -137,8 +137,7 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq .LBB1_8
+; CHECK-NEXT:    cbz r2, .LBB1_8
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    cmp r2, #4
 ; CHECK-NEXT:    blo .LBB1_9

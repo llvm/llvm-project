@@ -876,8 +876,7 @@ define arm_aapcs_vfpcc void @float_int_int_mul(i32* nocapture readonly %a, i32* 
 ; CHECK-LABEL: float_int_int_mul:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB4_8
+; CHECK-NEXT:    cbz r3, .LBB4_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB4_3
