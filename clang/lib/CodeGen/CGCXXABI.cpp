@@ -135,8 +135,8 @@ void CGCXXABI::buildThisParam(CodeGenFunction &CGF, FunctionArgList &params) {
   // down to whether we know it's a complete object or not.
   auto &Layout = CGF.getContext().getASTRecordLayout(MD->getParent());
   if (MD->getParent()->getNumVBases() == 0 || // avoid vcall in common case
-      MD->getParent()->hasAttr<FinalAttr>() ||
-      !isThisCompleteObject(CGF.CurGD)) {
+      MD->getParent()->isEffectivelyFinal() ||
+      isThisCompleteObject(CGF.CurGD)) {
     CGF.CXXABIThisAlignment = Layout.getAlignment();
   } else {
     CGF.CXXABIThisAlignment = Layout.getNonVirtualAlignment();
