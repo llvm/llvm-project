@@ -1461,6 +1461,83 @@ public:
   static void bindDerived(ClassTy &m) {}
 };
 
+class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAArray;
+  static constexpr const char *pyClassName = "ArrayAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  class PyArrayAttributeIterator {
+  public:
+    PyArrayAttributeIterator(PyAttribute attr) : attr(attr) {}
+
+    PyArrayAttributeIterator &dunderIter() { return *this; }
+
+    PyAttribute dunderNext() {
+      if (nextIndex >= mlirArrayAttrGetNumElements(attr.get())) {
+        throw py::stop_iteration();
+      }
+      return PyAttribute(attr.getContext(),
+                         mlirArrayAttrGetElement(attr.get(), nextIndex++));
+    }
+
+    static void bind(py::module &m) {
+      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+          .def("__iter__", &PyArrayAttributeIterator::dunderIter)
+          .def("__next__", &PyArrayAttributeIterator::dunderNext);
+    }
+
+  private:
+    PyAttribute attr;
+    int nextIndex = 0;
+  };
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](py::list attributes, DefaultingPyMlirContext context) {
+          SmallVector<MlirAttribute> mlirAttributes;
+          mlirAttributes.reserve(py::len(attributes));
+          for (auto attribute : attributes) {
+            try {
+              mlirAttributes.push_back(attribute.cast<PyAttribute>());
+            } catch (py::cast_error &err) {
+              std::string msg = std::string("Invalid attribute when attempting "
+                                            "to create an ArrayAttribute (") +
+                                err.what() + ")";
+              throw py::cast_error(msg);
+            } catch (py::reference_cast_error &err) {
+              // This exception seems thrown when the value is "None".
+              std::string msg =
+                  std::string("Invalid attribute (None?) when attempting to "
+                              "create an ArrayAttribute (") +
+                  err.what() + ")";
+              throw py::cast_error(msg);
+            }
+          }
+          MlirAttribute attr = mlirArrayAttrGet(
+              context->get(), mlirAttributes.size(), mlirAttributes.data());
+          return PyArrayAttribute(context->getRef(), attr);
+        },
+        py::arg("attributes"), py::arg("context") = py::none(),
+        "Gets a uniqued Array attribute");
+    c.def("__getitem__",
+          [](PyArrayAttribute &arr, intptr_t i) {
+            if (i >= mlirArrayAttrGetNumElements(arr))
+              throw py::index_error("ArrayAttribute index out of range");
+            return PyAttribute(arr.getContext(),
+                               mlirArrayAttrGetElement(arr, i));
+          })
+        .def("__len__",
+             [](const PyArrayAttribute &arr) {
+               return mlirArrayAttrGetNumElements(arr);
+             })
+        .def("__iter__", [](const PyArrayAttribute &arr) {
+          return PyArrayAttributeIterator(arr);
+        });
+  }
+};
+
 /// Float Point Attribute subclass - FloatAttr.
 class PyFloatAttribute : public PyConcreteAttribute<PyFloatAttribute> {
 public:
@@ -3089,6 +3166,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Builtin attribute bindings.
   PyFloatAttribute::bind(m);
+  PyArrayAttribute::bind(m);
+  PyArrayAttribute::PyArrayAttributeIterator::bind(m);
   PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);
   PyStringAttribute::bind(m);

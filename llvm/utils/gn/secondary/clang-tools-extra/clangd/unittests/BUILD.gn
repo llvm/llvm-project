@@ -27,6 +27,7 @@ unittest("ClangdTests") {
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Inclusions",
     "//clang/lib/Tooling/Syntax",
+    "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]

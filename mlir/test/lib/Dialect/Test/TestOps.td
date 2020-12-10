@@ -23,6 +23,7 @@ include "TestInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "::mlir::test";
+  let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;

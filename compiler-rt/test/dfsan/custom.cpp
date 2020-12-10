@@ -792,9 +792,17 @@ void test_pthread_create() {
   pthread_t pt;
   pthread_create(&pt, 0, pthread_create_test_cb, (void *)1);
   void *cbrv;
-  pthread_join(pt, &cbrv);
+  dfsan_set_label(i_label, &cbrv, sizeof(cbrv));
+  int ret = pthread_join(pt, &cbrv);
+  assert(ret == 0);
   assert(cbrv == (void *)2);
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_ZERO_LABEL(cbrv);
 }
+
+// Tested by test_pthread_create().  This empty function is here to appease the
+// check-wrappers script.
+void test_pthread_join() {}
 
 int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                             void *data) {
@@ -1216,6 +1224,7 @@ int main(void) {
   test_poll();
   test_pread();
   test_pthread_create();
+  test_pthread_join();
   test_read();
   test_recvmsg();
   test_sched_getaffinity();

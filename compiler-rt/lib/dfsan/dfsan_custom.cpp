@@ -427,6 +427,18 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
   return rv;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
+                                                      void **retval,
+                                                      dfsan_label thread_label,
+                                                      dfsan_label retval_label,
+                                                      dfsan_label *ret_label) {
+  int ret = pthread_join(thread, retval);
+  if (ret == 0 && retval)
+    dfsan_set_label(0, retval, sizeof(*retval));
+  *ret_label = 0;
+  return ret;
+}
+
 struct dl_iterate_phdr_info {
   int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
                              size_t size, void *data, dfsan_label info_label,

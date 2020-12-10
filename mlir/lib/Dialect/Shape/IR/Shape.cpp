@@ -110,7 +110,7 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
   if (type.isa<WitnessType>())
     return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
-  if (type.isa<IndexType>())
+  if (ConstantOp::isBuildableWith(value, type))
     return builder.create<ConstantOp>(loc, type, value);
   return nullptr;
 }

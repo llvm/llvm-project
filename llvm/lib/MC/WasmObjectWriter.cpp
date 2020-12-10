@@ -1367,6 +1367,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (Mode == DwoMode::DwoOnly && !isDwoSection(Sec))
       continue;
 
+    LLVM_DEBUG(dbgs() << "Processing Section " << SectionName << "  group "
+                      << Section.getGroup() << "\n";);
+
     // .init_array sections are handled specially elsewhere.
     if (SectionName.startswith(".init_array"))
       continue;
