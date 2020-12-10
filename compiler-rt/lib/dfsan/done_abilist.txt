@@ -194,6 +194,7 @@ fun:get_current_dir_name=custom
 fun:gethostname=custom
 fun:getrlimit=custom
 fun:getrusage=custom
+fun:getsockname=custom
 fun:getsockopt=custom
 fun:nanosleep=custom
 fun:pread=custom
