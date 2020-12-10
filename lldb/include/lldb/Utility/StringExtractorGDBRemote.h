@@ -76,7 +76,6 @@ public:
     eServerPacketType_QSetSTDERR,
     eServerPacketType_QSetWorkingDir,
     eServerPacketType_QStartNoAckMode,
-    eServerPacketType_qPathComplete,
     eServerPacketType_qPlatform_shell,
     eServerPacketType_qPlatform_mkdir,
     eServerPacketType_qPlatform_chmod,
