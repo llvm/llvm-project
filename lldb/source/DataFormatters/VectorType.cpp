@@ -220,20 +220,8 @@ public:
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
     parent_type.IsVectorType(&element_type, nullptr);
-    TypeSystem *type_system = nullptr;
-    if (auto target_sp = m_backend.GetTargetSP()) {
-      auto type_system_or_err =
-          target_sp->GetScratchTypeSystemForLanguage(lldb::eLanguageTypeC);
-      if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(
-            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
-            std::move(err), "Unable to update from scratch TypeSystem");
-      } else {
-        type_system = &type_system_or_err.get();
-      }
-    }
-    m_child_type =
-        ::GetCompilerTypeForFormat(m_parent_format, element_type, type_system);
+    m_child_type = ::GetCompilerTypeForFormat(m_parent_format, element_type,
+                                              parent_type.GetTypeSystem());
     m_num_children = ::CalculateNumChildren(parent_type, m_child_type);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;

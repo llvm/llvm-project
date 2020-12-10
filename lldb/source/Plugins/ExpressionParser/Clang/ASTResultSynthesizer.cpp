@@ -443,7 +443,9 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
     return;
 
   auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
-  TypeSystemClang *scratch_ctx = TypeSystemClang::GetScratch(m_target);
+
+  TypeSystemClang *scratch_ctx = ScratchTypeSystemClang::GetForTarget(
+      m_target, m_ast_context->getLangOpts());
 
   for (clang::NamedDecl *decl : m_decls) {
     StringRef name = decl->getName();
