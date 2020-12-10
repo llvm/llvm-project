@@ -4,14 +4,14 @@
 ; GCN-LABEL: spill_v2i32:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:16 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:20 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:16 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:20 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx2 off, v{{.*}} offset:16 ; 8-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:16 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:20 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:16 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:20 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx2 v{{.*}} offset:16 ; 8-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v2i32() {
 entry:
@@ -32,14 +32,14 @@ entry:
 ; GCN-LABEL: spill_v2f32:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:16 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:20 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:16 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:20 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx2 off, v{{.*}} offset:16 ; 8-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:16 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:20 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:16 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:20 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx2 v{{.*}} offset:16 ; 8-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v2f32() {
 entry:
@@ -61,17 +61,15 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:32 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:36 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:40 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:32 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:36 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:40 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx3 off, v{{.*}} offset:32 ; 12-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx3 v{{.*}} offset:32 ; 12-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v3i32() {
 entry:
@@ -93,17 +91,15 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:32 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:36 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:40 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:32 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:36 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:40 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx3 off, v{{.*}} offset:32 ; 12-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx3 v{{.*}} offset:32 ; 12-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v3f32() {
 entry:
@@ -126,20 +122,16 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:36 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:40 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:44 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:32 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:36 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:40 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:44 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx4 off, v{{.*}} offset:32 ; 16-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:44 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:44 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx4 v{{.*}} offset:32 ; 16-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v4i32() {
 entry:
@@ -162,20 +154,16 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:36 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:40 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:44 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:32 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:36 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:40 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:44 ; 4-byte Folded Spill
+; FLATSCR:   scratch_store_dwordx4 off, v{{.*}} offset:32 ; 16-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:44 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:32 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:36 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:40 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:44 ; 4-byte Folded Reload
+; FLATSCR:   scratch_load_dwordx4 v{{.*}} offset:32 ; 16-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 
 define void @spill_v4f32() {
 entry:
@@ -198,20 +186,18 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:68 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:72 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:76 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:64 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:68 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:72 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:76 ; 4-byte Folded Spill
+; FLATSCR-DAG: scratch_store_dwordx4 off, v{{.*}} offset:64 ; 16-byte Folded Spill
+; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:80 ; 4-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:64 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:68 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:72 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:76 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:64 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:68 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:72 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:76 ; 4-byte Folded Reload
+; FLATSCR-DAG: scratch_load_dwordx4 v{{.*}} offset:64 ; 16-byte Folded Reload
+; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:80 ; 4-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 define void @spill_v5i32() {
 entry:
   %alloca = alloca <5 x i32>, i32 2, align 4, addrspace(5)
@@ -233,20 +219,18 @@ entry:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:68 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:72 ; 4-byte Folded Spill
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:76 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:64 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:68 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:72 ; 4-byte Folded Spill
-; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:76 ; 4-byte Folded Spill
+; FLATSCR-DAG: scratch_store_dwordx4 off, v{{.*}} offset:64 ; 16-byte Folded Spill
+; FLATSCR-DAG: scratch_store_dword off, v{{.*}} offset:80 ; 4-byte Folded Spill
+; FLATSCR-NOT: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:64 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:68 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:72 ; 4-byte Folded Reload
 ; MUBUF-DAG: buffer_load_dword v{{.*}} offset:76 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:64 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:68 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:72 ; 4-byte Folded Reload
-; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:76 ; 4-byte Folded Reload
+; FLATSCR-DAG: scratch_load_dwordx4 v{{.*}} offset:64 ; 16-byte Folded Reload
+; FLATSCR-DAG: scratch_load_dword v{{.*}} offset:80 ; 4-byte Folded Reload
+; FLATSCR-NOT: scratch_load_dword
 define void @spill_v5f32() {
 entry:
   %alloca = alloca <5 x i32>, i32 2, align 4, addrspace(5)

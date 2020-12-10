@@ -14,15 +14,13 @@
 ; Just test that it compiles successfully.
 ; CHECK-LABEL: test
 
-; GFX9-FLATSCR:     s_mov_b32 [[SOFF1:s[0-9]+]], 4{{$}}
-; GFX9-FLATSCR-DAG: scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] ; 4-byte Folded Spill
-; GFX9-FLATSCR-DAG: scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GFX9-FLATSCR:     s_movk_i32 [[SOFF2:s[0-9]+]], 0x{{[0-9a-f]+}}{{$}}
-; GFX9-FLATSCR-DAG: scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] ; 4-byte Folded Reload
-; GFX9-FLATSCR-DAG: scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] offset:{{[0-9]+}} ; 4-byte Folded Reload
+; GFX9-FLATSCR: s_mov_b32 [[SOFF1:s[0-9]+]], 4{{$}}
+; GFX9-FLATSCR: scratch_store_dwordx4 off, v[{{[0-9:]+}}], [[SOFF1]] ; 16-byte Folded Spill
+; GFX9-FLATSCR: s_movk_i32 [[SOFF2:s[0-9]+]], 0x{{[0-9a-f]+}}{{$}}
+; GFX9-FLATSCR: scratch_load_dwordx4 v[{{[0-9:]+}}], off, [[SOFF2]] ; 16-byte Folded Reload
 
-; GFX10-FLATSCR: scratch_store_dword off, v{{[0-9]+}}, off offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GFX10-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, off offset:{{[0-9]+}} ; 4-byte Folded Reload
+; GFX10-FLATSCR: scratch_store_dwordx4 off, v[{{[0-9:]+}}], off offset:{{[0-9]+}} ; 16-byte Folded Spill
+; GFX10-FLATSCR: scratch_load_dwordx4 v[{{[0-9:]+}}], off, off offset:{{[0-9]+}} ; 16-byte Folded Reload
 define amdgpu_kernel void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -55,9 +53,9 @@ entry:
 
 ; FLATSCR:           s_movk_i32 [[SOFF1:s[0-9]+]], 0x
 ; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:      scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] ; 4-byte Folded Spill
+; FLATSCR-NEXT:      scratch_store_dwordx4 off, v[{{[0-9:]+}}], [[SOFF1]] ; 16-byte Folded Spill
 ; FLATSCR:           s_movk_i32 [[SOFF2:s[0-9]+]], 0x
-; FLATSCR:           scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] ; 4-byte Folded Reload
+; FLATSCR:           scratch_load_dwordx4 v[{{[0-9:]+}}], off, [[SOFF2]] ; 16-byte Folded Reload
 define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 x i32> addrspace(1)* %in) #0 {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
