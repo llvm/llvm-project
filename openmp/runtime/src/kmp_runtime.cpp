@@ -6356,11 +6356,12 @@ static char *__kmp_registration_str = NULL;
 // Value to be saved in env var __KMP_REGISTERED_LIB_<pid>.
 
 static inline char *__kmp_reg_status_name() {
-  /* On RHEL 3u5 if linked statically, getpid() returns different values in
-     each thread. If registration and unregistration go in different threads
-     (omp_misc_other_root_exit.cpp test case), the name of registered_lib_env
-     env var can not be found, because the name will contain different pid. */
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB // shared memory is with dynamic library
+/* On RHEL 3u5 if linked statically, getpid() returns different values in
+   each thread. If registration and unregistration go in different threads
+   (omp_misc_other_root_exit.cpp test case), the name of registered_lib_env
+   env var can not be found, because the name will contain different pid. */
+// macOS* complains about name being too long with additional getuid()
+#if KMP_OS_UNIX && !KMP_OS_DARWIN && KMP_DYNAMIC_LIB
   return __kmp_str_format("__KMP_REGISTERED_LIB_%d_%d", (int)getpid(),
                           (int)getuid());
 #else
