@@ -286,17 +286,13 @@ private:
           return NameOrErr.takeError();
 
         LLVM_DEBUG({
-          dbgs() << "  ";
-          if (!Name)
-            dbgs() << "<anonymous symbol>";
-          else
-            dbgs() << *Name;
-          dbgs() << ": value = " << formatv("{0:x16}", SymRef.getValue())
+          dbgs() << "  value = " << formatv("{0:x16}", SymRef.getValue())
                  << ", type = " << formatv("{0:x2}", SymRef.getType())
-                 << ", binding = " << SymRef.getBinding()
-                 << ", size =" << SymRef.st_size
-                 << ", info =" << SymRef.st_info;
-          dbgs() << "\n";
+                 << ", binding = " << formatv("{0:x2}", SymRef.getBinding())
+                 << ", size = "
+                 << formatv("{0:x16}", static_cast<uint64_t>(SymRef.st_size))
+                 << ", info = " << formatv("{0:x2}", SymRef.st_info)
+                 << " :" << (Name ? *Name : "<anonymous symbol>") << "\n";
         });
       }
     }
@@ -333,7 +329,7 @@ private:
       LLVM_DEBUG({
         dbgs() << "  " << *Name << ": " << formatv("{0:x16}", Address) << " -- "
                << formatv("{0:x16}", Address + Size) << ", align: " << Alignment
-               << " Flags:" << Flags << "\n";
+               << " Flags: " << formatv("{0:x}", Flags) << "\n";
       });
 
       if (SecRef.sh_type != ELF::SHT_NOBITS) {
@@ -418,8 +414,8 @@ private:
         if (!TargetSymbol) {
           return make_error<llvm::StringError>(
               "Could not find symbol at given index, did you add it to "
-              "JITSymbolTable? index: " +
-                  std::to_string((*Symbol)->st_shndx) +
+              "JITSymbolTable? index: " + std::to_string(SymbolIndex)
+              + ", shndx: " + std::to_string((*Symbol)->st_shndx) +
                   " Size of table: " + std::to_string(JITSymbolTable.size()),
               llvm::inconvertibleErrorCode());
         }
@@ -546,7 +542,7 @@ private:
                 "Section has no block", llvm::inconvertibleErrorCode());
 
           auto B = *bs.begin();
-          LLVM_DEBUG({ dbgs() << "  " << *Name << ": "; });
+          LLVM_DEBUG({ dbgs() << "  " << *Name << " at index " << SymbolIndex << "\n"; });
           if (SymRef.getType() == ELF::STT_SECTION)
             *Name = *sectName;
           auto &S = G->addDefinedSymbol(
@@ -556,7 +552,12 @@ private:
         } else if (SymRef.isUndefined() && SymRef.isExternal()) {
           auto &S = G->addExternalSymbol(*Name, SymRef.st_size, bindings.first);
           JITSymbolTable[SymbolIndex] = &S;
-        }
+        } else
+          LLVM_DEBUG({
+              dbgs()
+                << "Not creating graph symbol for normalized symbol at index "
+                << SymbolIndex << ", \"" << *Name << "\"\n";
+            });
 
         // TODO: The following has to be implmented.
         // leaving commented out to save time for future patchs
