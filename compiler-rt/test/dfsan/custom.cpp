@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -334,6 +335,41 @@ void test_calloc() {
   crv = (char *) calloc(4096, 1);
   ASSERT_ZERO_LABEL(crv[0]);
   free(crv);
+}
+
+void test_recvmsg() {
+  int sockfds[2];
+  int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
+  assert(ret != -1);
+
+  char sbuf[] = "abcdefghijkl";
+  struct iovec siovs[2] = {{&sbuf[0], 4}, {&sbuf[4], 4}};
+  struct msghdr smsg = {};
+  smsg.msg_iov = siovs;
+  smsg.msg_iovlen = 2;
+
+  ssize_t sent = sendmsg(sockfds[0], &smsg, 0);
+  assert(sent > 0);
+
+  char rbuf[128];
+  struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
+  struct msghdr rmsg = {};
+  rmsg.msg_iov = riovs;
+  rmsg.msg_iovlen = 2;
+
+  dfsan_set_label(i_label, rbuf, sizeof(rbuf));
+  dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+
+  ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
+  assert(received == sent);
+  assert(memcmp(sbuf, rbuf, 8) == 0);
+  ASSERT_ZERO_LABEL(received);
+  ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
+  ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
+  ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+
+  close(sockfds[0]);
+  close(sockfds[1]);
 }
 
 void test_read() {
@@ -1089,6 +1125,7 @@ int main(void) {
   test_pread();
   test_pthread_create();
   test_read();
+  test_recvmsg();
   test_sched_getaffinity();
   test_select();
   test_sigaction();
