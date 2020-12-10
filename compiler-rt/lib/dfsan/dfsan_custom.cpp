@@ -966,6 +966,21 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getsockname(
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getpeername(
+    int sockfd, struct sockaddr *addr, socklen_t *addrlen,
+    dfsan_label sockfd_label, dfsan_label addr_label, dfsan_label addrlen_label,
+    dfsan_label *ret_label) {
+  socklen_t origlen = addrlen ? *addrlen : 0;
+  int ret = getpeername(sockfd, addr, addrlen);
+  if (ret != -1 && addr && addrlen) {
+    socklen_t written_bytes = origlen < *addrlen ? origlen : *addrlen;
+    dfsan_set_label(0, addrlen, sizeof(*addrlen));
+    dfsan_set_label(0, addr, written_bytes);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
 // Type of the trampoline function passed to the custom version of
 // dfsan_set_write_callback.
 typedef void (*write_trampoline_t)(
