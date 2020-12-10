@@ -315,8 +315,8 @@ ProgramHeaders:
 # RUN: llvm-readelf --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-GNU
 
 # BOTH-RELA-REL-LLVM:      Dynamic Relocations {
-# BOTH-RELA-REL-LLVM-NEXT:   0x1 R_X86_64_NONE - 0x0
-# BOTH-RELA-REL-LLVM-NEXT:   0x2 R_X86_64_NONE - 0x0
+# BOTH-RELA-REL-LLVM-NEXT:   0x1 R_X86_64_NONE - 0x0{{$}}
+# BOTH-RELA-REL-LLVM-NEXT:   0x2 R_X86_64_NONE -{{$}}
 # BOTH-RELA-REL-LLVM-NEXT: }
 
 # BOTH-RELA-REL-GNU:       'RELA' relocation section at offset 0x78 contains 24 bytes:

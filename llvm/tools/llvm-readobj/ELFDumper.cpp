@@ -6419,18 +6419,20 @@ void LLVMStyle<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   SmallString<32> RelocName;
   this->Obj.getRelocationTypeName(R.Type, RelocName);
 
-  uintX_t Addend = R.Addend.getValueOr(0);
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printHex("Offset", R.Offset);
     W.printNumber("Type", RelocName, R.Type);
     W.printNumber("Symbol", !SymbolName.empty() ? SymbolName : "-", R.Symbol);
-    W.printHex("Addend", Addend);
+    if (R.Addend)
+      W.printHex("Addend", (uintX_t)*R.Addend);
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(R.Offset) << " " << RelocName << " "
-       << (!SymbolName.empty() ? SymbolName : "-") << " " << W.hex(Addend)
-       << "\n";
+       << (!SymbolName.empty() ? SymbolName : "-");
+    if (R.Addend)
+      OS << " " << W.hex((uintX_t)*R.Addend);
+    OS << "\n";
   }
 }
 
