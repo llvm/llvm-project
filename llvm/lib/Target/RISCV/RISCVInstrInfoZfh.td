@@ -313,23 +313,6 @@ def : PatFpr16Fpr16<setolt, FLT_H>;
 def : PatFpr16Fpr16<setle, FLE_H>;
 def : PatFpr16Fpr16<setole, FLE_H>;
 
-// Define pattern expansions for setcc operations which aren't directly
-// handled by a RISC-V instruction and aren't expanded in the SelectionDAG
-// Legalizer.
-
-def : Pat<(seto FPR16:$rs1, FPR16:$rs2),
-          (AND (FEQ_H FPR16:$rs1, FPR16:$rs1),
-               (FEQ_H FPR16:$rs2, FPR16:$rs2))>;
-def : Pat<(seto FPR16:$rs1, FPR16:$rs1),
-          (FEQ_H $rs1, $rs1)>;
-
-def : Pat<(setuo FPR16:$rs1, FPR16:$rs2),
-          (SLTIU (AND (FEQ_H FPR16:$rs1, FPR16:$rs1),
-                      (FEQ_H FPR16:$rs2, FPR16:$rs2)),
-                 1)>;
-def : Pat<(setuo FPR16:$rs1, FPR16:$rs1),
-          (SLTIU (FEQ_H $rs1, $rs1), 1)>;
-
 def Select_FPR16_Using_CC_GPR : SelectCC_rrirr<FPR16, GPR>;
 
 /// Loads
