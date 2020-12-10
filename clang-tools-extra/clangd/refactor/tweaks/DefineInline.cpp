@@ -84,7 +84,7 @@ llvm::Optional<SourceLocation> getSemicolonForDecl(const FunctionDecl *FD) {
 // or the function decl to be selected. Returns null if none of the above
 // criteria is met.
 const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
-  const ast_type_traits::DynTypedNode &AstNode = SelNode->ASTNode;
+  const DynTypedNode &AstNode = SelNode->ASTNode;
   if (const FunctionDecl *FD = AstNode.get<FunctionDecl>())
     return FD;
   if (AstNode.get<CompoundStmt>() &&

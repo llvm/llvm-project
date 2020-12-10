@@ -275,9 +275,8 @@ void UseAfterMoveFinder::getDeclRefs(
                                       unless(inDecltypeOrTemplateArg()))
                               .bind("declref");
 
-    addDeclRefs(
-        match(traverse(ast_type_traits::TK_AsIs, findAll(DeclRefMatcher)),
-              *S->getStmt(), *Context));
+    addDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
+                      *Context));
     addDeclRefs(match(findAll(cxxOperatorCallExpr(
                                   hasAnyOverloadedOperatorName("*", "->", "[]"),
                                   hasArgument(0, DeclRefMatcher))
@@ -342,7 +341,7 @@ void UseAfterMoveFinder::getReinits(
                // Passing variable to a function as a non-const lvalue reference
                // (unless that function is std::move()).
                callExpr(forEachArgumentWithParam(
-                            traverse(ast_type_traits::TK_AsIs, DeclRefMatcher),
+                            traverse(TK_AsIs, DeclRefMatcher),
                             unless(parmVarDecl(hasType(
                                 references(qualType(isConstQualified())))))),
                         unless(callee(functionDecl(hasName("::std::move")))))))
@@ -406,7 +405,7 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           // To find the Stmt that we assume performs the actual move, we look
           // for the direct ancestor of the std::move() that isn't one of the
           // node types ignored by ignoringParenImpCasts().

@@ -281,8 +281,7 @@ void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseAutoCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs, makeCombinedMatcher()),
-                     this);
+  Finder->addMatcher(traverse(TK_AsIs, makeCombinedMatcher()), this);
 }
 
 void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {

@@ -52,7 +52,7 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
   // In the non-template case, we can search for the copy constructor call.
   const auto HasNonTemplateSelfCopy = cxxMethodDecl(
       ofClass(cxxRecordDecl(unless(hasAncestor(classTemplateDecl())))),
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                hasDescendant(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
                    isCopyConstructor(), ofClass(equalsBoundNode("class"))))))));
 

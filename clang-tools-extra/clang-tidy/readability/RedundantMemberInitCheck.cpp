@@ -34,7 +34,7 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxConstructorDecl(
               unless(isDelegatingConstructor()),
               ofClass(unless(

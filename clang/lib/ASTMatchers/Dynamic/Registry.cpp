@@ -31,8 +31,6 @@
 #include <utility>
 #include <vector>
 
-using namespace clang::ast_type_traits;
-
 namespace clang {
 namespace ast_matchers {
 namespace dynamic {

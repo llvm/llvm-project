@@ -33,7 +33,7 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
       tagType(hasDeclaration(decl(isInStdNamespace())))));
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxMemberCallExpr(
               on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),
               callee(cxxMethodDecl(hasName("erase"))), argumentCountIs(1),

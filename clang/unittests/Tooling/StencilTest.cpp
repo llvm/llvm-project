@@ -338,8 +338,8 @@ TEST_F(StencilTest, AccessOpExplicitThis) {
     };
   )cc";
   auto StmtMatch = matchStmt(
-      Snippet, traverse(ast_type_traits::TK_AsIs,
-                        returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+      Snippet,
+      traverse(TK_AsIs, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
                             hasObjectExpression(expr().bind("obj"))))))));
   ASSERT_TRUE(StmtMatch);
   const Stencil Stencil = access("obj", "field");

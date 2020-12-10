@@ -366,7 +366,7 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
                                      hasType(nonConstReferenceType())))));
 
   const auto Matches = match(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                findAll(stmt(anyOf(AsAssignmentLhs, AsIncDecOperand,
                                   AsNonConstThis, AsAmpersandOperand,
                                   AsPointerFromArrayDecay, AsOperatorArrowThis,
@@ -543,7 +543,7 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
   const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
   const auto Matches = match(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           findAll(
               expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl,
                                   unless(callee(namedDecl(hasAnyName(

@@ -26,10 +26,10 @@ AST_MATCHER(VarDecl, isGlobalStatic) {
 
 void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Constructing global, non-trivial objects with static storage is
-  // disallowed, unless the object is statically initialized with a constexpr 
+  // disallowed, unless the object is statically initialized with a constexpr
   // constructor or has no explicit constructor.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                varDecl(
                    // Match global, statically stored objects...
                    isGlobalStatic(),
