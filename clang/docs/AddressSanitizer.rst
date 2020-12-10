@@ -273,7 +273,7 @@ Supported Platforms
 AddressSanitizer is supported on:
 
 * Linux i386/x86\_64 (tested on Ubuntu 12.04)
-* macOS 10.7 - 10.11 (i386/x86\_64)
+* macOS 10.7 - 10.11 (i386/x86\_64/aarch64)
 * iOS Simulator
 * Android ARM
 * NetBSD i386/x86\_64
