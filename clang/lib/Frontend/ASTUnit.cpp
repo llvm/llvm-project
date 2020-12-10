@@ -758,9 +758,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, bool UseDebugInfo,
-    bool OnlyLocalDecls, ArrayRef<RemappedFile> RemappedFiles,
-    CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
-    bool UserFilesAreVolatile) {
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
+    bool AllowASTWithCompilerErrors, bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
   // Recover resources if we crash before exiting this method.
@@ -792,9 +791,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                                          AST->getLangOpts(),
                                          /*Target=*/nullptr));
   AST->PPOpts = std::make_shared<PreprocessorOptions>();
-
-  for (const auto &RemappedFile : RemappedFiles)
-    AST->PPOpts->addRemappedFile(RemappedFile.first, RemappedFile.second);
 
   // Gather Info for preprocessor construction later on.
 
