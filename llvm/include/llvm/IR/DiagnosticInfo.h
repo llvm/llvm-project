@@ -35,6 +35,7 @@ namespace llvm {
 class DiagnosticPrinter;
 class Function;
 class Instruction;
+class InstructionCost;
 class LLVMContext;
 class Module;
 class SMDiagnostic;
@@ -437,6 +438,7 @@ public:
     Argument(StringRef Key, ElementCount EC);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
     Argument(StringRef Key, DebugLoc dl);
+    Argument(StringRef Key, InstructionCost C);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
