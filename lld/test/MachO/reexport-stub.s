@@ -15,8 +15,8 @@
 # RUN: %lld -o %t/test -lSystem -L%t -lreexporter %t/test.o
 # RUN: llvm-objdump --bind --no-show-raw-insn -d %t/test | FileCheck %s
 
-# CHECK: Bind table:
-# CHECK-DAG: __DATA __data {{.*}} pointer 0 libreexporter ___gxx_personality_v0
+# CHECK:     Bind table:
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++abi ___gxx_personality_v0
 
 .text
 .globl _main
