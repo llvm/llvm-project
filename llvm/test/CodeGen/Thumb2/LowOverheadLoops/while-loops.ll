@@ -53,11 +53,11 @@ if.end:                                           ; preds = %do.body, %entry
 define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32* nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: nested:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    cbz r3, .LBB1_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    ldr r5, [sp, #24]
+; CHECK-NEXT:    ldr r5, [sp, #28]
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    b .LBB1_4
@@ -77,11 +77,11 @@ define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32*
 ; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  @ %bb.5: @ %do.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    bic r6, r7, #3
-; CHECK-NEXT:    dlstp.32 lr, r5
+; CHECK-NEXT:    bic r9, r7, #3
 ; CHECK-NEXT:    mov r7, r5
-; CHECK-NEXT:    add.w r8, r0, r6, lsl #2
 ; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    add.w r8, r0, r9, lsl #2
+; CHECK-NEXT:    dlstp.32 lr, r5
 ; CHECK-NEXT:  .LBB1_6: @ %do.body
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -90,11 +90,11 @@ define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32*
 ; CHECK-NEXT:    letp lr, .LBB1_6
 ; CHECK-NEXT:  @ %bb.7: @ %if.end.loopexit
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    subs r5, r5, r6
+; CHECK-NEXT:    sub.w r5, r5, r9
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
   %cmp20.not = icmp eq i32 %m, 0
   br i1 %cmp20.not, label %for.cond.cleanup, label %for.body

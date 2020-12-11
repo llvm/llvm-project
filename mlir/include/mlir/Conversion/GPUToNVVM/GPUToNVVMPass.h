@@ -22,7 +22,7 @@ namespace gpu {
 class GPUModuleOp;
 }
 
-/// Configure target to convert from to convert from the GPU dialect to NVVM.
+/// Configure target to convert from the GPU dialect to NVVM.
 void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.

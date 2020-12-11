@@ -208,7 +208,7 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
   // instructions before the call is less then DuplicationThreshold. The
   // instructions before the call will be duplicated in the split blocks and
   // corresponding uses will be updated.
-  unsigned Cost = 0;
+  InstructionCost Cost = 0;
   for (auto &InstBeforeCall :
        llvm::make_range(CallSiteBB->begin(), CB.getIterator())) {
     Cost += TTI.getInstructionCost(&InstBeforeCall,

@@ -23,7 +23,7 @@ class OperationPass;
 struct LowerVectorToLLVMOptions {
   LowerVectorToLLVMOptions()
       : reassociateFPReductions(false), enableIndexOptimizations(true),
-        enableAVX512(false) {}
+        enableArmNeon(false), enableAVX512(false) {}
 
   LowerVectorToLLVMOptions &setReassociateFPReductions(bool b) {
     reassociateFPReductions = b;
@@ -37,9 +37,14 @@ struct LowerVectorToLLVMOptions {
     enableAVX512 = b;
     return *this;
   }
+  LowerVectorToLLVMOptions &setEnableArmNeon(bool b) {
+    enableArmNeon = b;
+    return *this;
+  }
 
   bool reassociateFPReductions;
   bool enableIndexOptimizations;
+  bool enableArmNeon;
   bool enableAVX512;
 };
 

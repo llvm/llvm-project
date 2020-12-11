@@ -571,7 +571,7 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::Enum:
     return "enum";
   case HighlightingKind::EnumConstant:
-    return "enumConstant"; // nonstandard
+    return "enumMember";
   case HighlightingKind::Typedef:
     return "type";
   case HighlightingKind::DependentType:

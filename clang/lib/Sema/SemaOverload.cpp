@@ -14154,11 +14154,11 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 /// parameter). The caller needs to validate that the member
 /// expression refers to a non-static member function or an overloaded
 /// member function.
-ExprResult
-Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
-                                SourceLocation LParenLoc,
-                                MultiExprArg Args,
-                                SourceLocation RParenLoc) {
+ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
+                                           SourceLocation LParenLoc,
+                                           MultiExprArg Args,
+                                           SourceLocation RParenLoc,
+                                           bool AllowRecovery) {
   assert(MemExprE->getType() == Context.BoundMemberTy ||
          MemExprE->getType() == Context.OverloadTy);
 
@@ -14215,6 +14215,17 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     return MaybeBindToTemporary(call);
   }
 
+  // We only try to build a recovery expr at this level if we can preserve
+  // the return type, otherwise we return ExprError() and let the caller
+  // recover.
+  auto BuildRecoveryExpr = [&](QualType Type) {
+    if (!AllowRecovery)
+      return ExprError();
+    std::vector<Expr *> SubExprs = {MemExprE};
+    llvm::for_each(Args, [&SubExprs](Expr *E) { SubExprs.push_back(E); });
+    return CreateRecoveryExpr(MemExprE->getBeginLoc(), RParenLoc, SubExprs,
+                              Type);
+  };
   if (isa<CXXPseudoDestructorExpr>(NakedMemExpr))
     return CallExpr::Create(Context, MemExprE, Args, Context.VoidTy, VK_RValue,
                             RParenLoc, CurFPFeatureOverrides());
@@ -14362,7 +14373,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   // Check for a valid return type.
   if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),
                           TheCall, Method))
-    return ExprError();
+    return BuildRecoveryExpr(ResultType);
 
   // Convert the object argument (for a non-static member function call).
   // We only need to do this if there was actually an overload; otherwise
@@ -14379,7 +14390,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   // Convert the rest of the arguments
   if (ConvertArgumentsForCall(TheCall, MemExpr, Method, Proto, Args,
                               RParenLoc))
-    return ExprError();
+    return BuildRecoveryExpr(ResultType);
 
   DiagnoseSentinelCalls(Method, LParenLoc, Args);
 

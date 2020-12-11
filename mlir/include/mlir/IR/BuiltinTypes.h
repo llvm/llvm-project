@@ -150,6 +150,11 @@ public:
   /// Return true if this is an unsigned integer type.
   bool isUnsigned() const { return getSignedness() == Unsigned; }
 
+  /// Get or create a new IntegerType with the same signedness as `this` and a
+  /// bitwidth scaled by `scale`.
+  /// Return null if the scaled element type cannot be represented.
+  IntegerType scaleElementBitwidth(unsigned scale);
+
   /// Integer representation maximal bitwidth.
   static constexpr unsigned kMaxWidth = 4096;
 };
@@ -173,6 +178,10 @@ public:
 
   /// Return the bitwidth of this float type.
   unsigned getWidth();
+
+  /// Get or create a new FloatType with bitwidth scaled by `scale`.
+  /// Return null if the scaled element type cannot be represented.
+  FloatType scaleElementBitwidth(unsigned scale);
 
   /// Return the floating semantics of this float type.
   const llvm::fltSemantics &getFloatSemantics();
@@ -433,6 +442,11 @@ public:
   }
 
   ArrayRef<int64_t> getShape() const;
+
+  /// Get or create a new VectorType with the same shape as `this` and an
+  /// element type of bitwidth scaled by `scale`.
+  /// Return null if the scaled element type cannot be represented.
+  VectorType scaleElementBitwidth(unsigned scale);
 };
 
 //===----------------------------------------------------------------------===//

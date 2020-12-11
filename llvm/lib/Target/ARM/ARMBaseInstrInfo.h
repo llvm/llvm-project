@@ -361,7 +361,8 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
-    return MI->getOpcode() == ARM::t2LoopEndDec;
+    return MI->getOpcode() == ARM::t2LoopEndDec ||
+           MI->getOpcode() == ARM::t2DoLoopStartTP;
   }
 
 private:

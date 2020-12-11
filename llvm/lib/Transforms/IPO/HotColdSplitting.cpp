@@ -233,11 +233,11 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
 }
 
 /// Get the benefit score of outlining \p Region.
-static int getOutliningBenefit(ArrayRef<BasicBlock *> Region,
-                               TargetTransformInfo &TTI) {
+static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
+                                           TargetTransformInfo &TTI) {
   // Sum up the code size costs of non-terminator instructions. Tight coupling
   // with \ref getOutliningPenalty is needed to model the costs of terminators.
-  int Benefit = 0;
+  InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
     for (Instruction &I : BB->instructionsWithoutDebug())
       if (&I != BB->getTerminator())
@@ -324,12 +324,12 @@ Function *HotColdSplitting::extractColdRegion(
   // splitting.
   SetVector<Value *> Inputs, Outputs, Sinks;
   CE.findInputsOutputs(Inputs, Outputs, Sinks);
-  int OutliningBenefit = getOutliningBenefit(Region, TTI);
+  InstructionCost OutliningBenefit = getOutliningBenefit(Region, TTI);
   int OutliningPenalty =
       getOutliningPenalty(Region, Inputs.size(), Outputs.size());
   LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
                     << ", penalty = " << OutliningPenalty << "\n");
-  if (OutliningBenefit <= OutliningPenalty)
+  if (!OutliningBenefit.isValid() || OutliningBenefit <= OutliningPenalty)
     return nullptr;
 
   Function *OrigF = Region[0]->getParent();
