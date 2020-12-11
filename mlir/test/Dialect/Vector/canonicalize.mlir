@@ -613,4 +613,51 @@ func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
   return %0, %1 : vector<12x2xf32>, vector<2x13x3xi32>
 }
 
+// -----
+
+// CHECK-LABEL: extract_strided_broadcast
+//       CHECK:   %[[B:.*]] = vector.broadcast %{{.*}} : vector<4xf16> to vector<2x4xf16>
+//  CHECK-NEXT:   return %[[B]] : vector<2x4xf16>
+func @extract_strided_broadcast(%arg0: vector<4xf16>) -> vector<2x4xf16> {
+ %0 = vector.broadcast %arg0 : vector<4xf16> to vector<16x4xf16>
+ %1 = vector.extract_strided_slice %0
+  {offsets = [0, 0], sizes = [2, 4], strides = [1, 1]} :
+  vector<16x4xf16> to vector<2x4xf16>
+  return %1 : vector<2x4xf16>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_broadcast2
+//       CHECK:   %[[E:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0], sizes = [2], strides = [1]} : vector<4xf16> to vector<2xf16>
+//  CHECK-NEXT:   %[[B:.*]] = vector.broadcast %[[E]] : vector<2xf16> to vector<2x2xf16>
+//  CHECK-NEXT:   return %[[B]] : vector<2x2xf16>
+func @extract_strided_broadcast2(%arg0: vector<4xf16>) -> vector<2x2xf16> {
+ %0 = vector.broadcast %arg0 : vector<4xf16> to vector<16x4xf16>
+ %1 = vector.extract_strided_slice %0
+  {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} :
+  vector<16x4xf16> to vector<2x2xf16>
+  return %1 : vector<2x2xf16>
+}
+
+// -----
+
+// CHECK-LABEL: consecutive_shape_cast
+//       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
+//  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>
+func @consecutive_shape_cast(%arg0: vector<16xf16>) -> vector<4x4xf16> {
+  %0 = vector.shape_cast %arg0 : vector<16xf16> to vector<2x8xf16>
+  %1 = vector.shape_cast %0 : vector<2x8xf16> to vector<4x4xf16>
+  return %1 : vector<4x4xf16>
+}
+
+// -----
+
+// CHECK-LABEL: broadcast_to_shapecast
+//       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<4x4xf16> to vector<1x4x4xf16>
+//  CHECK-NEXT:   return %[[C]] : vector<1x4x4xf16>
+func @broadcast_to_shapecast(%arg0: vector<4x4xf16>) -> vector<1x4x4xf16> {
+  %0 = vector.broadcast %arg0 : vector<4x4xf16> to vector<1x4x4xf16>
+  return %0 : vector<1x4x4xf16>
+}
 
