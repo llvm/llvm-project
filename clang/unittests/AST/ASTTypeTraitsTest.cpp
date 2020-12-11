@@ -14,7 +14,7 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
-namespace ast_type_traits {
+namespace {
 
 TEST(ASTNodeKind, NoKind) {
   EXPECT_FALSE(ASTNodeKind().isBaseOf(ASTNodeKind()));
@@ -179,5 +179,5 @@ TEST(DynTypedNode, QualType) {
   EXPECT_FALSE(Node < Node);
 }
 
-}  // namespace ast_type_traits
+} // namespace
 }  // namespace clang

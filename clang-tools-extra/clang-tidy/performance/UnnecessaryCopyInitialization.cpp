@@ -142,7 +142,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                AllowedTypes)))))),
                                    unless(isImplicit()),
                                    hasInitializer(traverse(
-                                       ast_type_traits::TK_AsIs,
+                                       TK_AsIs,
                                        cxxConstructExpr(
                                            hasDeclaration(cxxConstructorDecl(
                                                isCopyConstructor())),
@@ -170,7 +170,7 @@ void UnnecessaryCopyInitialization::check(
   const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
 
-  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
   // since we cannot place them correctly.

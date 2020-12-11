@@ -29,7 +29,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
 
   // Analyse parameter usage in function.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
                           binaryOperator(), callExpr(), returnStmt(),
                           cxxConstructExpr()))

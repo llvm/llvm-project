@@ -51,7 +51,7 @@ void IncorrectRoundingsCheck::registerMatchers(MatchFinder *MatchFinder) {
   // Find expressions of cast to int of the sum of a floating point expression
   // and 0.5.
   MatchFinder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                implicitCastExpr(hasImplicitDestinationType(isInteger()),
                                 ignoringParenCasts(binaryOperator(
                                     hasOperatorName("+"), OneSideHalf)))

@@ -97,16 +97,16 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto StringType = hasType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(cxxRecordDecl(hasStringTypeName)))));
-  const auto EmptyStringInit =
-      traverse(ast_type_traits::TK_AsIs, expr(ignoringImplicit(
-      anyOf(EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries))));
+  const auto EmptyStringInit = traverse(
+      TK_AsIs, expr(ignoringImplicit(anyOf(
+                   EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries))));
 
   // Match a variable declaration with an empty string literal as initializer.
   // Examples:
   //     string foo = "";
   //     string bar("");
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                namedDecl(varDecl(StringType, hasInitializer(EmptyStringInit))
                              .bind("vardecl"),
                          unless(parmVarDecl()))),

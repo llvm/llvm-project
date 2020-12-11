@@ -222,7 +222,7 @@ bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   std::queue<const Stmt *> Q;
   Q.push(Cast);
 
-  TraversalKindScope RAII(Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(Context, TK_AsIs);
 
   while (!Q.empty()) {
     for (const auto &N : Context.getParents(*Q.front())) {
@@ -276,7 +276,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(hasOperatorName("^"), hasLHS(implicitCastFromBool),
                      hasRHS(implicitCastFromBool));
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                implicitCastExpr(
                    anyOf(hasCastKind(CK_IntegralToBoolean),
                          hasCastKind(CK_FloatingToBoolean),
@@ -309,7 +309,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       forField(hasBitWidth(1)))));
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           implicitCastExpr(
               implicitCastFromBool,
               // Exclude comparisons of bools, as they are always cast to

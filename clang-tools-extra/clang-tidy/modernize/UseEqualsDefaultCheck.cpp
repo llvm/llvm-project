@@ -75,7 +75,7 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
     // The initialization of a base class should be a call to a copy
     // constructor of the base.
     if (match(
-            traverse(ast_type_traits::TK_AsIs,
+            traverse(TK_AsIs,
                      cxxConstructorDecl(
                          forEachConstructorInitializer(cxxCtorInitializer(
                              isBaseInitializer(),
@@ -96,7 +96,7 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
     auto AccessToFieldInParam = accessToFieldInVar(Field, Param);
     // The initialization is a CXXConstructExpr for class types.
     if (match(traverse(
-                  ast_type_traits::TK_AsIs,
+                  TK_AsIs,
                   cxxConstructorDecl(
                       forEachConstructorInitializer(cxxCtorInitializer(
                           isMemberInitializer(), forField(equalsNode(Field)),
@@ -137,7 +137,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
   //   return *this;
   if (Compound->body_empty() ||
       match(traverse(
-                ast_type_traits::TK_AsIs,
+                TK_AsIs,
                 returnStmt(has(ignoringParenImpCasts(unaryOperator(
                     hasOperatorName("*"), hasUnaryOperand(cxxThisExpr())))))),
             *Compound->body_back(), *Context)
@@ -153,7 +153,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
     //   ((Base*)this)->operator=((Base)Other);
     //
     // So we are looking for a member call that fulfills:
-    if (match(traverse(ast_type_traits::TK_AsIs,
+    if (match(traverse(TK_AsIs,
                        compoundStmt(has(ignoringParenImpCasts(cxxMemberCallExpr(
                            // - The object is an implicit cast of 'this' to a
                            // pointer to
@@ -184,7 +184,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
                           member(fieldDecl(equalsNode(Field))));
     auto RHS = accessToFieldInVar(Field, Param);
     if (match(
-            traverse(ast_type_traits::TK_AsIs,
+            traverse(TK_AsIs,
                      compoundStmt(has(ignoringParenImpCasts(stmt(anyOf(
                          binaryOperator(hasOperatorName("="), hasLHS(LHS),
                                         hasRHS(RHS)),

@@ -21,7 +21,7 @@ void PreferRegisterOverUnsignedCheck::registerMatchers(MatchFinder *Finder) {
       cxxRecordDecl(hasName("::llvm::Register")).bind("registerClassDecl"));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                valueDecl(allOf(
                    hasType(qualType(isUnsignedInteger()).bind("varType")),
                    varDecl(hasInitializer(exprWithCleanups(

@@ -125,7 +125,7 @@ public:
     // Direct children within the selection tree.
     llvm::SmallVector<const Node *> Children;
     // The corresponding node from the full AST.
-    ast_type_traits::DynTypedNode ASTNode;
+    DynTypedNode ASTNode;
     // The extent to which this node is covered by the selection.
     Selection Selected;
     // Walk up the AST to get the DeclContext of this Node,

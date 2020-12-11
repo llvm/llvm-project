@@ -132,7 +132,7 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxConstructorDecl(
               forEachConstructorInitializer(
                   cxxCtorInitializer(
