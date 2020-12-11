@@ -278,11 +278,11 @@ TEST_MACROS();
 #endif
 #include <tuple>
 TEST_MACROS();
+#include <type_traits>
+TEST_MACROS();
 #include <typeindex>
 TEST_MACROS();
 #include <typeinfo>
-TEST_MACROS();
-#include <type_traits>
 TEST_MACROS();
 #include <unordered_map>
 TEST_MACROS();
