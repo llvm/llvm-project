@@ -159,6 +159,7 @@ private:
   void replaceCoroSuspends();
   void replaceCoroEnds();
   void replaceSwiftErrorOps();
+  void salvageDebugInfo();
   void handleFinalSuspend();
   void maybeFreeContinuationStorage();
 };
@@ -584,6 +585,24 @@ void CoroCloner::replaceSwiftErrorOps() {
   ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
 }
 
+void CoroCloner::salvageDebugInfo() {
+  SmallVector<DbgDeclareInst *, 8> Worklist;
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  for (auto &BB : *NewF)
+    for (auto &I : BB)
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+        Worklist.push_back(DDI);
+  for (DbgDeclareInst *DDI : Worklist) {
+    // Remove the allocas inserted by CoroFrame for the sake of the
+    // cloned function.
+    if (isa<AllocaInst>(DDI->getAddress()))
+      DDI->eraseFromParent();
+    else
+      coro::salvageDebugInfo(DbgPtrAllocaCache, DDI,
+                             /*LoadFromFramePointer*/ true);
+  }
+}
+
 void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
@@ -852,6 +871,9 @@ void CoroCloner::create() {
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
+
+  // Salvage debug info that points into the coroutine frame.
+  salvageDebugInfo();
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
