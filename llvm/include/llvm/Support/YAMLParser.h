@@ -102,6 +102,8 @@ public:
 
   void printError(Node *N, const Twine &Msg,
                   SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
+  void printError(const SMRange &Range, const Twine &Msg,
+                  SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
 
 private:
   friend class Document;
