@@ -52,6 +52,11 @@ void replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
                      CallGraph &CG, CallGraphSCC &SCC);
+/// Recover a dbg.declare prepared by the frontend and emit an alloca
+/// holding a pointer to the coroutine frame.
+void salvageDebugInfo(
+    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
+    DbgDeclareInst *DDI, bool LoadFromCoroFrame = false);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {

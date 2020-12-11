@@ -9700,14 +9700,15 @@ GetSpecializedASTName(ScratchTypeSystemClang::IsolatedASTKind feature) {
 }
 
 TypeSystemClang &ScratchTypeSystemClang::GetIsolatedAST(
-    ScratchTypeSystemClang::IsolatedASTKind feature) {
+    ScratchTypeSystemClang::IsolatedASTKind feature_enum) {
+  int feature = static_cast<int>(feature_enum);
   auto found_ast = m_isolated_asts.find(feature);
   if (found_ast != m_isolated_asts.end())
     return *found_ast->second;
 
   // Couldn't find the requested sub-AST, so create it now.
   std::unique_ptr<TypeSystemClang> new_ast;
-  new_ast.reset(new SpecializedScratchAST(GetSpecializedASTName(feature),
+  new_ast.reset(new SpecializedScratchAST(GetSpecializedASTName(feature_enum),
                                           m_triple, CreateASTSource()));
   m_isolated_asts[feature] = std::move(new_ast);
   return *m_isolated_asts[feature];

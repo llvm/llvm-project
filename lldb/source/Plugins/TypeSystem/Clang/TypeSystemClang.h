@@ -1237,7 +1237,7 @@ private:
   /// Map from IsolatedASTKind to their actual TypeSystemClang instance.
   /// This map is lazily filled with sub-ASTs and should be accessed via
   /// `GetSubAST` (which lazily fills this map).
-  std::unordered_map<IsolatedASTKind, std::unique_ptr<TypeSystemClang>>
+  std::unordered_map<int, std::unique_ptr<TypeSystemClang>>
       m_isolated_asts;
 };
 
