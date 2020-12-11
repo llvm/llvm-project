@@ -1503,8 +1503,6 @@ struct __cxx_atomic_impl : public _Base {
     using __cxx_contention_t = int64_t;
 #endif //__linux__
 
-#if _LIBCPP_STD_VER >= 11
-
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 
 #ifndef _LIBCPP_HAS_NO_PLATFORM_WAIT
@@ -1581,8 +1579,6 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, mem
     __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
     return __cxx_atomic_wait(__a, __test_fn);
 }
-
-#endif //_LIBCPP_STD_VER >= 11
 
 // general atomic<T>
 
