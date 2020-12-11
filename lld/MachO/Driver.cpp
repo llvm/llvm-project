@@ -309,10 +309,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    newFile = make<DylibFile>(mbref);
-    break;
   case file_magic::tapi_file: {
-    if (Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref))
+    if (Optional<DylibFile *> dylibFile = loadDylib(mbref))
       newFile = *dylibFile;
     break;
   }
