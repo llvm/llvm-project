@@ -364,7 +364,6 @@ protected:
         result.AppendError(error.AsCString("Error creating target"));
         return false;
       }
-      GetDebugger().GetTargetList().SetSelectedTarget(target);
     }
 
     // Record the old executable module, we want to issue a warning if the

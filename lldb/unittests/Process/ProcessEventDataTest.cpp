@@ -112,15 +112,10 @@ typedef std::shared_ptr<Process::ProcessEventData> ProcessEventDataSP;
 typedef std::shared_ptr<Event> EventSP;
 
 TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
-  Status error;
   PlatformSP platform_sp;
   TargetSP target_sp;
-  error = debugger_sp->GetTargetList().CreateTarget(
+  debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
-
-  if (target_sp) {
-    debugger_sp->GetTargetList().SetSelectedTarget(target_sp.get());
-  }
 
   return target_sp;
 }
