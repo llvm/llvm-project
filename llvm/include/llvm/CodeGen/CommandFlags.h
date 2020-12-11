@@ -99,6 +99,8 @@ Optional<bool> getExplicitFunctionSections();
 
 bool getIgnoreXCOFFVisibility();
 
+bool getXCOFFTracebackTable();
+
 std::string getBBSections();
 
 std::string getStackProtectorGuard();

@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
+; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj  --symbols %t.o | FileCheck %s
 
 define void @foo() {
