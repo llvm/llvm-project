@@ -309,6 +309,9 @@ void MCFragment::destroy() {
     case FT_CVDefRange:
       delete cast<MCCVDefRangeFragment>(this);
       return;
+    case FT_PseudoProbe:
+      delete cast<MCPseudoProbeAddrFragment>(this);
+      return;
     case FT_Dummy:
       delete cast<MCDummyFragment>(this);
       return;
@@ -351,6 +354,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_SymbolId:    OS << "MCSymbolIdFragment"; break;
   case MCFragment::FT_CVInlineLines: OS << "MCCVInlineLineTableFragment"; break;
   case MCFragment::FT_CVDefRange: OS << "MCCVDefRangeTableFragment"; break;
+  case MCFragment::FT_PseudoProbe:
+    OS << "MCPseudoProbe";
+    break;
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
@@ -482,6 +488,12 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << " RangeStart:" << RangeStartEnd.first;
       OS << " RangeEnd:" << RangeStartEnd.second;
     }
+    break;
+  }
+  case MCFragment::FT_PseudoProbe: {
+    const auto *OF = cast<MCPseudoProbeAddrFragment>(this);
+    OS << "\n       ";
+    OS << " AddrDelta:" << OF->getAddrDelta();
     break;
   }
   case MCFragment::FT_Dummy:
