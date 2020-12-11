@@ -22,6 +22,7 @@ void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 void registerToNVVMIRTranslation();
 void registerToROCDLIRTranslation();
+void registerArmNeonToLLVMIRTranslation();
 void registerAVX512ToLLVMIRTranslation();
 
 // This function should be called before creating any MLIRContext if one
@@ -35,6 +36,7 @@ inline void registerAllTranslations() {
     registerToSPIRVTranslation();
     registerToNVVMIRTranslation();
     registerToROCDLIRTranslation();
+    registerArmNeonToLLVMIRTranslation();
     registerAVX512ToLLVMIRTranslation();
     return true;
   }();

@@ -66,6 +66,12 @@ IntegerType::SignednessSemantics IntegerType::getSignedness() const {
   return getImpl()->signedness;
 }
 
+IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
+  if (!scale)
+    return IntegerType();
+  return IntegerType::get(scale * getWidth(), getSignedness(), getContext());
+}
+
 //===----------------------------------------------------------------------===//
 // Float Type
 //===----------------------------------------------------------------------===//
@@ -91,6 +97,22 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
   if (isa<Float64Type>())
     return APFloat::IEEEdouble();
   llvm_unreachable("non-floating point type used");
+}
+
+FloatType FloatType::scaleElementBitwidth(unsigned scale) {
+  if (!scale)
+    return FloatType();
+  MLIRContext *ctx = getContext();
+  if (isF16() || isBF16()) {
+    if (scale == 2)
+      return FloatType::getF32(ctx);
+    if (scale == 4)
+      return FloatType::getF64(ctx);
+  }
+  if (isF32())
+    if (scale == 2)
+      return FloatType::getF64(ctx);
+  return FloatType();
 }
 
 //===----------------------------------------------------------------------===//
@@ -305,6 +327,18 @@ LogicalResult VectorType::verifyConstructionInvariants(Location loc,
 }
 
 ArrayRef<int64_t> VectorType::getShape() const { return getImpl()->getShape(); }
+
+VectorType VectorType::scaleElementBitwidth(unsigned scale) {
+  if (!scale)
+    return VectorType();
+  if (auto et = getElementType().dyn_cast<IntegerType>())
+    if (auto scaledEt = et.scaleElementBitwidth(scale))
+      return VectorType::get(getShape(), scaledEt);
+  if (auto et = getElementType().dyn_cast<FloatType>())
+    if (auto scaledEt = et.scaleElementBitwidth(scale))
+      return VectorType::get(getShape(), scaledEt);
+  return VectorType();
+}
 
 //===----------------------------------------------------------------------===//
 // TensorType

@@ -55,6 +55,25 @@ add_mlir_translation_library(MLIRTargetLLVMIR
   MLIRTargetLLVMIRModuleTranslation
   )
 
+add_mlir_translation_library(MLIRTargetArmNeon
+  LLVMIR/LLVMArmNeonIntr.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
+
+  DEPENDS
+  MLIRLLVMArmNeonConversionsIncGen
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRLLVMArmNeon
+  MLIRLLVMIR
+  MLIRTargetLLVMIRModuleTranslation
+  )
+
 add_mlir_translation_library(MLIRTargetNVVMIR
   LLVMIR/ConvertToNVVMIR.cpp
 
