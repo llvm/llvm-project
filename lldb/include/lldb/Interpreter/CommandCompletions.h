@@ -47,13 +47,11 @@ public:
     eBreakpointNameCompletion = (1u << 19),
     eProcessIDCompletion = (1u << 20),
     eProcessNameCompletion = (1u << 21),
-    eRemoteDiskFileCompletion = (1u << 22),
-    eRemoteDiskDirectoryCompletion = (1u << 23),
     eTypeCategoryNameCompletion = (1u << 24),
     // This item serves two purposes.  It is the last element in the enum, so
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
-    eCustomCompletion = (1u << 24)
+    eCustomCompletion = (1u << 22)
   };
 
   static bool InvokeCommonCompletionCallbacks(
@@ -74,14 +72,6 @@ public:
   static void DiskDirectories(const llvm::Twine &partial_file_name,
                               StringList &matches,
                               TildeExpressionResolver &Resolver);
-
-  static void RemoteDiskFiles(CommandInterpreter &interpreter,
-                              CompletionRequest &request,
-                              SearchFilter *searcher);
-
-  static void RemoteDiskDirectories(CommandInterpreter &interpreter,
-                                    CompletionRequest &request,
-                                    SearchFilter *searcher);
 
   static void SourceFiles(CommandInterpreter &interpreter,
                           CompletionRequest &request, SearchFilter *searcher);

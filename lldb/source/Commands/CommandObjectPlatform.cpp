@@ -392,8 +392,7 @@ public:
                             "or for a platform by name.",
                             "platform settings", 0),
         m_options(),
-        m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w',
-                             CommandCompletions::eRemoteDiskDirectoryCompletion,
+        m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w', 0,
                              eArgTypePath,
                              "The working directory for the platform.") {
     m_options.Append(&m_option_working_dir, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
@@ -485,15 +484,6 @@ public:
         m_options() {}
 
   ~CommandObjectPlatformFOpen() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
-  }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
@@ -827,19 +817,6 @@ public:
 
   ~CommandObjectPlatformGetFile() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
-    else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
-  }
-
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     // If the number of arguments is incorrect, issue an error message.
     if (args.GetArgumentCount() != 2) {
@@ -905,17 +882,6 @@ public:
 
   ~CommandObjectPlatformGetSize() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() != 0)
-      return;
-
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
-  }
-
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     // If the number of arguments is incorrect, issue an error message.
     if (args.GetArgumentCount() != 1) {
@@ -960,19 +926,6 @@ public:
   }
 
   ~CommandObjectPlatformPutFile() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
-    else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
-  }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     const char *src = args.GetArgumentAtIndex(0);
