@@ -49,13 +49,13 @@ public:
   bool hidden() const override { return true; }
 
 private:
-  static bool dumpable(const ast_type_traits::DynTypedNode &N) {
+  static bool dumpable(const DynTypedNode &N) {
     // Sadly not all node types can be dumped, and there's no API to check.
     // See DynTypedNode::dump().
     return N.get<Decl>() || N.get<Stmt>() || N.get<Type>();
   }
 
-  llvm::Optional<ast_type_traits::DynTypedNode> Node;
+  llvm::Optional<DynTypedNode> Node;
 };
 REGISTER_TWEAK(DumpAST)
 

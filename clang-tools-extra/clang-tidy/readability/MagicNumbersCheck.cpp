@@ -19,7 +19,6 @@
 #include <algorithm>
 
 using namespace clang::ast_matchers;
-using namespace clang::ast_type_traits;
 
 namespace clang {
 
