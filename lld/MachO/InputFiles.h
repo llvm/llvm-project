@@ -95,6 +95,7 @@ public:
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   ArrayRef<llvm::MachO::section_64> sectionHeaders;
+  std::vector<InputSection *> debugSections;
 
 private:
   void parseSections(ArrayRef<llvm::MachO::section_64>);

@@ -603,10 +603,6 @@ void Writer::createOutputSections() {
   MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
       mergedOutputSections;
   for (InputSection *isec : inputSections) {
-    // Instead of emitting DWARF sections, we emit STABS symbols to the object
-    // files that contain them.
-    if (isDebugSection(isec->flags) && isec->segname == segment_names::dwarf)
-      continue;
     MergedOutputSection *&osec =
         mergedOutputSections[{isec->segname, isec->name}];
     if (osec == nullptr)
