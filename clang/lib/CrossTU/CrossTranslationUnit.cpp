@@ -765,7 +765,7 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
 
 llvm::Optional<std::pair<SourceLocation, ASTUnit *>>
 CrossTranslationUnitContext::getImportedFromSourceLocation(
-    SourceLocation ToLoc) const {
+    const clang::SourceLocation &ToLoc) const {
   const SourceManager &SM = Context.getSourceManager();
   auto DecToLoc = SM.getDecomposedLoc(ToLoc);
 
