@@ -841,7 +841,6 @@ private:
 
   CachingWalker<AliasAnalysis> *getWalkerImpl();
   void buildMemorySSA(BatchAAResults &BAA);
-  void optimizeUses();
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
