@@ -57,7 +57,7 @@ if (TARGET cxx_shared)
       "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/sym_diff.py"
           --only-stdlib-symbols
           --strict "${abi_list_file}"
-          $<TARGET_SONAME_FILE:cxx_shared>
+          $<TARGET_FILE:cxx_shared>
       DEPENDS cxx_shared
       COMMENT "Testing libc++'s exported symbols against the ABI list")
   else()
@@ -67,7 +67,7 @@ if (TARGET cxx_shared)
   add_custom_target(generate-cxx-abilist
     COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_abi_list.py"
             --output "${abi_list_file}"
-            "$<TARGET_SONAME_FILE:cxx_shared>"
+            "$<TARGET_FILE:cxx_shared>"
     DEPENDS cxx_shared
     COMMENT "Generating the ABI list file for configuration ${abi_list_identifier}")
 else()
