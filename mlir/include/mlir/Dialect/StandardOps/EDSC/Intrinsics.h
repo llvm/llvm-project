@@ -9,7 +9,6 @@
 #define MLIR_DIALECT_STANDARDOPS_EDSC_INTRINSICS_H_
 
 #include "mlir/Dialect/StandardOps/EDSC/Builders.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 namespace mlir {
 namespace edsc {
@@ -29,6 +28,7 @@ using std_dealloc = OperationBuilder<DeallocOp>;
 using std_divis = ValueBuilder<SignedDivIOp>;
 using std_diviu = ValueBuilder<UnsignedDivIOp>;
 using std_dim = ValueBuilder<DimOp>;
+using std_extract_element = ValueBuilder<ExtractElementOp>;
 using std_fpext = ValueBuilder<FPExtOp>;
 using std_fptrunc = ValueBuilder<FPTruncOp>;
 using std_im = ValueBuilder<ImOp>;
@@ -52,7 +52,6 @@ using std_tensor_store = OperationBuilder<TensorStoreOp>;
 using std_view = ValueBuilder<ViewOp>;
 using std_zero_extendi = ValueBuilder<ZeroExtendIOp>;
 using std_sign_extendi = ValueBuilder<SignExtendIOp>;
-using tensor_extract = ValueBuilder<tensor::ExtractOp>;
 
 /// Branches into `block` with `operands`.
 BranchOp std_br(Block *block, ValueRange operands);

@@ -12,7 +12,6 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -65,10 +64,10 @@ public:
     rewriter.create<scf::ForOp>(
         loc, rankDiff, greaterRank, one, llvm::None,
         [&](OpBuilder &b, Location loc, Value iv, ValueRange) {
-          Value greaterRankOperandExtent = b.create<tensor::ExtractOp>(
+          Value greaterRankOperandExtent = b.create<ExtractElementOp>(
               loc, greaterRankOperand, ValueRange{iv});
           Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
-          Value lesserRankOperandExtent = b.create<tensor::ExtractOp>(
+          Value lesserRankOperandExtent = b.create<ExtractElementOp>(
               loc, lesserRankOperand, ValueRange{ivShifted});
 
           Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(

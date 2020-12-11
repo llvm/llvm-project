@@ -672,6 +672,19 @@ func @calls(%arg0: i32) {
   return
 }
 
+// CHECK-LABEL: func @extract_element(%arg0: tensor<*xi32>, %arg1: tensor<4x4xf32>) -> i32 {
+func @extract_element(%arg0: tensor<*xi32>, %arg1 : tensor<4x4xf32>) -> i32 {
+  %c0 = "std.constant"() {value = 0: index} : () -> index
+
+  // CHECK: %0 = extract_element %arg0[%c0, %c0, %c0, %c0] : tensor<*xi32>
+  %0 = extract_element %arg0[%c0, %c0, %c0, %c0] : tensor<*xi32>
+
+  // CHECK: %1 = extract_element %arg1[%c0, %c0] : tensor<4x4xf32>
+  %1 = extract_element %arg1[%c0, %c0] : tensor<4x4xf32>
+
+  return %0 : i32
+}
+
 // CHECK-LABEL: func @tensor_from_elements() {
 func @tensor_from_elements() {
   %c0 = "std.constant"() {value = 0: index} : () -> index
@@ -959,3 +972,4 @@ func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : 
 
 // CHECK-LABEL: func private @legacy_visibility_syntax
 func @legacy_visibility_syntax() attributes { sym_visibility = "private" }
+
