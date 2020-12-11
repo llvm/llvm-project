@@ -30,7 +30,7 @@ define i64 @getVar64() {
 
 ; CHECK-LABEL: getVar
 ; CHECK: adrp [[TLS_INDEX_ADDR:x[0-9]+]], _tls_index
-; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], _tls_index]
+; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], :lo12:_tls_index]
 ; CHECK: ldr [[TLS_POINTER:x[0-9]+]], [x18, #88]
 
 ; CHECK: ldr [[TLS:x[0-9]+]], {{\[}}[[TLS_POINTER]], x[[TLS_INDEX]], lsl #3]
@@ -39,7 +39,7 @@ define i64 @getVar64() {
 
 ; CHECK-LABEL: getPtr
 ; CHECK: adrp [[TLS_INDEX_ADDR:x[0-9]+]], _tls_index
-; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], _tls_index]
+; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], :lo12:_tls_index]
 ; CHECK: ldr [[TLS_POINTER:x[0-9]+]], [x18, #88]
 
 ; CHECK: ldr [[TLS:x[0-9]+]], {{\[}}[[TLS_POINTER]], x[[TLS_INDEX]], lsl #3]
@@ -48,7 +48,7 @@ define i64 @getVar64() {
 
 ; CHECK-LABEL: setVar
 ; CHECK: adrp [[TLS_INDEX_ADDR:x[0-9]+]], _tls_index
-; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], _tls_index]
+; CHECK: ldr w[[TLS_INDEX:[0-9]+]], {{\[}}[[TLS_INDEX_ADDR]], :lo12:_tls_index]
 ; CHECK: ldr [[TLS_POINTER:x[0-9]+]], [x18, #88]
 
 ; CHECK: ldr [[TLS:x[0-9]+]], {{\[}}[[TLS_POINTER]], x[[TLS_INDEX]], lsl #3]
