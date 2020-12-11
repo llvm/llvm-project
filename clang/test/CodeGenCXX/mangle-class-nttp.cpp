@@ -124,7 +124,7 @@ union E {
 template<E> void f() {}
 
 // Union members.
-// CHECK: define weak_odr void @_Z1fIL1EEEvv(
+// CHECK: define weak_odr void @_Z1fIXL1EEEEvv(
 // MSABI: define {{.*}} @"??$f@$7TE@@@@@YAXXZ"
 template void f<E{}>();
 // CHECK: define weak_odr void @_Z1fIXtl1EEEEvv(
@@ -214,10 +214,10 @@ template<H1> void f() {}
 template<H2> void f() {}
 template<H3> void f() {}
 template<H4> void f() {}
-// CHECK: define weak_odr void @_Z1fIL2H1EEvv
+// CHECK: define weak_odr void @_Z1fIXL2H1EEEvv
 // MSABI: define {{.*}} @"??$f@$7TH1@@@@@YAXXZ"
 template void f<H1{}>();
-// CHECK: define weak_odr void @_Z1fIL2H2EEvv
+// CHECK: define weak_odr void @_Z1fIXL2H2EEEvv
 // MSABI: define {{.*}} @"??$f@$7TH2@@@@@YAXXZ"
 template void f<H2{}>();
 // CHECK: define weak_odr void @_Z1fIXtl2H3EEEvv
