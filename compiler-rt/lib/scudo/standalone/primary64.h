@@ -80,17 +80,7 @@ public:
       Region->RegionBeg =
           getRegionBaseByClassId(I) + (getRandomModN(&Seed, 16) + 1) * PageSize;
       Region->RandState = getRandomU32(&Seed);
-      // Releasing smaller size classes doesn't necessarily yield to a
-      // meaningful RSS impact: there are more blocks per page, they are
-      // randomized around, and thus pages are less likely to be entirely empty.
-      // On top of this, attempting to release those require more iterations and
-      // memory accesses which ends up being fairly costly. The current lower
-      // limit is mostly arbitrary and based on empirical observations.
-      // TODO(kostyak): make the lower limit a runtime option
-      Region->CanRelease = (I != SizeClassMap::BatchClassId) &&
-                           (getSizeByClassId(I) >= (PageSize / 32));
-      if (Region->CanRelease)
-        Region->ReleaseInfo.LastReleaseAtNs = Time;
+      Region->ReleaseInfo.LastReleaseAtNs = Time;
     }
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
 
@@ -129,7 +119,7 @@ public:
     ScopedLock L(Region->Mutex);
     Region->FreeList.push_front(B);
     Region->Stats.PushedBlocks += B->getCount();
-    if (Region->CanRelease)
+    if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Region, ClassId);
   }
 
@@ -201,6 +191,8 @@ public:
   uptr releaseToOS() {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
       TotalReleasedBytes += releaseToOSMaybe(Region, I, /*Force=*/true);
@@ -291,7 +283,6 @@ private:
     HybridMutex Mutex;
     SinglyLinkedList<TransferBatch> FreeList;
     RegionStats Stats;
-    bool CanRelease;
     bool Exhausted;
     u32 RandState;
     uptr RegionBeg;
@@ -417,7 +408,7 @@ private:
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
-    CHECK_GE(Region->Stats.PoppedBlocks, Region->Stats.PushedBlocks);
+    DCHECK_GE(Region->Stats.PoppedBlocks, Region->Stats.PushedBlocks);
     const uptr BytesInFreeList =
         Region->AllocatedUser -
         (Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks) * BlockSize;
