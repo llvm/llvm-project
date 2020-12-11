@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -89,21 +90,6 @@ public:
 } // namespace
 
 namespace {
-class BufferizeExtractElementOp : public OpConversionPattern<ExtractElementOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(ExtractElementOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    ExtractElementOp::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<LoadOp>(op, adaptor.aggregate(),
-                                        adaptor.indices());
-    return success();
-  }
-};
-} // namespace
-
-namespace {
 class BufferizeSelectOp : public OpConversionPattern<SelectOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -165,7 +151,6 @@ void mlir::populateStdBufferizePatterns(MLIRContext *context,
       // clang-format off
       BufferizeDimOp,
       BufferizeDynamicTensorFromElementsOp,
-      BufferizeExtractElementOp,
       BufferizeSelectOp,
       BufferizeTensorCastOp,
       BufferizeTensorFromElementsOp
@@ -183,10 +168,11 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
 
     target.addLegalDialect<StandardOpsDialect>();
     target.addLegalDialect<scf::SCFDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
 
     populateStdBufferizePatterns(context, typeConverter, patterns);
-    target.addIllegalOp<DynamicTensorFromElementsOp, ExtractElementOp,
-                        TensorCastOp, TensorFromElementsOp>();
+    target.addIllegalOp<DynamicTensorFromElementsOp, TensorCastOp,
+                        TensorFromElementsOp>();
     // We only bufferize the case of tensor selected type and scalar condition,
     // as that boils down to a select over memref descriptors (don't need to
     // touch the data).
