@@ -76,11 +76,11 @@ namespace std {
 #include <__config>
 #include <__availability>
 #include <__errc>
-#include <type_traits>
+#include <cmath> // for log2f
+#include <cstdint>
+#include <cstring>
 #include <limits>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
+#include <type_traits>
 
 #include <__debug>
 
@@ -333,7 +333,7 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
         auto __len = __p - __buf;
         if (__len <= __diff)
         {
-            memcpy(__first, __buf, __len);
+            _VSTD::memcpy(__first, __buf, __len);
             return {__first + __len, {}};
         }
         else
@@ -382,7 +382,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
         return {__last, errc::value_too_large};
     else
     {
-        memmove(__first, __p, __len);
+        _VSTD::memmove(__first, __p, __len);
         return {__first + __len, {}};
     }
 }
@@ -429,7 +429,7 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
         if (__x <= __complement(__to_unsigned(__tl::min())))
         {
             __x = __complement(__x);
-            memcpy(&__value, &__x, sizeof(__x));
+            _VSTD::memcpy(&__value, &__x, sizeof(__x));
             return __r;
         }
     }
