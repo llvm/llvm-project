@@ -246,8 +246,6 @@ public:
     case TCK_SizeAndLatency:
       Cost = getUserCost(I, kind);
       break;
-    default:
-      llvm_unreachable("Unknown instruction cost kind");
     }
     if (Cost == -1)
       Cost.setInvalid();
