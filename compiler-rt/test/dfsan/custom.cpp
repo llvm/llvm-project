@@ -337,6 +337,64 @@ void test_calloc() {
   free(crv);
 }
 
+void test_recvmmsg() {
+  int sockfds[2];
+  int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
+  assert(ret != -1);
+
+  // Setup messages to send.
+  struct mmsghdr smmsg[2] = {};
+  char sbuf0[] = "abcdefghijkl";
+  struct iovec siov0[2] = {{&sbuf0[0], 4}, {&sbuf0[4], 4}};
+  smmsg[0].msg_hdr.msg_iov = siov0;
+  smmsg[0].msg_hdr.msg_iovlen = 2;
+  char sbuf1[] = "1234567890";
+  struct iovec siov1[1] = {{&sbuf1[0], 7}};
+  smmsg[1].msg_hdr.msg_iov = siov1;
+  smmsg[1].msg_hdr.msg_iovlen = 1;
+
+  // Send messages.
+  int sent_msgs = sendmmsg(sockfds[0], smmsg, 2, 0);
+  assert(sent_msgs == 2);
+
+  // Setup receive buffers.
+  struct mmsghdr rmmsg[2] = {};
+  char rbuf0[128];
+  struct iovec riov0[2] = {{&rbuf0[0], 4}, {&rbuf0[4], 4}};
+  rmmsg[0].msg_hdr.msg_iov = riov0;
+  rmmsg[0].msg_hdr.msg_iovlen = 2;
+  char rbuf1[128];
+  struct iovec riov1[1] = {{&rbuf1[0], 16}};
+  rmmsg[1].msg_hdr.msg_iov = riov1;
+  rmmsg[1].msg_hdr.msg_iovlen = 1;
+  struct timespec timeout = {1, 1};
+  dfsan_set_label(i_label, rbuf0, sizeof(rbuf0));
+  dfsan_set_label(i_label, rbuf1, sizeof(rbuf1));
+  dfsan_set_label(i_label, &rmmsg[0].msg_len, sizeof(rmmsg[0].msg_len));
+  dfsan_set_label(i_label, &rmmsg[1].msg_len, sizeof(rmmsg[1].msg_len));
+  dfsan_set_label(i_label, &timeout, sizeof(timeout));
+
+  // Receive messages and check labels.
+  int received_msgs = recvmmsg(sockfds[1], rmmsg, 2, 0, &timeout);
+  assert(received_msgs == sent_msgs);
+  assert(rmmsg[0].msg_len == smmsg[0].msg_len);
+  assert(rmmsg[1].msg_len == smmsg[1].msg_len);
+  assert(memcmp(sbuf0, rbuf0, 8) == 0);
+  assert(memcmp(sbuf1, rbuf1, 7) == 0);
+  ASSERT_ZERO_LABEL(received_msgs);
+  ASSERT_ZERO_LABEL(rmmsg[0].msg_len);
+  ASSERT_ZERO_LABEL(rmmsg[1].msg_len);
+  ASSERT_READ_ZERO_LABEL(&rbuf0[0], 8);
+  ASSERT_READ_LABEL(&rbuf0[8], 1, i_label);
+  ASSERT_READ_ZERO_LABEL(&rbuf1[0], 7);
+  ASSERT_READ_LABEL(&rbuf1[7], 1, i_label);
+  ASSERT_LABEL(timeout.tv_sec, i_label);
+  ASSERT_LABEL(timeout.tv_nsec, i_label);
+
+  close(sockfds[0]);
+  close(sockfds[1]);
+}
+
 void test_recvmsg() {
   int sockfds[2];
   int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
@@ -1226,6 +1284,7 @@ int main(void) {
   test_pthread_create();
   test_pthread_join();
   test_read();
+  test_recvmmsg();
   test_recvmsg();
   test_sched_getaffinity();
   test_select();

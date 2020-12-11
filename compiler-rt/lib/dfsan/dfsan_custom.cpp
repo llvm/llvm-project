@@ -916,22 +916,40 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_nanosleep(const struct timespec *req,
   return ret;
 }
 
+static void clear_msghdr_labels(size_t bytes_written, struct msghdr *msg) {
+  dfsan_set_label(0, msg, sizeof(*msg));
+  dfsan_set_label(0, msg->msg_name, msg->msg_namelen);
+  dfsan_set_label(0, msg->msg_control, msg->msg_controllen);
+  for (size_t i = 0; bytes_written > 0; ++i) {
+    assert(i < msg->msg_iovlen);
+    struct iovec *iov = &msg->msg_iov[i];
+    size_t iov_written =
+        bytes_written < iov->iov_len ? bytes_written : iov->iov_len;
+    dfsan_set_label(0, iov->iov_base, iov_written);
+    bytes_written -= iov_written;
+  }
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_recvmmsg(
+    int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags,
+    struct timespec *timeout, dfsan_label sockfd_label,
+    dfsan_label msgvec_label, dfsan_label vlen_label, dfsan_label flags_label,
+    dfsan_label timeout_label, dfsan_label *ret_label) {
+  int ret = recvmmsg(sockfd, msgvec, vlen, flags, timeout);
+  for (int i = 0; i < ret; ++i) {
+    dfsan_set_label(0, &msgvec[i].msg_len, sizeof(msgvec[i].msg_len));
+    clear_msghdr_labels(msgvec[i].msg_len, &msgvec[i].msg_hdr);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfsw_recvmsg(
     int sockfd, struct msghdr *msg, int flags, dfsan_label sockfd_label,
     dfsan_label msg_label, dfsan_label flags_label, dfsan_label *ret_label) {
   ssize_t ret = recvmsg(sockfd, msg, flags);
-  if (ret >= 0) {
-    dfsan_set_label(0, msg, sizeof(*msg));
-    dfsan_set_label(0, msg->msg_name, msg->msg_namelen);
-    dfsan_set_label(0, msg->msg_control, msg->msg_controllen);
-    for (size_t remaining = ret, i = 0; remaining > 0; ++i) {
-      assert(i < msg->msg_iovlen);
-      struct iovec *iov = &msg->msg_iov[i];
-      size_t written = remaining < iov->iov_len ? remaining : iov->iov_len;
-      dfsan_set_label(0, iov->iov_base, written);
-      remaining -= written;
-    }
-  }
+  if (ret >= 0)
+    clear_msghdr_labels(ret, msg);
   *ret_label = 0;
   return ret;
 }
