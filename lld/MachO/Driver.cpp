@@ -749,6 +749,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     return !errorCount();
   }
 
+  initLLVM(); // must be run before any call to addFile()
+
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -807,7 +809,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   for (auto *arg : args.filtered(OPT_mllvm))
     parseClangOption(arg->getValue(), arg->getSpelling());
 
-  initLLVM();
   compileBitcodeFiles();
   replaceCommonSymbols();
 
