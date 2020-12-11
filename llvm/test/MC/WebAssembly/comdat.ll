@@ -1,4 +1,8 @@
 ; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=asm %s -asm-verbose=false -o -  | FileCheck --check-prefix=ASM %s
+; RUN: llc -filetype=asm %s -o - | llvm-mc -triple=wasm32 -filetype=obj  -o - | obj2yaml | FileCheck %s
+; These RUN lines verify the ll direct-to-object path, the ll->asm path, and the
+; object output via asm.
 
 target triple = "wasm32-unknown-unknown"
 
@@ -116,3 +120,19 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:          - Kind:            DATA
 ; CHECK-NEXT:            Index:           0
 ; CHECK-NEXT: ...
+
+
+; ASM:        .section        .text.basicInlineFn,"G",@,basicInlineFn,comdat
+; ASM-NEXT:        .weak   basicInlineFn
+; ASM-NEXT:        .type   basicInlineFn,@function
+; ASM-NEXT: basicInlineFn:
+
+; ASM:        .section        .text.sharedFn,"G",@,sharedComdat,comdat
+; ASM-NEXT:        .weak   sharedFn
+; ASM-NEXT:        .type   sharedFn,@function
+; ASM-NEXT: sharedFn:
+
+; ASM:        .type   constantData,@object
+; ASM-NEXT:        .section        .rodata.constantData,"G",@,sharedComdat,comdat
+; ASM-NEXT:        .weak   constantData
+; ASM-NEXT: constantData:

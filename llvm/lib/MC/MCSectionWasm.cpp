@@ -64,7 +64,9 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << ",\"";
 
   if (IsPassive)
-    OS << "passive";
+    OS << "p";
+  if (Group)
+    OS << "G";
 
   OS << '"';
 
@@ -77,6 +79,12 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << '@';
 
   // TODO: Print section type.
+
+  if (Group) {
+    OS << ",";
+    printName(OS, Group->getName());
+    OS << ",comdat";
+  }
 
   if (isUnique())
     OS << ",unique," << UniqueID;
