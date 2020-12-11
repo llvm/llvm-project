@@ -114,9 +114,10 @@ class TestLibraryIndirect(TestBase):
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
         self.expect("fr var", substrs=[
-            "(SomeLibrary.ContainsTwoInts) container = (wrapped = 0x",
-            ", other = 10)",
+            "(SomeLibrary.ContainsTwoInts) container = {",
+            "wrapped = 0x",
+            "other = 10",
             "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "(wrapped = 0x", ", other = 10"])
+        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"])
         self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "{}"])
         self.expect("e container.wrapped.value", error=True, substrs=["value of type 'BoxedTwoInts' has no member 'value'"])

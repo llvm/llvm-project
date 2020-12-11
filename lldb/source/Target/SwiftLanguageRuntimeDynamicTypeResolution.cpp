@@ -997,6 +997,38 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   return offset;
 }
 
+static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
+                                    CompilerType type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  auto mangled = type.GetMangledTypeName().GetStringRef();
+  NodePointer n = dem.demangleSymbol(mangled);
+  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n ||
+      (n->getKind() != Node::Kind::Weak &&
+       n->getKind() != Node::Kind::Unowned &&
+       n->getKind() != Node::Kind::Unmanaged) ||
+      !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  // FIXME: We only need to canonicalize this node, not the entire type.
+  n = ts.CanonicalizeSugar(dem, n->getFirstChild());
+  if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  return ts.RemangleAsType(dem, n);
+}
+
 llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
                                          ValueObject *valobj) {
@@ -1008,7 +1040,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   // Try the static type metadata.
   auto frame =
       valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
-  auto *ti = GetTypeInfo(type, frame);
+  const swift::reflection::TypeRef *tr = nullptr;
+  auto *ti = GetTypeInfo(type, frame, &tr);
   // Structs and Tuples.
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
@@ -1029,6 +1062,41 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   }
   if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
     return eti->getNumPayloadCases();
+  }
+  // Objects.
+  if (auto *rti =
+      llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
+
+    switch (rti->getReferenceKind()) {
+    case swift::reflection::ReferenceKind::Weak:
+    case swift::reflection::ReferenceKind::Unowned:
+    case swift::reflection::ReferenceKind::Unmanaged:
+      // Weak references are implicitly Optionals, so report the one
+      // child of Optional here.
+      if (GetWeakReferent(*ts, type))
+        return 1;
+      break;
+    default:
+      break;
+    }
+
+    if (!tr)
+      return {};
+
+    auto *reflection_ctx = GetReflectionContext();
+    auto &builder = reflection_ctx->getBuilder();
+    auto tc = swift::reflection::TypeConverter(builder);
+    LLDBTypeInfoProvider tip(*this, *ts);
+    auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
+    if (auto *rti =
+            llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
+      // The superclass, if any, is an extra child.
+      if (builder.lookupSuperclass(tr))
+        return rti->getNumFields() + 1;
+      return rti->getNumFields();
+    }
+
+    return {};
   }
   // FIXME: Implement more cases.
   return {};
@@ -1062,38 +1130,6 @@ static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node) {
       return GetBaseName(child);
     return {};
   }
-}
-
-static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
-                                    CompilerType type) {
-  using namespace swift::Demangle;
-  Demangler dem;
-  auto mangled = type.GetMangledTypeName().GetStringRef();
-  NodePointer n = dem.demangleSymbol(mangled);
-  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n ||
-      (n->getKind() != Node::Kind::Weak &&
-       n->getKind() != Node::Kind::Unowned &&
-       n->getKind() != Node::Kind::Unmanaged) ||
-      !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
-    return {};
-  // FIXME: We only need to canonicalize this node, not the entire type.
-  n = ts.CanonicalizeSugar(dem, n->getFirstChild());
-  if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  return ts.RemangleAsType(dem, n);
 }
 
 static CompilerType
@@ -2510,9 +2546,9 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   return type_ref;
 }
 
-const swift::reflection::TypeInfo *
-SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
-                                      ExecutionContextScope *exe_scope) {
+const swift::reflection::TypeInfo *SwiftLanguageRuntimeImpl::GetTypeInfo(
+    CompilerType type, ExecutionContextScope *exe_scope,
+    swift::reflection::TypeRef const **out_tr) {
   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
   if (!ts)
     return nullptr;
@@ -2542,6 +2578,9 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
       GetTypeRef(type, ts->GetSwiftASTContext());
   if (!type_ref)
     return nullptr;
+
+  if (out_tr)
+    *out_tr = type_ref;
 
   auto *reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)

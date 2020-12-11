@@ -78,7 +78,8 @@ public:
 
   /// Ask Remote Mirrors for the type info about a Swift type.
   const swift::reflection::TypeInfo *
-  GetTypeInfo(CompilerType type, ExecutionContextScope *exe_scope);
+  GetTypeInfo(CompilerType type, ExecutionContextScope *exe_scope,
+              swift::reflection::TypeRef const **out_tr = nullptr);
 
   llvm::Optional<const swift::reflection::TypeInfo *>
   lookupClangTypeInfo(CompilerType clang_type);
