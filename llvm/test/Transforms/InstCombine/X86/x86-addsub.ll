@@ -5,6 +5,7 @@ declare <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double>, <2 x double>)
 declare <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float>, <4 x float>)
 declare <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double>, <4 x double>)
 declare <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float>, <8 x float>)
+declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8 immarg) #0
 
 ;
 ; Demanded Elts
@@ -164,4 +165,30 @@ define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, flo
   ret void
 }
 
+define double @PR48476_fsub(<2 x double> %x) {
+; CHECK-LABEL: @PR48476_fsub(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> <double 0.000000e+00, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> [[TMP1]], <2 x double> [[X]], i8 6)
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[T2]], i32 0
+; CHECK-NEXT:    ret double [[VECEXT]]
+;
+  %t1 = call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> zeroinitializer, <2 x double> %x)
+  %t2 = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %t1, <2 x double> %x, i8 6)
+  %vecext = extractelement <2 x double> %t2, i32 0
+  ret double %vecext
+}
 
+define double @PR48476_fadd_fsub(<2 x double> %x) {
+; CHECK-LABEL: @PR48476_fadd_fsub(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[X:%.*]], <double undef, double 0.000000e+00>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[S]], [[X]]
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    ret double [[VECEXT]]
+;
+  %t1 = call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> zeroinitializer, <2 x double> %x)
+  %s = shufflevector <2 x double> %t1, <2 x double> undef, <2 x i32> <i32 1, i32 0>
+  %t2 = call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> %s, <2 x double> %x)
+  %vecext = extractelement <2 x double> %t2, i32 0
+  ret double %vecext
+}
