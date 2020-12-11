@@ -233,7 +233,7 @@ public:
   ///      for (uint8_t i = 100u; i > 0; i += 127u)
   ///
   ///
-  /// TODO: May need to add addtional parameters to represent:
+  /// TODO: May need to add additional parameters to represent:
   ///
   ///  * Allow representing downcounting with unsigned integers.
   ///
