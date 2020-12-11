@@ -16,11 +16,13 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include <chrono>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -58,10 +60,117 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   return Cmd;
 }
 
+// Loads and caches the CDB from a single directory.
+//
+// This class is threadsafe, which is to say we have independent locks for each
+// directory we're searching for a CDB.
+// Loading is deferred until first access.
+//
+// The DirectoryBasedCDB keeps a map from path => DirectoryCache.
+// Typical usage is to:
+//  - 1) determine all the paths that might be searched
+//  - 2) acquire the map lock and get-or-create all the DirectoryCache entries
+//  - 3) release the map lock and query the caches as desired
+//
+// FIXME: this should revalidate the cache sometimes
+// FIXME: IO should go through a VFS
+class DirectoryBasedGlobalCompilationDatabase::DirectoryCache {
+  // Absolute canonical path that we're the cache for. (Not case-folded).
+  const std::string Path;
+
+  // True if we've looked for a CDB here and found none.
+  // (This makes it possible for get() to return without taking a lock)
+  // FIXME: this should have an expiry time instead of lasting forever.
+  std::atomic<bool> FinalizedNoCDB = {false};
+
+  // Guards following cache state.
+  std::mutex Mu;
+  // Has cache been filled from disk? FIXME: this should be an expiry time.
+  bool CachePopulated = false;
+  // Whether a new CDB has been loaded but not broadcast yet.
+  bool NeedsBroadcast = false;
+  // Last loaded CDB, meaningful if CachePopulated is set.
+  // shared_ptr so we can overwrite this when callers are still using the CDB.
+  std::shared_ptr<tooling::CompilationDatabase> CDB;
+
+public:
+  DirectoryCache(llvm::StringRef Path) : Path(Path) {
+    assert(llvm::sys::path::is_absolute(Path));
+  }
+
+  // Get the CDB associated with this directory.
+  // ShouldBroadcast:
+  //  - as input, signals whether the caller is willing to broadcast a
+  //    newly-discovered CDB. (e.g. to trigger background indexing)
+  //  - as output, signals whether the caller should do so.
+  // (If a new CDB is discovered and ShouldBroadcast is false, we mark the
+  // CDB as needing broadcast, and broadcast it next time we can).
+  std::shared_ptr<const tooling::CompilationDatabase>
+  get(bool &ShouldBroadcast) {
+    // Fast path for common case without taking lock.
+    if (FinalizedNoCDB.load()) {
+      ShouldBroadcast = false;
+      return nullptr;
+    }
+    std::lock_guard<std::mutex> Lock(Mu);
+    auto RequestBroadcast = llvm::make_scope_exit([&, OldCDB(CDB.get())] {
+      // If we loaded a new CDB, it should be broadcast at some point.
+      if (CDB != nullptr && CDB.get() != OldCDB)
+        NeedsBroadcast = true;
+      else if (CDB == nullptr) // nothing to broadcast anymore!
+        NeedsBroadcast = false;
+      // If we have something to broadcast, then do so iff allowed.
+      if (!ShouldBroadcast)
+        return;
+      ShouldBroadcast = NeedsBroadcast;
+      NeedsBroadcast = false;
+    });
+
+    // For now, we never actually attempt to revalidate a populated cache.
+    if (CachePopulated)
+      return CDB;
+    assert(CDB == nullptr);
+
+    load();
+    CachePopulated = true;
+
+    if (!CDB)
+      FinalizedNoCDB.store(true);
+    return CDB;
+  }
+
+  llvm::StringRef path() const { return Path; }
+
+private:
+  // Updates `CDB` from disk state.
+  void load() {
+    std::string Error; // ignored, because it's often "didn't find anything".
+    CDB = tooling::CompilationDatabase::loadFromDirectory(Path, Error);
+    if (!CDB) {
+      // Fallback: check for $src/build, the conventional CMake build root.
+      // Probe existence first to avoid each plugin doing IO if it doesn't
+      // exist.
+      llvm::SmallString<256> BuildDir(Path);
+      llvm::sys::path::append(BuildDir, "build");
+      if (llvm::sys::fs::is_directory(BuildDir)) {
+        vlog("Found candidate build directory {0}", BuildDir);
+        CDB = tooling::CompilationDatabase::loadFromDirectory(BuildDir, Error);
+      }
+    }
+    if (CDB) {
+      log("Loaded compilation database from {0}", Path);
+    } else {
+      vlog("No compilation database at {0}", Path);
+    }
+  }
+};
+
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(
-        llvm::Optional<Path> CompileCommandsDir)
-    : CompileCommandsDir(std::move(CompileCommandsDir)) {}
+        llvm::Optional<Path> CompileCommandsDir) {
+  if (CompileCommandsDir)
+    OnlyDirCache = std::make_unique<DirectoryCache>(*CompileCommandsDir);
+}
 
 DirectoryBasedGlobalCompilationDatabase::
     ~DirectoryBasedGlobalCompilationDatabase() = default;
@@ -107,31 +216,26 @@ static bool pathEqual(PathRef A, PathRef B) {
 #endif
 }
 
-DirectoryBasedGlobalCompilationDatabase::CachedCDB &
-DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
-  // FIXME(ibiryukov): Invalidate cached compilation databases on changes
-  auto Key = maybeCaseFoldPath(Dir);
-  auto R = CompilationDatabases.try_emplace(Key);
-  if (R.second) { // Cache miss, try to load CDB.
-    CachedCDB &Entry = R.first->second;
-    std::string Error;
-    Entry.Path = std::string(Dir);
-    Entry.CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
-    // Check for $src/build, the conventional CMake build root.
-    // Probe existence first to avoid each plugin doing IO if it doesn't exist.
-    if (!CompileCommandsDir && !Entry.CDB) {
-      llvm::SmallString<256> BuildDir = Dir;
-      llvm::sys::path::append(BuildDir, "build");
-      if (llvm::sys::fs::is_directory(BuildDir)) {
-        vlog("Found candidate build directory {0}", BuildDir);
-        Entry.CDB =
-            tooling::CompilationDatabase::loadFromDirectory(BuildDir, Error);
-      }
-    }
-    if (Entry.CDB)
-      log("Loaded compilation database from {0}", Dir);
+std::vector<DirectoryBasedGlobalCompilationDatabase::DirectoryCache *>
+DirectoryBasedGlobalCompilationDatabase::getDirectoryCaches(
+    llvm::ArrayRef<llvm::StringRef> Dirs) const {
+  std::vector<std::string> FoldedDirs;
+  FoldedDirs.reserve(Dirs.size());
+  for (const auto &Dir : Dirs) {
+#ifndef NDEBUG
+    if (!llvm::sys::path::is_absolute(Dir))
+      elog("Trying to cache CDB for relative {0}");
+#endif
+    FoldedDirs.push_back(maybeCaseFoldPath(Dir));
   }
-  return R.first->second;
+
+  std::vector<DirectoryCache *> Ret;
+  Ret.reserve(Dirs.size());
+
+  std::lock_guard<std::mutex> Lock(DirCachesMutex);
+  for (unsigned I = 0; I < Dirs.size(); ++I)
+    Ret.push_back(&DirCaches.try_emplace(FoldedDirs[I], Dirs[I]).first->second);
+  return Ret;
 }
 
 llvm::Optional<DirectoryBasedGlobalCompilationDatabase::CDBLookupResult>
@@ -141,39 +245,40 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
          "path must be absolute");
 
   bool ShouldBroadcast = false;
-  CDBLookupResult Result;
-
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    CachedCDB *Entry = nullptr;
-    if (CompileCommandsDir) {
-      Entry = &getCDBInDirLocked(*CompileCommandsDir);
-    } else {
-      // Traverse the canonical version to prevent false positives. i.e.:
-      // src/build/../a.cc can detect a CDB in /src/build if not canonicalized.
-      // FIXME(sammccall): this loop is hot, use a union-find-like structure.
-      actOnAllParentDirectories(removeDots(Request.FileName),
-                                [&](PathRef Path) {
-                                  Entry = &getCDBInDirLocked(Path);
-                                  return Entry->CDB != nullptr;
-                                });
+  DirectoryCache *DirCache = nullptr;
+  std::shared_ptr<const tooling::CompilationDatabase> CDB = nullptr;
+  if (OnlyDirCache) {
+    DirCache = OnlyDirCache.get();
+    ShouldBroadcast = Request.ShouldBroadcast;
+    CDB = DirCache->get(ShouldBroadcast);
+  } else {
+    // Traverse the canonical version to prevent false positives. i.e.:
+    // src/build/../a.cc can detect a CDB in /src/build if not canonicalized.
+    std::string CanonicalPath = removeDots(Request.FileName);
+    std::vector<llvm::StringRef> SearchDirs;
+    actOnAllParentDirectories(CanonicalPath, [&](PathRef Path) {
+      SearchDirs.push_back(Path);
+      return false;
+    });
+    for (DirectoryCache *Candidate : getDirectoryCaches(SearchDirs)) {
+      bool CandidateShouldBroadcast = Request.ShouldBroadcast;
+      if ((CDB = Candidate->get(CandidateShouldBroadcast))) {
+        DirCache = Candidate;
+        ShouldBroadcast = CandidateShouldBroadcast;
+        break;
+      }
     }
-
-    if (!Entry || !Entry->CDB)
-      return llvm::None;
-
-    // Mark CDB as broadcasted to make sure discovery is performed once.
-    if (Request.ShouldBroadcast && !Entry->SentBroadcast) {
-      Entry->SentBroadcast = true;
-      ShouldBroadcast = true;
-    }
-
-    Result.CDB = Entry->CDB.get();
-    Result.PI.SourceRoot = Entry->Path;
   }
 
-  // FIXME: Maybe make the following part async, since this can block retrieval
-  // of compile commands.
+  if (!CDB)
+    return llvm::None;
+
+  CDBLookupResult Result;
+  Result.CDB = std::move(CDB);
+  Result.PI.SourceRoot = DirCache->path().str();
+
+  // FIXME: Maybe make the following part async, since this can block
+  // retrieval of compile commands.
   if (ShouldBroadcast)
     broadcastCDB(Result);
   return Result;
@@ -186,29 +291,32 @@ void DirectoryBasedGlobalCompilationDatabase::broadcastCDB(
   std::vector<std::string> AllFiles = Result.CDB->getAllFiles();
   // We assume CDB in CompileCommandsDir owns all of its entries, since we don't
   // perform any search in parent paths whenever it is set.
-  if (CompileCommandsDir) {
-    assert(*CompileCommandsDir == Result.PI.SourceRoot &&
+  if (OnlyDirCache) {
+    assert(OnlyDirCache->path() == Result.PI.SourceRoot &&
            "Trying to broadcast a CDB outside of CompileCommandsDir!");
     OnCommandChanged.broadcast(std::move(AllFiles));
     return;
   }
 
+  // Uniquify all parent directories of all files.
   llvm::StringMap<bool> DirectoryHasCDB;
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    // Uniquify all parent directories of all files.
-    for (llvm::StringRef File : AllFiles) {
-      actOnAllParentDirectories(File, [&](PathRef Path) {
-        auto It = DirectoryHasCDB.try_emplace(Path);
-        // Already seen this path, and all of its parents.
-        if (!It.second)
-          return true;
+  std::vector<llvm::StringRef> FileAncestors;
+  for (llvm::StringRef File : AllFiles) {
+    actOnAllParentDirectories(File, [&](PathRef Path) {
+      auto It = DirectoryHasCDB.try_emplace(Path);
+      // Already seen this path, and all of its parents.
+      if (!It.second)
+        return true;
 
-        CachedCDB &Entry = getCDBInDirLocked(Path);
-        It.first->second = Entry.CDB != nullptr;
-        return pathEqual(Path, Result.PI.SourceRoot);
-      });
-    }
+      FileAncestors.push_back(It.first->getKey());
+      return pathEqual(Path, Result.PI.SourceRoot);
+    });
+  }
+  // Work out which ones have CDBs in them.
+  for (DirectoryCache *Dir : getDirectoryCaches(FileAncestors)) {
+    bool ShouldBroadcast = false;
+    if (Dir->get(ShouldBroadcast))
+      DirectoryHasCDB.find(Dir->path())->setValue(true);
   }
 
   std::vector<std::string> GovernedFiles;
