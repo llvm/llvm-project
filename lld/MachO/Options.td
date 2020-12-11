@@ -246,7 +246,6 @@ def seg1addr : Separate<["-"], "seg1addr">,
      Group<grp_opts>;
 def no_implicit_dylibs : Flag<["-"], "no_implicit_dylibs">,
      HelpText<"Do not optimize public dylib transitive symbol references">,
-     Flags<[HelpHidden]>,
      Group<grp_opts>;
 def exported_symbols_order : Separate<["-"], "exported_symbols_order">,
      MetaVarName<"<file>">,
