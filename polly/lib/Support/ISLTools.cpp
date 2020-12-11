@@ -524,6 +524,12 @@ isl::map polly::subtractParams(isl::map Map, isl::set Params) {
   return Map.subtract(ParamsMap);
 }
 
+isl::set polly::subtractParams(isl::set Set, isl::set Params) {
+  isl::space SetSpace = Set.get_space();
+  isl::set ParamsSet = isl::set::universe(SetSpace).intersect_params(Params);
+  return Set.subtract(ParamsSet);
+}
+
 isl::val polly::getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
   assert(!Max || !Min); // Cannot return min and max at the same time.
   isl::val Result;

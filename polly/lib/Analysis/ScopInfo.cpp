@@ -1079,6 +1079,8 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
     isl::set StmtDomain = getStatement()->getDomain();
     StmtDomain =
         StmtDomain.intersect_params(getStatement()->getParent()->getContext());
+    StmtDomain = subtractParams(
+        StmtDomain, getStatement()->getParent()->getInvalidContext());
     isl::set NewDomain = NewAccess.domain();
     assert(StmtDomain.is_subset(NewDomain) &&
            "Partial READ accesses not supported");
