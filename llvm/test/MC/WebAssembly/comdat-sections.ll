@@ -1,13 +1,28 @@
 ; RUN: llc -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=wasm32-unknown-unknown < %s \
-; RUN:     | obj2yaml | FileCheck %s
+; RUN:     | obj2yaml | FileCheck --check-prefix=OBJ %s
+
+; RUN: llc -dwarf-version=4 -generate-type-units \
+; RUN:     -filetype=asm -O0 -mtriple=wasm32-unknown-unknown < %s \
+; RUN:      | FileCheck --check-prefix=ASM %s
 
 
-; CHECK:     Comdats:
-; CHECK:      - Name:            '4721183873463917179'
-; CHECK:        Entries:
-; CHECK:          - Kind:            SECTION
-; CHECK:            Index:           3
+; OBJ:     Comdats:
+; OBJ-NEXT:      - Name:            '4721183873463917179'
+; OBJ-NEXT:        Entries:
+; OBJ-NEXT:          - Kind:            SECTION
+; OBJ-NEXT:            Index:           3
+
+
+; ASM: .section .debug_types,"G",@,4721183873463917179,comdat
+; Here we are not trying to verify all of the debug info; just enough  to ensure
+; that the section contains a type unit for a type with matching signature
+; ASM-NEXT:	.int32	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
+; ASM-NEXT: .Ldebug_info_start0:
+; ASM-NEXT:	.int16	4                               # DWARF version number
+; ASM-NEXT:	.int32	.debug_abbrev0                  # Offset Into Abbrev. Section
+; ASM-NEXT:	.int8	4                               # Address Size (in bytes)
+; ASM-NEXT:	.int64	4721183873463917179             # Type Signature
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
