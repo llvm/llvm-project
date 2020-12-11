@@ -2261,7 +2261,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // Because the API deals out an index into a list of children we
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
-  if (m_swift_ast_context->GetNumFields(ReconstructType(type)) <
+  if (m_swift_ast_context->GetNumChildren(ReconstructType(type),
+                                          omit_empty_base_classes, exe_ctx) <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return fallback();
 
