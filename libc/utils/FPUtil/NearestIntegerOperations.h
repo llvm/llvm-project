@@ -13,6 +13,15 @@
 
 #include "utils/CPP/TypeTraits.h"
 
+#include <math.h>
+#if math_errhandling & MATH_ERREXCEPT
+#include "FEnv.h"
+#endif
+#if math_errhandling & MATH_ERRNO
+#include "src/errno/llvmlibc_errno.h"
+#include <errno.h>
+#endif
+
 namespace __llvm_libc {
 namespace fputil {
 
@@ -148,6 +157,53 @@ static inline T round(T x) {
   } else {
     return isNeg ? truncValue - T(1.0) : truncValue + T(1.0);
   }
+}
+
+template <typename F, typename I,
+          cpp::EnableIfType<cpp::IsFloatingPointType<F>::Value &&
+                                cpp::IsIntegral<I>::Value,
+                            int> = 0>
+static inline I roundToSignedInteger(F x) {
+  constexpr I IntegerMin = (I(1) << (sizeof(I) * 8 - 1));
+  constexpr I IntegerMax = -(IntegerMin + 1);
+
+  using FPBits = FPBits<F>;
+  F roundedValue = round(x);
+  FPBits bits(roundedValue);
+  auto setDomainErrorAndRaiseInvalid = []() {
+#if math_errhandling & MATH_ERRNO
+    llvmlibc_errno = EDOM;
+#endif
+#if math_errhandling & MATH_ERREXCEPT
+    raiseExcept(FE_INVALID);
+#endif
+  };
+
+  if (bits.isInfOrNaN()) {
+    // Result of round is infinity or NaN only if x is infinity
+    // or NaN.
+    setDomainErrorAndRaiseInvalid();
+    return bits.sign ? IntegerMin : IntegerMax;
+  }
+
+  int exponent = bits.getExponent();
+  constexpr int exponentLimit = sizeof(I) * 8 - 1;
+  if (exponent > exponentLimit) {
+    setDomainErrorAndRaiseInvalid();
+    return bits.sign ? IntegerMin : IntegerMax;
+  } else if (exponent == exponentLimit) {
+    if (bits.sign == 0 || bits.mantissa != 0) {
+      setDomainErrorAndRaiseInvalid();
+      return bits.sign ? IntegerMin : IntegerMax;
+    }
+    // If the control reaches here, then it means that the rounded
+    // value is the most negative number for the signed integer type I.
+  }
+
+  // For all other cases, if |roundedValue| can fit in the integer type |I|,
+  // we just return the roundedValue. Implicit conversion will convert the
+  // floating point value to the exact integer value.
+  return roundedValue;
 }
 
 } // namespace fputil

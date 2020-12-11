@@ -39,11 +39,11 @@ class RestrictedPtrType<Type type> : Type {
 def VarArgType : Type {}
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
+def LongType : NamedType<"long">;
+def LongLongType : NamedType<"long long">;
 def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
-def LongLongType : NamedType<"long long">;
-def LongType : NamedType<"long">;
 def CharType : NamedType<"char">;
 
 // Common types

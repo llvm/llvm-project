@@ -363,6 +363,14 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"roundf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"roundl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
 
+          FunctionSpec<"lround", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"lroundf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"lroundl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+
+          FunctionSpec<"llround", RetValSpec<LongLongType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"llroundf", RetValSpec<LongLongType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"llroundl", RetValSpec<LongLongType>, [ArgSpec<LongDoubleType>]>,
+
           FunctionSpec<"sqrt", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sqrtf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sqrtl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
