@@ -1262,26 +1262,20 @@ int registerOnlyStd() {
     return 2;
 
   mlirContextRegisterStandardDialect(ctx);
-  if (mlirContextGetNumRegisteredDialects(ctx) != 1)
-    return 3;
-  if (mlirContextGetNumLoadedDialects(ctx) != 1)
-    return 4;
 
   std = mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
   if (mlirDialectIsNull(std))
-    return 5;
-  if (mlirContextGetNumLoadedDialects(ctx) != 2)
-    return 6;
+    return 3;
 
   MlirDialect alsoStd = mlirContextLoadStandardDialect(ctx);
   if (!mlirDialectEqual(std, alsoStd))
-    return 7;
+    return 4;
 
   MlirStringRef stdNs = mlirDialectGetNamespace(std);
   MlirStringRef alsoStdNs = mlirStandardDialectGetNamespace();
   if (stdNs.length != alsoStdNs.length ||
       strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
-    return 8;
+    return 5;
 
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration
