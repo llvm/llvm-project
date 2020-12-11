@@ -40,6 +40,7 @@ add_llvm_unittest(SupportTests
   GlobPatternTest.cpp
   Host.cpp
   IndexedAccessorTest.cpp
+  InstructionCostTest.cpp
   ItaniumManglingCanonicalizerTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp

@@ -27,6 +27,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/InstructionCost.h"
 #include <functional>
 
 namespace llvm {
@@ -231,19 +232,26 @@ public:
   ///
   /// Note, this method does not cache the cost calculation and it
   /// can be expensive in some cases.
-  int getInstructionCost(const Instruction *I, enum TargetCostKind kind) const {
+  InstructionCost getInstructionCost(const Instruction *I,
+                                     enum TargetCostKind kind) const {
+    InstructionCost Cost;
     switch (kind) {
     case TCK_RecipThroughput:
-      return getInstructionThroughput(I);
-
+      Cost = getInstructionThroughput(I);
+      break;
     case TCK_Latency:
-      return getInstructionLatency(I);
-
+      Cost = getInstructionLatency(I);
+      break;
     case TCK_CodeSize:
     case TCK_SizeAndLatency:
-      return getUserCost(I, kind);
+      Cost = getUserCost(I, kind);
+      break;
+    default:
+      llvm_unreachable("Unknown instruction cost kind");
     }
-    llvm_unreachable("Unknown instruction cost kind");
+    if (Cost == -1)
+      Cost.setInvalid();
+    return Cost;
   }
 
   /// Underlying constants for 'cost' values in this interface.
