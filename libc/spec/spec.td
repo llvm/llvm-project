@@ -42,6 +42,8 @@ def IntType : NamedType<"int">;
 def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
+def LongLongType : NamedType<"long long">;
+def LongType : NamedType<"long">;
 def CharType : NamedType<"char">;
 
 // Common types
