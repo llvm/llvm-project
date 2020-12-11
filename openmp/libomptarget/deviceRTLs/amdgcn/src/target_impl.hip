@@ -9,6 +9,7 @@
 // Definitions of target specific functions
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "target_impl.h"
 
@@ -66,7 +67,13 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 
-static DEVICE SHARED uint32_t L1_Barrier;
+
+// static doesn't work for openmp + shared, the variable is discarded by llc
+// and lld then fails to link. Unclear why the variable hasn't been associated
+// with the kernel. Dropping the static qualifier for now.
+
+// static
+DEVICE  uint32_t SHARED(L1_Barrier);
 
 DEVICE void __kmpc_impl_target_init() {
   // Don't have global ctors, and shared memory is not zero init
@@ -153,3 +160,4 @@ EXTERN int global_free(void*);
 // Memory
 DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
+#pragma omp end declare target

@@ -20,8 +20,9 @@ template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
   return atomicAdd(address, val);
 #else
   //  Hack for k4000 without a working  64bit atomic add
-  uint newval = (uint) val;
-  uint* uintaddr = (uint *) address; // take little end for 32 bit atomic op
+  uint32_t newval = (uint32_t)val;
+  uint32_t *uintaddr =
+      (uint32_t *)address; // take little end for 32 bit atomic op
   return (T) atomicAdd(uintaddr, newval);
 #endif
 }

@@ -9,6 +9,7 @@
 // This file contains the implementation of reduction with KMPC interface.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "common/target_atomic.h"
@@ -238,8 +239,8 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
-  static SHARED unsigned Bound;
-  static SHARED unsigned ChunkTeamCount;
+  static unsigned SHARED(Bound);
+  static unsigned SHARED(ChunkTeamCount);
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal
@@ -359,3 +360,4 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   return 0;
 }
 
+#pragma omp end declare target

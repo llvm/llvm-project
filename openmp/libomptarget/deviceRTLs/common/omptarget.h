@@ -72,8 +72,8 @@ private:
   uint32_t nArgs;
 };
 
-extern DEVICE SHARED omptarget_nvptx_SharedArgs
-    omptarget_nvptx_globalArgs;
+extern DEVICE
+    omptarget_nvptx_SharedArgs EXTERN_SHARED(omptarget_nvptx_globalArgs);
 
 // Worker slot type which is initialized with the default worker slot
 // size of 4*32 bytes.
@@ -91,11 +91,11 @@ struct __kmpc_data_sharing_slot {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
-  void * volatile FramePtr[DS_Max_Warp_Number];
+  void *volatile FramePtr[DS_Max_Warp_Number];
   __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
 };
 
-extern DEVICE SHARED DataSharingStateTy DataSharingState;
+extern DEVICE DataSharingStateTy EXTERN_SHARED(DataSharingState);
 
 ////////////////////////////////////////////////////////////////////////////////
 // task ICV and (implicit & explicit) task state
@@ -322,18 +322,25 @@ public:
 
 extern DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
-extern DEVICE SHARED uint32_t usedMemIdx;
-extern DEVICE SHARED uint32_t usedSlotIdx;
-extern DEVICE SHARED uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-extern DEVICE SHARED uint16_t threadLimit;
-extern DEVICE SHARED uint16_t threadsInTeam;
-extern DEVICE SHARED uint16_t nThreads;
-extern DEVICE SHARED
-    omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
+extern DEVICE uint32_t EXTERN_SHARED(usedMemIdx);
+extern DEVICE uint32_t EXTERN_SHARED(usedSlotIdx);
 
-extern DEVICE SHARED uint32_t execution_param;
-extern DEVICE SHARED void *ReductionScratchpadPtr;
+#if _OPENMP
+extern DEVICE uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+#pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
+#else
+extern DEVICE
+    uint8_t EXTERN_SHARED(parallelLevel)[MAX_THREADS_PER_TEAM / WARPSIZE];
+#endif
+
+extern DEVICE uint16_t EXTERN_SHARED(threadLimit);
+extern DEVICE uint16_t EXTERN_SHARED(threadsInTeam);
+extern DEVICE uint16_t EXTERN_SHARED(nThreads);
+extern DEVICE omptarget_nvptx_ThreadPrivateContext *
+    EXTERN_SHARED(omptarget_nvptx_threadPrivateContext);
+
+extern DEVICE uint32_t EXTERN_SHARED(execution_param);
+extern DEVICE void *EXTERN_SHARED(ReductionScratchpadPtr);
 
 ////////////////////////////////////////////////////////////////////////////////
 // work function (outlined parallel/simd functions) and arguments.
@@ -341,8 +348,9 @@ extern DEVICE SHARED void *ReductionScratchpadPtr;
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-extern volatile DEVICE SHARED omptarget_nvptx_WorkFn
-    omptarget_nvptx_workFn;
+
+extern volatile DEVICE
+    omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
 
 ////////////////////////////////////////////////////////////////////////////////
 // get private data structures

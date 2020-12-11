@@ -17,16 +17,55 @@
 #endif
 
 #include "amdgcn_interface.h"
+#include "amdgcn_intrinsics.h"
 
 #include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef _OPENMP
+#define DEVICE
+#else
 #define DEVICE __attribute__((device))
+#endif
+
 #define INLINE inline DEVICE
 #define NOINLINE __attribute__((noinline)) DEVICE
-#define SHARED __attribute__((shared))
+
+#ifdef _OPENMP
+
+// Follows the pattern in interface.h
+typedef enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = UINTPTR_MAX
+} omp_allocator_handle_t;
+
+#define __p(STR) _Pragma(STR)
+#define __p2(STR) __p(#STR)
+
+#define SHARED(NAME)                                                           \
+  NAME [[clang::loader_uninitialized]];                                        \
+  __p2(omp allocate(NAME) allocator(omp_pteam_mem_alloc))
+
+#define EXTERN_SHARED(NAME)                                                    \
+  NAME;                                                                        \
+  __p2(omp allocate(NAME) allocator(omp_pteam_mem_alloc))
+
+#else
+// HIP
+#define SHARED(NAME) __attribute__((shared)) NAME
+#define EXTERN_SHARED(NAME) __attribute__((shared)) NAME
+#endif
+
 #define ALIGN(N) __attribute__((aligned(N)))
 
 #include "hip_atomics.h"

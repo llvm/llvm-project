@@ -162,16 +162,18 @@ endmacro()
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
     -std=c++14
-    -fcuda-rdc
+    -xc++
     -c
-    -D_OPENMP # FIXME This gets around ~./clang/lib/Headers/__clang_hip_runtime_wrapper.h
     -fvisibility=default
     --cuda-device-only
+    -fopenmp-cuda-mode # skip data sharing prologue on device functions
     -Wno-unused-value
-    -x hip
-    -nogpulib -nogpuinc
+    -nogpulib
+    -D__AMDGCN__ # Code uses this to distinguish vs nvptx
+    -target x86_64-pc-linux-gnu -fopenmp
+    -fopenmp-targets=amdgcn-amd-amdhsa
+    -Xopenmp-target=amdgcn-amd-amdhsa -march=${mcpu}
     -O${optimization_level}
-    --cuda-gpu-arch=${mcpu}
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory})

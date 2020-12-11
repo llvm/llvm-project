@@ -31,6 +31,7 @@
 //    To make a long story short...
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "target_impl.h"
@@ -350,3 +351,4 @@ EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid,
                                   int proc_bind) {
   PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", (int)proc_bind);
 }
+#pragma omp end declare target
