@@ -427,6 +427,11 @@ LLVM_DUMP_METHOD void GCOVBlock::dump() const { print(dbgs()); }
 // The algorithm in GCC is based on the algorithm by Hawick & James:
 //   "Enumerating Circuits and Loops in Graphs with Self-Arcs and Multiple-Arcs"
 //   http://complexity.massey.ac.nz/cstn/013/cstn-013.pdf.
+//
+// An optimization is to skip any arc with zero count and to backtrack if the
+// current path has such arcs: any cycle with such arc makes no contribution to
+// the final cycle count. This reduces the complexity from exponential to
+// polynomial of the arcs.
 
 /// Get the count for the detected cycle.
 uint64_t GCOVBlock::getCycleCount(const Edges &Path) {
@@ -458,6 +463,15 @@ void GCOVBlock::unblock(const GCOVBlock *U, BlockVector &Blocked,
   }
 }
 
+void GCOVBlock::trimZeroCountSuffix(Edges &Path) {
+  for (size_t index = 0; index < Path.size(); ++index) {
+    if (Path[index]->cycleCount == 0) {
+      Path.resize(index);
+      return;
+    }
+  }
+}
+
 bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
                                Edges &Path, BlockVector &Blocked,
                                BlockVectorLists &BlockLists,
@@ -465,10 +479,11 @@ bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
   Blocked.push_back(V);
   BlockLists.emplace_back(BlockVector());
   bool FoundCircuit = false;
+  const size_t PrefixLength = Path.size();
 
   for (auto E : V->dsts()) {
     const GCOVBlock *W = &E->dst;
-    if (W < Start || find(Blocks, W) == Blocks.end()) {
+    if (E->cycleCount == 0 || W < Start || find(Blocks, W) == Blocks.end()) {
       continue;
     }
 
@@ -477,6 +492,7 @@ bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
     if (W == Start) {
       // We've a cycle.
       Count += GCOVBlock::getCycleCount(Path);
+      trimZeroCountSuffix(Path);
       FoundCircuit = true;
     } else if (find(Blocked, W) == Blocked.end() && // W is not blocked.
                GCOVBlock::lookForCircuit(W, Start, Path, Blocked, BlockLists,
@@ -484,7 +500,10 @@ bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
       FoundCircuit = true;
     }
 
-    Path.pop_back();
+    if (Path.size() > PrefixLength)
+      Path.pop_back();
+    else if (Path.size() < PrefixLength)
+      break;
   }
 
   if (FoundCircuit) {
@@ -492,7 +511,7 @@ bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
   } else {
     for (auto E : V->dsts()) {
       const GCOVBlock *W = &E->dst;
-      if (W < Start || find(Blocks, W) == Blocks.end()) {
+      if (E->cycleCount == 0 || W < Start || find(Blocks, W) == Blocks.end()) {
         continue;
       }
       const size_t index = find(Blocked, W) - Blocked.begin();
