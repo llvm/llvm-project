@@ -6,12 +6,12 @@ void bar();
 void go();
 
 void foo(int x) {
-  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0)
+  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1)
   if (x == 0)
-    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 2, i32 0)
+    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 2, i32 0, i64 -1)
     bar();
   else
-    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 3, i32 0)
+    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 3, i32 0, i64 -1)
     go();
-  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0)
+  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64 -1)
 }

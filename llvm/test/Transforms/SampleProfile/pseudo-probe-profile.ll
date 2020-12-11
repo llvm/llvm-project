@@ -8,26 +8,26 @@ entry:
   store i32 %x, i32* %x.addr, align 4
   %0 = load i32, i32* %x.addr, align 4
   %cmp = icmp eq i32 %0, 0
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1)
   br i1 %cmp, label %if.then, label %if.else
   ; CHECK: br i1 %cmp, label %if.then, label %if.else, !prof ![[PD1:[0-9]+]]
 
 if.then:
   ; CHECK: call {{.*}}, !dbg ![[#PROBE1:]], !prof ![[PROF1:[0-9]+]]
   call void %f(i32 1)
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1)
   store i32 1, i32* %retval, align 4
   br label %return
 
 if.else:
   ; CHECK: call {{.*}}, !dbg ![[#PROBE2:]], !prof ![[PROF2:[0-9]+]]
   call void %f(i32 2)
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1)
   store i32 2, i32* %retval, align 4
   br label %return
 
 return:
-  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0)
+  ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
   %1 = load i32, i32* %retval, align 4
   ret i32 %1
 }
@@ -36,14 +36,14 @@ attributes #0 = {"use-sample-profile"}
 
 ; CHECK: ![[PD1]] = !{!"branch_weights", i32 8, i32 7}
 ; CHECK: ![[#PROBE1]] = !DILocation(line: 0, scope: ![[#SCOPE1:]])
-;; A discriminator of 119537711 which is 0x400002f in hexdecimal, stands for an indirect call probe
+;; A discriminator of 119537711 which is 0x720002f in hexdecimal, stands for an indirect call probe
 ;; with an index of 5.
-; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 67108911)
+; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537711)
 ; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 7, i64 9191153033785521275, i64 5, i64 -1069303473483922844, i64 2}
-; CHECK: ![[#PROBE2]] = !DILocation(line: 0, scope: ![[#SCOPE2:]])
-;; A discriminator of 119537719 which is 0x4000037 in hexdecimal, stands for an indirect call probe
+;; A discriminator of 119537719 which is 0x7200037 in hexdecimal, stands for an indirect call probe
 ;; with an index of 6.
-; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 67108919)
+; CHECK: ![[#PROBE2]] = !DILocation(line: 0, scope: ![[#SCOPE2:]])
+; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537719)
 ; CHECK: ![[PROF2]] = !{!"VP", i32 0, i64 6, i64 -1069303473483922844, i64 4, i64 9191153033785521275, i64 2}
 
 !llvm.module.flags = !{!9, !10}
@@ -69,6 +69,10 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '13'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '1'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '13'
 ;YAML-NEXT:    - String:          ')'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
@@ -80,6 +84,10 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '7'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '5'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '7'
 ;YAML-NEXT:    - String:          ')'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
@@ -91,6 +99,10 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '7'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '2'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '7'
 ;YAML-NEXT:    - String:          ')'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
@@ -102,6 +114,10 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '6'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '6'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '6'
 ;YAML-NEXT:    - String:          ')'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
@@ -113,6 +129,10 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '6'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '3'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '6'
 ;YAML-NEXT:    - String:          ')'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
@@ -124,4 +144,8 @@ attributes #0 = {"use-sample-profile"}
 ;YAML-NEXT:    - NumSamples:      '13'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '4'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '13'
 ;YAML-NEXT:    - String:          ')'
