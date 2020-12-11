@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
+
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
 struct PseudoProbeDwarfDiscriminator {

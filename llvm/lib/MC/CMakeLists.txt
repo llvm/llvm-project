@@ -32,6 +32,7 @@ add_llvm_component_library(LLVMMC
   MCObjectFileInfo.cpp
   MCObjectStreamer.cpp
   MCObjectWriter.cpp
+  MCPseudoProbe.cpp
   MCRegisterInfo.cpp
   MCSchedule.cpp
   MCSection.cpp
