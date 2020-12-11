@@ -1,6 +1,5 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --allow-undefined --experimental-pic -pie -o %t.wasm %t.o
-; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -65,4 +64,51 @@ define void @_start() {
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
 
+; CHECK:        - Type:            START
+; CHECK-NEXT:     StartFunction:   2
+
+; CHECK:        - Type:            CUSTOM
+; CHECK-NEXT:     Name:            name
+; CHECK-NEXT:     FunctionNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __wasm_call_ctors
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            __wasm_apply_data_relocs
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Name:            __wasm_apply_global_relocs
+
+
+; Run the same test with threading support.  In this mode
+; we expect __wasm_init_memory and __wasm_apply_data_relocs
+; to be generated along with __wasm_start as the start
+; function.
+
+; RUN: llc -relocation-model=pic -mattr=+mutable-globals,+atomics,+bulk-memory -filetype=obj %s -o %t.shmem.o
+; RUN: wasm-ld --no-gc-sections --shared-memory --allow-undefined --experimental-pic -pie -o %t.shmem.wasm %t.shmem.o
+; RUN: obj2yaml %t.shmem.wasm | FileCheck %s --check-prefix=SHMEM
+
+; SHMEM:         - Type:            CODE
+; SHMEM:           - Index:           5
+; SHMEM-NEXT:        Locals:          []
+; SHMEM-NEXT:        Body:            100210040B
+
+; SHMEM:         FunctionNames:
+; SHMEM-NEXT:      - Index:           0
+; SHMEM-NEXT:        Name:            __wasm_call_ctors
+; SHMEM-NEXT:      - Index:           1
+; SHMEM-NEXT:        Name:            __wasm_init_tls
+; SHMEM-NEXT:      - Index:           2
+; SHMEM-NEXT:        Name:            __wasm_init_memory
+; SHMEM-NEXT:      - Index:           3
+; SHMEM-NEXT:        Name:            __wasm_apply_data_relocs
+; SHMEM-NEXT:      - Index:           4
+; SHMEM-NEXT:        Name:            __wasm_apply_global_relocs
+; SHMEM-NEXT:      - Index:           5
+; SHMEM-NEXT:        Name:            __wasm_start
+; SHMEM-NEXT:      - Index:           6
+; SHMEM-NEXT:        Name:            foo
+; SHMEM-NEXT:      - Index:           7
+; SHMEM-NEXT:        Name:            get_data_address
+; SHMEM-NEXT:      - Index:           8
+; SHMEM-NEXT:        Name:            _start
 

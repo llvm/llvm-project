@@ -60,7 +60,9 @@ private:
 
   void createSyntheticInitFunctions();
   void createInitMemoryFunction();
-  void createApplyRelocationsFunction();
+  void createStartFunction();
+  void createApplyDataRelocationsFunction();
+  void createApplyGlobalRelocationsFunction();
   void createCallCtorsFunction();
   void createInitTLSFunction();
   void createCommandExportWrappers();
@@ -296,8 +298,11 @@ void Writer::layoutMemory() {
   }
 
   // Make space for the memory initialization flag
-  if (WasmSym::initMemoryFlag) {
+  if (config->sharedMemory && hasPassiveInitializedSegments()) {
     memoryPtr = alignTo(memoryPtr, 4);
+    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
+        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
+    WasmSym::initMemoryFlag->markLive();
     WasmSym::initMemoryFlag->setVirtualAddress(memoryPtr);
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}",
                 "__wasm_init_memory_flag", memoryPtr, 4, 4));
@@ -867,19 +872,43 @@ bool Writer::hasPassiveInitializedSegments() {
 }
 
 void Writer::createSyntheticInitFunctions() {
+  if (config->relocatable)
+    return;
+
+  static WasmSignature nullSignature = {{}, {}};
+
   // Passive segments are used to avoid memory being reinitialized on each
   // thread's instantiation. These passive segments are initialized and
   // dropped in __wasm_init_memory, which is registered as the start function
-
   if (config->sharedMemory && hasPassiveInitializedSegments()) {
-    static WasmSignature nullSignature = {{}, {}};
     WasmSym::initMemory = symtab->addSyntheticFunction(
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
     WasmSym::initMemory->markLive();
-    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
-        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::initMemoryFlag->markLive();
+  }
+
+  if (config->isPic) {
+    // For PIC code we create synthetic functions that apply relocations.
+    // These get called from __wasm_call_ctors before the user-level
+    // constructors.
+    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_data_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
+    WasmSym::applyDataRelocs->markLive();
+
+    if (out.globalSec->needsRelocations()) {
+      WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
+          "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+          make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
+      WasmSym::applyGlobalRelocs->markLive();
+    }
+  }
+
+  if (WasmSym::applyGlobalRelocs && WasmSym::initMemory) {
+    WasmSym::startFunction = symtab->addSyntheticFunction(
+        "__wasm_start", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature, "__wasm_start"));
+    WasmSym::startFunction->markLive();
   }
 }
 
@@ -1042,24 +1071,39 @@ void Writer::createInitMemoryFunction() {
   createFunction(WasmSym::initMemory, bodyContent);
 }
 
+void Writer::createStartFunction() {
+  if (WasmSym::startFunction) {
+    std::string bodyContent;
+    {
+      raw_string_ostream os(bodyContent);
+      writeUleb128(os, 0, "num locals");
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::initMemory->getFunctionIndex(),
+                   "function index");
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::applyGlobalRelocs->getFunctionIndex(),
+                   "function index");
+      writeU8(os, WASM_OPCODE_END, "END");
+    }
+    createFunction(WasmSym::startFunction, bodyContent);
+  } else if (WasmSym::initMemory) {
+    WasmSym::startFunction = WasmSym::initMemory;
+  } else if (WasmSym::applyGlobalRelocs) {
+    WasmSym::startFunction = WasmSym::applyGlobalRelocs;
+  }
+}
+
 // For -shared (PIC) output, we create create a synthetic function which will
 // apply any relocations to the data segments on startup.  This function is
 // called __wasm_apply_relocs and is added at the beginning of __wasm_call_ctors
 // before any of the constructors run.
-void Writer::createApplyRelocationsFunction() {
-  LLVM_DEBUG(dbgs() << "createApplyRelocationsFunction\n");
+void Writer::createApplyDataRelocationsFunction() {
+  LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
   // First write the body's contents to a string.
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
-
-    // First apply relocations to any internalized GOT entries.  These
-    // are the result of relaxation when building with -Bsymbolic.
-    out.globalSec->generateRelocationCode(os);
-
-    // Next apply any realocation to the data section by reading GOT entry
-    // globals.
     for (const OutputSegment *seg : segments)
       for (const InputSegment *inSeg : seg->inputSegments)
         inSeg->generateRelocationCode(os);
@@ -1067,7 +1111,23 @@ void Writer::createApplyRelocationsFunction() {
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
-  createFunction(WasmSym::applyRelocs, bodyContent);
+  createFunction(WasmSym::applyDataRelocs, bodyContent);
+}
+
+// Similar to createApplyDataRelocationsFunction but generates relocation code
+// fro WebAssembly globals. Because these globals are not shared between threads
+// these relocation need to run on every thread.
+void Writer::createApplyGlobalRelocationsFunction() {
+  // First write the body's contents to a string.
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+    writeUleb128(os, 0, "num locals");
+    out.globalSec->generateRelocationCode(os);
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+
+  createFunction(WasmSym::applyGlobalRelocs, bodyContent);
 }
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
@@ -1076,7 +1136,8 @@ void Writer::createCallCtorsFunction() {
   // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
   // aren't calling `__wasm_apply_relocs` for Emscripten-style PIC, don't
   // define the `__wasm_call_ctors` function.
-  if (!WasmSym::callCtors->isLive() && initFunctions.empty() && !config->isPic)
+  if (!WasmSym::callCtors->isLive() && !WasmSym::applyDataRelocs &&
+      initFunctions.empty())
     return;
 
   // First write the body's contents to a string.
@@ -1085,9 +1146,9 @@ void Writer::createCallCtorsFunction() {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
 
-    if (config->isPic) {
+    if (WasmSym::applyDataRelocs) {
       writeU8(os, WASM_OPCODE_CALL, "CALL");
-      writeUleb128(os, WasmSym::applyRelocs->getFunctionIndex(),
+      writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
                    "function index");
     }
 
@@ -1099,6 +1160,7 @@ void Writer::createCallCtorsFunction() {
         writeU8(os, WASM_OPCODE_DROP, "DROP");
       }
     }
+
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
@@ -1118,7 +1180,7 @@ void Writer::createCommandExportWrapper(uint32_t functionIndex,
     // If we have any ctors, or we're calling `__wasm_apply_relocs` for
     // Emscripten-style PIC, call `__wasm_call_ctors` which performs those
     // calls.
-    if (!initFunctions.empty() || config->isPic) {
+    if (WasmSym::callCtors->isLive()) {
       writeU8(os, WASM_OPCODE_CALL, "CALL");
       writeUleb128(os, WasmSym::callCtors->getFunctionIndex(),
                    "function index");
@@ -1253,8 +1315,6 @@ void Writer::run() {
   populateProducers();
   log("-- calculateImports");
   calculateImports();
-  log("-- createSyntheticInitFunctions");
-  createSyntheticInitFunctions();
   log("-- layoutMemory");
   layoutMemory();
 
@@ -1267,18 +1327,23 @@ void Writer::run() {
 
   log("-- scanRelocations");
   scanRelocations();
+  log("-- createSyntheticInitFunctions");
+  createSyntheticInitFunctions();
   log("-- assignIndexes");
   assignIndexes();
   log("-- calculateInitFunctions");
   calculateInitFunctions();
 
   if (!config->relocatable) {
-    if (WasmSym::applyRelocs)
-      createApplyRelocationsFunction();
+    // Create linker synthesized functions
+    if (WasmSym::applyDataRelocs)
+      createApplyDataRelocationsFunction();
+    if (WasmSym::applyGlobalRelocs)
+      createApplyGlobalRelocationsFunction();
     if (WasmSym::initMemory)
       createInitMemoryFunction();
+    createStartFunction();
 
-    // Create linker synthesized functions
     createCallCtorsFunction();
 
     // Create export wrappers for commands if needed.

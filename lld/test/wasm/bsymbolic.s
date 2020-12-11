@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t.o
-// RUN: wasm-ld --no-entry -Bsymbolic %t.o -o %t2.so 2>&1 | FileCheck -check-prefix=WARNING %s
+// RUN: wasm-ld --no-entry -Bsymbolic %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=WARNING %s
 // WARNING: warning: -Bsymbolic is only meaningful when combined with -shared
 
 // RUN: wasm-ld --experimental-pic -shared %t.o -o %t0.so
