@@ -113,6 +113,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                                  "__ocml_log10_f64");
   patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__ocml_log2_f32",
                                                 "__ocml_log2_f64");
+  patterns.insert<OpToFuncCallLowering<RsqrtOp>>(converter, "__ocml_rsqrt_f32",
+                                                 "__ocml_rsqrt_f64");
   patterns.insert<OpToFuncCallLowering<SinOp>>(converter, "__ocml_sin_f32",
                                                "__ocml_sin_f64");
   patterns.insert<OpToFuncCallLowering<SqrtOp>>(converter, "__ocml_sqrt_f32",
