@@ -371,7 +371,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "namespace " << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
-  // TODO: Factor out instructions with same operands to compress the tables.
+  // TODO: Factor out duplicate operand lists to compress the tables.
   if (!NumberedInstructions.empty()) {
     std::vector<int> OperandOffsets;
     std::vector<Record *> OperandRecords;
@@ -393,16 +393,26 @@ void InstrInfoEmitter::emitOperandTypeMappings(
       }
     }
 
-    // Emit the table of offsets for the opcode lookup.
-    OS << "  const int Offsets[] = {\n";
+    // Emit the table of offsets (indexes) into the operand type table.
+    // Size the unsigned integer offset to save space.
+    assert(OperandRecords.size() <= UINT32_MAX &&
+           "Too many operands for offset table");
+    OS << ((OperandRecords.size() <= UINT16_MAX) ? "  const uint16_t"
+                                                 : "  const uint32_t");
+    OS << " Offsets[] = {\n";
     for (int I = 0, E = OperandOffsets.size(); I != E; ++I)
       OS << "    " << OperandOffsets[I] << ",\n";
     OS << "  };\n";
 
     // Add an entry for the end so that we don't need to special case it below.
     OperandOffsets.push_back(OperandRecords.size());
+
     // Emit the actual operand types in a flat table.
-    OS << "  const int OpcodeOperandTypes[] = {\n    ";
+    // Size the signed integer operand type to save space.
+    assert(EnumVal <= INT16_MAX &&
+           "Too many operand types for operand types table");
+    OS << ((EnumVal <= INT8_MAX) ? "  const int8_t" : "  const int16_t");
+    OS << " OpcodeOperandTypes[] = {\n    ";
     for (int I = 0, E = OperandRecords.size(), CurOffset = 1; I != E; ++I) {
       // We print each Opcode's operands in its own row.
       if (I == OperandOffsets[CurOffset]) {
