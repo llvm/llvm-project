@@ -971,27 +971,12 @@ public:
     auto SymName = Symbol->getName();
     if (SymName.startswith(".L"))
       return; // Local Symbol.
-
     // Only create a new text section if we're already in one.
-    // TODO: If the user explicitly creates a new function section, we ignore
-    // its name when we create this one. It would be nice to honor their
-    // choice, while still ensuring that we create one if they forget.
-    // (that requires coordination with WasmAsmParser::parseSectionDirective)
     auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
     if (!CWS || !CWS->getKind().isText())
       return;
     auto SecName = ".text." + SymName;
-
-    auto *Group = CWS->getGroup();
-    // If the current section is a COMDAT, also set the flag on the symbol.
-    // TODO: Currently the only place that the symbols' comdat flag matters is
-    // for importing comdat functions. But there's no way to specify that in
-    // assembly currently.
-    if (Group)
-      cast<MCSymbolWasm>(Symbol)->setComdat(true);
-    auto *WS =
-        getContext().getWasmSection(SecName, SectionKind::getText(), Group,
-                                    MCContext::GenericSectionID, nullptr);
+    auto WS = getContext().getWasmSection(SecName, SectionKind::getText());
     getStreamer().SwitchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())
