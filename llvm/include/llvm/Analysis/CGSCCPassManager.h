@@ -499,10 +499,6 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT Pass) {
       std::make_unique<PassModelT>(std::move(Pass)));
 }
 
-/// Checks -abort-on-max-devirt-iterations-reached to see if we should report an
-/// error.
-void maxDevirtIterationsReached();
-
 /// A helper that repeats an SCC pass each time an indirect call is refined to
 /// a direct call by that pass.
 ///

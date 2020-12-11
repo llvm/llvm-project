@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gwp_asan/definitions.h"
-#include "gwp_asan/utilities.h"
-
-#include <assert.h>
-
 #ifdef __BIONIC__
 #include <stdlib.h>
 extern "C" GWP_ASAN_WEAK void android_set_abort_message(const char *);

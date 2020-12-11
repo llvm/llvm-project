@@ -80,15 +80,15 @@ class DeclRelationSet;
 /// If callers want to support such decls, they should cast the node directly.
 ///
 /// FIXME: some AST nodes cannot be DynTypedNodes, these cannot be specified.
-llvm::SmallVector<const NamedDecl *, 1>
-targetDecl(const ast_type_traits::DynTypedNode &, DeclRelationSet Mask);
+llvm::SmallVector<const NamedDecl *, 1> targetDecl(const DynTypedNode &,
+                                                   DeclRelationSet Mask);
 
 /// Similar to targetDecl(), however instead of applying a filter, all possible
 /// decls are returned along with their DeclRelationSets.
 /// This is suitable for indexing, where everything is recorded and filtering
 /// is applied later.
 llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
-allTargetDecls(const ast_type_traits::DynTypedNode &);
+allTargetDecls(const DynTypedNode &);
 
 enum class DeclRelation : unsigned {
   // Template options apply when the declaration is an instantiated template.
@@ -162,8 +162,7 @@ void findExplicitReferences(const ASTContext &AST,
 ///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
 /// \p Mask should not contain TemplatePattern or TemplateInstantiation.
 llvm::SmallVector<const NamedDecl *, 1>
-explicitReferenceTargets(ast_type_traits::DynTypedNode N,
-                         DeclRelationSet Mask);
+explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask);
 
 // Boring implementation details of bitfield.
 

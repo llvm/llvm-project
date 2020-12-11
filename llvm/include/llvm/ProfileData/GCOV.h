@@ -295,6 +295,7 @@ public:
   static uint64_t getCycleCount(const Edges &Path);
   static void unblock(const GCOVBlock *U, BlockVector &Blocked,
                       BlockVectorLists &BlockLists);
+  static void trimZeroCountSuffix(Edges &Path);
   static bool lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
                              Edges &Path, BlockVector &Blocked,
                              BlockVectorLists &BlockLists,

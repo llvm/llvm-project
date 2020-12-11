@@ -18,8 +18,7 @@ template <typename T> class OperationPass;
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                            OwningRewritePatternList &patterns,
-                                            MLIRContext *ctx);
+                                            OwningRewritePatternList &patterns);
 
 /// Create a pass to convert Linalg operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToLLVMPass();

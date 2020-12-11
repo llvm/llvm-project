@@ -44,10 +44,8 @@
 namespace clang {
 namespace clangd {
 namespace {
-using ast_type_traits::DynTypedNode;
 
-LLVM_ATTRIBUTE_UNUSED std::string
-nodeToString(const ast_type_traits::DynTypedNode &N) {
+LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
   std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
@@ -335,13 +333,11 @@ private:
   RelSet Flags;
 
   template <typename T> void debug(T &Node, RelSet Flags) {
-    dlog("visit [{0}] {1}", Flags,
-         nodeToString(ast_type_traits::DynTypedNode::create(Node)));
+    dlog("visit [{0}] {1}", Flags, nodeToString(DynTypedNode::create(Node)));
   }
 
   void report(const NamedDecl *D, RelSet Flags) {
-    dlog("--> [{0}] {1}", Flags,
-         nodeToString(ast_type_traits::DynTypedNode::create(*D)));
+    dlog("--> [{0}] {1}", Flags, nodeToString(DynTypedNode::create(*D)));
     auto It = Decls.try_emplace(D, std::make_pair(Flags, Decls.size()));
     // If already exists, update the flags.
     if (!It.second)
@@ -684,7 +680,7 @@ public:
 } // namespace
 
 llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
-allTargetDecls(const ast_type_traits::DynTypedNode &N) {
+allTargetDecls(const DynTypedNode &N) {
   dlog("allTargetDecls({0})", nodeToString(N));
   TargetFinder Finder;
   DeclRelationSet Flags;
@@ -708,8 +704,8 @@ allTargetDecls(const ast_type_traits::DynTypedNode &N) {
   return Finder.takeDecls();
 }
 
-llvm::SmallVector<const NamedDecl *, 1>
-targetDecl(const ast_type_traits::DynTypedNode &N, DeclRelationSet Mask) {
+llvm::SmallVector<const NamedDecl *, 1> targetDecl(const DynTypedNode &N,
+                                                   DeclRelationSet Mask) {
   llvm::SmallVector<const NamedDecl *, 1> Result;
   for (const auto &Entry : allTargetDecls(N)) {
     if (!(Entry.second & ~Mask))

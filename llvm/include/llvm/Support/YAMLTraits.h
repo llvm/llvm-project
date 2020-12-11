@@ -18,6 +18,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
@@ -1471,9 +1472,10 @@ private:
 
     static bool classof(const MapHNode *) { return true; }
 
-    using NameToNode = StringMap<std::unique_ptr<HNode>>;
+    using NameToNodeAndLoc =
+        StringMap<std::pair<std::unique_ptr<HNode>, SMRange>>;
 
-    NameToNode Mapping;
+    NameToNodeAndLoc Mapping;
     SmallVector<std::string, 6> ValidKeys;
   };
 
@@ -1495,9 +1497,11 @@ private:
   std::unique_ptr<Input::HNode> createHNodes(Node *node);
   void setError(HNode *hnode, const Twine &message);
   void setError(Node *node, const Twine &message);
+  void setError(const SMRange &Range, const Twine &message);
 
   void reportWarning(HNode *hnode, const Twine &message);
   void reportWarning(Node *hnode, const Twine &message);
+  void reportWarning(const SMRange &Range, const Twine &message);
 
 public:
   // These are only used by operator>>. They could be private

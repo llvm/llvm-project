@@ -529,16 +529,11 @@ void LoopConvertCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs, makeArrayLoopMatcher()),
-                     this);
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs, makeIteratorLoopMatcher(false)), this);
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs, makePseudoArrayLoopMatcher()), this);
+  Finder->addMatcher(traverse(TK_AsIs, makeArrayLoopMatcher()), this);
+  Finder->addMatcher(traverse(TK_AsIs, makeIteratorLoopMatcher(false)), this);
+  Finder->addMatcher(traverse(TK_AsIs, makePseudoArrayLoopMatcher()), this);
   if (UseReverseRanges)
-    Finder->addMatcher(
-        traverse(ast_type_traits::TK_AsIs, makeIteratorLoopMatcher(true)),
-        this);
+    Finder->addMatcher(traverse(TK_AsIs, makeIteratorLoopMatcher(true)), this);
 }
 
 /// Given the range of a single declaration, such as:
@@ -965,7 +960,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Find out which qualifiers we have to use in the loop range.
-  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Context, TK_AsIs);
   const UsageResult &Usages = Finder.getUsages();
   determineRangeDescriptor(Context, Nodes, Loop, FixerKind, ContainerExpr,
                            Usages, Descriptor);

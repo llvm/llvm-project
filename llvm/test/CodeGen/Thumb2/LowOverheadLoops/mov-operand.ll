@@ -8,8 +8,8 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_1: @ %do.body.i
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r12], #16
@@ -17,30 +17,19 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %arm_mean_f32_mve.exit
 ; CHECK-NEXT:    vmov s4, r1
-; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vadd.f32 s0, s3, s3
-; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    vcvt.f32.u32 s4, s4
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge r3, #4
-; CHECK-NEXT:    subs r3, r1, r3
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    adds r3, #3
-; CHECK-NEXT:    add.w lr, lr, r3, lsr #2
 ; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdiv.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_3: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vpsttt
-; CHECK-NEXT:    vldrwt.u32 q1, [r0], #16
-; CHECK-NEXT:    vsubt.f32 q1, q1, r12
-; CHECK-NEXT:    vfmat.f32 q0, q1, q1
-; CHECK-NEXT:    le lr, .LBB0_3
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vsub.f32 q1, q1, r12
+; CHECK-NEXT:    vfma.f32 q0, q1, q1
+; CHECK-NEXT:    letp lr, .LBB0_3
 ; CHECK-NEXT:  @ %bb.4: @ %do.end
 ; CHECK-NEXT:    subs r0, r1, #1
 ; CHECK-NEXT:    vadd.f32 s0, s3, s3

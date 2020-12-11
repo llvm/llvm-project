@@ -183,6 +183,7 @@ fun:uselocale=discard
 
 # Functions that produce output does not depend on the input (need to zero the
 # shadow manually).
+fun:_dl_get_tls_static_info=custom
 fun:calloc=custom
 fun:clock_gettime=custom
 fun:dlopen=custom
@@ -192,13 +193,17 @@ fun:fstat=custom
 fun:getcwd=custom
 fun:get_current_dir_name=custom
 fun:gethostname=custom
+fun:getpeername=custom
 fun:getrlimit=custom
 fun:getrusage=custom
+fun:getsockname=custom
 fun:getsockopt=custom
 fun:nanosleep=custom
 fun:pread=custom
 fun:read=custom
+fun:recvmmsg=custom
 fun:recvmsg=custom
+fun:sigaltstack=custom
 fun:socketpair=custom
 fun:stat=custom
 fun:time=custom
@@ -314,6 +319,10 @@ fun:pthread_setspecific=discard
 
 # Functions that take a callback (wrap the callback manually).
 fun:pthread_create=custom
+
+# Functions that produce output does not depend on the input (need to zero the
+# shadow manually).
+fun:pthread_join=custom
 
 ###############################################################################
 # libffi/libgo

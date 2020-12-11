@@ -217,6 +217,7 @@ public:
   // specific relocation types combined with linker relaxation which could
   // transform a `global.get` to an `i32.const`.
   void addInternalGOTEntry(Symbol *sym);
+  bool needsRelocations() { return internalGotSymbols.size(); }
   void generateRelocationCode(raw_ostream &os) const;
 
   std::vector<const DefinedData *> dataAddressGlobals;
@@ -239,14 +240,9 @@ public:
 
 class StartSection : public SyntheticSection {
 public:
-  StartSection(bool hasInitializedSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_START),
-        hasInitializedSegments(hasInitializedSegments) {}
+  StartSection() : SyntheticSection(llvm::wasm::WASM_SEC_START) {}
   bool isNeeded() const override;
   void writeBody() override;
-
-protected:
-  bool hasInitializedSegments;
 };
 
 class ElemSection : public SyntheticSection {

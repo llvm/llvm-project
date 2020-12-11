@@ -268,6 +268,126 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lround_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lround
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lroundf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lroundl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llround_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llround
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llroundf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llroundl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   expf_test
   NEED_MPFR
   SUITE

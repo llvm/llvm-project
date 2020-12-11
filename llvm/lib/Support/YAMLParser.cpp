@@ -1774,7 +1774,11 @@ Stream::~Stream() = default;
 bool Stream::failed() { return scanner->failed(); }
 
 void Stream::printError(Node *N, const Twine &Msg, SourceMgr::DiagKind Kind) {
-  SMRange Range = N ? N->getSourceRange() : SMRange();
+  printError(N ? N->getSourceRange() : SMRange(), Msg, Kind);
+}
+
+void Stream::printError(const SMRange &Range, const Twine &Msg,
+                        SourceMgr::DiagKind Kind) {
   scanner->printError(Range.Start, Kind, Msg, Range);
 }
 

@@ -55,6 +55,17 @@ struct RefMaps {
   }
 };
 
+TEST(FileEntryTest, Constructor) {
+  FileEntry FE;
+  EXPECT_EQ(0U, FE.getSize());
+  EXPECT_EQ(0, FE.getModificationTime());
+  EXPECT_EQ(nullptr, FE.getDir());
+  EXPECT_EQ(0U, FE.getUniqueID().getDevice());
+  EXPECT_EQ(0U, FE.getUniqueID().getFile());
+  EXPECT_EQ(false, FE.isNamedPipe());
+  EXPECT_EQ(false, FE.isValid());
+}
+
 TEST(FileEntryTest, FileEntryRef) {
   RefMaps Refs;
   FileEntryRef R1 = Refs.addFile("1");

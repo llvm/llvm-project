@@ -35,7 +35,6 @@ namespace clang {
 namespace clangd {
 namespace {
 using Node = SelectionTree::Node;
-using ast_type_traits::DynTypedNode;
 
 // Measure the fraction of selections that were enabled by recovery AST.
 void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {

@@ -19,8 +19,7 @@ class OperationPass;
 class OwningRewritePatternList;
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
-void populateOpenMPToLLVMConversionPatterns(MLIRContext *context,
-                                            LLVMTypeConverter &converter,
+void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             OwningRewritePatternList &patterns);
 
 /// Create a pass to convert OpenMP operations to the LLVMIR dialect.

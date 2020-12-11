@@ -256,6 +256,10 @@ void Fortran::lower::genOpenMPConstruct(
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
             TODO("");
           },
+          [&](const Fortran::parser::OpenMPDeclarativeAllocate
+                  &execAllocConstruct) { TODO(""); },
+          [&](const Fortran::parser::OpenMPExecutableAllocate
+                  &execAllocConstruct) { TODO(""); },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
             genOMP(converter, eval, blockConstruct);
           },

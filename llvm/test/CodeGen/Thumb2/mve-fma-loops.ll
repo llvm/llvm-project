@@ -266,8 +266,8 @@ define arm_aapcs_vfpcc void @fmss1(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:  .LBB4_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r12, #-2147483648
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
@@ -530,8 +530,8 @@ define arm_aapcs_vfpcc void @fms1(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:  .LBB8_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r12, #-2147483648
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB8_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4

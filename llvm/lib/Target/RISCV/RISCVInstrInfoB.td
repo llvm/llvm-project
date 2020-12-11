@@ -480,12 +480,10 @@ def C_ZEXTW : RVBInstC<0b10, "c.zext.w">, Sched<[]>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZbb, IsRV32] in {
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZbb, IsRV32]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
 def : InstAlias<"zext.w $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZbb, IsRV64]

@@ -2287,6 +2287,25 @@ public:
     Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPExecutableAllocate &x) {
+    BeginOpenMP();
+    Word("!$OMP ALLOCATE");
+    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<Statement<AllocateStmt>>(x.t));
+  }
+  void Unparse(const OpenMPDeclarativeAllocate &x) {
+    BeginOpenMP();
+    Word("!$OMP ALLOCATE");
+    Put(" (");
+    Walk(std::get<OmpObjectList>(x.t));
+    Put(")");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();
     Word("!$OMP CRITICAL");
@@ -2339,6 +2358,15 @@ public:
     BeginOpenMP();
     Word("!$OMP ");
     return std::visit(common::visitors{
+                          [&](const OpenMPDeclarativeAllocate &z) {
+                            Word("ALLOCATE (");
+                            Walk(std::get<OmpObjectList>(z.t));
+                            Put(")");
+                            Walk(std::get<OmpClauseList>(z.t));
+                            Put("\n");
+                            EndOpenMP();
+                            return false;
+                          },
                           [&](const OpenMPDeclareReductionConstruct &) {
                             Word("DECLARE REDUCTION ");
                             return true;

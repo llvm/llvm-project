@@ -160,17 +160,9 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     case MachineOperand::MO_Register: {
       unsigned Reg = MO.getReg();
 
-      // Nothing to do on NoRegister operands (used as vector mask operand on
-      // unmasked instructions)
-      if (Reg == RISCV::NoRegister) {
-        MCOp = MCOperand::createReg(Reg);
-        break;
-      }
-
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      if (RC->hasSuperClassEq(&RISCV::VRM2RegClass) ||
-          RC->hasSuperClassEq(&RISCV::VRM4RegClass) ||
-          RC->hasSuperClassEq(&RISCV::VRM8RegClass)) {
+      if (RISCV::VRM2RegClass.contains(Reg) ||
+          RISCV::VRM4RegClass.contains(Reg) ||
+          RISCV::VRM8RegClass.contains(Reg)) {
         Reg = TRI->getSubReg(Reg, RISCV::sub_vrm2);
         assert(Reg && "Subregister does not exist");
       }
@@ -184,6 +176,12 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     }
     OutMI.addOperand(MCOp);
   }
+
+  // Unmasked pseudo instructions define MergeOpIndex to -1.
+  // Append dummy mask operand to V instructions.
+  if (RVV->getMergeOpIndex() == -1)
+    OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
+
   return true;
 }
 

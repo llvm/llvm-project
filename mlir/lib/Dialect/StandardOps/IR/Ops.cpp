@@ -1136,7 +1136,7 @@ static LogicalResult verify(ConstantOp &op) {
   if (!value)
     return op.emitOpError("requires a 'value' attribute");
 
-  auto type = op.getType();
+  Type type = op.getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return op.emitOpError() << "requires attribute's type (" << value.getType()
                             << ") to match op's return type (" << type << ")";
@@ -1145,10 +1145,14 @@ static LogicalResult verify(ConstantOp &op) {
     return success();
 
   if (auto intAttr = value.dyn_cast<IntegerAttr>()) {
+    IntegerType intType = type.cast<IntegerType>();
+    if (!intType.isSignless())
+      return op.emitOpError("requires integer result types to be signless");
+
     // If the type has a known bitwidth we verify that the value can be
     // represented with the given bitwidth.
-    auto bitwidth = type.cast<IntegerType>().getWidth();
-    auto intVal = intAttr.getValue();
+    unsigned bitwidth = intType.getWidth();
+    APInt intVal = intAttr.getValue();
     if (!intVal.isSignedIntN(bitwidth) && !intVal.isIntN(bitwidth))
       return op.emitOpError("requires 'value' to be an integer within the "
                             "range of the integer result type");
@@ -1228,9 +1232,13 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   // SymbolRefAttr can only be used with a function type.
   if (value.isa<SymbolRefAttr>())
     return type.isa<FunctionType>();
-  // Otherwise, the attribute must have the same type as 'type'.
+  // The attribute must have the same type as 'type'.
   if (value.getType() != type)
     return false;
+  // If the type is an integer type, it must be signless.
+  if (IntegerType integerTy = type.dyn_cast<IntegerType>())
+    if (!integerTy.isSignless())
+      return false;
   // Finally, check that the attribute kind is handled.
   return value.isa<IntegerAttr, FloatAttr, ElementsAttr, UnitAttr>();
 }

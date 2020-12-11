@@ -478,6 +478,9 @@ isl::map intersectRange(isl::map Map, isl::union_set Range);
 /// @param The map with the parameter conditions removed.
 isl::map subtractParams(isl::map Map, isl::set Params);
 
+/// Subtract the parameter space @p Params from @p Set.
+isl::set subtractParams(isl::set Set, isl::set Params);
+
 /// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.

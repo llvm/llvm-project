@@ -28,7 +28,7 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxConstructorDecl(
                    unless(isImplicit()), isMoveConstructor(),
                    hasAnyConstructorInitializer(

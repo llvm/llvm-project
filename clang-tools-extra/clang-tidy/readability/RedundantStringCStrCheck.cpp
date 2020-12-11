@@ -99,7 +99,7 @@ void RedundantStringCStrCheck::registerMatchers(
   // check that matched ParamDecl of the ancestor CallExpr is not rvalue.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxConstructExpr(
               StringConstructorExpr, hasArgument(0, StringCStrCallExpr),
               unless(anyOf(HasRValueTempParent, hasParent(cxxBindTemporaryExpr(
@@ -158,7 +158,7 @@ void RedundantStringCStrCheck::registerMatchers(
   // Detect redundant 'c_str()' calls through a StringRef constructor.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxConstructExpr(
               // Implicit constructors of these classes are overloaded
               // wrt. string types and they internally make a StringRef

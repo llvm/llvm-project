@@ -6,7 +6,8 @@ extern unsigned fireFighters;
 bool isBurning();
 bool isReallyBurning();
 bool isCollapsing();
-void tryToExtinguish(bool&);
+bool tryToExtinguish(bool&);
+bool tryToExtinguishByVal(bool);
 void tryPutFireOut();
 bool callTheFD();
 void scream();
@@ -948,6 +949,30 @@ void negative_indirect2_outer_and_rhs_inner_or_rhs() {
   }
 }
 
+void negative_by_ref(bool onFire) {
+  if (tryToExtinguish(onFire) && onFire) {
+    if (tryToExtinguish(onFire) && onFire) {
+      // NO-MESSAGE: fire may have been extinguished
+      scream();
+    }
+  }
+}
+
+void negative_by_val(bool onFire) {
+  if (tryToExtinguishByVal(onFire) && onFire) {
+    if (tryToExtinguish(onFire) && onFire) {
+      // NO-MESSAGE: fire may have been extinguished
+      scream();
+    }
+  }
+  if (tryToExtinguish(onFire) && onFire) {
+    if (tryToExtinguishByVal(onFire) && onFire) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      scream();
+    }
+  }
+}
+
 void negative_reassigned() {
   bool onFire = isBurning();
   if (onFire) {
@@ -1077,9 +1102,9 @@ void positive_comma_after_condition() {
 int positive_expr_with_cleanups() {
   class RetT {
   public:
-    RetT(const int _code) : code_(_code) {}
-    bool Ok() const { return code_ == 0; }
-    static RetT Test(bool &_isSet) { return 0; }
+    RetT(const int code);
+    bool Ok() const;
+    static RetT Test(bool isSet);
 
   private:
     int code_;

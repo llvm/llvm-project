@@ -48,7 +48,7 @@ void ImplicitConversionInLoopCheck::registerMatchers(MatchFinder *Finder) {
   // cxxOperatorCallExpr() matcher.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxForRangeStmt(hasLoopVariable(
               varDecl(
                   hasType(qualType(references(qualType(isConstQualified())))),

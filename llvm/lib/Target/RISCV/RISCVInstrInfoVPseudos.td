@@ -126,34 +126,86 @@ def RISCVVPseudosTable : GenericTable {
 // Helpers to define the different pseudo instructions.
 //===----------------------------------------------------------------------===//
 
-multiclass pseudo_binary<VReg result_reg_class,
-                         VReg op1_reg_class,
-                         DAGOperand op2_kind,
-                         LMULInfo vlmul > {
-  let Constraints = "$rd = $merge",
-      Uses = [VL, VTYPE], VLIndex = 5, SEWIndex = 6, MergeOpIndex = 1,
-      BaseInstr = !cast<Instruction>(!subst("Pseudo", "", NAME)) in
-    def "_"# vlmul.MX : Pseudo<(outs result_reg_class:$rd),
-                            (ins result_reg_class:$merge,
-                                 op1_reg_class:$rs2, op2_kind:$rs1,
-                                 VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),
-                            []>,
-                     RISCVVPseudo;
+class PseudoToVInst<string PseudoInst> {
+  string VInst = !subst("_M8", "",
+                 !subst("_M4", "",
+                 !subst("_M2", "",
+                 !subst("_M1", "",
+                 !subst("_MF2", "",
+                 !subst("_MF4", "",
+                 !subst("_MF8", "",
+                 !subst("_MASK", "",
+                 !subst("Pseudo", "", PseudoInst)))))))));
 }
 
-multiclass pseudo_binary_v_vv_vx_vi<Operand imm_type = simm5,
-                                    bit force_earlyclobber = 0> {
+class VPseudoBinary<VReg RetClass,
+                    VReg Op1Class,
+                    DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd),
+               (ins Op1Class:$rs2, Op2Class:$rs1, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let Uses = [VL, VTYPE];
+  let VLIndex = 3;
+  let SEWIndex = 4;
+  let MergeOpIndex = -1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoBinaryMask<VReg RetClass,
+                        VReg Op1Class,
+                        DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd),
+                (ins RetClass:$merge,
+                     Op1Class:$rs2, Op2Class:$rs1,
+                     VMaskOp:$vm, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let Constraints = "$rd = $merge";
+  let Uses = [VL, VTYPE];
+  let VLIndex = 5;
+  let SEWIndex = 6;
+  let MergeOpIndex = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+multiclass VPseudoBinary<VReg RetClass,
+                         VReg Op1Class,
+                         DAGOperand Op2Class,
+                         LMULInfo MInfo> {
+  def "_" # MInfo.MX : VPseudoBinary<RetClass, Op1Class, Op2Class>;
+  def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMask<RetClass, Op1Class, Op2Class>;
+}
+
+multiclass VPseudoBinaryV_VV {
   let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1 in
   foreach m = MxList.m in
   {
     let VLMul = m.value in
-    {
-      defvar evr = m.vrclass;
-      defm _VV : pseudo_binary<evr, evr, evr, m>;
-      defm _VX : pseudo_binary<evr, evr, GPR, m>;
-      defm _VI : pseudo_binary<evr, evr, imm_type, m>;
-    }
+    defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m>;
   }
+}
+
+multiclass VPseudoBinaryV_VX {
+  let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1 in
+  foreach m = MxList.m in
+  {
+    let VLMul = m.value in
+    defm _VX : VPseudoBinary<m.vrclass, m.vrclass, GPR, m>;
+  }
+}
+
+multiclass VPseudoBinaryV_VI<Operand ImmType = simm5> {
+  let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1 in
+  foreach m = MxList.m in
+  {
+    let VLMul = m.value in
+    defm _VI : VPseudoBinary<m.vrclass, m.vrclass, ImmType, m>;
+  }
+}
+
+multiclass VPseudoBinary_VV_VX_VI<Operand ImmType = simm5> {
+  defm "" : VPseudoBinaryV_VV;
+  defm "" : VPseudoBinaryV_VX;
+  defm "" : VPseudoBinaryV_VI<ImmType>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -167,7 +219,7 @@ multiclass pat_vop_binary<SDNode vop,
                           ValueType mask_type,
                           int sew,
                           LMULInfo vlmul,
-                          VReg result_reg_class,
+                          VReg RetClass,
                           VReg op_reg_class,
                           bit swap = 0>
 {
@@ -175,10 +227,8 @@ multiclass pat_vop_binary<SDNode vop,
   def : Pat<(result_type (vop
                           (op_type op_reg_class:$rs1),
                           (op_type op_reg_class:$rs2))),
-            (instruction (result_type (IMPLICIT_DEF)),
-                         op_reg_class:$rs1,
+            (instruction op_reg_class:$rs1,
                          op_reg_class:$rs2,
-                         (mask_type zero_reg),
                          VLMax, sew)>;
 }
 
@@ -300,7 +350,7 @@ foreach vti = AllVectors in
 //===----------------------------------------------------------------------===//
 
 // Pseudo instructions.
-defm PseudoVADD        : pseudo_binary_v_vv_vx_vi;
+defm PseudoVADD        : VPseudoBinary_VV_VX_VI;
 
 // Whole-register vector patterns.
 defm "" : pat_vop_binary_common<add, "PseudoVADD", AllIntegerVectors>;

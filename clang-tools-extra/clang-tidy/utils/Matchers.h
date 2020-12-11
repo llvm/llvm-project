@@ -43,6 +43,12 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
   return referenceType(pointee(qualType(isConstQualified())));
 }
 
+// Returns QualType matcher for pointers to const.
+AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
+  using namespace ast_matchers;
+  return pointerType(pointee(qualType(isConstQualified())));
+}
+
 AST_MATCHER_P(NamedDecl, matchesAnyListedName, std::vector<std::string>,
               NameList) {
   return llvm::any_of(NameList, [&Node](const std::string &Name) {

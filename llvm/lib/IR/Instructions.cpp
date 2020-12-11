@@ -322,16 +322,6 @@ Value *CallBase::getReturnedArgOperand() const {
   return nullptr;
 }
 
-bool CallBase::hasRetAttr(Attribute::AttrKind Kind) const {
-  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
-    return true;
-
-  // Look at the callee, if available.
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
-  return false;
-}
-
 /// Determine whether the argument or parameter has the given attribute.
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < getNumArgOperands() && "Param index out of bounds!");

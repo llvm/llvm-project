@@ -859,44 +859,43 @@ OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
-CanonicalLoopInfo *
-OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
-                                     LoopBodyGenCallbackTy BodyGenCB,
-                                     Value *TripCount) {
-  BasicBlock *BB = Loc.IP.getBlock();
-  BasicBlock *NextBB = BB->getNextNode();
-  Function *F = BB->getParent();
+CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
+    DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
+    BasicBlock *PostInsertBefore, const Twine &Name) {
+  Module *M = F->getParent();
+  LLVMContext &Ctx = M->getContext();
   Type *IndVarTy = TripCount->getType();
 
   // Create the basic block structure.
   BasicBlock *Preheader =
-      BasicBlock::Create(M.getContext(), "omp_for.preheader", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".preheader", F, PreInsertBefore);
   BasicBlock *Header =
-      BasicBlock::Create(M.getContext(), "omp_for.header", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".header", F, PreInsertBefore);
   BasicBlock *Cond =
-      BasicBlock::Create(M.getContext(), "omp_for.cond", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".cond", F, PreInsertBefore);
   BasicBlock *Body =
-      BasicBlock::Create(M.getContext(), "omp_for.body", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".body", F, PreInsertBefore);
   BasicBlock *Latch =
-      BasicBlock::Create(M.getContext(), "omp_for.inc", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".inc", F, PostInsertBefore);
   BasicBlock *Exit =
-      BasicBlock::Create(M.getContext(), "omp_for.exit", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".exit", F, PostInsertBefore);
   BasicBlock *After =
-      BasicBlock::Create(M.getContext(), "omp_for.after", F, NextBB);
+      BasicBlock::Create(Ctx, "omp_" + Name + ".after", F, PostInsertBefore);
 
-  updateToLocation(Loc);
-  Builder.CreateBr(Preheader);
+  // Use specified DebugLoc for new instructions.
+  Builder.SetCurrentDebugLocation(DL);
 
   Builder.SetInsertPoint(Preheader);
   Builder.CreateBr(Header);
 
   Builder.SetInsertPoint(Header);
-  PHINode *IndVarPHI = Builder.CreatePHI(IndVarTy, 2, "omp_for.iv");
+  PHINode *IndVarPHI = Builder.CreatePHI(IndVarTy, 2, "omp_" + Name + ".iv");
   IndVarPHI->addIncoming(ConstantInt::get(IndVarTy, 0), Preheader);
   Builder.CreateBr(Cond);
 
   Builder.SetInsertPoint(Cond);
-  Value *Cmp = Builder.CreateICmpULT(IndVarPHI, TripCount, "omp_for.cmp");
+  Value *Cmp =
+      Builder.CreateICmpULT(IndVarPHI, TripCount, "omp_" + Name + ".cmp");
   Builder.CreateCondBr(Cmp, Body, Exit);
 
   Builder.SetInsertPoint(Body);
@@ -904,15 +903,12 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
 
   Builder.SetInsertPoint(Latch);
   Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
-                                  "omp_for.next", /*HasNUW=*/true);
+                                  "omp_" + Name + ".next", /*HasNUW=*/true);
   Builder.CreateBr(Header);
   IndVarPHI->addIncoming(Next, Latch);
 
   Builder.SetInsertPoint(Exit);
   Builder.CreateBr(After);
-
-  // After all control flow has been created, insert the body user code.
-  BodyGenCB(InsertPointTy(Body, Body->begin()), IndVarPHI);
 
   // Remember and return the canonical control flow.
   LoopInfos.emplace_front();
@@ -934,9 +930,43 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
   return CL;
 }
 
+CanonicalLoopInfo *
+OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
+                                     LoopBodyGenCallbackTy BodyGenCB,
+                                     Value *TripCount, const Twine &Name) {
+  BasicBlock *BB = Loc.IP.getBlock();
+  BasicBlock *NextBB = BB->getNextNode();
+
+  CanonicalLoopInfo *CL = createLoopSkeleton(Loc.DL, TripCount, BB->getParent(),
+                                             NextBB, NextBB, Name);
+  BasicBlock *After = CL->getAfter();
+
+  // If location is not set, don't connect the loop.
+  if (updateToLocation(Loc)) {
+    // Split the loop at the insertion point: Branch to the preheader and move
+    // every following instruction to after the loop (the After BB). Also, the
+    // new successor is the loop's after block.
+    Builder.CreateBr(CL->Preheader);
+    After->getInstList().splice(After->begin(), BB->getInstList(),
+                                Builder.GetInsertPoint(), BB->end());
+    After->replaceSuccessorsPhiUsesWith(BB, After);
+  }
+
+  // Emit the body content. We do it after connecting the loop to the CFG to
+  // avoid that the callback encounters degenerate BBs.
+  BodyGenCB(CL->getBodyIP(), CL->getIndVar());
+
+#ifndef NDEBUG
+  CL->assertOK();
+#endif
+  return CL;
+}
+
 CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
     const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
-    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop) {
+    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+    InsertPointTy ComputeIP, const Twine &Name) {
+
   // Consider the following difficulties (assuming 8-bit signed integers):
   //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
   //      DO I = 1, 100, 50
@@ -948,7 +978,9 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
   assert(IndVarTy == Stop->getType() && "Stop type mismatch");
   assert(IndVarTy == Step->getType() && "Step type mismatch");
 
-  updateToLocation(Loc);
+  LocationDescription ComputeLoc =
+      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
+  updateToLocation(ComputeLoc);
 
   ConstantInt *Zero = ConstantInt::get(IndVarTy, 0);
   ConstantInt *One = ConstantInt::get(IndVarTy, 1);
@@ -989,7 +1021,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
         InclusiveStop ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE, Span, Incr);
     CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
   }
-  Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping);
+  Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
+                                          "omp_" + Name + ".tripcount");
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
@@ -997,7 +1030,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
     Value *IndVar = Builder.CreateAdd(Span, Start);
     BodyGenCB(Builder.saveIP(), IndVar);
   };
-  return createCanonicalLoop(Builder.saveIP(), BodyGen, TripCount);
+  LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
+  return createCanonicalLoop(LoopLoc, BodyGen, TripCount, Name);
 }
 
 // Returns an LLVM function to call for initializing loop bounds using OpenMP
@@ -1111,20 +1145,6 @@ CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
 
   CLI->assertOK();
   return CLI;
-}
-
-void CanonicalLoopInfo::eraseFromParent() {
-  assert(IsValid && "can only erase previously valid loop cfg");
-  IsValid = false;
-
-  SmallVector<BasicBlock *, 5> BBsToRemove{Header, Cond, Latch, Exit};
-  SmallVector<Instruction *, 16> InstsToRemove;
-
-  // Only remove preheader if not re-purposed somewhere else.
-  if (Preheader->getNumUses() == 0)
-    BBsToRemove.push_back(Preheader);
-
-  DeleteDeadBlocks(BBsToRemove);
 }
 
 OpenMPIRBuilder::InsertPointTy

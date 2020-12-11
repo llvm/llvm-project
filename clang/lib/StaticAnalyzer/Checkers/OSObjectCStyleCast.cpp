@@ -24,32 +24,36 @@ using namespace ento;
 using namespace ast_matchers;
 
 namespace {
-
-const char *WarnAtNode = "OSObjCast";
+static constexpr const char *const WarnAtNode = "WarnAtNode";
+static constexpr const char *const WarnRecordDecl = "WarnRecordDecl";
 
 class OSObjectCStyleCastChecker : public Checker<check::ASTCodeBody> {
 public:
-  void checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
+  void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
 };
+}
 
 static void emitDiagnostics(const BoundNodes &Nodes,
                             BugReporter &BR,
                             AnalysisDeclContext *ADC,
                             const OSObjectCStyleCastChecker *Checker) {
   const auto *CE = Nodes.getNodeAs<CastExpr>(WarnAtNode);
-  assert(CE);
+  const CXXRecordDecl *RD = Nodes.getNodeAs<CXXRecordDecl>(WarnRecordDecl);
+  assert(CE && RD);
 
   std::string Diagnostics;
   llvm::raw_string_ostream OS(Diagnostics);
-  OS << "C-style cast of OSObject. Use OSDynamicCast instead.";
+  OS << "C-style cast of an OSObject is prone to type confusion attacks; "
+     << "use 'OSRequiredCast' if the object is definitely of type '"
+     << RD->getNameAsString() << "', or 'OSDynamicCast' followed by "
+     << "a null check if unsure",
 
   BR.EmitBasicReport(
     ADC->getDecl(),
     Checker,
     /*Name=*/"OSObject C-Style Cast",
-    /*BugCategory=*/"Security",
+    categories::SecurityError,
     OS.str(),
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), ADC),
     CE->getSourceRange());
@@ -68,7 +72,7 @@ void OSObjectCStyleCastChecker::checkASTCodeBody(const Decl *D, AnalysisManager 
 
   auto OSObjTypeM = hasTypePointingTo(cxxRecordDecl(isDerivedFrom("OSMetaClassBase")));
   auto OSObjSubclassM = hasTypePointingTo(
-    cxxRecordDecl(isDerivedFrom("OSObject")));
+    cxxRecordDecl(isDerivedFrom("OSObject")).bind(WarnRecordDecl));
 
   auto CastM = cStyleCastExpr(
           allOf(hasSourceExpression(allOf(OSObjTypeM, unless(DynamicCastM))),
@@ -77,7 +81,6 @@ void OSObjectCStyleCastChecker::checkASTCodeBody(const Decl *D, AnalysisManager 
   auto Matches = match(stmt(forEachDescendant(CastM)), *D->getBody(), AM.getASTContext());
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, BR, ADC, this);
-}
 }
 
 void ento::registerOSObjectCStyleCast(CheckerManager &Mgr) {

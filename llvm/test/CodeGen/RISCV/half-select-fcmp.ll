@@ -202,7 +202,7 @@ define half @select_fcmp_ueq(half %a, half %b) nounwind {
 ; RV32IZFH-NEXT:    feq.h a1, fa1, fa1
 ; RV32IZFH-NEXT:    feq.h a2, fa0, fa0
 ; RV32IZFH-NEXT:    and a1, a2, a1
-; RV32IZFH-NEXT:    seqz a1, a1
+; RV32IZFH-NEXT:    xori a1, a1, 1
 ; RV32IZFH-NEXT:    or a0, a0, a1
 ; RV32IZFH-NEXT:    bnez a0, .LBB8_2
 ; RV32IZFH-NEXT:  # %bb.1:
@@ -216,7 +216,7 @@ define half @select_fcmp_ueq(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a1, fa1, fa1
 ; RV64IZFH-NEXT:    feq.h a2, fa0, fa0
 ; RV64IZFH-NEXT:    and a1, a2, a1
-; RV64IZFH-NEXT:    seqz a1, a1
+; RV64IZFH-NEXT:    xori a1, a1, 1
 ; RV64IZFH-NEXT:    or a0, a0, a1
 ; RV64IZFH-NEXT:    bnez a0, .LBB8_2
 ; RV64IZFH-NEXT:  # %bb.1:
@@ -360,7 +360,7 @@ define half @select_fcmp_uno(half %a, half %b) nounwind {
 ; RV32IZFH-NEXT:    feq.h a0, fa1, fa1
 ; RV32IZFH-NEXT:    feq.h a1, fa0, fa0
 ; RV32IZFH-NEXT:    and a0, a1, a0
-; RV32IZFH-NEXT:    seqz a0, a0
+; RV32IZFH-NEXT:    xori a0, a0, 1
 ; RV32IZFH-NEXT:    bnez a0, .LBB14_2
 ; RV32IZFH-NEXT:  # %bb.1:
 ; RV32IZFH-NEXT:    fmv.h fa0, fa1
@@ -372,7 +372,7 @@ define half @select_fcmp_uno(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a0, fa1, fa1
 ; RV64IZFH-NEXT:    feq.h a1, fa0, fa0
 ; RV64IZFH-NEXT:    and a0, a1, a0
-; RV64IZFH-NEXT:    seqz a0, a0
+; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    bnez a0, .LBB14_2
 ; RV64IZFH-NEXT:  # %bb.1:
 ; RV64IZFH-NEXT:    fmv.h fa0, fa1

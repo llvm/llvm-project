@@ -2330,8 +2330,8 @@ define i64 @add4i64(i32* noalias nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    cbz r1, .LBB29_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB29_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
@@ -2383,8 +2383,8 @@ define i64 @mla4i64(i32* noalias nocapture readonly %x, i32* noalias nocapture r
 ; CHECK-NEXT:    cbz r2, .LBB30_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB30_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
@@ -2442,8 +2442,8 @@ define i64 @mla8i64(i16* noalias nocapture readonly %x, i16* noalias nocapture r
 ; CHECK-NEXT:    cbz r2, .LBB31_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB31_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16

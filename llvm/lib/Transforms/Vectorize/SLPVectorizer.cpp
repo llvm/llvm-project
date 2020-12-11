@@ -3793,17 +3793,23 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
           Instruction *I = cast<Instruction>(VL[Idx]);
-          ReuseShuffleCost -= TTI->getInstructionCost(I, CostKind);
+          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+          assert(Cost.isValid() && "Invalid instruction cost");
+          ReuseShuffleCost -= *(Cost.getValue());
         }
         for (Value *V : VL) {
           Instruction *I = cast<Instruction>(V);
-          ReuseShuffleCost += TTI->getInstructionCost(I, CostKind);
+          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+          assert(Cost.isValid() && "Invalid instruction cost");
+          ReuseShuffleCost += *(Cost.getValue());
         }
       }
       for (Value *V : VL) {
         Instruction *I = cast<Instruction>(V);
         assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-        ScalarCost += TTI->getInstructionCost(I, CostKind);
+        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        assert(Cost.isValid() && "Invalid instruction cost");
+        ScalarCost += *(Cost.getValue());
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.

@@ -14,6 +14,7 @@
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#include "PseudoProbePrinter.h"
 #include "UnwindStreamer.h"
 #include "WasmException.h"
 #include "WinCFGuard.h"
@@ -78,6 +79,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -149,6 +151,10 @@ const char CFGuardName[] = "Control Flow Guard";
 const char CFGuardDescription[] = "Control Flow Guard";
 const char CodeViewLineTablesGroupName[] = "linetables";
 const char CodeViewLineTablesGroupDescription[] = "CodeView Line Tables";
+const char PPTimerName[] = "emit";
+const char PPTimerDescription[] = "Pseudo Probe Emission";
+const char PPGroupName[] = "pseudo probe";
+const char PPGroupDescription[] = "Pseudo Probe Emission";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -334,6 +340,12 @@ bool AsmPrinter::doInitialization(Module &M) {
                               DWARFGroupDescription);
       }
     }
+  }
+
+  if (M.getNamedMetadata(PseudoProbeDescMetadataName)) {
+    PP = new PseudoProbeHandler(this, &M);
+    Handlers.emplace_back(std::unique_ptr<PseudoProbeHandler>(PP), PPTimerName,
+                          PPTimerDescription, PPGroupName, PPGroupDescription);
   }
 
   if (MAI->getExceptionHandlingType() == ExceptionHandling::None &&
@@ -1100,6 +1112,15 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->PopSection();
 }
 
+void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
+  auto GUID = MI.getOperand(0).getImm();
+  auto Index = MI.getOperand(1).getImm();
+  auto Type = MI.getOperand(2).getImm();
+  auto Attr = MI.getOperand(3).getImm();
+  DILocation *DebugLoc = MI.getDebugLoc();
+  PP->emitPseudoProbe(GUID, Index, Type, Attr, DebugLoc);
+}
+
 void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   if (!MF.getTarget().Options.EmitStackSizeSection)
     return;
@@ -1232,6 +1253,9 @@ void AsmPrinter::emitFunctionBody() {
         break;
       case TargetOpcode::KILL:
         if (isVerbose()) emitKill(&MI, *this);
+        break;
+      case TargetOpcode::PSEUDO_PROBE:
+        emitPseudoProbe(MI);
         break;
       default:
         emitInstruction(&MI);
