@@ -18,7 +18,7 @@ name:            test
 frameInfo:
   maxAlignment:    4
 fixedStack:
-  # CHECK: [[@LINE+1]]:63: unknown key 'isAliased'
+  # CHECK: [[@LINE+1]]:52: unknown key 'isAliased'
   - { id: 0, type: spill-slot, offset: 0, size: 4, isAliased: true }
 stack:
   - { id: 0, offset: -12, size: 4, alignment: 4 }

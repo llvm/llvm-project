@@ -831,8 +831,8 @@ TEST(TBDv3, MalformedFile2) {
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
   ASSERT_EQ(
-      "malformed file\nTest.tbd:5:9: error: unknown key 'foobar'\nfoobar: "
-      "\"Unsupported key\"\n        ^~~~~~~~~~~~~~~~~\n",
+      "malformed file\nTest.tbd:5:1: error: unknown key 'foobar'\nfoobar: "
+      "\"Unsupported key\"\n^~~~~~\n",
       ErrorMessage);
 }
 
