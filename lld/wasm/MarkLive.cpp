@@ -98,9 +98,6 @@ void MarkLive::run() {
   if (WasmSym::callDtors)
     enqueue(WasmSym::callDtors);
 
-  if (WasmSym::applyRelocs)
-    enqueue(WasmSym::applyRelocs);
-
   // Enqueue constructors in objects explicitly live from the command-line.
   for (const ObjFile *obj : symtab->objectFiles)
     if (obj->isLive())

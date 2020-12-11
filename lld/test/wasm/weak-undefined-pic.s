@@ -66,7 +66,7 @@ _start:
 # CHECK-NEXT:      - Index:           0
 # CHECK-NEXT:        Name:            __stack_pointer
 # CHECK-NEXT:      - Index:           1
-# CHECK-NEXT:        Name:            'undefined_weak:foo'
+# CHECK-NEXT:        Name:            'GOT.func.internal.undefined_weak:foo'
 
 # With `-pie` or `-shared` the resolution should be deferred to the dynamic
 # linker and the function address should be imported as GOT.func.foo.

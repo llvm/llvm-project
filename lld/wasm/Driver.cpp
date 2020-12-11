@@ -616,14 +616,6 @@ static void createSyntheticSymbols() {
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   if (config->isPic) {
-    // For PIC code we create a synthetic function __wasm_apply_relocs which
-    // is called from __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
-  }
-
-  if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
                                                      ? &mutableGlobalTypeI64
