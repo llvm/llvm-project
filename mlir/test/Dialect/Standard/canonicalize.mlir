@@ -46,11 +46,11 @@ func @dim_of_tensor_load(%arg0: memref<?xf32>) -> index {
 }
 
 // Test case: Folding of load(tensor_to_memref(%v, %idxs))
-//            -> extract_element(%v, %idx)
+//            -> tensor.extract(%v, %idx)
 // CHECK-LABEL: func @load_from_tensor_to_memref(
 //  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
 //  CHECK-SAME:     %[[TENSOR:[0-9a-z]+]]: tensor<?x?xf32>
-//       CHECK:   %[[RES:.*]] = extract_element %[[TENSOR]][%[[IDX0]], %[[IDX1]]]
+//       CHECK:   %[[RES:.*]] = tensor.extract %[[TENSOR]][%[[IDX0]], %[[IDX1]]]
 //   CHECK-NOT:   load
 //       CHECK:   return %[[RES]] : f32
 func @load_from_tensor_to_memref(%arg0: index, %arg1: index, %arg2: tensor<?x?xf32>) -> f32 {
