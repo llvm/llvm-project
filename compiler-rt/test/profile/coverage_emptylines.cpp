@@ -3,7 +3,7 @@
 // RUN: %clangxx_profgen -fcoverage-mapping -o %t %t.stripped.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: llvm-cov show %t -instr-profile %t.profdata -path-equivalence=/tmp,%S 2>&1 | FileCheck %s
+// RUN: llvm-cov show %t -instr-profile %t.profdata 2>&1 | FileCheck %s
 
 
 int main() {                        // CHECK:       [[# @LINE]]| 1|int main() {
