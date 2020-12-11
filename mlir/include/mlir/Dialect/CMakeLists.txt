@@ -1,5 +1,6 @@
 add_subdirectory(Affine)
 add_subdirectory(Async)
+add_subdirectory(ArmNeon)
 add_subdirectory(AVX512)
 add_subdirectory(GPU)
 add_subdirectory(Linalg)
