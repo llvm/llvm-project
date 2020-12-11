@@ -105,6 +105,10 @@ void mlir::populateGpuToROCDLConversionPatterns(
       GPUFuncOpLowering<5>, GPUReturnOpLowering>(converter);
   patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__ocml_fabs_f32",
                                                 "__ocml_fabs_f64");
+  patterns.insert<OpToFuncCallLowering<AtanOp>>(converter, "__ocml_atan_f32",
+                                                "__ocml_atan_f64");
+  patterns.insert<OpToFuncCallLowering<Atan2Op>>(converter, "__ocml_atan2_f32",
+                                                 "__ocml_atan2_f64");
   patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__ocml_ceil_f32",
                                                  "__ocml_ceil_f64");
   patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__ocml_cos_f32",
