@@ -221,7 +221,7 @@ public:
 
   StringRef getName() const override { return section.Name; }
   StringRef getDebugName() const override { return StringRef(); }
-  uint32_t getComdat() const override { return UINT32_MAX; }
+  uint32_t getComdat() const override { return section.Comdat; }
 
 protected:
   ArrayRef<uint8_t> data() const override { return section.Content; }
