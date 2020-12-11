@@ -652,7 +652,8 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);
           InlinedAt = remap(InlinedAt);
-          return DebugLoc::get(DL.getLine(), DL.getCol(), Scope, InlinedAt);
+          return DILocation::get(M.getContext(), DL.getLine(), DL.getCol(),
+                                 Scope, InlinedAt);
         };
 
         if (I.getDebugLoc() != DebugLoc())
@@ -712,12 +713,12 @@ void Instruction::dropLocation() {
 
   // Set a line 0 location for calls to preserve scope information in case
   // inlining occurs.
-  const DISubprogram *SP = getFunction()->getSubprogram();
+  DISubprogram *SP = getFunction()->getSubprogram();
   if (SP)
     // If a function scope is available, set it on the line 0 location. When
     // hoisting a call to a predecessor block, using the function scope avoids
     // making it look like the callee was reached earlier than it should be.
-    setDebugLoc(DebugLoc::get(0, 0, SP));
+    setDebugLoc(DILocation::get(getContext(), 0, 0, SP));
   else
     // The parent function has no scope. Go ahead and drop the location. If
     // the parent function is inlined, and the callee has a subprogram, the
