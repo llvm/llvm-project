@@ -153,6 +153,16 @@ public:
     return result;
   }
 
+  bool roundToLong(long &result) const {
+    // We first calculate the rounded value. This way, when converting
+    // to long using mpfr_get_si, the rounding direction of MPFR_RNDN
+    // (or any other rounding mode), does not have an influence.
+    MPFRNumber roundedValue = round();
+    mpfr_clear_erangeflag();
+    result = mpfr_get_si(roundedValue.value, MPFR_RNDN);
+    return mpfr_erangeflag_p();
+  }
+
   MPFRNumber sin() const {
     MPFRNumber result;
     mpfr_sin(result.value, value, MPFR_RNDN);
@@ -554,6 +564,15 @@ template bool compareBinaryOperationOneOutput<long double>(
     Operation, const BinaryInput<long double> &, long double, double);
 
 } // namespace internal
+
+template <typename T> bool RoundToLong(T x, long &result) {
+  MPFRNumber mpfr(x);
+  return mpfr.roundToLong(result);
+}
+
+template bool RoundToLong<float>(float, long &);
+template bool RoundToLong<double>(double, long &);
+template bool RoundToLong<long double>(long double, long &);
 
 } // namespace mpfr
 } // namespace testing
