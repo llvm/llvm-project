@@ -16,7 +16,6 @@
 // template<class T, class... Args> shared_ptr<T> make_shared(Args&&... args);
 
 #include <memory>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -25,10 +24,8 @@ protected:
    S () {};  // ctor is protected
 };
 
-int main(int, char**)
-{
-  std::shared_ptr<S> p = std::make_shared<
-      S>(); // expected-error@memory:* {{static_assert failed due to requirement 'is_constructible<S>::value' "Can't construct object in make_shared"}}
+int main(int, char**) {
+  std::shared_ptr<S> p = std::make_shared<S>(); // expected-error@memory:* {{static_assert failed due to requirement 'is_constructible<S>::value}}
 
   return 0;
 }
