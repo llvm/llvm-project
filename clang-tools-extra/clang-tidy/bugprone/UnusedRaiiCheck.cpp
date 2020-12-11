@@ -32,7 +32,7 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
                       unless(has(ignoringParenImpCasts(objcMessageExpr()))))
                       .bind("temp");
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                exprWithCleanups(
                    unless(isInTemplateInstantiation()),
                    hasParent(compoundStmt().bind("compound")),

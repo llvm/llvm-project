@@ -52,7 +52,7 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
           .bind("rhs");
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                stmt(anyOf(
                    ifStmt(Any), whileStmt(Any), doStmt(Condition),
                    binaryOperator(

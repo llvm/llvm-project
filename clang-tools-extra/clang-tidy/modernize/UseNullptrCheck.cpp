@@ -42,7 +42,7 @@ StatementMatcher makeCastSequenceMatcher() {
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
   return traverse(
-      ast_type_traits::TK_AsIs,
+      TK_AsIs,
       castExpr(anyOf(ImplicitCastToNull,
                      explicitCastExpr(hasDescendant(ImplicitCastToNull))),
                unless(hasAncestor(explicitCastExpr())))
@@ -277,10 +277,9 @@ private:
       return false;
 
     // Step 2: Find the first ancestor that doesn't expand from this macro.
-    ast_type_traits::DynTypedNode ContainingAncestor;
-    if (!findContainingAncestor(
-            ast_type_traits::DynTypedNode::create<Stmt>(*CE), MacroLoc,
-            ContainingAncestor))
+    DynTypedNode ContainingAncestor;
+    if (!findContainingAncestor(DynTypedNode::create<Stmt>(*CE), MacroLoc,
+                                ContainingAncestor))
       return false;
 
     // Step 3:
@@ -407,9 +406,8 @@ private:
   ///
   /// \pre MacroLoc.isFileID()
   /// \returns true if such an ancestor was found, false otherwise.
-  bool findContainingAncestor(ast_type_traits::DynTypedNode Start,
-                              SourceLocation MacroLoc,
-                              ast_type_traits::DynTypedNode &Result) {
+  bool findContainingAncestor(DynTypedNode Start, SourceLocation MacroLoc,
+                              DynTypedNode &Result) {
     // Below we're only following the first parent back up the AST. This should
     // be fine since for the statements we care about there should only be one
     // parent, except for the case specified below.
@@ -431,7 +429,7 @@ private:
         }
       }
 
-      const ast_type_traits::DynTypedNode &Parent = Parents[0];
+      const DynTypedNode &Parent = Parents[0];
 
       SourceLocation Loc;
       if (const auto *D = Parent.get<Decl>())

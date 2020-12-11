@@ -128,20 +128,17 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
   llvm_unreachable("Invalid output kind");
 }
 
-QueryRef QueryParser::parseSetTraversalKind(
-    ast_type_traits::TraversalKind QuerySession::*Var) {
+QueryRef QueryParser::parseSetTraversalKind(TraversalKind QuerySession::*Var) {
   StringRef ValStr;
   unsigned Value =
       LexOrCompleteWord<unsigned>(this, ValStr)
-          .Case("AsIs", ast_type_traits::TK_AsIs)
-          .Case("IgnoreUnlessSpelledInSource",
-                ast_type_traits::TK_IgnoreUnlessSpelledInSource)
+          .Case("AsIs", TK_AsIs)
+          .Case("IgnoreUnlessSpelledInSource", TK_IgnoreUnlessSpelledInSource)
           .Default(~0u);
   if (Value == ~0u) {
     return new InvalidQuery("expected traversal kind, got '" + ValStr + "'");
   }
-  return new SetQuery<ast_type_traits::TraversalKind>(
-      Var, static_cast<ast_type_traits::TraversalKind>(Value));
+  return new SetQuery<TraversalKind>(Var, static_cast<TraversalKind>(Value));
 }
 
 QueryRef QueryParser::endQuery(QueryRef Q) {

@@ -55,19 +55,17 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
                   declRefExpr(hasDeclaration(Alloc1Func)))));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               callExpr(callee(decl(anyOf(Alloc0Func, Alloc0FuncPtr))),
-                        hasArgument(0, BadArg))
-                   .bind("Alloc")),
+      traverse(TK_AsIs, callExpr(callee(decl(anyOf(Alloc0Func, Alloc0FuncPtr))),
+                                 hasArgument(0, BadArg))
+                            .bind("Alloc")),
       this);
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               callExpr(callee(decl(anyOf(Alloc1Func, Alloc1FuncPtr))),
-                        hasArgument(1, BadArg))
-                   .bind("Alloc")),
+      traverse(TK_AsIs, callExpr(callee(decl(anyOf(Alloc1Func, Alloc1FuncPtr))),
+                                 hasArgument(1, BadArg))
+                            .bind("Alloc")),
       this);
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxNewExpr(isArray(), hasArraySize(BadArg)).bind("Alloc")),
       this);
 }

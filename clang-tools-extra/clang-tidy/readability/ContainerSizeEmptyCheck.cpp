@@ -40,7 +40,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
               .bind("container")))))));
 
   const auto WrongUse = traverse(
-      ast_type_traits::TK_AsIs,
+      TK_AsIs,
       anyOf(
           hasParent(binaryOperator(isComparisonOperator(),
                                    hasEitherOperand(ignoringImpCasts(

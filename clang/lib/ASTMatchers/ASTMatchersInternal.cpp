@@ -256,8 +256,7 @@ DynTypedMatcher::constructRestrictedWrapper(const DynTypedMatcher &InnerMatcher,
   return Copy;
 }
 
-DynTypedMatcher
-DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
+DynTypedMatcher DynTypedMatcher::withTraversalKind(TraversalKind TK) {
   auto Copy = *this;
   Copy.Implementation =
       new DynTraversalMatcherImpl(TK, std::move(Copy.Implementation));

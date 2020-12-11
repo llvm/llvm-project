@@ -101,7 +101,7 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
 void NSInvocationArgumentLifetimeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           objcMessageExpr(
               hasReceiverType(asString("NSInvocation *")),
               anyOf(hasSelector("getArgument:atIndex:"),
