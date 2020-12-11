@@ -85,16 +85,6 @@
 // DEFADDESIG: clang{{.*}} "-cc1"
 // DEFADDESIG-NOT: "-faddrsig"
 
-// RUN: %clangxx -### -target ve %s -faddrsig 2>&1 | \
-// RUN:     FileCheck -check-prefix=ADDRSIG %s
-// ADDRSIG: clang{{.*}} "-cc1"
-// ADDRSIG: "-faddrsig"
-
-// RUN: %clangxx -### -target ve %s -fno-addrsig 2>&1 | \
-// RUN:     FileCheck -check-prefix=NOADDRSIG %s
-// NOADDRSIG: clang{{.*}} "-cc1"
-// NOADDRSIG-NOT: "-faddrsig"
-
 ///-----------------------------------------------------------------------------
 /// Checking exceptions
 
