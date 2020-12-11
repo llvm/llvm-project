@@ -707,7 +707,7 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   typedef typename ELFObjectFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename ELFObjectFile<ELFT>::Elf_Rela Elf_Rela;
 
-  const ELFFile<ELFT> &EF = *Obj->getELFFile();
+  const ELFFile<ELFT> &EF = Obj->getELFFile();
 
   auto SecOrErr = EF.getSection(Rel.d.a);
   if (!SecOrErr)

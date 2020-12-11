@@ -47,10 +47,10 @@ using namespace llvm::object;
 using llvm::DisassemHelper;
 
 template <class ELFT>
-void printProgramHeaders(const ELFFile<ELFT> *ELF, raw_ostream &OS) {
+void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
   typedef ELFFile<ELFT> ELFO;
   OS << "Program Header:\n";
-  auto ProgramHeaderOrError = ELF->program_headers();
+  auto ProgramHeaderOrError = ELF.program_headers();
   if (!ProgramHeaderOrError)
     report_fatal_error(
         errorToErrorCode(ProgramHeaderOrError.takeError()).message());
