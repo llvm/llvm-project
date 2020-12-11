@@ -102,6 +102,10 @@ protected:
 
   void ReadModuleList();
 
+  lldb::ModuleSP GetOrCreateModule(lldb_private::UUID minidump_uuid,
+                                   llvm::StringRef name,
+                                   lldb_private::ModuleSpec module_spec);
+
   JITLoaderList &GetJITLoaders() override;
 
 private:
