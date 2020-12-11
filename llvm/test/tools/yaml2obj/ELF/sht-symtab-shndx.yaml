@@ -109,7 +109,7 @@ Symbols:
 # RUN: yaml2obj --docnum=5 %s -o %t5
 # RUN: llvm-readelf -S 2>&1 %t5 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
 
-# CASE5: warning: '[[FILE]]': section [index 1] has an invalid sh_entsize: 2
+# CASE5: warning: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 4, but got 2
 
 --- !ELF
 FileHeader:
