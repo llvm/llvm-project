@@ -654,6 +654,17 @@ static bool isPie(opt::InputArgList &args) {
   return args.hasArg(OPT_pie);
 }
 
+static void parseClangOption(StringRef opt, const Twine &msg) {
+  std::string err;
+  raw_string_ostream os(err);
+
+  const char *argv[] = {"lld", opt.data()};
+  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+    return;
+  os.flush();
+  error(msg + ": " + StringRef(err).trim());
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -787,6 +798,14 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!markSubLibrary(searchName))
       error("-sub_library " + searchName + " does not match a supplied dylib");
   }
+
+  // Parse LTO options.
+  if (auto *arg = args.getLastArg(OPT_mcpu))
+    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+                     arg->getSpelling());
+
+  for (auto *arg : args.filtered(OPT_mllvm))
+    parseClangOption(arg->getValue(), arg->getSpelling());
 
   initLLVM();
   compileBitcodeFiles();

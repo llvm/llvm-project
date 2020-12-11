@@ -27,6 +27,9 @@ using namespace llvm::sys;
 static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
+  c.CodeModel = getCodeModelFromCMModel();
+  c.CPU = getCPUStr();
+  c.MAttrs = getMAttrs();
   return c;
 }
 
