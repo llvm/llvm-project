@@ -438,17 +438,6 @@ EXTERN void __kmpc_begin_sharing_variables(void ***GlobalArgs, size_t nArgs);
 EXTERN void __kmpc_end_sharing_variables();
 EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs);
 
-// The slot used for data sharing by the master and worker threads. We use a
-// complete (default size version and an incomplete one so that we allow sizes
-// greater than the default).
-struct __kmpc_data_sharing_slot {
-  __kmpc_data_sharing_slot *Next;
-  __kmpc_data_sharing_slot *Prev;
-  void *PrevSlotStackPtr;
-  void *DataEnd;
-  char Data[];
-};
-
 // SPMD execution mode interrogation function.
 EXTERN int8_t __kmpc_is_spmd_exec_mode();
 
