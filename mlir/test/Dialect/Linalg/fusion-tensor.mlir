@@ -395,7 +395,7 @@ func @scalar_indexed_generic_fusion
     ins(%arg1 : tensor<i32>) {
     ^bb0(%arg2: i32):  // no predecessors
       %3 = index_cast %arg2 : i32 to index
-      %4 = tensor.extract %arg0[%3, %c0, %c0] : tensor<5x1x1xf32>
+      %4 = extract_element %arg0[%3, %c0, %c0] : tensor<5x1x1xf32>
       linalg.yield %4 : f32
     } -> tensor<f32>
   %1 = linalg.generic
@@ -418,6 +418,6 @@ func @scalar_indexed_generic_fusion
 //  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
 //  CHECK-SAME:     iterator_types = ["parallel"]
 //  CHECK-SAME:     ins(%[[ARG1]] : tensor<i32>)
-//       CHECK:     tensor.extract %[[ARG0]]
+//       CHECK:     extract_element %[[ARG0]]
 //       CHECK:     linalg.yield
 //       CHECK   return %[[T0]]

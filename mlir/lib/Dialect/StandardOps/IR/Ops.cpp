@@ -9,7 +9,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -154,7 +153,6 @@ static LogicalResult verifyCastOp(T op) {
 }
 
 void StandardOpsDialect::initialize() {
-  getContext()->loadDialect<tensor::TensorDialect>();
   addOperations<DmaStartOp, DmaWaitOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/StandardOps/IR/Ops.cpp.inc"
@@ -1865,18 +1863,18 @@ struct StaticDynamicTensorFromElements
 ///   <computation>
 ///   yield %1 : index
 /// } : tensor<?xindex>
-/// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
+/// %extracted_element = extract_element %tensor[%c0] : tensor<?xi32>
 ///
 /// to just <computation> with %arg0 replaced by %c0. We only do this if the
 /// dynamic_tensor_from_elements operation has no side-effects.
-struct ExtractFromDynamicTensorFromElements
-    : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+struct ExtractElementFromDynamicTensorFromElements
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
                                 PatternRewriter &rewriter) const final {
     auto tensorFromElements =
-        extract.tensor().getDefiningOp<DynamicTensorFromElementsOp>();
+        extract.aggregate().getDefiningOp<DynamicTensorFromElementsOp>();
     if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
       return failure();
 
@@ -1896,22 +1894,23 @@ struct ExtractFromDynamicTensorFromElements
 /// Canonicalizes the pattern of the form
 ///
 /// %val = tensor_cast %source : : tensor<?xi32> to tensor<2xi32>
-/// %extracted_element = tensor.extract %val[%c0] : tensor<2xi32>
+/// %extracted_element = extract_element %val[%c0] : tensor<2xi32>
 ///
 /// to
 ///
-/// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
-struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+/// %extracted_element = extract_element %source[%c0] : tensor<?xi32>
+struct ExtractElementFromTensorCast
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
                                 PatternRewriter &rewriter) const final {
-    auto tensorCast = extract.tensor().getDefiningOp<TensorCastOp>();
+    auto tensorCast = extract.aggregate().getDefiningOp<TensorCastOp>();
     if (!tensorCast)
       return failure();
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(extract, tensorCast.source(),
-                                                   extract.indices());
+    rewriter.replaceOpWithNewOp<ExtractElementOp>(extract, tensorCast.source(),
+                                                  extract.getIndices());
     return success();
   }
 };
@@ -1920,9 +1919,51 @@ struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
 
 void DynamicTensorFromElementsOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  // TODO: Move extract patterns to tensor::ExtractOp.
-  results.insert<ExtractFromDynamicTensorFromElements, ExtractFromTensorCast,
-                 StaticDynamicTensorFromElements>(context);
+  results.insert<ExtractElementFromDynamicTensorFromElements,
+                 ExtractElementFromTensorCast, StaticDynamicTensorFromElements>(
+      context);
+}
+
+//===----------------------------------------------------------------------===//
+// ExtractElementOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ExtractElementOp op) {
+  // Verify the # indices match if we have a ranked type.
+  auto aggregateType = op.getAggregate().getType().cast<ShapedType>();
+  if (aggregateType.hasRank() &&
+      aggregateType.getRank() != op.getNumOperands() - 1)
+    return op.emitOpError("incorrect number of indices for extract_element");
+
+  return success();
+}
+
+OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
+  assert(!operands.empty() && "extract_element takes at least one operand");
+
+  // The aggregate operand must be a known constant.
+  Attribute aggregate = operands.front();
+  if (!aggregate)
+    return {};
+
+  // If this is a splat elements attribute, simply return the value. All of the
+  // elements of a splat attribute are the same.
+  if (auto splatAggregate = aggregate.dyn_cast<SplatElementsAttr>())
+    return splatAggregate.getSplatValue();
+
+  // Otherwise, collect the constant indices into the aggregate.
+  SmallVector<uint64_t, 8> indices;
+  for (Attribute indice : llvm::drop_begin(operands, 1)) {
+    if (!indice || !indice.isa<IntegerAttr>())
+      return {};
+    indices.push_back(indice.cast<IntegerAttr>().getInt());
+  }
+
+  // If this is an elements attribute, query the value at the given indices.
+  auto elementsAttr = aggregate.dyn_cast<ElementsAttr>();
+  if (elementsAttr && elementsAttr.isValidIndex(indices))
+    return elementsAttr.getValue(indices);
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1948,20 +1989,20 @@ namespace {
 // Canonicalizes the pattern of the form
 //
 // %tensor = "tensor_from_elements(%element) : (i32) -> tensor<1xi32>
-// %extracted_element = tensor.extract %tensor[%c0] : tensor<1xi32>
+// %extracted_element = extract_element %tensor[%c0] : tensor<1xi32>
 //
 // to just %element.
 struct ExtractElementFromTensorFromElements
-    : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
                                 PatternRewriter &rewriter) const final {
     if (extract.indices().size() != 1)
       return failure();
 
     auto tensorFromElements = dyn_cast_or_null<TensorFromElementsOp>(
-        extract.tensor().getDefiningOp());
+        extract.aggregate().getDefiningOp());
     if (tensorFromElements == nullptr)
       return failure();
 
@@ -2175,7 +2216,7 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
 }
 
 namespace {
-/// Fold a load on a tensor_to_memref operation into an tensor.extract on the
+/// Fold a load on a tensor_to_memref operation into an extract_element on the
 /// corresponding tensor.
 struct LoadOfTensorToMemref : public OpRewritePattern<LoadOp> {
   using OpRewritePattern<LoadOp>::OpRewritePattern;
@@ -2186,8 +2227,8 @@ struct LoadOfTensorToMemref : public OpRewritePattern<LoadOp> {
     if (!tensorToMemref)
       return failure();
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
-        load, tensorToMemref.tensor(), load.indices());
+    rewriter.replaceOpWithNewOp<ExtractElementOp>(load, tensorToMemref.tensor(),
+                                                  load.indices());
     return success();
   }
 };

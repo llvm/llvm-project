@@ -25,7 +25,6 @@
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
-#include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -58,7 +57,6 @@ inline void registerAllPasses() {
   registerShapePasses();
   spirv::registerSPIRVPasses();
   registerStandardPasses();
-  tensor::registerTensorPasses();
   tosa::registerTosaOptPasses();
 }
 
