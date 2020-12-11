@@ -21,7 +21,7 @@ void DurationDivisionCheck::registerMatchers(MatchFinder *finder) {
   const auto DurationExpr =
       expr(hasType(cxxRecordDecl(hasName("::absl::Duration"))));
   finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                implicitCastExpr(
                    hasSourceExpression(ignoringParenCasts(
                        cxxOperatorCallExpr(hasOverloadedOperatorName("/"),
