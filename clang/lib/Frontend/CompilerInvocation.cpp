@@ -325,6 +325,7 @@ static void FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.XRayInstrumentFunctions = LangOpts.XRayInstrument;
   CodeGenOpts.XRayAlwaysEmitCustomEvents = LangOpts.XRayAlwaysEmitCustomEvents;
   CodeGenOpts.XRayAlwaysEmitTypedEvents = LangOpts.XRayAlwaysEmitTypedEvents;
+  CodeGenOpts.DisableFree = FrontendOpts.DisableFree;
   FrontendOpts.GenerateGlobalModuleIndex = FrontendOpts.UseGlobalModuleIndex;
 
   llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
@@ -919,35 +920,15 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDebuggerTuning(static_cast<llvm::DebuggerKind>(Val));
   }
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
-  Opts.DebugColumnInfo = !Args.hasArg(OPT_gno_column_info);
-  Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
-  Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);
-  Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
-  Opts.VirtualFunctionElimination =
-      Args.hasArg(OPT_fvirtual_function_elimination);
-  Opts.LTOVisibilityPublicStd = Args.hasArg(OPT_flto_visibility_public_std);
   Opts.SplitDwarfFile = std::string(Args.getLastArgValue(OPT_split_dwarf_file));
   Opts.SplitDwarfOutput =
       std::string(Args.getLastArgValue(OPT_split_dwarf_output));
-  Opts.SplitDwarfInlining = !Args.hasArg(OPT_fno_split_dwarf_inlining);
-  Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
-  Opts.DebugExplicitImport = Args.hasArg(OPT_dwarf_explicit_import);
-  Opts.DebugFwdTemplateParams = Args.hasArg(OPT_debug_forward_template_params);
-  Opts.EmbedSource = Args.hasArg(OPT_gembed_source);
-  Opts.ForceDwarfFrameSection = Args.hasArg(OPT_fforce_dwarf_frame);
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
     Opts.DebugPrefixMap.insert(
         {std::string(Split.first), std::string(Split.second)});
   }
-
-  if (const Arg *A =
-          Args.getLastArg(OPT_emit_llvm_uselists, OPT_no_emit_llvm_uselists))
-    Opts.EmitLLVMUseLists = A->getOption().getID() == OPT_emit_llvm_uselists;
-
-  Opts.DisableLLVMPasses = Args.hasArg(OPT_disable_llvm_passes);
-  Opts.DisableLifetimeMarkers = Args.hasArg(OPT_disable_lifetimemarkers);
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
       llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
@@ -959,29 +940,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EmitCallSiteInfo = true;
 
-  Opts.ValueTrackingVariableLocations =
-      Args.hasArg(OPT_fexperimental_debug_variable_locations);
-
-  Opts.DisableO0ImplyOptNone = Args.hasArg(OPT_disable_O0_optnone);
-  Opts.DisableRedZone = Args.hasArg(OPT_disable_red_zone);
-  Opts.IndirectTlsSegRefs = Args.hasArg(OPT_mno_tls_direct_seg_refs);
-  Opts.ForbidGuardVariables = Args.hasArg(OPT_fforbid_guard_variables);
-  Opts.UseRegisterSizedBitfieldAccess = Args.hasArg(
-    OPT_fuse_register_sized_bitfield_access);
-  Opts.RelaxedAliasing = Args.hasArg(OPT_relaxed_aliasing);
-  Opts.StructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa);
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
                            Args.hasArg(OPT_new_struct_path_tbaa);
-  Opts.FineGrainedBitfieldAccesses =
-      Args.hasFlag(OPT_ffine_grained_bitfield_accesses,
-                   OPT_fno_fine_grained_bitfield_accesses, false);
   Opts.DwarfDebugFlags =
       std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
   Opts.RecordCommandLine =
       std::string(Args.getLastArgValue(OPT_record_command_line));
-  Opts.MergeAllConstants = Args.hasArg(OPT_fmerge_all_constants);
-  Opts.NoCommon = !Args.hasArg(OPT_fcommon);
-  Opts.NoImplicitFloat = Args.hasArg(OPT_no_implicit_float);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
   Opts.SimplifyLibCalls = !(Args.hasArg(OPT_fno_builtin) ||
                             Args.hasArg(OPT_ffreestanding));
@@ -990,26 +954,17 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
-  Opts.RerollLoops = Args.hasArg(OPT_freroll_loops);
 
-  Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
   Opts.SampleProfileFile =
       std::string(Args.getLastArgValue(OPT_fprofile_sample_use_EQ));
-  Opts.DebugInfoForProfiling = Args.hasFlag(
-      OPT_fdebug_info_for_profiling, OPT_fno_debug_info_for_profiling, false);
-  Opts.PseudoProbeForProfiling =
-      Args.hasFlag(OPT_fpseudo_probe_for_profiling,
-                   OPT_fno_pseudo_probe_for_profiling, false);
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
           ? llvm::DICompileUnit::DebugNameTableKind::GNU
           : Args.hasArg(OPT_gpubnames)
                 ? llvm::DICompileUnit::DebugNameTableKind::Default
                 : llvm::DICompileUnit::DebugNameTableKind::None);
-  Opts.DebugRangesBaseAddress = Args.hasArg(OPT_fdebug_ranges_base_address);
 
   setPGOInstrumentor(Opts, Args, Diags);
-  Opts.AtomicProfileUpdate = Args.hasArg(OPT_fprofile_update_EQ);
   Opts.InstrProfileOutput =
       std::string(Args.getLastArgValue(OPT_fprofile_instrument_path_EQ));
   Opts.ProfileInstrumentUsePath =
@@ -1024,17 +979,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         << "-fno-legacy-pass-manager";
   }
 
-  Opts.CoverageMapping =
-      Args.hasFlag(OPT_fcoverage_mapping, OPT_fno_coverage_mapping, false);
-  Opts.DumpCoverageMapping = Args.hasArg(OPT_dump_coverage_mapping);
-  Opts.AsmVerbose = !Args.hasArg(OPT_fno_verbose_asm);
-  Opts.PreserveAsmComments = !Args.hasArg(OPT_fno_preserve_as_comments);
-  Opts.AssumeSaneOperatorNew = !Args.hasArg(OPT_fno_assume_sane_operator_new);
-  Opts.ObjCAutoRefCountExceptions = Args.hasArg(OPT_fobjc_arc_exceptions);
-  Opts.CXAAtExit = !Args.hasArg(OPT_fno_use_cxa_atexit);
-  Opts.RegisterGlobalDtorsWithAtExit =
-      Args.hasArg(OPT_fregister_global_dtors_with_atexit);
-  Opts.CXXCtorDtorAliases = Args.hasArg(OPT_mconstructor_aliases);
   Opts.CodeModel = TargetOpts.CodeModel;
   Opts.DebugPass = std::string(Args.getLastArgValue(OPT_mdebug_pass));
 
@@ -1078,42 +1022,15 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.DisableFree = Args.hasArg(OPT_disable_free);
-  Opts.DiscardValueNames = Args.hasArg(OPT_discard_value_names);
-  Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
-  Opts.NoEscapingBlockTailCalls =
-      Args.hasArg(OPT_fno_escaping_block_tail_calls);
   Opts.FloatABI = std::string(Args.getLastArgValue(OPT_mfloat_abi));
   Opts.LimitFloatPrecision =
       std::string(Args.getLastArgValue(OPT_mlimit_float_precision));
   Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
-  Opts.StrictFloatCastOverflow =
-      !Args.hasArg(OPT_fno_strict_float_cast_overflow);
 
-  Opts.NoZeroInitializedInBSS = Args.hasArg(OPT_fno_zero_initialized_in_bss);
   Opts.NumRegisterParameters = getLastArgIntValue(Args, OPT_mregparm, 0, Diags);
-  Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.SmallDataLimit =
       getLastArgIntValue(Args, OPT_msmall_data_limit, 0, Diags);
-  Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
-  Opts.NoWarn = Args.hasArg(OPT_massembler_no_warn);
-  Opts.EnableSegmentedStacks = Args.hasArg(OPT_split_stacks);
-  Opts.RelaxAll = Args.hasArg(OPT_mrelax_all);
-  Opts.IncrementalLinkerCompatible =
-      Args.hasArg(OPT_mincremental_linker_compatible);
-  Opts.PIECopyRelocations =
-      Args.hasArg(OPT_mpie_copy_relocations);
-  Opts.NoPLT = Args.hasArg(OPT_fno_plt);
-  Opts.SaveTempLabels = Args.hasArg(OPT_msave_temp_labels);
-  Opts.NoDwarfDirectoryAsm = Args.hasArg(OPT_fno_dwarf_directory_asm);
-  Opts.SoftFloat = Args.hasArg(OPT_msoft_float);
-  Opts.StrictEnums = Args.hasArg(OPT_fstrict_enums);
-  Opts.StrictReturn = !Args.hasArg(OPT_fno_strict_return);
-  Opts.StrictVTablePointers = Args.hasArg(OPT_fstrict_vtable_pointers);
-  Opts.ForceEmitVTables = Args.hasArg(OPT_fforce_emit_vtables);
-  Opts.UnwindTables = Args.hasArg(OPT_munwind_tables);
   Opts.TrapFuncName = std::string(Args.getLastArgValue(OPT_ftrap_function_EQ));
-  Opts.UseInitArray = !Args.hasArg(OPT_fno_use_init_array);
 
   Opts.BBSections =
       std::string(Args.getLastArgValue(OPT_fbasic_block_sections_EQ, "none"));
@@ -1122,24 +1039,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.FunctionSections =
       Args.hasArg(OPT_ffunction_sections) ||
       (Opts.BBSections != "none" && Opts.BBSections != "labels");
-
-  Opts.DataSections = Args.hasArg(OPT_fdata_sections);
-  Opts.StackSizeSection = Args.hasArg(OPT_fstack_size_section);
-  Opts.UniqueSectionNames = !Args.hasArg(OPT_fno_unique_section_names);
-  Opts.UniqueBasicBlockSectionNames =
-      Args.hasArg(OPT_funique_basic_block_section_names);
-  Opts.UniqueInternalLinkageNames =
-      Args.hasArg(OPT_funique_internal_linkage_names);
-
-  Opts.SplitMachineFunctions = Args.hasArg(OPT_fsplit_machine_functions);
-
-  Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
-
-  Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
-
-  Opts.NullPointerIsValid = Args.hasArg(OPT_fno_delete_null_pointer_checks);
-
-  Opts.ProfileSampleAccurate = Args.hasArg(OPT_fprofile_sample_accurate);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   Opts.PrepareForThinLTO = false;
@@ -1150,8 +1049,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     else if (S != "full")
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << S;
   }
-  Opts.LTOUnit = Args.hasFlag(OPT_flto_unit, OPT_fno_lto_unit, false);
-  Opts.EnableSplitLTOUnit = Args.hasArg(OPT_fsplit_lto_unit);
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -1178,22 +1075,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   } else if (Args.hasArg(OPT_fmemory_profile))
     Opts.MemoryProfileOutput = MemProfileBasename;
 
-  Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
-
-  Opts.VectorizeLoop = Args.hasArg(OPT_vectorize_loops);
-  Opts.VectorizeSLP = Args.hasArg(OPT_vectorize_slp);
-
   Opts.PreferVectorWidth =
       std::string(Args.getLastArgValue(OPT_mprefer_vector_width_EQ));
 
   Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
-  Opts.VerifyModule = !Args.hasArg(OPT_disable_llvm_verifier);
 
-  Opts.ControlFlowGuardNoChecks = Args.hasArg(OPT_cfguard_no_checks);
-  Opts.ControlFlowGuard = Args.hasArg(OPT_cfguard);
-
-  Opts.EmitGcovNotes = Args.hasArg(OPT_ftest_coverage);
-  Opts.EmitGcovArcs = Args.hasArg(OPT_fprofile_arcs);
   if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
     Opts.CoverageDataFile =
         std::string(Args.getLastArgValue(OPT_coverage_data_file));
@@ -1251,13 +1137,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.PreserveVec3Type = Args.hasArg(OPT_fpreserve_vec3_type);
-  Opts.InstrumentFunctions = Args.hasArg(OPT_finstrument_functions);
-  Opts.InstrumentFunctionsAfterInlining =
-      Args.hasArg(OPT_finstrument_functions_after_inlining);
-  Opts.InstrumentFunctionEntryBare =
-      Args.hasArg(OPT_finstrument_function_entry_bare);
-
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.XRayTotalFunctionGroups =
@@ -1278,11 +1157,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fpatchable_function_entry_EQ, 0, Diags);
   Opts.PatchableFunctionEntryOffset = getLastArgIntValue(
       Args, OPT_fpatchable_function_entry_offset_EQ, 0, Diags);
-  Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
-  Opts.CallFEntry = Args.hasArg(OPT_mfentry);
-  Opts.MNopMCount = Args.hasArg(OPT_mnop_mcount);
-  Opts.RecordMCount = Args.hasArg(OPT_mrecord_mcount);
-  Opts.PackedStack = Args.hasArg(OPT_mpacked_stack);
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
@@ -1308,7 +1182,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.setCompressDebugSections(DCT);
   }
 
-  Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DebugCompilationDir =
       std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
   for (auto *A :
@@ -1326,61 +1199,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   }
   Opts.SanitizeCoverageType =
       getLastArgIntValue(Args, OPT_fsanitize_coverage_type, 0, Diags);
-  Opts.SanitizeCoverageIndirectCalls =
-      Args.hasArg(OPT_fsanitize_coverage_indirect_calls);
-  Opts.SanitizeCoverageTraceBB = Args.hasArg(OPT_fsanitize_coverage_trace_bb);
-  Opts.SanitizeCoverageTraceCmp = Args.hasArg(OPT_fsanitize_coverage_trace_cmp);
-  Opts.SanitizeCoverageTraceDiv = Args.hasArg(OPT_fsanitize_coverage_trace_div);
-  Opts.SanitizeCoverageTraceGep = Args.hasArg(OPT_fsanitize_coverage_trace_gep);
-  Opts.SanitizeCoverage8bitCounters =
-      Args.hasArg(OPT_fsanitize_coverage_8bit_counters);
-  Opts.SanitizeCoverageTracePC = Args.hasArg(OPT_fsanitize_coverage_trace_pc);
-  Opts.SanitizeCoverageTracePCGuard =
-      Args.hasArg(OPT_fsanitize_coverage_trace_pc_guard);
-  Opts.SanitizeCoverageNoPrune = Args.hasArg(OPT_fsanitize_coverage_no_prune);
-  Opts.SanitizeCoverageInline8bitCounters =
-      Args.hasArg(OPT_fsanitize_coverage_inline_8bit_counters);
-  Opts.SanitizeCoverageInlineBoolFlag =
-      Args.hasArg(OPT_fsanitize_coverage_inline_bool_flag);
-  Opts.SanitizeCoveragePCTable = Args.hasArg(OPT_fsanitize_coverage_pc_table);
-  Opts.SanitizeCoverageStackDepth =
-      Args.hasArg(OPT_fsanitize_coverage_stack_depth);
   Opts.SanitizeCoverageAllowlistFiles =
       Args.getAllArgValues(OPT_fsanitize_coverage_allowlist);
   Opts.SanitizeCoverageBlocklistFiles =
       Args.getAllArgValues(OPT_fsanitize_coverage_blocklist);
   Opts.SanitizeMemoryTrackOrigins =
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
-  Opts.SanitizeMemoryUseAfterDtor =
-      Args.hasFlag(OPT_fsanitize_memory_use_after_dtor,
-                   OPT_fno_sanitize_memory_use_after_dtor,
-                   false);
-  Opts.SanitizeMinimalRuntime = Args.hasArg(OPT_fsanitize_minimal_runtime);
-  Opts.SanitizeCfiCrossDso = Args.hasArg(OPT_fsanitize_cfi_cross_dso);
-  Opts.SanitizeCfiICallGeneralizePointers =
-      Args.hasArg(OPT_fsanitize_cfi_icall_generalize_pointers);
-  Opts.SanitizeCfiCanonicalJumpTables =
-      Args.hasArg(OPT_fsanitize_cfi_canonical_jump_tables);
-  Opts.SanitizeStats = Args.hasArg(OPT_fsanitize_stats);
-  if (Arg *A = Args.getLastArg(
-          OPT_fsanitize_address_poison_custom_array_cookie,
-          OPT_fno_sanitize_address_poison_custom_array_cookie)) {
-    Opts.SanitizeAddressPoisonCustomArrayCookie =
-        A->getOption().getID() ==
-        OPT_fsanitize_address_poison_custom_array_cookie;
-  }
-  if (Arg *A = Args.getLastArg(OPT_fsanitize_address_use_after_scope,
-                               OPT_fno_sanitize_address_use_after_scope)) {
-    Opts.SanitizeAddressUseAfterScope =
-        A->getOption().getID() == OPT_fsanitize_address_use_after_scope;
-  }
-  Opts.SanitizeAddressGlobalsDeadStripping =
-      Args.hasArg(OPT_fsanitize_address_globals_dead_stripping);
-  if (Arg *A = Args.getLastArg(OPT_fsanitize_address_use_odr_indicator,
-                               OPT_fno_sanitize_address_use_odr_indicator)) {
-    Opts.SanitizeAddressUseOdrIndicator =
-        A->getOption().getID() == OPT_fsanitize_address_use_odr_indicator;
-  }
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
 
@@ -1398,7 +1222,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_mstack_protector_guard_reg_EQ,
                                        "none"));
 
-  Opts.StackRealignment = Args.hasArg(OPT_mstackrealign);
   if (Arg *A = Args.getLastArg(OPT_mstack_alignment)) {
     StringRef Val = A->getValue();
     unsigned StackAlignment = Opts.StackAlignment;
@@ -1412,10 +1235,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Val.getAsInteger(0, StackProbeSize);
     Opts.StackProbeSize = StackProbeSize;
   }
-
-  Opts.NoStackArgProbe = Args.hasArg(OPT_mno_stack_arg_probe);
-
-  Opts.StackClashProtector = Args.hasArg(OPT_fstack_clash_protection);
 
   if (Arg *A = Args.getLastArg(OPT_fobjc_dispatch_method_EQ)) {
     StringRef Name = A->getValue();
@@ -1433,9 +1252,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-
-  if (Args.hasArg(OPT_fno_objc_convert_messages_to_runtime_calls))
-    Opts.ObjCConvertMessagesToRuntimeCalls = 0;
 
   if (Args.getLastArg(OPT_femulated_tls) ||
       Args.getLastArg(OPT_fno_emulated_tls)) {
@@ -1554,8 +1370,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     NeedLocTracking = true;
   }
 
-  Opts.DiagnosticsWithHotness =
-      Args.hasArg(options::OPT_fdiagnostics_show_hotness);
   bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
   bool UsingProfile = UsingSampleProfile ||
       (Opts.getProfileUse() != CodeGenOptions::ProfileNone);
@@ -1610,18 +1424,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CudaGpuBinaryFileName =
       std::string(Args.getLastArgValue(OPT_fcuda_include_gpubinary));
 
-  Opts.Backchain = Args.hasArg(OPT_mbackchain);
-
   Opts.EmitCheckPathComponentsToStrip = getLastArgIntValue(
       Args, OPT_fsanitize_undefined_strip_path_components_EQ, 0, Diags);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
-
-  Opts.Addrsig = Args.hasArg(OPT_faddrsig);
-
-  Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
-
-  Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
 
   Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
 
@@ -1629,12 +1435,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.SymbolPartition =
       std::string(Args.getLastArgValue(OPT_fsymbol_partition_EQ));
-
-  Opts.ForceAAPCSBitfieldLoad = Args.hasArg(OPT_ForceAAPCSBitfieldLoad);
-  Opts.AAPCSBitfieldWidth =
-      Args.hasFlag(OPT_AAPCSBitfieldWidth, OPT_ForceNoAAPCSBitfieldWidth, true);
-
-  Opts.PassByValueIsNoAlias = Args.hasArg(OPT_fpass_by_value_is_noalias);
 
   return Success;
 }

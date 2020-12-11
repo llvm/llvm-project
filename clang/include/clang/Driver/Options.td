@@ -1053,7 +1053,8 @@ def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
     DocBrief<[{Specifies that the sample profile is accurate. If the sample
                profile is accurate, callsites without profile samples are marked
                as cold. Otherwise, treat callsites without profile samples as if
-               we have no profile}]>;
+               we have no profile}]>,
+   MarshallingInfoFlag<"CodeGenOpts.ProfileSampleAccurate">;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">,
   Group<f_Group>, Flags<[NoXarchOption]>;
 def fauto_profile : Flag<["-"], "fauto-profile">, Group<f_Group>,
@@ -1072,8 +1073,10 @@ def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
 def fdebug_compilation_dir_EQ : Joined<["-"], "fdebug-compilation-dir=">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
     Alias<fdebug_compilation_dir>;
-defm debug_info_for_profiling : OptInFFlag<"debug-info-for-profiling",
-  "Emit extra debug info to make sample profile more accurate">;
+defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
+  "CodeGenOpts.DebugInfoForProfiling", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emit extra debug info to make sample profile more accurate">,
+  ResetBy<NegFlag>>;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -1090,9 +1093,10 @@ def fprofile_remapping_file_EQ : Joined<["-"], "fprofile-remapping-file=">,
     HelpText<"Use the remappings described in <file> to match the profile data against names in the program">;
 def fprofile_remapping_file : Separate<["-"], "fprofile-remapping-file">,
     Group<f_Group>, Flags<[CoreOption]>, Alias<fprofile_remapping_file_EQ>;
-defm coverage_mapping : OptInFFlag<"coverage-mapping",
-  "Generate coverage mapping to enable code coverage analysis", "Disable code coverage analysis", "",
-  [CoreOption]>;
+defm coverage_mapping : BoolFOption<"coverage-mapping",
+  "CodeGenOpts.CoverageMapping", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Generate coverage mapping to enable code coverage analysis">,
+  ResetBy<NegFlag, [], "Disable code coverage analysis">, BothFlags<[CoreOption]>>;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
@@ -1129,18 +1133,20 @@ def fprofile_exclude_files_EQ : Joined<["-"], "fprofile-exclude-files=">,
     HelpText<"Instrument only functions from files where names don't match all the regexes separated by a semi-colon">;
 def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>, Values<"atomic,prefer-atomic,single">,
-    MetaVarName<"<method>">, HelpText<"Set update method of profile counters (atomic,prefer-atomic,single)">;
-def fpseudo_probe_for_profiling : Flag<["-"], "fpseudo-probe-for-profiling">,
-    Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
-    HelpText<"Emit pseudo probes for sample profiler">;
-def fno_pseudo_probe_for_profiling : Flag<["-"], "fno-pseudo-probe-for-profiling">,
-    Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
-    HelpText<"Do not emit pseudo probes for sample profiler.">;
+    MetaVarName<"<method>">, HelpText<"Set update method of profile counters (atomic,prefer-atomic,single)">,
+    MarshallingInfoFlag<"CodeGenOpts.AtomicProfileUpdate">;
+defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
+  "CodeGenOpts.PseudoProbeForProfiling", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emit">, ResetBy<NegFlag, [], "Do not emit">,
+  BothFlags<[NoXarchOption, CC1Option], " pseudo probes for sample profiler">>;
 def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
 
-defm addrsig : OptInFFlag<"addrsig", "Emit", "Don't emit", " an address-significance table", [CoreOption]>;
+defm addrsig : BoolFOption<"addrsig",
+  "CodeGenOpts.Addrsig", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emit">, ResetBy<NegFlag, [], "Don't emit">,
+  BothFlags<[CoreOption], " an address-significance table">>;
 defm blocks : OptInFFlag<"blocks", "Enable the 'blocks' language feature", "", "", [CoreOption]>;
 def fbootclasspath_EQ : Joined<["-"], "fbootclasspath=">, Group<f_Group>;
 def fborland_extensions : Flag<["-"], "fborland-extensions">, Group<f_Group>, Flags<[CC1Option]>,
@@ -1173,7 +1179,8 @@ def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
-  Flags<[CoreOption, CC1Option]>, HelpText<"Place uninitialized global variables in a common block">;
+  Flags<[CoreOption, CC1Option]>, HelpText<"Place uninitialized global variables in a common block">,
+  MarshallingInfoFlag<"CodeGenOpts.NoCommon", "true">, IsNegative;
 def fcompile_resource_EQ : Joined<["-"], "fcompile-resource=">, Group<f_Group>;
 def fcomplete_member_pointers : Flag<["-"], "fcomplete-member-pointers">, Group<f_clang_Group>,
    Flags<[CoreOption, CC1Option]>,
@@ -1208,8 +1215,10 @@ def fdiagnostics_parseable_fixits : Flag<["-"], "fdiagnostics-parseable-fixits">
 def fdiagnostics_print_source_range_info : Flag<["-"], "fdiagnostics-print-source-range-info">,
     Group<f_clang_Group>,  Flags<[CC1Option]>,
     HelpText<"Print source range spans in numeric form">;
-def fdiagnostics_show_hotness : Flag<["-"], "fdiagnostics-show-hotness">, Group<f_Group>,
-    Flags<[CC1Option]>, HelpText<"Enable profile hotness information in diagnostic line">;
+defm diagnostics_show_hotness : BoolFOption<"diagnostics-show-hotness",
+  "CodeGenOpts.DiagnosticsWithHotness", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable profile hotness information in diagnostic line">,
+  ResetBy<NegFlag>>;
 def fdiagnostics_hotness_threshold_EQ : Joined<["-"], "fdiagnostics-hotness-threshold=">,
     Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<value>">,
     HelpText<"Prevent optimization remarks from being output if they do not have at least this profile count. "
@@ -1233,7 +1242,9 @@ def fdollars_in_identifiers : Flag<["-"], "fdollars-in-identifiers">, Group<f_Gr
   HelpText<"Allow '$' in identifiers">, Flags<[CC1Option]>;
 def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
 def fno_dwarf2_cfi_asm : Flag<["-"], "fno-dwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
-defm dwarf_directory_asm : OptOutFFlag<"dwarf-directory-asm", "", "">;
+defm dwarf_directory_asm : BoolFOption<"dwarf-directory-asm",
+  "CodeGenOpts.NoDwarfDirectoryAsm", DefaultsToFalse,
+  ChangedBy<NegFlag>, ResetBy<PosFlag>>;
 def felide_constructors : Flag<["-"], "felide-constructors">, Group<f_Group>;
 def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     Flags<[CC1Option]>,
@@ -1293,9 +1304,15 @@ defm math_errno : OptInFFlag<"math-errno", "Require math functions to indicate e
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
 def fno_signaling_math : Flag<["-"], "fno-signaling-math">, Group<f_Group>;
-defm jump_tables : OptOutFFlag<"jump-tables", "Use", "Do not use", " jump tables for lowering switches">;
+defm jump_tables : BoolFOption<"jump-tables",
+  "CodeGenOpts.NoUseJumpTables", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Do not use">, ResetBy<PosFlag, [], "Use">,
+  BothFlags<[], " jump tables for lowering switches">>;
 defm force_enable_int128 : OptInFFlag<"force-enable-int128", "Enable", "Disable", " support for int128_t type", [], "TargetOpts->ForceEnableInt128">;
-defm keep_static_consts : OptInFFlag<"keep-static-consts", "Keep", "Don't keep", " static const variables if unused", [NoXarchOption]>;
+defm keep_static_consts : BoolFOption<"keep-static-consts",
+  "CodeGenOpts.KeepStaticConsts", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Keep">, ResetBy<NegFlag, [], "Don't keep">,
+  BothFlags<[NoXarchOption], " static const variables if unused">>;
 defm fixed_point : OptInFFlag<"fixed-point", "Enable", "Disable", " fixed point types">;
 defm cxx_static_destructors : OptOutFFlag<"c++-static-destructors", "",
   "Disable C++ static destructor registration">;
@@ -1357,41 +1374,33 @@ def fno_sanitize_memory_track_origins : Flag<["-"], "fno-sanitize-memory-track-o
                                         Group<f_clang_Group>,
                                         Flags<[CoreOption, NoXarchOption]>,
                                         HelpText<"Disable origins tracking in MemorySanitizer">;
-def fsanitize_memory_use_after_dtor : Flag<["-"], "fsanitize-memory-use-after-dtor">,
-                                     Group<f_clang_Group>,
-                                     HelpText<"Enable use-after-destroy detection in MemorySanitizer">;
-def fno_sanitize_memory_use_after_dtor : Flag<["-"], "fno-sanitize-memory-use-after-dtor">,
-                                     Group<f_clang_Group>,
-                                     HelpText<"Disable use-after-destroy detection in MemorySanitizer">;
+defm sanitize_memory_use_after_dtor : BoolOption<"sanitize-memory-use-after-dtor",
+  "CodeGenOpts.SanitizeMemoryUseAfterDtor", DefaultsToFalse,
+  ChangedBy<PosFlag, [CC1Option], "Enable">, ResetBy<NegFlag, [], "Disable">,
+  BothFlags<[], " use-after-destroy detection in MemorySanitizer">, "f">,
+  Group<f_clang_Group>;
 def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-padding=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Level of field padding for AddressSanitizer">;
-def fsanitize_address_use_after_scope : Flag<["-"], "fsanitize-address-use-after-scope">,
-                                        Group<f_clang_Group>,
-                                        HelpText<"Enable use-after-scope detection in AddressSanitizer">;
-def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use-after-scope">,
-                                           Group<f_clang_Group>,
-                                           Flags<[CoreOption, NoXarchOption]>,
-                                           HelpText<"Disable use-after-scope detection in AddressSanitizer">;
-def fsanitize_address_poison_custom_array_cookie
-    : Flag<[ "-" ], "fsanitize-address-poison-custom-array-cookie">,
-      Group<f_clang_Group>,
-      HelpText<"Enable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
-def fno_sanitize_address_poison_custom_array_cookie
-    : Flag<[ "-" ], "fno-sanitize-address-poison-custom-array-cookie">,
-      Group<f_clang_Group>,
-      HelpText<"Disable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
+defm sanitize_address_use_after_scope : BoolOption<"sanitize-address-use-after-scope",
+  "CodeGenOpts.SanitizeAddressUseAfterScope", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [CoreOption, NoXarchOption], "Disable">,
+  BothFlags<[], " use-after-scope detection in AddressSanitizer">, "f">,
+  Group<f_clang_Group>;
+defm sanitize_address_poison_custom_array_cookie : BoolOption<"sanitize-address-poison-custom-array-cookie",
+  "CodeGenOpts.SanitizeAddressPoisonCustomArrayCookie", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [], "Disable">,
+  BothFlags<[], " poisoning array cookies when using custom operator new[] in AddressSanitizer">, "f">,
+  Group<f_clang_Group>;
 def fsanitize_address_globals_dead_stripping : Flag<["-"], "fsanitize-address-globals-dead-stripping">,
-                                        Group<f_clang_Group>,
-                                        HelpText<"Enable linker dead stripping of globals in AddressSanitizer">;
-def fsanitize_address_use_odr_indicator
-    : Flag<["-"], "fsanitize-address-use-odr-indicator">,
-      Group<f_clang_Group>,
-      HelpText<"Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size">;
-def fno_sanitize_address_use_odr_indicator
-    : Flag<["-"], "fno-sanitize-address-use-odr-indicator">,
-      Group<f_clang_Group>,
-      HelpText<"Disable ODR indicator globals">;
+  Group<f_clang_Group>, HelpText<"Enable linker dead stripping of globals in AddressSanitizer">,
+  MarshallingInfoFlag<"CodeGenOpts.SanitizeAddressGlobalsDeadStripping", "false">;
+defm sanitize_address_use_odr_indicator : BoolOption<"sanitize-address-use-odr-indicator",
+  "CodeGenOpts.SanitizeAddressUseOdrIndicator", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable ODR indicator globals to avoid false ODR violation"
+            " reports in partially sanitized programs at the cost of an increase in binary size">,
+  ResetBy<NegFlag, [], "Disable ODR indicator globals">, BothFlags<[]>, "f">,
+  Group<f_clang_Group>;
 // Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.
@@ -1431,10 +1440,10 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
-def fsanitize_minimal_runtime : Flag<["-"], "fsanitize-minimal-runtime">,
-                                        Group<f_clang_Group>;
-def fno_sanitize_minimal_runtime : Flag<["-"], "fno-sanitize-minimal-runtime">,
-                                        Group<f_clang_Group>;
+defm sanitize_minimal_runtime : BoolOption<"sanitize-minimal-runtime",
+  "CodeGenOpts.SanitizeMinimalRuntime", DefaultsToFalse,
+  ChangedBy<PosFlag>, ResetBy<NegFlag>, BothFlags<[]>, "f">,
+  Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -1443,30 +1452,25 @@ def fsanitize_link_cxx_runtime : Flag<["-"], "fsanitize-link-c++-runtime">,
                                  Group<f_clang_Group>;
 def fno_sanitize_link_cxx_runtime : Flag<["-"], "fno-sanitize-link-c++-runtime">,
                                     Group<f_clang_Group>;
-def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
-                              Group<f_clang_Group>,
-                              HelpText<"Enable control flow integrity (CFI) checks for cross-DSO calls.">;
-def fno_sanitize_cfi_cross_dso : Flag<["-"], "fno-sanitize-cfi-cross-dso">,
-                                 Flags<[CoreOption, NoXarchOption]>,
-                                 Group<f_clang_Group>,
-                                 HelpText<"Disable control flow integrity (CFI) checks for cross-DSO calls.">;
+defm sanitize_cfi_cross_dso : BoolOption<"sanitize-cfi-cross-dso",
+  "CodeGenOpts.SanitizeCfiCrossDso", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [CoreOption, NoXarchOption], "Disable">,
+  BothFlags<[], " control flow integrity (CFI) checks for cross-DSO calls.">, "f">,
+  Group<f_clang_Group>;
 def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
                                               Group<f_clang_Group>,
-                                              HelpText<"Generalize pointers in CFI indirect call type signature checks">;
-def fsanitize_cfi_canonical_jump_tables : Flag<["-"], "fsanitize-cfi-canonical-jump-tables">,
-                                          Group<f_clang_Group>,
-                                          HelpText<"Make the jump table addresses canonical in the symbol table">;
-def fno_sanitize_cfi_canonical_jump_tables : Flag<["-"], "fno-sanitize-cfi-canonical-jump-tables">,
-                                             Group<f_clang_Group>,
-                                             Flags<[CoreOption, NoXarchOption]>,
-                                             HelpText<"Do not make the jump table addresses canonical in the symbol table">;
-def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
-                              Group<f_clang_Group>,
-                              HelpText<"Enable sanitizer statistics gathering.">;
-def fno_sanitize_stats : Flag<["-"], "fno-sanitize-stats">,
-                                 Group<f_clang_Group>,
-                                 Flags<[CoreOption, NoXarchOption]>,
-                                 HelpText<"Disable sanitizer statistics gathering.">;
+                                              HelpText<"Generalize pointers in CFI indirect call type signature checks">,
+                                              MarshallingInfoFlag<"CodeGenOpts.SanitizeCfiICallGeneralizePointers">;
+defm sanitize_cfi_canonical_jump_tables : BoolOption<"sanitize-cfi-canonical-jump-tables",
+  "CodeGenOpts.SanitizeCfiCanonicalJumpTables", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Make">, ResetBy<NegFlag, [CoreOption, NoXarchOption], "Do not make">,
+  BothFlags<[], " the jump table addresses canonical in the symbol table">, "f">,
+  Group<f_clang_Group>;
+defm sanitize_stats : BoolOption<"sanitize-stats",
+  "CodeGenOpts.SanitizeStats", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [CoreOption, NoXarchOption], "Disable">,
+  BothFlags<[], " sanitizer statistics gathering.">, "f">,
+  Group<f_clang_Group>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
                                      Group<f_clang_Group>,
                                      HelpText<"Enable memory access instrumentation in ThreadSanitizer (default)">;
@@ -1532,9 +1536,11 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   " Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
   Values<"fast,on,off,fast-honor-pragmas">;
 
-defm strict_float_cast_overflow : OptOutFFlag<"strict-float-cast-overflow",
-  "Assume that overflowing float-to-int casts are undefined (default)",
-  "Relax language rules and try to match the behavior of the target's native float-to-int conversion instructions">;
+defm strict_float_cast_overflow : BoolFOption<"strict-float-cast-overflow",
+  "CodeGenOpts.StrictFloatCastOverflow", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Relax language rules and try to match the behavior"
+            " of the target's native float-to-int conversion instructions">,
+  ResetBy<PosFlag, [], "Assume that overflowing float-to-int casts are undefined (default)">>;
 
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
@@ -1546,10 +1552,11 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
   "PreprocessorOutputOpts.RewriteIncludes", DefaultsToFalse,
   ChangedBy<PosFlag>, ResetBy<NegFlag>>;
 
-defm delete_null_pointer_checks : OptOutFFlag<"delete-null-pointer-checks",
-  "Treat usage of null pointers as undefined behavior (default)",
-  "Do not treat usage of null pointers as undefined behavior",
-  "", [CoreOption]>;
+defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
+  "CodeGenOpts.NullPointerIsValid", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Do not treat usage of null pointers as undefined behavior">,
+  ResetBy<PosFlag, [], "Treat usage of null pointers as undefined behavior (default)">,
+  BothFlags<[CoreOption]>>;
 
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
@@ -1601,11 +1608,14 @@ def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floa
 def finput_charset_EQ : Joined<["-"], "finput-charset=">, Group<f_Group>;
 def fexec_charset_EQ : Joined<["-"], "fexec-charset=">, Group<f_Group>;
 def finstrument_functions : Flag<["-"], "finstrument-functions">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Generate calls to instrument function entry and exit">;
+  HelpText<"Generate calls to instrument function entry and exit">,
+  MarshallingInfoFlag<"CodeGenOpts.InstrumentFunctions">;
 def finstrument_functions_after_inlining : Flag<["-"], "finstrument-functions-after-inlining">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Like -finstrument-functions, but insert the calls after inlining">;
+  HelpText<"Like -finstrument-functions, but insert the calls after inlining">,
+  MarshallingInfoFlag<"CodeGenOpts.InstrumentFunctionsAfterInlining">;
 def finstrument_function_entry_bare : Flag<["-"], "finstrument-function-entry-bare">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">;
+  HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">,
+  MarshallingInfoFlag<"CodeGenOpts.InstrumentFunctionEntryBare">;
 def fcf_protection_EQ : Joined<["-"], "fcf-protection=">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Instrument control-flow architecture protection. Options: return, branch, full, none.">, Values<"return,branch,full,none">;
 def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
@@ -1672,12 +1682,12 @@ def fxray_selected_function_group :
   HelpText<"When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1">;
 
 
-def ffine_grained_bitfield_accesses : Flag<["-"],
-  "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Use separate accesses for consecutive bitfield runs with legal widths and alignments.">;
-def fno_fine_grained_bitfield_accesses : Flag<["-"],
-  "fno-fine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Use large-integer access for consecutive bitfield runs.">;
+defm fine_grained_bitfield_accesses : BoolOption<"fine-grained-bitfield-accesses",
+  "CodeGenOpts.FineGrainedBitfieldAccesses", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Use separate accesses for consecutive bitfield runs with legal widths and alignments.">,
+  ResetBy<NegFlag, [], "Use large-integer access for consecutive bitfield runs.">,
+  BothFlags<[CC1Option]>, "f">,
+  Group<f_clang_Group>;
 
 def fexperimental_relative_cxx_abi_vtables : Flag<["-"], "fexperimental-relative-c++-abi-vtables">,
   Group<f_Group>, Flags<[CC1Option]>,
@@ -1713,15 +1723,18 @@ def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
   HelpText<"Write minimized bitcode to <file> for the ThinLTO thin link only">;
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
                                 Group<f_Group>, Flags<[NoXarchOption, CoreOption]>;
-def fmerge_all_constants : Flag<["-"], "fmerge-all-constants">, Group<f_Group>,
-  Flags<[CC1Option, CoreOption]>, HelpText<"Allow merging of constants">;
+defm merge_all_constants : BoolFOption<"merge-all-constants",
+  "CodeGenOpts.MergeAllConstants", DefaultsToFalse,
+  ChangedBy<PosFlag, [CoreOption], "Allow">, ResetBy<NegFlag, [], "Disallow">,
+  BothFlags<[], " merging of constants">>;
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Format message diagnostics so that they fit within N columns">;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">;
-def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>, Flags<[CC1Option]>;
+def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"CodeGenOpts.MSVolatile">;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>, Flags<[NoXarchOption, CoreOption]>,
   HelpText<"Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))">;
 def fms_compatibility_version
@@ -1858,7 +1871,7 @@ def fno_asm : Flag<["-"], "fno-asm">, Group<f_Group>;
 def fno_asynchronous_unwind_tables : Flag<["-"], "fno-asynchronous-unwind-tables">, Group<f_Group>;
 def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, Group<f_Group>,
   HelpText<"Don't assume that C++'s global operator new can't alias any pointer">,
-  Flags<[CC1Option]>;
+  Flags<[CC1Option]>, MarshallingInfoFlag<"CodeGenOpts.AssumeSaneOperatorNew", "true">, IsNegative;
 def fno_borland_extensions : Flag<["-"], "fno-borland-extensions">, Group<f_Group>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Disable implicit builtin knowledge of functions">;
@@ -1875,7 +1888,6 @@ def fno_cxx_modules : Flag <["-"], "fno-cxx-modules">, Group<f_Group>,
   Flags<[NoXarchOption]>;
 def fno_diagnostics_fixit_info : Flag<["-"], "fno-diagnostics-fixit-info">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not include fixit information in diagnostics">;
-def fno_diagnostics_show_hotness : Flag<["-"], "fno-diagnostics-show-hotness">, Group<f_Group>;
 def fno_diagnostics_show_option : Flag<["-"], "fno-diagnostics-show-option">, Group<f_Group>, Flags<[CC1Option]>;
 def fno_diagnostics_show_note_include_stack : Flag<["-"], "fno-diagnostics-show-note-include-stack">,
     Flags<[CC1Option]>, Group<f_Group>;
@@ -1901,8 +1913,6 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Use the given vector functions library">, Values<"Accelerate,libmvec,MASSV,SVML,none">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
-def fno_merge_all_constants : Flag<["-"], "fno-merge-all-constants">, Group<f_Group>,
-  HelpText<"Disallow merging of constants">;
 def fno_modules : Flag <["-"], "fno-modules">, Group<f_Group>,
   Flags<[NoXarchOption]>;
 def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
@@ -1947,8 +1957,6 @@ def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
-def fno_strict_vtable_pointers: Flag<["-"], "fno-strict-vtable-pointers">,
-  Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<
@@ -1956,25 +1964,25 @@ def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   MarshallingInfoFlag<"FrontendOpts.UseTemporary", "true">, IsNegative;
 def fno_threadsafe_statics : Flag<["-"], "fno-threadsafe-statics">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not emit code to make initialization of local statics thread safe">;
-def fno_use_cxa_atexit : Flag<["-"], "fno-use-cxa-atexit">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Don't use __cxa_atexit for calling destructors">;
-def fno_register_global_dtors_with_atexit : Flag<["-"], "fno-register-global-dtors-with-atexit">, Group<f_Group>,
-  HelpText<"Don't use atexit or __cxa_atexit to register global destructors">;
+defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
+  "CodeGenOpts.CXAAtExit", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Don't use __cxa_atexit for calling destructors">,
+  ResetBy<PosFlag>>;
 def fno_unit_at_a_time : Flag<["-"], "fno-unit-at-a-time">, Group<f_Group>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
-def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>, Flags<[CC1Option]>;
+def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"CodeGenOpts.AsmVerbose", "true">, IsNegative;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
 def fno_objc_arc : Flag<["-"], "fno-objc-arc">, Group<f_Group>;
-def fobjc_convert_messages_to_runtime_calls :
-  Flag<["-"], "fobjc-convert-messages-to-runtime-calls">, Group<f_Group>;
-def fno_objc_convert_messages_to_runtime_calls :
-  Flag<["-"], "fno-objc-convert-messages-to-runtime-calls">, Group<f_Group>, Flags<[CC1Option]>;
-def fobjc_arc_exceptions : Flag<["-"], "fobjc-arc-exceptions">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Use EH-safe code when synthesizing retains and releases in -fobjc-arc">;
-def fno_objc_arc_exceptions : Flag<["-"], "fno-objc-arc-exceptions">, Group<f_Group>;
+defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages-to-runtime-calls",
+  "CodeGenOpts.ObjCConvertMessagesToRuntimeCalls", DefaultsToTrue,
+  ChangedBy<NegFlag>, ResetBy<PosFlag>>;
+defm objc_arc_exceptions : OptInFFlag<"objc-arc-exceptions",
+  "Use EH-safe code when synthesizing retains and releases in -fobjc-arc",
+  "", "", [], "CodeGenOpts.ObjCAutoRefCountExceptions">;
 def fobjc_atdefs : Flag<["-"], "fobjc-atdefs">, Group<clang_ignored_f_Group>;
 def fobjc_call_cxx_cdtors : Flag<["-"], "fobjc-call-cxx-cdtors">, Group<clang_ignored_f_Group>;
 def fobjc_exceptions: Flag<["-"], "fobjc-exceptions">, Group<f_Group>,
@@ -2075,8 +2083,9 @@ def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
-def fno_escaping_block_tail_calls : Flag<["-"], "fno-escaping-block-tail-calls">, Group<f_Group>, Flags<[CC1Option]>;
-def fescaping_block_tail_calls : Flag<["-"], "fescaping-block-tail-calls">, Group<f_Group>;
+defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
+  "CodeGenOpts.NoEscapingBlockTailCalls", DefaultsToFalse,
+  ChangedBy<NegFlag>, ResetBy<PosFlag>>;
 def force__cpusubtype__ALL : Flag<["-"], "force_cpusubtype_ALL">;
 def force__flat__namespace : Flag<["-"], "force_flat_namespace">;
 def force__load : Separate<["-"], "force_load">;
@@ -2100,8 +2109,10 @@ def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
-defm plt : OptOutFFlag<"plt", "",
-  "Use GOT indirection instead of PLT to make external function calls (x86 only)">;
+defm plt : BoolFOption<"plt",
+  "CodeGenOpts.NoPLT", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Use GOT indirection instead of PLT to make external function calls (x86 only)">,
+  ResetBy<PosFlag>>;
 defm ropi : OptInFFlag<"ropi", "Generate read-only position independent code (ARM only)">;
 defm rwpi : OptInFFlag<"rwpi", "Generate read-write position independent code (ARM only)">;
 def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>, Flags<[NoXarchOption]>, MetaVarName<"<dsopath>">,
@@ -2109,10 +2120,13 @@ def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>, Flags<[NoXarchOption
 def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<dsopath>">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">;
-defm preserve_as_comments : OptOutFFlag<"preserve-as-comments", "",
-  "Do not preserve comments in inline assembly">;
-def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>, Flags<[CC1Option,LinkOption]>;
-def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
+defm preserve_as_comments : BoolFOption<"preserve-as-comments",
+  "CodeGenOpts.PreserveAsmComments", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Do not preserve comments in inline assembly">,
+  ResetBy<PosFlag>>;
+defm profile_arcs : BoolFOption<"profile-arcs",
+  "CodeGenOpts.EmitGcovArcs", DefaultsToFalse,
+  ChangedBy<PosFlag, [LinkOption]>, ResetBy<NegFlag>>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>, Flags<[CC1Option]>,
@@ -2142,10 +2156,10 @@ defm signed_char : OptOutFFlag<"signed-char", "char is signed", "char is unsigne
 def fsplit_stack : Flag<["-"], "fsplit-stack">, Group<f_Group>;
 def fstack_protector_all : Flag<["-"], "fstack-protector-all">, Group<f_Group>,
   HelpText<"Enable stack protectors for all functions">;
-def fstack_clash_protection : Flag<["-"], "fstack-clash-protection">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable stack clash protection">;
-def fno_stack_clash_protection : Flag<["-"], "fno-stack-clash-protection">, Group<f_Group>,
-  HelpText<"Disable stack clash protection">;
+defm stack_clash_protection : BoolFOption<"stack-clash-protection",
+  "CodeGenOpts.StackClashProtector", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [], "Disable">,
+  BothFlags<[], " stack clash protection">>;
 def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Group>,
   HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
            "Compared to -fstack-protector, this uses a stronger heuristic "
@@ -2184,11 +2198,13 @@ def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
   Flags<[NoXarchOption, CoreOption]>;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
-           "value range">;
-def fstrict_vtable_pointers: Flag<["-"], "fstrict-vtable-pointers">,
-  Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable optimizations based on the strict rules for overwriting "
-             "polymorphic C++ objects">;
+           "value range">,
+  MarshallingInfoFlag<"CodeGenOpts.StrictEnums">;
+defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
+  "CodeGenOpts.StrictVTablePointers", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable optimizations based on the strict rules for"
+            " overwriting polymorphic C++ objects">,
+  ResetBy<NegFlag>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
   Flags<[NoXarchOption,CoreOption,CC1Option]>, Group<Action_Group>;
@@ -2216,8 +2232,9 @@ def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=
   HelpText<"Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)">,
   MetaVarName<"<regex>">;
 
-def ftest_coverage : Flag<["-"], "ftest-coverage">, Flags<[CC1Option]>, Group<f_Group>;
-def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
+defm test_coverage : BoolFOption<"test-coverage",
+  "CodeGenOpts.EmitGcovNotes", DefaultsToFalse,
+  ChangedBy<PosFlag>, ResetBy<NegFlag>>;
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
@@ -2277,7 +2294,9 @@ def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Flags<[CC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
   HelpText<"Turn off loop unroller">, Flags<[CC1Option]>;
-defm reroll_loops : OptInFFlag<"reroll-loops", "Turn on loop reroller">;
+defm reroll_loops : BoolFOption<"reroll-loops",
+  "CodeGenOpts.RerollLoops", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Turn on loop reroller">, ResetBy<NegFlag>>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Flags<[CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
@@ -2286,10 +2305,14 @@ def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
 def funwind_tables : Flag<["-"], "funwind-tables">, Group<f_Group>;
-def fuse_cxa_atexit : Flag<["-"], "fuse-cxa-atexit">, Group<f_Group>;
-def fregister_global_dtors_with_atexit : Flag<["-"], "fregister-global-dtors-with-atexit">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Use atexit or __cxa_atexit to register global destructors">;
-defm use_init_array : OptOutFFlag<"use-init-array", "", "Use .ctors/.dtors instead of .init_array/.fini_array">;
+defm register_global_dtors_with_atexit : BoolFOption<"register-global-dtors-with-atexit",
+  "CodeGenOpts.RegisterGlobalDtorsWithAtExit", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Use">, ResetBy<NegFlag, [], "Don't use">,
+  BothFlags<[], " atexit or __cxa_atexit to register global destructors">>;
+defm use_init_array : BoolFOption<"use-init-array",
+  "CodeGenOpts.UseInitArray", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Use .ctors/.dtors instead of .init_array/.fini_array">,
+  ResetBy<PosFlag>>;
 def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Group>;
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>,
   HelpText<"Generate verbose assembly output">;
@@ -2324,41 +2347,69 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
            "variables 'hidden' visibility by default">;
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
   HelpText<"Give global C++ operator new and delete declarations hidden visibility">, Flags<[CC1Option]>;
-defm whole_program_vtables : OptInFFlag<"whole-program-vtables",
-  "Enables whole-program vtable optimization. Requires -flto", "", "", [CoreOption]>;
-defm split_lto_unit : OptInFFlag<"split-lto-unit",
-  "Enables splitting of the LTO unit", "", "", [CoreOption]>;
-defm force_emit_vtables : OptInFFlag<"force-emit-vtables",
-  "Emits more virtual tables to improve devirtualization", "", "", [CoreOption]>;
-defm virtual_function_elimination : OptInFFlag<"virtual-function-elimination",
-  "Enables dead virtual function elimination optimization. Requires -flto=full", "", "", [CoreOption]>;
+defm whole_program_vtables : BoolFOption<"whole-program-vtables",
+  "CodeGenOpts.WholeProgramVTables", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enables whole-program vtable optimization. Requires -flto">,
+  ResetBy<NegFlag>, BothFlags<[CoreOption]>>;
+defm split_lto_unit : BoolFOption<"split-lto-unit",
+  "CodeGenOpts.EnableSplitLTOUnit", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enables splitting of the LTO unit">,
+  ResetBy<NegFlag>, BothFlags<[CoreOption]>>;
+defm force_emit_vtables : BoolFOption<"force-emit-vtables",
+  "CodeGenOpts.ForceEmitVTables", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emits more virtual tables to improve devirtualization">,
+  ResetBy<NegFlag>, BothFlags<[CoreOption]>>;
+defm virtual_function_elimination : BoolFOption<"virtual-function-elimination",
+  "CodeGenOpts.VirtualFunctionElimination", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enables dead virtual function elimination optimization. Requires -flto=full">,
+  ResetBy<NegFlag>, BothFlags<[CoreOption]>>;
 
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Store string literals as writable data">;
-defm zero_initialized_in_bss : OptOutFFlag<"zero-initialized-in-bss", "", "Don't place zero initialized data in BSS">;
+defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
+  "CodeGenOpts.NoZeroInitializedInBSS", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Don't place zero initialized data in BSS">,
+  ResetBy<PosFlag>>;
 defm function_sections : OptInFFlag<"function-sections", "Place each function in its own section">;
 def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_Group>,
   Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Place each function's basic blocks in unique sections (ELF Only) : all | labels | none | list=<file>">,
   DocBrief<[{Generate labels for each basic block or place each basic block or a subset of basic blocks in its own section.}]>,
   Values<"all,labels,none,list=">;
-defm data_sections : OptInFFlag<"data-sections", "Place each data in its own section">;
-defm stack_size_section : OptInFFlag<"stack-size-section", "Emit section containing metadata on function stack sizes">;
+defm data_sections : BoolFOption<"data-sections",
+  "CodeGenOpts.DataSections", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Place each data in its own section">, ResetBy<NegFlag>>;
+defm stack_size_section : BoolFOption<"stack-size-section",
+  "CodeGenOpts.StackSizeSection", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emit section containing metadata on function stack sizes">,
+  ResetBy<NegFlag>>;
 
-defm unique_basic_block_section_names : OptInFFlag<"unique-basic-block-section-names",
- "Use unique names for basic block sections (ELF Only)">;
-defm unique_internal_linkage_names : OptInFFlag<"unique-internal-linkage-names",
- "Uniqueify Internal Linkage Symbol Names by appending the MD5 hash of the module path">;
-defm unique_section_names : OptOutFFlag<"unique-section-names",
-  "", "Don't use unique names for text and data sections">;
+defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
+  "CodeGenOpts.UniqueBasicBlockSectionNames", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Use unique names for basic block sections (ELF Only)">,
+  ResetBy<NegFlag>>;
+defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
+  "CodeGenOpts.UniqueInternalLinkageNames", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Uniqueify Internal Linkage Symbol Names by appending"
+            " the MD5 hash of the module path">,
+  ResetBy<NegFlag>>;
+defm unique_section_names : BoolFOption<"unique-section-names",
+  "CodeGenOpts.UniqueSectionNames", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Don't use unique names for text and data sections">,
+  ResetBy<PosFlag>>;
 
-defm split_machine_functions: OptInFFlag<"split-machine-functions",
-  "Enable", "Disable", " late function splitting using profile information (x86 ELF)">;
+defm split_machine_functions: BoolFOption<"split-machine-functions",
+  "CodeGenOpts.SplitMachineFunctions", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [], "Disable">,
+  BothFlags<[], " late function splitting using profile information (x86 ELF)">>;
 
-defm strict_return : OptOutFFlag<"strict-return", "",
-  "Don't treat control flow paths that fall off the end of a non-void function as unreachable">;
+defm strict_return : BoolFOption<"strict-return",
+  "CodeGenOpts.StrictReturn", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Don't treat control flow paths that fall off the end"
+            " of a non-void function as unreachable">,
+  ResetBy<PosFlag>>;
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Flags<[CC1Option]>,
@@ -2368,12 +2419,16 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
 def fdebug_types_section: Flag <["-"], "fdebug-types-section">, Group<f_Group>,
   HelpText<"Place debug types in their own section (ELF Only)">;
 def fno_debug_types_section: Flag<["-"], "fno-debug-types-section">, Group<f_Group>;
-defm debug_ranges_base_address : OptInFFlag<"debug-ranges-base-address",
-  "Use DWARF base address selection entries in .debug_ranges">;
-def fsplit_dwarf_inlining: Flag <["-"], "fsplit-dwarf-inlining">, Group<f_Group>,
-  HelpText<"Provide minimal debug info in the object/executable to facilitate online symbolication/stack traces in the absence of .dwo/.dwp files when using Split DWARF">;
-def fno_split_dwarf_inlining: Flag<["-"], "fno-split-dwarf-inlining">, Group<f_Group>,
-  Flags<[CC1Option]>;
+defm debug_ranges_base_address : BoolFOption<"debug-ranges-base-address",
+  "CodeGenOpts.DebugRangesBaseAddress", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Use DWARF base address selection entries in .debug_ranges">,
+  ResetBy<NegFlag>>;
+defm split_dwarf_inlining : BoolFOption<"split-dwarf-inlining",
+  "CodeGenOpts.SplitDwarfInlining", DefaultsToTrue,
+  ChangedBy<NegFlag>,
+  ResetBy<PosFlag, [], "Provide minimal debug info in the object/executable"
+          " to facilitate online symbolication/stack traces in the absence of"
+          " .dwo/.dwp files when using Split DWARF">>;
 def fdebug_default_version: Joined<["-"], "fdebug-default-version=">, Group<f_Group>,
   HelpText<"Default DWARF version to use, if a -g option caused DWARF debug info to be produced">;
 def fdebug_prefix_map_EQ
@@ -2386,7 +2441,9 @@ def ffile_prefix_map_EQ
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<Preprocessor_Group>, Flags<[CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros">;
-defm force_dwarf_frame : OptInFFlag<"force-dwarf-frame", "Always emit a debug frame section">;
+defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
+  "CodeGenOpts.ForceDwarfFrameSection", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Always emit a debug frame section">, ResetBy<NegFlag>>;
 def g_Flag : Flag<["-"], "g">, Group<g_Group>,
   HelpText<"Generate source-level debug information">;
 def gline_tables_only : Flag<["-"], "gline-tables-only">, Group<gN_Group>,
@@ -2420,7 +2477,8 @@ def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
 
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,
-  Flags<[CC1Option, CC1AsOption, CoreOption]>;
+  Flags<[CC1Option, CC1AsOption, CoreOption]>,
+  MarshallingInfoFlag<"CodeGenOpts.EmitCodeView">;
 defm codeview_ghash : BoolOption<"codeview-ghash",
   "CodeGenOpts.CodeViewGHash", DefaultsToFalse,
   ChangedBy<PosFlag, [CC1Option], "Emit type record hashes in a .debug$H section">,
@@ -2445,8 +2503,9 @@ def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
 def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 def gstrict_dwarf : Flag<["-"], "gstrict-dwarf">, Group<g_flags_Group>;
 def gno_strict_dwarf : Flag<["-"], "gno-strict-dwarf">, Group<g_flags_Group>;
-def gcolumn_info : Flag<["-"], "gcolumn-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
-def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flags<[CoreOption, CC1Option]>;
+defm column_info : BoolGOption<"column-info",
+  "CodeGenOpts.DebugColumnInfo", DefaultsToTrue,
+  ChangedBy<NegFlag>, ResetBy<PosFlag>, BothFlags<[CoreOption]>>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   HelpText<"Set DWARF fission mode to either 'split' or 'single'">,
@@ -2464,7 +2523,8 @@ def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
     HelpText<"DWARF debug sections compression type">;
 def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>, Flags<[CC1Option]>,
-    HelpText<"Embed source text in DWARF debug sections">;
+    HelpText<"Embed source text in DWARF debug sections">,
+    MarshallingInfoFlag<"CodeGenOpts.EmbedSource">;
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
@@ -2642,7 +2702,8 @@ def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>, Flags<[CC1Op
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
 def mstackrealign : Flag<["-"], "mstackrealign">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Force realign the stack at entry to every function">;
+  HelpText<"Force realign the stack at entry to every function">,
+  MarshallingInfoFlag<"CodeGenOpts.StackRealignment">;
 def mstack_alignment : Joined<["-"], "mstack-alignment=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Set the stack alignment">;
 def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Group<m_Group>, Flags<[CC1Option]>,
@@ -2650,7 +2711,8 @@ def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Group<m_Group>, Fla
 def mstack_arg_probe : Flag<["-"], "mstack-arg-probe">, Group<m_Group>,
   HelpText<"Enable stack probes">;
 def mno_stack_arg_probe : Flag<["-"], "mno-stack-arg-probe">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Disable stack probes which are enabled by default">;
+  HelpText<"Disable stack probes which are enabled by default">,
+  MarshallingInfoFlag<"CodeGenOpts.NoStackArgProbe">;
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">;
 def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
@@ -2663,7 +2725,8 @@ def mno_pascal_strings : Flag<["-"], "mno-pascal-strings">,
   Alias<fno_pascal_strings>;
 def mno_red_zone : Flag<["-"], "mno-red-zone">, Group<m_Group>;
 def mno_tls_direct_seg_refs : Flag<["-"], "mno-tls-direct-seg-refs">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Disable direct TLS access through segment registers">;
+  HelpText<"Disable direct TLS access through segment registers">,
+  MarshallingInfoFlag<"CodeGenOpts.IndirectTlsSegRefs">;
 def mno_relax_all : Flag<["-"], "mno-relax-all">, Group<m_Group>;
 def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;
@@ -2672,7 +2735,8 @@ def mno_stackrealign : Flag<["-"], "mno-stackrealign">, Group<m_Group>;
 def mretpoline : Flag<["-"], "mretpoline">, Group<m_Group>, Flags<[CoreOption,NoXarchOption]>;
 def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_Group>, Flags<[CoreOption,NoXarchOption]>;
 def mspeculative_load_hardening : Flag<["-"], "mspeculative-load-hardening">,
-  Group<m_Group>, Flags<[CoreOption,CC1Option]>;
+  Group<m_Group>, Flags<[CoreOption,CC1Option]>,
+  MarshallingInfoFlag<"CodeGenOpts.SpeculativeLoadHardening">;
 def mno_speculative_load_hardening : Flag<["-"], "mno-speculative-load-hardening">,
   Group<m_Group>, Flags<[CoreOption]>;
 def mlvi_hardening : Flag<["-"], "mlvi-hardening">, Group<m_Group>, Flags<[CoreOption,NoXarchOption]>,
@@ -2736,13 +2800,14 @@ def mcmse : Flag<["-"], "mcmse">, Group<m_arm_Features_Group>,
   HelpText<"Allow use of CMSE (Armv8-M Security Extensions)">;
 def ForceAAPCSBitfieldLoad : Flag<["-"], "faapcs-bitfield-load">, Group<m_arm_Features_Group>,
   Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Follows the AAPCS standard that all volatile bit-field write generates at least one load. (ARM only).">;
-def ForceNoAAPCSBitfieldWidth : Flag<["-"], "fno-aapcs-bitfield-width">, Group<m_arm_Features_Group>,
-  Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Do not follow the AAPCS standard requirement that volatile bit-field width is dictated by the field container type. (ARM only).">;
-def AAPCSBitfieldWidth : Flag<["-"], "faapcs-bitfield-width">, Group<m_arm_Features_Group>,
-  Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Follow the AAPCS standard requirement stating that volatile bit-field width is dictated by the field container type. (ARM only).">;
+  HelpText<"Follows the AAPCS standard that all volatile bit-field write generates at least one load. (ARM only).">,
+  MarshallingInfoFlag<"CodeGenOpts.ForceAAPCSBitfieldLoad">;
+defm aapcs_bitfield_width : BoolOption<"aapcs-bitfield-width",
+  "CodeGenOpts.AAPCSBitfieldWidth", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Do not follow">, ResetBy<PosFlag, [], "Follow">,
+  BothFlags<[NoXarchOption, CC1Option], " the AAPCS standard requirement stating that"
+            " volatile bit-field width is dictated by the field container type. (ARM only).">,
+  "f">, Group<m_arm_Features_Group>;
 
 def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Generate code which only uses the general purpose registers (AArch64 only)">;
@@ -2913,9 +2978,10 @@ def mno_zvector : Flag<["-"], "mno-zvector">, Alias<fno_zvector>;
 def mignore_xcoff_visibility : Flag<["-"], "mignore-xcoff-visibility">, Group<m_Group>,
 HelpText<"Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspecified' visibility in XCOFF object file">,
   Flags<[CC1Option]>;
-def mbackchain : Flag<["-"], "mbackchain">, Group<m_Group>, Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Link stack frames through backchain on System Z">;
-def mno_backchain : Flag<["-"], "mno-backchain">, Group<m_Group>, Flags<[NoXarchOption,CC1Option]>;
+defm backchain : BoolOption<"backchain",
+  "CodeGenOpts.Backchain", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Link stack frames through backchain on System Z">,
+  ResetBy<NegFlag>, BothFlags<[NoXarchOption,CC1Option]>, "m">, Group<m_Group>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
@@ -2928,10 +2994,12 @@ def mtls_direct_seg_refs : Flag<["-"], "mtls-direct-seg-refs">, Group<m_Group>,
   HelpText<"Enable direct TLS access through segment registers (default)">;
 def mregparm_EQ : Joined<["-"], "mregparm=">, Group<m_Group>;
 def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>, Flags<[CC1Option,CC1AsOption]>,
-  HelpText<"(integrated-as) Relax all machine instructions">;
+  HelpText<"(integrated-as) Relax all machine instructions">,
+  MarshallingInfoFlag<"CodeGenOpts.RelaxAll">;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Flags<[CC1Option,CC1AsOption]>,
-  HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">;
+  HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
+  MarshallingInfoFlag<"CodeGenOpts.IncrementalLinkerCompatible">;
 def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
   HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>, Flags<[CC1Option]>,
@@ -2939,7 +3007,8 @@ def mrtd : Flag<["-"], "mrtd">, Group<m_Group>, Flags<[CC1Option]>,
 def msmall_data_threshold_EQ : Joined <["-"], "msmall-data-threshold=">,
   Group<m_Group>, Alias<G>;
 def msoft_float : Flag<["-"], "msoft-float">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Use software floating point">;
+  HelpText<"Use software floating point">,
+  MarshallingInfoFlag<"CodeGenOpts.SoftFloat">;
 def moutline_atomics : Flag<["-"], "moutline-atomics">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Generate local calls to out-of-line atomic operations">;
 def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Group>, Flags<[CC1Option]>,
@@ -2957,18 +3026,22 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   HelpText<"Use the given offset for addressing the stack-protector guard">;
 def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">;
-def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">, Group<m_Group>,
-  Flags<[CC1Option]>,
-  HelpText<"Use copy relocations support for PIE builds">;
-def mno_pie_copy_relocations : Flag<["-"], "mno-pie-copy-relocations">, Group<m_Group>;
+defm pie_copy_relocations : BoolOption<"pie-copy-relocations",
+  "CodeGenOpts.PIECopyRelocations", DefaultsToFalse,
+  ChangedBy<PosFlag, [CC1Option], "Use copy relocations support for PIE builds">,
+  ResetBy<NegFlag>, BothFlags<[]>, "m">, Group<m_Group>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
-  Flags<[CC1Option]>, Group<m_Group>;
+  Flags<[CC1Option]>, Group<m_Group>,
+  MarshallingInfoFlag<"CodeGenOpts.CallFEntry">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
-  Flags<[CC1Option]>, Group<m_Group>;
+  Flags<[CC1Option]>, Group<m_Group>,
+  MarshallingInfoFlag<"CodeGenOpts.MNopMCount">;
 def mrecord_mcount : Flag<["-"], "mrecord-mcount">, HelpText<"Generate a __mcount_loc section entry for each __fentry__ call.">,
-  Flags<[CC1Option]>, Group<m_Group>;
+  Flags<[CC1Option]>, Group<m_Group>,
+  MarshallingInfoFlag<"CodeGenOpts.RecordMCount">;
 def mpacked_stack : Flag<["-"], "mpacked-stack">, HelpText<"Use packed stack layout (SystemZ only).">,
-  Flags<[CC1Option]>, Group<m_Group>;
+  Flags<[CC1Option]>, Group<m_Group>,
+  MarshallingInfoFlag<"CodeGenOpts.PackedStack">;
 def mno_packed_stack : Flag<["-"], "mno-packed-stack">, Flags<[CC1Option]>, Group<m_Group>;
 def mips16 : Flag<["-"], "mips16">, Group<m_mips_Features_Group>;
 def mno_mips16 : Flag<["-"], "mno-mips16">, Group<m_mips_Features_Group>;
@@ -3166,7 +3239,8 @@ def pagezero__size : JoinedOrSeparate<["-"], "pagezero_size">;
 def pass_exit_codes : Flag<["-", "--"], "pass-exit-codes">, Flags<[Unsupported]>;
 def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group>, Flags<[CC1Option]>;
 def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>, Flags<[CC1Option]>;
-def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC1Option]>;
+def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"CodeGenOpts.InstrumentForProfiling">;
 def pipe : Flag<["-", "--"], "pipe">,
   HelpText<"Use pipes between commands, when possible">;
 def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules">;
@@ -3334,7 +3408,10 @@ def x : JoinedOrSeparate<["-"], "x">, Flags<[NoXarchOption,CC1Option]>,
   MetaVarName<"<language>">;
 def y : Joined<["-"], "y">;
 
-defm integrated_as : OptOutFFlag<"integrated-as", "Enable the integrated assembler", "Disable the integrated assembler">;
+defm integrated_as : BoolFOption<"integrated-as",
+  "CodeGenOpts.DisableIntegratedAS", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Disable">, ResetBy<PosFlag, [], "Enable">,
+  BothFlags<[], " the integrated assembler">>;
 
 def fintegrated_cc1 : Flag<["-"], "fintegrated-cc1">,
                       Flags<[CoreOption, NoXarchOption]>, Group<f_Group>,
@@ -4112,7 +4189,8 @@ def migrator_no_finalize_removal : Flag<["-"], "no-finalize-removal">,
 let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
 def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
-  HelpText<"Emit macro debug information">;
+  HelpText<"Emit macro debug information">,
+  MarshallingInfoFlag<"CodeGenOpts.MacroDebugInfo">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">;
@@ -4126,17 +4204,22 @@ def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
   Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
-  HelpText<"Mark the file as not needing an executable stack">;
+  HelpText<"Mark the file as not needing an executable stack">,
+  MarshallingInfoFlag<"CodeGenOpts.NoExecStack">;
 def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
-  HelpText<"Make assembler not emit warnings">;
+  HelpText<"Make assembler not emit warnings">,
+  MarshallingInfoFlag<"CodeGenOpts.NoWarn">;
 def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
-  HelpText<"Make assembler warnings fatal">;
+  HelpText<"Make assembler warnings fatal">,
+  MarshallingInfoFlag<"CodeGenOpts.FatalWarnings">;
 def mrelax_relocations : Flag<["--"], "mrelax-relocations">,
-    HelpText<"Use relaxable elf relocations">;
+    HelpText<"Use relaxable elf relocations">,
+    MarshallingInfoFlag<"CodeGenOpts.RelaxELFRelocations">;
 def msave_temp_labels : Flag<["-"], "msave-temp-labels">,
   HelpText<"Save temporary labels in the symbol table. "
            "Note this may change .s semantics and shouldn't generally be used "
-           "on compiler-generated code.">;
+           "on compiler-generated code.">,
+  MarshallingInfoFlag<"CodeGenOpts.SaveTempLabels">;
 def mrelocation_model : Separate<["-"], "mrelocation-model">,
   HelpText<"The relocation model to use">, Values<"static,pic,ropi,rwpi,ropi-rwpi,dynamic-no-pic">,
   NormalizedValuesScope<"llvm::Reloc">,
@@ -4150,36 +4233,47 @@ def fuse_ctor_homing: Flag<["-"], "fuse-ctor-homing">,
 }
 
 def disable_llvm_verifier : Flag<["-"], "disable-llvm-verifier">,
-  HelpText<"Don't run the LLVM IR verifier pass">;
+  HelpText<"Don't run the LLVM IR verifier pass">,
+  MarshallingInfoFlag<"CodeGenOpts.VerifyModule", "true">, IsNegative;
 def disable_llvm_passes : Flag<["-"], "disable-llvm-passes">,
   HelpText<"Use together with -emit-llvm to get pristine LLVM IR from the "
-           "frontend by not running any LLVM passes at all">;
+           "frontend by not running any LLVM passes at all">,
+  MarshallingInfoFlag<"CodeGenOpts.DisableLLVMPasses">;
 def disable_llvm_optzns : Flag<["-"], "disable-llvm-optzns">,
   Alias<disable_llvm_passes>;
 def disable_lifetimemarkers : Flag<["-"], "disable-lifetime-markers">,
   HelpText<"Disable lifetime-markers emission even when optimizations are "
-           "enabled">;
+           "enabled">,
+  MarshallingInfoFlag<"CodeGenOpts.DisableLifetimeMarkers">;
 def disable_O0_optnone : Flag<["-"], "disable-O0-optnone">,
-  HelpText<"Disable adding the optnone attribute to functions at O0">;
+  HelpText<"Disable adding the optnone attribute to functions at O0">,
+  MarshallingInfoFlag<"CodeGenOpts.DisableO0ImplyOptNone">;
 def disable_red_zone : Flag<["-"], "disable-red-zone">,
-  HelpText<"Do not emit code that uses the red zone.">;
+  HelpText<"Do not emit code that uses the red zone.">,
+  MarshallingInfoFlag<"CodeGenOpts.DisableRedZone">;
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
-           " or precompiled headers">;
+           " or precompiled headers">,
+  MarshallingInfoFlag<"CodeGenOpts.DebugTypeExtRefs">;
 def dwarf_explicit_import : Flag<["-"], "dwarf-explicit-import">,
   HelpText<"Generate explicit import from anonymous namespace to containing"
-           " scope">;
+           " scope">,
+  MarshallingInfoFlag<"CodeGenOpts.DebugExplicitImport">;
 def debug_forward_template_params : Flag<["-"], "debug-forward-template-params">,
   HelpText<"Emit complete descriptions of template parameters in forward"
-           " declarations">;
+           " declarations">,
+  MarshallingInfoFlag<"CodeGenOpts.DebugFwdTemplateParams">;
 def fforbid_guard_variables : Flag<["-"], "fforbid-guard-variables">,
-  HelpText<"Emit an error if a C++ static local initializer would need a guard variable">;
+  HelpText<"Emit an error if a C++ static local initializer would need a guard variable">,
+  MarshallingInfoFlag<"CodeGenOpts.ForbidGuardVariables">;
 def no_implicit_float : Flag<["-"], "no-implicit-float">,
-  HelpText<"Don't generate implicit floating point instructions">;
+  HelpText<"Don't generate implicit floating point instructions">,
+  MarshallingInfoFlag<"CodeGenOpts.NoImplicitFloat">;
 def fdump_vtable_layouts : Flag<["-"], "fdump-vtable-layouts">,
   HelpText<"Dump the layouts of all vtables that will be emitted in a translation unit">;
 def fmerge_functions : Flag<["-"], "fmerge-functions">,
-  HelpText<"Permit merging of identical functions when optimizing.">;
+  HelpText<"Permit merging of identical functions when optimizing.">,
+  MarshallingInfoFlag<"CodeGenOpts.MergeFunctions">;
 def coverage_data_file : Separate<["-"], "coverage-data-file">,
   HelpText<"Emit coverage data to this filename.">;
 def coverage_data_file_EQ : Joined<["-"], "coverage-data-file=">,
@@ -4191,13 +4285,17 @@ def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
-  HelpText<"Dump the coverage mapping records, for testing">;
+  HelpText<"Dump the coverage mapping records, for testing">,
+  MarshallingInfoFlag<"CodeGenOpts.DumpCoverageMapping">;
 def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfield-access">,
-  HelpText<"Use register sized accesses to bit-fields, when possible.">;
+  HelpText<"Use register sized accesses to bit-fields, when possible.">,
+  MarshallingInfoFlag<"CodeGenOpts.UseRegisterSizedBitfieldAccess">;
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
-  HelpText<"Turn off Type Based Alias Analysis">;
+  HelpText<"Turn off Type Based Alias Analysis">,
+  MarshallingInfoFlag<"CodeGenOpts.RelaxedAliasing">;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
-  HelpText<"Turn off struct-path aware Type Based Alias Analysis">;
+  HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
+  MarshallingInfoFlag<"CodeGenOpts.StructPathTBAA", "true">, IsNegative;
 def new_struct_path_tbaa : Flag<["-"], "new-struct-path-tbaa">,
   HelpText<"Enable enhanced struct-path aware Type Based Alias Analysis">;
 def mdebug_pass : Separate<["-"], "mdebug-pass">,
@@ -4205,7 +4303,8 @@ def mdebug_pass : Separate<["-"], "mdebug-pass">,
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
   HelpText<"Specify which frame pointers to retain (all, non-leaf, none).">, Values<"all,non-leaf,none">;
 def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
-  HelpText<"Disable tail call optimization, keeping the call stack accurate">;
+  HelpText<"Disable tail call optimization, keeping the call stack accurate">,
+  MarshallingInfoFlag<"CodeGenOpts.DisableTailCalls">;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
   MarshallingInfoFlag<"LangOpts->NoHonorInfs">, ImpliedByAnyOf<[ffinite_math_only]>;
@@ -4224,15 +4323,18 @@ def mtp : Separate<["-"], "mtp">,
 def mlimit_float_precision : Separate<["-"], "mlimit-float-precision">,
   HelpText<"Limit float precision to the given value">;
 def split_stacks : Flag<["-"], "split-stacks">,
-  HelpText<"Try to use a split stack if possible.">;
+  HelpText<"Try to use a split stack if possible.">,
+  MarshallingInfoFlag<"CodeGenOpts.EnableSegmentedStacks">;
 def mregparm : Separate<["-"], "mregparm">,
   HelpText<"Limit the number of registers available for integer arguments">;
 def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
   HelpText<"Put global and static data smaller than the limit into a special section">;
 def munwind_tables : Flag<["-"], "munwind-tables">,
-  HelpText<"Generate unwinding tables for all functions">;
+  HelpText<"Generate unwinding tables for all functions">,
+  MarshallingInfoFlag<"CodeGenOpts.UnwindTables">;
 def mconstructor_aliases : Flag<["-"], "mconstructor-aliases">,
-  HelpText<"Emit complete constructors and destructors as aliases when possible">;
+  HelpText<"Emit complete constructors and destructors as aliases when possible">,
+  MarshallingInfoFlag<"CodeGenOpts.CXXCtorDtorAliases">;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
@@ -4241,9 +4343,11 @@ def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
 def mlink_cuda_bitcode : Separate<["-"], "mlink-cuda-bitcode">,
   Alias<mlink_builtin_bitcode>;
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
-  HelpText<"Run the Loop vectorization passes">;
+  HelpText<"Run the Loop vectorization passes">,
+  MarshallingInfoFlag<"CodeGenOpts.VectorizeLoop">;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
-  HelpText<"Run the SLP vectorization passes">;
+  HelpText<"Run the SLP vectorization passes">,
+  MarshallingInfoFlag<"CodeGenOpts.VectorizeSLP">;
 def dependent_lib : Joined<["--"], "dependent-lib=">,
   HelpText<"Add dependent library">;
 def linker_option : Joined<["--"], "linker-option=">,
@@ -4252,43 +4356,56 @@ def fsanitize_coverage_type : Joined<["-"], "fsanitize-coverage-type=">,
                               HelpText<"Sanitizer coverage type">;
 def fsanitize_coverage_indirect_calls
     : Flag<["-"], "fsanitize-coverage-indirect-calls">,
-      HelpText<"Enable sanitizer coverage for indirect calls">;
+      HelpText<"Enable sanitizer coverage for indirect calls">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageIndirectCalls">;
 def fsanitize_coverage_trace_bb
     : Flag<["-"], "fsanitize-coverage-trace-bb">,
-      HelpText<"Enable basic block tracing in sanitizer coverage">;
+      HelpText<"Enable basic block tracing in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTraceBB">;
 def fsanitize_coverage_trace_cmp
     : Flag<["-"], "fsanitize-coverage-trace-cmp">,
-      HelpText<"Enable cmp instruction tracing in sanitizer coverage">;
+      HelpText<"Enable cmp instruction tracing in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTraceCmp">;
 def fsanitize_coverage_trace_div
     : Flag<["-"], "fsanitize-coverage-trace-div">,
-      HelpText<"Enable div instruction tracing in sanitizer coverage">;
+      HelpText<"Enable div instruction tracing in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTraceDiv">;
 def fsanitize_coverage_trace_gep
     : Flag<["-"], "fsanitize-coverage-trace-gep">,
-      HelpText<"Enable gep instruction tracing in sanitizer coverage">;
+      HelpText<"Enable gep instruction tracing in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTraceGep">;
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
-      HelpText<"Enable frequency counters in sanitizer coverage">;
+      HelpText<"Enable frequency counters in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverage8bitCounters">;
 def fsanitize_coverage_inline_8bit_counters
     : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
-      HelpText<"Enable inline 8-bit counters in sanitizer coverage">;
+      HelpText<"Enable inline 8-bit counters in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageInline8bitCounters">;
 def fsanitize_coverage_inline_bool_flag
     : Flag<["-"], "fsanitize-coverage-inline-bool-flag">,
-      HelpText<"Enable inline bool flag in sanitizer coverage">;
+      HelpText<"Enable inline bool flag in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageInlineBoolFlag">;
 def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
-      HelpText<"Create a table of coverage-instrumented PCs">;
+      HelpText<"Create a table of coverage-instrumented PCs">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoveragePCTable">;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
-      HelpText<"Enable PC tracing in sanitizer coverage">;
+      HelpText<"Enable PC tracing in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTracePC">;
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
-      HelpText<"Enable PC tracing with guard in sanitizer coverage">;
+      HelpText<"Enable PC tracing with guard in sanitizer coverage">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageTracePCGuard">;
 def fsanitize_coverage_no_prune
     : Flag<["-"], "fsanitize-coverage-no-prune">,
-      HelpText<"Disable coverage pruning (i.e. instrument all blocks/edges)">;
+      HelpText<"Disable coverage pruning (i.e. instrument all blocks/edges)">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageNoPrune">;
 def fsanitize_coverage_stack_depth
     : Flag<["-"], "fsanitize-coverage-stack-depth">,
-      HelpText<"Enable max stack depth tracing">;
+      HelpText<"Enable max stack depth tracing">,
+      MarshallingInfoFlag<"CodeGenOpts.SanitizeCoverageStackDepth">;
 def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">;
@@ -4303,10 +4420,12 @@ def fprofile_instrument_use_path_EQ :
     HelpText<"Specify the profile path in PGO use compilation">;
 def flto_visibility_public_std:
     Flag<["-"], "flto-visibility-public-std">,
-    HelpText<"Use public LTO visibility for classes in std and stdext namespaces">;
-def flto_unit: Flag<["-"], "flto-unit">,
-    HelpText<"Emit IR to support LTO unit features (CFI, whole program vtable opt)">;
-def fno_lto_unit: Flag<["-"], "fno-lto-unit">;
+    HelpText<"Use public LTO visibility for classes in std and stdext namespaces">,
+    MarshallingInfoFlag<"CodeGenOpts.LTOVisibilityPublicStd">;
+defm lto_unit : BoolFOption<"lto-unit",
+  "CodeGenOpts.LTOUnit", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Emit IR to support LTO unit features (CFI, whole program vtable opt)">,
+  ResetBy<NegFlag>>;
 defm debug_pass_manager : BoolOption<"debug-pass-manager",
   "CodeGenOpts.DebugPassManager", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Prints debug information for the new pass manager">,
@@ -4314,7 +4433,8 @@ defm debug_pass_manager : BoolOption<"debug-pass-manager",
   BothFlags<[]>, "f">;
 def fexperimental_debug_variable_locations : Flag<["-"],
     "fexperimental-debug-variable-locations">,
-    HelpText<"Use experimental new value-tracking variable locations">;
+    HelpText<"Use experimental new value-tracking variable locations">,
+    MarshallingInfoFlag<"CodeGenOpts.ValueTrackingVariableLocations">;
 // The driver option takes the key as a parameter to the -msign-return-address=
 // and -mbranch-protection= options, but CC1 has a separate option so we
 // don't have to parse the parameter twice.
@@ -4323,9 +4443,11 @@ def msign_return_address_key_EQ : Joined<["-"], "msign-return-address-key=">,
 def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,
-    HelpText<"Emit Windows Control Flow Guard tables only (no checks)">;
+    HelpText<"Emit Windows Control Flow Guard tables only (no checks)">,
+    MarshallingInfoFlag<"CodeGenOpts.ControlFlowGuardNoChecks">;
 def cfguard : Flag<["-"], "cfguard">,
-    HelpText<"Emit Windows Control Flow Guard tables and checks">;
+    HelpText<"Emit Windows Control Flow Guard tables and checks">,
+    MarshallingInfoFlag<"CodeGenOpts.ControlFlowGuard">;
 
 def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
    Group<f_Group>;
@@ -4437,7 +4559,8 @@ def disable_free : Flag<["-"], "disable-free">,
   HelpText<"Disable freeing of memory on exit">,
   MarshallingInfoFlag<"FrontendOpts.DisableFree">;
 def discard_value_names : Flag<["-"], "discard-value-names">,
-  HelpText<"Discard value names in LLVM IR">;
+  HelpText<"Discard value names in LLVM IR">,
+  MarshallingInfoFlag<"CodeGenOpts.DiscardValueNames">;
 def load : Separate<["-"], "load">, MetaVarName<"<dsopath>">,
   HelpText<"Load the named plugin (dynamic shared object)">;
 def plugin : Separate<["-"], "plugin">, MetaVarName<"<name>">,
@@ -4579,10 +4702,11 @@ def print_dependency_directives_minimized_source : Flag<["-"],
   HelpText<"Print the output of the dependency directives source minimizer">;
 }
 
-def emit_llvm_uselists : Flag<["-"], "emit-llvm-uselists">,
-  HelpText<"Preserve order of LLVM use-lists when serializing">;
-def no_emit_llvm_uselists : Flag<["-"], "no-emit-llvm-uselists">,
-  HelpText<"Don't preserve order of LLVM use-lists when serializing">;
+defm emit_llvm_uselists : BoolOption<"emit-llvm-uselists",
+  "CodeGenOpts.EmitLLVMUseLists", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Preserve">,
+  ResetBy<NegFlag, [], "Don't preserve">,
+  BothFlags<[], " order of LLVM use-lists when serializing">>;
 
 def mt_migrate_directory : Separate<["-"], "mt-migrate-directory">,
   HelpText<"Directory for temporary files produced during ARC or ObjC migration">;
@@ -4760,7 +4884,8 @@ def finclude_default_header : Flag<["-"], "finclude-default-header">,
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
   HelpText<"Add OpenCL builtin function declarations (experimental)">;
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
-  HelpText<"Preserve 3-component vector type">;
+  HelpText<"Preserve 3-component vector type">,
+  MarshallingInfoFlag<"CodeGenOpts.PreserveVec3Type">;
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
   HelpText<"Select underlying type for wchar_t">, Values<"char,short,int">;
 def fsigned_wchar : Flag<["-"], "fsigned-wchar">,
@@ -4772,7 +4897,8 @@ def fcompatibility_qualified_id_block_param_type_checking : Flag<["-"], "fcompat
            "the type system guarantees when a parameter is qualified id">;
 def fpass_by_value_is_noalias: Flag<["-"], "fpass-by-value-is-noalias">,
   HelpText<"Allows assuming by-value parameters do not alias any other value. "
-           "Has no effect on non-trivially-copyable classes in C++.">, Group<f_Group>;
+           "Has no effect on non-trivially-copyable classes in C++.">, Group<f_Group>,
+  MarshallingInfoFlag<"CodeGenOpts.PassByValueIsNoAlias">;
 
 // FIXME: Remove these entirely once functionality/tests have been excised.
 def fobjc_gc_only : Flag<["-"], "fobjc-gc-only">, Group<f_Group>,
