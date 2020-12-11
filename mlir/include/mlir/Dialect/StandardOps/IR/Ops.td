@@ -1670,59 +1670,6 @@ def Exp2Op : FloatUnaryOp<"exp2"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-def ExtractElementOp : Std_Op<"extract_element",
-    [NoSideEffect,
-     TypesMatchWith<"result type matches element type of aggregate",
-                    "aggregate", "result",
-                    "$_self.cast<ShapedType>().getElementType()">]> {
-  let summary = "element extract operation";
-  let description = [{
-    The `extract_element` op reads a tensor or vector and returns one element
-    from it specified by an index list. The output of the 'extract_element' is a
-    new value with the same type as the elements of the tensor or vector. The
-    arity of indices matches the rank of the accessed value (i.e., if a tensor
-    is of rank 3, then 3 indices are required for the extract. The indices
-    should all be of `index` type.
-
-    Example:
-
-    ```mlir
-    %3 = extract_element %v[%1, %2] : vector<4x4xi32>
-    %4 = extract_element %t[%1, %2] : tensor<4x4xi32>
-    %5 = extract_element %ut[%1, %2] : tensor<*xi32>
-    ```
-  }];
-
-  let arguments = (ins AnyTypeOf<[AnyVector, AnyTensor]>:$aggregate,
-                       Variadic<Index>:$indices);
-  let results = (outs AnyType:$result);
-
-  let builders = [
-    OpBuilderDAG<(ins "Value":$aggregate, CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = aggregate.getType().cast<ShapedType>()
-                                         .getElementType();
-      build($_builder, $_state, resType, aggregate, indices);
-    }]>];
-
-  let extraClassDeclaration = [{
-    Value getAggregate() { return getOperand(0); }
-
-    operand_range getIndices() {
-      return {operand_begin() + 1, operand_end()};
-    }
-  }];
-
-  let hasFolder = 1;
-
-  let assemblyFormat = [{
-    $aggregate `[` $indices `]` attr-dict `:` type($aggregate)
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // TensorFromElementsOp
 //===----------------------------------------------------------------------===//
 

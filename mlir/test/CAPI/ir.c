@@ -89,10 +89,12 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirAttribute funcNameAttr =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
-      mlirNamedAttributeGet(mlirStringRefCreateFromCString("type"),
-                            funcTypeAttr),
-      mlirNamedAttributeGet(mlirStringRefCreateFromCString("sym_name"),
-                            funcNameAttr)};
+      mlirNamedAttributeGet(
+          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("type")),
+          funcTypeAttr),
+      mlirNamedAttributeGet(
+          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),
+          funcNameAttr)};
   MlirOperationState funcState =
       mlirOperationStateGet(mlirStringRefCreateFromCString("func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
@@ -105,7 +107,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirAttribute indexZeroLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
   MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirStringRefCreateFromCString("value"), indexZeroLiteral);
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexZeroLiteral);
   MlirOperationState constZeroState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constZeroState, 1, &indexType);
@@ -130,7 +133,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirAttribute indexOneLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
   MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
-      mlirStringRefCreateFromCString("value"), indexOneLiteral);
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexOneLiteral);
   MlirOperationState constOneState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("std.constant"), location);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
@@ -375,8 +379,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // CHECK: Get attr 0: 0 : index
 
   // Now re-get the attribute by name.
-  MlirAttribute attr0ByName =
-      mlirOperationGetAttributeByName(operation, namedAttr0.name);
+  MlirAttribute attr0ByName = mlirOperationGetAttributeByName(
+      operation, mlirIdentifierStr(namedAttr0.name));
   fprintf(stderr, "Get attr 0 by name: ");
   mlirAttributePrint(attr0ByName, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -1262,26 +1266,20 @@ int registerOnlyStd() {
     return 2;
 
   mlirContextRegisterStandardDialect(ctx);
-  if (mlirContextGetNumRegisteredDialects(ctx) != 1)
-    return 3;
-  if (mlirContextGetNumLoadedDialects(ctx) != 1)
-    return 4;
 
   std = mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
   if (mlirDialectIsNull(std))
-    return 5;
-  if (mlirContextGetNumLoadedDialects(ctx) != 2)
-    return 6;
+    return 3;
 
   MlirDialect alsoStd = mlirContextLoadStandardDialect(ctx);
   if (!mlirDialectEqual(std, alsoStd))
-    return 7;
+    return 4;
 
   MlirStringRef stdNs = mlirDialectGetNamespace(std);
   MlirStringRef alsoStdNs = mlirStandardDialectGetNamespace();
   if (stdNs.length != alsoStdNs.length ||
       strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
-    return 8;
+    return 5;
 
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration

@@ -42,7 +42,16 @@ static std::string GetAliaseeName() {
   auto ErrorOrBuf = llvm::MemoryBuffer::getFile(AliaseeFile);
   if (!ErrorOrBuf)
     llvm::PrintFatalError("Unable to read the aliasee file " + AliaseeFile);
-  return std::string(ErrorOrBuf.get()->getBuffer().trim());
+  llvm::StringRef FileContent = ErrorOrBuf.get()->getBuffer().trim();
+  llvm::SmallVector<llvm::StringRef> Lines;
+  FileContent.split(Lines, '\n');
+  for (llvm::StringRef L : Lines) {
+    if (L.contains("__llvm_libc"))
+      return std::string(L);
+  }
+  llvm::PrintFatalError("Did not find an LLVM libc mangled name in " +
+                        AliaseeFile);
+  return std::string();
 }
 
 static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {

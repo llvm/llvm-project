@@ -8,6 +8,7 @@
 
 #include "PPCMachineFunctionInfo.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -62,4 +63,37 @@ bool PPCFunctionInfo::isLiveInZExt(Register VReg) const {
     if (LiveIn.first == VReg)
       return LiveIn.second.isZExt();
   return false;
+}
+
+void PPCFunctionInfo::appendParameterType(ParamType Type) {
+  uint32_t CopyParamType = ParameterType;
+  unsigned Bits = 0;
+
+  // If it is fixed type, we only need to increase the FixedParamNum, for
+  // the bit encode of fixed type is bit of zero, we do not need to change the
+  // ParamType.
+  if (Type == FixedType) {
+    ++FixedParamNum;
+    return;
+  }
+
+  ++FloatingPointParamNum;
+
+  for (int I = 0;
+       I < static_cast<int>(FloatingPointParamNum + FixedParamNum - 1); ++I) {
+    if (CopyParamType & XCOFF::TracebackTable::ParmTypeIsFloatingBit) {
+      // '10'b => floating point short parameter.
+      // '11'b => floating point long parameter.
+      CopyParamType <<= 2;
+      Bits += 2;
+    } else {
+      // '0'b => fixed parameter.
+      CopyParamType <<= 1;
+      ++Bits;
+    }
+  }
+
+  assert(Type != FixedType && "FixedType should already be handled.");
+  if (30 - Bits >= 0)
+    ParameterType |= Type << (30 - Bits);
 }
