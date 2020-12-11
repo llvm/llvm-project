@@ -128,8 +128,8 @@ public:
 
 private:
   std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;
-  llvm::SmallString<256> ServerAddress;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
+  llvm::SmallString<256> ServerAddress;
   // Each request will be terminated if it takes too long.
   std::chrono::milliseconds DeadlineWaitingTime;
 };
