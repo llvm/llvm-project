@@ -662,7 +662,7 @@ typedef enum memory_order {
 
 template <typename _Tp> _LIBCPP_INLINE_VISIBILITY
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-    return memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+    return _VSTD::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
 }
 
 static_assert((is_same<underlying_type<memory_order>::type, __memory_order_underlying_t>::value),
@@ -1262,7 +1262,7 @@ bool __cxx_atomic_compare_exchange_strong(volatile __cxx_atomic_lock_impl<_Tp>* 
   _Tp __temp;
   __a->__lock();
   __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = (memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
+  bool __ret = (_VSTD::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1275,11 +1275,11 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(__cxx_atomic_lock_impl<_Tp>* __a,
                                           _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  bool __ret = (memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
+  bool __ret = (_VSTD::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
   if(__ret)
-    memcpy(&__a->__a_value, &__value, sizeof(_Tp));
+    _VSTD::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
   else
-    memcpy(__expected, &__a->__a_value, sizeof(_Tp));
+    _VSTD::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
   __a->__unlock();
   return __ret;
 }
@@ -1291,7 +1291,7 @@ bool __cxx_atomic_compare_exchange_weak(volatile __cxx_atomic_lock_impl<_Tp>* __
   _Tp __temp;
   __a->__lock();
   __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = (memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
+  bool __ret = (_VSTD::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1304,11 +1304,11 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(__cxx_atomic_lock_impl<_Tp>* __a,
                                         _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  bool __ret = (memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
+  bool __ret = (_VSTD::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
   if(__ret)
-    memcpy(&__a->__a_value, &__value, sizeof(_Tp));
+    _VSTD::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
   else
-    memcpy(__expected, &__a->__a_value, sizeof(_Tp));
+    _VSTD::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
   __a->__unlock();
   return __ret;
 }
