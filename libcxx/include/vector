@@ -2139,7 +2139,7 @@ vector<_Tp, _Allocator>::__invalidate_iterators_past(pointer __new_last) {
     if (__i->base() > __new_last) {
       (*__p)->__c_ = nullptr;
       if (--__c->end_ != __p)
-        memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+        _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
     }
   }
   __get_db()->unlock();
