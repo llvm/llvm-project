@@ -2773,8 +2773,8 @@ bool IRTranslator::translate(const Instruction &Inst) {
   // We only emit constants into the entry block from here. To prevent jumpy
   // debug behaviour set the line to 0.
   if (const DebugLoc &DL = Inst.getDebugLoc())
-    EntryBuilder->setDebugLoc(
-        DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
+    EntryBuilder->setDebugLoc(DILocation::get(
+        Inst.getContext(), 0, 0, DL.getScope(), DL.getInlinedAt()));
   else
     EntryBuilder->setDebugLoc(DebugLoc());
 
