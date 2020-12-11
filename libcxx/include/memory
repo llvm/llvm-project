@@ -4036,28 +4036,6 @@ shared_ptr<_Tp>::reset(_Yp* __p, _Dp __d, _Alloc __a)
     shared_ptr(__p, __d, __a).swap(*this);
 }
 
-template<class _Tp, class ..._Args>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    !is_array<_Tp>::value,
-    shared_ptr<_Tp>
->::type
-make_shared(_Args&& ...__args)
-{
-    static_assert(is_constructible<_Tp, _Args...>::value, "Can't construct object in make_shared");
-    typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
-    typedef allocator<_CntrlBlk> _A2;
-    typedef __allocator_destructor<_A2> _D2;
-
-    _A2 __a2;
-    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-    ::new(__hold2.get()) _CntrlBlk(__a2, _VSTD::forward<_Args>(__args)...);
-
-    _Tp *__ptr = __hold2->__get_elem();
-    return shared_ptr<_Tp>::__create_with_control_block(__ptr, __hold2.release());
-}
-
 template<class _Tp, class _Alloc, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
@@ -4067,7 +4045,8 @@ typename enable_if
 >::type
 allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
-    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in allocate_shared");
+    static_assert(is_constructible<_Tp, _Args...>::value,
+        "allocate_shared/make_shared: the type is not constructible from the provided arguments");
 
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
@@ -4080,6 +4059,13 @@ allocate_shared(const _Alloc& __a, _Args&& ...__args)
 
     typename shared_ptr<_Tp>::element_type *__p = __hold2->__get_elem();
     return shared_ptr<_Tp>::__create_with_control_block(__p, _VSTD::addressof(*__hold2.release()));
+}
+
+template<class _Tp, class ..._Args, class = _EnableIf<!is_array<_Tp>::value> >
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared(_Args&& ...__args)
+{
+    return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
 }
 
 template<class _Tp, class _Up>

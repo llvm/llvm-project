@@ -49,12 +49,9 @@ body:             |
 # POST-INSERTER: dead %12:gpr = PseudoVSETVLI %0, 76, implicit-def $vl, implicit-def $vtype
 # POST-INSERTER: PseudoVSE64_V_M1 killed %8, %3, $noreg, $noreg, -1, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
 
-# CODEGEN: vsetvli	a4, a3, e64,m1,ta,mu
+# CODEGEN: vsetvli	a3, a3, e64,m1,ta,mu
 # CODEGEN-NEXT: vle64.v	v25, (a1)
-# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,ta,mu
 # CODEGEN-NEXT: vle64.v	v26, (a2)
-# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,ta,mu
 # CODEGEN-NEXT: vadd.vv	v25, v25, v26
-# CODEGEN-NEXT: vsetvli	a1, a3, e64,m1,ta,mu
 # CODEGEN-NEXT: vse64.v	v25, (a0)
 # CODEGEN-NEXT: ret

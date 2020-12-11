@@ -12,7 +12,7 @@
 
 @c1 = external global i16
 
-define void @f(i16 %a) {
+define void @f(i16 %a, [1 x i32]* %p) {
   br label %bb0
 
 bb0:
@@ -24,9 +24,9 @@ bb1:
 
 bb2:
   %tmp2 = phi i16 [ %tmp1, %bb1 ], [ %tmp3, %bb2 ]
-  %tmp4 = getelementptr inbounds [1 x i32], [1 x i32]* undef, i32 0, i32 4
+  %tmp4 = getelementptr inbounds [1 x i32], [1 x i32]* %p, i32 0, i32 4
   store i32 1, i32* %tmp4
-  %tmp5 = getelementptr inbounds [1 x i32], [1 x i32]* undef, i32 0, i32 9
+  %tmp5 = getelementptr inbounds [1 x i32], [1 x i32]* %p, i32 0, i32 9
   store i32 0, i32* %tmp5
   %tmp3 = add i16 %tmp2, 1
   store i16 %tmp2, i16* @c1
