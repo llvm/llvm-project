@@ -347,6 +347,16 @@ public:
     return SortedTargets;
   }
 
+  /// Prorate call targets by a distribution factor.
+  static const CallTargetMap adjustCallTargets(const CallTargetMap &Targets,
+                                               float DistributionFactor) {
+    CallTargetMap AdjustedTargets;
+    for (const auto &I : Targets) {
+      AdjustedTargets[I.first()] = I.second * DistributionFactor;
+    }
+    return AdjustedTargets;
+  }
+
   /// Merge the samples in \p Other into this record.
   /// Optionally scale sample counts by \p Weight.
   sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1) {
