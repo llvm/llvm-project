@@ -390,6 +390,9 @@ void Sema::Initialize() {
 }
 
 Sema::~Sema() {
+  assert(InstantiatingSpecializations.empty() &&
+         "failed to clean up an InstantiatingTemplate?");
+
   if (VisContext) FreeVisContext();
 
   // Kill all the active scopes.
