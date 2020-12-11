@@ -292,8 +292,16 @@ template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
   return getIfUnordered(dyn_cast<StoreInst>(In));
 }
 
+#if !defined(_MSC_VER) || _MSC_VER >= 1920
+// VS2017 has trouble compiling this:
+// error C2976: 'std::map': too few template arguments
 template <typename Pred, typename... Ts>
-void erase_if(std::map<Ts...> &map, Pred p) {
+void erase_if(std::map<Ts...> &map, Pred p)
+#else
+template <typename Pred, typename T, typename U>
+void erase_if(std::map<T, U> &map, Pred p)
+#endif
+{
   for (auto i = map.begin(), e = map.end(); i != e;) {
     if (p(*i))
       i = map.erase(i);
