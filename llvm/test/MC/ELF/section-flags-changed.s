@@ -9,4 +9,7 @@ foo:
 # CHECK: {{.*}}.s:[[# @LINE+1]]:1: error: changed section flags for .foo, expected: 0x6
 .pushsection .foo,"a",@progbits
 
+# CHECK: {{.*}}.s:[[# @LINE+1]]:1: error: changed section flags for .foo, expected: 0x6
+.section .foo,"",@progbits
+
 .pushsection .foo,"ax",@progbits
