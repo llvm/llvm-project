@@ -841,6 +841,7 @@ private:
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
 
   SDValue SplitVecOp_BITCAST(SDNode *N);
+  SDValue SplitVecOp_INSERT_SUBVECTOR(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue SplitVecOp_ExtVecInRegOp(SDNode *N);
