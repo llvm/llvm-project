@@ -637,8 +637,10 @@ define amdgpu_kernel void @test_export_pos_before_param_across_load(i32 %idx) #0
 }
 
 ; GCN-LABEL: {{^}}test_export_across_store_load:
-; GCN: buffer_store
-; GCN: buffer_load
+; GFX78: buffer_store
+; GFX78: buffer_load
+; GFX11: scratch_store
+; GFX11: scratch_load
 ; GCN: exp pos0
 ; GFX78: exp param0
 ; GFX78: exp param1

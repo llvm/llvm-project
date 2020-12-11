@@ -393,6 +393,7 @@ protected:
   bool FlatGlobalInsts;
   bool FlatScratchInsts;
   bool ScalarFlatScratchInsts;
+  bool HasArchitectedFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
   bool R600ALUInst;
@@ -1179,6 +1180,12 @@ public:
   /// pointer to the wave's scratch memory rather than a size and offset.
   bool flatScratchIsPointer() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
+  /// \returns true if the flat_scratch register is initialized by the HW.
+  /// In this case it is readonly.
+  bool flatScratchIsArchitected() const {
+    return HasArchitectedFlatScratch;
   }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are

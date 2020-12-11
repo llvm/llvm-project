@@ -1256,6 +1256,10 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
 }
 
 
+bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
+  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//
@@ -1315,7 +1319,8 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
                           AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
 
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
-  KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
+  if (!hasArchitectedFlatScratch())
+    KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
   KdStream << Indent << ".amdhsa_reserve_xnack_mask " << 0 << '\n';
   KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
 
@@ -1366,9 +1371,12 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
     uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
   using namespace amdhsa;
   StringRef Indent = "\t";
-  PRINT_DIRECTIVE(
-      ".amdhsa_system_sgpr_private_segment_wavefront_offset",
-      COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
+  if (hasArchitectedFlatScratch())
+    PRINT_DIRECTIVE(".amdhsa_enable_private_segment",
+                    COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
+  else
+    PRINT_DIRECTIVE(".amdhsa_system_sgpr_private_segment_wavefront_offset",
+                    COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
   PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_x",
                   COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X);
   PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_y",
@@ -1502,8 +1510,9 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     using namespace amdhsa;
     TwoByteBuffer = DE.getU16(Cursor);
 
-    PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_buffer",
-                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
+  if (!hasArchitectedFlatScratch())
+      PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_buffer",
+                      KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_ptr",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_queue_ptr",
@@ -1512,8 +1521,9 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_id",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
-    PRINT_DIRECTIVE(".amdhsa_user_sgpr_flat_scratch_init",
-                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
+  if (!hasArchitectedFlatScratch())
+      PRINT_DIRECTIVE(".amdhsa_user_sgpr_flat_scratch_init",
+                      KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
 

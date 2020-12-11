@@ -688,6 +688,12 @@ def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
   " supports it"
 >;
 
+def FeatureArchitectedFlatScratch : SubtargetFeature<"architected-flat-scratch",
+  "HasArchitectedFlatScratch",
+  "true",
+  "Flat Scratch register is a readonly SPI initialized architected register"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1046,6 +1052,7 @@ def FeatureISAVersion11_0_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
+   FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureDoesNotSupportXNACK]>;

@@ -51,10 +51,6 @@ define amdgpu_kernel void @zero_init_kernel() {
 ;
 ; GFX11-LABEL: zero_init_kernel:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s1, s0
@@ -124,15 +120,6 @@ define amdgpu_kernel void @zero_init_kernel() {
 ;
 ; GFX11-PAL-LABEL: zero_init_kernel:
 ; GFX11-PAL:       ; %bb.0:
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-PAL-NEXT:    s_mov_b32 s1, s0
@@ -310,10 +297,6 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s2, s2, s5
-; GFX11-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -371,15 +354,6 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[4:5]
-; GFX11-PAL-NEXT:    s_mov_b32 s4, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s4, s4, s3
-; GFX11-PAL-NEXT:    s_addc_u32 s5, s5, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s4
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s5
 ; GFX11-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -437,18 +411,14 @@ define amdgpu_ps void @store_load_sindex_foo(i32 inreg %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_foo:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX11-NEXT:    s_and_b32 s0, s2, 15
+; GFX11-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 15
-; GFX11-NEXT:    s_lshl_b32 s1, s2, 2
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX11-NEXT:    s_add_u32 s1, 4, s1
+; GFX11-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX11-NEXT:    s_add_u32 s0, 4, s0
-; GFX11-NEXT:    scratch_store_b32 off, v0, s1
-; GFX11-NEXT:    scratch_load_b32 v0, off, s0
+; GFX11-NEXT:    s_add_u32 s1, 4, s1
+; GFX11-NEXT:    scratch_store_b32 off, v0, s0
+; GFX11-NEXT:    scratch_load_b32 v0, off, s1
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_foo:
@@ -493,15 +463,6 @@ define amdgpu_ps void @store_load_sindex_foo(i32 inreg %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX11-PAL-NEXT:    s_lshl_b32 s0, s0, 2
@@ -555,10 +516,6 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ;
 ; GFX11-LABEL: store_load_vindex_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -607,15 +564,6 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ;
 ; GFX11-PAL-LABEL: store_load_vindex_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -844,10 +792,6 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ;
 ; GFX11-LABEL: zero_init_small_offset_kernel:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -924,15 +868,6 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ;
 ; GFX11-PAL-LABEL: zero_init_small_offset_kernel:
 ; GFX11-PAL:       ; %bb.0:
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1135,10 +1070,6 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_small_offset_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s2, s2, s5
-; GFX11-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1203,15 +1134,6 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_small_offset_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[4:5]
-; GFX11-PAL-NEXT:    s_mov_b32 s4, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s4, s4, s3
-; GFX11-PAL-NEXT:    s_addc_u32 s5, s5, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s4
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s5
 ; GFX11-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
@@ -1279,20 +1201,16 @@ define amdgpu_ps void @store_load_sindex_small_offset_foo(i32 inreg %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_small_offset_foo:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
-; GFX11-NEXT:    s_and_b32 s0, s2, 15
+; GFX11-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 15
-; GFX11-NEXT:    s_lshl_b32 s1, s2, 2
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX11-NEXT:    s_add_u32 s1, 0x104, s1
+; GFX11-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX11-NEXT:    s_add_u32 s0, 0x104, s0
-; GFX11-NEXT:    scratch_store_b32 off, v0, s1
-; GFX11-NEXT:    scratch_load_b32 v0, off, s0
+; GFX11-NEXT:    s_add_u32 s1, 0x104, s1
+; GFX11-NEXT:    scratch_store_b32 off, v0, s0
+; GFX11-NEXT:    scratch_load_b32 v0, off, s1
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_small_offset_foo:
@@ -1342,15 +1260,6 @@ define amdgpu_ps void @store_load_sindex_small_offset_foo(i32 inreg %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_small_offset_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
@@ -1413,10 +1322,6 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ;
 ; GFX11-LABEL: store_load_vindex_small_offset_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    scratch_load_b32 v3, off, off offset:4
@@ -1470,15 +1375,6 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ;
 ; GFX11-PAL-LABEL: store_load_vindex_small_offset_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-PAL-NEXT:    scratch_load_b32 v3, off, off offset:4
@@ -1673,10 +1569,6 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ;
 ; GFX11-LABEL: zero_init_large_offset_kernel:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_movk_i32 vcc_lo, 0x4010
@@ -1760,15 +1652,6 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ;
 ; GFX11-PAL-LABEL: zero_init_large_offset_kernel:
 ; GFX11-PAL:       ; %bb.0:
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-PAL-NEXT:    s_movk_i32 vcc_lo, 0x4010
@@ -1996,10 +1879,6 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_large_offset_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s2, s2, s5
-; GFX11-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -2064,15 +1943,6 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_large_offset_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[4:5]
-; GFX11-PAL-NEXT:    s_mov_b32 s4, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s4, s4, s3
-; GFX11-PAL-NEXT:    s_addc_u32 s5, s5, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s4
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s5
 ; GFX11-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
@@ -2140,20 +2010,16 @@ define amdgpu_ps void @store_load_sindex_large_offset_foo(i32 inreg %idx) {
 ;
 ; GFX11-LABEL: store_load_sindex_large_offset_foo:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
-; GFX11-NEXT:    s_and_b32 s0, s2, 15
+; GFX11-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 15
-; GFX11-NEXT:    s_lshl_b32 s1, s2, 2
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX11-NEXT:    s_add_u32 s1, 0x4004, s1
+; GFX11-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX11-NEXT:    s_add_u32 s0, 0x4004, s0
-; GFX11-NEXT:    scratch_store_b32 off, v0, s1
-; GFX11-NEXT:    scratch_load_b32 v0, off, s0
+; GFX11-NEXT:    s_add_u32 s1, 0x4004, s1
+; GFX11-NEXT:    scratch_store_b32 off, v0, s0
+; GFX11-NEXT:    scratch_load_b32 v0, off, s1
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_large_offset_foo:
@@ -2203,15 +2069,6 @@ define amdgpu_ps void @store_load_sindex_large_offset_foo(i32 inreg %idx) {
 ;
 ; GFX11-PAL-LABEL: store_load_sindex_large_offset_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4
 ; GFX11-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
@@ -2274,10 +2131,6 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ;
 ; GFX11-LABEL: store_load_vindex_large_offset_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    s_movk_i32 vcc_lo, 0x4004
@@ -2332,15 +2185,6 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ;
 ; GFX11-PAL-LABEL: store_load_vindex_large_offset_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-PAL-NEXT:    s_movk_i32 vcc_lo, 0x4004
@@ -2518,10 +2362,6 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ;
 ; GFX11-LABEL: store_load_large_imm_offset_kernel:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s0, s0, s3
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x3000
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 15
@@ -2571,15 +2411,6 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ;
 ; GFX11-PAL-LABEL: store_load_large_imm_offset_kernel:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-PAL-NEXT:    s_mov_b32 s2, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s2, s2, s1
-; GFX11-PAL-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 0x3000
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v2, 15
@@ -2725,10 +2556,6 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ;
 ; GFX11-LABEL: store_load_vidx_sidx_offset:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_add_u32 s2, s2, s5
-; GFX11-NEXT:    s_addc_u32 s3, s3, 0
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2777,15 +2604,6 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ;
 ; GFX11-PAL-LABEL: store_load_vidx_sidx_offset:
 ; GFX11-PAL:       ; %bb.0: ; %bb
-; GFX11-PAL-NEXT:    s_getpc_b64 s[4:5]
-; GFX11-PAL-NEXT:    s_mov_b32 s4, s0
-; GFX11-PAL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX11-PAL-NEXT:    s_add_u32 s4, s4, s3
-; GFX11-PAL-NEXT:    s_addc_u32 s5, s5, 0
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s4
-; GFX11-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s5
 ; GFX11-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
