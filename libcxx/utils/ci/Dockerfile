@@ -51,8 +51,8 @@ RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-comp
 # Install the most recently released LLVM
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-RUN ln -s $(find /usr/bin -regex '.+/clang\+\+-[a-zA-Z0-9.]+') /usr/bin/clang++
-RUN ln -s $(find /usr/bin -regex '.+/clang-[a-zA-Z0-9.]+') /usr/bin/clang
+RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++
+RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang
 
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
