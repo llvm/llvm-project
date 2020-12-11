@@ -1021,6 +1021,7 @@ template <typename T> struct CalculateSmallVectorDefaultInlinedElements {
 ///
 /// \warning This does not attempt to be exception safe.
 ///
+/// \see https://llvm.org/docs/ProgrammersManual.html#llvm-adt-smallvector-h
 template <typename T,
           unsigned N = CalculateSmallVectorDefaultInlinedElements<T>::value>
 class LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
