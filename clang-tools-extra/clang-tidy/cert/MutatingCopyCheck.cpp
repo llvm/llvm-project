@@ -30,7 +30,7 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
             MemberExprOrSourceObject);
 
   const auto IsSourceMutatingAssignment = traverse(
-      ast_type_traits::TK_AsIs,
+      TK_AsIs,
       expr(anyOf(binaryOperator(isAssignmentOperator(), hasLHS(IsPartOfSource))
                      .bind(MutatingOperatorName),
                  cxxOperatorCallExpr(isAssignmentOperator(),

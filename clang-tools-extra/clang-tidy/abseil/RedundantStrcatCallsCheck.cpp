@@ -68,7 +68,7 @@ const clang::CallExpr* ProcessArgument(const Expr* Arg,
       has(callExpr(callee(functionDecl(*Strcat))).bind("StrCat")));
   if (const auto *SubStrcatCall = selectFirst<const CallExpr>(
           "StrCat",
-          match(stmt(traverse(ast_type_traits::TK_AsIs,
+          match(stmt(traverse(TK_AsIs,
                               anyOf(cxxConstructExpr(IsAlphanum,
                                                      hasArgument(0, IsStrcat)),
                                     IsStrcat))),

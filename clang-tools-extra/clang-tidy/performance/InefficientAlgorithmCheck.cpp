@@ -36,7 +36,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
       "::std::unordered_multiset", "::std::unordered_multimap"));
 
   const auto Matcher = traverse(
-      ast_type_traits::TK_AsIs,
+      TK_AsIs,
       callExpr(
           callee(functionDecl(Algorithms)),
           hasArgument(

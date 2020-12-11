@@ -62,7 +62,7 @@ void ProperlySeededRandomGeneratorCheck::registerMatchers(MatchFinder *Finder) {
   // std::mt19937 engine(x);
   //              ^
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxConstructExpr(RandomGeneratorEngineTypeMatcher).bind("ctor")),
       this);
 

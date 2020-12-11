@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
 ; RUN: llc -filetype=asm %s -asm-verbose=false -o -  | FileCheck --check-prefix=ASM %s
-; RUN: llc -filetype=asm %s -o %t.s | llvm-mc -triple=wasm32 -filetype=obj %t.s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=asm %s -o - | llvm-mc -triple=wasm32 -filetype=obj  -o - | obj2yaml | FileCheck %s
 ; These RUN lines verify the ll direct-to-object path, the ll->asm path, and the
 ; object output via asm.
 

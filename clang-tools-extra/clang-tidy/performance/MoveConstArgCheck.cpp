@@ -52,7 +52,7 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(callExpr(ConstParamMatcher).bind("receiving-expr"), this);
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxConstructExpr(ConstParamMatcher).bind("receiving-expr")),
       this);
 }

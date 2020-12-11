@@ -305,13 +305,3 @@ MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
   };
   return MDNode::get(Context, Vals);
 }
-
-MDNode *MDBuilder::createPseudoProbeDesc(uint64_t GUID, uint64_t Hash,
-                                         Function *F) {
-  auto *Int64Ty = Type::getInt64Ty(Context);
-  SmallVector<Metadata *, 3> Ops(3);
-  Ops[0] = createConstant(ConstantInt::get(Int64Ty, GUID));
-  Ops[1] = createConstant(ConstantInt::get(Int64Ty, Hash));
-  Ops[2] = createString(F->getName());
-  return MDNode::get(Context, Ops);
-}

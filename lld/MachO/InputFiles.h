@@ -95,6 +95,7 @@ public:
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   ArrayRef<llvm::MachO::section_64> sectionHeaders;
+  std::vector<InputSection *> debugSections;
 
 private:
   void parseSections(ArrayRef<llvm::MachO::section_64>);
@@ -133,7 +134,6 @@ public:
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   bool reexport = false;
   bool forceWeakImport = false;
-  std::vector<DylibFile *> reexported;
 };
 
 // .a file

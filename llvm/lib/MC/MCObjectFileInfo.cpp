@@ -497,10 +497,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
-
-  PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
-  PseudoProbeDescSection =
-      Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -1028,42 +1024,4 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
   return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
                             Flags, 0, GroupName, ElfSec.getUniqueID(),
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
-}
-
-MCSection *
-MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
-  if (Env == IsELF) {
-    const auto *ElfSec = static_cast<const MCSectionELF *>(TextSec);
-    // Create a separate section for probes that comes with a comdat function.
-    if (const MCSymbol *Group = ElfSec->getGroup()) {
-      auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
-      auto Flags = S->getFlags() | ELF::SHF_GROUP;
-      return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                                S->getEntrySize(), Group->getName());
-    }
-  }
-  return PseudoProbeSection;
-}
-
-MCSection *
-MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
-  if (Env == IsELF) {
-    // Create a separate comdat group for each function's descriptor in order
-    // for the linker to deduplicate. The duplication, must be from different
-    // tranlation unit, can come from:
-    //  1. Inline functions defined in header files;
-    //  2. ThinLTO imported funcions;
-    //  3. Weak-linkage definitions.
-    // Use a concatenation of the section name and the function name as the
-    // group name so that descriptor-only groups won't be folded with groups of
-    // code.
-    if (TT.supportsCOMDAT() && !FuncName.empty()) {
-      auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
-      auto Flags = S->getFlags() | ELF::SHF_GROUP;
-      return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                                S->getEntrySize(),
-                                S->getName() + "_" + FuncName);
-    }
-  }
-  return PseudoProbeDescSection;
 }

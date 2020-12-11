@@ -309,10 +309,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    newFile = make<DylibFile>(mbref);
-    break;
   case file_magic::tapi_file: {
-    if (Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref))
+    if (Optional<DylibFile *> dylibFile = loadDylib(mbref))
       newFile = *dylibFile;
     break;
   }
@@ -654,6 +652,17 @@ static bool isPie(opt::InputArgList &args) {
   return args.hasArg(OPT_pie);
 }
 
+static void parseClangOption(StringRef opt, const Twine &msg) {
+  std::string err;
+  raw_string_ostream os(err);
+
+  const char *argv[] = {"lld", opt.data()};
+  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+    return;
+  os.flush();
+  error(msg + ": " + StringRef(err).trim());
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -703,10 +712,12 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
+  config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->demangle = args.hasArg(OPT_demangle);
+  config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
 
   if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
@@ -736,6 +747,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     freeArena();
     return !errorCount();
   }
+
+  initLLVM(); // must be run before any call to addFile()
 
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
@@ -787,7 +800,14 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       error("-sub_library " + searchName + " does not match a supplied dylib");
   }
 
-  initLLVM();
+  // Parse LTO options.
+  if (auto *arg = args.getLastArg(OPT_mcpu))
+    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+                     arg->getSpelling());
+
+  for (auto *arg : args.filtered(OPT_mllvm))
+    parseClangOption(arg->getValue(), arg->getSpelling());
+
   compileBitcodeFiles();
   replaceCommonSymbols();
 

@@ -43,8 +43,8 @@ std::string createResponseFile(const llvm::opt::InputArgList &args);
 // Check for both libfoo.dylib and libfoo.tbd (in that order).
 llvm::Optional<std::string> resolveDylibPath(llvm::StringRef path);
 
-llvm::Optional<DylibFile *> makeDylibFromTAPI(llvm::MemoryBufferRef mbref,
-                                              DylibFile *umbrella = nullptr);
+llvm::Optional<DylibFile *> loadDylib(llvm::MemoryBufferRef mbref,
+                                      DylibFile *umbrella = nullptr);
 
 uint32_t getModTime(llvm::StringRef path);
 

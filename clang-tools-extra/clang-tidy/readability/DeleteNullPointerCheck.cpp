@@ -39,7 +39,7 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
       hasOperands(castExpr(hasCastKind(CK_NullToPointer)), PointerExpr));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                ifStmt(hasCondition(
                           anyOf(PointerCondition, BinaryPointerCheckCondition)),
                       hasThen(anyOf(DeleteExpr, DeleteMemberExpr,

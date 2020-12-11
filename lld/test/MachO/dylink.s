@@ -38,6 +38,20 @@
 # CHECK-DAG: __DATA       __data 0x{{0*}}[[#%x, DATA_ADDR + 8]]                       pointer 8   libhello   _hello_its_me
 # CHECK-DAG: __DATA       __data 0x{{0*}}[[#%x, DATA_ADDR + 16]]                      pointer -15 libgoodbye _goodbye_world
 
+# RUN: llvm-objdump --macho --all-headers %t/dylink | FileCheck %s \
+# RUN:   --check-prefix=LOAD --implicit-check-not LC_LOAD_DYLIB
+## Check that we don't create duplicate LC_LOAD_DYLIBs.
+# RUN: %lld -o %t/dylink -L%t -lhello -lhello -lgoodbye -lgoodbye %t/dylink.o
+# RUN: llvm-objdump --macho --all-headers %t/dylink | FileCheck %s \
+# RUN:   --check-prefix=LOAD --implicit-check-not LC_LOAD_DYLIB
+
+# LOAD:              cmd LC_LOAD_DYLIB
+# LOAD-NEXT:     cmdsize
+# LOAD-NEXT:        name @executable_path/libhello.dylib
+# LOAD:              cmd LC_LOAD_DYLIB
+# LOAD-NEXT:     cmdsize
+# LOAD-NEXT:        name @executable_path/libgoodbye.dylib
+
 .section __TEXT,__text
 .globl _main
 
