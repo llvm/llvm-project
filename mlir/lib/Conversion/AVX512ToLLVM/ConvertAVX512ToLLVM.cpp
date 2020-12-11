@@ -22,111 +22,59 @@ using namespace mlir::vector;
 using namespace mlir::avx512;
 
 template <typename OpTy>
-static Type getSrcVectorElementType(OpTy op) {
-  return op.src().getType().template cast<VectorType>().getElementType();
-}
-
-// TODO: Code is currently copy-pasted and adapted from the code
-// 1-1 LLVM conversion. It would better if it were properly exposed in core and
-// reusable.
-/// Basic lowering implementation for one-to-one rewriting from AVX512 Ops to
-/// LLVM Dialect Ops. Convert the type of the result to an LLVM type, pass
-/// operands as is, preserve attributes.
-template <typename SourceOp, typename TargetOp>
-static LogicalResult
-matchAndRewriteOneToOne(LLVMTypeConverter &typeConverter, Operation *op,
-                        ArrayRef<Value> operands,
-                        ConversionPatternRewriter &rewriter) {
-  unsigned numResults = op->getNumResults();
-
-  Type packedType;
-  if (numResults != 0) {
-    packedType = typeConverter.packFunctionResults(op->getResultTypes());
-    if (!packedType)
-      return failure();
-  }
-
-  auto newOp = rewriter.create<TargetOp>(op->getLoc(), packedType, operands,
-                                         op->getAttrs());
-
-  // If the operation produced 0 or 1 result, return them immediately.
-  if (numResults == 0)
-    return rewriter.eraseOp(op), success();
-  if (numResults == 1)
-    return rewriter.replaceOp(op, newOp->getResult(0)), success();
-
-  // Otherwise, it had been converted to an operation producing a structure.
-  // Extract individual results from the structure and return them as list.
-  SmallVector<Value, 4> results;
-  results.reserve(numResults);
-  for (unsigned i = 0; i < numResults; ++i) {
-    auto type = typeConverter.convertType(op->getResult(i).getType());
-    results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-        op->getLoc(), type, newOp->getResult(0), rewriter.getI64ArrayAttr(i)));
-  }
-  rewriter.replaceOp(op, results);
-  return success();
+static Type getSrcVectorElementType(Operation *op) {
+  return cast<OpTy>(op)
+      .src()
+      .getType()
+      .template cast<VectorType>()
+      .getElementType();
 }
 
 namespace {
-// TODO: Patterns are too verbose due to the fact that we have 1 op (e.g.
-// MaskRndScaleOp) and different possible target ops. It would be better to take
-// a Functor so that all these conversions become 1-liners.
-struct MaskRndScaleOpPS512Conversion
-    : public ConvertOpToLLVMPattern<MaskRndScaleOp> {
-  using ConvertOpToLLVMPattern<MaskRndScaleOp>::ConvertOpToLLVMPattern;
+
+// TODO: turn these into simpler declarative templated patterns when we've had
+// enough.
+struct MaskRndScaleOp512Conversion : public ConvertToLLVMPattern {
+  explicit MaskRndScaleOp512Conversion(MLIRContext *context,
+                                       LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(MaskRndScaleOp::getOperationName(), context,
+                             typeConverter) {}
 
   LogicalResult
-  matchAndRewrite(MaskRndScaleOp op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!getSrcVectorElementType(op).isF32())
-      return failure();
-    return matchAndRewriteOneToOne<MaskRndScaleOp,
-                                   LLVM::x86_avx512_mask_rndscale_ps_512>(
-        *getTypeConverter(), op, operands, rewriter);
+    Type elementType = getSrcVectorElementType<MaskRndScaleOp>(op);
+    if (elementType.isF32())
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_mask_rndscale_ps_512::getOperationName(),
+          operands, *getTypeConverter(), rewriter);
+    if (elementType.isF64())
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_mask_rndscale_pd_512::getOperationName(),
+          operands, *getTypeConverter(), rewriter);
+    return failure();
   }
 };
 
-struct MaskRndScaleOpPD512Conversion
-    : public ConvertOpToLLVMPattern<MaskRndScaleOp> {
-  using ConvertOpToLLVMPattern<MaskRndScaleOp>::ConvertOpToLLVMPattern;
+struct ScaleFOp512Conversion : public ConvertToLLVMPattern {
+  explicit ScaleFOp512Conversion(MLIRContext *context,
+                                 LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(MaskScaleFOp::getOperationName(), context,
+                             typeConverter) {}
 
   LogicalResult
-  matchAndRewrite(MaskRndScaleOp op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!getSrcVectorElementType(op).isF64())
-      return failure();
-    return matchAndRewriteOneToOne<MaskRndScaleOp,
-                                   LLVM::x86_avx512_mask_rndscale_pd_512>(
-        *getTypeConverter(), op, operands, rewriter);
-  }
-};
-
-struct ScaleFOpPS512Conversion : public ConvertOpToLLVMPattern<MaskScaleFOp> {
-  using ConvertOpToLLVMPattern<MaskScaleFOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(MaskScaleFOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!getSrcVectorElementType(op).isF32())
-      return failure();
-    return matchAndRewriteOneToOne<MaskScaleFOp,
-                                   LLVM::x86_avx512_mask_scalef_ps_512>(
-        *getTypeConverter(), op, operands, rewriter);
-  }
-};
-
-struct ScaleFOpPD512Conversion : public ConvertOpToLLVMPattern<MaskScaleFOp> {
-  using ConvertOpToLLVMPattern<MaskScaleFOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(MaskScaleFOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!getSrcVectorElementType(op).isF64())
-      return failure();
-    return matchAndRewriteOneToOne<MaskScaleFOp,
-                                   LLVM::x86_avx512_mask_scalef_pd_512>(
-        *getTypeConverter(), op, operands, rewriter);
+    Type elementType = getSrcVectorElementType<MaskScaleFOp>(op);
+    if (elementType.isF32())
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_mask_scalef_ps_512::getOperationName(), operands,
+          *getTypeConverter(), rewriter);
+    if (elementType.isF64())
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_mask_scalef_pd_512::getOperationName(), operands,
+          *getTypeConverter(), rewriter);
+    return failure();
   }
 };
 } // namespace
@@ -135,9 +83,7 @@ struct ScaleFOpPD512Conversion : public ConvertOpToLLVMPattern<MaskScaleFOp> {
 void mlir::populateAVX512ToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   // clang-format off
-  patterns.insert<MaskRndScaleOpPS512Conversion,
-                  MaskRndScaleOpPD512Conversion,
-                  ScaleFOpPS512Conversion,
-                  ScaleFOpPD512Conversion>(converter);
+  patterns.insert<MaskRndScaleOp512Conversion,
+                  ScaleFOp512Conversion>(&converter.getContext(), converter);
   // clang-format on
 }

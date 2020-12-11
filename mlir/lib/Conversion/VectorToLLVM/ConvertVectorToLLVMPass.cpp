@@ -11,10 +11,13 @@
 #include "../PassDetail.h"
 
 #include "mlir/Conversion/AVX512ToLLVM/ConvertAVX512ToLLVM.h"
+#include "mlir/Conversion/ArmNeonToLLVM/ArmNeonToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/AVX512/AVX512Dialect.h"
+#include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -28,7 +31,16 @@ struct LowerVectorToLLVMPass
   LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
     this->reassociateFPReductions = options.reassociateFPReductions;
     this->enableIndexOptimizations = options.enableIndexOptimizations;
+    this->enableArmNeon = options.enableArmNeon;
     this->enableAVX512 = options.enableAVX512;
+  }
+  // Override explicitly to allow conditional dialect dependence.
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+    if (enableArmNeon)
+      registry.insert<LLVM::LLVMArmNeonDialect>();
+    if (enableAVX512)
+      registry.insert<LLVM::LLVMAVX512Dialect>();
   }
   void runOnOperation() override;
 };
@@ -56,6 +68,11 @@ void LowerVectorToLLVMPass::runOnOperation() {
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());
+  if (enableArmNeon) {
+    target.addLegalDialect<LLVM::LLVMArmNeonDialect>();
+    target.addIllegalDialect<arm_neon::ArmNeonDialect>();
+    populateArmNeonToLLVMConversionPatterns(converter, patterns);
+  }
   if (enableAVX512) {
     target.addLegalDialect<LLVM::LLVMAVX512Dialect>();
     target.addIllegalDialect<avx512::AVX512Dialect>();
