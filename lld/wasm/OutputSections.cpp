@@ -239,6 +239,7 @@ void CustomSection::finalizeContents() {
   os.flush();
 
   for (InputSection *section : inputSections) {
+    assert(!section->discarded);
     section->outputSec = this;
     section->outputOffset = payloadSize;
     payloadSize += section->getSize();

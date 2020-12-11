@@ -74,6 +74,16 @@ private:
 extern DEVICE SHARED omptarget_nvptx_SharedArgs
     omptarget_nvptx_globalArgs;
 
+// Worker slot type which is initialized with the default worker slot
+// size of 4*32 bytes.
+struct __kmpc_data_sharing_slot {
+  __kmpc_data_sharing_slot *Next;
+  __kmpc_data_sharing_slot *Prev;
+  void *PrevSlotStackPtr;
+  void *DataEnd;
+  char Data[DS_Worker_Warp_Slot_Size];
+};
+
 // Data structure to keep in shared memory that traces the current slot, stack,
 // and frame pointer as well as the active threads that didn't exit the current
 // environment.
@@ -82,15 +92,6 @@ struct DataSharingStateTy {
   void *StackPtr[DS_Max_Warp_Number];
   void * volatile FramePtr[DS_Max_Warp_Number];
   __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
-};
-// Additional worker slot type which is initialized with the default worker slot
-// size of 4*32 bytes.
-struct __kmpc_data_sharing_worker_slot_static {
-  __kmpc_data_sharing_slot *Next;
-  __kmpc_data_sharing_slot *Prev;
-  void *PrevSlotStackPtr;
-  void *DataEnd;
-  char Data[DS_Worker_Warp_Slot_Size];
 };
 
 extern DEVICE SHARED DataSharingStateTy DataSharingState;
@@ -213,7 +214,7 @@ private:
       workDescrForActiveParallel; // one, ONLY for the active par
 
   ALIGN(16)
-  __kmpc_data_sharing_worker_slot_static worker_rootS[DS_Max_Warp_Number];
+  __kmpc_data_sharing_slot worker_rootS[DS_Max_Warp_Number];
 };
 
 ////////////////////////////////////////////////////////////////////////////////

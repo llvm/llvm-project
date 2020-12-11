@@ -1,4 +1,6 @@
 # REQUIRES: x86
+## FIXME: We appear to emit LC_LOAD_DYLIBs in a different order on Windows.
+# UNSUPPORTED: system-windows
 # RUN: rm -rf %t; split-file %s %t
 # RUN: mkdir -p %t/usr/lib/system
 
