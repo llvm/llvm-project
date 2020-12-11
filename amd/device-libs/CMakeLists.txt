@@ -96,10 +96,39 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set ( CPACK_GENERATOR "DEB;RPM" CACHE STRING "Default packaging generators." )
 
+  ## ROCM version updates as per naming convention
+  set ( ROCM_VERSION_FOR_PACKAGE "99999" )
+  if( DEFINED ENV{ROCM_LIBPATCH_VERSION} )
+    set ( ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION} )
+  endif()
   ## Debian package values
-  set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "AMD" )
+  set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "ROCm Compiler Support <rocm.compiler.support@amd.com>" )
   set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CPACK packaging path prefix default" )
-  set ( CPACK_DEBIAN_PACKAGE_DEPENDS "" )
 
+  set ( CPACK_DEBIAN_PACKAGE_RELEASE "local" )
+  if( DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE} )
+    set ( CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE} )
+  endif()
+  ## RPM package variables
+  set ( CPACK_RPM_PACKAGE_RELEASE "local" )
+  if( DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE} )
+    set ( CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE} )
+  endif()
+  ## get distro for RPM package using dist
+  message("device-libs CPACK_RPM_PACKAGE_RELEASE now is ${CPACK_RPM_PACKAGE_RELEASE}")
+
+  execute_process( COMMAND rpm --eval %{?dist}
+                 RESULT_VARIABLE _result_var
+                 OUTPUT_VARIABLE _output_var
+                 OUTPUT_STRIP_TRAILING_WHITESPACE )
+  if( _result_var EQUAL "0" AND NOT _output_var STREQUAL "" )
+    string (APPEND CPACK_RPM_PACKAGE_RELEASE ${_output_var})
+  endif()
+  # set package name as per standard
+  set ( CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}" )
+
+  set ( CPACK_RPM_FILE_NAME "RPM-DEFAULT" )
+  set ( CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT" )
+  set ( CPACK_DEBIAN_PACKAGE_DEPENDS "" )
   include( CPack )
 endif()
