@@ -5,62 +5,62 @@
 # RUN: cd %t.dir
 
 ## Object files.
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj ref.s -o %t1.o
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj refanddef.s -o %t2.o
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj def.s -o %tstrong_data_only.o
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj weak.s -o %tweak_data_only.o
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj ref.s -o 1.o
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj refanddef.s -o 2.o
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj def.s -o strong_data_only.o
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj weak.s -o weak_data_only.o
 
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj main.s -o %tmain.o
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj main.s -o main.o
 
 ## Object file archives.
-# RUN: llvm-ar crs %t1.a %t1.o %tstrong_data_only.o
-# RUN: llvm-ar crs %t2.a %t1.o %tweak_data_only.o
-# RUN: llvm-ar crs %t3.a %t2.o %tstrong_data_only.o
+# RUN: llvm-ar crs 1.a 1.o strong_data_only.o
+# RUN: llvm-ar crs 2.a 1.o weak_data_only.o
+# RUN: llvm-ar crs 3.a 2.o strong_data_only.o
 
 ## Bitcode files.
-# RUN: llvm-as -o %t1.bc commonblock.ll
-# RUN: llvm-as -o %t2.bc blockdata.ll
+# RUN: llvm-as -o 1.bc commonblock.ll
+# RUN: llvm-as -o 2.bc blockdata.ll
 
 ## Bitcode archive.
-# RUN: llvm-ar crs %t4.a %t1.bc %t2.bc
+# RUN: llvm-ar crs 4.a 1.bc 2.bc
 
-# RUN: ld.lld -o %t1 %tmain.o %t1.a
-# RUN: llvm-objdump -D -j .data %t1 | FileCheck --check-prefix=TEST1 %s
+# RUN: ld.lld -o 1 main.o 1.a
+# RUN: llvm-objdump -D -j .data 1 | FileCheck --check-prefix=TEST1 %s
 
-# RUN: ld.lld -o %t2 %tmain.o --start-lib %t1.o %tstrong_data_only.o --end-lib
-# RUN: llvm-objdump -D -j .data %t2 | FileCheck --check-prefix=TEST1 %s
+# RUN: ld.lld -o 2 main.o --start-lib 1.o strong_data_only.o --end-lib
+# RUN: llvm-objdump -D -j .data 2 | FileCheck --check-prefix=TEST1 %s
 
-# RUN: ld.lld -o %t3 %tmain.o %t2.a
-# RUN: llvm-objdump -D -j .data %t3 | FileCheck --check-prefix=TEST1 %s
+# RUN: ld.lld -o 3 main.o 2.a
+# RUN: llvm-objdump -D -j .data 3 | FileCheck --check-prefix=TEST1 %s
 
-# RUN: ld.lld -o %t4 %tmain.o --start-lib %t1.o %tweak_data_only.o --end-lib
-# RUN: llvm-objdump -D -j .data %t4 | FileCheck --check-prefix=TEST1 %s
+# RUN: ld.lld -o 4 main.o --start-lib 1.o weak_data_only.o --end-lib
+# RUN: llvm-objdump -D -j .data 4 | FileCheck --check-prefix=TEST1 %s
 
-# RUN: ld.lld -o %t5 %tmain.o %t3.a --print-map | FileCheck --check-prefix=MAP %s
+# RUN: ld.lld -o 5 main.o 3.a --print-map | FileCheck --check-prefix=MAP %s
 
-# RUN: ld.lld -o %t6 %tmain.o %t2.o %t1.a
-# RUN: llvm-objdump -D -j .data %t6 | FileCheck --check-prefix=TEST2 %s
+# RUN: ld.lld -o 6 main.o 2.o 1.a
+# RUN: llvm-objdump -D -j .data 6 | FileCheck --check-prefix=TEST2 %s
 
-# RUN: ld.lld -o %t7 %tmain.o %t2.o --start-lib %t1.o %tstrong_data_only.o --end-lib
-# RUN: llvm-objdump -D -j .data %t7 | FileCheck --check-prefix=TEST2 %s
+# RUN: ld.lld -o 7 main.o 2.o --start-lib 1.o strong_data_only.o --end-lib
+# RUN: llvm-objdump -D -j .data 7 | FileCheck --check-prefix=TEST2 %s
 
-# RUN: not ld.lld -o %t8 %tmain.o %t1.a %tstrong_data_only.o 2>&1 | \
+# RUN: not ld.lld -o 8 main.o 1.a strong_data_only.o 2>&1 | \
 # RUN:   FileCheck --check-prefix=ERR %s
 
-# RUN: not ld.lld -o %t9 %tmain.o --start-lib %t1.o %t2.o --end-lib  %tstrong_data_only.o 2>&1 | \
+# RUN: not ld.lld -o 9 main.o --start-lib 1.o 2.o --end-lib  strong_data_only.o 2>&1 | \
 # RUN:   FileCheck --check-prefix=ERR %s
 
 # ERR: ld.lld: error: duplicate symbol: block
 
-# RUN: ld.lld --no-fortran-common -o %t10 %tmain.o %t1.a
-# RUN: llvm-readobj --syms %t10 | FileCheck --check-prefix=NFC %s
+# RUN: ld.lld --no-fortran-common -o 10 main.o 1.a
+# RUN: llvm-readobj --syms 10 | FileCheck --check-prefix=NFC %s
 
-# RUN: ld.lld --no-fortran-common -o %t11 %tmain.o --start-lib %t1.o %tstrong_data_only.o --end-lib
-# RUN: llvm-readobj --syms %t11 | FileCheck --check-prefix=NFC %s
+# RUN: ld.lld --no-fortran-common -o 11 main.o --start-lib 1.o strong_data_only.o --end-lib
+# RUN: llvm-readobj --syms 11 | FileCheck --check-prefix=NFC %s
 
-# RUN: ld.lld -o - %tmain.o %t4.a --lto-emit-asm | FileCheck --check-prefix=ASM %s
+# RUN: ld.lld -o - main.o 4.a --lto-emit-asm | FileCheck --check-prefix=ASM %s
 
-# RUN: ld.lld -o - %tmain.o  --start-lib %t1.bc %t2.bc --end-lib --lto-emit-asm | \
+# RUN: ld.lld -o - main.o  --start-lib 1.bc 2.bc --end-lib --lto-emit-asm | \
 # RUN:   FileCheck --check-prefix=ASM %s
 
 ## Old FORTRAN that mixes use of COMMON blocks and BLOCK DATA requires that we
@@ -92,7 +92,7 @@
 # TEST2-NEXT:     0a bf 05 40
 # TEST2-NEXT:     ...
 
-# MAP:       28 8 {{.*}}tmp3.a(common-archive-lookup.s.tmp2.o):(.data)
+# MAP:       28 8 3.a(2.o):(.data)
 # MAP-NEXT:  28 1 block
 
 # ASM:         .type   block,@object
