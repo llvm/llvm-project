@@ -224,7 +224,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     // get the values from the ABI:
 
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ast_context)
       return false;
 

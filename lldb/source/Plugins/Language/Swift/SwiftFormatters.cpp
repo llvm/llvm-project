@@ -322,7 +322,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
   if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ast_context)
       return false;
 

@@ -1046,7 +1046,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                 ABISP abi_sp(frame.GetThread()->GetProcess()->GetABI());
                 ValueList argument_values;
                 Value input_value;
-                auto clang_ctx = TypeSystemClang::GetScratch(target);
+                auto clang_ctx = ScratchTypeSystemClang::GetForTarget(target);
                 if (!clang_ctx)
                   continue;
 

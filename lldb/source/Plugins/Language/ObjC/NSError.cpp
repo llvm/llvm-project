@@ -87,7 +87,7 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   ValueObjectSP domain_str_sp = ValueObject::CreateValueObjectFromData(
       "domain_str", isw.GetAsData(process_sp->GetByteOrder()),
       valobj.GetExecutionContextRef(),
-      TypeSystemClang::GetScratch(process_sp->GetTarget())
+      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
           ->GetBasicType(lldb::eBasicTypeVoid)
           .GetPointerType());
 
@@ -156,7 +156,7 @@ public:
     m_child_sp = CreateValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
-        TypeSystemClang::GetScratch(process_sp->GetTarget())
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
             ->GetBasicType(lldb::eBasicTypeObjCID));
     return false;
   }
