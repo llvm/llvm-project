@@ -12,7 +12,6 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -119,12 +118,12 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
         Value outputDimension = args[0];
         Value isUnchallengedDimension = b.create<CmpIOp>(
             loc, CmpIPredicate::ult, outputDimension, rankDiff);
-        Value greaterRankOperandExtent = b.create<tensor::ExtractOp>(
+        Value greaterRankOperandExtent = b.create<ExtractElementOp>(
             loc, greaterRankOperand, outputDimension);
         // The initial dimensions of the greater-rank operand are unchallenged,
         // so we can take them as-is. Otherwise, we need to do a comparison.
         // We need an actual branch here (instead of a select) because the
-        // lesser-rank operand might be rank 0, so any tensor.extract would be
+        // lesser-rank operand might be rank 0, so any extract_element would be
         // invalid.
         auto ifOp = b.create<IfOp>(
             loc, TypeRange{indexTy}, isUnchallengedDimension,
@@ -141,7 +140,7 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
               // dimensions of zero extent.
               Value lesserRankOperandDimension =
                   b.create<SubIOp>(loc, indexTy, outputDimension, rankDiff);
-              Value lesserRankOperandExtent = b.create<tensor::ExtractOp>(
+              Value lesserRankOperandExtent = b.create<ExtractElementOp>(
                   loc, lesserRankOperand,
                   ValueRange{lesserRankOperandDimension});
               Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(
@@ -263,12 +262,12 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
   auto reduceResult = rewriter.create<ForOp>(
       loc, rankDiff, greaterRank, one, ValueRange{init},
       [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {
-        Value greaterRankOperandExtent = b.create<tensor::ExtractOp>(
-            loc, greaterRankOperand, ValueRange{iv});
+        Value greaterRankOperandExtent =
+            b.create<ExtractElementOp>(loc, greaterRankOperand, ValueRange{iv});
         Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(
             loc, CmpIPredicate::eq, greaterRankOperandExtent, one);
         Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
-        Value lesserRankOperandExtent = b.create<tensor::ExtractOp>(
+        Value lesserRankOperandExtent = b.create<ExtractElementOp>(
             loc, lesserRankOperand, ValueRange{ivShifted});
         Value lesserRankOperandExtentIsOne = b.create<CmpIOp>(
             loc, CmpIPredicate::eq, lesserRankOperandExtent, one);
@@ -317,9 +316,9 @@ LogicalResult GetExtentOpConverter::matchAndRewrite(
     }
   }
 
-  rewriter.replaceOpWithNewOp<tensor::ExtractOp>(op, rewriter.getIndexType(),
-                                                 transformed.shape(),
-                                                 ValueRange{transformed.dim()});
+  rewriter.replaceOpWithNewOp<ExtractElementOp>(op, rewriter.getIndexType(),
+                                                transformed.shape(),
+                                                ValueRange{transformed.dim()});
   return success();
 }
 
@@ -376,8 +375,7 @@ ReduceOpConverter::matchAndRewrite(shape::ReduceOp op, ArrayRef<Value> operands,
   auto loop = rewriter.create<scf::ForOp>(
       loc, zero, rank, one, op.initVals(),
       [&](OpBuilder &b, Location loc, Value iv, ValueRange args) {
-        Value extent =
-            b.create<tensor::ExtractOp>(loc, transformed.shape(), iv);
+        Value extent = b.create<ExtractElementOp>(loc, transformed.shape(), iv);
 
         SmallVector<Value, 2> mappedValues{iv, extent};
         mappedValues.append(args.begin(), args.end());
@@ -417,8 +415,8 @@ namespace {
 ///   %c1 = constant 1 : index
 ///   %true = constant true
 ///   %4 = scf.for %arg2 = %c0 to %0 step %c1 iter_args(%arg3 = %true) -> (i1) {
-///     %5 = tensor.extract %arg0[%arg2] : tensor<?xindex>
-///     %6 = tensor.extract %arg1[%arg2] : tensor<?xindex>
+///     %5 = extract_element %arg0[%arg2] : tensor<?xindex>
+///     %6 = extract_element %arg1[%arg2] : tensor<?xindex>
 ///     %7 = cmpi "eq", %5, %6 : index
 ///     %8 = and %arg3, %7 : i1
 ///     scf.yield %8 : i1
@@ -467,9 +465,9 @@ ShapeEqOpConverter::matchAndRewrite(ShapeEqOp op, ArrayRef<Value> operands,
             [&](OpBuilder &b, Location nestedLoc, Value iv, ValueRange args) {
               Value conj = args[0];
               Value lhsExtent =
-                  b.create<tensor::ExtractOp>(loc, transformed.lhs(), iv);
+                  b.create<ExtractElementOp>(loc, transformed.lhs(), iv);
               Value rhsExtent =
-                  b.create<tensor::ExtractOp>(loc, transformed.rhs(), iv);
+                  b.create<ExtractElementOp>(loc, transformed.rhs(), iv);
               Value eqExtent = b.create<CmpIOp>(loc, CmpIPredicate::eq,
                                                 lhsExtent, rhsExtent);
               Value conjNext = b.create<AndOp>(loc, conj, eqExtent);
@@ -586,8 +584,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
   // Setup target legality.
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
-  target
-      .addLegalDialect<StandardOpsDialect, SCFDialect, tensor::TensorDialect>();
+  target.addLegalDialect<StandardOpsDialect, SCFDialect>();
   target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp, ModuleTerminatorOp>();
 
   // Setup conversion patterns.
