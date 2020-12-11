@@ -457,12 +457,7 @@ static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
     error("could not read dylib file at " + path);
     return {};
   }
-
-  file_magic magic = identify_magic(mbref->getBuffer());
-  if (magic == file_magic::tapi_file)
-    return makeDylibFromTAPI(*mbref, umbrella);
-  assert(magic == file_magic::macho_dynamically_linked_shared_lib);
-  return make<DylibFile>(*mbref, umbrella);
+  return loadDylib(*mbref, umbrella);
 }
 
 // TBD files are parsed into a series of TAPI documents (InterfaceFiles), with
@@ -518,11 +513,10 @@ static bool isImplicitlyLinked(StringRef path) {
   // -sub_umbrella first to write a test case.
 }
 
-static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
+void loadReexport(StringRef path, DylibFile *umbrella) {
   Optional<DylibFile *> reexport = loadReexportHelper(path, umbrella);
   if (reexport && isImplicitlyLinked(path))
     inputFiles.push_back(*reexport);
-  return reexport;
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
@@ -572,8 +566,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     auto *c = reinterpret_cast<const dylib_command *>(cmd);
     StringRef reexportPath =
         reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-    if (Optional<DylibFile *> reexport = loadReexport(reexportPath, umbrella))
-      reexported.push_back(*reexport);
+    loadReexport(reexportPath, umbrella);
   }
 }
 
@@ -621,9 +614,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
   }
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    if (Optional<DylibFile *> reexport =
-            loadReexport(intfRef.getInstallName(), umbrella))
-      reexported.push_back(*reexport);
+    loadReexport(intfRef.getInstallName(), umbrella);
 
   if (isTopLevelTapi)
     currentTopLevelTapi = nullptr;

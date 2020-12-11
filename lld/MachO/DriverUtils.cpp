@@ -14,6 +14,8 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -166,7 +168,7 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
   return {};
 }
 
-Optional<DylibFile *> macho::makeDylibFromTAPI(MemoryBufferRef mbref,
+static Optional<DylibFile *> makeDylibFromTapi(MemoryBufferRef mbref,
                                                DylibFile *umbrella) {
   Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
   if (!result) {
@@ -175,6 +177,24 @@ Optional<DylibFile *> macho::makeDylibFromTAPI(MemoryBufferRef mbref,
     return {};
   }
   return make<DylibFile>(**result, umbrella);
+}
+
+static DenseSet<CachedHashStringRef> loadedDylibs;
+
+Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
+                                       DylibFile *umbrella) {
+  StringRef path = mbref.getBufferIdentifier();
+  if (loadedDylibs.contains(CachedHashStringRef(path)))
+    return {};
+  loadedDylibs.insert(CachedHashStringRef(path));
+
+  file_magic magic = identify_magic(mbref.getBuffer());
+  if (magic == file_magic::tapi_file)
+    return makeDylibFromTapi(mbref, umbrella);
+
+  assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
+         magic == file_magic::macho_dynamically_linked_shared_lib_stub);
+  return make<DylibFile>(mbref, umbrella);
 }
 
 uint32_t macho::getModTime(StringRef path) {
