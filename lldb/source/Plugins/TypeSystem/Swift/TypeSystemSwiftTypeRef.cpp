@@ -1762,13 +1762,49 @@ bool TypeSystemSwiftTypeRef::IsFunctionPointerType(
   VALIDATE_AND_RETURN(impl, IsFunctionPointerType, type,
                       (ReconstructType(type)));
 }
+
 bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
                                                    CompilerType *target_type,
                                                    bool check_cplusplus,
                                                    bool check_objc) {
-  return m_swift_ast_context->IsPossibleDynamicType(
-      ReconstructType(type), target_type, check_cplusplus, check_objc);
+  if (target_type)
+    target_type->Clear();
+
+  if (!type)
+    return false;
+
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    if (!node)
+      return false;
+
+    switch (node->getKind()) {
+    case Node::Kind::Class:
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::Protocol:
+    case Node::Kind::ProtocolList:
+    case Node::Kind::ProtocolListWithClass:
+    case Node::Kind::DynamicSelf:
+      return true;
+    case Node::Kind::BuiltinTypeName: {
+      if (!node->hasText())
+        return false;
+      auto name = node->getText();
+      return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
+             name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
+             name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
+    }
+    default:
+      return ContainsGenericTypeParameter(node);
+    }
+  };
+  VALIDATE_AND_RETURN(
+      impl, IsPossibleDynamicType, type,
+      (ReconstructType(type), nullptr, check_cplusplus, check_objc));
 }
+
 bool TypeSystemSwiftTypeRef::IsPointerType(opaque_compiler_type_t type,
                                            CompilerType *pointee_type) {
   auto impl = [&]() {
