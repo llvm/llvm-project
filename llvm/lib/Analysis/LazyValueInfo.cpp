@@ -1244,7 +1244,7 @@ ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
 
 // Return true if Usr has Op as an operand, otherwise false.
 static bool usesOperand(User *Usr, Value *Op) {
-  return find(Usr->operands(), Op) != Usr->op_end();
+  return is_contained(Usr->operands(), Op);
 }
 
 // Return true if the instruction type of Val is supported by
