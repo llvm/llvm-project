@@ -48,9 +48,13 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
-  return CreateTargetInternal(debugger, user_exe_path, triple_str,
-                              load_dependent_files, platform_options,
-                              target_sp);
+  auto result = TargetList::CreateTargetInternal(
+      debugger, user_exe_path, triple_str, load_dependent_files,
+      platform_options, target_sp);
+
+  if (target_sp && result.Success())
+    AddTargetInternal(target_sp, /*do_select*/ true);
+  return result;
 }
 
 Status TargetList::CreateTarget(Debugger &debugger,
@@ -58,8 +62,13 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const ArchSpec &specified_arch,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
-  return CreateTargetInternal(debugger, user_exe_path, specified_arch,
-                              load_dependent_files, platform_sp, target_sp);
+  auto result = TargetList::CreateTargetInternal(
+      debugger, user_exe_path, specified_arch, load_dependent_files,
+      platform_sp, target_sp);
+
+  if (target_sp && result.Success())
+    AddTargetInternal(target_sp, /*do_select*/ true);
+  return result;
 }
 
 Status TargetList::CreateTargetInternal(
@@ -388,9 +397,6 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  m_selected_target_idx = m_target_list.size();
-  m_target_list.push_back(target_sp);
   // Now prime this from the dummy target:
   target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
 
@@ -552,18 +558,29 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
   return UINT32_MAX;
 }
 
-uint32_t TargetList::SetSelectedTarget(Target *target) {
+void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  lldbassert(std::find(m_target_list.begin(), m_target_list.end(), target_sp) ==
+                 m_target_list.end() &&
+             "target already exists it the list");
+  m_target_list.push_back(std::move(target_sp));
+  if (do_select)
+    SetSelectedTargetInternal(m_target_list.size() - 1);
+}
+
+void TargetList::SetSelectedTargetInternal(uint32_t index) {
+  lldbassert(!m_target_list.empty());
+  m_selected_target_idx = index < m_target_list.size() ? index : 0;
+}
+
+void TargetList::SetSelectedTarget(uint32_t index) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  collection::const_iterator pos, begin = m_target_list.begin(),
-                                  end = m_target_list.end();
-  for (pos = begin; pos != end; ++pos) {
-    if (pos->get() == target) {
-      m_selected_target_idx = std::distance(begin, pos);
-      return m_selected_target_idx;
-    }
-  }
-  m_selected_target_idx = 0;
-  return m_selected_target_idx;
+  SetSelectedTargetInternal(index);
+}
+
+void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
 }
 
 lldb::TargetSP TargetList::GetSelectedTarget() {
