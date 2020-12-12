@@ -113,6 +113,34 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
+  // For binary operations with V0 as input.
+  // Input: (vector_in, vector_in/scalar_in, V0, vl)
+  class RISCVBinaryWithV0
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  // For binary operations with mask type output and V0 as input.
+  // Output: (mask type output)
+  // Input: (vector_in, vector_in/scalar_in, V0, vl)
+  class RISCVBinaryMOutWithV0
+        :Intrinsic<[llvm_anyvector_ty],
+                   [llvm_anyvector_ty, llvm_any_ty, LLVMMatchType<0>,
+                    llvm_anyint_ty],
+                   [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  // For binary operations with mask type output.
+  // Output: (mask type output)
+  // Input: (vector_in, vector_in/scalar_in, vl)
+  class RISCVBinaryMOut
+        : Intrinsic<[llvm_anyvector_ty],
+                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
 
   multiclass RISCVBinaryAAX {
     def "int_riscv_" # NAME : RISCVBinaryAAXNoMask;
@@ -121,6 +149,15 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVBinaryABX {
     def "int_riscv_" # NAME : RISCVBinaryABXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryABXMask;
+  }
+  multiclass RISCVBinaryWithV0 {
+    def "int_riscv_" # NAME : RISCVBinaryWithV0;
+  }
+  multiclass RISCVBinaryMaskOutWithV0 {
+    def "int_riscv_" # NAME : RISCVBinaryMOutWithV0;
+  }
+  multiclass RISCVBinaryMaskOut {
+    def "int_riscv_" # NAME : RISCVBinaryMOut;
   }
 
   defm vadd : RISCVBinaryAAX;
@@ -135,5 +172,13 @@ let TargetPrefix = "riscv" in {
   defm vwsub : RISCVBinaryABX;
   defm vwsubu_w : RISCVBinaryAAX;
   defm vwsub_w : RISCVBinaryAAX;
+
+  defm vadc : RISCVBinaryWithV0;
+  defm vmadc_carry_in : RISCVBinaryMaskOutWithV0;
+  defm vmadc : RISCVBinaryMaskOut;
+
+  defm vsbc : RISCVBinaryWithV0;
+  defm vmsbc_borrow_in : RISCVBinaryMaskOutWithV0;
+  defm vmsbc : RISCVBinaryMaskOut;
 
 } // TargetPrefix = "riscv"
