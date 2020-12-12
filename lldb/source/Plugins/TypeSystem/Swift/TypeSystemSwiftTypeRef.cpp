@@ -1782,6 +1782,12 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
     if (!node)
       return false;
 
+    if (node->getKind() == Node::Kind::TypeAlias) {
+      auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node);
+      if (resolved.first)
+        node = resolved.first;
+    }
+
     switch (node->getKind()) {
     case Node::Kind::Class:
     case Node::Kind::BoundGenericClass:
@@ -1792,17 +1798,6 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
     case Node::Kind::ExistentialMetatype:
     case Node::Kind::DynamicSelf:
       return true;
-    case Node::Kind::TypeAlias: {
-      if (node->getNumChildren() == 2) {
-        auto *module = node->getFirstChild();
-        auto *identifier = node->getLastChild();
-        return module->getKind() == Node::Kind::Module &&
-               identifier->getKind() == Node::Kind::Identifier &&
-               module->getText() == "Swift" &&
-               identifier->getText() == "AnyObject";
-      }
-      break;
-    }
     case Node::Kind::BuiltinTypeName: {
       if (!node->hasText())
         return false;
