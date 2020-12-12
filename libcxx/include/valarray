@@ -2753,7 +2753,7 @@ __val_expr<_ValExpr>::operator valarray<__val_expr::result_type>() const
         __r.__begin_ =
             __r.__end_ = allocator<result_type>().allocate(__n);
         for (size_t __i = 0; __i != __n; ++__r.__end_, ++__i)
-            ::new (__r.__end_) result_type(__expr_[__i]);
+            ::new ((void*)__r.__end_) result_type(__expr_[__i]);
     }
     return __r;
 }
@@ -2774,7 +2774,7 @@ valarray<_Tp>::valarray(size_t __n)
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; --__n_left, ++__end_)
-                ::new (__end_) value_type();
+                ::new ((void*)__end_) value_type();
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2808,7 +2808,7 @@ valarray<_Tp>::valarray(const value_type* __p, size_t __n)
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; ++__end_, ++__p, --__n_left)
-                ::new (__end_) value_type(*__p);
+                ::new ((void*)__end_) value_type(*__p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2833,7 +2833,7 @@ valarray<_Tp>::valarray(const valarray& __v)
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (value_type* __p = __v.__begin_; __p != __v.__end_; ++__end_, ++__p)
-                ::new (__end_) value_type(*__p);
+                ::new ((void*)__end_) value_type(*__p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2871,7 +2871,7 @@ valarray<_Tp>::valarray(initializer_list<value_type> __il)
 #endif  // _LIBCPP_NO_EXCEPTIONS
             size_t __n_left = __n;
             for (const value_type* __p = __il.begin(); __n_left; ++__end_, ++__p, --__n_left)
-                ::new (__end_) value_type(*__p);
+                ::new ((void*)__end_) value_type(*__p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2900,7 +2900,7 @@ valarray<_Tp>::valarray(const slice_array<value_type>& __sa)
 #endif  // _LIBCPP_NO_EXCEPTIONS
             size_t __n_left = __n;
             for (const value_type* __p = __sa.__vp_; __n_left; ++__end_, __p += __sa.__stride_, --__n_left)
-                ::new (__end_) value_type(*__p);
+                ::new ((void*)__end_) value_type(*__p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2929,7 +2929,7 @@ valarray<_Tp>::valarray(const gslice_array<value_type>& __ga)
             const value_type* __s = __ga.__vp_;
             for (_Ip __i = __ga.__1d_.__begin_, __e = __ga.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
-                ::new (__end_) value_type(__s[*__i]);
+                ::new ((void*)__end_) value_type(__s[*__i]);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2958,7 +2958,7 @@ valarray<_Tp>::valarray(const mask_array<value_type>& __ma)
             const value_type* __s = __ma.__vp_;
             for (_Ip __i = __ma.__1d_.__begin_, __e = __ma.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
-                ::new (__end_) value_type(__s[*__i]);
+                ::new ((void*)__end_) value_type(__s[*__i]);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -2987,7 +2987,7 @@ valarray<_Tp>::valarray(const indirect_array<value_type>& __ia)
             const value_type* __s = __ia.__vp_;
             for (_Ip __i = __ia.__1d_.__begin_, __e = __ia.__1d_.__end_;
                     __i != __e; ++__i, ++__end_)
-                ::new (__end_) value_type(__s[*__i]);
+                ::new ((void*)__end_) value_type(__s[*__i]);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
@@ -3269,7 +3269,7 @@ valarray<_Tp>::operator+() const
     {
         __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) value_type(+*__p);
+            ::new ((void*)__r.__end_) value_type(+*__p);
     }
     return __r;
 }
@@ -3284,7 +3284,7 @@ valarray<_Tp>::operator-() const
     {
         __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) value_type(-*__p);
+            ::new ((void*)__r.__end_) value_type(-*__p);
     }
     return __r;
 }
@@ -3299,7 +3299,7 @@ valarray<_Tp>::operator~() const
     {
         __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) value_type(~*__p);
+            ::new ((void*)__r.__end_) value_type(~*__p);
     }
     return __r;
 }
@@ -3314,7 +3314,7 @@ valarray<_Tp>::operator!() const
     {
         __r.__begin_ = __r.__end_ = allocator<bool>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) bool(!*__p);
+            ::new ((void*)__r.__end_) bool(!*__p);
     }
     return __r;
 }
@@ -3649,11 +3649,11 @@ valarray<_Tp>::shift(int __i) const
             __te = __r.__begin_ + __n;
         }
         for (; __r.__end_ != __tb; ++__r.__end_)
-            ::new (__r.__end_) value_type();
+            ::new ((void*)__r.__end_) value_type();
         for (; __r.__end_ != __te; ++__r.__end_, ++__sb)
-            ::new (__r.__end_) value_type(*__sb);
+            ::new ((void*)__r.__end_) value_type(*__sb);
         for (__te = __r.__begin_ + __n; __r.__end_ != __te; ++__r.__end_)
-            ::new (__r.__end_) value_type();
+            ::new ((void*)__r.__end_) value_type();
     }
     return __r;
 }
@@ -3670,9 +3670,9 @@ valarray<_Tp>::cshift(int __i) const
         __i %= static_cast<int>(__n);
         const value_type* __m = __i >= 0 ? __begin_ + __i : __end_ + __i;
         for (const value_type* __s = __m; __s != __end_; ++__r.__end_, ++__s)
-            ::new (__r.__end_) value_type(*__s);
+            ::new ((void*)__r.__end_) value_type(*__s);
         for (const value_type* __s = __begin_; __s != __m; ++__r.__end_, ++__s)
-            ::new (__r.__end_) value_type(*__s);
+            ::new ((void*)__r.__end_) value_type(*__s);
     }
     return __r;
 }
@@ -3687,7 +3687,7 @@ valarray<_Tp>::apply(value_type __f(value_type)) const
     {
         __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) value_type(__f(*__p));
+            ::new ((void*)__r.__end_) value_type(__f(*__p));
     }
     return __r;
 }
@@ -3702,7 +3702,7 @@ valarray<_Tp>::apply(value_type __f(const value_type&)) const
     {
         __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
         for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new (__r.__end_) value_type(__f(*__p));
+            ::new ((void*)__r.__end_) value_type(__f(*__p));
     }
     return __r;
 }
@@ -3733,7 +3733,7 @@ valarray<_Tp>::resize(size_t __n, value_type __x)
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (size_t __n_left = __n; __n_left; --__n_left, ++__end_)
-                ::new (__end_) value_type(__x);
+                ::new ((void*)__end_) value_type(__x);
 #ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (...)
