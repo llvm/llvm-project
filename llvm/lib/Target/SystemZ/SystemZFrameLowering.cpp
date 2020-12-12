@@ -511,13 +511,10 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(SystemZ::R1D, RegState::Define).addReg(SystemZ::R15D);
       emitIncrement(MBB, MBBI, DL, SystemZ::R15D, Delta, ZII);
       buildCFAOffs(MBB, MBBI, DL, SPOffsetFromCFA + Delta, ZII);
-      if (StoreBackchain) {
-        // The back chain is stored topmost with packed-stack.
-        int Offset = usePackedStack(MF) ? SystemZMC::CallFrameSize - 8 : 0;
+      if (StoreBackchain)
         BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::STG))
           .addReg(SystemZ::R1D, RegState::Kill).addReg(SystemZ::R15D)
-          .addImm(Offset).addReg(0);
-      }
+          .addImm(getBackchainOffset(MF)).addReg(0);
     }
     SPOffsetFromCFA += Delta;
   }
@@ -709,13 +706,10 @@ void SystemZFrameLowering::inlineStackProbe(MachineFunction &MF,
   if (Residual)
     allocateAndProbe(*MBB, MBBI, Residual, true/*EmitCFI*/);
 
-  if (StoreBackchain) {
-    // The back chain is stored topmost with packed-stack.
-    int Offset = usePackedStack(MF) ? SystemZMC::CallFrameSize - 8 : 0;
+  if (StoreBackchain)
     BuildMI(*MBB, MBBI, DL, ZII->get(SystemZ::STG))
       .addReg(SystemZ::R1D, RegState::Kill).addReg(SystemZ::R15D)
-      .addImm(Offset).addReg(0);
-  }
+      .addImm(getBackchainOffset(MF)).addReg(0);
 
   StackAllocMI->eraseFromParent();
   if (DoneMBB != nullptr) {
@@ -790,8 +784,7 @@ getOrCreateFramePointerSaveIndex(MachineFunction &MF) const {
   int FI = ZFI->getFramePointerSaveIndex();
   if (!FI) {
     MachineFrameInfo &MFFrame = MF.getFrameInfo();
-    // The back chain is stored topmost with packed-stack.
-    int Offset = usePackedStack(MF) ? -8 : -SystemZMC::CallFrameSize;
+    int Offset = getBackchainOffset(MF) - SystemZMC::CallFrameSize;
     FI = MFFrame.CreateFixedObject(8, Offset, false);
     ZFI->setFramePointerSaveIndex(FI);
   }
