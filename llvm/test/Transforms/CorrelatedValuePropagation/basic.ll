@@ -285,11 +285,7 @@ define void @switch_nonzero_zext(i8 %s) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SWITCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       switch:
 ; CHECK-NEXT:    [[S_EXT:%.*]] = zext i8 [[S]] to i32
-; CHECK-NEXT:    switch i32 [[S_EXT]], label [[EXIT]] [
-; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
-; CHECK-NEXT:    i32 1, label [[EXIT]]
-; CHECK-NEXT:    i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreachable:
@@ -319,11 +315,7 @@ define void @switch_assume_nonzero(i32 %s) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[S:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    switch i32 [[S]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
-; CHECK-NEXT:    i32 1, label [[EXIT]]
-; CHECK-NEXT:    i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreachable:
@@ -355,11 +347,7 @@ define void @switch_nonzero_phi(i1 %cond) {
 ; CHECK-NEXT:    br label [[SWITCH]]
 ; CHECK:       switch:
 ; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 1, [[IF]] ], [ -1, [[ELSE]] ]
-; CHECK-NEXT:    switch i32 [[S]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
-; CHECK-NEXT:    i32 1, label [[EXIT]]
-; CHECK-NEXT:    i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreachable:
