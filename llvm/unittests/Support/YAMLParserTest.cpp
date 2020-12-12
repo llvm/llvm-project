@@ -342,4 +342,44 @@ TEST(YAMLParser, FlowSequenceTokensOutsideFlowSequence) {
   }
 }
 
+static void expectCanParseBool(StringRef S, bool Expected) {
+  llvm::Optional<bool> Parsed = yaml::parseBool(S);
+  EXPECT_TRUE(Parsed.hasValue());
+  EXPECT_EQ(*Parsed, Expected);
+}
+
+static void expectCannotParseBool(StringRef S) {
+  EXPECT_FALSE(yaml::parseBool(S).hasValue());
+}
+
+TEST(YAMLParser, ParsesBools) {
+  // Test true values.
+  expectCanParseBool("ON", true);
+  expectCanParseBool("On", true);
+  expectCanParseBool("on", true);
+  expectCanParseBool("TRUE", true);
+  expectCanParseBool("True", true);
+  expectCanParseBool("true", true);
+  expectCanParseBool("Y", true);
+  expectCanParseBool("y", true);
+  expectCanParseBool("YES", true);
+  expectCanParseBool("Yes", true);
+  expectCanParseBool("yes", true);
+  expectCannotParseBool("1");
+
+  // Test false values.
+  expectCanParseBool("FALSE", false);
+  expectCanParseBool("False", false);
+  expectCanParseBool("false", false);
+  expectCanParseBool("N", false);
+  expectCanParseBool("n", false);
+  expectCanParseBool("NO", false);
+  expectCanParseBool("No", false);
+  expectCanParseBool("no", false);
+  expectCanParseBool("OFF", false);
+  expectCanParseBool("Off", false);
+  expectCanParseBool("off", false);
+  expectCannotParseBool("0");
+}
+
 } // end namespace llvm
