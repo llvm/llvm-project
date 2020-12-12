@@ -278,6 +278,117 @@ next:
   ret void
 }
 
+define void @switch_nonzero_zext(i8 %s) {
+; CHECK-LABEL: @switch_nonzero_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[S:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[SWITCH:%.*]], label [[EXIT:%.*]]
+; CHECK:       switch:
+; CHECK-NEXT:    [[S_EXT:%.*]] = zext i8 [[S]] to i32
+; CHECK-NEXT:    switch i32 [[S_EXT]], label [[EXIT]] [
+; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    i32 1, label [[EXIT]]
+; CHECK-NEXT:    i32 -1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ne i8 %s, 0
+  br i1 %cmp, label %switch, label %exit
+
+switch:
+  %s.ext = zext i8 %s to i32
+  switch i32 %s.ext, label %exit [
+  i32 0, label %unreachable
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  ret void
+
+unreachable:
+  ret void
+}
+
+define void @switch_assume_nonzero(i32 %s) {
+; CHECK-LABEL: @switch_assume_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[S:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    switch i32 [[S]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    i32 1, label [[EXIT]]
+; CHECK-NEXT:    i32 -1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ne i32 %s, 0
+  call void @llvm.assume(i1 %cmp)
+  switch i32 %s, label %exit [
+  i32 0, label %unreachable
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  ret void
+
+unreachable:
+  ret void
+}
+
+define void @switch_nonzero_phi(i1 %cond) {
+; CHECK-LABEL: @switch_nonzero_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[SWITCH:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[SWITCH]]
+; CHECK:       switch:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 1, [[IF]] ], [ -1, [[ELSE]] ]
+; CHECK-NEXT:    switch i32 [[S]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    i32 1, label [[EXIT]]
+; CHECK-NEXT:    i32 -1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %if, label %else
+
+if:
+  br label %switch
+
+else:
+  br label %switch
+
+switch:
+  %s = phi i32 [ 1, %if ], [ -1, %else ]
+  switch i32 %s, label %exit [
+  i32 0, label %unreachable
+  i32 1, label %exit
+  i32 -1, label %exit
+  ]
+
+exit:
+  ret void
+
+unreachable:
+  ret void
+}
+
 define i1 @arg_attribute(i8* nonnull %a) {
 ; CHECK-LABEL: @arg_attribute(
 ; CHECK-NEXT:    ret i1 false
@@ -966,3 +1077,4 @@ declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
 declare i32 @llvm.sadd.sat.i32(i32, i32)
 declare i32 @llvm.ssub.sat.i32(i32, i32)
+declare void @llvm.assume(i1)
