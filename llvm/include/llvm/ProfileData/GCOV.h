@@ -292,15 +292,10 @@ public:
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  static uint64_t getCycleCount(const Edges &Path);
-  static void unblock(const GCOVBlock *U, BlockVector &Blocked,
-                      BlockVectorLists &BlockLists);
-  static void trimZeroCountSuffix(Edges &Path);
-  static bool lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
-                             Edges &Path, BlockVector &Blocked,
-                             BlockVectorLists &BlockLists,
-                             const BlockVector &Blocks, uint64_t &Count);
-  static void getCyclesCount(const BlockVector &Blocks, uint64_t &Count);
+  static uint64_t
+  augmentOneCycle(GCOVBlock *src,
+                  std::vector<std::pair<GCOVBlock *, size_t>> &stack);
+  static uint64_t getCyclesCount(const BlockVector &blocks);
   static uint64_t getLineCount(const BlockVector &Blocks);
 
 public:
@@ -309,6 +304,8 @@ public:
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
   SmallVector<uint32_t, 4> lines;
+  bool traversable = false;
+  GCOVArc *incoming = nullptr;
 };
 
 void gcovOneInput(const GCOV::Options &options, StringRef filename,
