@@ -15,7 +15,7 @@ define void @pred_loop(i32* %off, i32* %data, i32* %dst, i32 %n) #0 {
 ; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i32 %add1, i32* %arrayidx2, align 4
 ; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %exitcond.not = icmp eq i32 %add, %n
 ; CHECK-COST-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %exitcond.not, label %exit.loopexit, label %for.body
-; CHECK-COST-NEXT: LV: Scalar loop costs: 2.
+; CHECK-COST-NEXT: LV: Scalar loop costs: 5.
 
 entry:
   %cmp8 = icmp sgt i32 %n, 0

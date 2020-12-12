@@ -6483,9 +6483,10 @@ LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // if-converted. This means that the block's instructions (aside from
     // stores and instructions that may divide by zero) will now be
     // unconditionally executed. For the scalar case, we may not always execute
-    // the predicated block. Thus, scale the block's cost by the probability of
-    // executing it.
-    if (VF.isScalar() && blockNeedsPredication(BB))
+    // the predicated block, if it is an if-else block. Thus, scale the block's
+    // cost by the probability of executing it. blockNeedsPredication from
+    // Legal is used so as to not include all blocks in tail folded loops.
+    if (VF.isScalar() && Legal->blockNeedsPredication(BB))
       BlockCost.first /= getReciprocalPredBlockProb();
 
     Cost.first += BlockCost.first;
