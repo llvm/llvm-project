@@ -123,8 +123,6 @@ TraceSessionFileParser::ParseProcess(const JSONProcess &process) {
   ParsedProcess parsed_process;
   parsed_process.target_sp = target_sp;
 
-  m_debugger.GetTargetList().SetSelectedTarget(target_sp.get());
-
   ProcessSP process_sp = target_sp->CreateProcess(
       /*listener*/ nullptr, "trace",
       /*crash_file*/ nullptr,

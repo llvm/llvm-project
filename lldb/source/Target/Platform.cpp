@@ -1831,8 +1831,6 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
   if (!target || error.Fail())
     return nullptr;
 
-  debugger.GetTargetList().SetSelectedTarget(target);
-
   lldb::ProcessSP process_sp =
       target->CreateProcess(debugger.GetListener(), plugin_name, nullptr, true);
 
