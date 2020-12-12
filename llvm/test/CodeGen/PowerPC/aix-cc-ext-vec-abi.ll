@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -xcoff-traceback-table=false \
 ; RUN:  -vec-extabi -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefixes=ASM32,ASM %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -xcoff-traceback-table=false \
 ; RUN:  -vec-extabi -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefixes=ASM64,ASM %s
 

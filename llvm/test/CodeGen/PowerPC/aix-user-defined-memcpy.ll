@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN: -mattr=-altivec -filetype=obj -o %t.o < %s
+; RUN: -mattr=-altivec -filetype=obj -xcoff-traceback-table=false -o %t.o < %s
 
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=32-SYM %s
 

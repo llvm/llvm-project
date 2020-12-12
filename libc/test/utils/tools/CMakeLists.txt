@@ -1,4 +1,4 @@
-add_custom_target(libc-tool-util-tests)
+add_libc_testsuite(libc-tool-unittests)
 
 function(add_libc_tool_unittest target_name)
 
@@ -27,7 +27,7 @@ function(add_libc_tool_unittest target_name)
     COMMAND $<TARGET_FILE:${target_name}> 
             ${LIBC_TOOL_UNITTEST_ARGS}
   )
-  add_dependencies(libc-tool-util-tests ${target_name})
+  add_dependencies(libc-tool-unittests ${target_name})
 
   target_compile_options(${target_name} PUBLIC -fno-rtti)
   target_link_libraries(${target_name} PRIVATE LLVMSupport)

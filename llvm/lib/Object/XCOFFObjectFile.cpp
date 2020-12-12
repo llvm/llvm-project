@@ -942,29 +942,6 @@ static SmallString<32> parseParmsTypeWithVecInfo(uint32_t Value,
   return ParmsType;
 }
 
-static SmallString<32> parseParmsType(uint32_t Value, unsigned ParmsNum) {
-  SmallString<32> ParmsType;
-  for (unsigned I = 0; I < ParmsNum; ++I) {
-    if (I != 0)
-      ParmsType += ", ";
-    if ((Value & TracebackTable::ParmTypeIsFloatingBit) == 0) {
-      // Fixed parameter type.
-      ParmsType += "i";
-      Value <<= 1;
-    } else {
-      if ((Value & TracebackTable::ParmTypeFloatingIsDoubleBit) == 0)
-        // Float parameter type.
-        ParmsType += "f";
-      else
-        // Double parameter type.
-        ParmsType += "d";
-
-      Value <<= 2;
-    }
-  }
-  return ParmsType;
-}
-
 Expected<XCOFFTracebackTable> XCOFFTracebackTable::create(const uint8_t *Ptr,
                                                           uint64_t &Size) {
   Error Err = Error::success();

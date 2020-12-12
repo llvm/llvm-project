@@ -1040,21 +1040,21 @@ func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: i
 
 // -----
 
-// CHECK-LABEL: func @extract_element_from_tensor_from_elements
-func @extract_element_from_tensor_from_elements(%element : index) -> index {
+// CHECK-LABEL: func @extract_from_tensor_from_elements
+func @extract_from_tensor_from_elements(%element : index) -> index {
   // CHECK-SAME: ([[ARG:%.*]]: index)
   %c0 = constant 0 : index
   %tensor = tensor_from_elements %element : tensor<1xindex>
-  %extracted_element = extract_element %tensor[%c0] : tensor<1xindex>
+  %extracted_element = tensor.extract %tensor[%c0] : tensor<1xindex>
   // CHECK: [[ARG]] : index
   return %extracted_element : index
 }
 
 // -----
 
-// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements
+// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements
 // CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_element_from_dynamic_tensor_from_elements(%idx: index, %tensor: tensor<*xf32>) -> index {
+func @extract_from_dynamic_tensor_from_elements(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
   // CHECK-NEXT: %[[RES:.*]] = dim %[[TENSOR]], %[[IDX]]
   %0 = dynamic_tensor_from_elements %size {
@@ -1062,16 +1062,16 @@ func @extract_element_from_dynamic_tensor_from_elements(%idx: index, %tensor: te
     %1 = dim %tensor, %arg0 : tensor<*xf32>
     yield %1 : index
   } : tensor<?xindex>
-  %1 = extract_element %0[%idx] : tensor<?xindex>
+  %1 = tensor.extract %0[%idx] : tensor<?xindex>
   // CHECK-NEXT: return %[[RES]]
   return %1 : index
 }
 
 // -----
 
-// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements_2d
+// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements_2d
 // CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_element_from_dynamic_tensor_from_elements_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
+func @extract_from_dynamic_tensor_from_elements_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
   // CHECK-NEXT: %[[DIM0:.*]] = dim %[[TENSOR]], %[[IDX0]]
   // CHECK-NEXT: %[[DIM1:.*]] = dim %[[TENSOR]], %[[IDX1]]
@@ -1083,16 +1083,16 @@ func @extract_element_from_dynamic_tensor_from_elements_2d(%idx0: index, %idx1: 
     %3 = addi %1, %2 : index
     yield %3 : index
   } : tensor<?x?xindex>
-  %4 = extract_element %0[%idx0, %idx1] : tensor<?x?xindex>
+  %4 = tensor.extract %0[%idx0, %idx1] : tensor<?x?xindex>
   // CHECK-NEXT: return %[[RES]]
   return %4 : index
 }
 
 // -----
 
-// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements_sideeffects
+// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements_sideeffects
 // CHECK-SAME: %[[IDX:.*]]: index
-func @extract_element_from_dynamic_tensor_from_elements_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
+func @extract_from_dynamic_tensor_from_elements_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
   %mem = alloc(%size) : memref<?xindex>
   // CHECK: %[[DTENSOR:.*]] = dynamic_tensor_from_elements
@@ -1102,8 +1102,8 @@ func @extract_element_from_dynamic_tensor_from_elements_sideeffects(%idx: index,
     store %1, %mem[%arg0] : memref<?xindex>
     yield %1 : index
   } : tensor<?xindex>
-  // CHECK: %[[RES:.*]] = extract_element %[[DTENSOR]][%[[IDX]]]
-  %1 = extract_element %0[%idx] : tensor<?xindex>
+  // CHECK: %[[RES:.*]] = tensor.extract %[[DTENSOR]][%[[IDX]]]
+  %1 = tensor.extract %0[%idx] : tensor<?xindex>
   // CHECK-NEXT: return %[[RES]]
   return %1 : index
 }
@@ -1205,14 +1205,14 @@ func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
 
 // -----
 
-// CHECK-LABEL: func @extract_element_from_tensor_cast
+// CHECK-LABEL: func @extract_from_tensor_cast
 // CHECK-SAME: %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_element_from_tensor_cast(%tensor: tensor<*xf32>) -> f32 {
+func @extract_from_tensor_cast(%tensor: tensor<*xf32>) -> f32 {
   // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
   %c0 = constant 0 : index
   // CHECK-NOT: tensor_cast
   %casted = tensor_cast %tensor : tensor<*xf32> to tensor<?xf32>
-  // CHECK-NEXT: extract_element %[[TENSOR]][%[[C0]]]
-  %result = extract_element %casted[%c0] : tensor<?xf32>
+  // CHECK-NEXT: tensor.extract %[[TENSOR]][%[[C0]]]
+  %result = tensor.extract %casted[%c0] : tensor<?xf32>
   return %result : f32
 }

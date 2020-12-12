@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
@@ -75,4 +76,56 @@ StringRef XCOFF::getRelocationTypeString(XCOFF::RelocationType Type) {
   }
   return "Unknown";
 }
+
+#define LANG_CASE(A)                                                           \
+  case XCOFF::TracebackTable::A:                                               \
+    return #A;
+
+StringRef XCOFF::getNameForTracebackTableLanguageId(
+    XCOFF::TracebackTable::LanguageID LangId) {
+  switch (LangId) {
+    LANG_CASE(C)
+    LANG_CASE(Fortran)
+    LANG_CASE(Pascal)
+    LANG_CASE(Ada)
+    LANG_CASE(PL1)
+    LANG_CASE(Basic)
+    LANG_CASE(Lisp)
+    LANG_CASE(Cobol)
+    LANG_CASE(Modula2)
+    LANG_CASE(Rpg)
+    LANG_CASE(PL8)
+    LANG_CASE(Assembly)
+    LANG_CASE(Java)
+    LANG_CASE(ObjectiveC)
+    LANG_CASE(CPlusPlus)
+  }
+  return "Unknown";
+}
+#undef LANG_CASE
+
+SmallString<32> XCOFF::parseParmsType(uint32_t Value, unsigned ParmsNum) {
+  SmallString<32> ParmsType;
+  for (unsigned I = 0; I < ParmsNum; ++I) {
+    if (I != 0)
+      ParmsType += ", ";
+    if ((Value & TracebackTable::ParmTypeIsFloatingBit) == 0) {
+      // Fixed parameter type.
+      ParmsType += "i";
+      Value <<= 1;
+    } else {
+      if ((Value & TracebackTable::ParmTypeFloatingIsDoubleBit) == 0)
+        // Float parameter type.
+        ParmsType += "f";
+      else
+        // Double parameter type.
+        ParmsType += "d";
+
+      Value <<= 2;
+    }
+  }
+  assert(Value == 0u && "ParmsType encodes more than ParmsNum parameters.");
+  return ParmsType;
+}
+
 #undef RELOC_CASE

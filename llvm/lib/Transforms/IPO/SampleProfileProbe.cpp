@@ -122,7 +122,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
            "Expecting pseudo probe or call instructions");
     if (!I->getDebugLoc()) {
       if (auto *SP = F.getSubprogram()) {
-        auto DIL = DebugLoc::get(0, 0, SP);
+        auto DIL = DILocation::get(SP->getContext(), 0, 0, SP);
         I->setDebugLoc(DIL);
         ArtificialDbgLine++;
         LLVM_DEBUG({

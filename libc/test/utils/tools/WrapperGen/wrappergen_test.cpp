@@ -12,6 +12,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -149,6 +150,49 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithAliasee) {
   // would break this test.
 }
 
+TEST_F(WrapperGenTest, DeclStrlenAliasUsingAliaseeFile) {
+  llvm::Optional<llvm::StringRef> Redirects[] = {
+      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      llvm::StringRef(STDErrFile.get().TmpName)};
+
+  const char *AliaseeFileContent = "abc\nxyz__llvm_libcSTRLEN_ALIAS\nijk\n";
+  llvm::SmallVector<char> AliaseeFilePath;
+  auto AliaseeFileCreateError = llvm::sys::fs::createUniqueFile(
+      "libc-wrappergen-test-aliasee-file-%%-%%-%%-%%.txt", AliaseeFilePath);
+  ASSERT_FALSE(AliaseeFileCreateError);
+  auto AliaseeFileWriteError = llvm::writeFileAtomically(
+      "libc-wrappergen-temp-test-aliasee-file-%%-%%-%%-%%.txt",
+      llvm::StringRef(AliaseeFilePath.data()),
+      llvm::StringRef(AliaseeFileContent));
+  ASSERT_FALSE(AliaseeFileWriteError);
+
+  llvm::StringRef ArgV[] = {ProgPath,
+                            llvm::StringRef(IncludeArg),
+                            llvm::StringRef(APIArg),
+                            "--aliasee-file",
+                            llvm::StringRef(AliaseeFilePath.data()),
+                            "--name",
+                            "strlen"};
+
+  int ExitCode =
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+
+  EXPECT_EQ(ExitCode, 0);
+
+  auto STDErrOrError = llvm::MemoryBuffer::getFile(STDErrFile.get().TmpName);
+  std::string STDErrOutput = STDErrOrError.get()->getBuffer().str();
+
+  ASSERT_EQ(STDErrOutput, "");
+
+  auto STDOutOrError = llvm::MemoryBuffer::getFile(STDOutFile.get().TmpName);
+  std::string STDOutOutput = STDOutOrError.get()->getBuffer().str();
+
+  ASSERT_EQ(STDOutOutput,
+            "extern \"C\" size_t strlen(const char * __arg0) "
+            "__attribute__((alias(\"xyz__llvm_libcSTRLEN_ALIAS\")));\n");
+}
+
+/////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 // BAD INPUT TESTS
 // all of the tests after this point are testing inputs that should
@@ -244,4 +288,35 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithBadAliaseeFile) {
   std::string STDOutOutput = STDOutOrError.get()->getBuffer().str();
 
   ASSERT_EQ(STDOutOutput, "");
+}
+
+TEST_F(WrapperGenTest, RunWithAliaseeFileMissingLLVMLibcName) {
+  llvm::Optional<llvm::StringRef> Redirects[] = {
+      llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
+      llvm::StringRef(STDErrFile.get().TmpName)};
+
+  llvm::SmallVector<char> AliaseeFilePath;
+  auto AliaseeFileCreateError = llvm::sys::fs::createUniqueFile(
+      "libc-wrappergen-test-aliasee-file-%%-%%-%%-%%.txt", AliaseeFilePath);
+  ASSERT_FALSE(AliaseeFileCreateError);
+
+  llvm::StringRef ArgV[] = {ProgPath,
+                            llvm::StringRef(IncludeArg),
+                            llvm::StringRef(APIArg),
+                            "--aliasee-file",
+                            llvm::StringRef(AliaseeFilePath.data()),
+                            "--name",
+                            "strlen"};
+
+  int ExitCode =
+      llvm::sys::ExecuteAndWait(ProgPath, ArgV, llvm::None, Redirects);
+
+  EXPECT_NE(ExitCode, 0);
+
+  auto STDErrOrError = llvm::MemoryBuffer::getFile(STDErrFile.get().TmpName);
+  std::string STDErrOutput = STDErrOrError.get()->getBuffer().str();
+
+  ASSERT_EQ(STDErrOutput, ("error: Did not find an LLVM libc mangled name in " +
+                           AliaseeFilePath + "\n")
+                              .str());
 }
