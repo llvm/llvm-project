@@ -18,6 +18,7 @@
 
 namespace llvm {
 class StringRef;
+template <unsigned> class SmallString;
 
 namespace XCOFF {
 
@@ -28,6 +29,7 @@ constexpr size_t NameSize = 8;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
 constexpr uint16_t RelocOverflow = 65535;
+constexpr uint8_t AllocRegNo = 31;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
@@ -294,8 +296,27 @@ enum CFileCpuId : uint8_t {
 
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 StringRef getRelocationTypeString(XCOFF::RelocationType Type);
+SmallString<32> parseParmsType(uint32_t Value, unsigned ParmsNum);
 
 struct TracebackTable {
+  enum LanguageID : uint8_t {
+    C,
+    Fortran,
+    Pascal,
+    Ada,
+    PL1,
+    Basic,
+    Lisp,
+    Cobol,
+    Modula2,
+    CPlusPlus,
+    Rpg,
+    PL8,
+    PLIX = PL8,
+    Assembly,
+    Java,
+    ObjectiveC
+  };
   // Byte 1
   static constexpr uint32_t VersionMask = 0xFF00'0000;
   static constexpr uint8_t VersionShift = 24;
@@ -380,6 +401,8 @@ enum ExtendedTBTableFlag : uint8_t {
   TB_OS2 = 0x10,         ///< Reserved for OS use
   TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists
 };
+
+StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
 
 } // end namespace XCOFF
 } // end namespace llvm

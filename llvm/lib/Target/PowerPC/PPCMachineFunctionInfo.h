@@ -22,6 +22,16 @@ namespace llvm {
 /// PPCFunctionInfo - This class is derived from MachineFunction private
 /// PowerPC target-specific information for each MachineFunction.
 class PPCFunctionInfo : public MachineFunctionInfo {
+public:
+  // The value in the ParamType are used to indicate the bitstrings used in the
+  // encoding format.
+  enum ParamType {
+    FixedType = 0x0,
+    ShortFloatPoint = 0x2,
+    LongFloatPoint = 0x3
+  };
+
+private:
   virtual void anchor();
 
   /// FramePointerSaveIndex - Frame index of where the old frame pointer is
@@ -107,6 +117,20 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// register for parameter passing.
   unsigned VarArgsNumFPR = 0;
 
+  /// FixedParamNum - Number of fixed parameter.
+  unsigned FixedParamNum = 0;
+
+  /// FloatingParamNum - Number of floating point parameter.
+  unsigned FloatingPointParamNum = 0;
+
+  /// ParamType - Encode type for every parameter
+  /// in the order of parameters passing in.
+  /// Bitstring starts from the most significant (leftmost) bit.
+  /// '0'b => fixed parameter.
+  /// '10'b => floating point short parameter.
+  /// '11'b => floating point long parameter.
+  uint32_t ParameterType = 0;
+
   /// CRSpillFrameIndex - FrameIndex for CR spill slot for 32-bit SVR4.
   int CRSpillFrameIndex = 0;
 
@@ -189,6 +213,13 @@ public:
 
   unsigned getVarArgsNumGPR() const { return VarArgsNumGPR; }
   void setVarArgsNumGPR(unsigned Num) { VarArgsNumGPR = Num; }
+
+  unsigned getFixedParamNum() const { return FixedParamNum; }
+
+  unsigned getFloatingPointParamNum() const { return FloatingPointParamNum; }
+
+  uint32_t getParameterType() const { return ParameterType; }
+  void appendParameterType(ParamType Type);
 
   unsigned getVarArgsNumFPR() const { return VarArgsNumFPR; }
   void setVarArgsNumFPR(unsigned Num) { VarArgsNumFPR = Num; }
