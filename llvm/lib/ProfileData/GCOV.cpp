@@ -421,120 +421,84 @@ void GCOVBlock::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void GCOVBlock::dump() const { print(dbgs()); }
 #endif
 
-//===----------------------------------------------------------------------===//
-// Cycles detection
-//
-// The algorithm in GCC is based on the algorithm by Hawick & James:
-//   "Enumerating Circuits and Loops in Graphs with Self-Arcs and Multiple-Arcs"
-//   http://complexity.massey.ac.nz/cstn/013/cstn-013.pdf.
-//
-// An optimization is to skip any arc with zero count and to backtrack if the
-// current path has such arcs: any cycle with such arc makes no contribution to
-// the final cycle count. This reduces the complexity from exponential to
-// polynomial of the arcs.
-
-/// Get the count for the detected cycle.
-uint64_t GCOVBlock::getCycleCount(const Edges &Path) {
-  uint64_t CycleCount = std::numeric_limits<uint64_t>::max();
-  for (auto E : Path) {
-    CycleCount = std::min(E->cycleCount, CycleCount);
-  }
-  for (auto E : Path) {
-    E->cycleCount -= CycleCount;
-  }
-  return CycleCount;
-}
-
-/// Unblock a vertex previously marked as blocked.
-void GCOVBlock::unblock(const GCOVBlock *U, BlockVector &Blocked,
-                        BlockVectorLists &BlockLists) {
-  auto it = find(Blocked, U);
-  if (it == Blocked.end()) {
-    return;
-  }
-
-  const size_t index = it - Blocked.begin();
-  Blocked.erase(it);
-
-  const BlockVector ToUnblock(BlockLists[index]);
-  BlockLists.erase(BlockLists.begin() + index);
-  for (auto GB : ToUnblock) {
-    GCOVBlock::unblock(GB, Blocked, BlockLists);
-  }
-}
-
-void GCOVBlock::trimZeroCountSuffix(Edges &Path) {
-  for (size_t index = 0; index < Path.size(); ++index) {
-    if (Path[index]->cycleCount == 0) {
-      Path.resize(index);
-      return;
-    }
-  }
-}
-
-bool GCOVBlock::lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
-                               Edges &Path, BlockVector &Blocked,
-                               BlockVectorLists &BlockLists,
-                               const BlockVector &Blocks, uint64_t &Count) {
-  Blocked.push_back(V);
-  BlockLists.emplace_back(BlockVector());
-  bool FoundCircuit = false;
-  const size_t PrefixLength = Path.size();
-
-  for (auto E : V->dsts()) {
-    const GCOVBlock *W = &E->dst;
-    if (E->cycleCount == 0 || W < Start || find(Blocks, W) == Blocks.end()) {
+uint64_t
+GCOVBlock::augmentOneCycle(GCOVBlock *src,
+                           std::vector<std::pair<GCOVBlock *, size_t>> &stack) {
+  GCOVBlock *u;
+  size_t i;
+  stack.clear();
+  stack.emplace_back(src, 0);
+  src->incoming = (GCOVArc *)1; // Mark u available for cycle detection
+  for (;;) {
+    std::tie(u, i) = stack.back();
+    if (i == u->succ.size()) {
+      u->traversable = false;
+      stack.pop_back();
+      if (stack.empty())
+        break;
       continue;
     }
-
-    Path.push_back(E);
-
-    if (W == Start) {
-      // We've a cycle.
-      Count += GCOVBlock::getCycleCount(Path);
-      trimZeroCountSuffix(Path);
-      FoundCircuit = true;
-    } else if (find(Blocked, W) == Blocked.end() && // W is not blocked.
-               GCOVBlock::lookForCircuit(W, Start, Path, Blocked, BlockLists,
-                                         Blocks, Count)) {
-      FoundCircuit = true;
+    ++stack.back().second;
+    GCOVArc *succ = u->succ[i];
+    // Ignore saturated arcs (cycleCount has been reduced to 0) and visited
+    // blocks. Ignore self arcs to guard against bad input (.gcno has no
+    // self arcs).
+    if (succ->cycleCount == 0 || !succ->dst.traversable || &succ->dst == u)
+      continue;
+    if (succ->dst.incoming == nullptr) {
+      succ->dst.incoming = succ;
+      stack.emplace_back(&succ->dst, 0);
+      continue;
     }
-
-    if (Path.size() > PrefixLength)
-      Path.pop_back();
-    else if (Path.size() < PrefixLength)
-      break;
-  }
-
-  if (FoundCircuit) {
-    GCOVBlock::unblock(V, Blocked, BlockLists);
-  } else {
-    for (auto E : V->dsts()) {
-      const GCOVBlock *W = &E->dst;
-      if (E->cycleCount == 0 || W < Start || find(Blocks, W) == Blocks.end()) {
-        continue;
-      }
-      const size_t index = find(Blocked, W) - Blocked.begin();
-      BlockVector &List = BlockLists[index];
-      if (find(List, V) == List.end()) {
-        List.push_back(V);
-      }
+    uint64_t minCount = succ->cycleCount;
+    for (GCOVBlock *v = u;;) {
+      minCount = std::min(minCount, v->incoming->cycleCount);
+      v = &v->incoming->src;
+      if (v == &succ->dst)
+        break;
     }
+    succ->cycleCount -= minCount;
+    for (GCOVBlock *v = u;;) {
+      v->incoming->cycleCount -= minCount;
+      v = &v->incoming->src;
+      if (v == &succ->dst)
+        break;
+    }
+    return minCount;
   }
-
-  return FoundCircuit;
+  return 0;
 }
 
-/// Get the count for the list of blocks which lie on the same line.
-void GCOVBlock::getCyclesCount(const BlockVector &Blocks, uint64_t &Count) {
-  for (auto Block : Blocks) {
-    Edges Path;
-    BlockVector Blocked;
-    BlockVectorLists BlockLists;
-
-    GCOVBlock::lookForCircuit(Block, Block, Path, Blocked, BlockLists, Blocks,
-                              Count);
+// Get the total execution count of loops among blocks on the same line.
+// Assuming a reducible flow graph, the count is the sum of back edge counts.
+// Identifying loops is complex, so we simply find cycles and perform cycle
+// cancelling iteratively.
+uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
+  std::vector<std::pair<GCOVBlock *, size_t>> stack;
+  uint64_t count = 0, d;
+  for (;;) {
+    // Make blocks on the line traversable and try finding a cycle.
+    for (auto b : blocks) {
+      const_cast<GCOVBlock *>(b)->traversable = true;
+      const_cast<GCOVBlock *>(b)->incoming = nullptr;
+    }
+    d = 0;
+    for (auto block : blocks) {
+      auto *b = const_cast<GCOVBlock *>(block);
+      if (b->traversable && (d = augmentOneCycle(b, stack)) > 0)
+        break;
+    }
+    if (d == 0)
+      break;
+    count += d;
   }
+  // If there is no more loop, all traversable bits should have been cleared.
+  // This property is needed by subsequent calls.
+  for (auto b : blocks) {
+    assert(!b->traversable);
+    (void)b;
+  }
+  return count;
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,7 +690,7 @@ void Context::collectSourceLine(SourceInfo &si, Summary *summary,
       arc->cycleCount = arc->count;
   }
 
-  GCOVBlock::getCyclesCount(line.blocks, count);
+  count += GCOVBlock::getCyclesCount(line.blocks);
   line.count = count;
   if (line.exists) {
     ++summary->lines;
