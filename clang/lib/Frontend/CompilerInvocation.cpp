@@ -185,20 +185,24 @@ static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
   return FlagToValueNormalizer<T>{std::move(Value)};
 }
 
-static auto makeBooleanFlagNormalizer(OptSpecifier NegOpt) {
-  return [NegOpt](OptSpecifier PosOpt, unsigned, const ArgList &Args,
-                  DiagnosticsEngine &) -> Optional<bool> {
-    if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
-      return A->getOption().matches(PosOpt);
+static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
+                                        OptSpecifier OtherOpt) {
+  return [Value, OtherValue, OtherOpt](OptSpecifier Opt, unsigned,
+                                       const ArgList &Args,
+                                       DiagnosticsEngine &) -> Optional<bool> {
+    if (const Arg *A = Args.getLastArg(Opt, OtherOpt)) {
+      return A->getOption().matches(Opt) ? Value : OtherValue;
+    }
     return None;
   };
 }
 
-static auto makeBooleanFlagDenormalizer(const char *NegSpelling) {
-  return [NegSpelling](
-             SmallVectorImpl<const char *> &Args, const char *PosSpelling,
-             CompilerInvocation::StringAllocator, unsigned, unsigned Value) {
-    Args.push_back(Value ? PosSpelling : NegSpelling);
+static auto makeBooleanOptionDenormalizer(bool Value,
+                                          const char *OtherSpelling) {
+  return [Value, OtherSpelling](
+             SmallVectorImpl<const char *> &Args, const char *Spelling,
+             CompilerInvocation::StringAllocator, unsigned, bool KeyPath) {
+    Args.push_back(KeyPath == Value ? Spelling : OtherSpelling);
   };
 }
 
@@ -906,7 +910,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
   Opts.DebugColumnInfo = !Args.hasArg(OPT_gno_column_info);
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
-  Opts.CodeViewGHash = Args.hasArg(OPT_gcodeview_ghash);
   Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);
   Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
   Opts.VirtualFunctionElimination =
@@ -967,7 +970,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_record_command_line));
   Opts.MergeAllConstants = Args.hasArg(OPT_fmerge_all_constants);
   Opts.NoCommon = !Args.hasArg(OPT_fcommon);
-  Opts.NoInlineLineTables = Args.hasArg(OPT_gno_inline_line_tables);
   Opts.NoImplicitFloat = Args.hasArg(OPT_no_implicit_float);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
   Opts.SimplifyLibCalls = !(Args.hasArg(OPT_fno_builtin) ||
@@ -980,7 +982,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.RerollLoops = Args.hasArg(OPT_freroll_loops);
 
   Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
-  Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile =
       std::string(Args.getLastArgValue(OPT_fprofile_sample_use_EQ));
   Opts.DebugInfoForProfiling = Args.hasFlag(

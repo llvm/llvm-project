@@ -268,10 +268,234 @@ multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
                ImpliedByAnyOf<disablers, "true">;
 }
 
-multiclass BooleanMarshalledFFlag<string name, code keypath, code default_value, string pos_help = "", string neg_help=""> {
-  def fno_#NAME : Flag<["-"], "fno-"#name>, HelpText<neg_help>;
-  def f#NAME : Flag<["-"], "f"#name>, HelpText<pos_help>,
-    MarshallingInfoBooleanFlag<keypath, default_value, "fno_"#NAME, "-fno-"#name>;
+//===----------------------------------------------------------------------===//
+// BoolOptionBase
+//===----------------------------------------------------------------------===//
+
+// Default value of the keypath associated with a marshalled bool option.
+class Default<code value> { code Value = value; }
+
+class FlagPolarity<bit value> { bit Value = value; }
+def PosFlag : FlagPolarity<true> {}
+def NegFlag : FlagPolarity<false> {}
+
+// Definition of a single command line flag.
+class FlagDef<FlagPolarity polarity, bit value, list<OptionFlag> option_flags,
+              string help, list<Option> implied_by_options = []> {
+  // Negative polarity (false) implies a command line spelling prefixed with
+  // "no-" and a TableGen record whose name is prefixed with "no_".
+  FlagPolarity Polarity = polarity;
+
+  // The value assigned to keypath when the flag is present on the command line.
+  bit Value = value;
+
+  // List of OptionFlag records that control the visibility of the flag in
+  // different scenarios.
+  list<OptionFlag> OptionFlags = option_flags;
+
+  // The help text associated with the flag.
+  string Help = help;
+
+  // List of options that imply this flag when present on command line.
+  list<Option> ImpliedBy = implied_by_options;
+}
+
+// Information extending a FlagDef.
+class FlagDefSuffix<list<OptionFlag> option_flags, string help> {
+  list<OptionFlag> OptionFlags = option_flags;
+  string Help = help;
+}
+
+// Extend the flag definition with a suffix.
+class ApplySuffix<FlagDef flag, FlagDefSuffix flag_suffix> {
+  FlagDef Result
+    = FlagDef<flag.Polarity, flag.Value,
+              !listconcat(flag.OptionFlags, flag_suffix.OptionFlags),
+              !strconcat(flag.Help, flag_suffix.Help), flag.ImpliedBy>;
+}
+
+// FlagDef extension. Convenient for creation of TableGen records.
+class FlagDefExpanded<FlagDef flag, string prefix, string name, string spelling>
+  : FlagDef<flag.Polarity, flag.Value, flag.OptionFlags, flag.Help,
+            flag.ImpliedBy> {
+  // Name of the TableGen record.
+  string RecordName = prefix#!cond(flag.Polarity.Value : "", true : "no_")#name;
+
+  // Spelling of the flag.
+  string Spelling
+    = prefix#!cond(flag.Polarity.Value : "", true : "no-")#spelling;
+
+  // Does the flag have CC1Option?
+  bit IsCC1 = !not(!empty(!filter(opt_flag, flag.OptionFlags,
+                                  !eq(opt_flag, CC1Option))));
+
+  // Can the flag be implied by another flag?
+  bit CanBeImplied = !not(!empty(flag.ImpliedBy));
+
+  // C++ code that will be assigned to the keypath when the flag is present.
+  code ValueAsCode = !cond(flag.Value : "true", true: "false");
+}
+
+// Creates simple flag record.
+class BoolOptionFlag<FlagDefExpanded flag, code keypath, Default default>
+  : Flag<["-"], flag.Spelling>, Flags<flag.OptionFlags>, HelpText<flag.Help> {}
+
+// Creates marshalled flag record.
+class CC1BoolOptionFlag<FlagDefExpanded flag, FlagDefExpanded other,
+                        code keypath, Default default>
+  : Flag<["-"], flag.Spelling>, Flags<flag.OptionFlags>, HelpText<flag.Help>,
+    MarshallingInfoBooleanFlag<keypath, default.Value, flag.ValueAsCode,
+                               flag.RecordName, other.ValueAsCode,
+                               other.RecordName, other.Spelling>,
+    ImpliedByAnyOf<flag.ImpliedBy, flag.ValueAsCode> {}
+
+// Generates TableGen records for two command line flags that control the same
+// keypath via the marshalling infrastructure.
+// Names of the records consist of the specified prefix, "no_" for the negative
+// flag, and NAME.
+// BoolOption is the API that should be used most of the time. Use this only
+// when you need more control (e.g. to represent a marshalled option whose
+// keypath defaults to an arbitrarily complex boolean expression).
+multiclass BoolOptionBase<string spelling_base, code keypath, Default default,
+                          FlagDef flag1_base, FlagDef flag2_base,
+                          FlagDefSuffix flags_suffix = FlagDefSuffix<[], "">,
+                          string prefix = ""> {
+  defvar flag1 = FlagDefExpanded<ApplySuffix<flag1_base, flags_suffix>.Result,
+                                 prefix, NAME, spelling_base>;
+
+  defvar flag2 = FlagDefExpanded<ApplySuffix<flag2_base, flags_suffix>.Result,
+                                 prefix, NAME, spelling_base>;
+
+  // TODO: Assert that the flags have different polarity.
+  // TODO: Assert that the flags have different value.
+  // TODO: Assert that only one of the flags can be implied.
+
+  if flag1.IsCC1 then {
+    def flag1.RecordName : CC1BoolOptionFlag<flag1, flag2, keypath, default>;
+  } else {
+    def flag1.RecordName : BoolOptionFlag<flag1, keypath, default>;
+  }
+
+  if flag2.IsCC1 then {
+    def flag2.RecordName : CC1BoolOptionFlag<flag2, flag1, keypath, default>;
+  } else {
+    def flag2.RecordName : BoolOptionFlag<flag2, keypath, default>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// BoolOption
+//===----------------------------------------------------------------------===//
+
+class DefaultsToBool<bit value> { bit Value = value; }
+def DefaultsToTrue : DefaultsToBool<true> {}
+def DefaultsToFalse : DefaultsToBool<false> {}
+
+/// Holds the mixins that apply to the changing flag:
+///   * list of OptionFlags (e.g. [CC1Option, NoXarchOption]),
+///   * help string,
+///   * list of Options that imply this flag.
+class ChangedBy<FlagPolarity polarity, list<OptionFlag> option_flags = [],
+                string help = "", list<Option> changed_by_options = []> {
+  FlagPolarity Polarity = polarity;
+  list<OptionFlag> OptionFlags = option_flags;
+  string Help = help;
+  list<Option> ChangedByOptions = changed_by_options;
+}
+
+/// Holds the mixins that apply to the resetting flag:
+///   * list of OptionFlags (e.g. [CC1Option, NoXarchOption]),
+///   * help string.
+class ResetBy<FlagPolarity polarity, list<OptionFlag> option_flags = [],
+              string help = ""> {
+  FlagPolarity Polarity = polarity;
+  list<OptionFlag> OptionFlags = option_flags;
+  string Help = help;
+}
+
+/// Holds the mixins that apply to both the changing flag and resetting flag:
+///   * list of OptionFlags (e.g. [CC1Option, NoXarchOption]),
+///   * the suffix of the help string.
+class BothFlags<list<OptionFlag> option_flags = [], string help = ""> {
+  list<OptionFlag> OptionFlags = option_flags;
+  string Help = help;
+}
+
+/// Creates two command line flags that control the same boolean keypath.
+///
+/// Example:
+///   defm my_boolean_option : BoolOption<"my-boolean-option",
+///     "CodeGenOpts.MyBooleanOption", DefaultsToFalse,
+///     ChangedBy<PosFlag, [CC1Option], "Enable">,
+///     ResetBy<NegFlag, [], "Disable">,
+///     BothFlags<[CoreOption], " my boolean option.">;
+///
+///   The Clang driver now knows two new command line flags: the "positive"
+///   -my-boolean-option and the "negative" -no-my-boolean-option. The positive
+///   flag is also available on the CC1 command line.
+///
+///   * When the command line contains neither of the flags, the keypath value
+///     defaults to false.
+///   * When the command line contains the positive -my-boolean-option, the
+///     keypath value changes to true.
+///   * When the command line contains the negative -no-my-bool-option, the
+///     keypath value resets to false.
+///
+///   The help text for -my-boolean-option is "Enable my boolean option." and
+///   "Disable my boolean option." for -no-my-boolean-option.
+multiclass BoolOption<string spelling_base, code keypath,
+                      DefaultsToBool defaults_to, ChangedBy changed_by,
+                      ResetBy reset_by, BothFlags both = BothFlags<[], "">,
+                      string name_prefix = ""> {
+  defvar default = Default<!cond(defaults_to.Value : "true", true: "false")>;
+
+  defvar changed_by_flag = FlagDef<changed_by.Polarity, !not(defaults_to.Value),
+                                   changed_by.OptionFlags, changed_by.Help,
+                                   changed_by.ChangedByOptions>;
+
+  defvar reset_by_flag = FlagDef<reset_by.Polarity, defaults_to.Value,
+                                 reset_by.OptionFlags, reset_by.Help>;
+
+  defvar flag_suffix = FlagDefSuffix<both.OptionFlags, both.Help>;
+
+  defm NAME : BoolOptionBase<spelling_base, keypath, default, changed_by_flag,
+                             reset_by_flag, flag_suffix, name_prefix>;
+}
+
+/// Creates a BoolOption with the changing available on the CC1 command line.
+multiclass BoolCC1Option<string flag_base, code keypath,
+                         DefaultsToBool defaults_to, ChangedBy changed_by,
+                         ResetBy reset_by, BothFlags both = BothFlags<[], "">,
+                         string name_prefix = ""> {
+  defvar changed_by_cc1
+    = ChangedBy<changed_by.Polarity,
+                !listconcat(changed_by.OptionFlags, [CC1Option]),
+                changed_by.Help, changed_by.ChangedByOptions>;
+
+  defm NAME : BoolOption<flag_base, keypath, defaults_to, changed_by_cc1,
+                         reset_by, both, name_prefix>;
+}
+
+/// Creates a BoolOption where both of the flags are prefixed with "f", are in
+/// the Group<f_Group>, and the changing flag is also available on the CC1
+/// command line.
+multiclass BoolFOption<string flag_base, code keypath,
+                       DefaultsToBool defaults_to, ChangedBy changed_by,
+                       ResetBy reset_by, BothFlags both = BothFlags<[], "">> {
+  defm NAME : BoolCC1Option<flag_base, keypath, defaults_to, changed_by,
+                            reset_by, both, "f">,
+              Group<f_Group>;
+}
+
+// Creates a BoolOption where both of the flags are prefixed with "g", are in
+// the Group<g_Group>, and the changing flag is also available on the CC1
+// command line.
+multiclass BoolGOption<string flag_base, code keypath,
+                       DefaultsToBool defaults_to, ChangedBy changed_by,
+                       ResetBy reset_by, BothFlags both = BothFlags<[], "">> {
+  defm NAME : BoolCC1Option<flag_base, keypath, defaults_to, changed_by,
+                            reset_by, both, "g">,
+              Group<g_Group>;
 }
 
 /////////
@@ -808,7 +1032,10 @@ def fno_double_square_bracket_attributes : Flag<[ "-" ], "fno-double-square-brac
   Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
   HelpText<"Disable '[[]]' attributes in all C and C++ language modes">;
 
-defm autolink : OptOutFFlag<"autolink", "", "Disable generation of linker directives for automatic library linking">;
+defm autolink : BoolFOption<"autolink",
+  "CodeGenOpts.Autolink", DefaultsToTrue,
+  ChangedBy<NegFlag, [CC1Option], "Disable generation of linker directives for automatic library linking">,
+  ResetBy<PosFlag>>;
 
 // C++ Coroutines TS
 defm coroutines_ts : OptInFFlag<"coroutines-ts", "Enable support for the C++ Coroutines TS">;
@@ -1282,8 +1509,11 @@ def fapprox_func : Flag<["-"], "fapprox-func">, Group<f_Group>, Flags<[CC1Option
   MarshallingInfoFlag<"LangOpts->ApproxFunc">, ImpliedByAnyOf<[menable_unsafe_fp_math]>;
 defm finite_math_only : OptInFFlag<"finite-math-only", "", "", "", [],
   "LangOpts->FiniteMathOnly", [cl_finite_math_only, ffast_math]>;
-defm signed_zeros : OptOutFFlag<"signed-zeros", "Allow optimizations that ignore the sign of floating point zeros", "", "", [],
-  "LangOpts->NoSignedZero", [cl_no_signed_zeros, menable_unsafe_fp_math]>;
+defm signed_zeros : BoolFOption<"signed-zeros",
+  "LangOpts->NoSignedZero", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Allow optimizations that ignore the sign of floating point zeros",
+            [cl_no_signed_zeros, menable_unsafe_fp_math]>,
+  ResetBy<PosFlag>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
 def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
 def fhonor_infinities : Flag<["-"], "fhonor-infinities">, Group<f_Group>;
@@ -1351,9 +1581,11 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
   HelpText<"Enables the global instruction selector">;
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
-defm legacy_pass_manager : BooleanMarshalledFFlag<"legacy-pass-manager", "CodeGenOpts.LegacyPassManager",
-  "!static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER)", "Use the legacy pass manager in LLVM",
-  "Use the new pass manager in LLVM">, Group<f_clang_Group>, Flags<[CC1Option]>;
+defm legacy_pass_manager : BoolOptionBase<"legacy-pass-manager",
+  "CodeGenOpts.LegacyPassManager", Default<"!static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER)">,
+  FlagDef<PosFlag, true, [], "Use the legacy pass manager in LLVM">,
+  FlagDef<NegFlag, false, [], "Use the new pass manager in LLVM">,
+  FlagDefSuffix<[CC1Option], "">, "f">, Group<f_clang_Group>;
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
 def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
@@ -1535,13 +1767,10 @@ def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagn
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Disable validation of the diagnostic options when loading the module">,
   MarshallingInfoFlag<"HeaderSearchOpts->ModulesValidateDiagnosticOptions", "true">, IsNegative;
-// todo: simplify these into a version of OptInFFlag that accepts different flags for each record and does not imply group
-def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-headers">,
-  Group<i_Group>, Flags<[CC1Option]>,
-  HelpText<"Validate the system headers that a module depends on when loading the module">,
-  MarshallingInfoFlag<"HeaderSearchOpts->ModulesValidateSystemHeaders">;
-def fno_modules_validate_system_headers : Flag<["-"], "fno-modules-validate-system-headers">,
-  Group<i_Group>, Flags<[NoXarchOption]>;
+defm modules_validate_system_headers : BoolOption<"modules-validate-system-headers",
+  "HeaderSearchOpts->ModulesValidateSystemHeaders", DefaultsToFalse,
+  ChangedBy<PosFlag, [CC1Option], "Validate the system headers that a module depends on when loading the module">,
+  ResetBy<NegFlag, [NoXarchOption]>, BothFlags<[]>, "f">, Group<i_Group>;
 
 def fvalidate_ast_input_files_content:
   Flag <["-"], "fvalidate-ast-input-files-content">,
@@ -2188,13 +2417,14 @@ def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,
   Flags<[CC1Option, CC1AsOption, CoreOption]>;
-def gcodeview_ghash : Flag<["-"], "gcodeview-ghash">,
-  HelpText<"Emit type record hashes in a .debug$H section">,
-  Flags<[CC1Option, CoreOption]>;
-def gno_codeview_ghash : Flag<["-"], "gno-codeview-ghash">, Flags<[CoreOption]>;
-def ginline_line_tables : Flag<["-"], "ginline-line-tables">, Flags<[CoreOption]>;
-def gno_inline_line_tables : Flag<["-"], "gno-inline-line-tables">,
-  Flags<[CC1Option, CoreOption]>, HelpText<"Don't emit inline line tables">;
+defm codeview_ghash : BoolOption<"codeview-ghash",
+  "CodeGenOpts.CodeViewGHash", DefaultsToFalse,
+  ChangedBy<PosFlag, [CC1Option], "Emit type record hashes in a .debug$H section">,
+  ResetBy<NegFlag>, BothFlags<[CoreOption]>, "g">;
+defm inline_line_tables : BoolGOption<"inline-line-tables",
+  "CodeGenOpts.NoInlineLineTables", DefaultsToFalse,
+  ChangedBy<NegFlag, [], "Don't emit inline line tables.">,
+  ResetBy<PosFlag>, BothFlags<[CoreOption]>>;
 
 def gfull : Flag<["-"], "gfull">, Group<g_Group>;
 def gused : Flag<["-"], "gused">, Group<g_Group>;
