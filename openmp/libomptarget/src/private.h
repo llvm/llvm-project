@@ -107,4 +107,11 @@ static inline void dumpTargetPointerMappings(const DeviceTy &Device) {
   }
 }
 
+#ifdef OMPTARGET_PROFILE_ENABLED
+#include "llvm/Support/TimeProfiler.h"
+#define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
+#else
+#define TIMESCOPE()
+#endif
+
 #endif
