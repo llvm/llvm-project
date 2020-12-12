@@ -2193,8 +2193,6 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
     break;
 
   case TemplateArgument::Declaration:
-    VisitType(Arg.getParamTypeForDecl());
-    // FIXME: Do we need to recursively decompose template parameter objects?
     VisitDecl(Arg.getAsDecl());
     break;
 
@@ -2203,8 +2201,8 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
     break;
 
   case TemplateArgument::Integral:
-    VisitType(Arg.getIntegralType());
     Arg.getAsIntegral().Profile(ID);
+    VisitType(Arg.getIntegralType());
     break;
 
   case TemplateArgument::Expression:
