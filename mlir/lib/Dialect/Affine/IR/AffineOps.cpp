@@ -1796,7 +1796,7 @@ void AffineForOp::setLowerBound(ValueRange lbOperands, AffineMap map) {
   newOperands.append(iterOperands.begin(), iterOperands.end());
   (*this)->setOperands(newOperands);
 
-  setAttr(getLowerBoundAttrName(), AffineMapAttr::get(map));
+  (*this)->setAttr(getLowerBoundAttrName(), AffineMapAttr::get(map));
 }
 
 void AffineForOp::setUpperBound(ValueRange ubOperands, AffineMap map) {
@@ -1809,7 +1809,7 @@ void AffineForOp::setUpperBound(ValueRange ubOperands, AffineMap map) {
   newOperands.append(iterOperands.begin(), iterOperands.end());
   (*this)->setOperands(newOperands);
 
-  setAttr(getUpperBoundAttrName(), AffineMapAttr::get(map));
+  (*this)->setAttr(getUpperBoundAttrName(), AffineMapAttr::get(map));
 }
 
 void AffineForOp::setLowerBoundMap(AffineMap map) {
@@ -1818,7 +1818,7 @@ void AffineForOp::setLowerBoundMap(AffineMap map) {
          lbMap.getNumSymbols() == map.getNumSymbols());
   assert(map.getNumResults() >= 1 && "bound map has at least one result");
   (void)lbMap;
-  setAttr(getLowerBoundAttrName(), AffineMapAttr::get(map));
+  (*this)->setAttr(getLowerBoundAttrName(), AffineMapAttr::get(map));
 }
 
 void AffineForOp::setUpperBoundMap(AffineMap map) {
@@ -1827,7 +1827,7 @@ void AffineForOp::setUpperBoundMap(AffineMap map) {
          ubMap.getNumSymbols() == map.getNumSymbols());
   assert(map.getNumResults() >= 1 && "bound map has at least one result");
   (void)ubMap;
-  setAttr(getUpperBoundAttrName(), AffineMapAttr::get(map));
+  (*this)->setAttr(getUpperBoundAttrName(), AffineMapAttr::get(map));
 }
 
 bool AffineForOp::hasConstantLowerBound() {
@@ -2128,7 +2128,7 @@ IntegerSet AffineIfOp::getIntegerSet() {
       .getValue();
 }
 void AffineIfOp::setIntegerSet(IntegerSet newSet) {
-  setAttr(getConditionAttrName(), IntegerSetAttr::get(newSet));
+  (*this)->setAttr(getConditionAttrName(), IntegerSetAttr::get(newSet));
 }
 
 void AffineIfOp::setConditional(IntegerSet set, ValueRange operands) {
@@ -2412,7 +2412,7 @@ static LogicalResult verifyAffineMinMaxOp(T op) {
 
 template <typename T>
 static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
-  p << op.getOperationName() << ' ' << op.getAttr(T::getMapAttrName());
+  p << op.getOperationName() << ' ' << op->getAttr(T::getMapAttrName());
   auto operands = op.getOperands();
   unsigned numDims = op.map().getNumDims();
   p << '(' << operands.take_front(numDims) << ')';
@@ -2461,7 +2461,7 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
     // If the map is the same, report that folding did not happen.
     if (foldedMap == op.map())
       return {};
-    op.setAttr("map", AffineMapAttr::get(foldedMap));
+    op->setAttr("map", AffineMapAttr::get(foldedMap));
     return op.getResult();
   }
 
@@ -2673,8 +2673,8 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(lbArgs);
   result.addOperands(ubArgs);
   // Create a region and a block for the body.
-  auto bodyRegion = result.addRegion();
-  auto body = new Block();
+  auto *bodyRegion = result.addRegion();
+  auto *body = new Block();
   // Add all the block arguments.
   for (unsigned i = 0; i < numDims; ++i)
     body->addArgument(IndexType::get(builder.getContext()));

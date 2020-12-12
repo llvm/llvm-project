@@ -822,7 +822,7 @@ def TestOpConstant : TEST_Op<"constant", [ConstantLike, NoSideEffect]> {
   let arguments = (ins AnyAttr:$value);
   let results = (outs AnyType);
   let extraClassDeclaration = [{
-    Attribute getValue() { return getAttr("value"); }
+    Attribute getValue() { return (*this)->getAttr("value"); }
   }];
 
   let hasFolder = 1;

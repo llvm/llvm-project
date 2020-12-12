@@ -2700,7 +2700,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     p.printAttributeWithoutType(getAttr(symbolAttrName()));
     if (auto val = getValueOrNull())
       p << '(' << val << ')';
-    if (getAttr(constantAttrName()))
+    if ((*this)->getAttr(constantAttrName()))
       p << " constant";
     p << " : ";
     p.printType(getType());

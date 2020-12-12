@@ -1302,17 +1302,17 @@ public:
     switch (funcOp.function_control()) {
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
-    newFuncOp.setAttr("passthrough", ArrayAttr::get({llvmAttr}, context));     \
+    newFuncOp->setAttr("passthrough", ArrayAttr::get({llvmAttr}, context));    \
     break;
 
-          DISPATCH(spirv::FunctionControl::Inline,
-                   StringAttr::get("alwaysinline", context));
-          DISPATCH(spirv::FunctionControl::DontInline,
-                   StringAttr::get("noinline", context));
-          DISPATCH(spirv::FunctionControl::Pure,
-                   StringAttr::get("readonly", context));
-          DISPATCH(spirv::FunctionControl::Const,
-                   StringAttr::get("readnone", context));
+      DISPATCH(spirv::FunctionControl::Inline,
+               StringAttr::get("alwaysinline", context));
+      DISPATCH(spirv::FunctionControl::DontInline,
+               StringAttr::get("noinline", context));
+      DISPATCH(spirv::FunctionControl::Pure,
+               StringAttr::get("readonly", context));
+      DISPATCH(spirv::FunctionControl::Const,
+               StringAttr::get("readnone", context));
 
 #undef DISPATCH
 

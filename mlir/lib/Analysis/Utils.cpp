@@ -829,7 +829,7 @@ void mlir::getComputationSliceState(
   for (unsigned i = 0; i < numSliceLoopIVs; ++i) {
     Value iv = getSliceLoop(i).getInductionVar();
     if (sequentialLoops.count(iv) == 0 &&
-        getSliceLoop(i).getAttr(kSliceFusionBarrierAttrName) == nullptr)
+        getSliceLoop(i)->getAttr(kSliceFusionBarrierAttrName) == nullptr)
       continue;
     for (unsigned j = i; j < numSliceLoopIVs; ++j) {
       sliceState->lbs[j] = AffineMap();

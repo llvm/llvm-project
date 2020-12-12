@@ -721,19 +721,20 @@ LogicalResult Deserializer::processExtInstImport(ArrayRef<uint32_t> words) {
 }
 
 void Deserializer::attachVCETriple() {
-  module->setAttr(spirv::ModuleOp::getVCETripleAttrName(),
-                  spirv::VerCapExtAttr::get(version, capabilities.getArrayRef(),
-                                            extensions.getArrayRef(), context));
+  (*module)->setAttr(
+      spirv::ModuleOp::getVCETripleAttrName(),
+      spirv::VerCapExtAttr::get(version, capabilities.getArrayRef(),
+                                extensions.getArrayRef(), context));
 }
 
 LogicalResult Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  module->setAttr(
+  (*module)->setAttr(
       "addressing_model",
       opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.front())));
-  module->setAttr(
+  (*module)->setAttr(
       "memory_model",
       opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.back())));
 
@@ -1035,7 +1036,7 @@ spirv::SpecConstantOp Deserializer::createSpecConstant(Location loc,
                                                     defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op.setAttr(attr.first, attr.second);
+      op->setAttr(attr.first, attr.second);
   }
   specConstMap[resultID] = op;
   return op;
@@ -1105,7 +1106,7 @@ LogicalResult Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   // Decorations.
   if (decorations.count(variableID)) {
     for (auto attr : decorations[variableID].getAttrs()) {
-      varOp.setAttr(attr.first, attr.second);
+      varOp->setAttr(attr.first, attr.second);
     }
   }
   globalVariableMap[variableID] = varOp;
