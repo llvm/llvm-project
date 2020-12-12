@@ -1791,7 +1791,7 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
     case Node::Kind::BuiltinTypeName: {
       if (!node->hasText())
         return false;
-      auto name = node->getText();
+      StringRef name = node->getText();
       return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
              name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
              name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
