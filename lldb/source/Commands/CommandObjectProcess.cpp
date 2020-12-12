@@ -380,7 +380,6 @@ protected:
       return false;
     }
 
-    m_interpreter.UpdateExecutionContext(nullptr);
     StreamString stream;
     const auto error = target->Attach(m_options.attach_info, &stream);
     if (error.Success()) {
