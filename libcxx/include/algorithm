@@ -3803,14 +3803,14 @@ __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
 }
 
 // Assumes size > 0
-template <class _Compare, class _BirdirectionalIterator>
+template <class _Compare, class _BidirectionalIterator>
 void
-__selection_sort(_BirdirectionalIterator __first, _BirdirectionalIterator __last, _Compare __comp)
+__selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
-    _BirdirectionalIterator __lm1 = __last;
+    _BidirectionalIterator __lm1 = __last;
     for (--__lm1; __first != __lm1; ++__first)
     {
-        _BirdirectionalIterator __i = _VSTD::min_element<_BirdirectionalIterator,
+        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator,
                                                         typename add_lvalue_reference<_Compare>::type>
                                                        (__first, __last, __comp);
         if (__i != __first)
@@ -3818,19 +3818,19 @@ __selection_sort(_BirdirectionalIterator __first, _BirdirectionalIterator __last
     }
 }
 
-template <class _Compare, class _BirdirectionalIterator>
+template <class _Compare, class _BidirectionalIterator>
 void
-__insertion_sort(_BirdirectionalIterator __first, _BirdirectionalIterator __last, _Compare __comp)
+__insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
-    typedef typename iterator_traits<_BirdirectionalIterator>::value_type value_type;
+    typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
     if (__first != __last)
     {
-        _BirdirectionalIterator __i = __first;
+        _BidirectionalIterator __i = __first;
         for (++__i; __i != __last; ++__i)
         {
-            _BirdirectionalIterator __j = __i;
+            _BidirectionalIterator __j = __i;
             value_type __t(_VSTD::move(*__j));
-            for (_BirdirectionalIterator __k = __i; __k != __first && __comp(__t,  *--__k); --__j)
+            for (_BidirectionalIterator __k = __i; __k != __first && __comp(__t,  *--__k); --__j)
                 *__j = _VSTD::move(*__k);
             *__j = _VSTD::move(__t);
         }
@@ -3911,12 +3911,12 @@ __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator
     return true;
 }
 
-template <class _Compare, class _BirdirectionalIterator>
+template <class _Compare, class _BidirectionalIterator>
 void
-__insertion_sort_move(_BirdirectionalIterator __first1, _BirdirectionalIterator __last1,
-                      typename iterator_traits<_BirdirectionalIterator>::value_type* __first2, _Compare __comp)
+__insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __last1,
+                      typename iterator_traits<_BidirectionalIterator>::value_type* __first2, _Compare __comp)
 {
-    typedef typename iterator_traits<_BirdirectionalIterator>::value_type value_type;
+    typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
     if (__first1 != __last1)
     {
         __destruct_n __d(0);
