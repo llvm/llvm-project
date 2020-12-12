@@ -291,9 +291,9 @@ llvm::Error ParseSource(const std::string &Path, CompilerInstance &CI,
   SourceManager &SM = CI.getSourceManager();
   auto FE = CI.getFileManager().getFileRef(Path);
   if (!FE) {
+    llvm::consumeError(FE.takeError());
     return llvm::make_error<llvm::StringError>(
-        llvm::Twine(llvm::toString(FE.takeError())) + ": " + Path,
-        std::error_code());
+        llvm::Twine("No such file or directory: ", Path), std::error_code());
   }
   SM.setMainFileID(SM.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
   ParseAST(CI.getPreprocessor(), &Consumer, CI.getASTContext());
