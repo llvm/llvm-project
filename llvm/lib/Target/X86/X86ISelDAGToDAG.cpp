@@ -4601,6 +4601,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tdpbssd_internal: {
       if (!Subtarget->hasAMXTILE())
         break;
+      SDValue Chain = Node->getOperand(0);
       unsigned Opc = X86::PTDPBSSDV;
       SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
       SDValue Ops[] = {Node->getOperand(2),
@@ -4609,7 +4610,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                        Node->getOperand(5),
                        Node->getOperand(6),
                        Node->getOperand(7),
-                       CFG};
+                       CFG,
+                       Chain};
       MachineSDNode *CNode =
           CurDAG->getMachineNode(Opc, dl, {MVT::v256i32, MVT::Other}, Ops);
       ReplaceNode(Node, CNode);
