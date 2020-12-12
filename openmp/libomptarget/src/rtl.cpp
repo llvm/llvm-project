@@ -33,14 +33,35 @@ static const char *RTLNames[] = {
 
 PluginManager *PM;
 
+#if OMPTARGET_PROFILE_ENABLED
+static char *ProfileTraceFile = nullptr;
+#endif
+
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
   PM = new PluginManager();
+
+#ifdef OMPTARGET_PROFILE_ENABLED
+  ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
+  // TODO: add a configuration option for time granularity
+  if (ProfileTraceFile)
+    llvm::timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+#endif
 }
 
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
   delete PM;
+
+#ifdef OMPTARGET_PROFILE_ENABLED
+  if (ProfileTraceFile) {
+    // TODO: add env var for file output
+    if (auto E = llvm::timeTraceProfilerWrite(ProfileTraceFile, "-"))
+      fprintf(stderr, "Error writing out the time trace\n");
+
+    llvm::timeTraceProfilerCleanup();
+  }
+#endif
 }
 
 void RTLsTy::LoadRTLs() {
