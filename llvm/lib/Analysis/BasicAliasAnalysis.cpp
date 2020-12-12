@@ -1285,24 +1285,27 @@ AliasResult BasicAAResult::aliasGEP(
         (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return NoAlias;
 
-    // Try to determine whether the variable part of the GEP is non-zero, in
-    // which case we can add/subtract a minimum scale from the offset.
-    // TODO: Currently this handles the case of Scale*V0-Scale*V1 where V0!=V1.
-    // We could also handle Scale*V0 where V0!=0.
-    if (V1Size.hasValue() && V2Size.hasValue() &&
-        DecompGEP1.VarIndices.size() == 2) {
-      const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
-      const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-      // Check that VisitedPhiBBs is empty, to avoid reasoning about inequality
-      // of values across loop iterations.
-      if (Var0.Scale == -Var1.Scale && Var0.ZExtBits == Var1.ZExtBits &&
-          Var0.SExtBits == Var1.SExtBits && VisitedPhiBBs.empty() &&
-          isKnownNonEqual(Var0.V, Var1.V, DL)) {
-        // If the indexes are not equal, the actual offset will have at least
-        // Scale or -Scale added to it.
-        APInt Scale = Var0.Scale.abs();
-        APInt OffsetLo = DecompGEP1.Offset - Scale;
-        APInt OffsetHi = DecompGEP1.Offset + Scale;
+    if (V1Size.hasValue() && V2Size.hasValue()) {
+      // Try to determine whether abs(VarIndex) > 0.
+      Optional<APInt> MinAbsVarIndex;
+      // TODO: Could handle single non-zero index as well.
+      if (DecompGEP1.VarIndices.size() == 2) {
+        // VarIndex = Scale*V0 + (-Scale)*V1.
+        // If V0 != V1 then abs(VarIndex) >= abs(Scale).
+        // Check that VisitedPhiBBs is empty, to avoid reasoning about
+        // inequality of values across loop iterations.
+        const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
+        const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
+        if (Var0.Scale == -Var1.Scale && Var0.ZExtBits == Var1.ZExtBits &&
+            Var0.SExtBits == Var1.SExtBits && VisitedPhiBBs.empty() &&
+            isKnownNonEqual(Var0.V, Var1.V, DL))
+          MinAbsVarIndex = Var0.Scale.abs();
+      }
+
+      if (MinAbsVarIndex) {
+        // The constant offset will have added at least +/-MinAbsVarIndex to it.
+        APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
+        APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
         // Check that an access at OffsetLo or lower, and an access at OffsetHi
         // or higher both do not alias.
         if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
