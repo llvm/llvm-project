@@ -285,6 +285,7 @@ entry:
 ; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
 ; CHECK-I686-DAG:	leal	tlssrcgd@TLSGD(,%ebx), %eax
 ; CHECK-I686-DAG:	calll	___tls_get_addr@PLT
+; CHECK-X32-NOT:	data16
 ; CHECK-X32-DAG:	leaq	tlsdstgd@TLSGD(%rip), %rdi
 ; CHECK-X32-DAG:	callq	__tls_get_addr@PLT
 ; CHECK-X32-DAG:	leaq	tlsptrgd@TLSGD(%rip), %rdi

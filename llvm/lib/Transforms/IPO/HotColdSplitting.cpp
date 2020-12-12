@@ -283,7 +283,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
     }
 
     for (BasicBlock *SuccBB : successors(BB)) {
-      if (find(Region, SuccBB) == Region.end()) {
+      if (!is_contained(Region, SuccBB)) {
         NoBlocksReturn = false;
         SuccsOutsideRegion.insert(SuccBB);
       }
