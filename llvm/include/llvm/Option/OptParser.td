@@ -171,10 +171,12 @@ class MarshallingInfoBitfieldFlag<code keypath, code value>
   code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
 }
 
-class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code neg_name, string neg_spelling>
+// Marshalling info for booleans. Applied to the flag setting keypath to false.
+class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, code name,
+                                 code other_value, code other_name, string other_spelling>
   : MarshallingInfoFlag<keypath, defaultvalue> {
-  code Normalizer = "makeBooleanFlagNormalizer(OPT_"#neg_name#")";
-  code Denormalizer = "makeBooleanFlagDenormalizer(\""#neg_spelling#"\")";
+  code Normalizer = "makeBooleanOptionNormalizer("#value#", "#other_value#", OPT_"#other_name#")";
+  code Denormalizer = "makeBooleanOptionDenormalizer("#value#", \""#other_spelling#"\")";
 }
 
 // Mixins for additional marshalling attributes.
