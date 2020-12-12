@@ -1,4 +1,5 @@
-# RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -x mir -verify-machineinstrs -start-after=lazy-machine-block-freq -filetype=obj -o %t.o < %s
+# RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -x mir -verify-machineinstrs \
+# RUN:     -xcoff-traceback-table=false -start-after=lazy-machine-block-freq -filetype=obj -o %t.o < %s
 # RUN: llvm-readobj --relocs --expand-relocs -t %t.o | FileCheck --check-prefixes=RELOC,SYM %s
 # RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 
