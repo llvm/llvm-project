@@ -341,8 +341,8 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
 
   // Emit prefetch instructions for smaller strides in cases where we think
   // the hardware prefetcher might not be able to keep up.
-  if (NumStridedMemAccesses > 32 &&
-      NumStridedMemAccesses == NumMemAccesses && !HasCall)
+  if (NumStridedMemAccesses > 32 && !HasCall &&
+      (NumMemAccesses - NumStridedMemAccesses) * 32 <= NumStridedMemAccesses)
     return 1;
 
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
