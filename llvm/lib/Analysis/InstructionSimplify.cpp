@@ -4669,7 +4669,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.
   // TODO: Should we allow this?
-  if (find(Indices, -1) != Indices.end())
+  if (is_contained(Indices, -1))
     return nullptr;
 
   // Check if every element of this shuffle can be mapped back to the
