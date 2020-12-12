@@ -2056,7 +2056,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         " referring to list argument");
     _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(&__i),
         "list::splice(iterator, list, iterator) called with second iterator not"
-        " derefereceable");
+        " dereferenceable");
 #endif
     if (__p.__ptr_ != __i.__ptr_ && __p.__ptr_ != __i.__ptr_->__next_)
     {

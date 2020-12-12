@@ -657,7 +657,7 @@ private:
       }
       template <class _Up, class _QUp = _QualUp>
       static constexpr bool __enable_assign() {
-          // Construction and assignability of _Qup to _Tp has already been
+          // Construction and assignability of _QUp to _Tp has already been
           // checked.
           return !__check_constructible_from_opt<_Up>::value &&
               !__check_assignable_from_opt<_Up>::value;
