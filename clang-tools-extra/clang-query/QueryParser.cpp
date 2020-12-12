@@ -108,6 +108,7 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
                          .Case("diag", OK_Diag)
                          .Case("print", OK_Print)
                          .Case("detailed-ast", OK_DetailedAST)
+                         .Case("srcloc", OK_SrcLoc)
                          .Case("dump", OK_DetailedAST)
                          .Default(~0u);
   if (OutKind == ~0u) {
@@ -123,6 +124,8 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
     return new QueryType(&QuerySession::DiagOutput);
   case OK_Print:
     return new QueryType(&QuerySession::PrintOutput);
+  case OK_SrcLoc:
+    return new QueryType(&QuerySession::SrcLocOutput);
   }
 
   llvm_unreachable("Invalid output kind");
