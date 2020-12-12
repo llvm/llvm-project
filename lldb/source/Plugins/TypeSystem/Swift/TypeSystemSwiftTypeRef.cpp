@@ -1786,6 +1786,7 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
     case Node::Kind::Protocol:
     case Node::Kind::ProtocolList:
     case Node::Kind::ProtocolListWithClass:
+    case Node::Kind::ProtocolListWithAnyObject:
     case Node::Kind::DynamicSelf:
       return true;
     case Node::Kind::BuiltinTypeName: {
