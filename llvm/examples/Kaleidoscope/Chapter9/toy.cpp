@@ -848,8 +848,8 @@ void DebugInfo::emitLocation(ExprAST *AST) {
     Scope = TheCU;
   else
     Scope = LexicalBlocks.back();
-  Builder->SetCurrentDebugLocation(
-      DebugLoc::get(AST->getLine(), AST->getCol(), Scope));
+  Builder->SetCurrentDebugLocation(DILocation::get(
+      Scope->getContext(), AST->getLine(), AST->getCol(), Scope));
 }
 
 static DISubroutineType *CreateFunctionType(unsigned NumArgs, DIFile *Unit) {
@@ -1277,7 +1277,7 @@ Function *FunctionAST::codegen() {
         true);
 
     DBuilder->insertDeclare(Alloca, D, DBuilder->createExpression(),
-                            DebugLoc::get(LineNo, 0, SP),
+                            DILocation::get(SP->getContext(), LineNo, 0, SP),
                             Builder->GetInsertBlock());
 
     // Store the initial value into the alloca.
