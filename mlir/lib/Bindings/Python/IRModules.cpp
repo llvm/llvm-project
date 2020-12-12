@@ -962,8 +962,10 @@ py::object PyOperation::create(
     llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
     for (auto &it : mlirAttributes)
-      mlirNamedAttributes.push_back(
-          mlirNamedAttributeGet(toMlirStringRef(it.first), it.second));
+      mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+          mlirIdentifierGet(mlirAttributeGetContext(it.second),
+                            toMlirStringRef(it.first)),
+          it.second));
     mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
                                     mlirNamedAttributes.data());
   }
@@ -1134,7 +1136,10 @@ PyAttribute PyAttribute::createFromCapsule(py::object capsule) {
 
 PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
     : ownedName(new std::string(std::move(ownedName))) {
-  namedAttr = mlirNamedAttributeGet(toMlirStringRef(*this->ownedName), attr);
+  namedAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(mlirAttributeGetContext(attr),
+                        toMlirStringRef(*this->ownedName)),
+      attr);
 }
 
 //------------------------------------------------------------------------------
@@ -1373,8 +1378,9 @@ public:
     }
     MlirNamedAttribute namedAttr =
         mlirOperationGetAttribute(operation->get(), index);
-    return PyNamedAttribute(namedAttr.attribute,
-                            std::string(namedAttr.name.data));
+    return PyNamedAttribute(
+        namedAttr.attribute,
+        std::string(mlirIdentifierStr(namedAttr.name).data));
   }
 
   void dunderSetItem(const std::string &name, PyAttribute attr) {
@@ -3137,7 +3143,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            [](PyNamedAttribute &self) {
              PyPrintAccumulator printAccum;
              printAccum.parts.append("NamedAttribute(");
-             printAccum.parts.append(self.namedAttr.name.data);
+             printAccum.parts.append(
+                 mlirIdentifierStr(self.namedAttr.name).data);
              printAccum.parts.append("=");
              mlirAttributePrint(self.namedAttr.attribute,
                                 printAccum.getCallback(),
@@ -3148,8 +3155,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "name",
           [](PyNamedAttribute &self) {
-            return py::str(self.namedAttr.name.data,
-                           self.namedAttr.name.length);
+            return py::str(mlirIdentifierStr(self.namedAttr.name).data,
+                           mlirIdentifierStr(self.namedAttr.name).length);
           },
           "The name of the NamedAttribute binding")
       .def_property_readonly(

@@ -82,7 +82,7 @@ MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
                                                 intptr_t pos) {
   NamedAttribute attribute =
       unwrap(attr).cast<DictionaryAttr>().getValue()[pos];
-  return {wrap(attribute.first.strref()), wrap(attribute.second)};
+  return {wrap(attribute.first), wrap(attribute.second)};
 }
 
 MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
