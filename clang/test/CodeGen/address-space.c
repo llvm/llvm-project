@@ -59,3 +59,14 @@ void __attribute__((address_space(1)))*
 void_ptr_arithmetic_test(void __attribute__((address_space(1))) *arg) {
     return arg + 4;
 }
+
+// CHECK-LABEL: define i32* @test5(
+const unsigned *test5() {
+  // Intentionally leave a part of an array uninitialized. This triggers a
+  // different code path contrary to a fully initialized array.
+  // CHECK: ret i32* getelementptr inbounds ([256 x i32]
+  static const unsigned bars[256] = {
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+  return &bars[0];
+}
