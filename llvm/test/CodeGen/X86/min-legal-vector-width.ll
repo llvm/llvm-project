@@ -1682,25 +1682,45 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 }
 
 define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
-; CHECK-LABEL: splatvar_rotate_v32i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
-; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm4 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpsubb %xmm1, %xmm4, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vpbroadcastb %xmm2, %ymm2
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrlw %xmm1, %ymm0, %ymm5
-; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vpsrlw %xmm1, %xmm4, %xmm0
-; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm0
-; CHECK-NEXT:    vpternlogq $236, %ymm5, %ymm2, %ymm0
-; CHECK-NEXT:    retq
+; CHECK-AVX512-LABEL: splatvar_rotate_v32i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpbroadcastb %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-AVX512-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
+; CHECK-AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-AVX512-NEXT:    vpsubb %xmm1, %xmm4, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; CHECK-AVX512-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
+; CHECK-AVX512-NEXT:    vpbroadcastb %xmm2, %ymm2
+; CHECK-AVX512-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-AVX512-NEXT:    vpsrlw %xmm1, %ymm0, %ymm5
+; CHECK-AVX512-NEXT:    vpand %ymm2, %ymm3, %ymm2
+; CHECK-AVX512-NEXT:    vpsrlw %xmm1, %xmm4, %xmm0
+; CHECK-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpbroadcastb %xmm0, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogq $236, %ymm5, %ymm2, %ymm0
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI-LABEL: splatvar_rotate_v32i8:
+; CHECK-VBMI:       # %bb.0:
+; CHECK-VBMI-NEXT:    vpbroadcastb %xmm1, %xmm1
+; CHECK-VBMI-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-VBMI-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-VBMI-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
+; CHECK-VBMI-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; CHECK-VBMI-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
+; CHECK-VBMI-NEXT:    vpbroadcastb %xmm2, %ymm2
+; CHECK-VBMI-NEXT:    vpand %ymm2, %ymm3, %ymm2
+; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-VBMI-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
+; CHECK-VBMI-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-VBMI-NEXT:    vpsrlw %xmm1, %ymm0, %ymm3
+; CHECK-VBMI-NEXT:    vpsrlw %xmm1, %xmm4, %xmm0
+; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-VBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
+; CHECK-VBMI-NEXT:    vpternlogq $236, %ymm3, %ymm2, %ymm0
+; CHECK-VBMI-NEXT:    retq
   %splat = shufflevector <32 x i8> %b, <32 x i8> undef, <32 x i32> zeroinitializer
   %splat8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %splat
   %shl = shl <32 x i8> %a, %splat
