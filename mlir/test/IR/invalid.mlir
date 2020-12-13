@@ -201,7 +201,7 @@ func @no_terminator() {
 
 // -----
 
-func @illegaltype(i0) // expected-error {{invalid integer width}}
+func @illegaltype(i21312312323120) // expected-error {{invalid integer width}}
 
 // -----
 
