@@ -1624,6 +1624,14 @@ TEST(FindReferences, WithinAST) {
         }
       )cpp",
 
+      R"cpp(// Macro outside preamble
+        int breakPreamble;
+        #define [[MA^CRO]](X) (X+1)
+        void test() {
+          int x = [[MACRO]]([[MACRO]](1));
+        }
+      )cpp",
+
       R"cpp(
         int [[v^ar]] = 0;
         void foo(int s = [[var]]);
