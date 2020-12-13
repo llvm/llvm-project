@@ -83,6 +83,8 @@ private:
   bool expandSVESpillFill(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, unsigned Opc,
                           unsigned N);
+  bool expandCALL_RVMARKER(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI);
 };
 
 } // end anonymous namespace
@@ -627,6 +629,46 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   return true;
 }
 
+bool AArch64ExpandPseudo::expandCALL_RVMARKER(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  // Expand CALL_RVMARKER pseudo to a branch, followed by the special `mov x29,
+  // x29` marker. Mark the sequence as bundle, to avoid passes moving other code
+  // in between.
+  MachineInstr &MI = *MBBI;
+
+  MachineInstr *OriginalCall;
+  MachineOperand &CallTarget = MI.getOperand(0);
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+  OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+  OriginalCall->addOperand(CallTarget);
+
+  unsigned RegMaskStartIdx = 1;
+  // Skip register arguments. Those are added during ISel, but are not
+  // needed for the concrete branch.
+  while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
+    assert(MI.getOperand(RegMaskStartIdx).isReg() &&
+           "should only skip register operands");
+    RegMaskStartIdx++;
+  }
+  for (; RegMaskStartIdx < MI.getNumOperands(); ++RegMaskStartIdx)
+    OriginalCall->addOperand(MI.getOperand(RegMaskStartIdx));
+
+  auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+                     .addReg(AArch64::FP, RegState::Define)
+                     .addReg(AArch64::XZR)
+                     .addReg(AArch64::FP)
+                     .addImm(0)
+                     .getInstr();
+  if (MI.shouldUpdateCallSiteInfo())
+    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+  MI.eraseFromParent();
+  finalizeBundle(MBB, OriginalCall->getIterator(),
+                 std::next(Marker->getIterator()));
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -1014,6 +1056,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
    case AArch64::LDR_ZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
+   case AArch64::BLR_RVMARKER:
+     return expandCALL_RVMARKER(MBB, MBBI);
   }
   return false;
 }

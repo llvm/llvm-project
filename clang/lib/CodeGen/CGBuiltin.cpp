@@ -13631,6 +13631,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::vector_reduce_and, Ops[0]->getType());
     return Builder.CreateCall(F, {Ops[0]});
   }
+  case X86::BI__builtin_ia32_reduce_fadd_pd512:
+  case X86::BI__builtin_ia32_reduce_fadd_ps512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Ops[1]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
+  case X86::BI__builtin_ia32_reduce_fmul_pd512:
+  case X86::BI__builtin_ia32_reduce_fmul_ps512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fmul, Ops[1]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
   case X86::BI__builtin_ia32_reduce_mul_d512:
   case X86::BI__builtin_ia32_reduce_mul_q512: {
     Function *F =
