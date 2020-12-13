@@ -110,4 +110,31 @@ define void @add_non_zero_with_offset(i32* %p, i32 %addend, i32* %q) {
   ret void
 }
 
+; CHECK-LABEL: non_zero_index_simple
+; CHECK: MayAlias: i32* %gep, i32* %p
+; CHECK: MayAlias: i16* %gep.16, i32* %p
+; CHECK: MayAlias: i32* %p, i64* %gep.64
+; TODO: First two could be NoAlias.
+define void @non_zero_index_simple(i32* %p, i32* %q) {
+  %knownnonzero = load i32, i32* %q, !range !0
+  %gep = getelementptr i32, i32* %p, i32 %knownnonzero
+  %gep.16 = bitcast i32* %gep to i16*
+  %gep.64 = bitcast i32* %gep to i64*
+  ret void
+}
+
+; CHECK-LABEL: non_zero_index_with_offset
+; CHECK: MayAlias: i32* %gep, i32* %p
+; CHECK: MayAlias: i16* %gep.16, i32* %p
+; TODO: Last could be NoAlias.
+define void @non_zero_index_with_offset(i32* %p, i32* %q) {
+  %knownnonzero = load i32, i32* %q, !range !0
+  %p.8 = bitcast i32* %p to i8*
+  %p.off.8 = getelementptr i8, i8* %p.8, i32 2
+  %p.off = bitcast i8* %p.off.8 to i32*
+  %gep = getelementptr i32, i32* %p.off, i32 %knownnonzero
+  %gep.16 = bitcast i32* %gep to i16*
+  ret void
+}
+
 !0 = !{ i32 1, i32 5 }

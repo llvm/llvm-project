@@ -246,7 +246,7 @@ SymbolCache::getSymbolById(SymIndexId SymbolId) const {
     return nullptr;
 
   // Make sure to handle the case where we've inserted a placeholder symbol
-  // for types we don't yet suppport.
+  // for types we don't yet support.
   NativeRawSymbol *NRS = Cache[SymbolId].get();
   if (!NRS)
     return nullptr;

@@ -638,6 +638,7 @@ inline bool isNull(StringRef S) {
 }
 
 inline bool isBool(StringRef S) {
+  // FIXME: using parseBool is causing multiple tests to fail.
   return S.equals("true") || S.equals("True") || S.equals("TRUE") ||
          S.equals("false") || S.equals("False") || S.equals("FALSE");
 }

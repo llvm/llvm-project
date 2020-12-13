@@ -162,7 +162,7 @@ static int gsiRecordCmp(StringRef S1, StringRef S2) {
   if (LLVM_UNLIKELY(!isAsciiString(S1) || !isAsciiString(S2)))
     return memcmp(S1.data(), S2.data(), LS);
 
-  // Both strings are ascii, perform a case-insenstive comparison.
+  // Both strings are ascii, perform a case-insensitive comparison.
   return S1.compare_lower(S2.data());
 }
 
