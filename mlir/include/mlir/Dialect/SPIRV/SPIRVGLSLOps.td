@@ -77,6 +77,28 @@ class SPV_GLSLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                  list<OpTrait> traits = []> :
   SPV_GLSLBinaryOp<mnemonic, opcode, type, type, traits>;
 
+// Base class for GLSL ternary ops.
+class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+                        list<OpTrait> traits = []> :
+  SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<type>:$x,
+    SPV_ScalarOrVectorOf<type>:$y,
+    SPV_ScalarOrVectorOf<type>:$z
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOf<type>:$result
+  );
+
+  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
+
+  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
+
+  let verifier = [{ return success(); }];
+}
+
 // -----
 
 def SPV_GLSLFAbsOp : SPV_GLSLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
@@ -858,6 +880,94 @@ def SPV_GLSLTanhOp : SPV_GLSLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
     ```mlir
     %2 = spv.GLSL.Tanh %0 : f32
     %3 = spv.GLSL.Tanh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLFClampOp : SPV_GLSLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal). The resulting value is undefined if
+    minVal > maxVal. The semantics used by min() and max() are those of FMin and
+    FMax.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    fclamp-op ::= ssa-id `=` `spv.GLSL.FClamp` ssa-use, ssa-use, ssa-use `:`
+               float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.FClamp %x, %min, %max : f32
+    %3 = spv.GLSL.FClamp %x, %min, %max : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrUnsignedInt> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal), where x, minVal and maxVal are
+    interpreted as unsigned integers. The resulting value is undefined if
+    minVal > maxVal.
+
+    Result Type and the type of the operands must both be integer scalar or
+    integer vector types. Result Type and operand types must have the same number
+    of components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    uclamp-op ::= ssa-id `=` `spv.GLSL.UClamp` ssa-use, ssa-use, ssa-use `:`
+               unsgined-signless-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.UClamp %x, %min, %max : i32
+    %3 = spv.GLSL.UClamp %x, %min, %max : vector<3xui16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_SignedInt> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal), where x, minVal and maxVal are
+    interpreted as signed integers. The resulting value is undefined if
+    minVal > maxVal.
+
+    Result Type and the type of the operands must both be integer scalar or
+    integer vector types. Result Type and operand types must have the same number
+    of components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    uclamp-op ::= ssa-id `=` `spv.GLSL.UClamp` ssa-use, ssa-use, ssa-use `:`
+               sgined-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.SClamp %x, %min, %max : si32
+    %3 = spv.GLSL.SClamp %x, %min, %max : vector<3xsi16>
     ```
   }];
 }
