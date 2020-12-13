@@ -89,9 +89,6 @@ public:
     return HeaderNode == I.HeaderNode;
   }
 
-  /// isLoop - Find out if there is a back edge in this interval...
-  bool isLoop() const;
-
   /// print - Show contents in human readable format...
   void print(raw_ostream &O) const;
 };
