@@ -7569,7 +7569,7 @@ multiclass avx512_cvt_fp_scalar_sd2ss<bits<8> opc, string OpcodeStr,
                                       SDNode OpNode, SDNode OpNodeRnd,
                                       X86FoldableSchedWrite sched,
                                       X86VectorVTInfo _src, X86VectorVTInfo _dst> {
-  let Predicates = [HasAVX512] in {
+  let Predicates = [HasAVX512], ExeDomain = SSEPackedSingle in {
     defm Z : avx512_cvt_fp_scalar<opc, OpcodeStr, _dst, _src, OpNode, sched>,
              avx512_cvt_fp_rc_scalar<opc, OpcodeStr, _dst, _src,
                                OpNodeRnd, sched>, VEX_W, EVEX_CD8<64, CD8VT1>, XD;
@@ -7580,7 +7580,7 @@ multiclass avx512_cvt_fp_scalar_ss2sd<bits<8> opc, string OpcodeStr,
                                       SDNode OpNode, SDNode OpNodeSAE,
                                       X86FoldableSchedWrite sched,
                                       X86VectorVTInfo _src, X86VectorVTInfo _dst> {
-  let Predicates = [HasAVX512] in {
+  let Predicates = [HasAVX512], ExeDomain = SSEPackedSingle in {
     defm Z : avx512_cvt_fp_scalar<opc, OpcodeStr, _dst, _src, OpNode, sched>,
              avx512_cvt_fp_sae_scalar<opc, OpcodeStr, _dst, _src, OpNodeSAE, sched>,
              EVEX_CD8<32, CD8VT1>, XS;
@@ -11913,11 +11913,6 @@ defm VPDPBUSD   : VNNI_common<0x50, "vpdpbusd", X86Vpdpbusd, SchedWriteVecIMul, 
 defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul, 0>;
 defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1>;
 defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1>;
-
-def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
-                             (X86vpmaddwd node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
 
 // Patterns to match VPDPWSSD from existing instructions/intrinsics.
 let Predicates = [HasVNNI] in {
