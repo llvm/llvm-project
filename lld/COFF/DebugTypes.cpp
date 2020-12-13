@@ -1051,7 +1051,7 @@ void TypeMerger::mergeTypesWithGHash() {
   // the contents of the hash table cell, but we can remember the insertion
   // position. Because the table does not rehash, the position will not change
   // under insertion. After insertion is done, the value of the cell can be read
-  // to retreive the final PDB type index.
+  // to retrieve the final PDB type index.
   parallelForEachN(0, TpiSource::instances.size(), [&](size_t tpiSrcIdx) {
     TpiSource *source = TpiSource::instances[tpiSrcIdx];
     source->indexMapStorage.resize(source->ghashes.size());

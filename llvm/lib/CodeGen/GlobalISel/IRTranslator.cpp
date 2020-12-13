@@ -170,7 +170,9 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
 
 IRTranslator::ValueToVRegInfo::VRegListT &
 IRTranslator::allocateVRegs(const Value &Val) {
-  assert(!VMap.contains(Val) && "Value already allocated in VMap");
+  auto VRegsIt = VMap.findVRegs(Val);
+  if (VRegsIt != VMap.vregs_end())
+    return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;

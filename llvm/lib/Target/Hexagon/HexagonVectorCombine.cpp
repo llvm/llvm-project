@@ -416,8 +416,7 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
     int ElemCount = VecTy->getElementCount().getFixedValue();
     return HVC.getFullValue(HVC.getBoolTy(ElemCount));
   }
-  // For scalars, return a vector <1 x i1>.
-  return HVC.getFullValue(HVC.getBoolTy(1));
+  return HVC.getFullValue(HVC.getBoolTy());
 }
 
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
@@ -811,14 +810,24 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // Stores.
     ByteSpan ASpanV, ASpanM;
 
+    // Return a vector value corresponding to the input value Val:
+    // either <1 x Val> for scalar Val, or Val itself for vector Val.
+    auto MakeVec = [](IRBuilder<> &Builder, Value *Val) -> Value * {
+      Type *Ty = Val->getType();
+      if (Ty->isVectorTy())
+        return Val;
+      auto *VecTy = VectorType::get(Ty, 1, /*Scalable*/ false);
+      return Builder.CreateBitCast(Val, VecTy);
+    };
+
     for (int i = -1; i != NumSectors; ++i) {
       ByteSpan Section = VSpan.section(i * ScLen, ScLen).normalize();
       Value *AccumV = UndefValue::get(SecTy);
       Value *AccumM = HVC.getNullValue(SecTy);
       for (ByteSpan::Block &S : Section) {
         Value *Pay = getPayload(S.Seg.Val);
-        Value *Mask = HVC.rescale(Builder, getMask(S.Seg.Val), Pay->getType(),
-                                  HVC.getByteTy());
+        Value *Mask = HVC.rescale(Builder, MakeVec(Builder, getMask(S.Seg.Val)),
+                                  Pay->getType(), HVC.getByteTy());
         AccumM = HVC.insertb(Builder, AccumM, HVC.vbytes(Builder, Mask),
                              S.Seg.Start, S.Seg.Size, S.Pos);
         AccumV = HVC.insertb(Builder, AccumV, HVC.vbytes(Builder, Pay),
