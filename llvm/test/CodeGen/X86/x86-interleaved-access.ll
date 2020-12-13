@@ -810,85 +810,79 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ;
 ; AVX512-LABEL: interleaved_load_vf32_i8_stride4:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa 112(%rdi), %xmm14
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,0,4,8,12,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm0, %xmm14, %xmm3
-; AVX512-NEXT:    vmovdqa 96(%rdi), %xmm2
-; AVX512-NEXT:    vpshufb %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm0
+; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm3
-; AVX512-NEXT:    vpmovdb %zmm3, %xmm3
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2,3,4,5],ymm0[6,7]
-; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm3
-; AVX512-NEXT:    vpmovdb %zmm3, %xmm3
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm9 = ymm3[0,1,2,3],ymm0[4,5,6,7]
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm1
+; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm9 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512-NEXT:    vmovdqa 64(%rdi), %xmm10
 ; AVX512-NEXT:    vmovdqa 80(%rdi), %xmm11
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,1,5,9,13,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm3, %xmm14, %xmm0
-; AVX512-NEXT:    vpshufb %xmm3, %xmm2, %xmm5
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
+; AVX512-NEXT:    vmovdqa 96(%rdi), %xmm12
+; AVX512-NEXT:    vmovdqa 112(%rdi), %xmm14
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,1,5,9,13,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vpshufb %xmm1, %xmm14, %xmm0
+; AVX512-NEXT:    vpshufb %xmm1, %xmm12, %xmm4
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1]
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = <1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm4, %xmm11, %xmm5
-; AVX512-NEXT:    vpshufb %xmm4, %xmm10, %xmm6
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
-; AVX512-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm5
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm8 = ymm5[0,1,2,3,4,5],ymm0[6,7]
-; AVX512-NEXT:    vmovdqa (%rdi), %xmm12
-; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm13
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = <1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vpshufb %xmm2, %xmm11, %xmm4
+; AVX512-NEXT:    vpshufb %xmm2, %xmm10, %xmm6
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm6[0],xmm4[0],xmm6[1],xmm4[1]
+; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm8 = ymm4[0,1,2,3,4,5],ymm0[6,7]
+; AVX512-NEXT:    vmovdqa (%rdi), %xmm13
+; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm6
 ; AVX512-NEXT:    vmovdqa 32(%rdi), %xmm7
 ; AVX512-NEXT:    vmovdqa 48(%rdi), %xmm0
-; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm5
-; AVX512-NEXT:    vpshufb %xmm3, %xmm7, %xmm3
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
-; AVX512-NEXT:    vpshufb %xmm4, %xmm13, %xmm5
-; AVX512-NEXT:    vpshufb %xmm4, %xmm12, %xmm4
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0,1],xmm3[2,3]
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm8 = ymm3[0,1,2,3],ymm8[4,5,6,7]
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,2,6,10,14,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm3, %xmm14, %xmm4
-; AVX512-NEXT:    vpshufb %xmm3, %xmm2, %xmm5
+; AVX512-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
+; AVX512-NEXT:    vpshufb %xmm1, %xmm7, %xmm1
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; AVX512-NEXT:    vpshufb %xmm2, %xmm6, %xmm3
+; AVX512-NEXT:    vpshufb %xmm2, %xmm13, %xmm2
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm8 = ymm1[0,1,2,3],ymm8[4,5,6,7]
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,2,6,10,14,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vpshufb %xmm1, %xmm14, %xmm2
+; AVX512-NEXT:    vpshufb %xmm1, %xmm12, %xmm3
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vpshufb %xmm3, %xmm11, %xmm4
+; AVX512-NEXT:    vpshufb %xmm3, %xmm10, %xmm5
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
 ; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm5 = <2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm5, %xmm11, %xmm6
-; AVX512-NEXT:    vpshufb %xmm5, %xmm10, %xmm1
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm6[0],xmm1[1],xmm6[1]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6,7]
-; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm4
-; AVX512-NEXT:    vpshufb %xmm3, %xmm7, %xmm3
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm4[0,1,2,3,4,5],ymm2[6,7]
+; AVX512-NEXT:    vpshufb %xmm1, %xmm0, %xmm4
+; AVX512-NEXT:    vpshufb %xmm1, %xmm7, %xmm1
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
+; AVX512-NEXT:    vpshufb %xmm3, %xmm6, %xmm4
+; AVX512-NEXT:    vpshufb %xmm3, %xmm13, %xmm3
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; AVX512-NEXT:    vpshufb %xmm5, %xmm13, %xmm4
-; AVX512-NEXT:    vpshufb %xmm5, %xmm12, %xmm5
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm3 = xmm4[0,1],xmm3[2,3]
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,3,7,11,15,u,u,u,u,u,u,u,u>
-; AVX512-NEXT:    vpshufb %xmm3, %xmm14, %xmm4
-; AVX512-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm1 = xmm3[0,1],xmm1[2,3]
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm15 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,3,7,11,15,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vpshufb %xmm2, %xmm14, %xmm3
+; AVX512-NEXT:    vpshufb %xmm2, %xmm12, %xmm4
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = <3,7,11,15,u,u,u,u,u,u,u,u,u,u,u,u>
 ; AVX512-NEXT:    vpshufb %xmm4, %xmm11, %xmm5
-; AVX512-NEXT:    vpshufb %xmm4, %xmm10, %xmm6
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
-; AVX512-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm5
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm5[0,1,2,3,4,5],ymm2[6,7]
-; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufb %xmm3, %xmm7, %xmm3
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; AVX512-NEXT:    vpshufb %xmm4, %xmm10, %xmm1
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1]
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm3[6,7]
+; AVX512-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufb %xmm2, %xmm7, %xmm2
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; AVX512-NEXT:    vpshufb %xmm4, %xmm6, %xmm2
 ; AVX512-NEXT:    vpshufb %xmm4, %xmm13, %xmm3
-; AVX512-NEXT:    vpshufb %xmm4, %xmm12, %xmm4
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm3[0,1],xmm0[2,3]
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-NEXT:    vpcmpeqb %zmm8, %zmm9, %k0
-; AVX512-NEXT:    vpcmpeqb %zmm0, %zmm1, %k1
+; AVX512-NEXT:    vpcmpeqb %zmm0, %zmm15, %k1
 ; AVX512-NEXT:    kxnord %k1, %k0, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
