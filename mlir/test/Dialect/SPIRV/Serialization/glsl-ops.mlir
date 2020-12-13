@@ -30,4 +30,22 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %12 = spv.GLSL.Round %arg0 : f32
     spv.Return
   }
+
+  spv.func @fclamp(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spv.GLSL.FClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spv.GLSL.FClamp %arg0, %arg1, %arg2 : f32
+    spv.Return
+  }
+
+  spv.func @uclamp(%arg0 : ui32, %arg1 : ui32, %arg2 : ui32) "None" {
+    // CHECK: spv.GLSL.UClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+    %13 = spv.GLSL.UClamp %arg0, %arg1, %arg2 : ui32
+    spv.Return
+  }
+
+  spv.func @sclamp(%arg0 : si32, %arg1 : si32, %arg2 : si32) "None" {
+    // CHECK: spv.GLSL.SClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : si32
+    %13 = spv.GLSL.SClamp %arg0, %arg1, %arg2 : si32
+    spv.Return
+  }
 }

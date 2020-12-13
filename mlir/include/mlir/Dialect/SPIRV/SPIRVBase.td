@@ -3075,6 +3075,7 @@ def SPV_Type : AnyTypeOf<[
     SPV_AnyCooperativeMatrix, SPV_AnyMatrix
   ]>;
 
+def SPV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
 def SPV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>;
 
 class SPV_CoopMatrixOfType<list<Type> allowedTypes> :
