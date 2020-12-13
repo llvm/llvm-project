@@ -765,10 +765,14 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
   std::string error;
   if (failed(context.generate(error)))
     return op->emitError("<MLIR-PassManager-Crash-Reproducer>: ") << error;
-  return op->emitError()
-         << "A failure has been detected while processing the MLIR module, a "
-            "reproducer has been generated in '"
-         << *crashReproducerFileName << "'";
+  bool shouldPrintOnOp = op->getContext()->shouldPrintOpOnDiagnostic();
+  op->getContext()->printOpOnDiagnostic(false);
+  op->emitError()
+      << "A failure has been detected while processing the MLIR module, a "
+         "reproducer has been generated in '"
+      << *crashReproducerFileName << "'";
+  op->getContext()->printOpOnDiagnostic(shouldPrintOnOp);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
