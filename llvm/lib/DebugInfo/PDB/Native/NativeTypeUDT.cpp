@@ -120,7 +120,7 @@ PDB_UdtType NativeTypeUDT::getUdtKind() const {
   case TypeRecordKind::Interface:
     return PDB_UdtType::Interface;
   default:
-    llvm_unreachable("Unexected udt kind");
+    llvm_unreachable("Unexpected udt kind");
   }
 }
 
