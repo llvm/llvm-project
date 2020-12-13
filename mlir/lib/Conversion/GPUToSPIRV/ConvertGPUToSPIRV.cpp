@@ -197,7 +197,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
     if (namedAttr.first == impl::getTypeAttrName() ||
         namedAttr.first == SymbolTable::getSymbolAttrName())
       continue;
-    newFuncOp.setAttr(namedAttr.first, namedAttr.second);
+    newFuncOp->setAttr(namedAttr.first, namedAttr.second);
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),

@@ -865,9 +865,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (MergeBlockIntoPredecessor(Dest, &DTU, LI)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
-        UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
-                                             UnrolledLoopBlocks.end(), Dest),
-                                 UnrolledLoopBlocks.end());
+        llvm::erase_value(UnrolledLoopBlocks, Dest);
       }
     }
   }

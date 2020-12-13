@@ -417,7 +417,11 @@ enum NodeType : unsigned {
 
   LDP,
   STP,
-  STNP
+  STNP,
+
+  // Pseudo for a OBJC call that gets emitted together with a special `mov
+  // x29, x29` marker instruction.
+  CALL_RVMARKER
 };
 
 } // end namespace AArch64ISD

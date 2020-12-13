@@ -500,8 +500,8 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; AVX512VL-NEXT:    kmovw %edi, %k1
 ; AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
-; AVX512VL-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [2,2,2,2,2,2,2,2]
+; AVX512VL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX512VL-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
@@ -513,8 +513,8 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
-; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; VL_BW_DQ-NEXT:    vpbroadcastq %xmm0, %ymm0
+; VL_BW_DQ-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2]
+; VL_BW_DQ-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %xmm0
 ; VL_BW_DQ-NEXT:    vzeroupper

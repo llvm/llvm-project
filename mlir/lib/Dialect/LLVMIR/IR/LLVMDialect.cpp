@@ -1738,8 +1738,8 @@ static ParseResult parseFenceOp(OpAsmParser &parser, OperationState &result) {
 static void printFenceOp(OpAsmPrinter &p, FenceOp &op) {
   StringRef syncscopeKeyword = "syncscope";
   p << op.getOperationName() << ' ';
-  if (!op.getAttr(syncscopeKeyword).cast<StringAttr>().getValue().empty())
-    p << "syncscope(" << op.getAttr(syncscopeKeyword) << ") ";
+  if (!op->getAttr(syncscopeKeyword).cast<StringAttr>().getValue().empty())
+    p << "syncscope(" << op->getAttr(syncscopeKeyword) << ") ";
   p << stringifyAtomicOrdering(op.ordering());
 }
 
