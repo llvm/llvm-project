@@ -3,15 +3,15 @@
 [TOC]
 
 Passes represent the basic infrastructure for transformation and optimization.
-This document provides a quickstart to the pass infrastructure in MLIR and how
-to use it.
+This document provides an overview of the pass infrastructure in MLIR and how to
+use it.
 
 See [MLIR specification](LangRef.md) for more information about MLIR and its
 core aspects, such as the IR structure and operations.
 
 See [MLIR Rewrites](Tutorials/QuickstartRewrites.md) for a quick start on graph
-rewriting in MLIR. If your transformation involves pattern matching operation
-DAGs, this is a great place to start.
+rewriting in MLIR. If a transformation involves pattern matching operation DAGs,
+this is a great place to start.
 
 ## Operation Pass
 
@@ -23,24 +23,27 @@ further below. All passes in MLIR derive from `OperationPass` and adhere to the
 following restrictions; any noncompliance will lead to problematic behavior in
 multithreaded and other advanced scenarios:
 
-*   Modify anything within the parent block/region/operation/etc, outside of the
-    current operation being operated on. This includes adding or removing
-    operations from the parent block.
-*   Maintain pass state across invocations of `runOnOperation`. A pass may be
-    run on several different operations with no guarantee of execution order.
-    *   When multithreading, a specific pass instance may not even execute on
-        all operations within the module. As such, a pass should not rely on
-        running on all operations.
+*   Modify any state referenced or relied upon outside the current being
+    operated on. This includes adding or removing operations from the parent
+    block, changing the attributes(depending on the contract of the current
+    operation)/operands/results/successors of the current operation.
 *   Modify the state of another operation not nested within the current
     operation being operated on.
-    *   Other threads may be operating on different operations within the module
-        simultaneously.
+    *   Other threads may be operating on these operations simultaneously.
+*   Inspect the state of sibling operations.
+    *   Other threads may be modifying these operations in parallel.
+    *   Inspecting the state of ancestor/parent operations is permitted.
+*   Maintain mutable pass state across invocations of `runOnOperation`. A pass
+    may be run on many different operations with no guarantee of execution
+    order.
+    *   When multithreading, a specific pass instance may not even execute on
+        all operations within the IR. As such, a pass should not rely on running
+        on all operations.
 *   Maintain any global mutable state, e.g. static variables within the source
     file. All mutable state should be maintained by an instance of the pass.
-*   Must be copy-constructible, multiple instances of the pass may be created by
-    the pass manager to process operations in parallel.
-*   Inspect the IR of sibling operations. Other threads may be modifying these
-    operations in parallel.
+*   Must be copy-constructible
+    *   Multiple instances of the pass may be created by the pass manager to
+        process operations in parallel.
 
 When creating an operation pass, there are two different types to choose from
 depending on the usage scenario:
@@ -62,7 +65,12 @@ A simple pass may look like:
 
 ```c++
 namespace {
-struct MyFunctionPass : public OperationPass<MyFunctionPass, FuncOp> {
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyFunctionPass : public PassWrapper<OperationPass<FuncOp>,
+                                           MyFunctionPass> {
   void runOnOperation() override {
     // Get the current FuncOp operation being operated on.
     FuncOp f = getOperation();
@@ -75,17 +83,23 @@ struct MyFunctionPass : public OperationPass<MyFunctionPass, FuncOp> {
 };
 } // end anonymous namespace
 
-// Register this pass to make it accessible to utilities like mlir-opt.
-// (Pass registration is discussed more below)
-static PassRegistration<MyFunctionPass> pass(
+/// Register this pass so that it can be built via from a textual pass pipeline.
+/// (Pass registration is discussed more below)
+void registerMyPass() {
+  PassRegistration<MyFunctionPass>(
     "flag-name-to-invoke-pass-via-mlir-opt", "Pass description here");
+}
 ```
 
 ### OperationPass : Op-Agnostic
 
 An `op-agnostic` pass operates on the operation type of the pass manager that it
-is added to. This means that a pass that operates on several different operation
-types in the same way only needs one implementation.
+is added to. This means that passes of this type may operate on several
+different operation types. Passes of this type are generally written generically
+using operation [interfaces](Interfaces.md) and [traits](Traits.md). Examples of
+this type of pass are
+[Common Sub-Expression Elimination](Passes.md#-cse-eliminate-common-sub-expressions)
+and [Inlining](Passes.md#-inline-inline-function-calls).
 
 To create an operation pass, a derived class must adhere to the following:
 
@@ -95,7 +109,11 @@ To create an operation pass, a derived class must adhere to the following:
 A simple pass may look like:
 
 ```c++
-struct MyOperationPass : public OperationPass<MyOperationPass> {
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyOperationPass : public PassWrapper<OperationPass<>, MyOperationPass> {
   void runOnOperation() override {
     // Get the current operation being operated on.
     Operation *op = getOperation();
@@ -107,11 +125,11 @@ struct MyOperationPass : public OperationPass<MyOperationPass> {
 ### Dependent Dialects
 
 Dialects must be loaded in the MLIRContext before entities from these dialects
-(operations, types, attributes, ...) can be created. Dialects must be loaded
-before starting the multi-threaded pass pipeline execution. To this end, a pass
-that can create an entity from a dialect that isn't already loaded must express
-this by overriding the `getDependentDialects()` method and declare this list of
-Dialects explicitly.
+(operations, types, attributes, ...) can be created. Dialects must also be
+loaded before starting the execution of a multi-threaded pass pipeline. To this
+end, a pass that may create an entity from a dialect that isn't guaranteed to
+already ne loaded must express this by overriding the `getDependentDialects()`
+method and declare this list of Dialects explicitly.
 
 ## Analysis Management
 
@@ -212,51 +230,53 @@ void MyOperationPass::runOnOperation() {
 Passes in MLIR are allowed to gracefully fail. This may happen if some invariant
 of the pass was broken, potentially leaving the IR in some invalid state. If
 such a situation occurs, the pass can directly signal a failure to the pass
-manager. If a pass signaled a failure when executing, no other passes in the
-pipeline will execute and the `PassManager::run` will return failure. Failure
-signaling is provided in the form of a `signalPassFailure` method.
+manager via the `signalPassFailure` method. If a pass signaled a failure when
+executing, no other passes in the pipeline will execute and the top-level call
+to `PassManager::run` will return `failure`.
 
 ```c++
-void MyPass::runOnOperation() {
+void MyOperationPass::runOnOperation() {
   // Signal failure on a broken invariant.
-  if (some_broken_invariant) {
-    signalPassFailure();
-    return;
-  }
+  if (some_broken_invariant)
+    return signalPassFailure();
 }
 ```
 
 ## Pass Manager
 
-Above we introduced the different types of passes and their constraints. Now
-that we have our pass we need to be able to run it over a specific module. This
-is where the pass manager comes into play. The `PassManager` class is used to
-configure and run a pipeline. The `OpPassManager` class is used to schedule
-passes to run at a specific level of nesting.
+The above sections introduced the different types of passes and their
+invariants. This section introduces the concept of a PassManager, and how it can
+be used to configure and schedule a pass pipeline. There are two main classes
+related to pass management, the `PassManager` and the `OpPassManager`. The
+`PassManager` class acts as the top-level entry point, and contains various
+configurations used for the entire pass pipeline. The `OpPassManager` class is
+used to schedule passes to run at a specific level of nesting. The top-level
+`PassManager` also functions as an `OpPassManager`.
 
 ### OpPassManager
 
 An `OpPassManager` is essentially a collection of passes to execute on an
-operation of a given type. This operation type must adhere to the following
+operation of a specific type. This operation type must adhere to the following
 requirement:
 
-*   Must be registered and marked `IsolatedFromAbove`.
+*   Must be registered and marked
+    [`IsolatedFromAbove`](Traits.md#isolatedfromabove).
 
     *   Passes are expected to not modify operations at or above the current
         operation being processed. If the operation is not isolated, it may
-        inadvertently modify the use-list of an operation it is not supposed to
-        modify.
+        inadvertently modify or traverse the SSA use-list of an operation it is
+        not supposed to.
 
 Passes can be added to a pass manager via `addPass`. The pass must either be an
 `op-specific` pass operating on the same operation type as `OpPassManager`, or
 an `op-agnostic` pass.
 
-An `OpPassManager` cannot be created directly, but must be explicitly nested
-within another `OpPassManager` via the `nest<>` method. This method takes the
+An `OpPassManager` is generally creted by explicitly nesting a pipeline within
+another existing `OpPassManager` via the `nest<>` method. This method takes the
 operation type that the nested pass manager will operate on. At the top-level, a
-`PassManager` acts as an `OpPassManager` that operates on the
-[`module`](LangRef.md#module) operation. Nesting in this sense, corresponds to
-the structural nesting within [Regions](LangRef.md#regions) of the IR.
+`PassManager` acts as an `OpPassManager`. Nesting in this sense, corresponds to
+the [structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
+[Regions](LangRef.md#regions) of the IR.
 
 For example, the following `.mlir`:
 
@@ -282,13 +302,17 @@ Below is an example of constructing a pipeline that operates on the above
 structure:
 
 ```c++
+// Create a top-level `PassManager` class. If an operation type is not
+// explicitly specific, the default is the builtin `module` operation.
 PassManager pm(ctx);
+// Note: We could also create the above `PassManager` this way.
+PassManager pm(ctx, /*operationName=*/"module");
 
 // Add a pass on the top-level module operation.
 pm.addPass(std::make_unique<MyModulePass>());
 
-// Nest a pass manager that operates on spirv module operations nested directly
-// under the top-level module.
+// Nest a pass manager that operates on `spirv.module` operations nested
+// directly under the top-level module.
 OpPassManager &nestedModulePM = pm.nest<spirv::ModuleOp>();
 nestedModulePM.addPass(std::make_unique<MySPIRVModulePass>());
 
@@ -298,12 +322,12 @@ OpPassManager &nestedFunctionPM = nestedModulePM.nest<FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 
 // Run the pass manager on the top-level module.
-Module m = ...;
+ModuleOp m = ...;
 if (failed(pm.run(m)))
     ... // One of the passes signaled a failure.
 ```
 
-The above pass manager would contain the following pipeline structure:
+The above pass manager contains the following pipeline structure:
 
 ```
 OpPassManager<ModuleOp>
@@ -326,146 +350,62 @@ program has been run through the passes. This provides several benefits:
     that need to be scheduled, as well as increasing the efficiency of each job.
     An entire function pipeline can be run on each function asynchronously.
 
-## Pass Registration
+## Dynamic Pass Pipelines
 
-Briefly shown in the example definitions of the various pass types is the
-`PassRegistration` class. This is a utility to register derived pass classes so
-that they may be created, and inspected, by utilities like mlir-opt. Registering
-a pass class takes the form:
-
-```c++
-static PassRegistration<MyPass> pass("command-line-arg", "description");
-```
-
-*   `MyPass` is the name of the derived pass class.
-*   "command-line-arg" is the argument to use on the command line to invoke the
-    pass from `mlir-opt`.
-*   "description" is a description of the pass.
-
-For passes that cannot be default-constructed, `PassRegistration` accepts an
-optional third argument that takes a callback to create the pass:
+In some situations it may be useful to run a pass pipeline within another pass,
+to allow configuring or filtering based on some invariants of the current
+operation being operated on. For example, the
+[Inliner Pass](Passes.md#-inline-inline-function-calls) may want to run
+intraprocedural simplification passes while it is inlining to produce a better
+cost model, and provide more optimal inlining. To enable this, passes may run an
+arbitrary `OpPassManager` on the current operation being operated on or any
+operation nested within the current operation via the `LogicalResult
+Pass::runPipeline(OpPassManager &, Operation *)` method. This method returns
+whether the dynamic pipeline succeeded or failed, similarly to the result of the
+top-level `PassManager::run` method. A simple example is shown below:
 
 ```c++
-static PassRegistration<MyParametricPass> pass(
-    "command-line-arg", "description",
-    []() -> std::unique_ptr<Pass> {
-      std::unique_ptr<Pass> p = std::make_unique<MyParametricPass>(/*options*/);
-      /*... non-trivial-logic to configure the pass ...*/;
-      return p;
-    });
-```
-
-This variant of registration can be used, for example, to accept the
-configuration of a pass from command-line arguments and pass it over to the pass
-constructor. Make sure that the pass is copy-constructible in a way that does
-not share data as the [pass manager](#pass-manager) may create copies of the
-pass to run in parallel.
-
-### Pass Pipeline Registration
-
-Described above is the mechanism used for registering a specific derived pass
-class. On top of that, MLIR allows for registering custom pass pipelines in a
-similar fashion. This allows for custom pipelines to be available to tools like
-mlir-opt in the same way that passes are, which is useful for encapsulating
-common pipelines like the "-O1" series of passes. Pipelines are registered via a
-similar mechanism to passes in the form of `PassPipelineRegistration`. Compared
-to `PassRegistration`, this class takes an additional parameter in the form of a
-pipeline builder that modifies a provided `OpPassManager`.
-
-```c++
-void pipelineBuilder(OpPassManager &pm) {
-  pm.addPass(std::make_unique<MyPass>());
-  pm.addPass(std::make_unique<MyOtherPass>());
+void MyModulePass::runOnOperation() {
+  ModuleOp module = getOperation();
+  if (hasSomeSpecificProperty(module)) {
+    OpPassManager dynamicPM("module");
+    ...; // Build the dynamic pipeline.
+    if (failed(runPipeline(dynamicPM, module)))
+      return signalPassFailure();
+  }
 }
-
-// Register an existing pipeline builder function.
-static PassPipelineRegistration<> pipeline(
-  "command-line-arg", "description", pipelineBuilder);
-
-// Register an inline pipeline builder.
-static PassPipelineRegistration<> pipeline(
-  "command-line-arg", "description", [](OpPassManager &pm) {
-    pm.addPass(std::make_unique<MyPass>());
-    pm.addPass(std::make_unique<MyOtherPass>());
-  });
 ```
 
-Pipeline registration also allows for simplified registration of
-specializations for existing passes:
+Note: though above the dynamic pipeline was constructed within the
+`runOnOperation` method, this is not necessary and pipelines should be cached
+when possible as the `OpPassManager` class can be safely copy constructed.
 
-```c++
-static PassPipelineRegistration<> foo10(
-    "foo-10", "Foo Pass 10", [] { return std::make_unique<FooPass>(10); } );
-```
+The mechanism described in this section should be used whenever a pass pipeline
+should run in a nested fashion, i.e. when the nested pipeline cannot be
+scheduled statically along with the rest of the main pass pipeline. More
+specifically, a `PassManager` should generally never need to be constructed
+within a `Pass`. Using `runPipeline` also ensures that all analyses,
+[instrumentations](#pass-instrumentation), and other pass manager related
+components are integrated with the dynamic pipeline being executed.
 
-### Textual Pass Pipeline Specification
+## Instance Specific Pass Options
 
-In the previous sections, we showed how to register passes and pass pipelines
-with a specific argument and description. Once registered, these can be used on
-the command line to configure a pass manager. The limitation of using these
-arguments directly is that they cannot build a nested pipeline. For example, if
-our module has another module nested underneath, with just `-my-module-pass`
-there is no way to specify that this pass should run on the nested module and
-not the top-level module. This is due to the flattened nature of the command
-line.
-
-To circumvent this limitation, MLIR also supports a textual description of a
-pass pipeline. This allows for explicitly specifying the structure of the
-pipeline to add to the pass manager. This includes the nesting structure, as
-well as the passes and pass pipelines to run. A textual pipeline is defined as a
-series of names, each of which may in itself recursively contain a nested
-pipeline description. The syntax for this specification is as follows:
-
-```ebnf
-pipeline          ::= op-name `(` pipeline-element (`,` pipeline-element)* `)`
-pipeline-element  ::= pipeline | (pass-name | pass-pipeline-name) options?
-options           ::= '{' (key ('=' value)?)+ '}'
-```
-
-*   `op-name`
-    *   This corresponds to the mnemonic name of an operation to run passes on,
-        e.g. `func` or `module`.
-*   `pass-name` | `pass-pipeline-name`
-    *   This corresponds to the command-line argument of a registered pass or
-        pass pipeline, e.g. `cse` or `canonicalize`.
-*   `options`
-    *   Options are pass specific key value pairs that are handled as described
-        in the [instance specific pass options](#instance-specific-pass-options)
-        section.
-
-For example, the following pipeline:
-
-```shell
-$ mlir-opt foo.mlir -cse -canonicalize -convert-std-to-llvm
-```
-
-Can also be specified as (via the `-pass-pipeline` flag):
-
-```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse, canonicalize), convert-std-to-llvm'
-```
-
-In order to support round-tripping your pass to the textual representation using
-`OpPassManager::printAsTextualPipeline(raw_ostream&)`, override
-`Pass::printAsTextualPipeline(raw_ostream&)` to format your pass-name and
-options in the format described above.
-
-### Instance Specific Pass Options
-
-Options may be specified for a parametric pass. Individual options are defined
-using the [LLVM command line](https://llvm.org/docs/CommandLine.html) flag
-definition rules. These options will then be parsed at pass construction time
-independently for each instance of the pass. To provide options for passes, the
-`Option<>` and `OptionList<>` classes may be used:
+MLIR provides a builtin mechanism for passes to specify options that configure
+its behavior. These options are parsed at pass construction time independently
+for each instance of the pass. Options are defined using the `Option<>` and
+`ListOption<>` classes, and follow the
+[LLVM command line](https://llvm.org/docs/CommandLine.html) flag definition
+rules. See below for a few examples:
 
 ```c++
 struct MyPass ... {
   /// Make sure that we have a valid default constructor and copy constructor to
-  /// make sure that the options are initialized properly.
+  /// ensure that the options are initialized properly.
   MyPass() = default;
   MyPass(const MyPass& pass) {}
 
-  // These just forward onto llvm::cl::list and llvm::cl::opt respectively.
+  /// Any parameters after the description are forwarded to llvm::cl::list and
+  /// llvm::cl::opt respectively.
   Option<int> exampleOption{*this, "flag-name", llvm::cl::desc("...")};
   ListOption<int> exampleListOption{*this, "list-flag-name",
                                     llvm::cl::desc("...")};
@@ -473,43 +413,44 @@ struct MyPass ... {
 ```
 
 For pass pipelines, the `PassPipelineRegistration` templates take an additional
-optional template parameter that is the Option struct definition to be used for
-that pipeline. To use pipeline specific options, create a class that inherits
-from `mlir::PassPipelineOptions` that contains the desired options. When using
-`PassPipelineRegistration`, the constructor now takes a function with the
-signature `void (OpPassManager &pm, const MyPipelineOptions&)` which should
-construct the passes from the options and pass them to the pm:
+template parameter for an optional `Option` struct definition. This struct
+should inherit from `mlir::PassPipelineOptions` and contain the desired pipeline
+options. When using `PassPipelineRegistration`, the constructor now takes a
+function with the signature `void (OpPassManager &pm, const MyPipelineOptions&)`
+which should construct the passes from the options and pass them to the pm:
 
 ```c++
 struct MyPipelineOptions : public PassPipelineOptions {
-  // These just forward onto llvm::cl::list and llvm::cl::opt respectively.
+  // The structure of these options is the same as those for pass options.
   Option<int> exampleOption{*this, "flag-name", llvm::cl::desc("...")};
   ListOption<int> exampleListOption{*this, "list-flag-name",
                                     llvm::cl::desc("...")};
 };
 
-
-static mlir::PassPipelineRegistration<MyPipelineOptions> pipeline(
+void registerMyPasses() {
+  PassPipelineRegistration<MyPipelineOptions>(
     "example-pipeline", "Run an example pipeline.",
     [](OpPassManager &pm, const MyPipelineOptions &pipelineOptions) {
       // Initialize the pass manager.
     });
+}
 ```
 
 ## Pass Statistics
 
 Statistics are a way to keep track of what the compiler is doing and how
 effective various transformations are. It is often useful to see what effect
-specific transformations have on a particular program, and how often they
-trigger. Pass statistics are instance specific which allow for taking this a
-step further as you are able to see the effect of placing a particular
-transformation at specific places within the pass pipeline. For example, they
-help answer questions like `What happens if I run CSE again here?`.
+specific transformations have on a particular input, and how often they trigger.
+Pass statistics are specific to each pass instance, which allow for seeing the
+effect of placing a particular transformation at specific places within the pass
+pipeline. For example, they help answer questions like "What happens if I run
+CSE again here?".
 
 Statistics can be added to a pass by using the 'Pass::Statistic' class. This
 class takes as a constructor arguments: the parent pass, a name, and a
-description. This class acts like an unsigned integer, and may be incremented
-and updated accordingly. These statistics use the same infrastructure as
+description. This class acts like an atomic unsigned integer, and may be
+incremented and updated accordingly. These statistics rely on the same
+infrastructure as
 [`llvm::Statistic`](http://llvm.org/docs/ProgrammersManual.html#the-statistic-class-stats-option)
 and thus have similar usage constraints. Collected statistics can be dumped by
 the [pass manager](#pass-manager) programmatically via
@@ -519,14 +460,20 @@ the [pass manager](#pass-manager) programmatically via
 An example is shown below:
 
 ```c++
-struct MyPass : public OperationPass<MyPass> {
-  Statistic testStat{this, "testStat", "A test statistic"};
+struct MyPass ... {
+  /// Make sure that we have a valid default constructor and copy constructor to
+  /// ensure that the options are initialized properly.
+  MyPass() = default;
+  MyPass(const MyPass& pass) {}
+
+  /// Define the statistic to track during the execution of MyPass.
+  Statistic exampleStat{this, "exampleStat", "An example statistic"};
 
   void runOnOperation() {
     ...
 
-    // Update our statistic after some invariant was hit.
-    ++testStat;
+    // Update the statistic after some invariant was hit.
+    ++exampleStat;
 
     ...
   }
@@ -546,15 +493,16 @@ $ mlir-opt -pass-pipeline='func(my-pass,my-pass)' foo.mlir -pass-statistics
 ===-------------------------------------------------------------------------===
 'func' Pipeline
   MyPass
-    (S) 15 testStat - A test statistic
+    (S) 15 exampleStat - An example statistic
   VerifierPass
   MyPass
-    (S)  6 testStat - A test statistic
+    (S)  6 exampleStat - An example statistic
   VerifierPass
 VerifierPass
 ```
 
-And a list view that aggregates all instances of a specific pass together:
+A list view that aggregates the statistics of all instances of a specific pass
+together:
 
 ```shell
 $ mlir-opt -pass-pipeline='func(my-pass, my-pass)' foo.mlir -pass-statistics -pass-statistics-display=list
@@ -563,24 +511,148 @@ $ mlir-opt -pass-pipeline='func(my-pass, my-pass)' foo.mlir -pass-statistics -pa
                          ... Pass statistics report ...
 ===-------------------------------------------------------------------------===
 MyPass
-  (S) 21 testStat - A test statistic
+  (S) 21 exampleStat - An example statistic
 ```
+
+## Pass Registration
+
+Briefly shown in the example definitions of the various pass types is the
+`PassRegistration` class. This mechanism allows for registering pass classes so
+that they may be created within a
+[textual pass pipeline description](#textual-pass-pipeline-specification). An
+example registration is shown below:
+
+```c++
+void registerMyPass() {
+  PassRegistration<MyPass>("argument", "description");
+}
+```
+
+*   `MyPass` is the name of the derived pass class.
+*   "argument" is the argument used to refer to the pass in the textual format.
+*   "description" is a brief description of the pass.
+
+For passes that cannot be default-constructed, `PassRegistration` accepts an
+optional third argument that takes a callback to create the pass:
+
+```c++
+void registerMyPass() {
+  PassRegistration<MyParametricPass>(
+    "argument", "description",
+    []() -> std::unique_ptr<Pass> {
+      std::unique_ptr<Pass> p = std::make_unique<MyParametricPass>(/*options*/);
+      /*... non-trivial-logic to configure the pass ...*/;
+      return p;
+    });
+}
+```
+
+This variant of registration can be used, for example, to accept the
+configuration of a pass from command-line arguments and pass it to the pass
+constructor.
+
+Note: Make sure that the pass is copy-constructible in a way that does not share
+data as the [pass manager](#pass-manager) may create copies of the pass to run
+in parallel.
+
+### Pass Pipeline Registration
+
+Described above is the mechanism used for registering a specific derived pass
+class. On top of that, MLIR allows for registering custom pass pipelines in a
+similar fashion. This allows for custom pipelines to be available to tools like
+mlir-opt in the same way that passes are, which is useful for encapsulating
+common pipelines like the "-O1" series of passes. Pipelines are registered via a
+similar mechanism to passes in the form of `PassPipelineRegistration`. Compared
+to `PassRegistration`, this class takes an additional parameter in the form of a
+pipeline builder that modifies a provided `OpPassManager`.
+
+```c++
+void pipelineBuilder(OpPassManager &pm) {
+  pm.addPass(std::make_unique<MyPass>());
+  pm.addPass(std::make_unique<MyOtherPass>());
+}
+
+void registerMyPasses() {
+  // Register an existing pipeline builder function.
+  PassPipelineRegistration<>(
+    "argument", "description", pipelineBuilder);
+
+  // Register an inline pipeline builder.
+  PassPipelineRegistration<>(
+    "argument", "description", [](OpPassManager &pm) {
+      pm.addPass(std::make_unique<MyPass>());
+      pm.addPass(std::make_unique<MyOtherPass>());
+    });
+}
+```
+
+### Textual Pass Pipeline Specification
+
+The previous sections detailed how to register passes and pass pipelines with a
+specific argument and description. Once registered, these can be used to
+configure a pass manager from a string description. This is especially useful
+for tools like `mlir-opt`, that configure pass managers from the command line,
+or as options to passes that utilize
+[dynamic pass pipelines](#dynamic-pass-pipelines).
+
+To support the ability to describe the full structure of pass pipelines, MLIR
+supports a custom textual description of pass pipelines. The textual description
+includes the nesting structure, the arguments of the passes and pass pipelines
+to run, and any options for those passes and pipelines. A textual pipeline is
+defined as a series of names, each of which may in itself recursively contain a
+nested pipeline description. The syntax for this specification is as follows:
+
+```ebnf
+pipeline          ::= op-name `(` pipeline-element (`,` pipeline-element)* `)`
+pipeline-element  ::= pipeline | (pass-name | pass-pipeline-name) options?
+options           ::= '{' (key ('=' value)?)+ '}'
+```
+
+*   `op-name`
+    *   This corresponds to the mnemonic name of an operation to run passes on,
+        e.g. `func` or `module`.
+*   `pass-name` | `pass-pipeline-name`
+    *   This corresponds to the argument of a registered pass or pass pipeline,
+        e.g. `cse` or `canonicalize`.
+*   `options`
+    *   Options are specific key value pairs representing options defined by a
+        pass or pass pipeline, as described in the
+        ["Instance Specific Pass Options"](#instance-specific-pass-options)
+        section. See this section for an example usage in a textual pipeline.
+
+For example, the following pipeline:
+
+```shell
+$ mlir-opt foo.mlir -cse -canonicalize -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1'
+```
+
+Can also be specified as (via the `-pass-pipeline` flag):
+
+```shell
+$ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize),convert-std-to-llvm{use-bare-ptr-memref-call-conv=1}'
+```
+
+In order to support round-tripping a pass to the textual representation using
+`OpPassManager::printAsTextualPipeline(raw_ostream&)`, override `StringRef
+Pass::getArgument()` to specify the argument used when registering a pass.
 
 ## Declarative Pass Specification
 
 Some aspects of a Pass may be specified declaratively, in a form similar to
-[operations](OpDefinitions.md). This specification simplifies several
-mechanisms used when defining passes. It can be used for generating pass
-registration calls, defining boilerplate pass utilities, and generating pass
-documentation.
+[operations](OpDefinitions.md). This specification simplifies several mechanisms
+used when defining passes. It can be used for generating pass registration
+calls, defining boilerplate pass utilities, and generating pass documentation.
 
 Consider the following pass specified in C++:
 
 ```c++
 struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
+  MyPass() = default;
+  MyPass(const MyPass &) {}
+
   ...
 
-  /// Options.
+  // Specify any options.
   Option<bool> option{
       *this, "example-option",
       llvm::cl::desc("An example option"), llvm::cl::init(true)};
@@ -589,7 +661,7 @@ struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
       llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore,
       llvm::cl::MiscFlags::CommaSeparated};
 
-  /// Statistics.
+  // Specify any statistics.
   Statistic statistic{this, "example-statistic", "An example statistic"};
 };
 
@@ -598,7 +670,10 @@ std::unique_ptr<Pass> foo::createMyPass() {
   return std::make_unique<MyPass>();
 }
 
-static PassRegistration<MyPass> pass("my-pass", "My pass summary");
+/// Register this pass.
+void foo::registerMyPass() {
+  PassRegistration<MyPass>("my-pass", "My pass summary");
+}
 ```
 
 This pass may be specified declaratively as so:
@@ -631,33 +706,35 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
 }
 ```
 
-Using the `gen-pass-decls` generator, we can generate the much of the
-boilerplater above automatically. This generator takes as an input a `-name`
-parameter, that provides a tag for the group of passes that are being generated.
-This generator produces two chunks of output:
+Using the `gen-pass-decls` generator, we can generate most of the boilerplate
+above automatically. This generator takes as an input a `-name` parameter, that
+provides a tag for the group of passes that are being generated. This generator
+produces two chunks of output:
 
-The first is the code for registering the declarative passes with the global
+The first is a code block for registering the declarative passes with the global
 registry. For each pass, the generator produces a `registerFooPass` where `Foo`
 is the name of the definition specified in tablegen. It also generates a
 `registerGroupPasses`, where `Group` is the tag provided via the `-name` input
 parameter, that registers all of the passes present.
 
 ```c++
+// gen-pass-decls -name="Example"
+
 #define GEN_PASS_REGISTRATION
 #include "Passes.h.inc"
 
 void registerMyPasses() {
-  // Register all of our passes.
-  registerMyPasses();
+  // Register all of the passes.
+  registerExamplePasses();
 
   // Register `MyPass` specifically.
   registerMyPassPass();
 }
 ```
 
-The second is a base class for each of the passes, with each containing most of
-the boiler plate related to pass definition. These classes are named in the form
-of `MyPassBase`, where `MyPass` is the name of the definition in tablegen. We
+The second is a base class for each of the passes, containing most of the boiler
+plate related to pass definitions. These classes are named in the form of
+`MyPassBase`, where `MyPass` is the name of the pass definition in tablegen. We
 can update the original C++ pass definition as so:
 
 ```c++
@@ -665,9 +742,15 @@ can update the original C++ pass definition as so:
 #define GEN_PASS_CLASSES
 #include "Passes.h.inc"
 
-// Define the main class as deriving from the generated base class.
+/// Define the main class as deriving from the generated base class.
 struct MyPass : MyPassBase<MyPass> {
+  /// The explicit constructor is no longer explicitly necessary when defining
+  /// pass options and statistics, the base class takes care of that
+  /// automatically.
   ...
+
+  /// The definitions of the options and statistics are now generated within
+  /// the base class, but are accessible in the same way.
 };
 
 /// Expose this pass to the outside world.
@@ -676,41 +759,42 @@ std::unique_ptr<Pass> foo::createMyPass() {
 }
 ```
 
-Using the `gen-pass-doc` generator, we can generate markdown documentation for
-each of our passes. See [Passes.md](Passes.md) for example output of real MLIR
-passes.
+Using the `gen-pass-doc` generator, markdown documentation for each of the
+passes can be generated. See [Passes.md](Passes.md) for example output of real
+MLIR passes.
 
 ### Tablegen Specification
 
 The `Pass` class is used to begin a new pass definition. This class takes as an
-argument the command line argument to attribute to the pass, as well as an
-optional string corresponding to the operation type that the pass operates on.
-It contains the following fields:
+argument the registry argument to attribute to the pass, as well as an optional
+string corresponding to the operation type that the pass operates on. The class
+contains the following fields:
 
-*   summary
+*   `summary`
     -   A short one line summary of the pass, used as the description when
         registering the pass.
-*   description
+*   `description`
     -   A longer, more detailed description of the pass. This is used when
         generating pass documentation.
-*   dependentDialects
-    -   A list of strings that are the Dialect classes this pass can introduce.
-*   constructor
-    -   A piece of C++ code used to create a default instance of the pass.
-*   options
+*   `dependentDialects`
+    -   A list of strings representing the `Dialect` classes this pass may
+        introduce entities, Attributes/Operations/Types/etc., of.
+*   `constructor`
+    -   A code block used to create a default instance of the pass.
+*   `options`
     -   A list of pass options used by the pass.
-*   statistics
+*   `statistics`
     -   A list of pass statistics used by the pass.
 
 #### Options
 
-Options can be specified by the `Option` and `ListOption` classes. The `Option`
-class takes the following fields:
+Options may be specified via the `Option` and `ListOption` classes. The `Option`
+class takes the following template parameters:
 
 *   C++ variable name
     -   A name to use for the generated option variable.
 *   argument
-    -   The command line argument of the option.
+    -   The argument name of the option.
 *   type
     -   The C++ type of the option.
 *   default value
@@ -721,12 +805,21 @@ class takes the following fields:
     -   A string containing any additional options necessary to construct the
         option.
 
+```tablegen
+def MyPass : Pass<"my-pass"> {
+  let options = [
+    Option<"option", "example-option", "bool", /*default=*/"true",
+           "An example option">,
+  ];
+}
+```
+
 The `ListOption` class takes the following fields:
 
 *   C++ variable name
     -   A name to use for the generated option variable.
 *   argument
-    -   The command line argument of the option.
+    -   The argument name of the option.
 *   element type
     -   The C++ type of the list element.
 *   description
@@ -735,10 +828,20 @@ The `ListOption` class takes the following fields:
     -   A string containing any additional options necessary to construct the
         option.
 
+```tablegen
+def MyPass : Pass<"my-pass"> {
+  let options = [
+    ListOption<"listOption", "example-list", "int64_t",
+               "An example list option",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
+}
+```
+
 #### Statistic
 
-Statistics can be specified via the `Statistic`, which takes the following
-fields:
+Statistics may be specified via the `Statistic`, which takes the following
+template parameters:
 
 *   C++ variable name
     -   A name to use for the generated statistic variable.
@@ -747,11 +850,19 @@ fields:
 *   description
     -   A one line description of the statistic.
 
+```tablegen
+def MyPass : Pass<"my-pass"> {
+  let statistics = [
+    Statistic<"statistic", "example-statistic", "An example statistic">
+  ];
+}
+```
+
 ## Pass Instrumentation
 
 MLIR provides a customizable framework to instrument pass execution and analysis
-computation. This is provided via the `PassInstrumentation` class. This class
-provides hooks into the PassManager that observe various pass events:
+computation, via the `PassInstrumentation` class. This class provides hooks into
+the PassManager that observe various events:
 
 *   `runBeforePipeline`
     *   This callback is run just before a pass pipeline, i.e. pass manager, is
@@ -763,24 +874,27 @@ provides hooks into the PassManager that observe various pass events:
     *   This callback is run just before a pass is executed.
 *   `runAfterPass`
     *   This callback is run right after a pass has been successfully executed.
-        If this hook is executed, runAfterPassFailed will not be.
+        If this hook is executed, `runAfterPassFailed` will *not* be.
 *   `runAfterPassFailed`
     *   This callback is run right after a pass execution fails. If this hook is
-        executed, runAfterPass will not be.
+        executed, `runAfterPass` will *not* be.
 *   `runBeforeAnalysis`
     *   This callback is run just before an analysis is computed.
 *   `runAfterAnalysis`
     *   This callback is run right after an analysis is computed.
 
-PassInstrumentation objects can be registered directly with a
+PassInstrumentation instances may be registered directly with a
 [PassManager](#pass-manager) instance via the `addInstrumentation` method.
 Instrumentations added to the PassManager are run in a stack like fashion, i.e.
 the last instrumentation to execute a `runBefore*` hook will be the first to
-execute the respective `runAfter*` hook. Below in an example instrumentation
-that counts the number of times DominanceInfo is computed:
+execute the respective `runAfter*` hook. The hooks of a `PassInstrumentation`
+class are guaranteed to be executed in a thread safe fashion, so additional
+synchronization is not necessary. Below in an example instrumentation that
+counts the number of times the `DominanceInfo` analysis is computed:
 
 ```c++
 struct DominanceCounterInstrumentation : public PassInstrumentation {
+  /// The cumulative count of how many times dominance has been calculated.
   unsigned &count;
 
   DominanceCounterInstrumentation(unsigned &count) : count(count) {}
@@ -809,15 +923,15 @@ llvm::errs() << "DominanceInfo was computed " << domInfoCount << " times!\n";
 ### Standard Instrumentations
 
 MLIR utilizes the pass instrumentation framework to provide a few useful
-developer tools and utilities. Each of these instrumentations are immediately
+developer tools and utilities. Each of these instrumentations are directly
 available to all users of the MLIR pass framework.
 
 #### Pass Timing
 
 The PassTiming instrumentation provides timing information about the execution
 of passes and computation of analyses. This provides a quick glimpse into what
-passes are taking the most time to execute, as well as how much of an effect
-your pass has on the total execution time of the pipeline. Users can enable this
+passes are taking the most time to execute, as well as how much of an effect a
+pass has on the total execution time of the pipeline. Users can enable this
 instrumentation directly on the PassManager via `enableTiming`. This
 instrumentation is also made available in mlir-opt via the `-pass-timing` flag.
 The PassTiming instrumentation provides several different display modes for the
@@ -1014,7 +1128,7 @@ was executing, as well as the initial IR before any passes were run. A potential
 reproducible may have the form:
 
 ```mlir
-// configuration: -pass-pipeline='func(cse, canonicalize), inline'
+// configuration: -pass-pipeline='func(cse,canonicalize),inline'
 // note: verifyPasses=false
 
 module {

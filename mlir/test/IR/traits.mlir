@@ -448,7 +448,7 @@ func @failedResultSizeAttrWrongTotalSize() {
 // -----
 
 func @failedResultSizeAttrWrongCount() {
-  // expected-error @+1 {{'result_segment_sizes' attribute for specifying result segments must have 4 elements}}
+  // expected-error @+1 {{'result_segment_sizes' attribute for specifying result segments must have 4 elements, but got 3}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : () -> (i32, i32, i32, i32)
 }
 

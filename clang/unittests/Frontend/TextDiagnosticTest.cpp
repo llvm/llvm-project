@@ -46,7 +46,7 @@ TEST(TextDiagnostic, ShowLine) {
   // Create a dummy file with some contents to produce a test SourceLocation.
   const llvm::StringRef file_path = "main.cpp";
   const llvm::StringRef main_file_contents = "some\nsource\ncode\n";
-  const clang::FileEntry &fe = *FileMgr.getVirtualFile(
+  const clang::FileEntryRef fe = FileMgr.getVirtualFileRef(
       file_path,
       /*Size=*/static_cast<off_t>(main_file_contents.size()),
       /*ModificationTime=*/0);
@@ -55,11 +55,11 @@ TEST(TextDiagnostic, ShowLine) {
   buffer.append(main_file_contents.begin(), main_file_contents.end());
   auto file_contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
       std::move(buffer), file_path);
-  SrcMgr.overrideFileContents(&fe, std::move(file_contents));
+  SrcMgr.overrideFileContents(fe, std::move(file_contents));
 
   // Create the actual file id and use it as the main file.
   clang::FileID fid =
-      SrcMgr.createFileID(&fe, SourceLocation(), clang::SrcMgr::C_User);
+      SrcMgr.createFileID(fe, SourceLocation(), clang::SrcMgr::C_User);
   SrcMgr.setMainFileID(fid);
 
   // Create the source location for the test diagnostic.

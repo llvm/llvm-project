@@ -289,10 +289,11 @@ CIAndOrigins BuildIndirect(CIAndOrigins &CI) {
 llvm::Error ParseSource(const std::string &Path, CompilerInstance &CI,
                         ASTConsumer &Consumer) {
   SourceManager &SM = CI.getSourceManager();
-  auto FE = CI.getFileManager().getFile(Path);
+  auto FE = CI.getFileManager().getFileRef(Path);
   if (!FE) {
+    llvm::consumeError(FE.takeError());
     return llvm::make_error<llvm::StringError>(
-        llvm::Twine("Couldn't open ", Path), std::error_code());
+        llvm::Twine("No such file or directory: ", Path), std::error_code());
   }
   SM.setMainFileID(SM.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
   ParseAST(CI.getPreprocessor(), &Consumer, CI.getASTContext());
@@ -360,7 +361,7 @@ int main(int argc, const char **argv) {
   for (auto I : Imports) {
     llvm::Expected<CIAndOrigins> ImportCI = Parse(I, {}, false, false);
     if (auto E = ImportCI.takeError()) {
-      llvm::errs() << llvm::toString(std::move(E));
+      llvm::errs() << "error: " << llvm::toString(std::move(E)) << "\n";
       exit(-1);
     }
     ImportCIs.push_back(std::move(*ImportCI));
@@ -379,7 +380,7 @@ int main(int argc, const char **argv) {
       Parse(Expression, (Direct && !UseOrigins) ? ImportCIs : IndirectCIs,
             DumpAST, DumpIR);
   if (auto E = ExpressionCI.takeError()) {
-    llvm::errs() << llvm::toString(std::move(E));
+    llvm::errs() << "error: " << llvm::toString(std::move(E)) << "\n";
     exit(-1);
   }
   Forget(*ExpressionCI, (Direct && !UseOrigins) ? ImportCIs : IndirectCIs);

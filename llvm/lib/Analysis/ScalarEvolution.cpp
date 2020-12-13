@@ -10639,7 +10639,7 @@ static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
   if (!MinMaxExpr)
     return false;
 
-  return find(MinMaxExpr->operands(), Candidate) != MinMaxExpr->op_end();
+  return is_contained(MinMaxExpr->operands(), Candidate);
 }
 
 static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,

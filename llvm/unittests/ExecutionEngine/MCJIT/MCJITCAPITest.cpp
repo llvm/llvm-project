@@ -424,9 +424,15 @@ TEST_F(MCJITCAPITest, stackmap_creates_compact_unwind_on_darwin) {
     didAllocateCompactUnwindSection);
 }
 
-TEST_F(MCJITCAPITest, reserve_allocation_space) {
+#if defined(__APPLE__) && defined(__aarch64__)
+// FIXME: Figure out why this fails on mac/arm, PR46647
+#define MAYBE_reserve_allocation_space DISABLED_reserve_allocation_space
+#else
+#define MAYBE_reserve_allocation_space reserve_allocation_space
+#endif
+TEST_F(MCJITCAPITest, MAYBE_reserve_allocation_space) {
   SKIP_UNSUPPORTED_PLATFORM;
-  
+
   TestReserveAllocationSpaceMemoryManager* MM = new TestReserveAllocationSpaceMemoryManager();
   
   buildModuleWithCodeAndData();

@@ -103,7 +103,7 @@ bool llvm::isCriticalEdge(const Instruction *TI, const BasicBlock *Dest,
   assert(TI->isTerminator() && "Must be a terminator to have successors!");
   if (TI->getNumSuccessors() == 1) return false;
 
-  assert(find(predecessors(Dest), TI->getParent()) != pred_end(Dest) &&
+  assert(is_contained(predecessors(Dest), TI->getParent()) &&
          "No edge between TI's block and Dest.");
 
   const_pred_iterator I = pred_begin(Dest), E = pred_end(Dest);

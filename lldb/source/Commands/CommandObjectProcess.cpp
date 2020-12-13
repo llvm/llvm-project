@@ -364,7 +364,6 @@ protected:
         result.AppendError(error.AsCString("Error creating target"));
         return false;
       }
-      GetDebugger().GetTargetList().SetSelectedTarget(target);
     }
 
     // Record the old executable module, we want to issue a warning if the
@@ -381,7 +380,6 @@ protected:
       return false;
     }
 
-    m_interpreter.UpdateExecutionContext(nullptr);
     StreamString stream;
     const auto error = target->Attach(m_options.attach_info, &stream);
     if (error.Success()) {

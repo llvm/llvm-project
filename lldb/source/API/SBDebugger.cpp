@@ -811,10 +811,8 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
         add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
         target_sp);
 
-    if (error.Success()) {
-      m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp.get());
+    if (error.Success())
       sb_target.SetSP(target_sp);
-    }
   }
 
   LLDB_LOGF(log,
@@ -840,10 +838,8 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
         add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
         target_sp);
 
-    if (error.Success()) {
-      m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp.get());
+    if (error.Success())
       sb_target.SetSP(target_sp);
-    }
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   LLDB_LOGF(log,
@@ -998,7 +994,7 @@ void SBDebugger::SetSelectedTarget(SBTarget &sb_target) {
 
   TargetSP target_sp(sb_target.GetSP());
   if (m_opaque_sp) {
-    m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp.get());
+    m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp);
   }
   if (log) {
     SBStream sstr;

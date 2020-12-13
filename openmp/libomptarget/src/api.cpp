@@ -19,6 +19,7 @@
 #include <cstdlib>
 
 EXTERN int omp_get_num_devices(void) {
+  TIMESCOPE();
   PM->RTLsMtx.lock();
   size_t DevicesSize = PM->Devices.size();
   PM->RTLsMtx.unlock();
@@ -29,6 +30,7 @@ EXTERN int omp_get_num_devices(void) {
 }
 
 EXTERN int omp_get_initial_device(void) {
+  TIMESCOPE();
   int hostDevice = omp_get_num_devices();
   DP("Call to omp_get_initial_device returning %d\n", hostDevice);
   return hostDevice;
@@ -40,6 +42,7 @@ EXTERN int omp_get_device_num(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {
+  TIMESCOPE();
   DP("Call to omp_target_alloc for device %d requesting %zu bytes\n",
       device_num, size);
 
@@ -67,6 +70,7 @@ EXTERN void *omp_target_alloc(size_t size, int device_num) {
 }
 
 EXTERN void omp_target_free(void *device_ptr, int device_num) {
+  TIMESCOPE();
   DP("Call to omp_target_free for device %d and address " DPxMOD "\n",
       device_num, DPxPTR(device_ptr));
 
@@ -91,6 +95,7 @@ EXTERN void omp_target_free(void *device_ptr, int device_num) {
 }
 
 EXTERN int omp_target_is_present(void *ptr, int device_num) {
+  TIMESCOPE();
   DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",
       device_num, DPxPTR(ptr));
 
@@ -130,6 +135,7 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
 
 EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     size_t dst_offset, size_t src_offset, int dst_device, int src_device) {
+  TIMESCOPE();
   DP("Call to omp_target_memcpy, dst device %d, src device %d, "
       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
       "src offset %zu, length %zu\n", dst_device, src_device, DPxPTR(dst),
@@ -195,6 +201,7 @@ EXTERN int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
     int num_dims, const size_t *volume, const size_t *dst_offsets,
     const size_t *src_offsets, const size_t *dst_dimensions,
     const size_t *src_dimensions, int dst_device, int src_device) {
+  TIMESCOPE();
   DP("Call to omp_target_memcpy_rect, dst device %d, src device %d, "
       "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
       "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
@@ -249,6 +256,7 @@ EXTERN int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
 
 EXTERN int omp_target_associate_ptr(void *host_ptr, void *device_ptr,
     size_t size, size_t device_offset, int device_num) {
+  TIMESCOPE();
   DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
       "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
       DPxPTR(host_ptr), DPxPTR(device_ptr), size, device_offset, device_num);
@@ -276,6 +284,7 @@ EXTERN int omp_target_associate_ptr(void *host_ptr, void *device_ptr,
 }
 
 EXTERN int omp_target_disassociate_ptr(void *host_ptr, int device_num) {
+  TIMESCOPE();
   DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
       "device_num %d\n", DPxPTR(host_ptr), device_num);
 

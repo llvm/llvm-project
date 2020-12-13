@@ -5,19 +5,19 @@ void testBranchingOnEnqueueKernel(queue_t default_queue, unsigned flags, ndrange
 
     if (enqueue_kernel(default_queue, flags, ndrange, ^(void) {}))
         (void)0;
-    // CHECK: [[P:%[0-9]+]] = call i32 @__enqueue_kernel
+    // CHECK: [[P:%[0-9]+]] = call spir_func i32 @__enqueue_kernel
     // CHECK-NEXT: [[Q:%[a-z0-9]+]] = icmp ne i32 [[P]], 0
     // CHECK-NEXT: br i1 [[Q]]
 
     if (get_kernel_work_group_size(^(void) {}))
         (void)0;
-    // CHECK: [[P:%[0-9]+]] = call i32 @__get_kernel_work_group_size
+    // CHECK: [[P:%[0-9]+]] = call spir_func i32 @__get_kernel_work_group_size
     // CHECK-NEXT: [[Q:%[a-z0-9]+]] = icmp ne i32 [[P]], 0
     // CHECK-NEXT: br i1 [[Q]]
 
     if (get_kernel_preferred_work_group_size_multiple(^(void) {}))
         (void)0;
-    // CHECK: [[P:%[0-9]+]] = call i32 @__get_kernel_preferred_work_group_size_multiple_impl
+    // CHECK: [[P:%[0-9]+]] = call spir_func i32 @__get_kernel_preferred_work_group_size_multiple_impl
     // CHECK-NEXT: [[Q:%[a-z0-9]+]] = icmp ne i32 [[P]], 0
     // CHECK-NEXT: br i1 [[Q]]
 }
@@ -27,32 +27,32 @@ void testBranchinOnPipeOperations(read_only pipe int r, write_only pipe int w, g
 
     if (read_pipe(r, ptr))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__read_pipe_2
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__read_pipe_2
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 
     if (write_pipe(w, ptr))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__write_pipe_2
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__write_pipe_2
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 
     if (get_pipe_num_packets(r))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__get_pipe_num_packets_ro
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__get_pipe_num_packets_ro
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 
     if (get_pipe_num_packets(w))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__get_pipe_num_packets_wo
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__get_pipe_num_packets_wo
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 
     if (get_pipe_max_packets(r))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__get_pipe_max_packets_ro
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__get_pipe_max_packets_ro
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 
     if (get_pipe_max_packets(w))
         (void)0;
-    // CHECK: [[R:%[0-9]+]] = call i32 @__get_pipe_max_packets_wo
+    // CHECK: [[R:%[0-9]+]] = call spir_func i32 @__get_pipe_max_packets_wo
     // CHECK-NEXT: icmp ne i32 [[R]], 0
 }
 
@@ -61,21 +61,21 @@ void testBranchingOnAddressSpaceCast(generic long* ptr) {
 
     if (to_global(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call [[GLOBAL_VOID:i8 addrspace\(1\)\*]] @__to_global([[GENERIC_VOID:i8 addrspace\(4\)\*]] {{%[0-9]+}})
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[GLOBAL_VOID:i8 addrspace\(1\)\*]] @__to_global([[GENERIC_VOID:i8 addrspace\(4\)\*]] {{%[0-9]+}})
     // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[GLOBAL_VOID]] [[P]] to [[GLOBAL_i64:i64 addrspace\(1\)\*]]
     // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[GLOBAL_i64]] [[Q]], null
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_local(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call [[LOCAL_VOID:i8 addrspace\(3\)\*]] @__to_local([[GENERIC_VOID]] {{%[0-9]+}})
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[LOCAL_VOID:i8 addrspace\(3\)\*]] @__to_local([[GENERIC_VOID]] {{%[0-9]+}})
     // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[LOCAL_VOID]] [[P]] to [[LOCAL_i64:i64 addrspace\(3\)\*]]
     // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[LOCAL_i64]] [[Q]], null
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_private(ptr))
         (void)0;
-    // CHECK:       [[P:%[0-9]+]] = call [[PRIVATE_VOID:i8\*]] @__to_private([[GENERIC_VOID]] {{%[0-9]+}})
+    // CHECK:       [[P:%[0-9]+]] = call spir_func [[PRIVATE_VOID:i8\*]] @__to_private([[GENERIC_VOID]] {{%[0-9]+}})
     // CHECK-NEXT:  [[Q:%[0-9]+]] = bitcast [[PRIVATE_VOID]] [[P]] to [[PRIVATE_i64:i64\*]]
     // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne [[PRIVATE_i64]] [[Q]], null
     // CHECK-NEXT:  br i1 [[BOOL]]

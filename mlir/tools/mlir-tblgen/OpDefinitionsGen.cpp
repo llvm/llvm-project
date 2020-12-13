@@ -2211,7 +2211,7 @@ void OpOperandAdaptorEmitter::addVerification() {
     auto numElements = sizeAttr.getType().cast<::mlir::ShapedType>().getNumElements();
     if (numElements != {1})
       return emitError(loc, "'{0}' attribute for specifying {2} segments "
-                       "must have {1} elements");
+                       "must have {1} elements, but got ") << numElements;
   }
   )";
 

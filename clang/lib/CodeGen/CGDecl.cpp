@@ -353,12 +353,11 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   if (GV->getValueType() != Init->getType()) {
     llvm::GlobalVariable *OldGV = GV;
 
-    GV = new llvm::GlobalVariable(CGM.getModule(), Init->getType(),
-                                  OldGV->isConstant(),
-                                  OldGV->getLinkage(), Init, "",
-                                  /*InsertBefore*/ OldGV,
-                                  OldGV->getThreadLocalMode(),
-                           CGM.getContext().getTargetAddressSpace(D.getType()));
+    GV = new llvm::GlobalVariable(
+        CGM.getModule(), Init->getType(), OldGV->isConstant(),
+        OldGV->getLinkage(), Init, "",
+        /*InsertBefore*/ OldGV, OldGV->getThreadLocalMode(),
+        OldGV->getType()->getPointerAddressSpace());
     GV->setVisibility(OldGV->getVisibility());
     GV->setDSOLocal(OldGV->isDSOLocal());
     GV->setComdat(OldGV->getComdat());
