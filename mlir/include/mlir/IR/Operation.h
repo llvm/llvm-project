@@ -318,6 +318,7 @@ public:
   /// Using a MutableDictionaryAttr is more efficient as it does not require new
   /// uniquing in the MLIRContext.
   void setAttrs(MutableDictionaryAttr newAttrs) { attrs = newAttrs; }
+  void setAttrs(ArrayRef<NamedAttribute> newAttrs) { attrs = newAttrs; }
 
   /// Return the specified attribute if present, null otherwise.
   Attribute getAttr(Identifier name) { return attrs.get(name); }

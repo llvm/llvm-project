@@ -524,7 +524,8 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
 BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
   auto attrName = getNumWorkgroupAttributionsAttrName();
   auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
-  setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  (*this)->setAttr(attrName,
+                   IntegerAttr::get(attr.getType(), attr.getValue() + 1));
   return getBody().insertArgument(getType().getNumInputs() + attr.getInt(),
                                   type);
 }
@@ -701,7 +702,7 @@ void GPUFuncOp::setType(FunctionType newType) {
   for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
     removeAttr(getArgAttrName(i, nameBuf));
 
-  setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  (*this)->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
 /// Hook for FunctionLike verifier.
