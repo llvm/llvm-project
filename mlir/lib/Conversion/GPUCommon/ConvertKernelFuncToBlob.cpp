@@ -70,7 +70,7 @@ public:
     // attribute to the module.
     if (auto blobAttr = translateGPUModuleToBinaryAnnotation(
             *llvmModule, module.getLoc(), module.getName()))
-      module.setAttr(blobAnnotation, blobAttr);
+      module->setAttr(blobAnnotation, blobAttr);
     else
       signalPassFailure();
   }

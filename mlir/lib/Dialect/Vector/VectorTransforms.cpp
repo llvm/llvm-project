@@ -2391,7 +2391,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   SmallVector<bool, 4> bools(xferOp.getTransferRank(), false);
   auto unmaskedAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceUnmasked) {
-    xferOp.setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+    xferOp->setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
     return success();
   }
 
@@ -2447,7 +2447,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   // Unmask the existing read op, it always reads from a full buffer.
   for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
     xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
-  xferOp.setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+  xferOp->setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
 
   return success();
 }

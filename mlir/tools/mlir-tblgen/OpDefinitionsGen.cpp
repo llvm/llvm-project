@@ -479,7 +479,7 @@ void OpEmitter::emitDef(raw_ostream &os) { opClass.writeDefTo(os); }
 
 void OpEmitter::genAttrGetters() {
   FmtContext fctx;
-  fctx.withBuilder("::mlir::Builder(this->getContext())");
+  fctx.withBuilder("::mlir::Builder((*this)->getContext())");
 
   Dialect opDialect = op.getDialect();
   // Emit the derived attribute body.
@@ -521,7 +521,7 @@ void OpEmitter::genAttrGetters() {
     if (!method)
       return;
     auto &body = method->body();
-    body << "  return this->getAttr(\"" << name << "\").";
+    body << "  return (*this)->getAttr(\"" << name << "\").";
     if (attr.isOptional() || attr.hasDefaultValue())
       body << "dyn_cast_or_null<";
     else
@@ -837,13 +837,13 @@ void OpEmitter::genNamedRegionGetters() {
     if (region.isVariadic()) {
       auto *m = opClass.addMethodAndPrune("::mlir::MutableArrayRef<Region>",
                                           region.name);
-      m->body() << formatv(
-          "  return this->getOperation()->getRegions().drop_front({0});", i);
+      m->body() << formatv("  return (*this)->getRegions().drop_front({0});",
+                           i);
       continue;
     }
 
     auto *m = opClass.addMethodAndPrune("::mlir::Region &", region.name);
-    m->body() << formatv("  return this->getOperation()->getRegion({0});", i);
+    m->body() << formatv("  return (*this)->getRegion({0});", i);
   }
 }
 
@@ -859,15 +859,14 @@ void OpEmitter::genNamedSuccessorGetters() {
       auto *m =
           opClass.addMethodAndPrune("::mlir::SuccessorRange", successor.name);
       m->body() << formatv(
-          "  return {std::next(this->getOperation()->successor_begin(), {0}), "
-          "this->getOperation()->successor_end()};",
+          "  return {std::next((*this)->successor_begin(), {0}), "
+          "(*this)->successor_end()};",
           i);
       continue;
     }
 
     auto *m = opClass.addMethodAndPrune("::mlir::Block *", successor.name);
-    m->body() << formatv("  return this->getOperation()->getSuccessor({0});",
-                         i);
+    m->body() << formatv("  return (*this)->getSuccessor({0});", i);
   }
 }
 
@@ -1826,16 +1825,16 @@ void OpEmitter::genVerifier() {
   auto *method = opClass.addMethodAndPrune("::mlir::LogicalResult", "verify");
   auto &body = method->body();
   body << "  if (failed(" << op.getAdaptorName()
-       << "(*this).verify(this->getLoc()))) "
+       << "(*this).verify((*this)->getLoc()))) "
        << "return ::mlir::failure();\n";
 
   auto *valueInit = def.getValueInit("verifier");
   StringInit *stringInit = dyn_cast<StringInit>(valueInit);
   bool hasCustomVerify = stringInit && !stringInit->getValue().empty();
-  populateSubstitutions(op, "this->getAttr", "this->getODSOperands",
+  populateSubstitutions(op, "(*this)->getAttr", "this->getODSOperands",
                         "this->getODSResults", verifyCtx);
 
-  genAttributeVerifier(op, "this->getAttr", "emitOpError(",
+  genAttributeVerifier(op, "(*this)->getAttr", "emitOpError(",
                        /*emitVerificationRequiringOp=*/true, verifyCtx, body);
   genOperandResultVerifier(body, op.getOperands(), "operand");
   genOperandResultVerifier(body, op.getResults(), "result");
@@ -1932,8 +1931,8 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
     body << "    for (::mlir::Region &region : ";
     body << formatv(region.isVariadic()
                         ? "{0}()"
-                        : "::mlir::MutableArrayRef<::mlir::Region>(this->"
-                          "getOperation()->getRegion({1}))",
+                        : "::mlir::MutableArrayRef<::mlir::Region>((*this)"
+                          "->getRegion({1}))",
                     region.name, i);
     body << ") {\n";
     auto constraint = tgfmt(region.constraint.getConditionTemplate(),
