@@ -1288,8 +1288,12 @@ AliasResult BasicAAResult::aliasGEP(
     if (V1Size.hasValue() && V2Size.hasValue()) {
       // Try to determine whether abs(VarIndex) > 0.
       Optional<APInt> MinAbsVarIndex;
-      // TODO: Could handle single non-zero index as well.
-      if (DecompGEP1.VarIndices.size() == 2) {
+      if (DecompGEP1.VarIndices.size() == 1) {
+        // VarIndex = Scale*V. If V != 0 then abs(VarIndex) >= abs(Scale).
+        const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
+        if (isKnownNonZero(Var.V, DL))
+          MinAbsVarIndex = Var.Scale.abs();
+      } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).
         // Check that VisitedPhiBBs is empty, to avoid reasoning about
