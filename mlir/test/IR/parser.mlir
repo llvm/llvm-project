@@ -58,8 +58,8 @@ func private @baz() -> (i1, index, f32)
 // CHECK: func private @missingReturn()
 func private @missingReturn()
 
-// CHECK: func private @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
-func private @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
+// CHECK: func private @int_types(i0, i1, i2, i4, i7, i87) -> (i1, index, i19)
+func private @int_types(i0, i1, i2, i4, i7, i87) -> (i1, index, i19)
 
 // CHECK: func private @sint_types(si2, si4) -> (si7, si1023)
 func private @sint_types(si2, si4) -> (si7, si1023)

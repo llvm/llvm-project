@@ -60,9 +60,7 @@ Optional<unsigned> Token::getIntTypeBitwidth() const {
   assert(getKind() == inttype);
   unsigned bitwidthStart = (spelling[0] == 'i' ? 1 : 2);
   unsigned result = 0;
-  if (spelling[bitwidthStart] == '0' ||
-      spelling.drop_front(bitwidthStart).getAsInteger(10, result) ||
-      result == 0)
+  if (spelling.drop_front(bitwidthStart).getAsInteger(10, result))
     return None;
   return result;
 }
