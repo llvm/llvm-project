@@ -915,7 +915,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   resultID = getNextID();
   valueIDMap[op.getResult()] = resultID;
   operands.push_back(resultID);
-  auto attr = op.getAttr(spirv::attributeName<spirv::StorageClass>());
+  auto attr = op->getAttr(spirv::attributeName<spirv::StorageClass>());
   if (attr) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
@@ -930,7 +930,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   }
   emitDebugLine(functionHeader, op.getLoc());
   encodeInstructionInto(functionHeader, spirv::Opcode::OpVariable, operands);
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op->getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
       continue;
@@ -999,7 +999,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   }
 
   // Encode decorations.
-  for (auto attr : varOp.getAttrs()) {
+  for (auto attr : varOp->getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
       continue;
@@ -2071,28 +2071,28 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
     operands.push_back(id);
   }
 
-  if (auto attr = op.getAttr("memory_access")) {
+  if (auto attr = op->getAttr("memory_access")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("memory_access");
 
-  if (auto attr = op.getAttr("alignment")) {
+  if (auto attr = op->getAttr("alignment")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("alignment");
 
-  if (auto attr = op.getAttr("source_memory_access")) {
+  if (auto attr = op->getAttr("source_memory_access")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("source_memory_access");
 
-  if (auto attr = op.getAttr("source_alignment")) {
+  if (auto attr = op->getAttr("source_alignment")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }

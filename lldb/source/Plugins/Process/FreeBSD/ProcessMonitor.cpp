@@ -215,7 +215,7 @@ public:
       : m_addr(addr), m_buff(buff), m_size(size), m_error(error),
         m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::addr_t m_addr;
@@ -240,7 +240,7 @@ public:
       : m_addr(addr), m_buff(buff), m_size(size), m_error(error),
         m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::addr_t m_addr;
@@ -303,7 +303,7 @@ public:
                     const RegisterValue &value, bool &result)
       : m_tid(tid), m_offset(offset), m_value(value), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -336,7 +336,7 @@ public:
       : m_tid(tid), m_offset(offset), m_size(size), m_value(value),
         m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -369,7 +369,7 @@ public:
                          const RegisterValue &value, bool &result)
       : m_tid(tid), m_offset(offset), m_value(value), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -400,7 +400,7 @@ public:
   ReadGPROperation(lldb::tid_t tid, void *buf, bool &result)
       : m_tid(tid), m_buf(buf), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -426,7 +426,7 @@ public:
   ReadFPROperation(lldb::tid_t tid, void *buf, bool &result)
       : m_tid(tid), m_buf(buf), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -448,7 +448,7 @@ public:
   WriteGPROperation(lldb::tid_t tid, void *buf, bool &result)
       : m_tid(tid), m_buf(buf), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -470,7 +470,7 @@ public:
   WriteFPROperation(lldb::tid_t tid, void *buf, bool &result)
       : m_tid(tid), m_buf(buf), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -492,7 +492,7 @@ public:
   ResumeOperation(uint32_t signo, bool &result)
       : m_signo(signo), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   uint32_t m_signo;
@@ -522,7 +522,7 @@ public:
   SingleStepOperation(uint32_t signo, bool &result)
       : m_signo(signo), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   uint32_t m_signo;
@@ -549,7 +549,7 @@ public:
   LwpInfoOperation(lldb::tid_t tid, void *info, bool &result, int &ptrace_err)
       : m_tid(tid), m_info(info), m_result(result), m_err(ptrace_err) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -577,7 +577,7 @@ public:
   ThreadSuspendOperation(lldb::tid_t tid, bool suspend, bool &result)
       : m_tid(tid), m_suspend(suspend), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -596,7 +596,7 @@ public:
   EventMessageOperation(lldb::tid_t tid, unsigned long *message, bool &result)
       : m_tid(tid), m_message(message), m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   lldb::tid_t m_tid;
@@ -624,7 +624,7 @@ class KillOperation : public Operation {
 public:
   KillOperation(bool &result) : m_result(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   bool &m_result;
@@ -645,7 +645,7 @@ class DetachOperation : public Operation {
 public:
   DetachOperation(Status &result) : m_error(result) {}
 
-  void Execute(ProcessMonitor *monitor);
+  void Execute(ProcessMonitor *monitor) override;
 
 private:
   Status &m_error;

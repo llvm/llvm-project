@@ -20,7 +20,8 @@ namespace {
 struct TestCallGraphPass
     : public PassWrapper<TestCallGraphPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
-    llvm::errs() << "Testing : " << getOperation().getAttr("test.name") << "\n";
+    llvm::errs() << "Testing : " << getOperation()->getAttr("test.name")
+                 << "\n";
     getAnalysis<CallGraph>().print(llvm::errs());
   }
 };

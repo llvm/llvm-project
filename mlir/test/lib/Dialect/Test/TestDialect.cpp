@@ -674,7 +674,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1);
   if (operands.front()) {
-    setAttr("attr", operands.front());
+    (*this)->setAttr("attr", operands.front());
     return getResult();
   }
   return {};

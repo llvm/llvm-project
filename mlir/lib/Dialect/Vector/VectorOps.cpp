@@ -666,8 +666,8 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
   std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp.setAttr(ExtractOp::getPositionAttrName(),
-                    b.getI64ArrayAttr(globalPosition));
+  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                     b.getI64ArrayAttr(globalPosition));
   return success();
 }
 
@@ -722,8 +722,8 @@ static LogicalResult foldExtractOpFromTranspose(ExtractOp extractOp) {
       inversePermutation(permutationMap).compose(extractedPos);
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp.setAttr(ExtractOp::getPositionAttrName(),
-                    b.getI64ArrayAttr(newExtractedPos));
+  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                     b.getI64ArrayAttr(newExtractedPos));
 
   return success();
 }
@@ -832,8 +832,8 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     extractOp.setOperand(broadcastOp.source());
     // OpBuilder is only used as a helper to build an I64ArrayAttr.
     OpBuilder b(extractOp.getContext());
-    extractOp.setAttr(ExtractOp::getPositionAttrName(),
-                      b.getI64ArrayAttr(extractPos));
+    extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                       b.getI64ArrayAttr(extractPos));
     return extractOp.getResult();
   }
   // TODO: In case the rank of the broadcast source is greater than the rank of
@@ -895,8 +895,8 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   SmallVector<int64_t, 4> newPosition = delinearize(newStrides, position);
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp.setAttr(ExtractOp::getPositionAttrName(),
-                    b.getI64ArrayAttr(newPosition));
+  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                     b.getI64ArrayAttr(newPosition));
   extractOp.setOperand(shapeCastOp.source());
   return extractOp.getResult();
 }
@@ -1737,8 +1737,8 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
       op.setOperand(insertOp.source());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
-      op.setAttr(ExtractStridedSliceOp::getOffsetsAttrName(),
-                 b.getI64ArrayAttr(offsetDiffs));
+      op->setAttr(ExtractStridedSliceOp::getOffsetsAttrName(),
+                  b.getI64ArrayAttr(offsetDiffs));
       return success();
     }
     // If the chunk extracted is disjoint from the chunk inserted, keep looking
@@ -2135,7 +2135,7 @@ static LogicalResult foldTransferMaskAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op.setAttr(TransferOp::getMaskedAttrName(), b.getBoolArrayAttr(isMasked));
+  op->setAttr(TransferOp::getMaskedAttrName(), b.getBoolArrayAttr(isMasked));
   return success();
 }
 

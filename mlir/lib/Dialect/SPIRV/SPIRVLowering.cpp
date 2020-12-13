@@ -496,7 +496,7 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
   for (const auto &namedAttr : funcOp.getAttrs()) {
     if (namedAttr.first != impl::getTypeAttrName() &&
         namedAttr.first != SymbolTable::getSymbolAttrName())
-      newFuncOp.setAttr(namedAttr.first, namedAttr.second);
+      newFuncOp->setAttr(namedAttr.first, namedAttr.second);
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -656,7 +656,7 @@ mlir::spirv::setABIAttrs(spirv::FuncOp funcOp,
   for (auto argIndex : llvm::seq<unsigned>(0, argABIInfo.size())) {
     funcOp.setArgAttr(argIndex, argABIAttrName, argABIInfo[argIndex]);
   }
-  funcOp.setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);
+  funcOp->setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);
   return success();
 }
 

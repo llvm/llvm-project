@@ -524,7 +524,7 @@ static LogicalResult processParallelLoop(
     if (namedAttr.first == gpu::getMappingAttrName() ||
         namedAttr.first == ParallelOp::getOperandSegmentSizeAttr())
       continue;
-    launchOp.setAttr(namedAttr.first, namedAttr.second);
+    launchOp->setAttr(namedAttr.first, namedAttr.second);
   }
 
   Block *body = parallelOp.getBody();
@@ -648,6 +648,6 @@ void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
 
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
-    return !parallelOp.getAttr(gpu::getMappingAttrName());
+    return !parallelOp->getAttr(gpu::getMappingAttrName());
   });
 }
