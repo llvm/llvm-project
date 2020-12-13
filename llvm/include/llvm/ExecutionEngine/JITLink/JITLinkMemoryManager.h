@@ -107,4 +107,4 @@ public:
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINK_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
