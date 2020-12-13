@@ -9345,37 +9345,25 @@ _mm512_mask_reduce_or_epi64(__mmask8 __M, __m512i __W) {
   return __builtin_ia32_reduce_or_q512(__W);
 }
 
-#define _mm512_mask_reduce_operator(op) \
-  __m256d __t1 = _mm512_extractf64x4_pd(__W, 0); \
-  __m256d __t2 = _mm512_extractf64x4_pd(__W, 1); \
-  __m256d __t3 = __t1 op __t2; \
-  __m128d __t4 = _mm256_extractf128_pd(__t3, 0); \
-  __m128d __t5 = _mm256_extractf128_pd(__t3, 1); \
-  __m128d __t6 = __t4 op __t5; \
-  __m128d __t7 = __builtin_shufflevector(__t6, __t6, 1, 0); \
-  __m128d __t8 = __t6 op __t7; \
-  return __t8[0]
-
 static __inline__ double __DEFAULT_FN_ATTRS512 _mm512_reduce_add_pd(__m512d __W) {
-  _mm512_mask_reduce_operator(+);
+  return __builtin_ia32_reduce_fadd_pd512(0.0, __W);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512 _mm512_reduce_mul_pd(__m512d __W) {
-  _mm512_mask_reduce_operator(*);
+  return __builtin_ia32_reduce_fmul_pd512(1.0, __W);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_add_pd(__mmask8 __M, __m512d __W) {
   __W = _mm512_maskz_mov_pd(__M, __W);
-  _mm512_mask_reduce_operator(+);
+  return __builtin_ia32_reduce_fadd_pd512(0.0, __W);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_mul_pd(__mmask8 __M, __m512d __W) {
   __W = _mm512_mask_mov_pd(_mm512_set1_pd(1.0), __M, __W);
-  _mm512_mask_reduce_operator(*);
+  return __builtin_ia32_reduce_fmul_pd512(1.0, __W);
 }
-#undef _mm512_mask_reduce_operator
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_add_epi32(__m512i __W) {
@@ -9421,41 +9409,27 @@ _mm512_mask_reduce_or_epi32(__mmask16 __M, __m512i __W) {
   return __builtin_ia32_reduce_or_d512((__v16si)__W);
 }
 
-#define _mm512_mask_reduce_operator(op) \
-  __m256 __t1 = (__m256)_mm512_extractf64x4_pd((__m512d)__W, 0); \
-  __m256 __t2 = (__m256)_mm512_extractf64x4_pd((__m512d)__W, 1); \
-  __m256 __t3 = __t1 op __t2; \
-  __m128 __t4 = _mm256_extractf128_ps(__t3, 0); \
-  __m128 __t5 = _mm256_extractf128_ps(__t3, 1); \
-  __m128 __t6 = __t4 op __t5; \
-  __m128 __t7 = __builtin_shufflevector(__t6, __t6, 2, 3, 0, 1); \
-  __m128 __t8 = __t6 op __t7; \
-  __m128 __t9 = __builtin_shufflevector(__t8, __t8, 1, 0, 3, 2); \
-  __m128 __t10 = __t8 op __t9; \
-  return __t10[0]
-
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_reduce_add_ps(__m512 __W) {
-  _mm512_mask_reduce_operator(+);
+  return __builtin_ia32_reduce_fadd_ps512(0.0f, __W);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_reduce_mul_ps(__m512 __W) {
-  _mm512_mask_reduce_operator(*);
+  return __builtin_ia32_reduce_fmul_ps512(1.0f, __W);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_add_ps(__mmask16 __M, __m512 __W) {
   __W = _mm512_maskz_mov_ps(__M, __W);
-  _mm512_mask_reduce_operator(+);
+  return __builtin_ia32_reduce_fadd_ps512(0.0f, __W);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W) {
   __W = _mm512_mask_mov_ps(_mm512_set1_ps(1.0f), __M, __W);
-  _mm512_mask_reduce_operator(*);
+  return __builtin_ia32_reduce_fmul_ps512(1.0f, __W);
 }
-#undef _mm512_mask_reduce_operator
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_epi64(__m512i __V) {
