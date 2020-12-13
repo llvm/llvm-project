@@ -257,6 +257,47 @@ def testDenseFPAttr():
 run(testDenseFPAttr)
 
 
+# CHECK-LABEL: TEST: testDictAttr
+def testDictAttr():
+  with Context():
+    dict_attr = {
+      'stringattr':  StringAttr.get('string'),
+      'integerattr' : IntegerAttr.get(
+        IntegerType.get_signless(32), 42)
+    }
+
+    a = DictAttr.get(dict_attr)
+
+    # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+    print("attr:", a)
+
+    assert len(a) == 2
+
+    # CHECK: 42 : i32
+    print(a['integerattr'])
+
+    # CHECK: "string"
+    print(a['stringattr'])
+
+    # Check that exceptions are raised as expected.
+    try:
+      _ = a['does_not_exist']
+    except KeyError:
+      pass
+    else:
+      assert False, "Exception not produced"
+
+    try:
+      _ = a[42]
+    except IndexError:
+      pass
+    else:
+      assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+
+
+run(testDictAttr)
+
 # CHECK-LABEL: TEST: testTypeAttr
 def testTypeAttr():
   with Context():
