@@ -312,7 +312,7 @@ specific information.
                                                                                                      Add product
                                                                                                      names.
 
-     **GCN GFX9** [AMD-GCN-GFX9]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_
      -------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack                       - *rocm-amdhsa* - Radeon Vega
                                                                                   - *pal-amdhsa*    Frontier Edition
@@ -363,7 +363,7 @@ specific information.
                                                                                                   - Ryzen 3 Pro 4350G
                                                                                                   - Ryzen 3 Pro 4350GE
 
-     **GCN GFX10** [AMD-GCN-GFX10]_
+     **GCN GFX10 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* - Radeon RX 5700
                                                     - wavefrontsize64             - *pal-amdhsa*  - Radeon RX 5700 XT
@@ -380,7 +380,8 @@ specific information.
      ``gfx1012``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* - Radeon RX 5500
                                                     - wavefrontsize64             - *pal-amdhsa*  - Radeon RX 5500 XT
                                                     - xnack                       - *pal-amdpal*
-
+     **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
+     -------------------------------------------------------------------------------------------------------------------
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* *TBA*
                                                     - wavefrontsize64             - *pal-amdhsa*
                                                                                   - *pal-amdpal*  .. TODO::
@@ -8719,8 +8720,8 @@ in this description.
 
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
-[AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_ and
-[AMD-GCN-GFX10]_.
+[AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_,
+[AMD-GCN-GFX10-RDNA1]_ and [AMD-GCN-GFX10-RDNA2]_.
 
 Operands
 ~~~~~~~~
@@ -9447,7 +9448,8 @@ Additional Documentation
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
 .. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
-.. [AMD-GCN-GFX10] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
+.. [AMD-GCN-GFX10-RDNA1] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
+.. [AMD-GCN-GFX10-RDNA2] `AMD "RDNA 2" Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
