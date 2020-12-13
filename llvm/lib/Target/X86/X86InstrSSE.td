@@ -7206,6 +7206,26 @@ defm VPDPBUSDS  : avx_vnni_rm<0x51, "vpdpbusds", X86Vpdpbusds, 0>, ExplicitVEXPr
 defm VPDPWSSD   : avx_vnni_rm<0x52, "vpdpwssd",  X86Vpdpwssd, 1>, ExplicitVEXPrefix;
 defm VPDPWSSDS  : avx_vnni_rm<0x53, "vpdpwssds", X86Vpdpwssds, 1>, ExplicitVEXPrefix;
 
+def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
+                             (X86vpmaddwd node:$lhs, node:$rhs), [{
+  return N->hasOneUse();
+}]>;
+
+let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI] in {
+  def : Pat<(v8i32 (add VR256:$src1,
+                        (X86vpmaddwd_su VR256:$src2, VR256:$src3))),
+            (VPDPWSSDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  def : Pat<(v8i32 (add VR256:$src1,
+                        (X86vpmaddwd_su VR256:$src2, (load addr:$src3)))),
+            (VPDPWSSDYrm VR256:$src1, VR256:$src2, addr:$src3)>;
+  def : Pat<(v4i32 (add VR128:$src1,
+                        (X86vpmaddwd_su VR128:$src2, VR128:$src3))),
+            (VPDPWSSDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v4i32 (add VR128:$src1,
+                        (X86vpmaddwd_su VR128:$src2, (load addr:$src3)))),
+            (VPDPWSSDrm VR128:$src1, VR128:$src2, addr:$src3)>;
+}
+
 //===----------------------------------------------------------------------===//
 // VPERMIL - Permute Single and Double Floating-Point Values
 //

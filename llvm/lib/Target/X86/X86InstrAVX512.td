@@ -11914,11 +11914,6 @@ defm VPDPBUSDS  : VNNI_common<0x51, "vpdpbusds", X86Vpdpbusds, SchedWriteVecIMul
 defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 1>;
 defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1>;
 
-def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
-                             (X86vpmaddwd node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
-
 // Patterns to match VPDPWSSD from existing instructions/intrinsics.
 let Predicates = [HasVNNI] in {
   def : Pat<(v16i32 (add VR512:$src1,
