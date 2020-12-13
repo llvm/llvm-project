@@ -416,7 +416,8 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
     int ElemCount = VecTy->getElementCount().getFixedValue();
     return HVC.getFullValue(HVC.getBoolTy(ElemCount));
   }
-  return HVC.getFullValue(HVC.getBoolTy());
+  // For scalars, return a vector <1 x i1>.
+  return HVC.getFullValue(HVC.getBoolTy(1));
 }
 
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
