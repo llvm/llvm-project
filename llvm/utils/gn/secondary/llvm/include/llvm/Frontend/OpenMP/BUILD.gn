@@ -6,6 +6,13 @@ tablegen("OMP") {
   output_name = "OMP.h.inc"
 }
 
+tablegen("OMPcpp") {
+  visibility = [ ":public_tablegen" ]
+  args = [ "-gen-directive-gen" ]
+  output_name = "OMP.cpp.inc"
+  td_file = "OMP.td"
+}
+
 # Groups all tablegen() calls that create .inc files that are included in
 # Frontent/OpenMP's public headers (just one so far).
 # //llvm/lib/Frontend/OpenMP has this as a public_dep, so targets depending on
@@ -14,5 +21,6 @@ group("public_tablegen") {
   public_deps = [
     # Frontend/OpenMP's public headers include OMP.h.inc.
     ":OMP",
+    ":OMPcpp",
   ]
 }

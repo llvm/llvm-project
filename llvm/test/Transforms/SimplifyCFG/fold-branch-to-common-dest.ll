@@ -5,6 +5,7 @@ declare void @sideeffect0()
 declare void @sideeffect1()
 declare void @sideeffect2()
 declare void @use8(i8)
+declare i1 @gen1()
 
 ; Basic cases, blocks have nothing other than the comparison itself.
 
@@ -724,5 +725,57 @@ final_left:
   ret void
 final_right:
   call void @sideeffect1()
+  ret void
+}
+
+define void @pr48450() {
+; CHECK-LABEL: @pr48450(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i16 [ 128, [[ENTRY:%.*]] ], [ [[DEC2:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @gen1()
+; CHECK-NEXT:    br i1 [[C]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[DOTOLD:%.*]] = add i16 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[DOTOLD3:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
+; CHECK-NEXT:    br i1 [[DOTOLD3]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @gen1()
+; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
+; CHECK-NEXT:    [[DEC:%.*]] = add i16 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C2_NOT]], [[CMP_NOT]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END_LOOPEXIT]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
+; CHECK:       for.bodythread-pre-split:
+; CHECK-NEXT:    [[DEC2]] = phi i16 [ [[DOTOLD]], [[FOR_INC]] ], [ [[DEC]], [[IF_THEN]] ]
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       if.end.loopexit:
+; CHECK-NEXT:    [[DEC1:%.*]] = phi i16 [ undef, [[IF_THEN]] ], [ [[DOTOLD]], [[FOR_INC]] ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %countdown = phi i16 [ 128, %entry ], [ %dec, %for.bodythread-pre-split ]
+  %c = call i1 @gen1()
+  br i1 %c, label %for.inc, label %if.then
+
+for.inc:
+  %dec = add i16 %countdown, -1
+  %cmp.not = icmp eq i16 %countdown, 0
+  br i1 %cmp.not, label %if.end.loopexit, label %for.bodythread-pre-split
+
+if.then:
+  %c2 = call i1 @gen1()
+  br i1 %c2, label %for.inc, label %if.end.loopexit
+
+for.bodythread-pre-split:
+  call void @sideeffect0()
+  br label %for.body
+
+if.end.loopexit:
   ret void
 }

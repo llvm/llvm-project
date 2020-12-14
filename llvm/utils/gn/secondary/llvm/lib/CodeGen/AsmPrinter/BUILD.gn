@@ -38,6 +38,7 @@ static_library("AsmPrinter") {
     "EHStreamer.cpp",
     "ErlangGCPrinter.cpp",
     "OcamlGCPrinter.cpp",
+    "PseudoProbePrinter.cpp",
     "WasmException.cpp",
     "WinCFGuard.cpp",
     "WinException.cpp",

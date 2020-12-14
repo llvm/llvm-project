@@ -577,9 +577,8 @@ define i1 @test_assume_cmp_with_offset(i64 %idx) {
 ; CHECK-NEXT:    [[IDX_OFF1:%.*]] = add i64 [[IDX:%.*]], -5
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IDX_OFF1]], 3
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
-; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add i64 [[IDX]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX_OFF2]], 10
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add nsw i64 [[IDX]], -1
+; CHECK-NEXT:    ret i1 true
 ;
   %idx.off1 = add i64 %idx, -5
   %cmp1 = icmp ult i64 %idx.off1, 3

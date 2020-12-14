@@ -87,7 +87,7 @@
 "`P0920R2 <https://wg21.link/P0920R2>`__","LWG","Precalculated hash values in lookup","Kona","Reverted by `P1661 <https://wg21.link/P1661>`__",""
 "`P1001R2 <https://wg21.link/P1001R2>`__","LWG","Target Vectorization Policies from Parallelism V2 TS to C++20","Kona","",""
 "`P1024R3 <https://wg21.link/P1024R3>`__","LWG","Usability Enhancements for std::span","Kona","|Complete|","9.0"
-"`P1164R1 <https://wg21.link/P1164R1>`__","LWG","Make create_directory() Intuitive","Kona","",""
+"`P1164R1 <https://wg21.link/P1164R1>`__","LWG","Make create_directory() Intuitive","Kona","|Complete|","12.0"
 "`P1227R2 <https://wg21.link/P1227R2>`__","LWG","Signed ssize() functions, unsigned size() functions","Kona","|Complete|","9.0"
 "`P1252R2 <https://wg21.link/P1252R2>`__","LWG","Ranges Design Cleanup","Kona","",""
 "`P1286R2 <https://wg21.link/P1286R2>`__","CWG","Contra CWG DR1778","Kona","",""

@@ -31,7 +31,7 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
       has(ConstructExpr), has(cxxFunctionalCastExpr(has(ConstructExpr)))));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                functionDecl(
                    isDefinition(), // Declarations don't have return statements.
                    returns(unless(anyOf(builtinType(), autoType()))),

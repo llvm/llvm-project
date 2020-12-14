@@ -120,7 +120,7 @@ template <> struct SetQueryKind<OutputKind> {
   static const QueryKind value = QK_SetOutputKind;
 };
 
-template <> struct SetQueryKind<ast_type_traits::TraversalKind> {
+template <> struct SetQueryKind<TraversalKind> {
   static const QueryKind value = QK_SetTraversalKind;
 };
 

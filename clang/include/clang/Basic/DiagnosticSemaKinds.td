@@ -2843,7 +2843,8 @@ def warn_unsupported_target_attribute
               "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
-    : Error<"%0 attribute is not supported for this target">;
+    : Error<"%0 attribute is not supported on targets missing %1;"
+            " specify an appropriate -march= or -mcpu=">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -3941,6 +3942,9 @@ def note_protocol_decl : Note<
   "protocol is declared here">;
 def note_protocol_decl_undefined : Note<
   "protocol %0 has no definition">;
+def err_attribute_preferred_name_arg_invalid : Error<
+  "argument %0 to 'preferred_name' attribute is not a typedef for "
+  "a specialization of %1">;
 
 // objc_designated_initializer attribute diagnostics.
 def warn_objc_designated_init_missing_super_call : Warning<

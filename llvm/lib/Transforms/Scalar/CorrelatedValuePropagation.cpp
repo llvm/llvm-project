@@ -330,15 +330,6 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   Value *Cond = I->getCondition();
   BasicBlock *BB = I->getParent();
 
-  // If the condition was defined in same block as the switch then LazyValueInfo
-  // currently won't say anything useful about it, though in theory it could.
-  if (isa<Instruction>(Cond) && cast<Instruction>(Cond)->getParent() == BB)
-    return false;
-
-  // If the switch is unreachable then trying to improve it is a waste of time.
-  pred_iterator PB = pred_begin(BB), PE = pred_end(BB);
-  if (PB == PE) return false;
-
   // Analyse each switch case in turn.
   bool Changed = false;
   DenseMap<BasicBlock*, int> SuccessorsCount;
@@ -351,35 +342,9 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
-
-      // Check to see if the switch condition is equal to/not equal to the case
-      // value on every incoming edge, equal/not equal being the same each time.
-      LazyValueInfo::Tristate State = LazyValueInfo::Unknown;
-      for (pred_iterator PI = PB; PI != PE; ++PI) {
-        // Is the switch condition equal to the case value?
-        LazyValueInfo::Tristate Value = LVI->getPredicateOnEdge(CmpInst::ICMP_EQ,
-                                                                Cond, Case, *PI,
-                                                                BB, SI);
-        // Give up on this case if nothing is known.
-        if (Value == LazyValueInfo::Unknown) {
-          State = LazyValueInfo::Unknown;
-          break;
-        }
-
-        // If this was the first edge to be visited, record that all other edges
-        // need to give the same result.
-        if (PI == PB) {
-          State = Value;
-          continue;
-        }
-
-        // If this case is known to fire for some edges and known not to fire for
-        // others then there is nothing we can do - give up.
-        if (Value != State) {
-          State = LazyValueInfo::Unknown;
-          break;
-        }
-      }
+      LazyValueInfo::Tristate State =
+          LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
+                              /* UseBlockValue */ true);
 
       if (State == LazyValueInfo::False) {
         // This case never fires - remove it.

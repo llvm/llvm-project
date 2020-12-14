@@ -201,7 +201,7 @@ func @no_terminator() {
 
 // -----
 
-func @illegaltype(i0) // expected-error {{invalid integer width}}
+func @illegaltype(i21312312323120) // expected-error {{invalid integer width}}
 
 // -----
 
@@ -684,6 +684,11 @@ func @elementsattr_toolarge1() -> () {
 ^bb0:
   "foo"(){bar = dense<[777]> : tensor<1xi8>} : () -> () // expected-error {{integer constant out of range}}
 }
+
+// -----
+
+// expected-error@+1 {{parsed zero elements, but type ('tensor<i64>') expected at least 1}}
+#attr = dense<> : tensor<i64>
 
 // -----
 

@@ -16,7 +16,7 @@
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_METACLASS_$_NSObject
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_IVAR_$_NSConstantArray._count
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 CoreFoundation _OBJC_EHTYPE_$_NSException
-# CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++         ___gxx_personality_v0
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++abi      ___gxx_personality_v0
 
 .section __TEXT,__text
 .global _main

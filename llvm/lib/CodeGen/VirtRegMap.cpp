@@ -68,6 +68,7 @@ bool VirtRegMap::runOnMachineFunction(MachineFunction &mf) {
   Virt2PhysMap.clear();
   Virt2StackSlotMap.clear();
   Virt2SplitMap.clear();
+  Virt2ShapeMap.clear();
 
   grow();
   return false;

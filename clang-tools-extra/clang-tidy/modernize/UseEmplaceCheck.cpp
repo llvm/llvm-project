@@ -110,10 +110,9 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
             HasConstructExpr, has(cxxFunctionalCastExpr(HasConstructExpr))));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxMemberCallExpr(CallPushBack, has(SoughtParam),
-                                 unless(isInTemplateInstantiation()))
-                   .bind("call")),
+      traverse(TK_AsIs, cxxMemberCallExpr(CallPushBack, has(SoughtParam),
+                                          unless(isInTemplateInstantiation()))
+                            .bind("call")),
       this);
 }
 

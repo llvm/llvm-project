@@ -34,7 +34,7 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
                                         PatternRewriter &rewriter) const {
   auto loc = op.getLoc();
   Type valueType = op.getResult().getType();
-  Value init = op.getDialect()
+  Value init = op->getDialect()
                    ->materializeConstant(rewriter, rewriter.getIndexAttr(1),
                                          valueType, loc)
                    ->getResult(0);

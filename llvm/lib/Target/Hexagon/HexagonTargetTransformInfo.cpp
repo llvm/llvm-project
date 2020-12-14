@@ -36,7 +36,7 @@ static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
   cl::desc("Control lookup table emission on Hexagon target"));
 
 static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
-  cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
+  cl::Hidden, cl::desc("Enable masked loads/stores for HVX"));
 
 // Constant "cost factor" to make floating point operations more expensive
 // in terms of vectorization cost. This isn't the best way, but it should

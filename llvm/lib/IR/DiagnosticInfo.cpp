@@ -32,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -218,6 +219,13 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
     : Key(std::string(Key)) {
   raw_string_ostream OS(Val);
   EC.print(OS);
+}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   InstructionCost C)
+    : Key(std::string(Key)) {
+  raw_string_ostream OS(Val);
+  C.print(OS);
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)

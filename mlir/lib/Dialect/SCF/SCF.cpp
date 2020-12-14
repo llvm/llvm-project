@@ -1172,7 +1172,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
 static LogicalResult verify(ReduceReturnOp op) {
   // The type of the return value should be the same type as the type of the
   // operand of the enclosing ReduceOp.
-  auto reduceOp = cast<ReduceOp>(op.getParentOp());
+  auto reduceOp = cast<ReduceOp>(op->getParentOp());
   Type reduceType = reduceOp.operand().getType();
   if (reduceType != op.result().getType())
     return op.emitOpError() << "needs to have type " << reduceType

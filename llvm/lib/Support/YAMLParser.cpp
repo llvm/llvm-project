@@ -746,6 +746,92 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
   return EscapedInput;
 }
 
+llvm::Optional<bool> yaml::parseBool(StringRef S) {
+  switch (S.size()) {
+  case 1:
+    switch (S.front()) {
+    case 'y':
+    case 'Y':
+      return true;
+    case 'n':
+    case 'N':
+      return false;
+    default:
+      return None;
+    }
+  case 2:
+    switch (S.front()) {
+    case 'O':
+      if (S[1] == 'N') // ON
+        return true;
+      LLVM_FALLTHROUGH;
+    case 'o':
+      if (S[1] == 'n') //[Oo]n
+        return true;
+      return None;
+    case 'N':
+      if (S[1] == 'O') // NO
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'n':
+      if (S[1] == 'o') //[Nn]o
+        return false;
+      return None;
+    default:
+      return None;
+    }
+  case 3:
+    switch (S.front()) {
+    case 'O':
+      if (S.drop_front() == "FF") // OFF
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'o':
+      if (S.drop_front() == "ff") //[Oo]ff
+        return false;
+      return None;
+    case 'Y':
+      if (S.drop_front() == "ES") // YES
+        return true;
+      LLVM_FALLTHROUGH;
+    case 'y':
+      if (S.drop_front() == "es") //[Yy]es
+        return true;
+      return None;
+    default:
+      return None;
+    }
+  case 4:
+    switch (S.front()) {
+    case 'T':
+      if (S.drop_front() == "RUE") // TRUE
+        return true;
+      LLVM_FALLTHROUGH;
+    case 't':
+      if (S.drop_front() == "rue") //[Tt]rue
+        return true;
+      return None;
+    default:
+      return None;
+    }
+  case 5:
+    switch (S.front()) {
+    case 'F':
+      if (S.drop_front() == "ALSE") // FALSE
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'f':
+      if (S.drop_front() == "alse") //[Ff]alse
+        return false;
+      return None;
+    default:
+      return None;
+    }
+  default:
+    return None;
+  }
+}
+
 Scanner::Scanner(StringRef Input, SourceMgr &sm, bool ShowColors,
                  std::error_code *EC)
     : SM(sm), ShowColors(ShowColors), EC(EC) {
@@ -1774,7 +1860,11 @@ Stream::~Stream() = default;
 bool Stream::failed() { return scanner->failed(); }
 
 void Stream::printError(Node *N, const Twine &Msg, SourceMgr::DiagKind Kind) {
-  SMRange Range = N ? N->getSourceRange() : SMRange();
+  printError(N ? N->getSourceRange() : SMRange(), Msg, Kind);
+}
+
+void Stream::printError(const SMRange &Range, const Twine &Msg,
+                        SourceMgr::DiagKind Kind) {
   scanner->printError(Range.Start, Kind, Msg, Range);
 }
 

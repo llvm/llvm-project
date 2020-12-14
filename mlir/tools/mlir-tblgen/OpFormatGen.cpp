@@ -1640,7 +1640,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
       body << "  if (!" << var->name << "().empty()) {\n";
 
     } else {
-      body << "  if (getAttr(\""
+      body << "  if ((*this)->getAttr(\""
            << cast<AttributeVariable>(anchor)->getVar()->name << "\")) {\n";
     }
 

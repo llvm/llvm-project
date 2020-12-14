@@ -789,7 +789,8 @@ bool SafeStack::run() {
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())
-    IRB.SetCurrentDebugLocation(DebugLoc::get(SP->getScopeLine(), 0, SP));
+    IRB.SetCurrentDebugLocation(
+        DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         "__safestack_pointer_address", StackPtrTy->getPointerTo(0));

@@ -95,11 +95,11 @@ bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
 
 namespace {
 
-struct X86OutgoingValueHandler : public CallLowering::IncomingValueHandler {
+struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   X86OutgoingValueHandler(MachineIRBuilder &MIRBuilder,
                           MachineRegisterInfo &MRI, MachineInstrBuilder &MIB,
                           CCAssignFn *AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         DL(MIRBuilder.getMF().getDataLayout()),
         STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
 

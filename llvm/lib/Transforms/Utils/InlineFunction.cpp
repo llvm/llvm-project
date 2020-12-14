@@ -1443,8 +1443,8 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
                                LLVMContext &Ctx,
                                DenseMap<const MDNode *, MDNode *> &IANodes) {
   auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
-  return DebugLoc::get(OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(),
-                       IA);
+  return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
+                         OrigDL.getScope(), IA);
 }
 
 /// Update inlined instructions' line numbers to

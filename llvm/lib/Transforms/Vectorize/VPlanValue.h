@@ -260,7 +260,7 @@ class VPDef {
   void removeDefinedValue(VPValue *V) {
     assert(V->getDef() == this &&
            "can only remove VPValue linked with this VPDef");
-    assert(find(DefinedValues, V) != DefinedValues.end() &&
+    assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     erase_value(DefinedValues, V);
     V->Def = nullptr;

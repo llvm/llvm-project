@@ -317,10 +317,10 @@ static void checkOptions() {
     error("--fix-cortex-a8 is only supported on ARM targets");
 
   if (config->tocOptimize && config->emachine != EM_PPC64)
-    error("--toc-optimize is only supported on the PowerPC64 target");
+    error("--toc-optimize is only supported on PowerPC64 targets");
 
   if (config->pcRelOptimize && config->emachine != EM_PPC64)
-    error("--pcrel--optimize is only supported on the PowerPC64 target");
+    error("--pcrel-optimize is only supported on PowerPC64 targets");
 
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
@@ -992,7 +992,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
   config->ltoNewPassManager =
-      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+      args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
                    LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =

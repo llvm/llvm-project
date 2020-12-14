@@ -1,9 +1,12 @@
 ; This file tests TOC entry generation and undefined symbol generation.
 
-; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
-; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
+; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
+; RUN:      -xcoff-traceback-table=false < %s | FileCheck --check-prefixes CHECK,CHECK32 %s
+; RUN: llc  -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
+; RUN:      -xcoff-traceback-table=false < %s 2>&1 | FileCheck --check-prefixes CHECK,CHECK64  %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
+; RUN:     --xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 
 ; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t.o 2>&1 \

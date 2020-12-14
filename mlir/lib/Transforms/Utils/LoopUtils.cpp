@@ -163,7 +163,7 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp.getParentOfType<FuncOp>().getBody());
+      OpBuilder topBuilder(forOp->getParentOfType<FuncOp>().getBody());
       auto constOp = topBuilder.create<ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
@@ -1484,7 +1484,7 @@ mlir::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
   auto enclosingLoop = loops.front();
   for (auto loop : loops.drop_front()) {
-    auto parentForOp = dyn_cast<AffineForOp>(loop.getParentOp());
+    auto parentForOp = dyn_cast<AffineForOp>(loop->getParentOp());
     // parentForOp's body should be just this loop and the terminator.
     if (parentForOp != enclosingLoop || !hasTwoElements(parentForOp.getBody()))
       return false;
@@ -3073,7 +3073,7 @@ mlir::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
   // Each successive for op has to be nested in the other.
   auto prevLoop = firstLoop;
   for (auto loop : inputNest.drop_front(1)) {
-    assert(loop.getParentOp() == prevLoop && "input not contiguously nested");
+    assert(loop->getParentOp() == prevLoop && "input not contiguously nested");
     prevLoop = loop;
   }
 

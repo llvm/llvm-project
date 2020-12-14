@@ -158,36 +158,36 @@ define double @fld_stack(double %a) nounwind {
 ; RV32IFD-LABEL: fld_stack:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
-; RV32IFD-NEXT:    sw ra, 28(sp)
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    fsd ft0, 0(sp)
+; RV32IFD-NEXT:    fsd ft0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    addi a0, sp, 16
-; RV32IFD-NEXT:    call notdead
+; RV32IFD-NEXT:    call notdead@plt
 ; RV32IFD-NEXT:    fld ft0, 16(sp)
-; RV32IFD-NEXT:    fld ft1, 0(sp)
+; RV32IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
-; RV32IFD-NEXT:    lw ra, 28(sp)
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fld_stack:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
-; RV64IFD-NEXT:    sd ra, 24(sp)
+; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fsd ft0, 8(sp)
+; RV64IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    addi a0, sp, 16
-; RV64IFD-NEXT:    call notdead
+; RV64IFD-NEXT:    call notdead@plt
 ; RV64IFD-NEXT:    fld ft0, 16(sp)
-; RV64IFD-NEXT:    fld ft1, 8(sp)
+; RV64IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
-; RV64IFD-NEXT:    ld ra, 24(sp)
+; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 32
 ; RV64IFD-NEXT:    ret
   %1 = alloca double, align 8
@@ -202,7 +202,7 @@ define void @fsd_stack(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fsd_stack:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
-; RV32IFD-NEXT:    sw ra, 28(sp)
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    sw a2, 8(sp)
 ; RV32IFD-NEXT:    sw a3, 12(sp)
 ; RV32IFD-NEXT:    fld ft0, 8(sp)
@@ -212,22 +212,22 @@ define void @fsd_stack(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV32IFD-NEXT:    fsd ft0, 16(sp)
 ; RV32IFD-NEXT:    addi a0, sp, 16
-; RV32IFD-NEXT:    call notdead
-; RV32IFD-NEXT:    lw ra, 28(sp)
+; RV32IFD-NEXT:    call notdead@plt
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fsd_stack:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp)
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d.x ft0, a1
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV64IFD-NEXT:    fsd ft0, 0(sp)
 ; RV64IFD-NEXT:    mv a0, sp
-; RV64IFD-NEXT:    call notdead
-; RV64IFD-NEXT:    ld ra, 8(sp)
+; RV64IFD-NEXT:    call notdead@plt
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = fadd double %a, %b ; force store from FPR64

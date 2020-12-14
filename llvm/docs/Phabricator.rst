@@ -200,7 +200,7 @@ click Submit.  Note the review must have been Accepted first.
 Committing someone's change from Phabricator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On a clean Git repository on an up to date ``master`` branch run the
+On a clean Git repository on an up to date ``main`` branch run the
 following (where ``<Revision>`` is the Phabricator review number):
 
 ::
@@ -209,7 +209,7 @@ following (where ``<Revision>`` is the Phabricator review number):
 
 
 This will create a new branch called ``arcpatch-D<Revision>`` based on the
-current ``master`` and will create a commit corresponding to ``D<Revision>`` with a
+current ``main`` and will create a commit corresponding to ``D<Revision>`` with a
 commit message derived from information in the Phabricator review.
 
 Check you are happy with the commit message and amend it if necessary.
@@ -225,10 +225,10 @@ the following:
 
 ::
 
-  git pull --rebase https://github.com/llvm/llvm-project.git master
+  git pull --rebase https://github.com/llvm/llvm-project.git main
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
-  git push https://github.com/llvm/llvm-project.git HEAD:master
+  git push https://github.com/llvm/llvm-project.git HEAD:main
 
 
 Abandoning a change

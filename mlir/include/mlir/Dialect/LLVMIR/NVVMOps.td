@@ -107,7 +107,7 @@ def NVVM_ShflBflyOp :
   let parser = [{ return parseNVVMShflSyncBflyOp(parser, result); }];
   let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
   let verifier = [{
-    if (!getAttrOfType<UnitAttr>("return_value_and_is_valid"))
+    if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
       return success();
     auto type = getType().cast<LLVM::LLVMType>();
     if (!type.isStructTy() || type.getStructNumElements() != 2 ||

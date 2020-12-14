@@ -70,9 +70,11 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       NameEntry.Index = Name.Index;
       if (Name.Type == llvm::wasm::NameType::FUNCTION) {
         NameSec->FunctionNames.push_back(NameEntry);
-      } else {
-        assert(Name.Type == llvm::wasm::NameType::GLOBAL);
+      } else if (Name.Type == llvm::wasm::NameType::GLOBAL) {
         NameSec->GlobalNames.push_back(NameEntry);
+      } else {
+        assert(Name.Type == llvm::wasm::NameType::DATA_SEGMENT);
+        NameSec->DataSegmentNames.push_back(NameEntry);
       }
     }
     CustomSec = std::move(NameSec);

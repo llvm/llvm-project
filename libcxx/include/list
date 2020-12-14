@@ -810,7 +810,7 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
         {
             __cn2->__add(*__p);
             if (--__cn1->end_ != __p)
-                memmove(__p, __p+1, (__cn1->end_ - __p)*sizeof(__i_node*));
+                _VSTD::memmove(__p, __p+1, (__cn1->end_ - __p)*sizeof(__i_node*));
         }
         else
             (*__p)->__c_ = __cn1;
@@ -823,7 +823,7 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
         {
             __cn1->__add(*__p);
             if (--__cn2->end_ != __p)
-                memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
+                _VSTD::memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
         }
         else
             (*__p)->__c_ = __cn2;
@@ -1758,7 +1758,7 @@ list<_Tp, _Alloc>::pop_front()
         {
             (*__p)->__c_ = nullptr;
             if (--__c->end_ != __p)
-                memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+                _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
         }
     }
     __get_db()->unlock();
@@ -1787,7 +1787,7 @@ list<_Tp, _Alloc>::pop_back()
         {
             (*__p)->__c_ = nullptr;
             if (--__c->end_ != __p)
-                memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+                _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
         }
     }
     __get_db()->unlock();
@@ -1823,7 +1823,7 @@ list<_Tp, _Alloc>::erase(const_iterator __p)
         {
             (*__ip)->__c_ = nullptr;
             if (--__c->end_ != __ip)
-                memmove(__ip, __ip+1, (__c->end_ - __ip)*sizeof(__i_node*));
+                _VSTD::memmove(__ip, __ip+1, (__c->end_ - __ip)*sizeof(__i_node*));
         }
     }
     __get_db()->unlock();
@@ -1869,7 +1869,7 @@ list<_Tp, _Alloc>::erase(const_iterator __f, const_iterator __l)
                 {
                     (*__p)->__c_ = nullptr;
                     if (--__c->end_ != __p)
-                        memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+                        _VSTD::memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
                 }
             }
             __get_db()->unlock();
@@ -2034,7 +2034,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
                     __cn1->__add(*__ip);
                     (*__ip)->__c_ = __cn1;
                     if (--__cn2->end_ != __ip)
-                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                        _VSTD::memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
                 }
             }
             __db->unlock();
@@ -2079,7 +2079,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
                     __cn1->__add(*__ip);
                     (*__ip)->__c_ = __cn1;
                     if (--__cn2->end_ != __ip)
-                        memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                        _VSTD::memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
                 }
             }
             __db->unlock();
@@ -2138,7 +2138,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
                         __cn1->__add(*__ip);
                         (*__ip)->__c_ = __cn1;
                         if (--__cn2->end_ != __ip)
-                            memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
+                            _VSTD::memmove(__ip, __ip+1, (__cn2->end_ - __ip)*sizeof(__i_node*));
                     }
                 }
             }
@@ -2271,7 +2271,7 @@ list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
                 __cn1->__add(*__p);
                 (*__p)->__c_ = __cn1;
                 if (--__cn2->end_ != __p)
-                    memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
+                    _VSTD::memmove(__p, __p+1, (__cn2->end_ - __p)*sizeof(__i_node*));
             }
         }
         __db->unlock();

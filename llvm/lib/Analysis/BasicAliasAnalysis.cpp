@@ -1098,6 +1098,22 @@ AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
     const Value *V2, LocationSize V2Size, const AAMDNodes &V2AAInfo,
     const Value *UnderlyingV1, const Value *UnderlyingV2, AAQueryInfo &AAQI) {
+  // If both accesses are unknown size, we can only check whether the
+  // underlying objects are different.
+  if (!V1Size.hasValue() && !V2Size.hasValue()) {
+    // If the other operand is a phi/select, let phi/select handling perform
+    // this check. Otherwise the same recursive walk is done twice.
+    if (!isa<PHINode>(V2) && !isa<SelectInst>(V2)) {
+      AliasResult BaseAlias =
+          aliasCheck(UnderlyingV1, LocationSize::beforeOrAfterPointer(),
+                     AAMDNodes(), UnderlyingV2,
+                     LocationSize::beforeOrAfterPointer(), AAMDNodes(), AAQI);
+      if (BaseAlias == NoAlias)
+        return NoAlias;
+    }
+    return MayAlias;
+  }
+
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1155,10 +1171,6 @@ AliasResult BasicAAResult::aliasGEP(
     // Check to see if these two pointers are related by the getelementptr
     // instruction.  If one pointer is a GEP with a non-zero index of the other
     // pointer, we know they cannot alias.
-
-    // If both accesses are unknown size, we can't do anything useful here.
-    if (!V1Size.hasValue() && !V2Size.hasValue())
-      return MayAlias;
 
     AliasResult R = aliasCheck(
         UnderlyingV1, LocationSize::beforeOrAfterPointer(), AAMDNodes(),
@@ -1273,24 +1285,31 @@ AliasResult BasicAAResult::aliasGEP(
         (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return NoAlias;
 
-    // Try to determine whether the variable part of the GEP is non-zero, in
-    // which case we can add/subtract a minimum scale from the offset.
-    // TODO: Currently this handles the case of Scale*V0-Scale*V1 where V0!=V1.
-    // We could also handle Scale*V0 where V0!=0.
-    if (V1Size.hasValue() && V2Size.hasValue() &&
-        DecompGEP1.VarIndices.size() == 2) {
-      const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
-      const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-      // Check that VisitedPhiBBs is empty, to avoid reasoning about inequality
-      // of values across loop iterations.
-      if (Var0.Scale == -Var1.Scale && Var0.ZExtBits == Var1.ZExtBits &&
-          Var0.SExtBits == Var1.SExtBits && VisitedPhiBBs.empty() &&
-          isKnownNonEqual(Var0.V, Var1.V, DL)) {
-        // If the indexes are not equal, the actual offset will have at least
-        // Scale or -Scale added to it.
-        APInt Scale = Var0.Scale.abs();
-        APInt OffsetLo = DecompGEP1.Offset - Scale;
-        APInt OffsetHi = DecompGEP1.Offset + Scale;
+    if (V1Size.hasValue() && V2Size.hasValue()) {
+      // Try to determine whether abs(VarIndex) > 0.
+      Optional<APInt> MinAbsVarIndex;
+      if (DecompGEP1.VarIndices.size() == 1) {
+        // VarIndex = Scale*V. If V != 0 then abs(VarIndex) >= abs(Scale).
+        const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
+        if (isKnownNonZero(Var.V, DL))
+          MinAbsVarIndex = Var.Scale.abs();
+      } else if (DecompGEP1.VarIndices.size() == 2) {
+        // VarIndex = Scale*V0 + (-Scale)*V1.
+        // If V0 != V1 then abs(VarIndex) >= abs(Scale).
+        // Check that VisitedPhiBBs is empty, to avoid reasoning about
+        // inequality of values across loop iterations.
+        const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
+        const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
+        if (Var0.Scale == -Var1.Scale && Var0.ZExtBits == Var1.ZExtBits &&
+            Var0.SExtBits == Var1.SExtBits && VisitedPhiBBs.empty() &&
+            isKnownNonEqual(Var0.V, Var1.V, DL))
+          MinAbsVarIndex = Var0.Scale.abs();
+      }
+
+      if (MinAbsVarIndex) {
+        // The constant offset will have added at least +/-MinAbsVarIndex to it.
+        APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
+        APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
         // Check that an access at OffsetLo or lower, and an access at OffsetHi
         // or higher both do not alias.
         if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&

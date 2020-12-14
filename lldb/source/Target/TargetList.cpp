@@ -48,9 +48,13 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
-  return CreateTargetInternal(debugger, user_exe_path, triple_str,
-                              load_dependent_files, platform_options,
-                              target_sp);
+  auto result = TargetList::CreateTargetInternal(
+      debugger, user_exe_path, triple_str, load_dependent_files,
+      platform_options, target_sp);
+
+  if (target_sp && result.Success())
+    AddTargetInternal(target_sp, /*do_select*/ true);
+  return result;
 }
 
 Status TargetList::CreateTarget(Debugger &debugger,
@@ -58,8 +62,13 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const ArchSpec &specified_arch,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
-  return CreateTargetInternal(debugger, user_exe_path, specified_arch,
-                              load_dependent_files, platform_sp, target_sp);
+  auto result = TargetList::CreateTargetInternal(
+      debugger, user_exe_path, specified_arch, load_dependent_files,
+      platform_sp, target_sp);
+
+  if (target_sp && result.Success())
+    AddTargetInternal(target_sp, /*do_select*/ true);
+  return result;
 }
 
 Status TargetList::CreateTargetInternal(
@@ -388,9 +397,6 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  m_selected_target_idx = m_target_list.size();
-  m_target_list.push_back(target_sp);
   // Now prime this from the dummy target:
   target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
 
@@ -399,80 +405,76 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
 bool TargetList::DeleteTarget(TargetSP &target_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  collection::iterator pos, end = m_target_list.end();
+  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  if (it == m_target_list.end())
+    return false;
 
-  for (pos = m_target_list.begin(); pos != end; ++pos) {
-    if (pos->get() == target_sp.get()) {
-      m_target_list.erase(pos);
-      return true;
-    }
-  }
-  return false;
+  m_target_list.erase(it);
+  return true;
 }
 
 TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
     const FileSpec &exe_file_spec, const ArchSpec *exe_arch_ptr) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  TargetSP target_sp;
-  collection::const_iterator pos, end = m_target_list.end();
-  for (pos = m_target_list.begin(); pos != end; ++pos) {
-    Module *exe_module = (*pos)->GetExecutableModulePointer();
+  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
+      [&exe_file_spec, exe_arch_ptr](const TargetSP &item) {
+        Module *exe_module = item->GetExecutableModulePointer();
+        if (!exe_module ||
+            !FileSpec::Match(exe_file_spec, exe_module->GetFileSpec()))
+          return false;
 
-    if (exe_module) {
-      if (FileSpec::Match(exe_file_spec, exe_module->GetFileSpec())) {
-        if (exe_arch_ptr) {
-          if (!exe_arch_ptr->IsCompatibleMatch(exe_module->GetArchitecture()))
-            continue;
-        }
-        target_sp = *pos;
-        break;
-      }
-    }
-  }
-  return target_sp;
+        return !exe_arch_ptr ||
+               exe_arch_ptr->IsCompatibleMatch(exe_module->GetArchitecture());
+      });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
 }
 
 TargetSP TargetList::FindTargetWithProcessID(lldb::pid_t pid) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  TargetSP target_sp;
-  collection::const_iterator pos, end = m_target_list.end();
-  for (pos = m_target_list.begin(); pos != end; ++pos) {
-    Process *process = (*pos)->GetProcessSP().get();
-    if (process && process->GetID() == pid) {
-      target_sp = *pos;
-      break;
-    }
-  }
-  return target_sp;
+  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
+      [pid](const TargetSP &item) {
+        auto *process_ptr = item->GetProcessSP().get();
+        return process_ptr && (process_ptr->GetID() == pid);
+      });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
 }
 
 TargetSP TargetList::FindTargetWithProcess(Process *process) const {
   TargetSP target_sp;
-  if (process) {
-    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-    collection::const_iterator pos, end = m_target_list.end();
-    for (pos = m_target_list.begin(); pos != end; ++pos) {
-      if (process == (*pos)->GetProcessSP().get()) {
-        target_sp = *pos;
-        break;
-      }
-    }
-  }
+  if (!process)
+    return target_sp;
+
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
+      [process](const TargetSP &item) {
+        return item->GetProcessSP().get() == process;
+      });
+
+  if (it != m_target_list.end())
+    target_sp = *it;
+
   return target_sp;
 }
 
 TargetSP TargetList::GetTargetSP(Target *target) const {
   TargetSP target_sp;
-  if (target) {
-    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-    collection::const_iterator pos, end = m_target_list.end();
-    for (pos = m_target_list.begin(); pos != end; ++pos) {
-      if (target == (*pos).get()) {
-        target_sp = *pos;
-        break;
-      }
-    }
-  }
+  if (!target)
+    return target_sp;
+
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
+      [target](const TargetSP &item) { return item.get() == target; });
+  if (it != m_target_list.end())
+    target_sp = *it;
+
   return target_sp;
 }
 
@@ -503,14 +505,11 @@ uint32_t TargetList::SignalIfRunning(lldb::pid_t pid, int signo) {
   if (pid == LLDB_INVALID_PROCESS_ID) {
     // Signal all processes with signal
     std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-    collection::iterator pos, end = m_target_list.end();
-    for (pos = m_target_list.begin(); pos != end; ++pos) {
-      process = (*pos)->GetProcessSP().get();
-      if (process) {
-        if (process->IsAlive()) {
-          ++num_signals_sent;
-          process->Signal(signo);
-        }
+    for (const auto &target_sp : m_target_list) {
+      process = target_sp->GetProcessSP().get();
+      if (process && process->IsAlive()) {
+        ++num_signals_sent;
+        process->Signal(signo);
       }
     }
   } else {
@@ -518,11 +517,9 @@ uint32_t TargetList::SignalIfRunning(lldb::pid_t pid, int signo) {
     TargetSP target_sp(FindTargetWithProcessID(pid));
     if (target_sp) {
       process = target_sp->GetProcessSP().get();
-      if (process) {
-        if (process->IsAlive()) {
-          ++num_signals_sent;
-          process->Signal(signo);
-        }
+      if (process && process->IsAlive()) {
+        ++num_signals_sent;
+        process->Signal(signo);
       }
     }
   }
@@ -544,26 +541,35 @@ lldb::TargetSP TargetList::GetTargetAtIndex(uint32_t idx) const {
 
 uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  size_t num_targets = m_target_list.size();
-  for (size_t idx = 0; idx < num_targets; idx++) {
-    if (target_sp == m_target_list[idx])
-      return idx;
-  }
+  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  if (it != m_target_list.end())
+    return std::distance(m_target_list.begin(), it);
   return UINT32_MAX;
 }
 
-uint32_t TargetList::SetSelectedTarget(Target *target) {
+void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  lldbassert(std::find(m_target_list.begin(), m_target_list.end(), target_sp) ==
+                 m_target_list.end() &&
+             "target already exists it the list");
+  m_target_list.push_back(std::move(target_sp));
+  if (do_select)
+    SetSelectedTargetInternal(m_target_list.size() - 1);
+}
+
+void TargetList::SetSelectedTargetInternal(uint32_t index) {
+  lldbassert(!m_target_list.empty());
+  m_selected_target_idx = index < m_target_list.size() ? index : 0;
+}
+
+void TargetList::SetSelectedTarget(uint32_t index) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  collection::const_iterator pos, begin = m_target_list.begin(),
-                                  end = m_target_list.end();
-  for (pos = begin; pos != end; ++pos) {
-    if (pos->get() == target) {
-      m_selected_target_idx = std::distance(begin, pos);
-      return m_selected_target_idx;
-    }
-  }
-  m_selected_target_idx = 0;
-  return m_selected_target_idx;
+  SetSelectedTargetInternal(index);
+}
+
+void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
 }
 
 lldb::TargetSP TargetList::GetSelectedTarget() {

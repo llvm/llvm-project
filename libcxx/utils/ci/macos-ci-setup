@@ -10,7 +10,7 @@ source secrets.env
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 
 # Install the required tools to run CI
-brew install sphinx-doc python3 ninja cmake buildkite/buildkite/buildkite-agent
+brew install sphinx-doc python3 ninja cmake clang-format buildkite/buildkite/buildkite-agent
 
 CFG_DIR="$(brew --prefix)/etc/buildkite-agent"
 

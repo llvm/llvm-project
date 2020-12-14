@@ -30,7 +30,7 @@ void IntegerDivisionCheck::registerMatchers(MatchFinder *Finder) {
             callExpr(IntType), explicitCastExpr(IntType), UnaryOperators);
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                binaryOperator(
                    hasOperatorName("/"), hasLHS(expr(IntType)),
                    hasRHS(expr(IntType)),

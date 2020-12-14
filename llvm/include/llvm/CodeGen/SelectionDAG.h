@@ -1362,7 +1362,7 @@ public:
                                 ISD::MemIndexedMode AM);
   SDValue getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
                           ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
-                          ISD::MemIndexType IndexType);
+                          ISD::MemIndexType IndexType, ISD::LoadExtType ExtTy);
   SDValue getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
                            ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
                            ISD::MemIndexType IndexType,
@@ -1829,7 +1829,8 @@ public:
   /// for \p DemandedElts.
   ///
   /// NOTE: The function will return true for a demanded splat of UNDEF values.
-  bool isSplatValue(SDValue V, const APInt &DemandedElts, APInt &UndefElts);
+  bool isSplatValue(SDValue V, const APInt &DemandedElts, APInt &UndefElts,
+                    unsigned Depth = 0);
 
   /// Test whether \p V has a splatted value.
   bool isSplatValue(SDValue V, bool AllowUndefs = false);

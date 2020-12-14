@@ -6,7 +6,7 @@ tablegen("ACC") {
   output_name = "ACC.h.inc"
 }
 
-tablegen("ACC.cpp") {
+tablegen("ACCcpp") {
   visibility = [ ":acc_gen" ]
   args = [ "-gen-directive-gen" ]
   output_name = "ACC.cpp.inc"
@@ -14,5 +14,8 @@ tablegen("ACC.cpp") {
 }
 
 group("acc_gen") {
-  deps = [ ":ACC" ]
+  deps = [
+    ":ACC",
+    ":ACCcpp",
+  ]
 }

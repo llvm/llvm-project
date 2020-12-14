@@ -76,6 +76,7 @@ CGOPT(bool, RelaxELFRelocations)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
+CGOPT(bool, XCOFFTracebackTable)
 CGOPT(std::string, BBSections)
 CGOPT(std::string, StackProtectorGuard)
 CGOPT(unsigned, StackProtectorGuardOffset)
@@ -351,6 +352,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(IgnoreXCOFFVisibility);
 
+  static cl::opt<bool> XCOFFTracebackTable(
+      "xcoff-traceback-table", cl::desc("Emit the XCOFF traceback table"),
+      cl::init(true));
+  CGBINDOPT(XCOFFTracebackTable);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -539,6 +545,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
       getExplicitDataSections().getValueOr(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
+  Options.XCOFFTracebackTable = getXCOFFTracebackTable();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();

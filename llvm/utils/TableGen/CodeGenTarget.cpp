@@ -356,10 +356,7 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
       continue;
 
     // We have a class. Check if it supports this value type.
-    if (llvm::none_of(SubClassWithSubReg->VTs,
-                      [&ValueTy](const ValueTypeByHwMode &ClassVT) {
-                        return ClassVT == ValueTy;
-                      }))
+    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
       continue;
 
     // We have a register class which supports both the value type and

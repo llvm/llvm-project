@@ -3793,17 +3793,23 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
           Instruction *I = cast<Instruction>(VL[Idx]);
-          ReuseShuffleCost -= TTI->getInstructionCost(I, CostKind);
+          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+          assert(Cost.isValid() && "Invalid instruction cost");
+          ReuseShuffleCost -= *(Cost.getValue());
         }
         for (Value *V : VL) {
           Instruction *I = cast<Instruction>(V);
-          ReuseShuffleCost += TTI->getInstructionCost(I, CostKind);
+          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+          assert(Cost.isValid() && "Invalid instruction cost");
+          ReuseShuffleCost += *(Cost.getValue());
         }
       }
       for (Value *V : VL) {
         Instruction *I = cast<Instruction>(V);
         assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-        ScalarCost += TTI->getInstructionCost(I, CostKind);
+        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        assert(Cost.isValid() && "Invalid instruction cost");
+        ScalarCost += *(Cost.getValue());
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
@@ -5536,10 +5542,15 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 }
 
 unsigned BoUpSLP::getVectorElementSize(Value *V) {
-  // If V is a store, just return the width of the stored value without
-  // traversing the expression tree. This is the common case.
-  if (auto *Store = dyn_cast<StoreInst>(V))
-    return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
+  // If V is a store, just return the width of the stored value (or value
+  // truncated just before storing) without traversing the expression tree.
+  // This is the common case.
+  if (auto *Store = dyn_cast<StoreInst>(V)) {
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      return DL->getTypeSizeInBits(Trunc->getSrcTy());
+    else
+      return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
+  }
 
   auto E = InstrElementSize.find(V);
   if (E != InstrElementSize.end())
@@ -7387,9 +7398,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
 
   if (findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts,
                              0)) {
-    llvm::erase_if(BuildVectorOpds,
-                   [](const Value *V) { return V == nullptr; });
-    llvm::erase_if(InsertElts, [](const Value *V) { return V == nullptr; });
+    llvm::erase_value(BuildVectorOpds, nullptr);
+    llvm::erase_value(InsertElts, nullptr);
     if (BuildVectorOpds.size() >= 2)
       return true;
   }

@@ -477,7 +477,7 @@ private:
   /// thread are not locked, as it's the only writer.
   ParseInputs FileInputs; /* GUARDED_BY(Mutex) */
   /// Times of recent AST rebuilds, used for UpdateDebounce computation.
-  llvm::SmallVector<DebouncePolicy::clock::duration, 8>
+  llvm::SmallVector<DebouncePolicy::clock::duration>
       RebuildTimes; /* GUARDED_BY(Mutex) */
   /// Set to true to signal run() to finish processing.
   bool Done;                              /* GUARDED_BY(Mutex) */

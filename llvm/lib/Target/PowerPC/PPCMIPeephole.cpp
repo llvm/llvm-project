@@ -302,7 +302,7 @@ static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
       // code.
       if (Opcode != PPC::PHI)
         continue;
-      if (std::find(PHIs.begin(), PHIs.end(), Instr) != PHIs.end())
+      if (llvm::is_contained(PHIs, Instr))
         return false;
       PHIs.push_back(Instr);
     }

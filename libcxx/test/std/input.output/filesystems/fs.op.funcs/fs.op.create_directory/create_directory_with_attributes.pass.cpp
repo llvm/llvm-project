@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// This test requires the dylib support introduced in D92769.
+// XFAIL: with_system_cxx_lib=macosx10.15
+
 // <filesystem>
 
 // bool create_directory(const path& p, const path& attr);
@@ -95,8 +98,21 @@ TEST_CASE(dest_is_file)
     const path attr_dir = env.create_dir("attr_dir");
     std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(file, attr_dir, ec) == false);
-    TEST_CHECK(!ec);
+    TEST_CHECK(ec);
     TEST_CHECK(is_regular_file(file));
+}
+
+TEST_CASE(dest_part_is_file)
+{
+    scoped_test_env env;
+    const path file = env.create_file("file", 42);
+    const path dir = env.make_env_path("file/dir1");
+    const path attr_dir = env.create_dir("attr_dir");
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(fs::create_directory(dir, attr_dir, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(is_regular_file(file));
+    TEST_CHECK(!exists(dir));
 }
 
 TEST_CASE(attr_dir_is_invalid) {
@@ -117,14 +133,38 @@ TEST_CASE(attr_dir_is_invalid) {
   }
 }
 
-TEST_CASE(dest_is_symlink) {
+TEST_CASE(dest_is_symlink_to_unexisting) {
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
+  const path attr_dir = env.create_dir("attr_dir");
   const path sym = env.create_symlink("dne_sym", "dne_sym_name");
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directory(sym, dir, ec) == false);
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
+    TEST_CHECK(ec);
+  }
+}
+
+TEST_CASE(dest_is_symlink_to_dir) {
+  scoped_test_env env;
+  const path dir = env.create_dir("dir");
+  const path sym = env.create_symlink(dir, "sym_name");
+  const path attr_dir = env.create_dir("attr_dir");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
     TEST_CHECK(!ec);
+  }
+}
+
+TEST_CASE(dest_is_symlink_to_file) {
+  scoped_test_env env;
+  const path file = env.create_file("file");
+  const path sym = env.create_symlink(file, "sym_name");
+  const path attr_dir = env.create_dir("attr_dir");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
+    TEST_CHECK(ec);
   }
 }
 

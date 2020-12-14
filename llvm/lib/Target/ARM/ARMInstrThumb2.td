@@ -5427,6 +5427,7 @@ def t2DoLoopStart :
   t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
   [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;
 
+let isTerminator = 1, hasSideEffects = 1 in
 def t2DoLoopStartTP :
   t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts, rGPR:$count), 4, IIC_Br, []>;
 
@@ -5446,6 +5447,10 @@ def t2WhileLoopStart :
 
 def t2LoopEnd :
   t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
+  8, IIC_Br, []>, Sched<[WriteBr]>;
+
+def t2LoopEndDec :
+  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$elts, brtarget:$target),
   8, IIC_Br, []>, Sched<[WriteBr]>;
 
 } // end isBranch, isTerminator, hasSideEffects

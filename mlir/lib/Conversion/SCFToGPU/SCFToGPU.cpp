@@ -381,7 +381,7 @@ static LogicalResult processParallelLoop(
   // TODO: Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
   ArrayAttr mapping =
-      parallelOp.getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
+      parallelOp->getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
 
   // TODO: Support reductions.
   if (!mapping || parallelOp.getNumResults() != 0)
@@ -390,7 +390,7 @@ static LogicalResult processParallelLoop(
   Location loc = parallelOp.getLoc();
 
   auto launchIndependent = [&launchOp](Value val) {
-    return val.getParentRegion()->isAncestor(launchOp.getParentRegion());
+    return val.getParentRegion()->isAncestor(launchOp->getParentRegion());
   };
 
   auto ensureLaunchIndependent = [&rewriter,
@@ -524,7 +524,7 @@ static LogicalResult processParallelLoop(
     if (namedAttr.first == gpu::getMappingAttrName() ||
         namedAttr.first == ParallelOp::getOperandSegmentSizeAttr())
       continue;
-    launchOp.setAttr(namedAttr.first, namedAttr.second);
+    launchOp->setAttr(namedAttr.first, namedAttr.second);
   }
 
   Block *body = parallelOp.getBody();
@@ -568,7 +568,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
   // We can only transform starting at the outer-most loop. Launches inside of
   // parallel loops are not supported.
-  if (auto parentLoop = parallelOp.getParentOfType<ParallelOp>())
+  if (auto parentLoop = parallelOp->getParentOfType<ParallelOp>())
     return failure();
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
@@ -648,6 +648,6 @@ void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
 
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
   target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
-    return !parallelOp.getAttr(gpu::getMappingAttrName());
+    return !parallelOp->getAttr(gpu::getMappingAttrName());
   });
 }

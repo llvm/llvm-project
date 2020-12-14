@@ -15,6 +15,7 @@
 #define LLVM_LTO_CONFIG_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
@@ -50,7 +51,7 @@ struct Config {
   bool DisableVerify = false;
 
   /// Use the new pass manager
-  bool UseNewPM = false;
+  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.

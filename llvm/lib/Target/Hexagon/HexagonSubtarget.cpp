@@ -133,7 +133,7 @@ bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
   if (IncludeBool && Ty == MVT::i1)
     return true;
   ArrayRef<MVT> ElemTypes = getHVXElementTypes();
-  return llvm::find(ElemTypes, Ty) != ElemTypes.end();
+  return llvm::is_contained(ElemTypes, Ty);
 }
 
 bool HexagonSubtarget::isHVXVectorType(MVT VecTy, bool IncludeBool) const {
@@ -159,7 +159,7 @@ bool HexagonSubtarget::isHVXVectorType(MVT VecTy, bool IncludeBool) const {
   unsigned VecWidth = VecTy.getSizeInBits();
   if (VecWidth != 8 * HwLen && VecWidth != 16 * HwLen)
     return false;
-  return llvm::find(ElemTypes, ElemTy) != ElemTypes.end();
+  return llvm::is_contained(ElemTypes, ElemTy);
 }
 
 bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {

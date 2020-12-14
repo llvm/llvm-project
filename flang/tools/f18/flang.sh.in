@@ -26,4 +26,4 @@ function abspath() {
 
 wd=`abspath $(dirname "$0")/..`
 
-${wd}/bin/f18 -module-suffix .f18.mod -intrinsic-module-directory @FLANG_INTRINSIC_MODULES_DIR@ $*
+${wd}/bin/f18 -module-suffix .f18.mod -intrinsic-module-directory ${wd}/include/flang $*

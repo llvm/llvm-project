@@ -62,6 +62,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
@@ -71,6 +72,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
+  initializeX86TileConfigPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
@@ -379,6 +381,7 @@ public:
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreSched2() override;
+  bool addPreRewrite() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -407,6 +410,7 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void X86PassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
+  addPass(createX86LowerAMXTypePass());
 
   TargetPassConfig::addIRPasses();
 
@@ -492,7 +496,12 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86WinAllocaExpander());
+
+  if (getOptLevel() != CodeGenOpt::None) {
+    addPass(createX86PreTileConfigPass());
+  }
 }
+
 void X86PassConfig::addMachineSSAOptimization() {
   addPass(createX86DomainReassignmentPass());
   TargetPassConfig::addMachineSSAOptimization();
@@ -563,6 +572,11 @@ void X86PassConfig::addPreEmitPass2() {
   if (TT.isOSWindows())
     addPass(createCFGuardLongjmpPass());
   addPass(createX86LoadValueInjectionRetHardeningPass());
+}
+
+bool X86PassConfig::addPreRewrite() {
+  addPass(createX86TileConfigPass());
+  return true;
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {

@@ -178,6 +178,11 @@ void TestDialect::initialize() {
   allowUnknownOperations();
 }
 
+Operation *TestDialect::materializeConstant(OpBuilder &builder, Attribute value,
+                                            Type type, Location loc) {
+  return builder.create<TestOpConstant>(loc, type, value);
+}
+
 static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
                           llvm::SetVector<Type> &stack) {
   StringRef typeTag;
@@ -669,7 +674,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1);
   if (operands.front()) {
-    setAttr("attr", operands.front());
+    (*this)->setAttr("attr", operands.front());
     return getResult();
   }
   return {};
@@ -726,7 +731,7 @@ struct TestResource : public SideEffects::Resource::Base<TestResource> {
 void SideEffectOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -761,7 +766,7 @@ void SideEffectOp::getEffects(
 
 void SideEffectOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
-  auto effectsAttr = getAttrOfType<AffineMapAttr>("effect_parameter");
+  auto effectsAttr = (*this)->getAttrOfType<AffineMapAttr>("effect_parameter");
   if (!effectsAttr)
     return;
 

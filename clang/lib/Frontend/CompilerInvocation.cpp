@@ -185,20 +185,24 @@ static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
   return FlagToValueNormalizer<T>{std::move(Value)};
 }
 
-static auto makeBooleanFlagNormalizer(OptSpecifier NegOpt) {
-  return [NegOpt](OptSpecifier PosOpt, unsigned, const ArgList &Args,
-                  DiagnosticsEngine &) -> Optional<bool> {
-    if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
-      return A->getOption().matches(PosOpt);
+static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
+                                        OptSpecifier OtherOpt) {
+  return [Value, OtherValue, OtherOpt](OptSpecifier Opt, unsigned,
+                                       const ArgList &Args,
+                                       DiagnosticsEngine &) -> Optional<bool> {
+    if (const Arg *A = Args.getLastArg(Opt, OtherOpt)) {
+      return A->getOption().matches(Opt) ? Value : OtherValue;
+    }
     return None;
   };
 }
 
-static auto makeBooleanFlagDenormalizer(const char *NegSpelling) {
-  return [NegSpelling](
-             SmallVectorImpl<const char *> &Args, const char *PosSpelling,
-             CompilerInvocation::StringAllocator, unsigned, unsigned Value) {
-    Args.push_back(Value ? PosSpelling : NegSpelling);
+static auto makeBooleanOptionDenormalizer(bool Value,
+                                          const char *OtherSpelling) {
+  return [Value, OtherSpelling](
+             SmallVectorImpl<const char *> &Args, const char *Spelling,
+             CompilerInvocation::StringAllocator, unsigned, bool KeyPath) {
+    Args.push_back(KeyPath == Value ? Spelling : OtherSpelling);
   };
 }
 
@@ -906,7 +910,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
   Opts.DebugColumnInfo = !Args.hasArg(OPT_gno_column_info);
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
-  Opts.CodeViewGHash = Args.hasArg(OPT_gcodeview_ghash);
   Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);
   Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
   Opts.VirtualFunctionElimination =
@@ -967,7 +970,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_record_command_line));
   Opts.MergeAllConstants = Args.hasArg(OPT_fmerge_all_constants);
   Opts.NoCommon = !Args.hasArg(OPT_fcommon);
-  Opts.NoInlineLineTables = Args.hasArg(OPT_gno_inline_line_tables);
   Opts.NoImplicitFloat = Args.hasArg(OPT_no_implicit_float);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
   Opts.SimplifyLibCalls = !(Args.hasArg(OPT_fno_builtin) ||
@@ -980,7 +982,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.RerollLoops = Args.hasArg(OPT_freroll_loops);
 
   Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
-  Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile =
       std::string(Args.getLastArgValue(OPT_fprofile_sample_use_EQ));
   Opts.DebugInfoForProfiling = Args.hasFlag(
@@ -1006,10 +1007,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
   Opts.ProfileRemappingFile =
       std::string(Args.getLastArgValue(OPT_fprofile_remapping_file_EQ));
-  if (!Opts.ProfileRemappingFile.empty() && !Opts.ExperimentalNewPassManager) {
+  if (!Opts.ProfileRemappingFile.empty() && Opts.LegacyPassManager) {
     Diags.Report(diag::err_drv_argument_only_allowed_with)
-      << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
-      << "-fexperimental-new-pass-manager";
+        << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
+        << "-fno-legacy-pass-manager";
   }
 
   Opts.CoverageMapping =
@@ -1051,9 +1052,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
     // -ftime-report= is only for new pass manager.
     if (A->getOption().getID() == OPT_ftime_report_EQ) {
-      if (!Opts.ExperimentalNewPassManager)
+      if (Opts.LegacyPassManager)
         Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-fexperimental-new-pass-manager";
+            << A->getAsString(Args) << "-fno-legacy-pass-manager";
 
       StringRef Val = A->getValue();
       if (Val == "per-pass")
@@ -3626,16 +3627,11 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   Opts.ImplicitPCHInclude = std::string(Args.getLastArgValue(OPT_include_pch));
   Opts.PCHWithHdrStop = Args.hasArg(OPT_pch_through_hdrstop_create) ||
                         Args.hasArg(OPT_pch_through_hdrstop_use);
-  Opts.PCHWithHdrStopCreate = Args.hasArg(OPT_pch_through_hdrstop_create);
   Opts.PCHThroughHeader =
       std::string(Args.getLastArgValue(OPT_pch_through_header_EQ));
-  Opts.UsePredefines = !Args.hasArg(OPT_undef);
-  Opts.DetailedRecord = Args.hasArg(OPT_detailed_preprocessing_record);
-  Opts.DisablePCHValidation = Args.hasArg(OPT_fno_validate_pch);
   Opts.AllowPCHWithCompilerErrors =
       Args.hasArg(OPT_fallow_pch_with_errors, OPT_fallow_pcm_with_errors);
 
-  Opts.DumpDeserializedPCHDecls = Args.hasArg(OPT_dump_deserialized_pch_decls);
   for (const auto *A : Args.filtered(OPT_error_on_deserialized_pch_decl))
     Opts.DeserializedPCHDeclsToErrorOn.insert(A->getValue());
 
@@ -3718,9 +3714,6 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
-
-  Opts.SetUpStaticAnalyzer = Args.hasArg(OPT_setup_static_analyzer);
-  Opts.DisablePragmaDebugCrash = Args.hasArg(OPT_disable_pragma_debug_crash);
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
@@ -3731,14 +3724,7 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
   else
     Opts.ShowCPP = 0;
 
-  Opts.ShowComments = Args.hasArg(OPT_C);
-  Opts.ShowLineMarkers = !Args.hasArg(OPT_P);
-  Opts.ShowMacroComments = Args.hasArg(OPT_CC);
   Opts.ShowMacros = Args.hasArg(OPT_dM) || Args.hasArg(OPT_dD);
-  Opts.ShowIncludeDirectives = Args.hasArg(OPT_dI);
-  Opts.RewriteIncludes = Args.hasArg(OPT_frewrite_includes);
-  Opts.RewriteImports = Args.hasArg(OPT_frewrite_imports);
-  Opts.UseLineDirectives = Args.hasArg(OPT_fuse_line_directives);
 }
 
 static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,

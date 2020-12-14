@@ -170,7 +170,9 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
 
 IRTranslator::ValueToVRegInfo::VRegListT &
 IRTranslator::allocateVRegs(const Value &Val) {
-  assert(!VMap.contains(Val) && "Value already allocated in VMap");
+  auto VRegsIt = VMap.findVRegs(Val);
+  if (VRegsIt != VMap.vregs_end())
+    return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
@@ -2773,8 +2775,8 @@ bool IRTranslator::translate(const Instruction &Inst) {
   // We only emit constants into the entry block from here. To prevent jumpy
   // debug behaviour set the line to 0.
   if (const DebugLoc &DL = Inst.getDebugLoc())
-    EntryBuilder->setDebugLoc(
-        DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
+    EntryBuilder->setDebugLoc(DILocation::get(
+        Inst.getContext(), 0, 0, DL.getScope(), DL.getInlinedAt()));
   else
     EntryBuilder->setDebugLoc(DebugLoc());
 

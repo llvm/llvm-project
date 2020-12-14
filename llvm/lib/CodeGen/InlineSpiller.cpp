@@ -1558,4 +1558,6 @@ void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
   else
     llvm_unreachable("VReg should be assigned either physreg or stackslot");
+  if (VRM.hasShape(Old))
+    VRM.assignVirt2Shape(New, VRM.getShape(Old));
 }

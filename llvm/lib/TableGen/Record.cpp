@@ -2595,8 +2595,20 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
+// We cache the record vectors for single classes. Many backends request
+// the same vectors multiple times.
 std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
-    const ArrayRef<StringRef> ClassNames) const {
+    StringRef ClassName) const {
+
+  auto Pair = ClassRecordsMap.try_emplace(ClassName);
+  if (Pair.second)
+    Pair.first->second = getAllDerivedDefinitions(makeArrayRef(ClassName));
+
+  return Pair.first->second;
+}
+
+std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
+    ArrayRef<StringRef> ClassNames) const {
   SmallVector<Record *, 2> ClassRecs;
   std::vector<Record *> Defs;
 

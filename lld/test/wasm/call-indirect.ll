@@ -156,4 +156,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:     GlobalNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            __stack_pointer
+; CHECK-NEXT:     DataSegmentNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            .data
 ; CHECK-NEXT: ...

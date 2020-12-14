@@ -4061,7 +4061,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size()) {
-        return Error(getLoc(), "too few operands for instruction");
+        return Error(IDLoc, "too few operands for instruction");
       }
       ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
       if (ErrorLoc == SMLoc())
@@ -5051,9 +5051,11 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       while (!getLexer().is(AsmToken::EndOfStatement)) {
         Parser.Lex();
       }
+      Parser.Lex();
       return true;
     }
   }
+  Parser.Lex();
 
   return false;
 }

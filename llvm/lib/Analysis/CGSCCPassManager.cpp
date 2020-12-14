@@ -489,7 +489,8 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
 
     // Otherwise, if we've already hit our max, we're done.
     if (Iteration >= MaxIterations) {
-      maxDevirtIterationsReached();
+      if (AbortOnMaxDevirtIterationsReached)
+        report_fatal_error("Max devirtualization iterations reached");
       LLVM_DEBUG(
           dbgs() << "Found another devirtualization after hitting the max "
                     "number of repetitions ("
@@ -813,11 +814,6 @@ static void updateNewSCCFunctionAnalyses(LazyCallGraph::SCC &C,
     // Now invalidate anything we found.
     FAM.invalidate(F, PA);
   }
-}
-
-void llvm::maxDevirtIterationsReached() {
-  if (AbortOnMaxDevirtIterationsReached)
-    report_fatal_error("Max devirtualization iterations reached");
 }
 
 /// Helper function to update both the \c CGSCCAnalysisManager \p AM and the \c

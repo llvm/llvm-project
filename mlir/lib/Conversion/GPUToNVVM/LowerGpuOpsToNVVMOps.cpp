@@ -31,10 +31,8 @@ using namespace mlir;
 
 namespace {
 
-struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
-  explicit GPUShuffleOpLowering(LLVMTypeConverter &lowering_)
-      : ConvertToLLVMPattern(gpu::ShuffleOp::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_) {}
+struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
+  using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
   /// Lowers a shuffle to the corresponding NVVM op.
   ///
@@ -53,7 +51,7 @@ struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ShuffleOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     gpu::ShuffleOpAdaptor adaptor(operands);
@@ -135,20 +133,26 @@ struct LowerGpuOpsToNVVMOpsPass
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
-    target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
-                        LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
-    target.addIllegalOp<FuncOp>();
-    target.addLegalDialect<NVVM::NVVMDialect>();
-    // TODO: Remove once we support replacing non-root ops.
-    target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+    configureGpuToNVVMConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
   }
 };
 
 } // anonymous namespace
+
+void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
+  target.addIllegalOp<FuncOp>();
+  target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
+  target.addIllegalDialect<gpu::GPUDialect>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
+                      LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
+                      LLVM::SinOp, LLVM::SqrtOp>();
+
+  // TODO: Remove once we support replacing non-root ops.
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+}
 
 void mlir::populateGpuToNVVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {

@@ -92,32 +92,40 @@ static void replaceValue(Value &Old, Value &New) {
 }
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
-  // Match insert into fixed vector of scalar load.
+  // Match insert into fixed vector of scalar value.
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
   if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
       !Scalar->hasOneUse())
     return false;
 
+  // Optionally match an extract from another vector.
+  Value *X;
+  bool HasExtract = match(Scalar, m_ExtractElt(m_Value(X), m_ZeroInt()));
+  if (!HasExtract)
+    X = Scalar;
+
+  // Match source value as load of scalar or vector.
   // Do not vectorize scalar load (widening) if atomic/volatile or under
   // asan/hwasan/memtag/tsan. The widened load may load data from dirty regions
   // or create data races non-existent in the source.
-  auto *Load = dyn_cast<LoadInst>(Scalar);
-  if (!Load || !Load->isSimple() ||
+  auto *Load = dyn_cast<LoadInst>(X);
+  if (!Load || !Load->isSimple() || !Load->hasOneUse() ||
       Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
       mustSuppressSpeculation(*Load))
     return false;
 
   // TODO: Extend this to match GEP with constant offsets.
-  Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
-  assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
-  unsigned AS = Load->getPointerAddressSpace();
+  const DataLayout &DL = I.getModule()->getDataLayout();
+  Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
+  assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
   // If original AS != Load's AS, we can't bitcast the original pointer and have
   // to use Load's operand instead. Ideally we would want to strip pointer casts
   // without changing AS, but there's no API to do that ATM.
-  if (AS != PtrOp->getType()->getPointerAddressSpace())
-    PtrOp = Load->getPointerOperand();
+  unsigned AS = Load->getPointerAddressSpace();
+  if (AS != SrcPtr->getType()->getPointerAddressSpace())
+    SrcPtr = Load->getPointerOperand();
 
   Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
@@ -129,15 +137,15 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   unsigned MinVecNumElts = MinVectorSize / ScalarSize;
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   Align Alignment = Load->getAlign();
-  const DataLayout &DL = I.getModule()->getDataLayout();
-  if (!isSafeToLoadUnconditionally(PtrOp, MinVecTy, Alignment, DL, Load, &DT))
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Alignment, DL, Load, &DT))
     return false;
 
-
-  // Original pattern: insertelt undef, load [free casts of] ScalarPtr, 0
-  int OldCost = TTI.getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, AS);
+  // Original pattern: insertelt undef, load [free casts of] PtrOp, 0
+  Type *LoadTy = Load->getType();
+  int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
-  OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts, true, false);
+  OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
+                                          /* Insert */ true, HasExtract);
 
   // New pattern: load VecPtr
   int NewCost = TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
@@ -150,7 +158,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreateBitCast(PtrOp, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr = Builder.CreateBitCast(SrcPtr, MinVecTy->getPointerTo(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
 
   // If the insert type does not match the target's minimum vector type,

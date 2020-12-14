@@ -45,14 +45,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb clang-format
 RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-compile to 32 bits
 
 # Install the most recently released LLVM
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-RUN ln -s $(find /usr/bin -regex '.+/clang\+\+-[a-zA-Z0-9.]+') /usr/bin/clang++
-RUN ln -s $(find /usr/bin -regex '.+/clang-[a-zA-Z0-9.]+') /usr/bin/clang
+RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++
+RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang
 
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test

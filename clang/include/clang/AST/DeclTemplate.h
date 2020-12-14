@@ -3353,6 +3353,36 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
              : nullptr;
 }
 
+/// Check whether the template parameter is a pack expansion, and if so,
+/// determine the number of parameters produced by that expansion. For instance:
+///
+/// \code
+/// template<typename ...Ts> struct A {
+///   template<Ts ...NTs, template<Ts> class ...TTs, typename ...Us> struct B;
+/// };
+/// \endcode
+///
+/// In \c A<int,int>::B, \c NTs and \c TTs have expanded pack size 2, and \c Us
+/// is not a pack expansion, so returns an empty Optional.
+inline Optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+    if (TTP->isExpandedParameterPack())
+      return TTP->getNumExpansionParameters();
+  }
+
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    if (NTTP->isExpandedParameterPack())
+      return NTTP->getNumExpansionTypes();
+  }
+
+  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+    if (TTP->isExpandedParameterPack())
+      return TTP->getNumExpansionTemplateParameters();
+  }
+
+  return None;
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLTEMPLATE_H

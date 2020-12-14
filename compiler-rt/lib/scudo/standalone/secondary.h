@@ -31,7 +31,7 @@ struct Header {
   uptr BlockEnd;
   uptr MapBase;
   uptr MapSize;
-  MapPlatformData Data;
+  [[no_unique_address]] MapPlatformData Data;
 };
 
 constexpr uptr getHeaderSize() {
@@ -232,7 +232,7 @@ private:
     uptr BlockEnd;
     uptr MapBase;
     uptr MapSize;
-    MapPlatformData Data;
+    [[no_unique_address]] MapPlatformData Data;
     u64 Time;
   };
 

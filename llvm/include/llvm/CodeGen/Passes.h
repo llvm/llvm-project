@@ -485,6 +485,10 @@ namespace llvm {
   /// The pass fixups statepoint machine instruction to replace usage of
   /// caller saved registers with stack slots.
   extern char &FixupStatepointCallerSavedID;
+
+  /// The pass transform load/store <256 x i32> to AMX load/store intrinsics
+  /// or split the data to two <128 x i32>.
+  FunctionPass *createX86LowerAMXTypePass();
 } // End llvm namespace
 
 #endif

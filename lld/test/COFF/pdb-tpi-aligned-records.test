@@ -17,7 +17,7 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
     # It is important to keep the 'SectionData' since the .OBJ is reconstructed from it,
-    # and that triggers an alignement bug in the output .PDB.
+    # and that triggers an alignment bug in the output .PDB.
     SectionData:     '040000001000081003000000000000000000000000000600011200000000'
     Types:
       - Kind:            LF_PROCEDURE

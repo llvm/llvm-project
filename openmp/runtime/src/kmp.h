@@ -694,6 +694,9 @@ public:
     virtual int begin() const { return 0; }
     virtual int end() const { return 0; }
     virtual int next(int previous) const { return 0; }
+#if KMP_OS_WINDOWS
+    virtual int set_process_affinity(bool abort_on_error) const { return -1; }
+#endif
     // Set the system's affinity to this affinity mask's value
     virtual int set_system_affinity(bool abort_on_error) const { return -1; }
     // Set this affinity mask to the current system affinity
@@ -3780,6 +3783,12 @@ KMP_EXPORT void __kmpc_taskloop(ident_t *loc, kmp_int32 gtid, kmp_task_t *task,
                                 kmp_uint64 *ub, kmp_int64 st, kmp_int32 nogroup,
                                 kmp_int32 sched, kmp_uint64 grainsize,
                                 void *task_dup);
+KMP_EXPORT void __kmpc_taskloop_5(ident_t *loc, kmp_int32 gtid,
+                                  kmp_task_t *task, kmp_int32 if_val,
+                                  kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
+                                  kmp_int32 nogroup, kmp_int32 sched,
+                                  kmp_uint64 grainsize, kmp_int32 modifier,
+                                  void *task_dup);
 KMP_EXPORT void *__kmpc_task_reduction_init(int gtid, int num_data, void *data);
 KMP_EXPORT void *__kmpc_taskred_init(int gtid, int num_data, void *data);
 KMP_EXPORT void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void *d);

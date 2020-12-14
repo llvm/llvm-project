@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
@@ -1040,6 +1041,25 @@ void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
   for (unsigned i = Inst.getNumOperands(); i--;)
     if (Inst.getOperand(i).isExpr())
       visitUsedExpr(*Inst.getOperand(i).getExpr());
+}
+
+void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
+                                 uint64_t Attr,
+                                 const MCPseudoProbeInlineStack &InlineStack) {
+  auto &Context = getContext();
+
+  // Create a symbol at in the current section for use in the probe.
+  MCSymbol *ProbeSym = Context.createTempSymbol();
+
+  // Set the value of the symbol to use for the MCPseudoProbe.
+  emitLabel(ProbeSym);
+
+  // Create a (local) probe entry with the symbol.
+  MCPseudoProbe Probe(ProbeSym, Guid, Index, Type, Attr);
+
+  // Add the probe entry to this section's entries.
+  Context.getMCPseudoProbeTable().getProbeSections().addPseudoProbe(
+      getCurrentSectionOnly(), Probe, InlineStack);
 }
 
 void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,

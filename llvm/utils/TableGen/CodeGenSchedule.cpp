@@ -950,9 +950,9 @@ void CodeGenSchedModels::collectSchedClasses() {
     }
     // If ProcIndices contains zero, the class applies to all processors.
     LLVM_DEBUG({
-      if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
+      if (!llvm::is_contained(ProcIndices, 0)) {
         for (const CodeGenProcModel &PM : ProcModels) {
-          if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
+          if (!llvm::is_contained(ProcIndices, PM.Index))
             dbgs() << "No machine model for " << Inst->TheDef->getName()
                    << " on processor " << PM.ModelName << '\n';
         }
@@ -1248,7 +1248,7 @@ void CodeGenSchedModels::inferFromItinClass(Record *ItinClassDef,
     bool HasMatch = false;
     for (const Record *Rec : PM.ItinRWDefs) {
       RecVec Matched = Rec->getValueAsListOfDefs("MatchedItinClasses");
-      if (!std::count(Matched.begin(), Matched.end(), ItinClassDef))
+      if (!llvm::is_contained(Matched, ItinClassDef))
         continue;
       if (HasMatch)
         PrintFatalError(Rec->getLoc(), "Duplicate itinerary class "
@@ -1767,7 +1767,7 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   LLVM_DEBUG(dbgs() << '\n');
 
   LastTransitions = makePerProcessorTransitions(
-      LastTransitions[0], llvm::count(ProcIndices, 0)
+      LastTransitions[0], llvm::is_contained(ProcIndices, 0)
                               ? ArrayRef<unsigned>(getAllProcIndices())
                               : ProcIndices);
   // Collect all PredTransitions for individual operands.
@@ -2046,7 +2046,7 @@ void CodeGenSchedModels::collectItinProcResources(Record *ItinClassDef) {
     for (RecIter II = PM.ItinRWDefs.begin(), IE = PM.ItinRWDefs.end();
          II != IE; ++II) {
       RecVec Matched = (*II)->getValueAsListOfDefs("MatchedItinClasses");
-      if (!std::count(Matched.begin(), Matched.end(), ItinClassDef))
+      if (!llvm::is_contained(Matched, ItinClassDef))
         continue;
       if (HasMatch)
         PrintFatalError((*II)->getLoc(), "Duplicate itinerary class "

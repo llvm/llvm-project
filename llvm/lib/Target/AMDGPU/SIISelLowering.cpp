@@ -6588,11 +6588,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return SDValue();
 
-    DiagnosticInfoUnsupported BadIntrin(
-      MF.getFunction(), "intrinsic not supported on subtarget",
-      DL.getDebugLoc());
-      DAG.getContext()->diagnose(BadIntrin);
-      return DAG.getUNDEF(VT);
+    return emitRemovedIntrinsicError(DAG, DL, VT);
   }
   case Intrinsic::amdgcn_ldexp:
     return DAG.getNode(AMDGPUISD::LDEXP, DL, VT,

@@ -903,12 +903,11 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.4-A"));
   EXPECT_TRUE(testAArch64CPU(
      "cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
-      AArch64::AEK_CRC     | AArch64::AEK_RDM  | AArch64::AEK_SSBS    |
-      AArch64::AEK_CRYPTO  | AArch64::AEK_SM4  | AArch64::AEK_SHA3    |
-      AArch64::AEK_SHA2    | AArch64::AEK_AES  | AArch64::AEK_DOTPROD |
-      AArch64::AEK_FP      | AArch64::AEK_SIMD | AArch64::AEK_FP16    |
-      AArch64::AEK_FP16FML | AArch64::AEK_RAS  | AArch64::AEK_RCPC    |
-      AArch64::AEK_SB, "8-R"));
+      AArch64::AEK_CRC     | AArch64::AEK_RDM  | AArch64::AEK_SSBS |
+      AArch64::AEK_DOTPROD | AArch64::AEK_FP   | AArch64::AEK_SIMD |
+      AArch64::AEK_FP16    | AArch64::AEK_FP16FML | AArch64::AEK_RAS |
+      AArch64::AEK_RCPC    | AArch64::AEK_LSE  | AArch64::AEK_SB,
+      "8-R"));
   EXPECT_TRUE(testAArch64CPU(
       "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
@@ -1118,6 +1117,12 @@ TEST(TargetParserTest, testAArch64Extension) {
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_TRUE(testAArch64Extension("cortex-a55",
                                     AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "dotprod"));
   EXPECT_FALSE(testAArch64Extension("cortex-a57",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cortex-a72",
@@ -1126,6 +1131,22 @@ TEST(TargetParserTest, testAArch64Extension) {
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_TRUE(testAArch64Extension("cortex-a75",
                                     AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75",
+                                    AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a75",
+                                    AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75",
+                                   AArch64::ArchKind::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82",
+                                   AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82",
+                                   AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82",
+                                   AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82",
+                                   AArch64::ArchKind::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82",
+                                   AArch64::ArchKind::INVALID, "lse"));
   EXPECT_FALSE(testAArch64Extension("cyclone",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("exynos-m3",
@@ -1168,18 +1189,6 @@ TEST(TargetParserTest, testAArch64Extension) {
                                    AArch64::ArchKind::INVALID, "profile"));
   EXPECT_FALSE(testAArch64Extension("saphira",
                                     AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "dotprod"));
   EXPECT_FALSE(testAArch64Extension("thunderx2t99",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("thunderx",

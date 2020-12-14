@@ -638,8 +638,8 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  uint32_t mm = module.getAttrOfType<IntegerAttr>("memory_model").getInt();
-  uint32_t am = module.getAttrOfType<IntegerAttr>("addressing_model").getInt();
+  uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
+  uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -656,7 +656,7 @@ LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.default_value(),
                                             /*isSpec=*/true)) {
     // Emit the OpDecorate instruction for SpecId.
-    if (auto specID = op.getAttrOfType<IntegerAttr>("spec_id")) {
+    if (auto specID = op->getAttrOfType<IntegerAttr>("spec_id")) {
       auto val = static_cast<uint32_t>(specID.getInt());
       emitDecoration(resultID, spirv::Decoration::SpecId, {val});
     }
@@ -915,7 +915,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   resultID = getNextID();
   valueIDMap[op.getResult()] = resultID;
   operands.push_back(resultID);
-  auto attr = op.getAttr(spirv::attributeName<spirv::StorageClass>());
+  auto attr = op->getAttr(spirv::attributeName<spirv::StorageClass>());
   if (attr) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
@@ -930,7 +930,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   }
   emitDebugLine(functionHeader, op.getLoc());
   encodeInstructionInto(functionHeader, spirv::Opcode::OpVariable, operands);
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op->getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
       continue;
@@ -999,7 +999,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   }
 
   // Encode decorations.
-  for (auto attr : varOp.getAttrs()) {
+  for (auto attr : varOp->getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
       continue;
@@ -1973,7 +1973,7 @@ Serializer::processOp<spirv::ControlBarrierOp>(spirv::ControlBarrierOp op) {
   SmallVector<uint32_t, 3> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();
@@ -2020,7 +2020,7 @@ Serializer::processOp<spirv::MemoryBarrierOp>(spirv::MemoryBarrierOp op) {
   SmallVector<uint32_t, 2> operands;
 
   for (auto argName : argNames) {
-    auto argIntAttr = op.getAttrOfType<IntegerAttr>(argName);
+    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
     auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
     if (!operand) {
       return failure();
@@ -2071,28 +2071,28 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
     operands.push_back(id);
   }
 
-  if (auto attr = op.getAttr("memory_access")) {
+  if (auto attr = op->getAttr("memory_access")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("memory_access");
 
-  if (auto attr = op.getAttr("alignment")) {
+  if (auto attr = op->getAttr("alignment")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("alignment");
 
-  if (auto attr = op.getAttr("source_memory_access")) {
+  if (auto attr = op->getAttr("source_memory_access")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("source_memory_access");
 
-  if (auto attr = op.getAttr("source_alignment")) {
+  if (auto attr = op->getAttr("source_alignment")) {
     operands.push_back(static_cast<uint32_t>(
         attr.cast<IntegerAttr>().getValue().getZExtValue()));
   }

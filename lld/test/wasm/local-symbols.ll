@@ -97,4 +97,7 @@ entry:
 ; CHECK-NEXT:     GlobalNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            __stack_pointer
+; CHECK-NEXT:     DataSegmentNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            .data
 ; CHECK-NEXT: ...

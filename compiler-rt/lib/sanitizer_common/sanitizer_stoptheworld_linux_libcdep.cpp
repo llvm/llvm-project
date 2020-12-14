@@ -490,6 +490,9 @@ typedef user_regs_struct regs_struct;
 #ifndef NT_X86_XSTATE
 #define NT_X86_XSTATE 0x202
 #endif
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
 // Compiler may use FP registers to store pointers.
 static constexpr uptr kExtraRegs[] = {NT_X86_XSTATE, NT_FPREGSET};
 

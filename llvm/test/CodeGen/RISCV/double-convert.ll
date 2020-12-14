@@ -136,9 +136,9 @@ define i64 @fcvt_l_d(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_l_d:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    call __fixdfdi
-; RV32IFD-NEXT:    lw ra, 12(sp)
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call __fixdfdi@plt
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -155,9 +155,9 @@ define i64 @fcvt_lu_d(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_lu_d:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    call __fixunsdfdi
-; RV32IFD-NEXT:    lw ra, 12(sp)
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call __fixunsdfdi@plt
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -203,9 +203,9 @@ define double @fcvt_d_l(i64 %a) nounwind {
 ; RV32IFD-LABEL: fcvt_d_l:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    call __floatdidf
-; RV32IFD-NEXT:    lw ra, 12(sp)
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call __floatdidf@plt
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -222,9 +222,9 @@ define double @fcvt_d_lu(i64 %a) nounwind {
 ; RV32IFD-LABEL: fcvt_d_lu:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    call __floatundidf
-; RV32IFD-NEXT:    lw ra, 12(sp)
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call __floatundidf@plt
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;

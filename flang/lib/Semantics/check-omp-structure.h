@@ -104,8 +104,12 @@ public:
 
   void Enter(const parser::OpenMPDeclareSimdConstruct &);
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
+  void Enter(const parser::OpenMPDeclarativeAllocate &);
+  void Leave(const parser::OpenMPDeclarativeAllocate &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
+  void Enter(const parser::OpenMPExecutableAllocate &);
+  void Leave(const parser::OpenMPExecutableAllocate &);
 
   void Enter(const parser::OpenMPSimpleStandaloneConstruct &);
   void Leave(const parser::OpenMPSimpleStandaloneConstruct &);
@@ -117,10 +121,13 @@ public:
   void Leave(const parser::OpenMPCancellationPointConstruct &);
   void Enter(const parser::OpenMPCriticalConstruct &);
   void Leave(const parser::OpenMPCriticalConstruct &);
+  void Enter(const parser::OpenMPAtomicConstruct &);
+  void Leave(const parser::OpenMPAtomicConstruct &);
 
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
   void Enter(const parser::OmpNowait &);
+  void Enter(const parser::OmpClause::Allocator &);
   void Enter(const parser::OmpClause::Inbranch &);
   void Enter(const parser::OmpClause::Mergeable &);
   void Enter(const parser::OmpClause::Nogroup &);
@@ -156,7 +163,16 @@ public:
   void Enter(const parser::OmpClause::Release &);
   void Enter(const parser::OmpClause::Acquire &);
   void Enter(const parser::OmpClause::Relaxed &);
+  void Enter(const parser::OmpClause::Hint &);
 
+  void Enter(const parser::OmpAtomicRead &);
+  void Leave(const parser::OmpAtomicRead &);
+  void Enter(const parser::OmpAtomicWrite &);
+  void Leave(const parser::OmpAtomicWrite &);
+  void Enter(const parser::OmpAtomicUpdate &);
+  void Leave(const parser::OmpAtomicUpdate &);
+  void Enter(const parser::OmpAtomicCapture &);
+  void Leave(const parser::OmpAtomic &);
   void Enter(const parser::OmpAlignedClause &);
   void Enter(const parser::OmpAllocateClause &);
   void Enter(const parser::OmpDefaultClause &);

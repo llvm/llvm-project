@@ -3792,11 +3792,15 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
     }
 
-    if (Decl->getSpecializationKind() == TSK_Undeclared) {
-      MultiLevelTemplateArgumentList TemplateArgLists;
-      TemplateArgLists.addOuterTemplateArguments(Converted);
-      InstantiateAttrsForDecl(TemplateArgLists, ClassTemplate->getTemplatedDecl(),
-                              Decl);
+    if (Decl->getSpecializationKind() == TSK_Undeclared &&
+        ClassTemplate->getTemplatedDecl()->hasAttrs()) {
+      InstantiatingTemplate Inst(*this, TemplateLoc, Decl);
+      if (!Inst.isInvalid()) {
+        MultiLevelTemplateArgumentList TemplateArgLists;
+        TemplateArgLists.addOuterTemplateArguments(Converted);
+        InstantiateAttrsForDecl(TemplateArgLists,
+                                ClassTemplate->getTemplatedDecl(), Decl);
+      }
     }
 
     // Diagnose uses of this specialization.
@@ -5582,39 +5586,6 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
   }
 
   return false;
-}
-
-/// Check whether the template parameter is a pack expansion, and if so,
-/// determine the number of parameters produced by that expansion. For instance:
-///
-/// \code
-/// template<typename ...Ts> struct A {
-///   template<Ts ...NTs, template<Ts> class ...TTs, typename ...Us> struct B;
-/// };
-/// \endcode
-///
-/// In \c A<int,int>::B, \c NTs and \c TTs have expanded pack size 2, and \c Us
-/// is not a pack expansion, so returns an empty Optional.
-static Optional<unsigned> getExpandedPackSize(NamedDecl *Param) {
-  if (TemplateTypeParmDecl *TTP
-        = dyn_cast<TemplateTypeParmDecl>(Param)) {
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionParameters();
-  }
-
-  if (NonTypeTemplateParmDecl *NTTP
-        = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-    if (NTTP->isExpandedParameterPack())
-      return NTTP->getNumExpansionTypes();
-  }
-
-  if (TemplateTemplateParmDecl *TTP
-        = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionTemplateParameters();
-  }
-
-  return None;
 }
 
 /// Diagnose a missing template argument.

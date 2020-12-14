@@ -4421,7 +4421,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   }
   SDValue Ops[] = { Root, Src0, Mask, Base, Index, Scale };
   SDValue Gather = DAG.getMaskedGather(DAG.getVTList(VT, MVT::Other), VT, sdl,
-                                       Ops, MMO, IndexType);
+                                       Ops, MMO, IndexType, ISD::NON_EXTLOAD);
 
   PendingLoads.push_back(Gather.getValue(1));
   setValue(&I, Gather);
@@ -6145,6 +6145,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/ConstrainedOps.def"
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(I));
     return;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#include "llvm/IR/VPIntrinsics.def"
+    visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
+    return;
   case Intrinsic::fmuladd: {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
@@ -6928,6 +6932,27 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              SetCC));
     return;
   }
+  case Intrinsic::experimental_vector_insert: {
+    auto DL = getCurSDLoc();
+
+    SDValue Vec = getValue(I.getOperand(0));
+    SDValue SubVec = getValue(I.getOperand(1));
+    SDValue Index = getValue(I.getOperand(2));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ResultVT, Vec, SubVec,
+                             Index));
+    return;
+  }
+  case Intrinsic::experimental_vector_extract: {
+    auto DL = getCurSDLoc();
+
+    SDValue Vec = getValue(I.getOperand(0));
+    SDValue Index = getValue(I.getOperand(1));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+    setValue(&I, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, Index));
+    return;
+  }
   }
 }
 
@@ -7041,6 +7066,41 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 
   SDValue FPResult = Result.getValue(0);
   setValue(&FPI, FPResult);
+}
+
+static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
+  Optional<unsigned> ResOPC;
+  switch (VPIntrin.getIntrinsicID()) {
+#define BEGIN_REGISTER_VP_INTRINSIC(INTRIN, ...) case Intrinsic::INTRIN:
+#define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) ResOPC = ISD::VPSDID;
+#define END_REGISTER_VP_INTRINSIC(...) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+
+  if (!ResOPC.hasValue())
+    llvm_unreachable(
+        "Inconsistency: no SDNode available for this VPIntrinsic!");
+
+  return ResOPC.getValue();
+}
+
+void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
+    const VPIntrinsic &VPIntrin) {
+  unsigned Opcode = getISDForVPIntrinsic(VPIntrin);
+
+  SmallVector<EVT, 4> ValueVTs;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  ComputeValueVTs(TLI, DAG.getDataLayout(), VPIntrin.getType(), ValueVTs);
+  SDVTList VTs = DAG.getVTList(ValueVTs);
+
+  // Request operands.
+  SmallVector<SDValue, 7> OpValues;
+  for (int i = 0; i < (int)VPIntrin.getNumArgOperands(); ++i)
+    OpValues.push_back(getValue(VPIntrin.getArgOperand(i)));
+
+  SDLoc DL = getCurSDLoc();
+  SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues);
+  setValue(&VPIntrin, Result);
 }
 
 std::pair<SDValue, SDValue>

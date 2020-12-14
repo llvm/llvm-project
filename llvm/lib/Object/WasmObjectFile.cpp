@@ -357,6 +357,7 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> SeenFunctions;
   llvm::DenseSet<uint64_t> SeenGlobals;
+  llvm::DenseSet<uint64_t> SeenSegments;
   if (FunctionTypes.size() && !SeenCodeSection) {
     return make_error<GenericBinaryError>("Names must come after code section",
                                           object_error::parse_failed);
@@ -368,11 +369,13 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
     const uint8_t *SubSectionEnd = Ctx.Ptr + Size;
     switch (Type) {
     case wasm::WASM_NAMES_FUNCTION:
-    case wasm::WASM_NAMES_GLOBAL: {
+    case wasm::WASM_NAMES_GLOBAL:
+    case wasm::WASM_NAMES_DATA_SEGMENT: {
       uint32_t Count = readVaruint32(Ctx);
       while (Count--) {
         uint32_t Index = readVaruint32(Ctx);
         StringRef Name = readString(Ctx);
+        wasm::NameType nameType = wasm::NameType::FUNCTION;
         if (Type == wasm::WASM_NAMES_FUNCTION) {
           if (!SeenFunctions.insert(Index).second)
             return make_error<GenericBinaryError>(
@@ -383,18 +386,24 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
 
           if (isDefinedFunctionIndex(Index))
             getDefinedFunction(Index).DebugName = Name;
-        } else {
+        } else if (Type == wasm::WASM_NAMES_GLOBAL) {
+          nameType = wasm::NameType::GLOBAL;
           if (!SeenGlobals.insert(Index).second)
             return make_error<GenericBinaryError>("Global named more than once",
                                                   object_error::parse_failed);
           if (!isValidGlobalIndex(Index) || Name.empty())
             return make_error<GenericBinaryError>("Invalid name entry",
                                                   object_error::parse_failed);
+        } else {
+          nameType = wasm::NameType::DATA_SEGMENT;
+          if (!SeenSegments.insert(Index).second)
+            return make_error<GenericBinaryError>(
+                "Segment named more than once", object_error::parse_failed);
+          if (Index > DataSegments.size())
+            return make_error<GenericBinaryError>("Invalid named data segment",
+                                                  object_error::parse_failed);
         }
-        wasm::NameType T = Type == wasm::WASM_NAMES_FUNCTION
-                               ? wasm::NameType::FUNCTION
-                               : wasm::NameType::GLOBAL;
-        DebugNames.push_back(wasm::WasmDebugName{T, Index, Name});
+        DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
       }
       break;
     }

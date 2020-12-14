@@ -18,17 +18,13 @@
 namespace mlir {
 
 template <unsigned AllocaAddrSpace>
-struct GPUFuncOpLowering : ConvertToLLVMPattern {
-  explicit GPUFuncOpLowering(LLVMTypeConverter &typeConverter)
-      : ConvertToLLVMPattern(gpu::GPUFuncOp::getOperationName(),
-                             typeConverter.getDialect()->getContext(),
-                             typeConverter) {}
+struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
+  using ConvertOpToLLVMPattern<gpu::GPUFuncOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     assert(operands.empty() && "func op is not expected to have operands");
-    auto gpuFuncOp = cast<gpu::GPUFuncOp>(op);
     Location loc = gpuFuncOp.getLoc();
 
     SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
@@ -154,14 +150,11 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
   }
 };
 
-struct GPUReturnOpLowering : public ConvertToLLVMPattern {
-  GPUReturnOpLowering(LLVMTypeConverter &typeConverter)
-      : ConvertToLLVMPattern(gpu::ReturnOp::getOperationName(),
-                             typeConverter.getDialect()->getContext(),
-                             typeConverter) {}
+struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
+  using ConvertOpToLLVMPattern<gpu::ReturnOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ReturnOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, operands);
     return success();

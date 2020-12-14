@@ -177,8 +177,9 @@ def scrub_asm_x86(asm, args):
   # Detect stack spills and reloads and hide their exact offset and whether
   # they used the stack pointer or frame pointer.
   asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r'{{[-0-9]+}}(%\1{{[sb]}}p)\2', asm)
-  # Generically match the stack offset of a memory operand.
-  asm = SCRUB_X86_SP_RE.sub(r'{{[0-9]+}}(%\1)', asm)
+  if getattr(args, 'x86_scrub_sp', True):
+    # Generically match the stack offset of a memory operand.
+    asm = SCRUB_X86_SP_RE.sub(r'{{[0-9]+}}(%\1)', asm)
   if getattr(args, 'x86_scrub_rip', False):
     # Generically match a RIP-relative memory operand.
     asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)

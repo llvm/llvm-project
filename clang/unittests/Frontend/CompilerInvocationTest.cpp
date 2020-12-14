@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "llvm/Support/Host.h"
 
 #include "gmock/gmock.h"
@@ -17,217 +18,412 @@ using namespace llvm;
 using namespace clang;
 
 using ::testing::Contains;
-using ::testing::Each;
 using ::testing::StrEq;
-using ::testing::StrNe;
 
 namespace {
-struct OptsPopulationTest : public ::testing::Test {
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
-  CompilerInvocation CInvok;
-
-  OptsPopulationTest()
-      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
-};
-
-class CC1CommandLineGenerationTest : public ::testing::Test {
+class CommandLineTest : public ::testing::Test {
 public:
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   SmallVector<const char *, 32> GeneratedArgs;
   SmallVector<std::string, 32> GeneratedArgsStorage;
+  CompilerInvocation Invocation;
 
   const char *operator()(const Twine &Arg) {
     return GeneratedArgsStorage.emplace_back(Arg.str()).c_str();
   }
 
-  CC1CommandLineGenerationTest()
-      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
+  CommandLineTest()
+      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions(),
+                                                  new TextDiagnosticBuffer())) {
+  }
 };
 
-TEST_F(OptsPopulationTest, OptIsInitializedWithCustomDefaultValue) {
-  const char *Args[] = {"clang", "-xc++"};
+// Boolean option with a keypath that defaults to true.
+// The only flag with a negative spelling can set the keypath to false.
 
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagNotPresent) {
+  const char *Args[] = {""};
 
-  ASSERT_TRUE(CInvok.getFrontendOpts().UseTemporary);
-}
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-TEST_F(OptsPopulationTest, OptOfNegativeFlagIsPopulatedWithFalse) {
-  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
 
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  ASSERT_FALSE(CInvok.getFrontendOpts().UseTemporary);
-}
-
-TEST_F(OptsPopulationTest, OptsOfImpliedPositiveFlagArePopulatedWithTrue) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
-
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  // Explicitly provided flag.
-  ASSERT_TRUE(CInvok.getLangOpts()->CLUnsafeMath);
-
-  // Flags directly implied by explicitly provided flag.
-  ASSERT_TRUE(CInvok.getCodeGenOpts().LessPreciseFPMAD);
-  ASSERT_TRUE(CInvok.getLangOpts()->UnsafeFPMath);
-
-  // Flag transitively implied by explicitly provided flag.
-  ASSERT_TRUE(CInvok.getLangOpts()->AllowRecip);
-}
-
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineFlag) {
-  const char *Args[] = {"clang", "-xc++", "-fmodules-strict-context-hash", "-"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
-
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fmodules-strict-context-hash")));
-}
-
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparate) {
-  const char *TripleCStr = "i686-apple-darwin9";
-  const char *Args[] = {"clang", "-xc++", "-triple", TripleCStr, "-"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
-
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(TripleCStr)));
-}
-
-TEST_F(CC1CommandLineGenerationTest,
-       CanGenerateCC1CommandLineSeparateRequiredPresent) {
-  const std::string DefaultTriple =
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-  const char *Args[] = {"clang", "-xc++", "-triple", DefaultTriple.c_str(),
-                        "-"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
-
-  // Triple should always be emitted even if it is the default
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
-}
-
-TEST_F(CC1CommandLineGenerationTest,
-       CanGenerateCC1CommandLineSeparateRequiredAbsent) {
-  const std::string DefaultTriple =
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-  const char *Args[] = {"clang", "-xc++", "-"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
-
-  // Triple should always be emitted even if it is the default
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
-}
-
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
-  const char *RelocationModelCStr = "static";
-  const char *Args[] = {"clang", "-xc++", "-mrelocation-model",
-                        RelocationModelCStr, "-"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
-
-  // Non default relocation model
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq(RelocationModelCStr)));
-  GeneratedArgs.clear();
-
-  RelocationModelCStr = "pic";
-  Args[3] = RelocationModelCStr;
-
-  CompilerInvocation CInvok1;
-  CompilerInvocation::CreateFromArgs(CInvok1, Args, *Diags);
-
-  CInvok1.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
-}
-
-TEST_F(CC1CommandLineGenerationTest, NotPresentNegativeFlagNotGenerated) {
-  const char *Args[] = {"clang", "-xc++"};
-
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
-
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-temp-file"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentNegativeFlagGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-fno-temp-file"};
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
+  const char *Args[] = {"-fno-temp-file"};
 
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getFrontendOpts().UseTemporary);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-temp-file")));
 }
 
-TEST_F(CC1CommandLineGenerationTest, NotPresentAndNotImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++"};
+TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagUnknownPresent) {
+  const char *Args[] = {"-ftemp-file"};
 
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  // Driver-only flag.
+  ASSERT_TRUE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
+}
 
-  // Missing options are not generated.
+// Boolean option with a keypath that defaults to true.
+// The flag with negative spelling can set the keypath to false.
+// The flag with positive spelling can reset the keypath to true.
+
+TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNone) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getCodeGenOpts().Autolink);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fautolink"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-autolink"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNegChange) {
+  const char *Args[] = {"-fno-autolink"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getCodeGenOpts().Autolink);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-autolink")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fautolink"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTruePresentPosReset) {
+  const char *Args[] = {"-fautolink"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  ASSERT_TRUE(Invocation.getCodeGenOpts().Autolink);
+}
+
+// Boolean option with a keypath that defaults to false.
+// The flag with negative spelling can set the keypath to true.
+// The flag with positive spelling can reset the keypath to false.
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNone) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-ginline-line-tables"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-inline-line-tables"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
+  const char *Args[] = {"-gno-inline-line-tables"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getCodeGenOpts().NoInlineLineTables);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gno-inline-line-tables")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-ginline-line-tables"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosReset) {
+  const char *Args[] = {"-ginline-line-tables"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
+}
+
+// Boolean option with a keypath that defaults to false.
+// The flag with positive spelling can set the keypath to true.
+// The flag with negative spelling can reset the keypath to false.
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNoneX) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gcodeview-ghash"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-codeview-ghash"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
+  const char *Args[] = {"-gcodeview-ghash"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getCodeGenOpts().CodeViewGHash);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-gcodeview-ghash")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-gno-codeview-ghash"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegReset) {
+  const char *Args[] = {"-gno-codeview-ghash"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
+}
+
+// Boolean option with a keypath that defaults to an arbitrary expression.
+// The flag with positive spelling can set the keypath to true.
+// The flag with negative spelling can set the keypath to false.
+
+static constexpr unsigned PassManagerDefault =
+    !static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER);
+
+static constexpr const char *PassManagerResetByFlag =
+    LLVM_ENABLE_NEW_PASS_MANAGER ? "-fno-legacy-pass-manager"
+                                 : "-flegacy-pass-manager";
+
+static constexpr const char *PassManagerChangedByFlag =
+    LLVM_ENABLE_NEW_PASS_MANAGER ? "-flegacy-pass-manager"
+                                 : "-fno-legacy-pass-manager";
+
+TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentNone) {
+  const char *Args = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, PassManagerDefault);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerResetByFlag))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerChangedByFlag))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentChange) {
+  const char *Args[] = {PassManagerChangedByFlag};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, !PassManagerDefault);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq(PassManagerChangedByFlag)));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerResetByFlag))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
+  const char *Args[] = {PassManagerResetByFlag};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, PassManagerDefault);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerResetByFlag))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerChangedByFlag))));
+}
+
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
+  const char *Args[] = {"-fmodules-strict-context-hash"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fmodules-strict-context-hash")));
+}
+
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
+  const char *TripleCStr = "i686-apple-darwin9";
+  const char *Args[] = {"-triple", TripleCStr};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq(TripleCStr)));
+}
+
+TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
+  const std::string DefaultTriple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+  const char *Args[] = {"-triple", DefaultTriple.c_str()};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Triple should always be emitted even if it is the default
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
+}
+
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
+  const std::string DefaultTriple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Triple should always be emitted even if it is the default
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
+}
+
+TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
+  const char *Args[] = {"-mrelocation-model", "static"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Non default relocation model.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("static")));
+}
+
+TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
+  const char *Args[] = {"-mrelocation-model", "pic"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Default relocation model.
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("pic"))));
+}
+
+// Tree of boolean options that can be (directly or transitively) implied by
+// their parent:
+//
+//   * -cl-unsafe-math-optimizations
+//     * -cl-mad-enable
+//     * -menable-unsafe-fp-math
+//       * -freciprocal-math
+
+TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_FALSE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_FALSE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_FALSE(Invocation.getLangOpts()->AllowRecip);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Not generated - missing.
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, NotPresentAndImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
+TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
+  const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  // Explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
+  // Directly implied by explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  // Transitively implied by explicitly provided root flag.
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
 
-  // Missing options that were implied are not generated.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  // Not generated - implied by the generated root flag.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentAndImpliedNotGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations",
-                        "-cl-mad-enable", "-menable-unsafe-fp-math"};
+TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
+  const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
+                        "-menable-unsafe-fp-math", "-freciprocal-math"};
 
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
 
-  // Present options that were also implied are not generated.
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  // Not generated - implied by their generated parent.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
-TEST_F(CC1CommandLineGenerationTest, PresentAndNotImpliedGenerated) {
-  const char *Args[] = {"clang", "-xc++", "-cl-mad-enable",
-                        "-menable-unsafe-fp-math"};
+TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
+  const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math",
+                        "-freciprocal-math"};
 
-  CompilerInvocation CInvok;
-  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
+  ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
+  ASSERT_TRUE(Invocation.getLangOpts()->AllowRecip);
 
-  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  // Not generated - missing.
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
+  // Generated - explicitly provided.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-menable-unsafe-fp-math")));
+  // Not generated - implied by its generated parent.
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
+}
+
+TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
+  const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Present options that were not implied are generated.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));

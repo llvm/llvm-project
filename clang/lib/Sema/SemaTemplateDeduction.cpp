@@ -658,23 +658,6 @@ static TemplateParameter makeTemplateParameter(Decl *D) {
   return TemplateParameter(cast<TemplateTemplateParmDecl>(D));
 }
 
-/// If \p Param is an expanded parameter pack, get the number of expansions.
-static Optional<unsigned> getExpandedPackSize(NamedDecl *Param) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionParameters();
-
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
-    if (NTTP->isExpandedParameterPack())
-      return NTTP->getNumExpansionTypes();
-
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param))
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionTemplateParameters();
-
-  return None;
-}
-
 /// A pack that we're currently deducing.
 struct clang::DeducedPack {
   // The index of the pack.

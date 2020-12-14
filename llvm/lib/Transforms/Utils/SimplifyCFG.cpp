@@ -68,6 +68,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -790,7 +791,7 @@ BasicBlock *SimplifyCFGOpt::GetValueEqualityComparisonCases(
 static void
 EliminateBlockCases(BasicBlock *BB,
                     std::vector<ValueEqualityComparisonCase> &Cases) {
-  Cases.erase(std::remove(Cases.begin(), Cases.end(), BB), Cases.end());
+  llvm::erase_value(Cases, BB);
 }
 
 /// Return true if there are any keys in C1 that exist in C2 as well.
@@ -2709,6 +2710,66 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
+/// Given \p BB block, for each instruction in said block, insert trivial
+/// (single value) PHI nodes into each successor block of \p BB block, and
+/// rewrite all the the non-PHI (or PHI uses not in successors of \p BB block)
+/// uses of instructions of \p BB block to use newly-inserted PHI nodes.
+/// NOTE: even though it would be correct to not deal with multi-predecessor
+///       successor blocks, or uses within the \p BB block, we may be dealing
+///       with an unreachable IR, where many invariants don't hold...
+static void FormTrivialSSAPHI(BasicBlock *BB) {
+  SmallSetVector<BasicBlock *, 16> Successors(succ_begin(BB), succ_end(BB));
+
+  // Process instructions in reverse order. There is no correctness reason for
+  // that order, but it allows us to consistently insert new PHI nodes
+  // at the top of blocks, while maintaining their relative order.
+  for (Instruction &DefInstr : make_range(BB->rbegin(), BB->rend())) {
+    SmallVector<std::reference_wrapper<Use>, 16> UsesToRewrite;
+
+    // Cache which uses we'll want to rewrite.
+    copy_if(DefInstr.uses(), std::back_inserter(UsesToRewrite),
+            [BB, &DefInstr, &Successors](Use &U) {
+              auto *User = cast<Instruction>(U.getUser());
+              auto *UserBB = User->getParent();
+              // Generally, ignore users in the same block as the instruction
+              // itself, unless the use[r] either comes before, or is [by] the
+              // instruction itself, which means we are in an unreachable IR.
+              if (UserBB == BB)
+                return !DefInstr.comesBefore(User);
+              // Otherwise, rewrite all non-PHI users,
+              // or PHI users in non-successor blocks.
+              return !isa<PHINode>(User) || !Successors.contains(UserBB);
+            });
+
+    // So, do we have uses to rewrite?
+    if (UsesToRewrite.empty())
+      continue; // Check next remaining instruction.
+
+    SSAUpdater SSAUpdate;
+    SSAUpdate.Initialize(DefInstr.getType(), DefInstr.getName());
+
+    // Create a new PHI node in each successor block.
+    // WARNING: the iteration order is externally-observable,
+    //          and therefore must be stable!
+    for (BasicBlock *Successor : Successors) {
+      IRBuilder<> Builder(&Successor->front());
+      auto *PN = Builder.CreatePHI(DefInstr.getType(), pred_size(Successor),
+                                   DefInstr.getName());
+      // By default, have an 'undef' incoming value for each predecessor.
+      for (BasicBlock *PredsOfSucc : predecessors(Successor))
+        PN->addIncoming(UndefValue::get(DefInstr.getType()), PredsOfSucc);
+      // .. but receive the correct value when coming from the right block.
+      PN->setIncomingValueForBlock(BB, &DefInstr);
+      // And make note of that PHI.
+      SSAUpdate.AddAvailableValue(Successor, PN);
+    }
+
+    // And finally, rewrite all the problematic uses to use the new PHI nodes.
+    while (!UsesToRewrite.empty())
+      SSAUpdate.RewriteUseAfterInsertions(UsesToRewrite.pop_back_val());
+  }
+}
+
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -2878,6 +2939,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       PBI->swapSuccessors();
     }
 
+    // Ensure that the bonus instructions are *only* used by the PHI nodes,
+    // because the successor basic block is about to get a new predecessor
+    // and non-PHI uses will become invalid.
+    FormTrivialSSAPHI(BB);
+
     // Before cloning instructions, notify the successor basic block that it
     // is about to have a new predecessor. This will update PHI nodes,
     // which will allow us to update live-out uses of bonus instructions.
@@ -2920,14 +2986,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       BonusInst.setName(BonusInst.getName() + ".old");
       BonusInst.replaceUsesWithIf(NewBonusInst, [BB](Use &U) {
         auto *User = cast<Instruction>(U.getUser());
-        // Ignore uses in the same block as the bonus instruction itself.
+        // Ignore the original bonus instructions themselves.
         if (User->getParent() == BB)
           return false;
-        // We can safely update external non-PHI uses.
-        if (!isa<PHINode>(User))
-          return true;
-        // For PHI nodes, don't touch incoming values for same block
-        // as the bonus instruction itself.
+        // Otherwise, we've got a PHI node. Don't touch incoming values
+        // for same block as the bonus instruction itself.
         return cast<PHINode>(User)->getIncomingBlock(U) != BB;
       });
     }

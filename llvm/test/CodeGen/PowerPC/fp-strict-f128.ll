@@ -130,7 +130,7 @@ define fp128 @fmadd_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl fmal
+; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -160,7 +160,7 @@ define fp128 @fmsub_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    li r9, 1
 ; CHECK-P8-NEXT:    sldi r9, r9, 63
 ; CHECK-P8-NEXT:    xor r8, r8, r9
-; CHECK-P8-NEXT:    bl fmal
+; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -188,7 +188,7 @@ define fp128 @fnmadd_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl fmal
+; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r5, 1
 ; CHECK-P8-NEXT:    sldi r5, r5, 63
@@ -224,7 +224,7 @@ define fp128 @fnmsub_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    li r9, 1
 ; CHECK-P8-NEXT:    sldi r30, r9, 63
 ; CHECK-P8-NEXT:    xor r8, r8, r30
-; CHECK-P8-NEXT:    bl fmal
+; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xor r4, r4, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -255,7 +255,7 @@ define fp128 @fsqrt_f128(fp128 %f1) #0 {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    bl sqrtl
+; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)

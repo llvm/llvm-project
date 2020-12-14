@@ -1149,8 +1149,9 @@ namespace {
          << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
       OS << "        ExprResult " << "Result = S.SubstExpr("
          << "A->get" << getUpperName() << "(), TemplateArgs);\n";
-      OS << "        tempInst" << getUpperName() << " = "
-         << "Result.getAs<Expr>();\n";
+      OS << "        if (Result.isInvalid())\n";
+      OS << "          return nullptr;\n";
+      OS << "        tempInst" << getUpperName() << " = Result.get();\n";
       OS << "      }\n";
     }
 
@@ -1202,7 +1203,9 @@ namespace {
          << "_end();\n";
       OS << "        for (; I != E; ++I, ++TI) {\n";
       OS << "          ExprResult Result = S.SubstExpr(*I, TemplateArgs);\n";
-      OS << "          *TI = Result.getAs<Expr>();\n";
+      OS << "          if (Result.isInvalid())\n";
+      OS << "            return nullptr;\n";
+      OS << "          *TI = Result.get();\n";
       OS << "        }\n";
       OS << "      }\n";
     }
@@ -1273,8 +1276,16 @@ namespace {
       OS << "      return false;\n";
     }
 
+    void writeTemplateInstantiation(raw_ostream &OS) const override {
+      OS << "      " << getType() << " tempInst" << getUpperName() << " =\n";
+      OS << "        S.SubstType(A->get" << getUpperName() << "Loc(), "
+         << "TemplateArgs, A->getLoc(), A->getAttrName());\n";
+      OS << "      if (!tempInst" << getUpperName() << ")\n";
+      OS << "        return nullptr;\n";
+    }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
-      OS << "A->get" << getUpperName() << "Loc()";
+      OS << "tempInst" << getUpperName();
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -3319,12 +3330,13 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
 
-    OS << "        return new (C) " << R.getName() << "Attr(C, *A";
+    OS << "      return new (C) " << R.getName() << "Attr(C, *A";
     for (auto const &ai : Args) {
       OS << ", ";
       ai->writeTemplateInstantiationArgs(OS);
     }
-    OS << ");\n    }\n";
+    OS << ");\n"
+       << "    }\n";
   }
   OS << "  } // end switch\n"
      << "  llvm_unreachable(\"Unknown attribute!\");\n"

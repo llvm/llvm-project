@@ -50,7 +50,7 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
   // FIXME: Add a method on \a DILocation that does this work.
   const MDNode *Scope = getInlinedAtScope();
   if (auto *SP = getDISubprogram(Scope))
-    return DebugLoc::get(SP->getScopeLine(), 0, SP);
+    return DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
 
   return DebugLoc();
 }

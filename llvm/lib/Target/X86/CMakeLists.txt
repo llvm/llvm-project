@@ -32,6 +32,9 @@ set(sources
   X86CmovConversion.cpp
   X86DomainReassignment.cpp
   X86DiscriminateMemOps.cpp
+  X86LowerAMXType.cpp
+  X86TileConfig.cpp
+  X86PreTileConfig.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
   X86FixupBWInsts.cpp

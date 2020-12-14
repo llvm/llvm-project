@@ -12,7 +12,7 @@
 // RUN:   -target-feature +float128 -fopenmp -fopenmp-is-device -emit-llvm \
 // RUN:   -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s \
 // RUN:   -check-prefix=OMP-TARGET
-// RUN: %clang_cc1 %t-ppc-host.bc -emit-llvm -o - | FileCheck %s \
+// RUN: %clang_cc1 -triple ppc64le %t-ppc-host.bc -emit-llvm -o - | FileCheck %s \
 // RUN:   -check-prefix=OMP-HOST
 
 #include <stdarg.h>

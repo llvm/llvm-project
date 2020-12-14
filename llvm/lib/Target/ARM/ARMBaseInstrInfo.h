@@ -360,6 +360,11 @@ public:
   /// Enable outlining by default at -Oz.
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
+    return MI->getOpcode() == ARM::t2LoopEndDec ||
+           MI->getOpcode() == ARM::t2DoLoopStartTP;
+  }
+
 private:
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.

@@ -591,7 +591,7 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   Rewriter Rewrite(SourceMgr, LangOptions());
   InMemoryFileSystem->addFile(
       "<stdin>", 0, llvm::MemoryBuffer::getMemBuffer(Code, "<stdin>"));
-  FileID ID = SourceMgr.createFileID(*Files.getFile("<stdin>"),
+  FileID ID = SourceMgr.createFileID(*Files.getOptionalFileRef("<stdin>"),
                                      SourceLocation(),
                                      clang::SrcMgr::C_User);
   for (auto I = Replaces.rbegin(), E = Replaces.rend(); I != E; ++I) {

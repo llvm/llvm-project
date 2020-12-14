@@ -64,7 +64,7 @@
 ; ACTIVE-NEXT:        Name:            __wasm_call_ctors
 
 ; PASSIVE-LABEL: - Type:            START
-; PASSIVE-NEXT:    StartFunction:   1
+; PASSIVE-NEXT:    StartFunction:   2
 ; PASSIVE-LABEL: - Type:            DATACOUNT
 ; PASSIVE-NEXT:    Count:           2
 ; PASSIVE-LABEL: - Type:            CODE
@@ -74,12 +74,11 @@
 ; PASSIVE-NEXT:        Body:            0B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
+; PASSIVE-NEXT:        Body:            0B
+; PASSIVE-NEXT:      - Index:           2
+; PASSIVE-NEXT:        Locals:          []
 ; PASSIVE32-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A054180084100410DFC08000041900841004114FC08010041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC09010B
 ; PASSIVE64-NEXT:        Body:            42B4D60041004101FE480200044042B4D6004101427FFE0102001A054280084100410DFC08000042900841004114FC08010042B4D6004102FE17020042B4D600417FFE0002001A0BFC0900FC09010B
-
-; PASSIVE-NEXT:  - Index:           2
-; PASSIVE-NEXT:    Locals:          []
-; PASSIVE-NEXT:    Body:            0B
 ; PASSIVE-NEXT:  - Type:            DATA
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
@@ -94,9 +93,9 @@
 ; PASSIVE-NEXT:      - Index:           0
 ; PASSIVE-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-NEXT:      - Index:           1
-; PASSIVE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-NEXT:      - Index:           2
 ; PASSIVE-NEXT:        Name:            __wasm_init_tls
+; PASSIVE-NEXT:      - Index:           2
+; PASSIVE-NEXT:        Name:            __wasm_init_memory
 
 ;      PASSIVE-PIC:  - Type:            START
 ; PASSIVE-PIC-NEXT:    StartFunction:   2
@@ -106,7 +105,7 @@
 ; PASSIVE-PIC-NEXT:    Functions:
 ; PASSIVE-PIC-NEXT:      - Index:           0
 ; PASSIVE-PIC-NEXT:        Locals:          []
-; PASSIVE-PIC-NEXT:        Body:            10010B
+; PASSIVE-PIC-NEXT:        Body:            10030B
 ; PASSIVE-PIC-NEXT:      - Index:           1
 ; PASSIVE-PIC-NEXT:        Locals:          []
 ; PASSIVE-PIC-NEXT:        Body:            0B
@@ -131,8 +130,8 @@
 ; PASSIVE-PIC-NEXT:      - Index:           0
 ; PASSIVE-PIC-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-PIC-NEXT:      - Index:           1
-; PASSIVE-PIC-NEXT:        Name:            __wasm_apply_relocs
+; PASSIVE-PIC-NEXT:        Name:            __wasm_init_tls
 ; PASSIVE-PIC-NEXT:      - Index:           2
 ; PASSIVE-PIC-NEXT:        Name:            __wasm_init_memory
 ; PASSIVE-PIC-NEXT:      - Index:           3
-; PASSIVE-PIC-NEXT:        Name:            __wasm_init_tls
+; PASSIVE-PIC-NEXT:        Name:            __wasm_apply_data_relocs

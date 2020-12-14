@@ -212,7 +212,7 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
 void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(

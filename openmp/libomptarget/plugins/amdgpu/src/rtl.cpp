@@ -36,6 +36,7 @@
 #include "internal.h"
 
 #include "Debug.h"
+#include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -91,15 +92,6 @@ uint32_t TgtStackItemSize = 0;
 #endif
 
 #include "../../common/elf_common.c"
-
-static bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
-  const uint16_t amdgcnMachineID = 224;
-  int32_t r = elf_check_machine(image, amdgcnMachineID);
-  if (!r) {
-    DP("Supported machine ID not found\n");
-  }
-  return r;
-}
 
 /// Keep entries table per device
 struct FuncOrGblEntryTy {
@@ -319,6 +311,7 @@ public:
   std::vector<int> GroupsPerDevice;
   std::vector<int> ThreadsPerGroup;
   std::vector<int> WarpSize;
+  std::vector<std::string> GPUName;
 
   // OpenMP properties
   std::vector<int> NumTeams;
@@ -472,6 +465,7 @@ public:
     FuncGblEntries.resize(NumberOfDevices);
     ThreadsPerGroup.resize(NumberOfDevices);
     ComputeUnits.resize(NumberOfDevices);
+    GPUName.resize(NumberOfDevices);
     GroupsPerDevice.resize(NumberOfDevices);
     WarpSize.resize(NumberOfDevices);
     NumTeams.resize(NumberOfDevices);
@@ -642,6 +636,40 @@ void finiAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
   assert(async_info_ptr->Queue);
   async_info_ptr->Queue = 0;
 }
+
+bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
+  const uint16_t amdgcnMachineID = EM_AMDGPU;
+  int32_t r = elf_check_machine(image, amdgcnMachineID);
+  if (!r) {
+    DP("Supported machine ID not found\n");
+  }
+  return r;
+}
+
+uint32_t elf_e_flags(__tgt_device_image *image) {
+  char *img_begin = (char *)image->ImageStart;
+  size_t img_size = (char *)image->ImageEnd - img_begin;
+
+  Elf *e = elf_memory(img_begin, img_size);
+  if (!e) {
+    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+    return 0;
+  }
+
+  Elf64_Ehdr *eh64 = elf64_getehdr(e);
+
+  if (!eh64) {
+    DP("Unable to get machine ID from ELF file!\n");
+    elf_end(e);
+    return 0;
+  }
+
+  uint32_t Flags = eh64->e_flags;
+
+  elf_end(e);
+  DP("ELF Flags: 0x%x\n", Flags);
+  return Flags;
+}
 } // namespace
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
@@ -676,9 +704,20 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DeviceInfo.ComputeUnits[device_id] = compute_units;
     DP("Using %d compute unis per grid\n", DeviceInfo.ComputeUnits[device_id]);
   }
+
+  char GetInfoName[64]; // 64 max size returned by get info
+  err = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
+                           (void *)GetInfoName);
+  if (err)
+    DeviceInfo.GPUName[device_id] = "--unknown gpu--";
+  else {
+    DeviceInfo.GPUName[device_id] = GetInfoName;
+  }
+
   if (print_kernel_trace == 4)
-    fprintf(stderr, "Device#%-2d CU's: %2d\n", device_id,
-            DeviceInfo.ComputeUnits[device_id]);
+    fprintf(stderr, "Device#%-2d CU's: %2d %s\n", device_id,
+            DeviceInfo.ComputeUnits[device_id],
+            DeviceInfo.GPUName[device_id].c_str());
 
   // Query attributes to determine number of threads/block and blocks/grid.
   uint16_t workgroup_max_dim[3];
@@ -749,9 +788,16 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DP("Default number of teams set according to environment %d\n",
        DeviceInfo.EnvNumTeams);
   } else {
-    DeviceInfo.NumTeams[device_id] = RTLDeviceInfoTy::DefaultNumTeams;
-    DP("Default number of teams set according to library's default %d\n",
-       RTLDeviceInfoTy::DefaultNumTeams);
+    char *TeamsPerCUEnvStr = getenv("OMP_TARGET_TEAMS_PER_PROC");
+    int TeamsPerCU = 1; // default number of teams per CU is 1
+    if (TeamsPerCUEnvStr) {
+      TeamsPerCU = std::stoi(TeamsPerCUEnvStr);
+    }
+
+    DeviceInfo.NumTeams[device_id] =
+        TeamsPerCU * DeviceInfo.ComputeUnits[device_id];
+    DP("Default number of teams = %d * number of compute units %d\n",
+       TeamsPerCU, DeviceInfo.ComputeUnits[device_id]);
   }
 
   if (DeviceInfo.NumTeams[device_id] > DeviceInfo.GroupsPerDevice[device_id]) {
@@ -851,6 +897,7 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
 typedef struct {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
+  uint32_t sh_type = SHT_NULL;
 } symbol_info;
 
 int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
@@ -873,8 +920,23 @@ int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
     return 1;
   }
 
-  res->size = static_cast<uint32_t>(sym->st_size);
+  if (sym->st_shndx == SHN_UNDEF) {
+    return 1;
+  }
+
+  Elf_Scn *section = elf_getscn(elf, sym->st_shndx);
+  if (!section) {
+    return 1;
+  }
+
+  Elf64_Shdr *header = elf64_getshdr(section);
+  if (!header) {
+    return 1;
+  }
+
   res->addr = sym->st_value + base;
+  res->size = static_cast<uint32_t>(sym->st_size);
+  res->sh_type = header->sh_type;
   return 0;
 }
 
@@ -952,6 +1014,99 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return res;
 }
 
+struct device_environment {
+  // initialise an omptarget_device_environmentTy in the deviceRTL
+  // patches around differences in the deviceRTL between trunk, aomp,
+  // rocmcc. Over time these differences will tend to zero and this class
+  // simplified.
+  // Symbol may be in .data or .bss, and may be missing fields:
+  //  - aomp has debug_level, num_devices, device_num
+  //  - trunk has debug_level
+  //  - under review in trunk is debug_level, device_num
+  //  - rocmcc matches aomp, patch to swap num_devices and device_num
+
+  // If the symbol is in .data (aomp, rocm) it can be written directly.
+  // If it is in .bss, we must wait for it to be allocated space on the
+  // gpu (trunk) and initialize after loading.
+  const char *sym() { return "omptarget_device_environment"; }
+
+  omptarget_device_environmentTy host_device_env;
+  symbol_info si;
+  bool valid = false;
+
+  __tgt_device_image *image;
+  const size_t img_size;
+
+  device_environment(int device_id, int number_devices,
+                     __tgt_device_image *image, const size_t img_size)
+      : image(image), img_size(img_size) {
+
+    host_device_env.num_devices = number_devices;
+    host_device_env.device_num = device_id;
+    host_device_env.debug_level = 0;
+#ifdef OMPTARGET_DEBUG
+    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
+      host_device_env.debug_level = std::stoi(envStr);
+    }
+#endif
+
+    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
+                                             img_size, sym(), &si);
+    if (rc != 0) {
+      DP("Finding global device environment '%s' - symbol missing.\n", sym());
+      return;
+    }
+
+    if (si.size > sizeof(host_device_env)) {
+      DP("Symbol '%s' has size %u, expected at most %zu.\n", sym(), si.size,
+         sizeof(host_device_env));
+      return;
+    }
+
+    valid = true;
+  }
+
+  bool in_image() { return si.sh_type != SHT_NOBITS; }
+
+  atmi_status_t before_loading(void *data, size_t size) {
+    assert(valid);
+    if (in_image()) {
+      DP("Setting global device environment before load (%u bytes)\n", si.size);
+      uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+      void *pos = (char *)data + offset;
+      memcpy(pos, &host_device_env, si.size);
+    }
+    return ATMI_STATUS_SUCCESS;
+  }
+
+  atmi_status_t after_loading() {
+    assert(valid);
+    if (!in_image()) {
+      DP("Setting global device environment after load (%u bytes)\n", si.size);
+      int device_id = host_device_env.device_num;
+
+      void *state_ptr;
+      uint32_t state_ptr_size;
+      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+          get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+      if (err != ATMI_STATUS_SUCCESS) {
+        DP("failed to find %s in loaded image\n", sym());
+        return err;
+      }
+
+      if (state_ptr_size != si.size) {
+        DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+           si.size);
+        return ATMI_STATUS_ERROR;
+      }
+
+      return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                  state_ptr_size, device_id);
+    }
+    return ATMI_STATUS_SUCCESS;
+  }
+};
+
 static atmi_status_t atmi_calloc(void **ret_ptr, size_t size,
                                  atmi_mem_place_t place) {
   uint64_t rounded = 4 * ((size + 3) / 4);
@@ -1007,53 +1162,31 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     return NULL;
   }
 
-  omptarget_device_environmentTy host_device_env;
-  host_device_env.num_devices = DeviceInfo.NumberOfDevices;
-  host_device_env.device_num = device_id;
-  host_device_env.debug_level = 0;
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
-    host_device_env.debug_level = std::stoi(envStr);
-  }
-#endif
-
-  auto on_deserialized_data = [&](void *data, size_t size) -> atmi_status_t {
-    const char *device_env_Name = "omptarget_device_environment";
-    symbol_info si;
-    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
-                                             img_size, device_env_Name, &si);
-    if (rc != 0) {
-      DP("Finding global device environment '%s' - symbol missing.\n",
-         device_env_Name);
-      // no need to return FAIL, consider this is a not a device debug build.
-      return ATMI_STATUS_SUCCESS;
-    }
-    if (si.size != sizeof(host_device_env)) {
-      return ATMI_STATUS_ERROR;
-    }
-    DP("Setting global device environment %u bytes\n", si.size);
-    uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-    void *pos = (char *)data + offset;
-    memcpy(pos, &host_device_env, sizeof(host_device_env));
-    return ATMI_STATUS_SUCCESS;
-  };
-
-  atmi_status_t err;
   {
-    err = module_register_from_memory_to_place(
+    auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
+                                  img_size);
+    if (!env.valid) {
+      return NULL;
+    }
+
+    atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
-        on_deserialized_data);
+        [&](void *data, size_t size) {
+          return env.before_loading(data, size);
+        });
 
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {
-      char GPUName[64] = "--unknown gpu--";
-      hsa_agent_t agent = DeviceInfo.HSAAgents[device_id];
-      (void)hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
-                               (void *)GPUName);
       fprintf(stderr,
-              "Possible gpu arch mismatch: %s, please check"
-              " compiler: -march=<gpu> flag\n",
-              GPUName);
+              "Possible gpu arch mismatch: device:%s, image:%s please check"
+              " compiler flag: -march=<gpu>\n",
+              DeviceInfo.GPUName[device_id].c_str(),
+              get_elf_mach_gfx_name(elf_e_flags(image)));
+      return NULL;
+    }
+
+    err = env.after_loading();
+    if (err != ATMI_STATUS_SUCCESS) {
       return NULL;
     }
   }
@@ -1149,8 +1282,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       void *varptr;
       uint32_t varsize;
 
-      err = atmi_interop_hsa_get_symbol_info(get_gpu_mem_place(device_id),
-                                             e->name, &varptr, &varsize);
+      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+          get_gpu_mem_place(device_id), e->name, &varptr, &varsize);
 
       if (err != ATMI_STATUS_SUCCESS) {
         DP("Loading global '%s' (Failed)\n", e->name);
@@ -1192,7 +1325,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     atmi_mem_place_t place = get_gpu_mem_place(device_id);
     uint32_t kernarg_segment_size;
-    err = atmi_interop_hsa_get_kernel_info(
+    atmi_status_t err = atmi_interop_hsa_get_kernel_info(
         place, e->name, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
 
@@ -1421,11 +1554,12 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
 //         loop_tripcount.
 void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
                    int ExecutionMode, int EnvTeamLimit, int EnvNumTeams,
-                   int num_teams, int thread_limit, uint64_t loop_tripcount) {
+                   int num_teams, int thread_limit, uint64_t loop_tripcount,
+                   int32_t device_id) {
 
   int Max_Teams = DeviceInfo.EnvMaxTeamsDefault > 0
                       ? DeviceInfo.EnvMaxTeamsDefault
-                      : DeviceInfo.Max_Teams;
+                      : DeviceInfo.NumTeams[device_id];
   if (Max_Teams > DeviceInfo.HardTeamLimit)
     Max_Teams = DeviceInfo.HardTeamLimit;
 
@@ -1623,10 +1757,10 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   getLaunchVals(threadsPerGroup, num_groups, KernelInfo->ConstWGSize,
                 KernelInfo->ExecutionMode, DeviceInfo.EnvTeamLimit,
                 DeviceInfo.EnvNumTeams,
-                num_teams,     // From run_region arg
-                thread_limit,  // From run_region arg
-                loop_tripcount // From run_region arg
-  );
+                num_teams,      // From run_region arg
+                thread_limit,   // From run_region arg
+                loop_tripcount, // From run_region arg
+                KernelInfo->device_id);
 
   if (print_kernel_trace == 4)
     // enum modes are SPMD, GENERIC, NONE 0,1,2

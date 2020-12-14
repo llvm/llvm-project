@@ -507,6 +507,8 @@ namespace {
 
     void RevertLoopEnd(MachineInstr *MI, bool SkipCmp = false) const;
 
+    void RevertLoopEndDec(MachineInstr *MI) const;
+
     void ConvertVPTBlocks(LowOverheadLoop &LoLoop);
 
     MachineInstr *ExpandLoopStart(LowOverheadLoop &LoLoop);
@@ -1023,12 +1025,12 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   // can only jump back.
   auto ValidateRanges = [](MachineInstr *Start, MachineInstr *End,
                            ARMBasicBlockUtils *BBUtils, MachineLoop &ML) {
-    assert(End->getOperand(1).isMBB() &&
-           "Expected LoopEnd to target basic block!");
-
+    MachineBasicBlock *TgtBB = End->getOpcode() == ARM::t2LoopEnd
+                                   ? End->getOperand(1).getMBB()
+                                   : End->getOperand(2).getMBB();
     // TODO Maybe there's cases where the target doesn't have to be the header,
     // but for now be safe and revert.
-    if (End->getOperand(1).getMBB() != ML.getHeader()) {
+    if (TgtBB != ML.getHeader()) {
       LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targeting header.\n");
       return false;
     }
@@ -1270,6 +1272,8 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         LoLoop.Dec = &MI;
       else if (MI.getOpcode() == ARM::t2LoopEnd)
         LoLoop.End = &MI;
+      else if (MI.getOpcode() == ARM::t2LoopEndDec)
+        LoLoop.End = LoLoop.Dec = &MI;
       else if (isLoopStart(MI))
         LoLoop.Start = &MI;
       else if (MI.getDesc().isCall()) {
@@ -1292,13 +1296,16 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return false;
   }
 
-  // Check that the only instruction using LoopDec is LoopEnd.
+  // Check that the only instruction using LoopDec is LoopEnd. This can only
+  // happen when the Dec and End are separate, not a single t2LoopEndDec.
   // TODO: Check for copy chains that really have no effect.
-  SmallPtrSet<MachineInstr*, 2> Uses;
-  RDA->getReachingLocalUses(LoLoop.Dec, MCRegister::from(ARM::LR), Uses);
-  if (Uses.size() > 1 || !Uses.count(LoLoop.End)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
-    LoLoop.Revert = true;
+  if (LoLoop.Dec != LoLoop.End) {
+    SmallPtrSet<MachineInstr *, 2> Uses;
+    RDA->getReachingLocalUses(LoLoop.Dec, MCRegister::from(ARM::LR), Uses);
+    if (Uses.size() > 1 || !Uses.count(LoLoop.End)) {
+      LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
+      LoLoop.Revert = true;
+    }
   }
   LoLoop.Validate(BBUtils.get());
   Expand(LoLoop);
@@ -1351,6 +1358,35 @@ void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI, bool SkipCmp) const {
     ARM::tBcc : ARM::t2Bcc;
 
   llvm::RevertLoopEnd(MI, TII, BrOpc, SkipCmp);
+}
+
+// Generate a subs, or sub and cmp, and a branch instead of an LE.
+void ARMLowOverheadLoops::RevertLoopEndDec(MachineInstr *MI) const {
+  LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to subs, br: " << *MI);
+  assert(MI->getOpcode() == ARM::t2LoopEndDec && "Expected a t2LoopEndDec!");
+  MachineBasicBlock *MBB = MI->getParent();
+
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
+  MIB.addDef(ARM::LR);
+  MIB.add(MI->getOperand(1));
+  MIB.addImm(1);
+  MIB.addImm(ARMCC::AL);
+  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(ARM::CPSR);
+  MIB->getOperand(5).setIsDef(true);
+
+  MachineBasicBlock *DestBB = MI->getOperand(2).getMBB();
+  unsigned BrOpc =
+      BBUtils->isBBInRange(MI, DestBB, 254) ? ARM::tBcc : ARM::t2Bcc;
+
+  // Create bne
+  MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
+  MIB.add(MI->getOperand(2)); // branch target
+  MIB.addImm(ARMCC::NE);      // condition code
+  MIB.addReg(ARM::CPSR);
+
+  MI->eraseFromParent();
 }
 
 // Perform dead code elimation on the loop iteration count setup expression.
@@ -1558,8 +1594,9 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     MachineInstrBuilder MIB = BuildMI(*MBB, End, End->getDebugLoc(),
                                       TII->get(Opc));
     MIB.addDef(ARM::LR);
-    MIB.add(End->getOperand(0));
-    MIB.add(End->getOperand(1));
+    unsigned Off = LoLoop.Dec == LoLoop.End ? 1 : 0;
+    MIB.add(End->getOperand(Off + 0));
+    MIB.add(End->getOperand(Off + 1));
     LLVM_DEBUG(dbgs() << "ARM Loops: Inserted LE: " << *MIB);
     LoLoop.ToRemove.insert(LoLoop.Dec);
     LoLoop.ToRemove.insert(End);
@@ -1588,8 +1625,10 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
       RevertWhile(LoLoop.Start);
     else
       RevertDo(LoLoop.Start);
-    bool FlagsAlreadySet = RevertLoopDec(LoLoop.Dec);
-    RevertLoopEnd(LoLoop.End, FlagsAlreadySet);
+    if (LoLoop.Dec == LoLoop.End)
+      RevertLoopEndDec(LoLoop.End);
+    else
+      RevertLoopEnd(LoLoop.End, RevertLoopDec(LoLoop.Dec));
   } else {
     LoLoop.Start = ExpandLoopStart(LoLoop);
     RemoveDeadBranch(LoLoop.Start);
@@ -1633,6 +1672,7 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
     SmallVector<MachineInstr*, 4> Starts;
     SmallVector<MachineInstr*, 4> Decs;
     SmallVector<MachineInstr*, 4> Ends;
+    SmallVector<MachineInstr *, 4> EndDecs;
 
     for (auto &I : MBB) {
       if (isLoopStart(I))
@@ -1641,9 +1681,11 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
         Decs.push_back(&I);
       else if (I.getOpcode() == ARM::t2LoopEnd)
         Ends.push_back(&I);
+      else if (I.getOpcode() == ARM::t2LoopEndDec)
+        EndDecs.push_back(&I);
     }
 
-    if (Starts.empty() && Decs.empty() && Ends.empty())
+    if (Starts.empty() && Decs.empty() && Ends.empty() && EndDecs.empty())
       continue;
 
     Changed = true;
@@ -1659,6 +1701,8 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
 
     for (auto *End : Ends)
       RevertLoopEnd(End);
+    for (auto *End : EndDecs)
+      RevertLoopEndDec(End);
   }
   return Changed;
 }

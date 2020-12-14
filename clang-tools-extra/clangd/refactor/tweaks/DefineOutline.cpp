@@ -51,7 +51,7 @@ namespace {
 const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
   if (!SelNode)
     return nullptr;
-  const ast_type_traits::DynTypedNode &AstNode = SelNode->ASTNode;
+  const DynTypedNode &AstNode = SelNode->ASTNode;
   if (const FunctionDecl *FD = AstNode.get<FunctionDecl>())
     return FD;
   if (AstNode.get<CompoundStmt>() &&

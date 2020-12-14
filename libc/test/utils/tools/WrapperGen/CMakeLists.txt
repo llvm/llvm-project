@@ -1,4 +1,5 @@
-add_libc_tool_unittest( wrappergen_test
+add_libc_tool_unittest(
+  wrappergen_test
   SRCS 
     wrappergen_test.cpp   
   ARGS

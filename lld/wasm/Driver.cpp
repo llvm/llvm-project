@@ -616,14 +616,6 @@ static void createSyntheticSymbols() {
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   if (config->isPic) {
-    // For PIC code we create a synthetic function __wasm_apply_relocs which
-    // is called from __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
-  }
-
-  if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
                                                      ? &mutableGlobalTypeI64
@@ -646,15 +638,6 @@ static void createSyntheticSymbols() {
   }
 
   if (config->sharedMemory) {
-    // Passive segments are used to avoid memory being reinitialized on each
-    // thread's instantiation. These passive segments are initialized and
-    // dropped in __wasm_init_memory, which is registered as the start function
-    WasmSym::initMemory = symtab->addSyntheticFunction(
-        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
-    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
-        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    assert(WasmSym::initMemoryFlag);
     WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
     WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);

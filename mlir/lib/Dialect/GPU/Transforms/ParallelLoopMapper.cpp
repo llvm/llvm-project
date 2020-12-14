@@ -52,8 +52,8 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
           "invalid mapping multiple loops to same processor");
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
-  ploopOp.setAttr(getMappingAttrName(),
-                  ArrayAttr::get(mappingAsAttrs, ploopOp.getContext()));
+  ploopOp->setAttr(getMappingAttrName(),
+                   ArrayAttr::get(mappingAsAttrs, ploopOp.getContext()));
   return success();
 }
 } // namespace gpu
@@ -122,8 +122,8 @@ static gpu::Processor getHardwareIdForMapping(MappingLevel level,
 static void mapParallelOp(ParallelOp parallelOp,
                           MappingLevel mappingLevel = MapGrid) {
   // Do not try to add a mapping to already mapped loops or nested loops.
-  if (parallelOp.getAttr(getMappingAttrName()) ||
-      ((mappingLevel == MapGrid) && parallelOp.getParentOfType<ParallelOp>()))
+  if (parallelOp->getAttr(getMappingAttrName()) ||
+      ((mappingLevel == MapGrid) && parallelOp->getParentOfType<ParallelOp>()))
     return;
 
   MLIRContext *ctx = parallelOp.getContext();

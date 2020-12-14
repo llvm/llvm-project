@@ -175,12 +175,12 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
       vulkanLaunchOperands);
 
   // Set SPIR-V binary shader data as an attribute.
-  vulkanLaunchCallOp.setAttr(
+  vulkanLaunchCallOp->setAttr(
       kSPIRVBlobAttrName,
       StringAttr::get({binary.data(), binary.size()}, loc->getContext()));
 
   // Set entry point name as an attribute.
-  vulkanLaunchCallOp.setAttr(
+  vulkanLaunchCallOp->setAttr(
       kSPIRVEntryPointAttrName,
       StringAttr::get(launchOp.getKernelName(), loc->getContext()));
 

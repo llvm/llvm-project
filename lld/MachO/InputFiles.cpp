@@ -174,7 +174,18 @@ void ObjFile::parseSections(ArrayRef<section_64> sections) {
     else
       isec->align = 1 << sec.align;
     isec->flags = sec.flags;
-    subsections.push_back({{0, isec}});
+
+    if (!(isDebugSection(isec->flags) &&
+          isec->segname == segment_names::dwarf)) {
+      subsections.push_back({{0, isec}});
+    } else {
+      // Instead of emitting DWARF sections, we emit STABS symbols to the
+      // object files that contain them. We filter them out early to avoid
+      // parsing their relocations unnecessarily. But we must still push an
+      // empty map to ensure the indices line up for the remaining sections.
+      subsections.push_back({});
+      debugSections.push_back(isec);
+    }
   }
 }
 
@@ -307,6 +318,7 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     const section_64 &sec = sectionHeaders[sym.n_sect - 1];
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
+    assert(!subsecMap.empty());
     uint64_t offset = sym.n_value - sec.addr;
 
     // If the input file does not use subsections-via-symbols, all symbols can
@@ -410,7 +422,8 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
   for (size_t i = 0, n = subsections.size(); i < n; ++i)
-    parseRelocations(sectionHeaders[i], subsections[i]);
+    if (!subsections[i].empty())
+      parseRelocations(sectionHeaders[i], subsections[i]);
 
   parseDebugInfo();
 }
@@ -444,12 +457,7 @@ static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
     error("could not read dylib file at " + path);
     return {};
   }
-
-  file_magic magic = identify_magic(mbref->getBuffer());
-  if (magic == file_magic::tapi_file)
-    return makeDylibFromTAPI(*mbref, umbrella);
-  assert(magic == file_magic::macho_dynamically_linked_shared_lib);
-  return make<DylibFile>(*mbref, umbrella);
+  return loadDylib(*mbref, umbrella);
 }
 
 // TBD files are parsed into a series of TAPI documents (InterfaceFiles), with
@@ -466,7 +474,8 @@ const InterfaceFile *currentTopLevelTapi = nullptr;
 
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
+static Optional<DylibFile *> loadReexportHelper(StringRef path,
+                                                DylibFile *umbrella) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
@@ -491,6 +500,25 @@ static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
   return {};
 }
 
+// If a re-exported dylib is public (lives in /usr/lib or
+// /System/Library/Frameworks), then it is considered implicitly linked: we
+// should bind to its symbols directly instead of via the re-exporting umbrella
+// library.
+static bool isImplicitlyLinked(StringRef path) {
+  if (!config->implicitDylibs)
+    return false;
+
+  return path::parent_path(path) == "/usr/lib";
+  // TODO: check for public frameworks too. We'll need to implement
+  // -sub_umbrella first to write a test case.
+}
+
+void loadReexport(StringRef path, DylibFile *umbrella) {
+  Optional<DylibFile *> reexport = loadReexportHelper(path, umbrella);
+  if (reexport && isImplicitlyLinked(path))
+    inputFiles.push_back(*reexport);
+}
+
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     : InputFile(DylibKind, mb) {
   if (umbrella == nullptr)
@@ -509,17 +537,15 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
   }
 
   // Initialize symbols.
-  // TODO: if a re-exported dylib is public (lives in /usr/lib or
-  // /System/Library/Frameworks), we should bind to its symbols directly
-  // instead of the re-exporting umbrella library.
+  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
                 bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
                 bool isTlv = flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
-                symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
-                                                   isWeakDef, isTlv));
+                symbols.push_back(symtab->addDylib(
+                    saver.save(name), exportingFile, isWeakDef, isTlv));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
@@ -540,8 +566,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     auto *c = reinterpret_cast<const dylib_command *>(cmd);
     StringRef reexportPath =
         reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-    if (Optional<DylibFile *> reexport = loadReexport(reexportPath, umbrella))
-      reexported.push_back(*reexport);
+    loadReexport(reexportPath, umbrella);
   }
 }
 
@@ -551,8 +576,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
     umbrella = this;
 
   dylibName = saver.save(interface.getInstallName());
+  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
-    symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
+    symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
                                        /*isTlv=*/false));
   };
@@ -588,9 +614,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
   }
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries())
-    if (Optional<DylibFile *> reexport =
-            loadReexport(intfRef.getInstallName(), umbrella))
-      reexported.push_back(*reexport);
+    loadReexport(intfRef.getInstallName(), umbrella);
 
   if (isTopLevelTapi)
     currentTopLevelTapi = nullptr;

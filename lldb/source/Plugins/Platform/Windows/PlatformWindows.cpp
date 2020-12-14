@@ -272,8 +272,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
   if (!target || error.Fail())
     return process_sp;
 
-  debugger.GetTargetList().SetSelectedTarget(target);
-
   const char *plugin_name = attach_info.GetProcessPluginName();
   process_sp = target->CreateProcess(
       attach_info.GetListenerForProcess(debugger), plugin_name, nullptr, false);

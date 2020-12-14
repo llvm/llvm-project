@@ -1105,6 +1105,9 @@ int main(int argc, const char *argv[]) {
   Dbg->GetCommandInterpreter().HandleCommand(
       "settings set target.inherit-tcc true",
       /*add_to_history*/ eLazyBoolNo, Result);
+  Dbg->GetCommandInterpreter().HandleCommand(
+      "settings set target.detach-on-error false",
+      /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
     Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, errs());

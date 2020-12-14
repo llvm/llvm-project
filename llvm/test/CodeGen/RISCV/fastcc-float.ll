@@ -17,7 +17,7 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    sw ra, 60(sp)
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    flw fa0, 0(a0)
 ; CHECK-NEXT:    flw fa1, 4(a0)
 ; CHECK-NEXT:    flw fa2, 8(a0)
@@ -63,7 +63,7 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    fsw fs1, 4(sp)
 ; CHECK-NEXT:    fsw fs0, 0(sp)
 ; CHECK-NEXT:    call callee
-; CHECK-NEXT:    lw ra, 60(sp)
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
 	%C = call fastcc float @callee(<32 x float> %A)
