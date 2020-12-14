@@ -348,9 +348,9 @@ public:
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in <Root>. All potential patterns are
   /// output in the <Pattern> array.
-  bool getMachineCombinerPatterns(
-      MachineInstr &Root,
-      SmallVectorImpl<MachineCombinerPattern> &P) const override;
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<MachineCombinerPattern> &P,
+                                  bool DoRegPressureReduce) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
 
