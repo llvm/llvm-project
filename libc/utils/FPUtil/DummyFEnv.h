@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_FPUTIL_DUMMY_FENV_H
 #define LLVM_LIBC_UTILS_FPUTIL_DUMMY_FENV_H
 
+#include <fenv.h>
 #include <math.h>
 
 namespace __llvm_libc {
