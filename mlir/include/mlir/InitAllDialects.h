@@ -17,10 +17,12 @@
 #include "mlir/Dialect/AVX512/AVX512Dialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
+#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -54,6 +56,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   LLVM::LLVMAVX512Dialect,
                   LLVM::LLVMDialect,
                   LLVM::LLVMArmNeonDialect,
+                  LLVM::LLVMArmSVEDialect,
                   linalg::LinalgDialect,
                   scf::SCFDialect,
                   omp::OpenMPDialect,
@@ -62,6 +65,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   quant::QuantizationDialect,
                   spirv::SPIRVDialect,
                   StandardOpsDialect,
+                  arm_sve::ArmSVEDialect,
                   vector::VectorDialect,
                   NVVM::NVVMDialect,
                   ROCDL::ROCDLDialect,
