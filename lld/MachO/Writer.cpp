@@ -242,7 +242,10 @@ public:
 //   * LC_REEXPORT_DYLIB
 class LCDylib : public LoadCommand {
 public:
-  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {
+  LCDylib(LoadCommandType type, StringRef path,
+          uint32_t compatibilityVersion = 0, uint32_t currentVersion = 0)
+      : type(type), path(path), compatibilityVersion(compatibilityVersion),
+        currentVersion(currentVersion) {
     instanceCount++;
   }
 
@@ -257,6 +260,9 @@ public:
     c->cmd = type;
     c->cmdsize = getSize();
     c->dylib.name = sizeof(dylib_command);
+    c->dylib.timestamp = 0;
+    c->dylib.compatibility_version = compatibilityVersion;
+    c->dylib.current_version = currentVersion;
 
     memcpy(buf, path.data(), path.size());
     buf[path.size()] = '\0';
@@ -267,6 +273,8 @@ public:
 private:
   LoadCommandType type;
   StringRef path;
+  uint32_t compatibilityVersion;
+  uint32_t currentVersion;
   static uint32_t instanceCount;
 };
 
@@ -431,7 +439,9 @@ void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
-    in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName));
+    in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
+                                            config->dylibCompatibilityVersion,
+                                            config->dylibCurrentVersion));
     break;
   case MH_BUNDLE:
     break;
