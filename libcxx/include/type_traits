@@ -2878,11 +2878,6 @@ struct __member_pointer_class_type<_Ret _ClassType::*> {
 
 // template <class T, class... Args> struct is_constructible;
 
-namespace __is_construct
-{
-struct __nat {};
-}
-
 #if defined(_LIBCPP_COMPILER_GCC) && _GNUC_VER_NEW >= 10000
 # define _LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE
 #endif
