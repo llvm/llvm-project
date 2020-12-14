@@ -279,6 +279,7 @@ namespace std {
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/formatter.h>
+#include <__format/formatter_char.h>
 #include <__format/formatter_integer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
@@ -338,24 +339,7 @@ _LIBCPP_HIDE_FROM_ABI __format_arg_store<wformat_context, _Args...>
 make_wformat_args(const _Args&... __args) {
   return _VSTD::make_format_args<wformat_context>(__args...);
 }
-
 namespace __format {
-template <class _Tp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_char {
-  _LIBCPP_HIDE_FROM_ABI
-  auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    // TODO FMT Implement this function.
-    return __parse_ctx.begin();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI
-  auto format(_Tp __c, auto& __ctx) -> decltype(__ctx.out()) {
-    // TODO FMT Implement the parsed formatting arguments.
-    auto __out_it = __ctx.out();
-    *__out_it++ = _CharT(__c);
-    return __out_it;
-  }
-};
 
 template <class _Tp, class _CharT>
 requires(is_arithmetic_v<_Tp> &&
@@ -404,20 +388,6 @@ private:
 
 // These specializations are helper stubs and not proper formatters.
 // TODO FMT Implement the proper formatter specializations.
-
-// [format.formatter.spec]/2.1 The specializations
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS formatter<char, char>
-    : public __format::__formatter_char<char, char> {};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS formatter<char, wchar_t>
-    : public __format::__formatter_char<char, wchar_t> {};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t>
-    : public __format::__formatter_char<wchar_t, wchar_t> {};
 
 // [format.formatter.spec]/2.3
 // For each charT, for each cv-unqualified arithmetic type ArithmeticT other
