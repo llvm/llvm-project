@@ -123,8 +123,8 @@ static mlir::FuncOp getIORuntimeFunc(mlir::Location loc,
     return func;
   auto funTy = getTypeModel<E>()(builder.getContext());
   func = builder.createFunction(loc, name, funTy);
-  func.setAttr("fir.runtime", builder.getUnitAttr());
-  func.setAttr("fir.io", builder.getUnitAttr());
+  func->setAttr("fir.runtime", builder.getUnitAttr());
+  func->setAttr("fir.io", builder.getUnitAttr());
   return func;
 }
 

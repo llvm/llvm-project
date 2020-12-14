@@ -535,3 +535,20 @@ define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(<1 x i32>* align 16 
   %r = insertelement <8 x i32> undef, i32 %s, i32 0
   ret <8 x i32> %r
 }
+
+; TODO: Can't safely load the offset vector, but can load+shuffle if it is profitable.
+
+define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(<2 x i16>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep1_load_v2i16_extract_insert_v8i16(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <2 x i16>, <2 x i16>* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i16>, <2 x i16>* [[GEP]], align 2
+; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x i16> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <2 x i16>, <2 x i16>* %p, i64 1
+  %l = load <2 x i16>, <2 x i16>* %gep, align 2
+  %s = extractelement <2 x i16> %l, i32 0
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}

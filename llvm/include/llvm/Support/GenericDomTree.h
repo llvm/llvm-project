@@ -554,7 +554,6 @@ protected:
   /// obtained PostViewCFG is the desired end state.
   void applyUpdates(ArrayRef<UpdateType> Updates,
                     ArrayRef<UpdateType> PostViewUpdates) {
-    // GraphDiff<NodePtr, IsPostDom> *PostViewCFG = nullptr) {
     if (Updates.empty()) {
       GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
       DomTreeBuilder::ApplyUpdates(*this, PostViewCFG, &PostViewCFG);
