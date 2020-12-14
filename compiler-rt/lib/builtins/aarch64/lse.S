@@ -102,8 +102,13 @@ HIDDEN(__aarch64_have_lse_atomics)
 
 // Macro for branch to label if no LSE available
 .macro JUMP_IF_NOT_LSE label
+#if !defined(__APPLE__)
         adrp    x(tmp0), __aarch64_have_lse_atomics
         ldrb    w(tmp0), [x(tmp0), :lo12:__aarch64_have_lse_atomics]
+#else
+        adrp    x(tmp0), __aarch64_have_lse_atomics@page
+        ldrb    w(tmp0), [x(tmp0), __aarch64_have_lse_atomics@pageoff]
+#endif
         cbz     w(tmp0), \label
 .endm
 
