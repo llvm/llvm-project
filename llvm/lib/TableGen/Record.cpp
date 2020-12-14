@@ -856,12 +856,12 @@ static StringInit *interleaveStringList(const ListInit *List,
                                         const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(dyn_cast<StringInit>(List->getElement(0))->getValue());
+  SmallString<80> Result(cast<StringInit>(List->getElement(0))->getValue());
   StringInit::StringFormat Fmt = StringInit::SF_String;
-  
+
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    auto *StrInit = dyn_cast<StringInit>(List->getElement(I));
+    auto *StrInit = cast<StringInit>(List->getElement(I));
     Result.append(StrInit->getValue());
     Fmt = StringInit::determineFormat(Fmt, StrInit->getFormat());
   }
@@ -872,13 +872,14 @@ static StringInit *interleaveIntList(const ListInit *List,
                                      const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(dyn_cast<IntInit>(List->getElement(0)->
-                             getCastTo(IntRecTy::get()))->getAsString());
-  
+  SmallString<80> Result(
+      cast<IntInit>(List->getElement(0)->getCastTo(IntRecTy::get()))
+          ->getAsString());
+
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    Result.append(dyn_cast<IntInit>(List->getElement(I)->
-                      getCastTo(IntRecTy::get()))->getAsString());
+    Result.append(cast<IntInit>(List->getElement(I)->getCastTo(IntRecTy::get()))
+                      ->getAsString());
   }
   return StringInit::get(Result);
 }
