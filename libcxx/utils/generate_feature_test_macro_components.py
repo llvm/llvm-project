@@ -670,7 +670,7 @@ def produce_version_header():
       cxx2a_macros=produce_macros_definition_for_std('c++2a').strip())
 
   version_header_path = os.path.join(include_path, 'version')
-  with open(version_header_path, 'w') as f:
+  with open(version_header_path, 'w', newline='\n') as f:
     f.write(version_str)
 
 
@@ -816,7 +816,7 @@ int main(int, char**) {{ return 0; }}
            cxx2a_tests=generate_std_test(test_list, 'c++2a').strip())
     test_name = "{header}.version.pass.cpp".format(header=h)
     out_path = os.path.join(macro_test_path, test_name)
-    with open(out_path, 'w') as f:
+    with open(out_path, 'w', newline='\n') as f:
       f.write(test_body)
 
 """
@@ -903,7 +903,7 @@ Status
 """.format(status_tables=create_table(get_status_table(), 4))
 
   table_doc_path = os.path.join(docs_path, 'FeatureTestMacroTable.rst')
-  with open(table_doc_path, 'w') as f:
+  with open(table_doc_path, 'w', newline='\n') as f:
     f.write(doc_str)
 
 def main():

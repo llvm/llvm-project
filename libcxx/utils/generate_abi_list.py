@@ -18,7 +18,7 @@ def OutputFile(file):
     if isinstance(file, io.IOBase):
         return file
     assert isinstance(file, str), "Got object {} which is not a str".format(file)
-    return open(file, 'w')
+    return open(file, 'w', newline='\n')
 
 def main(argv):
     parser = argparse.ArgumentParser(
