@@ -155,8 +155,11 @@ class MarshallingInfo<code keypath, code defaultvalue> {
   code DefaultValue = defaultvalue;
 }
 
-class MarshallingInfoString<code keypath, code defaultvalue>
-  : MarshallingInfo<keypath, defaultvalue> {}
+class MarshallingInfoString<code keypath, code defaultvalue="std::string()">
+  : MarshallingInfo<keypath, defaultvalue> {
+  code Normalizer = "normalizeString";
+  code Denormalizer = "denormalizeString";
+}
 
 class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   : MarshallingInfo<keypath, defaultvalue> {
@@ -189,7 +192,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; } 
-class DenormalizeString { code Denormalizer = "denormalizeString"; }
 class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";

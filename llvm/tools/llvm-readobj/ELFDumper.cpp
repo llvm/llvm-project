@@ -3576,8 +3576,20 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   printFields(OS, "OS/ABI:", Str);
   printFields(OS,
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
+
   Str = printEnum(e.e_type, makeArrayRef(ElfObjectFileType));
+  if (e.e_type >= ET_LOPROC) {
+    Str = "Processor Specific: (" + Str + ")";
+  } else if (e.e_type >= ET_LOOS) {
+    Str = "OS Specific: (" + Str + ")";
+  } else if (makeArrayRef(ElfObjectFileType).end() ==
+             llvm::find_if(ElfObjectFileType,
+                           [&](const EnumEntry<unsigned> &E) {
+                             return E.Value == e.e_type;
+                           }))
+    Str = "<unknown>: " + Str;
   printFields(OS, "Type:", Str);
+
   Str = printEnum(e.e_machine, makeArrayRef(ElfMachineType));
   printFields(OS, "Machine:", Str);
   Str = "0x" + to_hexString(e.e_version);
@@ -6555,18 +6567,20 @@ void LLVMStyle<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   SmallString<32> RelocName;
   this->Obj.getRelocationTypeName(R.Type, RelocName);
 
-  uintX_t Addend = R.Addend.getValueOr(0);
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printHex("Offset", R.Offset);
     W.printNumber("Type", RelocName, R.Type);
     W.printNumber("Symbol", !SymbolName.empty() ? SymbolName : "-", R.Symbol);
-    W.printHex("Addend", Addend);
+    if (R.Addend)
+      W.printHex("Addend", (uintX_t)*R.Addend);
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(R.Offset) << " " << RelocName << " "
-       << (!SymbolName.empty() ? SymbolName : "-") << " " << W.hex(Addend)
-       << "\n";
+       << (!SymbolName.empty() ? SymbolName : "-");
+    if (R.Addend)
+      OS << " " << W.hex((uintX_t)*R.Addend);
+    OS << "\n";
   }
 }
 

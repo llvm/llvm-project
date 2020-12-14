@@ -173,6 +173,10 @@ void mlir::populateGpuToNVVMConversionPatterns(
               GPUFuncOpLowering<0>>(converter);
   patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
                                                 "__nv_fabs");
+  patterns.insert<OpToFuncCallLowering<AtanOp>>(converter, "__nv_atanf",
+                                                "__nv_atan");
+  patterns.insert<OpToFuncCallLowering<Atan2Op>>(converter, "__nv_atan2f",
+                                                 "__nv_atan2");
   patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
                                                  "__nv_ceil");
   patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__nv_cosf",

@@ -312,6 +312,14 @@ namespace {
           continue;
 
         SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
+        // We don't know how to convert a block with just a VPT;VCTP into
+        // anything valid once we remove the VCTP. For now just bail out.
+        assert(isVPTOpcode(Insts.front()->getOpcode()) &&
+               "Expected VPT block to start with a VPST or VPT!");
+        if (Insts.size() == 2 && Insts.front()->getOpcode() != ARM::MVE_VPST &&
+            isVCTP(Insts.back()))
+          return false;
+
         for (auto *MI : Insts) {
           // Check that any internal VCTPs are 'Then' predicated.
           if (isVCTP(MI) && getVPTInstrPredicate(*MI) != ARMVCC::Then)
@@ -1547,9 +1555,15 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
       LoLoop.ToRemove.insert(VPST);
     } else if (Block.containsVCTP()) {
-      // The vctp will be removed, so the block mask of the vp(s)t will need
-      // to be recomputed.
-      LoLoop.BlockMasksToRecompute.insert(Insts.front());
+      // The vctp will be removed, so either the entire block will be dead or
+      // the block mask of the vp(s)t will need to be recomputed.
+      MachineInstr *VPST = Insts.front();
+      if (Block.size() == 2) {
+        assert(VPST->getOpcode() == ARM::MVE_VPST &&
+               "Found a VPST in an otherwise empty vpt block");
+        LoLoop.ToRemove.insert(VPST);
+      } else
+        LoLoop.BlockMasksToRecompute.insert(VPST);
     } else if (Insts.front()->getOpcode() == ARM::MVE_VPST) {
       // If this block starts with a VPST then attempt to merge it with the
       // preceeding un-merged VCMP into a VPT. This VCMP comes from a VPT

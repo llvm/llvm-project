@@ -38,7 +38,7 @@
 #                                     ^--- Addend for relocation in .rel.dyn
 # RELA-TO-REL:     Relocations [
 # RELA-TO-REL-NEXT:  Section ({{.+}}) .rel.dyn {
-# RELA-TO-REL-NEXT:     0x[[DATA]] R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE foo 0x0
+# RELA-TO-REL-NEXT:     0x[[DATA]] R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE foo
 # RELA-TO-REL-NEXT:  }
 # RELA-TO-REL-NEXT: ]
 

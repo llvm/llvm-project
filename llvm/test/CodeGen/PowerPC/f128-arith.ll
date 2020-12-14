@@ -195,7 +195,7 @@ define void @qpSqrt(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl sqrtl
+; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -840,7 +840,7 @@ define void @qpCeil(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl ceill
+; CHECK-P8-NEXT:    bl ceilf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -875,7 +875,7 @@ define void @qpFloor(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl floorl
+; CHECK-P8-NEXT:    bl floorf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -910,7 +910,7 @@ define void @qpTrunc(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl truncl
+; CHECK-P8-NEXT:    bl truncf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -945,7 +945,7 @@ define void @qpRound(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl roundl
+; CHECK-P8-NEXT:    bl roundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -973,7 +973,7 @@ define void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %res) {
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r30, r4
-; CHECK-NEXT:    bl lroundl
+; CHECK-NEXT:    bl lroundf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stw r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -993,7 +993,7 @@ define void @qpLRound(fp128* nocapture readonly %a, i32* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl lroundl
+; CHECK-P8-NEXT:    bl lroundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stw r3, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1021,7 +1021,7 @@ define void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %res) {
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r30, r4
-; CHECK-NEXT:    bl llroundl
+; CHECK-NEXT:    bl llroundf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    std r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -1041,7 +1041,7 @@ define void @qpLLRound(fp128* nocapture readonly %a, i64* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl llroundl
+; CHECK-P8-NEXT:    bl llroundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1076,7 +1076,7 @@ define void @qpRint(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl rintl
+; CHECK-P8-NEXT:    bl rintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1104,7 +1104,7 @@ define void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res) {
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r30, r4
-; CHECK-NEXT:    bl lrintl
+; CHECK-NEXT:    bl lrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stw r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -1124,7 +1124,7 @@ define void @qpLRint(fp128* nocapture readonly %a, i32* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl lrintl
+; CHECK-P8-NEXT:    bl lrintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stw r3, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1152,7 +1152,7 @@ define void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %res) {
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r30, r4
-; CHECK-NEXT:    bl llrintl
+; CHECK-NEXT:    bl llrintf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    std r3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -1172,7 +1172,7 @@ define void @qpLLRint(fp128* nocapture readonly %a, i64* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl llrintl
+; CHECK-P8-NEXT:    bl llrintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1207,7 +1207,7 @@ define void @qpNearByInt(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
-; CHECK-P8-NEXT:    bl nearbyintl
+; CHECK-P8-NEXT:    bl nearbyintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -1246,7 +1246,7 @@ define void @qpFMA(fp128* %a, fp128* %b, fp128* %c, fp128* %res) {
 ; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    lvx v4, 0, r5
 ; CHECK-P8-NEXT:    mr r30, r6
-; CHECK-P8-NEXT:    bl fmal
+; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    stvx v2, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48

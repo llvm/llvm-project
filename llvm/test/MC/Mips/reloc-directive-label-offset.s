@@ -48,22 +48,22 @@ bar:
   nop
 
 # OBJ-O32-LABEL: Relocations [
-# OBJ-O32:           0x0 R_MIPS_32 .text 0x0
-# OBJ-O32-NEXT:      0x4 R_MIPS_NONE .text 0x0
-# OBJ-O32-NEXT:      0xC R_MIPS_32 .text 0x0
-# OBJ-O32-NEXT:      0x10 R_MIPS_CALL16 foo 0x0
-# OBJ-O32-NEXT:      0x1C R_MIPS_GOT_OFST .text 0x0
-# OBJ-O32-NEXT:      0x20 R_MIPS_GOT_DISP foo 0x0
-# OBJ-O32-NEXT:      0x24 R_MIPS_GOT_PAGE .text 0x0
+# OBJ-O32:           0x0 R_MIPS_32 .text
+# OBJ-O32-NEXT:      0x4 R_MIPS_NONE .text
+# OBJ-O32-NEXT:      0xC R_MIPS_32 .text
+# OBJ-O32-NEXT:      0x10 R_MIPS_CALL16 foo
+# OBJ-O32-NEXT:      0x1C R_MIPS_GOT_OFST .text
+# OBJ-O32-NEXT:      0x20 R_MIPS_GOT_DISP foo
+# OBJ-O32-NEXT:      0x24 R_MIPS_GOT_PAGE .text
 
 # OBJ-N32-LABEL: Relocations [
-# OBJ-N32:           0x4 R_MIPS_NONE .text 0x0
-# OBJ-N32-NEXT:      0x1C R_MIPS_GOT_OFST .text 0x0
-# OBJ-N32-NEXT:      0x0 R_MIPS_32 .text 0x0
-# OBJ-N32-NEXT:      0xC R_MIPS_32 .text 0x0
-# OBJ-N32-NEXT:      0x10 R_MIPS_CALL16 foo 0x0
-# OBJ-N32-NEXT:      0x20 R_MIPS_GOT_DISP foo 0x0
-# OBJ-N32-NEXT:      0x24 R_MIPS_GOT_PAGE .text 0x0
+# OBJ-N32:           0x4 R_MIPS_NONE .text
+# OBJ-N32-NEXT:      0x1C R_MIPS_GOT_OFST .text
+# OBJ-N32-NEXT:      0x0 R_MIPS_32 .text
+# OBJ-N32-NEXT:      0xC R_MIPS_32 .text
+# OBJ-N32-NEXT:      0x10 R_MIPS_CALL16 foo
+# OBJ-N32-NEXT:      0x20 R_MIPS_GOT_DISP foo
+# OBJ-N32-NEXT:      0x24 R_MIPS_GOT_PAGE .text
 
 # OBJ-N64-LABEL: Relocations [
 # OBJ-N64:           0x4 R_MIPS_NONE/R_MIPS_NONE/R_MIPS_NONE .text 0x0

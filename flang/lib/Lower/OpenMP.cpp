@@ -109,7 +109,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                     std::get<std::optional<Fortran::parser::OmpObjectList>>(
                         flushConstruct.t))
               genObjectList(*ompObjectList, converter, operandRange);
-            if (std::get<std::optional<Fortran::parser::OmpMemoryOrderClause>>(
+            if (std::get<std::optional<
+                    std::list<Fortran::parser::OmpMemoryOrderClause>>>(
                     flushConstruct.t))
               TODO("Handle OmpMemoryOrderClause");
             converter.getFirOpBuilder().create<mlir::omp::FlushOp>(

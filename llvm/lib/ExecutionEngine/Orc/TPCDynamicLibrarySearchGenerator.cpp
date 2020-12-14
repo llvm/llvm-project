@@ -55,7 +55,7 @@ Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
     if (*ResultI)
       NewSymbols[KV.first] =
           JITEvaluatedSymbol(*ResultI, JITSymbolFlags::Exported);
-    ResultI++;
+    ++ResultI;
   }
 
   // If there were no resolved symbols bail out.

@@ -8827,11 +8827,10 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
-  Instruction *Instr = getUnderlyingInstr();
-  VPValue *StoredValue = isa<StoreInst>(Instr) ? getStoredValue() : nullptr;
-  State.ILV->vectorizeMemoryInstruction(Instr, State,
-                                        StoredValue ? nullptr : this, getAddr(),
-                                        StoredValue, getMask());
+  VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
+  State.ILV->vectorizeMemoryInstruction(&Ingredient, State,
+                                        StoredValue ? nullptr : toVPValue(),
+                                        getAddr(), StoredValue, getMask());
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising

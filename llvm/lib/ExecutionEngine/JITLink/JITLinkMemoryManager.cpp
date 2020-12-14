@@ -17,7 +17,8 @@ JITLinkMemoryManager::~JITLinkMemoryManager() = default;
 JITLinkMemoryManager::Allocation::~Allocation() = default;
 
 Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
-InProcessMemoryManager::allocate(const SegmentsRequestMap &Request) {
+InProcessMemoryManager::allocate(const JITLinkDylib *JD,
+                                 const SegmentsRequestMap &Request) {
 
   using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
 

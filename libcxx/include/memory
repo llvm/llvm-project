@@ -1716,7 +1716,7 @@ template <class _Alloc, class _Ptr>
 _LIBCPP_INLINE_VISIBILITY
 void __construct_forward_with_exception_guarantees(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2) {
     static_assert(__is_cpp17_move_insertable<_Alloc>::value,
-        "The specified type does not meet the requirements of Cpp17MoveInsertible");
+        "The specified type does not meet the requirements of Cpp17MoveInsertable");
     typedef allocator_traits<_Alloc> _Traits;
     for (; __begin1 != __end1; ++__begin1, (void)++__begin2) {
         _Traits::construct(__a, _VSTD::__to_address(__begin2),

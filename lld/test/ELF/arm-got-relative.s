@@ -28,7 +28,7 @@ function:
  bx lr
 
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:  0x2020C R_ARM_GLOB_DAT function 0x0
+// CHECK-NEXT:  0x2020C R_ARM_GLOB_DAT function
 
 // CHECK: Name: _GLOBAL_OFFSET_TABLE_
 // CHECK-NEXT:    Value: 0x2020C

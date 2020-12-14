@@ -43,8 +43,8 @@
 // &.got.plt[4] = 0x403278 + 16 = 0x403288
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.plt {
-// CHECK-NEXT:     0x403284 R_386_JUMP_SLOT bar 0x0
-// CHECK-NEXT:     0x403288 R_386_JUMP_SLOT zed 0x0
+// CHECK-NEXT:     0x403284 R_386_JUMP_SLOT bar
+// CHECK-NEXT:     0x403288 R_386_JUMP_SLOT zed
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -113,8 +113,8 @@
 // 0x3000 + got.plt.reserved(12) + 4 = 0x3010
 // CHECKSHARED:        Relocations [
 // CHECKSHARED-NEXT:     Section ({{.*}}) .rel.plt {
-// CHECKSHARED-NEXT:       0x329C R_386_JUMP_SLOT bar 0x0
-// CHECKSHARED-NEXT:       0x32A0 R_386_JUMP_SLOT zed 0x0
+// CHECKSHARED-NEXT:       0x329C R_386_JUMP_SLOT bar
+// CHECKSHARED-NEXT:       0x32A0 R_386_JUMP_SLOT zed
 // CHECKSHARED-NEXT:     }
 // CHECKSHARED-NEXT:   ]
 
