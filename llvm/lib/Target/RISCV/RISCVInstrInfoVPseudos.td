@@ -361,6 +361,24 @@ multiclass VPseudoBinaryW_WX {
                              "@earlyclobber $rd">;
 }
 
+multiclass VPseudoBinaryV_WV {
+  foreach m = MxList.m[0-5] in
+    defm _WV : VPseudoBinary<m.vrclass, m.wvrclass, m.vrclass, m,
+                             "@earlyclobber $rd">;
+}
+
+multiclass VPseudoBinaryV_WX {
+  foreach m = MxList.m[0-5] in
+    defm _WX : VPseudoBinary<m.vrclass, m.wvrclass, GPR, m,
+                             "@earlyclobber $rd">;
+}
+
+multiclass VPseudoBinaryV_WI {
+  foreach m = MxList.m[0-5] in
+    defm _WI : VPseudoBinary<m.vrclass, m.wvrclass, uimm5, m,
+                             "@earlyclobber $rd">;
+}
+
 // For vadc and vsbc, the instruction encoding is reserved if the destination
 // vector register is v0.
 // For vadc and vsbc, CarryIn == 1 and CarryOut == 0
@@ -451,6 +469,12 @@ multiclass VPseudoBinaryM_V_X_I<string Constraint> {
 multiclass VPseudoBinaryM_V_X<string Constraint> {
   defm "" : VPseudoBinaryV_VM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>;
   defm "" : VPseudoBinaryV_XM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>;
+}
+
+multiclass VPseudoBinaryV_WV_WX_WI {
+  defm "" : VPseudoBinaryV_WV;
+  defm "" : VPseudoBinaryV_WX;
+  defm "" : VPseudoBinaryV_WI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -659,6 +683,39 @@ multiclass VPatBinaryW_WX<string intrinsic, string instruction> {
   }
 }
 
+multiclass VPatBinaryV_WV<string intrinsic, string instruction> {
+  foreach VtiToWti = AllWidenableIntVectors in {
+    defvar Vti = VtiToWti.Vti;
+    defvar Wti = VtiToWti.Wti;
+    defm : VPatBinary<intrinsic, instruction, "WV",
+                      Vti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                      Vti.SEW, Vti.LMul, Vti.RegClass,
+                      Wti.RegClass, Vti.RegClass>;
+  }
+}
+
+multiclass VPatBinaryV_WX<string intrinsic, string instruction> {
+  foreach VtiToWti = AllWidenableIntVectors in {
+    defvar Vti = VtiToWti.Vti;
+    defvar Wti = VtiToWti.Wti;
+    defm : VPatBinary<intrinsic, instruction, "WX",
+                      Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
+                      Vti.SEW, Vti.LMul, Vti.RegClass,
+                      Wti.RegClass, GPR>;
+  }
+}
+
+multiclass VPatBinaryV_WI<string intrinsic, string instruction> {
+  foreach VtiToWti = AllWidenableIntVectors in {
+    defvar Vti = VtiToWti.Vti;
+    defvar Wti = VtiToWti.Wti;
+    defm : VPatBinary<intrinsic, instruction, "WI",
+                      Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
+                      Vti.SEW, Vti.LMul, Vti.RegClass,
+                      Wti.RegClass, uimm5>;
+  }
+}
+
 multiclass VPatBinaryV_VM<string intrinsic, string instruction,
                           bit CarryOut = 0> {
   foreach vti = AllIntegerVectors in
@@ -745,6 +802,13 @@ multiclass VPatBinaryW_WV_WX<string intrinsic, string instruction>
 {
   defm "" : VPatBinaryW_WV<intrinsic, instruction>;
   defm "" : VPatBinaryW_WX<intrinsic, instruction>;
+}
+
+multiclass VPatBinaryV_WV_WX_WI<string intrinsic, string instruction>
+{
+  defm "" : VPatBinaryV_WV<intrinsic, instruction>;
+  defm "" : VPatBinaryV_WX<intrinsic, instruction>;
+  defm "" : VPatBinaryV_WI<intrinsic, instruction>;
 }
 
 multiclass VPatBinaryV_VM_XM_IM<string intrinsic, string instruction>
@@ -941,6 +1005,12 @@ defm PseudoVSRL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
 defm PseudoVSRA        : VPseudoBinaryV_VV_VX_VI<uimm5>;
 
 //===----------------------------------------------------------------------===//
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVNSRL       : VPseudoBinaryV_WV_WX_WI;
+defm PseudoVNSRA       : VPseudoBinaryV_WV_WX_WI;
+
+//===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
 
@@ -990,5 +1060,11 @@ defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsrl", "PseudoVSRL", AllIntegerVectors
                                uimm5>;
 defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors,
                                uimm5>;
+
+//===----------------------------------------------------------------------===//
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsrl", "PseudoVNSRL">;
+defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsra", "PseudoVNSRA">;
 
 } // Predicates = [HasStdExtV]
