@@ -109,7 +109,7 @@ Error TPCTrampolinePool::grow() {
   jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
   Request[TrampolinePagePermissions] = {PageSize, static_cast<size_t>(PageSize),
                                         0};
-  auto Alloc = TPC.getMemMgr().allocate(Request);
+  auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
 
   if (!Alloc)
     return Alloc.takeError();
@@ -294,7 +294,7 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
   jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
   Request[ResolverBlockPermissions] = {TPC.getPageSize(),
                                        static_cast<size_t>(ResolverSize), 0};
-  auto Alloc = TPC.getMemMgr().allocate(Request);
+  auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
   if (!Alloc)
     return Alloc.takeError();
 
@@ -364,7 +364,7 @@ TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     Request[StubPagePermissions] = {PageSize, static_cast<size_t>(StubBytes),
                                     0};
     Request[PointerPagePermissions] = {PageSize, 0, PointerBytes};
-    auto Alloc = TPC.getMemMgr().allocate(Request);
+    auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
     if (!Alloc)
       return Alloc.takeError();
 
