@@ -1789,8 +1789,8 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
 
     if (node->getKind() == Node::Kind::TypeAlias) {
       auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node);
-      if (resolved.first)
-        node = resolved.first;
+      if (auto *n = std::get<swift::Demangle::NodePointer>(resolved))
+        node = n;
     }
 
     switch (node->getKind()) {
