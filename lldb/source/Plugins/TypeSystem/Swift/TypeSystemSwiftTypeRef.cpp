@@ -2327,12 +2327,29 @@ CompilerType
 TypeSystemSwiftTypeRef::GetTypeForFormatters(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeForFormatters(ReconstructType(type));
 }
+
 LazyBool
 TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
                                               ValueObject *valobj) {
-  return m_swift_ast_context->ShouldPrintAsOneLiner(ReconstructType(type),
-                                                    valobj);
+  auto impl = [&]() {
+    if (type) {
+      if (IsImportedType(type, nullptr))
+        return eLazyBoolNo;
+    }
+    if (valobj) {
+      if (valobj->IsBaseClass())
+        return eLazyBoolNo;
+      if ((valobj->GetLanguageFlags() & LanguageFlags::eIsIndirectEnumCase) ==
+          LanguageFlags::eIsIndirectEnumCase)
+        return eLazyBoolNo;
+    }
+
+    return eLazyBoolCalculate;
+  };
+  VALIDATE_AND_RETURN(impl, ShouldPrintAsOneLiner, type,
+                      (ReconstructType(type), valobj));
 }
+
 bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
     opaque_compiler_type_t type) {
   auto impl = [&]() {
