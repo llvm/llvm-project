@@ -107,70 +107,70 @@ static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
 
 cl::opt<bool> objdump::UniversalHeaders(
     "universal-headers",
-    cl::desc("Print Mach-O universal headers (requires -macho)"),
+    cl::desc("Print Mach-O universal headers (requires --macho)"),
     cl::cat(MachOCat));
 
 static cl::opt<bool> ArchiveMemberOffsets(
     "archive-member-offsets",
     cl::desc("Print the offset to each archive member for Mach-O archives "
-             "(requires -macho and -archive-headers)"),
+             "(requires --macho and --archive-headers)"),
     cl::cat(MachOCat));
 
 cl::opt<bool> objdump::IndirectSymbols(
     "indirect-symbols",
     cl::desc(
-        "Print indirect symbol table for Mach-O objects (requires -macho)"),
+        "Print indirect symbol table for Mach-O objects (requires --macho)"),
     cl::cat(MachOCat));
 
 cl::opt<bool> objdump::DataInCode(
     "data-in-code",
     cl::desc(
-        "Print the data in code table for Mach-O objects (requires -macho)"),
+        "Print the data in code table for Mach-O objects (requires --macho)"),
     cl::cat(MachOCat));
 
 cl::opt<bool>
     objdump::LinkOptHints("link-opt-hints",
                           cl::desc("Print the linker optimization hints for "
-                                   "Mach-O objects (requires -macho)"),
+                                   "Mach-O objects (requires --macho)"),
                           cl::cat(MachOCat));
 
 cl::opt<bool>
     objdump::InfoPlist("info-plist",
                        cl::desc("Print the info plist section as strings for "
-                                "Mach-O objects (requires -macho)"),
+                                "Mach-O objects (requires --macho)"),
                        cl::cat(MachOCat));
 
 cl::opt<bool>
     objdump::DylibsUsed("dylibs-used",
                         cl::desc("Print the shared libraries used for linked "
-                                 "Mach-O files (requires -macho)"),
+                                 "Mach-O files (requires --macho)"),
                         cl::cat(MachOCat));
 
 cl::opt<bool> objdump::DylibId("dylib-id",
                                cl::desc("Print the shared library's id for the "
-                                        "dylib Mach-O file (requires -macho)"),
+                                        "dylib Mach-O file (requires --macho)"),
                                cl::cat(MachOCat));
 
 static cl::opt<bool>
     NonVerbose("non-verbose",
                cl::desc("Print the info for Mach-O objects in non-verbose or "
-                        "numeric form (requires -macho)"),
+                        "numeric form (requires --macho)"),
                cl::cat(MachOCat));
 
 cl::opt<bool>
     objdump::ObjcMetaData("objc-meta-data",
                           cl::desc("Print the Objective-C runtime meta data "
-                                   "for Mach-O files (requires -macho)"),
+                                   "for Mach-O files (requires --macho)"),
                           cl::cat(MachOCat));
 
 static cl::opt<std::string> DisSymName(
     "dis-symname",
-    cl::desc("disassemble just this symbol's instructions (requires -macho)"),
+    cl::desc("disassemble just this symbol's instructions (requires --macho)"),
     cl::cat(MachOCat));
 
 static cl::opt<bool> NoSymbolicOperands(
     "no-symbolic-operands",
-    cl::desc("do not symbolic operands when disassembling (requires -macho)"),
+    cl::desc("do not symbolic operands when disassembling (requires --macho)"),
     cl::cat(MachOCat));
 
 static cl::list<std::string>
