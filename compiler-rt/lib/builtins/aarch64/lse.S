@@ -2,7 +2,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "assembly.h"
+#include "../assembly.h"
 
 // Out-of-line LSE atomics helpers. Ported from libgcc library.
 // N = {1, 2, 4, 8}
