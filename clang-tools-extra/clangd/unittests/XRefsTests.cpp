@@ -349,6 +349,22 @@ TEST(LocateSymbol, WithIndex) {
       ElementsAre(Sym("Forward", SymbolHeader.range("forward"), Test.range())));
 }
 
+TEST(LocateSymbol, FindOverrides) {
+  auto Code = Annotations(R"cpp(
+    class Foo {
+      virtual void $1[[fo^o]]() = 0;
+    };
+    class Bar : public Foo {
+      void $2[[foo]]() override;
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  EXPECT_THAT(locateSymbolAt(AST, Code.point(), TU.index().get()),
+              UnorderedElementsAre(Sym("foo", Code.range("1"), llvm::None),
+                                   Sym("foo", Code.range("2"), llvm::None)));
+}
+
 TEST(LocateSymbol, WithIndexPreferredLocation) {
   Annotations SymbolHeader(R"cpp(
         class $p[[Proto]] {};
