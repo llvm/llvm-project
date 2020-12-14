@@ -137,13 +137,14 @@ def produce_include(relpath, indent_level, post_include=None):
 def produce_headers(path_parts, indent_level, post_include=None, exclusions=None):
     pattern = os.path.join(*path_parts, '[a-z]*')
 
-    include_headers = glob.glob(pattern, recursive=False)
+    files = sorted(glob.glob(pattern, recursive=False))
 
     include_headers = [
         produce_include(os.path.relpath(p, include_path),
                         indent_level, post_include=post_include)
-        for p in include_headers
-        if should_keep_header(p, exclusions)]
+        for p in files
+        if should_keep_header(p, exclusions)
+    ]
 
     return '\n'.join(include_headers)
 
@@ -169,7 +170,7 @@ def replace_generated_headers(test_path, test_str):
     content = generated_part_pattern.sub(
         preambule + test_str + postambule, content)
 
-    with open(test_path, 'w') as f:
+    with open(test_path, 'w', newline='\n') as f:
         f.write(content)
 
 
