@@ -330,7 +330,7 @@ public:
   }
 
   Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
-  allocate(const SegmentsRequestMap &Request) override {
+  allocate(const JITLinkDylib *JD, const SegmentsRequestMap &Request) override {
 
     using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
 
