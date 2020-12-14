@@ -1876,10 +1876,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Success;
 }
 
-static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
-  Opts.WorkingDir = std::string(Args.getLastArgValue(OPT_working_directory));
-}
-
 /// Parse the argument to the -ftest-module-file-extension
 /// command-line argument.
 ///
@@ -3839,7 +3835,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                                  /*DefaultDiagColor=*/false);
   ParseCommentArgs(LangOpts.CommentOpts, Args);
-  ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
                                       LangOpts.IsHeaderFile);

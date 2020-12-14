@@ -3354,7 +3354,8 @@ def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,
       Flags<[CC1Option, NoXarchOption]>;
 
 def working_directory : JoinedOrSeparate<["-"], "working-directory">, Flags<[CC1Option]>,
-  HelpText<"Resolve file paths relative to the specified directory">;
+  HelpText<"Resolve file paths relative to the specified directory">,
+  MarshallingInfoString<"FileSystemOpts.WorkingDir">;
 def working_directory_EQ : Joined<["-"], "working-directory=">, Flags<[CC1Option]>,
   Alias<working_directory>;
 
