@@ -1764,13 +1764,64 @@ bool TypeSystemSwiftTypeRef::IsFunctionPointerType(
   VALIDATE_AND_RETURN(impl, IsFunctionPointerType, type,
                       (ReconstructType(type)));
 }
+
 bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
                                                    CompilerType *target_type,
                                                    bool check_cplusplus,
                                                    bool check_objc) {
-  return m_swift_ast_context->IsPossibleDynamicType(
-      ReconstructType(type), target_type, check_cplusplus, check_objc);
+  if (target_type)
+    target_type->Clear();
+
+  if (!type)
+    return false;
+
+  // This is a discrepancy with `SwiftASTContext`. The `impl` below correctly
+  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
+  // handling of `__C.NSNotificationName` can be removed when the
+  // `VALIDATE_AND_RETURN` is removed.
+  if (GetMangledTypeName(type) == "$sSo18NSNotificationNameaD")
+    return true;
+
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    if (!node)
+      return false;
+
+    if (node->getKind() == Node::Kind::TypeAlias) {
+      auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node);
+      if (auto *n = std::get<swift::Demangle::NodePointer>(resolved))
+        node = n;
+    }
+
+    switch (node->getKind()) {
+    case Node::Kind::Class:
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::Protocol:
+    case Node::Kind::ProtocolList:
+    case Node::Kind::ProtocolListWithClass:
+    case Node::Kind::ProtocolListWithAnyObject:
+    case Node::Kind::ExistentialMetatype:
+    case Node::Kind::DynamicSelf:
+      return true;
+    case Node::Kind::BuiltinTypeName: {
+      if (!node->hasText())
+        return false;
+      StringRef name = node->getText();
+      return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
+             name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
+             name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
+    }
+    default:
+      return ContainsGenericTypeParameter(node);
+    }
+  };
+  VALIDATE_AND_RETURN(
+      impl, IsPossibleDynamicType, type,
+      (ReconstructType(type), nullptr, check_cplusplus, check_objc));
 }
+
 bool TypeSystemSwiftTypeRef::IsPointerType(opaque_compiler_type_t type,
                                            CompilerType *pointee_type) {
   auto impl = [&]() {
