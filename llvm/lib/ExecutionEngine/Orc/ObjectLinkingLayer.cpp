@@ -28,7 +28,8 @@ public:
       ObjectLinkingLayer &Layer,
       std::unique_ptr<MaterializationResponsibility> MR,
       std::unique_ptr<MemoryBuffer> ObjBuffer)
-      : Layer(Layer), MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
+      : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
+        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
 
   ~ObjectLinkingLayerJITLinkContext() {
     // If there is an object buffer return function then use it to
