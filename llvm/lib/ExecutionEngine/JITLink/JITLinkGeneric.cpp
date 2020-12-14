@@ -266,7 +266,8 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
   }
   LLVM_DEBUG(dbgs() << " }\n");
 
-  if (auto AllocOrErr = Ctx->getMemoryManager().allocate(Segments))
+  if (auto AllocOrErr =
+          Ctx->getMemoryManager().allocate(Ctx->getJITLinkDylib(), Segments))
     Alloc = std::move(*AllocOrErr);
   else
     return AllocOrErr.takeError();

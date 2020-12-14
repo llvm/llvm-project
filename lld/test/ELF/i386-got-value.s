@@ -24,7 +24,7 @@
 # CHECK-NEXT:   0000: 00000000
 # CHECK-NEXT: )
 
-# CHECK: R_386_GLOB_DAT bar 0x0
+# CHECK: R_386_GLOB_DAT bar
 
         movl    bar@GOT(%eax), %eax
 

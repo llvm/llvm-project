@@ -56,6 +56,17 @@ FileHeader:
 # GNU-CORE: ELF Header:
 # GNU-CORE:   Type: CORE (Core file)
 
+## Test what we dump for an arbitrary unknown ELF type.
+# RUN: yaml2obj %s -DTYPE=0xFDFF -o %t.unknown
+# RUN: llvm-readobj -h %t.unknown | FileCheck %s --match-full-lines --check-prefix LLVM-UNNKNOWN
+# RUN: llvm-readelf -h %t.unknown | FileCheck %s --match-full-lines --check-prefix GNU-UNNKNOWN
+
+# LLVM-UNNKNOWN: ElfHeader {
+# LLVM-UNNKNOWN:   Type: 0xFDFF
+
+# GNU-UNNKNOWN: ELF Header:
+# GNU-UNNKNOWN:   Type: <unknown>: fdff
+
 # RUN: yaml2obj %s -DTYPE=0xfe00 -o %t6
 # RUN: llvm-readobj -h %t6 | FileCheck %s --match-full-lines --check-prefix LLVM-LOOS
 # RUN: llvm-readelf -h %t6 | FileCheck %s --match-full-lines --check-prefix GNU-LOOS
@@ -64,7 +75,7 @@ FileHeader:
 # LLVM-LOOS:   Type: 0xFE00
 
 # GNU-LOOS: ELF Header:
-# GNU-LOOS:   Type: fe00
+# GNU-LOOS:   Type: OS Specific: (fe00)
 
 # RUN: yaml2obj %s -DTYPE=0xfeff -o %t7
 # RUN: llvm-readobj -h %t7 | FileCheck %s --match-full-lines --check-prefix LLVM-HIOS
@@ -74,7 +85,7 @@ FileHeader:
 # LLVM-HIOS:   Type: 0xFEFF
 
 # GNU-HIOS: ELF Header:
-# GNU-HIOS:   Type: feff
+# GNU-HIOS:   Type: OS Specific: (feff)
 
 # RUN: yaml2obj %s -DTYPE=0xff00 -o %t8
 # RUN: llvm-readobj -h %t8 | FileCheck %s --match-full-lines --check-prefix LLVM-LOPROC
@@ -84,7 +95,7 @@ FileHeader:
 # LLVM-LOPROC:   Type: 0xFF00
 
 # GNU-LOPROC: ELF Header:
-# GNU-LOPROC:   Type: ff00
+# GNU-LOPROC:   Type: Processor Specific: (ff00)
 
 # RUN: yaml2obj %s -DTYPE=0xffff -o %t9
 # RUN: llvm-readobj -h %t9 | FileCheck %s --match-full-lines --check-prefix LLVM-HIPROC
@@ -94,4 +105,4 @@ FileHeader:
 # LLVM-HIPROC:   Type: 0xFFFF
 
 # GNU-HIPROC: ELF Header:
-# GNU-HIPROC:   Type: ffff
+# GNU-HIPROC:   Type: Processor Specific: (ffff)

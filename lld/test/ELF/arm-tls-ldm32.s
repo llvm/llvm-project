@@ -55,7 +55,7 @@ x:
 // SEC:      Size: 4
 
 // SEC: Dynamic Relocations {
-// SEC-NEXT:  0x20224 R_ARM_TLS_DTPMOD32 - 0x0
+// SEC-NEXT:  0x20224 R_ARM_TLS_DTPMOD32 -
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:

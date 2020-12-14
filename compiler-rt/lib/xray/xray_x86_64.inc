@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdint>
-#include <x86intrin.h>
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "xray_defs.h"

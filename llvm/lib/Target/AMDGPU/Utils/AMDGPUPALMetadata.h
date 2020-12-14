@@ -79,7 +79,7 @@ public:
   void setScratchSize(unsigned CC, unsigned Val);
 
   // Set the stack frame size of a function in the metadata.
-  void setStackFrameSize(const MachineFunction &MF, unsigned Val);
+  void setFunctionScratchSize(const MachineFunction &MF, unsigned Val);
 
   // Set the hardware register bit in PAL metadata to enable wave32 on the
   // shader of the given calling convention.
@@ -129,6 +129,9 @@ private:
 
   // Get (create if necessary) the shader functions map.
   msgpack::MapDocNode getShaderFunctions();
+
+  // Get (create if necessary) a function in the shader functions map.
+  msgpack::MapDocNode getShaderFunction(StringRef Name);
 
   // Get (create if necessary) the .hardware_stages entry for the given calling
   // convention.

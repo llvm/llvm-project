@@ -17,13 +17,13 @@
 # REL-NEXT: PLTGOT   {{.*}}
 # REL-NEXT: PLTREL   REL{{$}}
 # REL:      .rel.dyn {
-# REL-NEXT:   R_386_RELATIVE - 0x0
-# REL-NEXT:   R_386_GLOB_DAT func 0x0
-# REL-NEXT:   R_386_TLS_TPOFF tls 0x0
-# REL-NEXT:   R_386_32 _start 0x0
+# REL-NEXT:   R_386_RELATIVE -
+# REL-NEXT:   R_386_GLOB_DAT func
+# REL-NEXT:   R_386_TLS_TPOFF tls
+# REL-NEXT:   R_386_32 _start
 # REL-NEXT: }
 # REL-NEXT: .rel.plt {
-# REL-NEXT:   R_386_JUMP_SLOT func 0x0
+# REL-NEXT:   R_386_JUMP_SLOT func
 # REL-NEXT: }
 
 # REL:      Hex dump of section '.data':

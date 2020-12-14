@@ -13,11 +13,13 @@
 
 using namespace llvm;
 
-AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
-  MachineFunctionInfo(),
-  Mode(MF.getFunction()),
-  IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
-  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
+AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
+    : MachineFunctionInfo(), Mode(MF.getFunction()),
+      IsEntryFunction(
+          AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
+      IsModuleEntryFunction(
+          AMDGPU::isModuleEntryFunctionCC(MF.getFunction().getCallingConv())),
+      NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
