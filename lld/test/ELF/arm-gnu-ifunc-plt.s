@@ -10,14 +10,14 @@
 // Check that the IRELATIVE relocations are last in the .got
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (5) .rel.dyn {
-// CHECK-NEXT:     0x302E0 R_ARM_GLOB_DAT bar2 0x0
-// CHECK-NEXT:     0x302E4 R_ARM_GLOB_DAT zed2 0x0
-// CHECK-NEXT:     0x302E8 R_ARM_IRELATIVE - 0x0
-// CHECK-NEXT:     0x302EC R_ARM_IRELATIVE - 0x0
+// CHECK-NEXT:     0x302E0 R_ARM_GLOB_DAT bar2
+// CHECK-NEXT:     0x302E4 R_ARM_GLOB_DAT zed2
+// CHECK-NEXT:     0x302E8 R_ARM_IRELATIVE -
+// CHECK-NEXT:     0x302EC R_ARM_IRELATIVE -
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (6) .rel.plt {
-// CHECK-NEXT:     0x402FC R_ARM_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x40300 R_ARM_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:     0x402FC R_ARM_JUMP_SLOT bar2
+// CHECK-NEXT:     0x40300 R_ARM_JUMP_SLOT zed2
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

@@ -11,12 +11,12 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
-# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_COPY data0 0x0
-# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_COPY data1 0x0
+# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_COPY data0
+# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_COPY data1
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rel.plt {
-# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_JUMP_SLOT foo0 0x0
-# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_JUMP_SLOT foo1 0x0
+# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_JUMP_SLOT foo0
+# CHECK-DAG:      0x{{[0-9A-F]+}} R_MIPS_JUMP_SLOT foo1
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

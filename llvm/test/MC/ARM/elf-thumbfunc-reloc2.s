@@ -29,11 +29,11 @@ bar:
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section {{.*}} .rel.text {
-// CHECK-NEXT:     0x4 R_ARM_THM_CALL foo 0x0
+// CHECK-NEXT:     0x4 R_ARM_THM_CALL foo
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {{.*}} .rel.ARM.exidx {
-// CHECK-NEXT:     0x0 R_ARM_PREL31 .text 0x0
-// CHECK-NEXT:     0x8 R_ARM_PREL31 .text 0x0
+// CHECK-NEXT:     0x0 R_ARM_PREL31 .text
+// CHECK-NEXT:     0x8 R_ARM_PREL31 .text
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

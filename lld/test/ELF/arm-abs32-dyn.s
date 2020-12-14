@@ -26,7 +26,7 @@ bar:
 // CHECK:      Dynamic Relocations {
 // CHECK-NEXT:   0x30204 R_ARM_RELATIVE
 // CHECK-NEXT:   0x30208 R_ARM_RELATIVE
-// CHECK-NEXT:   0x30200 R_ARM_ABS32 foo 0x0
+// CHECK-NEXT:   0x30200 R_ARM_ABS32 foo
 // CHECK-NEXT: }
 
 // CHECK:      Symbols [
