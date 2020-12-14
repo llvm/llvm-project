@@ -18,50 +18,5 @@
   "directory": "DIR",
   "command": "clang -E DIR/target-filename_input.cpp -o first.o -o last.o",
   "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp -o clangcl-a.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp -oclangcl-b.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp /o clangcl-c.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp /oclangcl-d.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp /Foclangcl-e.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp -o clangcl-firstf.o -o clangcl-lastf.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp /oclangcl-firstg.o /Foclangcl-lastg.o",
-  "file": "DIR/target-filename_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E DIR/target-filename_input.cpp /Foclangcl-firsth.o -o clangcl-midh.o /oclangcl-lasth.o",
-  "file": "DIR/target-filename_input.cpp"
 }
 ]
