@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o %t.bc %s
-; RUN: wasm-ld --lto-new-pass-manager --lto-debug-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s
-; RUN: wasm-ld --lto-new-pass-manager --lto-debug-pass-manager --no-lto-new-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s --allow-empty --check-prefix=LPM
+; RUN: wasm-ld --no-lto-legacy-pass-manager --lto-debug-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s
+; RUN: wasm-ld --no-lto-legacy-pass-manager --lto-debug-pass-manager --lto-legacy-pass-manager -o /dev/null %t.bc 2>&1 | FileCheck %s --allow-empty --check-prefix=LPM
 
 ; CHECK: Starting llvm::Module pass manager run
 ; CHECK: Finished llvm::Module pass manager run
