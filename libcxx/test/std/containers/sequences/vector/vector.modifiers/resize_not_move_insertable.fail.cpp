@@ -14,7 +14,7 @@
 // <vector>
 
 // Test that vector produces a decent diagnostic for user types that explicitly
-// delete their move constructor. Such types don't meet the Cpp17CopyInsertible
+// delete their move constructor. Such types don't meet the Cpp17CopyInsertable
 // requirements.
 
 #include <vector>
