@@ -630,8 +630,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 
   // Remove the register (and its aliases from the list).
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-    UpdatedCSRs.erase(std::remove(UpdatedCSRs.begin(), UpdatedCSRs.end(), *AI),
-                      UpdatedCSRs.end());
+    llvm::erase_value(UpdatedCSRs, *AI);
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
