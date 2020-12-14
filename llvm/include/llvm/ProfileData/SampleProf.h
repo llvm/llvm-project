@@ -154,6 +154,9 @@ struct SecHdrTableEntry {
   uint64_t Flags;
   uint64_t Offset;
   uint64_t Size;
+  // The index indicating the location of the current entry in
+  // SectionHdrLayout table.
+  uint32_t LayoutIndex;
 };
 
 // Flags common for all sections are defined here. In SecHdrTableEntry::Flags,
