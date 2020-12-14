@@ -421,8 +421,8 @@ bool PPCInstrInfo::getFMAPatterns(
 }
 
 bool PPCInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root,
-    SmallVectorImpl<MachineCombinerPattern> &Patterns) const {
+    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    bool DoRegPressureReduce) const {
   // Using the machine combiner in this way is potentially expensive, so
   // restrict to when aggressive optimizations are desired.
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
@@ -431,7 +431,8 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
   if (getFMAPatterns(Root, Patterns))
     return true;
 
-  return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns);
+  return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
+                                                     DoRegPressureReduce);
 }
 
 void PPCInstrInfo::genAlternativeCodeSequence(

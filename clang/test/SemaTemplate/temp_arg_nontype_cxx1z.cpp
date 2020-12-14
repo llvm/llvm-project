@@ -187,6 +187,11 @@ namespace Auto {
     int &r = f(B<&a>());
     float &s = f(B<&b>());
 
+    void type_affects_identity(B<&a>) {}
+    void type_affects_identity(B<(const int*)&a>) {}
+    void type_affects_identity(B<(void*)&a>) {}
+    void type_affects_identity(B<(const void*)&a>) {}
+
     // pointers to members
     template<typename T, auto *T::*p> struct B<p> {};
     template<typename T, auto **T::*p> struct B<p> {};
@@ -197,6 +202,12 @@ namespace Auto {
     auto t = f(B<&X::n>()); // expected-error {{no match}}
     char &u = f(B<&X::p>());
     short &v = f(B<&X::pp>());
+
+    struct Y : X {};
+    void type_affects_identity(B<&X::n>) {}
+    void type_affects_identity(B<(int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
+    void type_affects_identity(B<(const int X::*)&X::n>) {}
+    void type_affects_identity(B<(const int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
 
     // A case where we need to do auto-deduction, and check whether the
     // resulting dependent types match during partial ordering. These
