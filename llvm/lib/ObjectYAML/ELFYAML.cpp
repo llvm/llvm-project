@@ -1040,6 +1040,9 @@ struct NormalizedOther {
       Map["STO_MIPS_PLT"] = ELF::STO_MIPS_PLT;
       Map["STO_MIPS_OPTIONAL"] = ELF::STO_MIPS_OPTIONAL;
     }
+
+    if (EMachine == ELF::EM_AARCH64)
+      Map["STO_AARCH64_VARIANT_PCS"] = ELF::STO_AARCH64_VARIANT_PCS;
     return Map;
   }
 
