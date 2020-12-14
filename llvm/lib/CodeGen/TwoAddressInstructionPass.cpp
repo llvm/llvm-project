@@ -1015,7 +1015,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
       if (MOReg.isPhysical() && regOverlapsSet(LiveDefs, MOReg, TRI))
         return false;
       // Physical register def is seen.
-      Defs.erase(std::remove(Defs.begin(), Defs.end(), MOReg), Defs.end());
+      llvm::erase_value(Defs, MOReg);
     }
   }
 
