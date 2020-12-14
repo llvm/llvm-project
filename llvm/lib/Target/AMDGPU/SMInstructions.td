@@ -332,13 +332,15 @@ let OtherPredicates = [HasScalarStores] in {
 def S_DCACHE_WB     : SM_Inval_Pseudo <"s_dcache_wb", int_amdgcn_s_dcache_wb>;
 def S_DCACHE_WB_VOL : SM_Inval_Pseudo <"s_dcache_wb_vol", int_amdgcn_s_dcache_wb_vol>;
 } // End OtherPredicates = [HasScalarStores]
-def S_MEMREALTIME   : SM_Time_Pseudo <"s_memrealtime", int_amdgcn_s_memrealtime>;
 
 defm S_ATC_PROBE        : SM_Pseudo_Probe <"s_atc_probe", SReg_64>;
 let is_buffer = 1 in {
 defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <"s_atc_probe_buffer", SReg_128>;
 }
 } // SubtargetPredicate = isGFX8Plus
+
+let SubtargetPredicate = HasSMemRealTime in
+def S_MEMREALTIME   : SM_Time_Pseudo <"s_memrealtime", int_amdgcn_s_memrealtime>;
 
 let SubtargetPredicate = isGFX10Plus in
 def S_GL1_INV : SM_Inval_Pseudo<"s_gl1_inv">;
