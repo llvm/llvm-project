@@ -148,8 +148,7 @@ public:
   OrcRPCTPCJITLinkMemoryManager(OrcRPCTPCImplT &Parent) : Parent(Parent) {}
 
   Expected<std::unique_ptr<Allocation>>
-  allocate(const jitlink::JITLinkDylib *JD,
-           const SegmentsRequestMap &Request) override {
+  allocate(const SegmentsRequestMap &Request) override {
     orcrpctpc::ReserveMemRequest RMR;
     HostAllocMap HostAllocs;
 

@@ -1270,14 +1270,8 @@ class JITLinkContext {
 public:
   using LookupMap = DenseMap<StringRef, SymbolLookupFlags>;
 
-  /// Create a JITLinkContext.
-  JITLinkContext(const JITLinkDylib *JD) : JD(JD) {}
-
   /// Destroy a JITLinkContext.
   virtual ~JITLinkContext();
-
-  /// Return the JITLinkDylib that this link is targeting, if any.
-  const JITLinkDylib *getJITLinkDylib() const { return JD; }
 
   /// Return the MemoryManager to be used for this link.
   virtual JITLinkMemoryManager &getMemoryManager() = 0;
@@ -1330,9 +1324,6 @@ public:
   /// Called by JITLink to modify the pass pipeline prior to linking.
   /// The default version performs no modification.
   virtual Error modifyPassConfig(const Triple &TT, PassConfiguration &Config);
-
-private:
-  const JITLinkDylib *JD = nullptr;
 };
 
 /// Marks all symbols in a graph live. This can be used as a default,
