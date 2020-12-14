@@ -8,7 +8,6 @@
 define void @sve_cmplt_setcc_inverted(<vscale x 8 x i16>* %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: @sve_cmplt_setcc_inverted
 ; CHECK: cmplt p1.h, p0/z, z0.h, #0
-; CHECK-NEXT: ptest p0, p1.b
 ; CHECK-NEXT: b.ne
 entry:
   %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmplt.wide.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %in, <vscale x 2 x i64> zeroinitializer)

@@ -280,6 +280,12 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
+  /// Returns true if the opcode is for an SVE instruction that sets the
+  /// condition codes as if it's results had been fed to a PTEST instruction
+  /// along with the same general predicate.
+  bool isPTestLikeOpcode(unsigned Opc) const;
+  /// Returns true if the opcode is for an SVE WHILE## instruction.
+  bool isWhileOpcode(unsigned Opc) const;
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
@@ -328,6 +334,12 @@ private:
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.
   unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
+
+  /// Remove a ptest of a predicate-generating operation that already sets, or
+  /// can be made to set, the condition codes in an identical manner
+  bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
+                          unsigned PredReg,
+                          const MachineRegisterInfo *MRI) const;
 };
 
 /// Return true if there is an instruction /after/ \p DefMI and before \p UseMI
@@ -411,6 +423,18 @@ static inline bool isIndirectBranchOpcode(int Opc) {
   return false;
 }
 
+static inline bool isPTrueOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::PTRUE_B:
+  case AArch64::PTRUE_H:
+  case AArch64::PTRUE_S:
+  case AArch64::PTRUE_D:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Return opcode to be used for indirect calls.
 unsigned getBLRCallOpcode(const MachineFunction &MF);
 
@@ -418,6 +442,7 @@ unsigned getBLRCallOpcode(const MachineFunction &MF);
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bit
 #define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7) // 2-bits
+#define TSFLAG_INSTR_FLAGS(X)           ((X) << 9) // 2-bits
 // }
 
 namespace AArch64 {
@@ -450,9 +475,14 @@ enum FalseLaneType {
   FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
 
+// NOTE: This is a bit field.
+static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);
+static const uint64_t InstrFlagIsPTestLike = TSFLAG_INSTR_FLAGS(0x2);
+
 #undef TSFLAG_ELEMENT_SIZE_TYPE
 #undef TSFLAG_DESTRUCTIVE_INST_TYPE
 #undef TSFLAG_FALSE_LANE_TYPE
+#undef TSFLAG_INSTR_FLAGS
 
 int getSVEPseudoMap(uint16_t Opcode);
 int getSVERevInstr(uint16_t Opcode);
