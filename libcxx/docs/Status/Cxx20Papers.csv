@@ -157,7 +157,7 @@
 "`P1871 <https://wg21.link/P1871>`__","LWG","Should concepts be enabled or disabled?","Belfast","* *",""
 "`P1872 <https://wg21.link/P1872>`__","LWG","span should have size_type, not index_type","Belfast","|Complete|","10.0"
 "`P1878 <https://wg21.link/P1878>`__","LWG","Constraining Readable Types","Belfast","* *",""
-"`P1892 <https://wg21.link/P1892>`__","LWG","Extended locale-specific presentation specifiers for std::format","Belfast","* *",""
+"`P1892 <https://wg21.link/P1892>`__","LWG","Extended locale-specific presentation specifiers for std::format","Belfast","|Complete|","14.0"
 "`P1902 <https://wg21.link/P1902>`__","LWG","Missing feature-test macros 2018-2019","Belfast","* *",""
 "`P1959 <https://wg21.link/P1959>`__","LWG","Remove std::weak_equality and std::strong_equality","Belfast","* *",""
 "`P1960 <https://wg21.link/P1960>`__","LWG","NB Comment Changes Reviewed by SG1","Belfast","* *",""

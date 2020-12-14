@@ -13,6 +13,7 @@
 #include <__availability>
 #include <__config>
 #include <__format/format_error.h>
+#include <__format/parser_std_format_spec.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
