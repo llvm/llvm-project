@@ -7780,6 +7780,11 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
           (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
 }
 
+let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
+def StoreSwiftAsyncContext
+      : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
+               []>, Sched<[]>;
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
 
