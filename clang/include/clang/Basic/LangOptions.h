@@ -380,6 +380,11 @@ public:
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
+
+  bool hasSjLjExceptions() const { return SjLjExceptions; }
+  bool hasSEHExceptions() const { return SEHExceptions; }
+  bool hasDWARFExceptions() const { return DWARFExceptions; }
+  bool hasWasmExceptions() const { return WasmExceptions; }
 };
 
 /// Floating point control options
