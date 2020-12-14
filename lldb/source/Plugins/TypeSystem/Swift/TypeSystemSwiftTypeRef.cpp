@@ -1775,6 +1775,13 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
   if (!type)
     return false;
 
+  // This is a discrepancy with `SwiftASTContext`. The `impl` below correctly
+  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
+  // handling of `__C.NSNotificationName` can be removed when the
+  // `VALIDATE_AND_RETURN` is removed.
+  if (GetMangledTypeName(type) == "$sSo18NSNotificationNameaD")
+    return true;
+
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
