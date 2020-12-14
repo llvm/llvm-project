@@ -892,6 +892,14 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
+  if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0) {
+    emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                    StackOffset::getFixed(CSStackSizeInc), TII,
+                    InProlog ? MachineInstr::FrameSetup
+                             : MachineInstr::FrameDestroy);
+    return std::prev(MBBI);
+  }
+
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
   MIB.addReg(AArch64::SP, RegState::Define);
 
@@ -1092,6 +1100,18 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
+  // We signal the presence of a Swift extended frame to external tools by
+  // storing FP with 0b0001 in bits 63:60. In normal userland operation a simple
+  // ORR is sufficient, it is assumed a Swift kernel would initialize the TBI
+  // bits so that is still true.
+  if (HasFP && AFI->hasSwiftAsyncContext()) {
+    // ORR x29, x29, #0x1000_0000_0000_0000
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXri), AArch64::FP)
+        .addUse(AArch64::FP)
+        .addImm(0x1100)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
+
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
@@ -1115,6 +1135,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // function, including the funclet.
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
+
   if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
     assert(!SVEStackSize &&
@@ -1193,6 +1214,20 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
+
+    // Before we update the live FP we have to ensure there's a valid (or null)
+    // asynchronous context in its slot just before FP in the frame record, so
+    // store it now.
+    if (AFI->hasSwiftAsyncContext()) {
+      const auto &Attrs = MF.getFunction().getAttributes();
+      bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
+          .addUse(HaveInitialContext ? AArch64::X22 : AArch64::XZR)
+          .addUse(AArch64::SP)
+          .addImm(FPOffset - 8)
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
 
     // Issue    sub fp, sp, FPOffset or
     //          mov fp,sp          when FPOffset is zero.
@@ -1702,6 +1737,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // HasWinCFI is equal to MF.hasWinCFI(), to verify this assumption.
     HasWinCFI = true;
     BuildMI(MBB, LastPopI, DL, TII->get(AArch64::SEH_EpilogStart))
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  // We need to reset FP to its untagged state on return. Bit 60 is currently
+  // used to show the presence of an extended frame.
+  if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    // BIC x29, x29, #0x1000_0000_0000_0000
+    BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::ANDXri),
+            AArch64::FP)
+        .addUse(AArch64::FP)
+        .addImm(0x10fe)
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 
@@ -2269,6 +2315,11 @@ static void computeCalleeSaveRegisterPairs(
     else
       ByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
 
+    // Swift's async context is directly before FP, so allocate an extra
+    // 8 bytes for it.
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+      ByteOffset += StackFillDir * 8;
+
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
            "Paired spill/fill instructions don't exist for SVE vectors");
 
@@ -2292,6 +2343,11 @@ static void computeCalleeSaveRegisterPairs(
     // If filling top down (default), we want the offset after incrementing it.
     // If fillibg bootom up (WinCFI) we need the original offset.
     int Offset = NeedsWinCFI ? OffsetPre : OffsetPost;
+
+    // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
+    // Swift context can directly precede FP.
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+      Offset += 8;
     RPI.Offset = Offset / Scale;
 
     assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
@@ -2736,6 +2792,12 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Adding the size of additional 64bit GPR saves.
   CSStackSize += 8 * (SavedRegs.count() - NumSavedRegs);
+
+  // A Swift asynchronous context extends the frame record with a pointer
+  // directly before FP.
+  if (hasFP(MF) && AFI->hasSwiftAsyncContext())
+    CSStackSize += 8;
+
   uint64_t AlignedCSStackSize = alignTo(CSStackSize, 16);
   LLVM_DEBUG(dbgs() << "Estimated stack frame size: "
                << EstimatedStackSize + AlignedCSStackSize
@@ -2753,8 +2815,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 }
 
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
-    MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI) const {
+    MachineFunction &MF, const TargetRegisterInfo *RegInfo,
+    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
+    unsigned &MaxCSFrameIndex) const {
   bool NeedsWinCFI = needsWinCFI(MF);
   // To match the canonical windows frame layout, reverse the list of
   // callee saved registers to get them laid out by PrologEpilogInserter
@@ -2763,8 +2826,37 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // the top, thus have the CSI array start from the highest registers.)
   if (NeedsWinCFI)
     std::reverse(CSI.begin(), CSI.end());
-  // Let the generic code do the rest of the setup.
-  return false;
+
+  if (CSI.empty())
+    return true; // Early exit if no callee saved registers are modified!
+
+  // Now that we know which registers need to be saved and restored, allocate
+  // stack slots for them.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto AFI = MF.getInfo<AArch64FunctionInfo>();
+  for (auto &CS : CSI) {
+    unsigned Reg = CS.getReg();
+    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+
+    int FrameIdx;
+    unsigned Size = RegInfo->getSpillSize(*RC);
+
+    Align Alignment(RegInfo->getSpillAlignment(*RC));
+    FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+    CS.setFrameIdx(FrameIdx);
+
+    if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
+    if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
+
+    // Grab 8 bytes below FP for the extended asynchronous frame info.
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
+      FrameIdx = MFI.CreateStackObject(8, Alignment, true);
+      AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
+      if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
+      if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
+    }
+  }
+  return true;
 }
 
 bool AArch64FrameLowering::enableStackSlotScavenging(

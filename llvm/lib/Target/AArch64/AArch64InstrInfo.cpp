@@ -150,6 +150,9 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
+  case AArch64::StoreSwiftAsyncContext:
+    NumBytes = 20;
+    break;
   case TargetOpcode::BUNDLE:
     NumBytes = getInstBundleLength(MI);
     break;
@@ -2466,6 +2469,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRDui:
   case AArch64::STRXui:
   case AArch64::STRDui:
+  case AArch64::StoreSwiftAsyncContext:
     Scale = TypeSize::Fixed(8);
     Width = 8;
     MinOffset = 0;
