@@ -2222,10 +2222,12 @@ public:
       break;
     }
   }
+  void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
+
   void Unparse(const OmpAtomic &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpClauseList>(x.t));
+    Walk(std::get<OmpAtomicClauseList>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<Statement<AssignmentStmt>>(x.t));
@@ -2448,6 +2450,13 @@ public:
     EndOpenMP();
   }
   void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
+  void Unparse(const OmpAtomicClause &x) {
+    std::visit(common::visitors{
+                   [&](const OmpMemoryOrderClause &y) { Walk(y); },
+                   [&](const OmpClause &z) { Walk(z); },
+               },
+        x.u);
+  }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH ");
