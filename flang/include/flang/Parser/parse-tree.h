@@ -3747,7 +3747,7 @@ struct OpenMPCancelConstruct {
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpMemoryOrderClause>,
+  std::tuple<Verbatim, std::optional<std::list<OmpMemoryOrderClause>>,
       std::optional<OmpObjectList>>
       t;
 };
