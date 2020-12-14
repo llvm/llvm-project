@@ -15,6 +15,7 @@
 // ExceptionTest must be callable as check_exception(expected-exception, string-to-format, args-to-format...)
 
 #define STR(S) MAKE_STRING(CharT, S)
+#define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class CharT>
 std::vector<std::basic_string<CharT>> invalid_types(std::string valid) {
@@ -258,6 +259,238 @@ void format_string_tests(TestFunction check, ExceptionTest check_exception) {
                             check_exception);
   format_test_string<CharT>(world, universe, check, check_exception);
   format_test_string_unicode<CharT>(check);
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_bool(TestFunction check, ExceptionTest check_exception) {
+
+  // *** align-fill & width ***
+  check(STR("answer is 'true   '"), STR("answer is '{:7}'"), true);
+  check(STR("answer is '   true'"), STR("answer is '{:>7}'"), true);
+  check(STR("answer is 'true   '"), STR("answer is '{:<7}'"), true);
+  check(STR("answer is ' true  '"), STR("answer is '{:^7}'"), true);
+
+  check(STR("answer is 'false   '"), STR("answer is '{:8s}'"), false);
+  check(STR("answer is '   false'"), STR("answer is '{:>8s}'"), false);
+  check(STR("answer is 'false   '"), STR("answer is '{:<8s}'"), false);
+  check(STR("answer is ' false  '"), STR("answer is '{:^8s}'"), false);
+
+  check(STR("answer is '---true'"), STR("answer is '{:->7}'"), true);
+  check(STR("answer is 'true---'"), STR("answer is '{:-<7}'"), true);
+  check(STR("answer is '-true--'"), STR("answer is '{:-^7}'"), true);
+
+  check(STR("answer is '---false'"), STR("answer is '{:->8s}'"), false);
+  check(STR("answer is 'false---'"), STR("answer is '{:-<8s}'"), false);
+  check(STR("answer is '-false--'"), STR("answer is '{:-^8s}'"), false);
+
+  // *** Sign ***
+  check_exception("A sign field isn't allowed in this format-spec", STR("{:-}"),
+                  true);
+  check_exception("A sign field isn't allowed in this format-spec", STR("{:+}"),
+                  true);
+  check_exception("A sign field isn't allowed in this format-spec", STR("{: }"),
+                  true);
+
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{:-s}"), true);
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{:+s}"), true);
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{: s}"), true);
+
+  // *** alternate form ***
+  check_exception("An alternate form field isn't allowed in this format-spec",
+                  STR("{:#}"), true);
+  check_exception("An alternate form field isn't allowed in this format-spec",
+                  STR("{:#s}"), true);
+
+  // *** zero-padding ***
+  check_exception("A zero-padding field isn't allowed in this format-spec",
+                  STR("{:0}"), true);
+  check_exception("A zero-padding field isn't allowed in this format-spec",
+                  STR("{:0s}"), true);
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42}"), true);
+
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.s}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0s}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42s}"), true);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
+    check_exception(
+        "The format-spec type has a type not supported for a bool argument",
+        fmt, true);
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_bool_as_char(TestFunction check,
+                              ExceptionTest check_exception) {
+  // *** align-fill & width ***
+  check(STR("answer is '\1     '"), STR("answer is '{:6c}'"), true);
+  check(STR("answer is '     \1'"), STR("answer is '{:>6c}'"), true);
+  check(STR("answer is '\1     '"), STR("answer is '{:<6c}'"), true);
+  check(STR("answer is '  \1   '"), STR("answer is '{:^6c}'"), true);
+
+  check(STR("answer is '-----\1'"), STR("answer is '{:->6c}'"), true);
+  check(STR("answer is '\1-----'"), STR("answer is '{:-<6c}'"), true);
+  check(STR("answer is '--\1---'"), STR("answer is '{:-^6c}'"), true);
+
+  check(std::basic_string<CharT>(CSTR("answer is '\0     '"), 18),
+        STR("answer is '{:6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '\0     '"), 18),
+        STR("answer is '{:6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '     \0'"), 18),
+        STR("answer is '{:>6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '\0     '"), 18),
+        STR("answer is '{:<6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '  \0   '"), 18),
+        STR("answer is '{:^6c}'"), false);
+
+  check(std::basic_string<CharT>(CSTR("answer is '-----\0'"), 18),
+        STR("answer is '{:->6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '\0-----'"), 18),
+        STR("answer is '{:-<6c}'"), false);
+  check(std::basic_string<CharT>(CSTR("answer is '--\0---'"), 18),
+        STR("answer is '{:-^6c}'"), false);
+
+  // *** Sign ***
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{:-c}"), true);
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{:+c}"), true);
+  check_exception("A sign field isn't allowed in this format-spec",
+                  STR("{: c}"), true);
+
+  // *** alternate form ***
+  check_exception("An alternate form field isn't allowed in this format-spec",
+                  STR("{:#c}"), true);
+
+  // *** zero-padding ***
+  check_exception("A zero-padding field isn't allowed in this format-spec",
+                  STR("{:0c}"), true);
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.c}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0c}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42c}"), true);
+
+  // *** locale-specific form ***
+  // Note it has no effect but it's allowed.
+  check(STR("answer is '*'"), STR("answer is '{:Lc}'"), '*');
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
+    check_exception(
+        "The format-spec type has a type not supported for a bool argument",
+        fmt, true);
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_bool_as_integer(TestFunction check,
+                                 ExceptionTest check_exception) {
+  // *** align-fill & width ***
+  check(STR("answer is '1'"), STR("answer is '{:<1d}'"), true);
+  check(STR("answer is '1 '"), STR("answer is '{:<2d}'"), true);
+  check(STR("answer is '0 '"), STR("answer is '{:<2d}'"), false);
+
+  check(STR("answer is '     1'"), STR("answer is '{:6d}'"), true);
+  check(STR("answer is '     1'"), STR("answer is '{:>6d}'"), true);
+  check(STR("answer is '1     '"), STR("answer is '{:<6d}'"), true);
+  check(STR("answer is '  1   '"), STR("answer is '{:^6d}'"), true);
+
+  check(STR("answer is '*****0'"), STR("answer is '{:*>6d}'"), false);
+  check(STR("answer is '0*****'"), STR("answer is '{:*<6d}'"), false);
+  check(STR("answer is '**0***'"), STR("answer is '{:*^6d}'"), false);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '     1'"), STR("answer is '{:>06d}'"), true);
+  check(STR("answer is '1     '"), STR("answer is '{:<06d}'"), true);
+  check(STR("answer is '  1   '"), STR("answer is '{:^06d}'"), true);
+
+  // *** Sign ***
+  check(STR("answer is 1"), STR("answer is {:d}"), true);
+  check(STR("answer is 0"), STR("answer is {:-d}"), false);
+  check(STR("answer is +1"), STR("answer is {:+d}"), true);
+  check(STR("answer is  0"), STR("answer is {: d}"), false);
+
+  // *** alternate form ***
+  check(STR("answer is +1"), STR("answer is {:+#d}"), true);
+  check(STR("answer is +1"), STR("answer is {:+b}"), true);
+  check(STR("answer is +0b1"), STR("answer is {:+#b}"), true);
+  check(STR("answer is +0B1"), STR("answer is {:+#B}"), true);
+  check(STR("answer is +1"), STR("answer is {:+o}"), true);
+  check(STR("answer is +01"), STR("answer is {:+#o}"), true);
+  check(STR("answer is +1"), STR("answer is {:+x}"), true);
+  check(STR("answer is +0x1"), STR("answer is {:+#x}"), true);
+  check(STR("answer is +1"), STR("answer is {:+X}"), true);
+  check(STR("answer is +0X1"), STR("answer is {:+#X}"), true);
+
+  check(STR("answer is 0"), STR("answer is {:#d}"), false);
+  check(STR("answer is 0"), STR("answer is {:b}"), false);
+  check(STR("answer is 0b0"), STR("answer is {:#b}"), false);
+  check(STR("answer is 0B0"), STR("answer is {:#B}"), false);
+  check(STR("answer is 0"), STR("answer is {:o}"), false);
+  check(STR("answer is 0"), STR("answer is {:#o}"), false);
+  check(STR("answer is 0"), STR("answer is {:x}"), false);
+  check(STR("answer is 0x0"), STR("answer is {:#x}"), false);
+  check(STR("answer is 0"), STR("answer is {:X}"), false);
+  check(STR("answer is 0X0"), STR("answer is {:#X}"), false);
+
+  // *** zero-padding & width ***
+  check(STR("answer is +00000000001"), STR("answer is {:+#012d}"), true);
+  check(STR("answer is +00000000001"), STR("answer is {:+012b}"), true);
+  check(STR("answer is +0b000000001"), STR("answer is {:+#012b}"), true);
+  check(STR("answer is +0B000000001"), STR("answer is {:+#012B}"), true);
+  check(STR("answer is +00000000001"), STR("answer is {:+012o}"), true);
+  check(STR("answer is +00000000001"), STR("answer is {:+#012o}"), true);
+  check(STR("answer is +00000000001"), STR("answer is {:+012x}"), true);
+  check(STR("answer is +0x000000001"), STR("answer is {:+#012x}"), true);
+  check(STR("answer is +00000000001"), STR("answer is {:+012X}"), true);
+  check(STR("answer is +0X000000001"), STR("answer is {:+#012X}"), true);
+
+  check(STR("answer is 000000000000"), STR("answer is {:#012d}"), false);
+  check(STR("answer is 000000000000"), STR("answer is {:012b}"), false);
+  check(STR("answer is 0b0000000000"), STR("answer is {:#012b}"), false);
+  check(STR("answer is 0B0000000000"), STR("answer is {:#012B}"), false);
+  check(STR("answer is 000000000000"), STR("answer is {:012o}"), false);
+  check(STR("answer is 000000000000"), STR("answer is {:#012o}"), false);
+  check(STR("answer is 000000000000"), STR("answer is {:012x}"), false);
+  check(STR("answer is 0x0000000000"), STR("answer is {:#012x}"), false);
+  check(STR("answer is 000000000000"), STR("answer is {:012X}"), false);
+  check(STR("answer is 0X0000000000"), STR("answer is {:#012X}"), false);
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.0}"), true);
+  check_exception("The format-spec should consume the input or end with a '}'",
+                  STR("{:.42}"), true);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
+    check_exception(
+        "The format-spec type has a type not supported for a bool argument",
+        fmt, true);
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
@@ -743,8 +976,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(STR("}"), STR("}}"));
 
   // *** Test argument ID ***
-  check(STR("hello 01"), STR("hello {0:}{1:}"), false, true);
-  check(STR("hello 10"), STR("hello {1:}{0:}"), false, true);
+  check(STR("hello false true"), STR("hello {0:} {1:}"), false, true);
+  check(STR("hello true false"), STR("hello {1:} {0:}"), false, true);
 
   // ** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", STR("{"));
@@ -799,7 +1032,11 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   format_string_tests<CharT>(check, check_exception);
 
   // *** Test Boolean format argument ***
-  check(STR("hello 01"), STR("hello {}{}"), false, true);
+  check(STR("hello false true"), STR("hello {} {}"), false, true);
+
+  format_test_bool<CharT>(check, check_exception);
+  format_test_bool_as_char<CharT>(check, check_exception);
+  format_test_bool_as_integer<CharT>(check, check_exception);
 
   // *** Test signed integral format argument ***
   check(STR("hello 42"), STR("hello {}"), static_cast<signed char>(42));

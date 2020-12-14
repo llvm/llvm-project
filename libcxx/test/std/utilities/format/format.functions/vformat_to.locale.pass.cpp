@@ -68,8 +68,8 @@ auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
         std::make_format_args<std::basic_format_context<CharT*, CharT>>(
             args...));
     assert(std::distance(out, it) == int(expected.size()));
-    *it = '\0';
-    assert(out == expected);
+    // Convert to std::string since output contains '\0' for boolean tests.
+    assert(std::basic_string<CharT>(out, it) == expected);
   }
 };
 
