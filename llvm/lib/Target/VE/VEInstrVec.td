@@ -43,6 +43,22 @@ let hasSideEffects = 0, isCodeGenOnly = 1, DisableEncoding = "$vl" in {
                          "# pseudo-vfmk.s.$cf $vmx, $vz, $vm">;
 }
 
+// ANDM/ORM/XORM/EQVM/NNDM/NEGM instructions using VM512
+let hasSideEffects = 0, isCodeGenOnly = 1 in {
+  def ANDMyy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy, VM512:$vmz),
+                      "# andm $vmx, $vmy, $vmz">;
+  def ORMyy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy, VM512:$vmz),
+                     "# orm $vmx, $vmy, $vmz">;
+  def XORMyy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy, VM512:$vmz),
+                      "# xorm $vmx, $vmy, $vmz">;
+  def EQVMyy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy, VM512:$vmz),
+                      "# eqvm $vmx, $vmy, $vmz">;
+  def NNDMyy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy, VM512:$vmz),
+                      "# nndm $vmx, $vmy, $vmz">;
+  def NEGMy : Pseudo<(outs VM512:$vmx), (ins VM512:$vmy),
+                     "# negm $vmx, $vmy">;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //
