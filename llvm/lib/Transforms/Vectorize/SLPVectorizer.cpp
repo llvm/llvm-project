@@ -6076,7 +6076,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
     // If a vector register can't hold 1 element, we are done.
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(Stores[0]);
+    unsigned EltSize = R.getVectorElementSize(Operands[0]);
     if (MaxVecRegSize % EltSize != 0)
       continue;
 
