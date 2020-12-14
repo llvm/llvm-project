@@ -18,6 +18,7 @@
 
 #include <format>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "format_tests.h"

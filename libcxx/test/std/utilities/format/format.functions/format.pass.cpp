@@ -27,6 +27,7 @@
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #include <iostream>
 #endif
+#include <vector>
 
 #include "test_macros.h"
 #include "format_tests.h"
