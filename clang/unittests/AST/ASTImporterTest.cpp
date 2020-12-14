@@ -6096,7 +6096,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, TypedefWithAttribute) {
       FirstDeclMatcher<TypedefDecl>().match(TU, typedefDecl(hasName("X")));
   auto *ToD = Import(FromD, Lang_CXX17);
   ASSERT_TRUE(ToD);
-  ASSERT_EQ(ToD->getAttrs().size(), 1);
+  ASSERT_EQ(ToD->getAttrs().size(), 1U);
   auto *ToAttr = dyn_cast<AnnotateAttr>(ToD->getAttrs()[0]);
   ASSERT_TRUE(ToAttr);
   EXPECT_EQ(ToAttr->getAnnotation(), "A");
