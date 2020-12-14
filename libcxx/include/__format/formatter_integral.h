@@ -82,7 +82,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __format_spec {
 
 /** Wrapper around @ref to_chars, returning the output pointer. */
-template <class _Tp>
+template <integral _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last,
                                         _Tp __value, int __base) {
   // TODO FMT Evaluate code overhead due to not calling the internal function
