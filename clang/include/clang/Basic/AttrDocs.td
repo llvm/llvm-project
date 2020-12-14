@@ -3976,6 +3976,22 @@ are used to instantiate the specialization.
   }];
 }
 
+def LeafDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+
+The ``leaf`` attribute is used as a compiler hint to improve dataflow analysis
+in library functions. Functions marked with the ``leaf`` attribute are not allowed
+to jump back into the caller's translation unit, whether through invoking a
+callback function, an external function call, use of ``longjmp``, or other means.
+Therefore, they cannot use or modify any data that does not escape the caller function's
+compilation unit.
+
+For more information see
+`gcc documentation <https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html>`
+}];
+}
+
 def NoStackProtectorDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

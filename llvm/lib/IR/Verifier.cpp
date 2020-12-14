@@ -1597,6 +1597,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoReturn:
   case Attribute::NoSync:
   case Attribute::WillReturn:
+  case Attribute::NoCallback:
   case Attribute::NoCfCheck:
   case Attribute::NoUnwind:
   case Attribute::NoInline:

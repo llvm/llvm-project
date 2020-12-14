@@ -653,6 +653,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(nest);
   KEYWORD(noalias);
   KEYWORD(nobuiltin);
+  KEYWORD(nocallback);
   KEYWORD(nocapture);
   KEYWORD(noduplicate);
   KEYWORD(nofree);
