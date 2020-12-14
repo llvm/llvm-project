@@ -3628,11 +3628,30 @@ struct OpenMPExecutableAllocate {
       t;
 };
 
-// 2.17.7 atomic -> ATOMIC [clause[,]] atomic-clause [[,]clause] |
-//                  ATOMIC [clause]
-//        clause -> memory-order-clause | HINT(hint-expression)
-//        memory-order-clause -> SEQ_CST | ACQ_REL | RELEASE | ACQUIRE | RELAXED
-//        atomic-clause -> READ | WRITE | UPDATE | CAPTURE
+// 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
+//        memory-order-clause -> acq_rel
+//                               release
+//                               acquire
+//                               seq_cst
+//                               relaxed
+struct OmpMemoryOrderClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
+  CharBlock source;
+};
+
+// 2.17.7 Atomic construct
+//        atomic-clause -> memory-order-clause | HINT(hint-expression)
+struct OmpAtomicClause {
+  UNION_CLASS_BOILERPLATE(OmpAtomicClause);
+  CharBlock source;
+  std::variant<OmpMemoryOrderClause, OmpClause> u;
+};
+
+// atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
+struct OmpAtomicClauseList {
+  WRAPPER_CLASS_BOILERPLATE(OmpAtomicClauseList, std::list<OmpAtomicClause>);
+  CharBlock source;
+};
 
 // END ATOMIC
 EMPTY_CLASS(OmpEndAtomic);
@@ -3641,8 +3660,8 @@ EMPTY_CLASS(OmpEndAtomic);
 struct OmpAtomicRead {
   TUPLE_CLASS_BOILERPLATE(OmpAtomicRead);
   CharBlock source;
-  std::tuple<OmpClauseList, Verbatim, OmpClauseList, Statement<AssignmentStmt>,
-      std::optional<OmpEndAtomic>>
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
       t;
 };
 
@@ -3650,8 +3669,8 @@ struct OmpAtomicRead {
 struct OmpAtomicWrite {
   TUPLE_CLASS_BOILERPLATE(OmpAtomicWrite);
   CharBlock source;
-  std::tuple<OmpClauseList, Verbatim, OmpClauseList, Statement<AssignmentStmt>,
-      std::optional<OmpEndAtomic>>
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
       t;
 };
 
@@ -3659,8 +3678,8 @@ struct OmpAtomicWrite {
 struct OmpAtomicUpdate {
   TUPLE_CLASS_BOILERPLATE(OmpAtomicUpdate);
   CharBlock source;
-  std::tuple<OmpClauseList, Verbatim, OmpClauseList, Statement<AssignmentStmt>,
-      std::optional<OmpEndAtomic>>
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
       t;
 };
 
@@ -3670,7 +3689,8 @@ struct OmpAtomicCapture {
   CharBlock source;
   WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
   WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<OmpClauseList, Verbatim, OmpClauseList, Stmt1, Stmt2, OmpEndAtomic>
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList, Stmt1, Stmt2,
+      OmpEndAtomic>
       t;
 };
 
@@ -3678,11 +3698,15 @@ struct OmpAtomicCapture {
 struct OmpAtomic {
   TUPLE_CLASS_BOILERPLATE(OmpAtomic);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList, Statement<AssignmentStmt>,
+  std::tuple<Verbatim, OmpAtomicClauseList, Statement<AssignmentStmt>,
       std::optional<OmpEndAtomic>>
       t;
 };
 
+// 2.17.7 atomic ->
+//        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
+//        ATOMIC [atomic-clause-list]
+//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE
 struct OpenMPAtomicConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
   std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
@@ -3718,14 +3742,6 @@ struct OpenMPCancelConstruct {
   std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
 
-// 2.17.8 Flush Construct [OpenMP 5.0]
-// memory-order-clause -> acq_rel
-//                        release
-//                        acquire
-struct OmpMemoryOrderClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
-  CharBlock source;
-};
 
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
