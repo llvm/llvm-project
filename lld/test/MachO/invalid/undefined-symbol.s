@@ -10,7 +10,8 @@
 # RUN:     FileCheck %s -DSYM=_bar -DFILENAME='foo.a(foo.o)'
 # RUN: not %lld -o /dev/null %t/main.o -force_load %t/foo.a 2>&1 | \
 # RUN:     FileCheck %s -DSYM=_bar -DFILENAME='foo.a(foo.o)'
-# CHECK: error: undefined symbol [[SYM]], referenced from [[FILENAME]]
+# CHECK: error: undefined symbol: [[SYM]]
+# CHECK-NEXT: >>> referenced by [[FILENAME]]
 
 #--- foo.s
 .globl _foo

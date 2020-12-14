@@ -94,7 +94,7 @@
 ## Weak references must still be satisfied at link time.
 # RUN: not %lld -lSystem %t/invalid.o -o /dev/null 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=INVALID -DDIR=%t
-# INVALID: error: undefined symbol _missing, referenced from [[DIR]]/invalid.o
+# INVALID: error: undefined symbol: _missing
 
 #--- libfoo.s
 .globl _foo, _foo_fn, _weak_foo, _weak_foo_fn
