@@ -1301,7 +1301,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
-    if (!MFI->isEntryFunction()) {
+    if (!MFI->isModuleEntryFunction()) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(

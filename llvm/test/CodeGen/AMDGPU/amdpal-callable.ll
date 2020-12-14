@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG -enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG -enable-var-scope %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GISEL -enable-var-scope %s
 
@@ -126,10 +125,29 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
   ret float %add
 }
 
+@lds = internal addrspace(3) global [64 x float] undef
+
+define amdgpu_gfx float @simple_lds(float %arg0) #0 {
+  %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
+  %val = load float, float addrspace(3)* %lds_ptr
+  ret float %val
+}
+
+define amdgpu_gfx float @simple_lds_recurse(float %arg0) #0 {
+  %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
+  %val = load float, float addrspace(3)* %lds_ptr
+  %res = call amdgpu_gfx float @simple_lds_recurse(float %val)
+  ret float %res
+}
+
 attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
-; GCN-NEXT:   - .registers:      {}
+; GCN-NEXT:  - .registers:
+; SDAG-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
+; SDAG-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
+; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01cf{{$}}
+; GISEL-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
@@ -147,6 +165,10 @@ attributes #0 = { nounwind }
 ; SDAG-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
 ; GISEL-NEXT:        .stack_frame_size_in_bytes: 0xd0{{$}}
 ; GCN-NEXT:      no_stack_indirect_call:
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
+; GCN-NEXT:      simple_lds:
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0{{$}}
+; GCN-NEXT:      simple_lds_recurse:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:      simple_stack:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x14{{$}}
