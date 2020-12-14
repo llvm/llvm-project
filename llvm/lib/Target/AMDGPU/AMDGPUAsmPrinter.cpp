@@ -446,7 +446,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->SwitchSection(ConfigSection);
   }
 
-  if (MFI->isEntryFunction()) {
+  if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
   } else {
     auto I = CallGraphResourceInfo.insert(
@@ -459,7 +459,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (STM.isAmdPalOS()) {
     if (MFI->isEntryFunction())
       EmitPALMetadata(MF, CurrentProgramInfo);
-    else
+    else if (MFI->isModuleEntryFunction())
       emitPALFunctionMetadata(MF);
   } else if (!STM.isAmdHsaOS()) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
@@ -922,7 +922,22 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           = TII->getNamedOperand(MI, AMDGPU::OpName::callee);
 
         const Function *Callee = getCalleeFunction(*CalleeOp);
-        if (!Callee || Callee->isDeclaration()) {
+        DenseMap<const Function *, SIFunctionResourceInfo>::const_iterator I =
+            CallGraphResourceInfo.end();
+        bool IsExternal = !Callee || Callee->isDeclaration();
+        if (!IsExternal)
+          I = CallGraphResourceInfo.find(Callee);
+
+        if (IsExternal || I == CallGraphResourceInfo.end()) {
+          // Avoid crashing on undefined behavior with an illegal call to a
+          // kernel. If a callsite's calling convention doesn't match the
+          // function's, it's undefined behavior. If the callsite calling
+          // convention does match, that would have errored earlier.
+          // FIXME: The verifier shouldn't allow this.
+          if (!IsExternal &&
+              AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
+            report_fatal_error("invalid call to entry function");
+
           // If this is a call to an external function, we can't do much. Make
           // conservative guesses.
 
@@ -942,19 +957,6 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else {
           // We force CodeGen to run in SCC order, so the callee's register
           // usage etc. should be the cumulative usage of all callees.
-
-          auto I = CallGraphResourceInfo.find(Callee);
-          if (I == CallGraphResourceInfo.end()) {
-            // Avoid crashing on undefined behavior with an illegal call to a
-            // kernel. If a callsite's calling convention doesn't match the
-            // function's, it's undefined behavior. If the callsite calling
-            // convention does match, that would have errored earlier.
-            // FIXME: The verifier shouldn't allow this.
-            if (AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
-              report_fatal_error("invalid call to entry function");
-
-            llvm_unreachable("callee should have been handled before caller");
-          }
 
           MaxSGPR = std::max(I->second.NumExplicitSGPR - 1, MaxSGPR);
           MaxVGPR = std::max(I->second.NumVGPR - 1, MaxVGPR);
@@ -1266,7 +1268,11 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
 void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   auto *MD = getTargetStreamer()->getPALMetadata();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  MD->setStackFrameSize(MF, MFI.getStackSize());
+  MD->setFunctionScratchSize(MF, MFI.getStackSize());
+  // Set compute registers
+  MD->setRsrc1(CallingConv::AMDGPU_CS,
+               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS));
+  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.ComputePGMRSrc2);
 }
 
 // This is supposed to be log2(Size)

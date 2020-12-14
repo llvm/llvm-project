@@ -109,6 +109,6 @@ _start:
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
 // DSOREL-NEXT:  Section (5) .rel.plt {
-// DSOREL-NEXT:    0x302E4 R_ARM_JUMP_SLOT func1 0x0
-// DSOREL-NEXT:    0x302E8 R_ARM_JUMP_SLOT func2 0x0
-// DSOREL-NEXT:    0x302EC R_ARM_JUMP_SLOT func3 0x0
+// DSOREL-NEXT:    0x302E4 R_ARM_JUMP_SLOT func1
+// DSOREL-NEXT:    0x302E8 R_ARM_JUMP_SLOT func2
+// DSOREL-NEXT:    0x302EC R_ARM_JUMP_SLOT func3

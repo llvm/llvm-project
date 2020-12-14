@@ -8,13 +8,13 @@
 # LLVM-NEXT:   Section (3) .rel.text {
 # LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
 # LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 2 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
-# LLVM-NEXT:     0x2 R_X86_64_NONE - 0x0
-# LLVM-NEXT:     0x3 R_X86_64_NONE .sec.symbol1 0x0
+# LLVM-NEXT:     0x2 R_X86_64_NONE -{{$}}
+# LLVM-NEXT:     0x3 R_X86_64_NONE .sec.symbol1{{$}}
 # LLVM-NEXT: warning: '[[FILE]]': invalid section index: 255
-# LLVM-NEXT:     0x4 R_X86_64_NONE <section 255> 0x0
-# LLVM-NEXT:     0x5 R_X86_64_NONE .sec.symbol2 0x0
+# LLVM-NEXT:     0x4 R_X86_64_NONE <section 255>{{$}}
+# LLVM-NEXT:     0x5 R_X86_64_NONE .sec.symbol2{{$}}
 # LLVM-NEXT: warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0xfefefefe) offset which goes past the end of the section name string table
-# LLVM-NEXT:     0x6 R_X86_64_NONE <section 2> 0x0
+# LLVM-NEXT:     0x6 R_X86_64_NONE <section 2>{{$}}
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Section (4) .rela.text {
 # LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 4: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM

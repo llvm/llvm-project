@@ -16,13 +16,13 @@
 /// other regular relocations (e.g. GLOB_DAT).
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rel.dyn {
-// CHECK-NEXT:     0x4022C8 R_386_GLOB_DAT bar3 0x0
-// CHECK-NEXT:     0x4032E0 R_386_IRELATIVE - 0x0
-// CHECK-NEXT:     0x4032E4 R_386_IRELATIVE - 0x0
+// CHECK-NEXT:     0x4022C8 R_386_GLOB_DAT bar3
+// CHECK-NEXT:     0x4032E0 R_386_IRELATIVE -
+// CHECK-NEXT:     0x4032E4 R_386_IRELATIVE -
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .rel.plt {
-// CHECK-NEXT:     0x4032D8 R_386_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x4032DC R_386_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:     0x4032D8 R_386_JUMP_SLOT bar2
+// CHECK-NEXT:     0x4032DC R_386_JUMP_SLOT zed2
 // CHECK-NEXT:   }
 
 // Check that IRELATIVE .got.plt entries point to ifunc resolver and not

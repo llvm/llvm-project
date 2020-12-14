@@ -38,13 +38,11 @@ _start:
 // CHECK-NEXT:      Offset: 0x40220
 // CHECK-NEXT:      Type: R_ARM_COPY
 // CHECK-NEXT:      Symbol: y
-// CHECK-NEXT:      Addend: 0x0
 // CHECK-NEXT:    }
 // CHECK-NEXT:    Relocation {
 // CHECK-NEXT:      Offset: 0x40224
 // CHECK-NEXT:      Type: R_ARM_COPY
 // CHECK-NEXT:      Symbol: z
-// CHECK-NEXT:      Addend: 0x0
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 

@@ -272,6 +272,15 @@ static void denormalizeSimpleEnumJoined(SmallVectorImpl<const char *> &Args,
                      "the tablegen option description");
 }
 
+static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
+                                             const ArgList &Args,
+                                             DiagnosticsEngine &Diags) {
+  auto *Arg = Args.getLastArg(Opt);
+  if (!Arg)
+    return None;
+  return std::string(Arg->getValue());
+}
+
 static void denormalizeString(SmallVectorImpl<const char *> &Args,
                               const char *Spelling,
                               CompilerInvocation::StringAllocator SA,
@@ -498,8 +507,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
         .Case("false", false)
         .Default(false);
 
-  Opts.DumpExplodedGraphTo =
-      std::string(Args.getLastArgValue(OPT_analyzer_dump_egraph));
   Opts.AnalyzeSpecificFunction =
       std::string(Args.getLastArgValue(OPT_analyze_function));
   Opts.maxBlockVisitOnPath =
@@ -1867,10 +1874,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
 
   return Success;
-}
-
-static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
-  Opts.WorkingDir = std::string(Args.getLastArgValue(OPT_working_directory));
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -3832,7 +3835,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                                  /*DefaultDiagColor=*/false);
   ParseCommentArgs(LangOpts.CommentOpts, Args);
-  ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
                                       LangOpts.IsHeaderFile);

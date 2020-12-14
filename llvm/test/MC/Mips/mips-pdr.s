@@ -34,8 +34,8 @@
 # We should also check if relocation information was correctly generated.
 # OBJOUT:      Relocations [
 # OBJOUT-NEXT:   Section ({{.*}}) .rel.pdr {
-# OBJOUT-NEXT:     0x0 R_MIPS_32 .text 0x0
-# OBJOUT-NEXT:     0x20 R_MIPS_32 _global_foo 0x0
+# OBJOUT-NEXT:     0x0 R_MIPS_32 .text
+# OBJOUT-NEXT:     0x20 R_MIPS_32 _global_foo
 # OBJOUT-NEXT:   }
 # OBJOUT-NEXT: ]
 

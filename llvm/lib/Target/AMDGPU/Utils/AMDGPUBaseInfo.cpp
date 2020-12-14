@@ -1068,6 +1068,15 @@ bool isEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool isModuleEntryFunctionCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_Gfx:
+    return true;
+  default:
+    return isEntryFunctionCC(CC);
+  }
+}
+
 bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
 }

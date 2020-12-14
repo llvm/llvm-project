@@ -9,8 +9,8 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10,FLATSCR,GFX9-FLATSCR-PAL %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx1030 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10,FLATSCR,GFX10-FLATSCR-PAL,GFX9_10-FLATSCR %s
 
-; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0 0x0
-; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD1 0x0
+; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0
+; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD1
 
 ; This used to fail due to a v_add_i32 instruction with an illegal immediate
 ; operand that was created during Local Stack Slot Allocation. Test case derived
