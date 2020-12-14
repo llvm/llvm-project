@@ -1744,6 +1744,13 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
         B.addAttribute(llvm::Attribute::OptimizeForSize);
       B.addAttribute(llvm::Attribute::Cold);
     }
+    if (D->hasAttr<HotAttr>()) {
+      if (!ShouldAddOptNone)
+        B.addAttribute(llvm::Attribute::OptimizeForSize);
+      // xur
+      //      B.addAttribute(llvm::Attribute::Hot);
+      fprintf(stderr, "hihi 1\n");
+    }
 
     if (D->hasAttr<MinSizeAttr>())
       B.addAttribute(llvm::Attribute::MinSize);
