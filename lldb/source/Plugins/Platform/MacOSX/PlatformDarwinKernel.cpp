@@ -727,8 +727,8 @@ PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle) {
 
 Status PlatformDarwinKernel::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
@@ -740,26 +740,26 @@ Status PlatformDarwinKernel::GetSharedModule(
   if (!kext_bundle_id.empty() && module_spec.GetUUID().IsValid()) {
     if (kext_bundle_id == "mach_kernel") {
       return GetSharedModuleKernel(module_spec, process, module_sp,
-                                   module_search_paths_ptr, old_module_sp_ptr,
+                                   module_search_paths_ptr, old_modules,
                                    did_create_ptr);
     } else {
       return GetSharedModuleKext(module_spec, process, module_sp,
-                                 module_search_paths_ptr, old_module_sp_ptr,
+                                 module_search_paths_ptr, old_modules,
                                  did_create_ptr);
     }
   } else {
     // Give the generic methods, including possibly calling into  DebugSymbols
     // framework on macOS systems, a chance.
     return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                           module_search_paths_ptr,
-                                           old_module_sp_ptr, did_create_ptr);
+                                           module_search_paths_ptr, old_modules,
+                                           did_create_ptr);
   }
 }
 
 Status PlatformDarwinKernel::GetSharedModuleKext(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
@@ -785,8 +785,8 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
   // Give the generic methods, including possibly calling into  DebugSymbols
   // framework on macOS systems, a chance.
   error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                          module_search_paths_ptr,
-                                          old_module_sp_ptr, did_create_ptr);
+                                          module_search_paths_ptr, old_modules,
+                                          did_create_ptr);
   if (error.Success() && module_sp.get()) {
     return error;
   }
@@ -811,8 +811,8 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
 
 Status PlatformDarwinKernel::GetSharedModuleKernel(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
 
@@ -878,8 +878,8 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
   // Give the generic methods, including possibly calling into  DebugSymbols
   // framework on macOS systems, a chance.
   error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                          module_search_paths_ptr,
-                                          old_module_sp_ptr, did_create_ptr);
+                                          module_search_paths_ptr, old_modules,
+                                          did_create_ptr);
   if (error.Success() && module_sp.get()) {
     return error;
   }
