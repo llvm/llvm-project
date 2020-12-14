@@ -646,6 +646,30 @@ The following are the set of valid punctuation:
 
 `:`, `,`, `=`, `<`, `>`, `(`, `)`, `{`, `}`, `[`, `]`, `->`, `?`, `+`, `*`
 
+The following are valid whitespace punctuation:
+
+`\n`, ` `
+
+The `\n` literal emits a newline an indents to the start of the operation. An
+example is shown below:
+
+```tablegen
+let assemblyFormat = [{
+  `{` `\n` ` ` ` ` `this_is_on_a_newline` `\n` `}` attr-dict
+}];
+```
+
+```mlir
+%results = my.operation {
+  this_is_on_a_newline
+}
+```
+
+An empty literal \`\` may be used to remove a space that is inserted implicitly
+after certain literal elements, such as `)`/`]`/etc. For example, "`]`" may
+result in an output of `]` it is not the last element in the format. "`]` \`\`"
+would trim the trailing space in this situation.
+
 #### Variables
 
 A variable is an entity that has been registered on the operation itself, i.e.
