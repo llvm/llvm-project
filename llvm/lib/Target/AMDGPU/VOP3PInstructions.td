@@ -39,7 +39,7 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
          // class constraints.
          !if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
                             (ins clampmod0:$clamp))),
-         (ins op_sel:$op_sel, op_sel_hi:$op_sel_hi));
+         (ins op_sel0:$op_sel, op_sel_hi0:$op_sel_hi));
 
   let Constraints = !if(UseTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(UseTiedOutput, "$vdst_in", "");

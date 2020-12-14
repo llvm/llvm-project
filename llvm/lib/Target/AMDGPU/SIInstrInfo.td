@@ -1136,10 +1136,10 @@ def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
 def src1_sel : NamedOperandU32<"SDWASrc1Sel", NamedMatchClass<"SDWASrc1Sel">>;
 def dst_unused : NamedOperandU32<"SDWADstUnused", NamedMatchClass<"SDWADstUnused">>;
 
-def op_sel : NamedOperandU32Default0<"OpSel", NamedMatchClass<"OpSel">>;
-def op_sel_hi : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
-def neg_lo : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
-def neg_hi : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
+def op_sel0 : NamedOperandU32Default0<"OpSel", NamedMatchClass<"OpSel">>;
+def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
+def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
+def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
 def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
 def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
@@ -1677,25 +1677,25 @@ class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            clampmod0:$clamp,
-           op_sel:$op_sel, op_sel_hi:$op_sel_hi,
-           neg_lo:$neg_lo, neg_hi:$neg_hi),
+           op_sel0:$op_sel, op_sel_hi0:$op_sel_hi,
+           neg_lo0:$neg_lo, neg_hi0:$neg_hi),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
-           op_sel:$op_sel, op_sel_hi:$op_sel_hi,
-           neg_lo:$neg_lo, neg_hi:$neg_hi)),
+           op_sel0:$op_sel, op_sel_hi0:$op_sel_hi,
+           neg_lo0:$neg_lo, neg_hi0:$neg_hi)),
     // else NumSrcArgs == 3
     !if (HasClamp,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            Src2Mod:$src2_modifiers, Src2RC:$src2,
            clampmod0:$clamp,
-           op_sel:$op_sel, op_sel_hi:$op_sel_hi,
-           neg_lo:$neg_lo, neg_hi:$neg_hi),
+           op_sel0:$op_sel, op_sel_hi0:$op_sel_hi,
+           neg_lo0:$neg_lo, neg_hi0:$neg_hi),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            Src2Mod:$src2_modifiers, Src2RC:$src2,
-           op_sel:$op_sel, op_sel_hi:$op_sel_hi,
-           neg_lo:$neg_lo, neg_hi:$neg_hi))
+           op_sel0:$op_sel, op_sel_hi0:$op_sel_hi,
+           neg_lo0:$neg_lo, neg_hi0:$neg_hi))
   );
 }
 
@@ -1712,21 +1712,21 @@ class getInsVOP3OpSel <RegisterOperand Src0RC,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            clampmod0:$clamp,
-           op_sel:$op_sel),
+           op_sel0:$op_sel),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
-           op_sel:$op_sel)),
+           op_sel0:$op_sel)),
     // else NumSrcArgs == 3
     !if (HasClamp,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            Src2Mod:$src2_modifiers, Src2RC:$src2,
            clampmod0:$clamp,
-           op_sel:$op_sel),
+           op_sel0:$op_sel),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            Src2Mod:$src2_modifiers, Src2RC:$src2,
-           op_sel:$op_sel))
+           op_sel0:$op_sel))
   );
 }
 
