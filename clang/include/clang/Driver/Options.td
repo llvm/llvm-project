@@ -638,9 +638,11 @@ def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>, Group<gfortran_Grou
 def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<dir>">,
     HelpText<"Add <dir> to search path for binaries and object files used implicitly">;
 def CC : Flag<["-"], "CC">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
-    HelpText<"Include comments from within macros in preprocessed output">;
+    HelpText<"Include comments from within macros in preprocessed output">,
+    MarshallingInfoFlag<"PreprocessorOutputOpts.ShowMacroComments">;
 def C : Flag<["-"], "C">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
-    HelpText<"Include comments in preprocessed output">;
+    HelpText<"Include comments in preprocessed output">,
+    MarshallingInfoFlag<"PreprocessorOutputOpts.ShowComments">;
 def D : JoinedOrSeparate<["-"], "D">, Group<Preprocessor_Group>,
     Flags<[CC1Option]>, MetaVarName<"<macro>=<value>">,
     HelpText<"Define <macro> to <value> (or 1 if <value> omitted)">;
@@ -706,7 +708,8 @@ def O : Joined<["-"], "O">, Group<O_Group>, Flags<[CC1Option]>;
 def O_flag : Flag<["-"], "O">, Flags<[CC1Option]>, Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>, Flags<[CC1Option]>;
 def P : Flag<["-"], "P">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
-  HelpText<"Disable linemarker output in -E mode">;
+  HelpText<"Disable linemarker output in -E mode">,
+  MarshallingInfoFlag<"PreprocessorOutputOpts.ShowLineMarkers", "true">, IsNegative;
 def Qy : Flag<["-"], "Qy">, Flags<[CC1Option]>,
   HelpText<"Emit metadata containing compiler name and version">;
 def Qn : Flag<["-"], "Qn">, Flags<[CC1Option]>,
@@ -959,7 +962,8 @@ def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Gro
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
 def dI : Flag<["-"], "dI">, Group<d_Group>, Flags<[CC1Option]>,
-  HelpText<"Print include directives in -E mode in addition to normal output">;
+  HelpText<"Print include directives in -E mode in addition to normal output">,
+  MarshallingInfoFlag<"PreprocessorOutputOpts.ShowIncludeDirectives">;
 def dM : Flag<["-"], "dM">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
@@ -1541,8 +1545,12 @@ defm strict_float_cast_overflow : OptOutFFlag<"strict-float-cast-overflow",
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
 
-defm rewrite_imports : OptInFFlag<"rewrite-imports", "">;
-defm rewrite_includes : OptInFFlag<"rewrite-includes", "">;
+defm rewrite_imports : BoolFOption<"rewrite-imports",
+  "PreprocessorOutputOpts.RewriteImports", DefaultsToFalse,
+  ChangedBy<PosFlag>, ResetBy<NegFlag>>;
+defm rewrite_includes : BoolFOption<"rewrite-includes",
+  "PreprocessorOutputOpts.RewriteIncludes", DefaultsToFalse,
+  ChangedBy<PosFlag>, ResetBy<NegFlag>>;
 
 defm delete_null_pointer_checks : OptOutFFlag<"delete-null-pointer-checks",
   "Treat usage of null pointers as undefined behavior (default)",
@@ -1556,7 +1564,9 @@ def frewrite_map_file_EQ : Joined<["-"], "frewrite-map-file=">,
                            Group<f_Group>,
                            Flags<[NoXarchOption]>;
 
-defm use_line_directives : OptInFFlag<"use-line-directives", "Use #line in preprocessed output">;
+defm use_line_directives : BoolFOption<"use-line-directives",
+  "PreprocessorOutputOpts.UseLineDirectives", DefaultsToFalse,
+  ChangedBy<PosFlag, [], "Use #line in preprocessed output">, ResetBy<NegFlag>>;
 
 def ffreestanding : Flag<["-"], "ffreestanding">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Assert that the compilation takes place in a freestanding environment">;
@@ -3309,7 +3319,8 @@ def t : Flag<["-"], "t">, Group<Link_Group>;
 def umbrella : Separate<["-"], "umbrella">;
 def undefined : JoinedOrSeparate<["-"], "undefined">, Group<u_Group>;
 def undef : Flag<["-"], "undef">, Group<u_Group>, Flags<[CC1Option]>,
-  HelpText<"undef all system defines">;
+  HelpText<"undef all system defines">,
+  MarshallingInfoFlag<"PreprocessorOpts->UsePredefines", "true">, IsNegative;
 def unexported__symbols__list : Separate<["-"], "unexported_symbols_list">;
 def u : JoinedOrSeparate<["-"], "u">, Group<u_Group>;
 def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
@@ -4621,7 +4632,8 @@ def pch_through_header_EQ : Joined<["-"], "pch-through-header=">,
   HelpText<"Stop PCH generation after including this file.  When using a PCH, "
            "skip tokens until after this file is included.">;
 def pch_through_hdrstop_create : Flag<["-"], "pch-through-hdrstop-create">,
-  HelpText<"When creating a PCH, stop PCH generation after #pragma hdrstop.">;
+  HelpText<"When creating a PCH, stop PCH generation after #pragma hdrstop.">,
+  MarshallingInfoFlag<"PreprocessorOpts->PCHWithHdrStopCreate">;
 def pch_through_hdrstop_use : Flag<["-"], "pch-through-hdrstop-use">,
   HelpText<"When using a PCH, skip tokens until after a #pragma hdrstop.">;
 def fno_pch_timestamp : Flag<["-"], "fno-pch-timestamp">,
@@ -4677,13 +4689,15 @@ def pic_level : Separate<["-"], "pic-level">,
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">;
 def fno_validate_pch : Flag<["-"], "fno-validate-pch">,
-  HelpText<"Disable validation of precompiled headers">;
+  HelpText<"Disable validation of precompiled headers">,
+  MarshallingInfoFlag<"PreprocessorOpts->DisablePCHValidation">;
 def fallow_pch_with_errors : Flag<["-"], "fallow-pch-with-compiler-errors">,
   HelpText<"Accept a PCH file that was created with compiler errors">;
 def fallow_pcm_with_errors : Flag<["-"], "fallow-pcm-with-compiler-errors">,
   HelpText<"Accept a PCM file that was created with compiler errors">;
 def dump_deserialized_pch_decls : Flag<["-"], "dump-deserialized-decls">,
-  HelpText<"Dump declarations that are deserialized from PCH, for testing">;
+  HelpText<"Dump declarations that are deserialized from PCH, for testing">,
+  MarshallingInfoFlag<"PreprocessorOpts->DumpDeserializedPCHDecls">;
 def error_on_deserialized_pch_decl : Separate<["-"], "error-on-deserialized-decl">,
   HelpText<"Emit error if a specific declaration is deserialized from PCH, for testing">;
 def error_on_deserialized_pch_decl_EQ : Joined<["-"], "error-on-deserialized-decl=">,
@@ -4816,11 +4830,14 @@ def preamble_bytes_EQ : Joined<["-"], "preamble-bytes=">,
   HelpText<"Assume that the precompiled header is a precompiled preamble "
            "covering the first N bytes of the main file">;
 def detailed_preprocessing_record : Flag<["-"], "detailed-preprocessing-record">,
-  HelpText<"include a detailed record of preprocessing actions">;
+  HelpText<"include a detailed record of preprocessing actions">,
+  MarshallingInfoFlag<"PreprocessorOpts->DetailedRecord">;
 def setup_static_analyzer : Flag<["-"], "setup-static-analyzer">,
-  HelpText<"Set up preprocessor for static analyzer (done automatically when static analyzer is run).">;
+  HelpText<"Set up preprocessor for static analyzer (done automatically when static analyzer is run).">,
+  MarshallingInfoFlag<"PreprocessorOpts->SetUpStaticAnalyzer">;
 def disable_pragma_debug_crash : Flag<["-"], "disable-pragma-debug-crash">,
-  HelpText<"Disable any #pragma clang __debug that can lead to crashing behavior. This is meant for testing.">;
+  HelpText<"Disable any #pragma clang __debug that can lead to crashing behavior. This is meant for testing.">,
+  MarshallingInfoFlag<"PreprocessorOpts->DisablePragmaDebugCrash">;
 
 //===----------------------------------------------------------------------===//
 // OpenCL Options

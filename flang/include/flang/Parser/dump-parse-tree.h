@@ -551,6 +551,8 @@ public:
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)
   NODE(parser, OmpMemoryOrderClause)
+  NODE(parser, OmpAtomicClause)
+  NODE(parser, OmpAtomicClauseList)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
