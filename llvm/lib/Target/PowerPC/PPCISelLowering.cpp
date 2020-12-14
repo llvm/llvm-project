@@ -1308,8 +1308,19 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::POW_F128, "powf128");
   setLibcallName(RTLIB::FMIN_F128, "fminf128");
   setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-  setLibcallName(RTLIB::POWI_F128, "__powikf2");
   setLibcallName(RTLIB::REM_F128, "fmodf128");
+  setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+  setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+  setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+  setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+  setLibcallName(RTLIB::ROUND_F128, "roundf128");
+  setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+  setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+  setLibcallName(RTLIB::RINT_F128, "rintf128");
+  setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+  setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+  setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+  setLibcallName(RTLIB::FMA_F128, "fmaf128");
 
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
