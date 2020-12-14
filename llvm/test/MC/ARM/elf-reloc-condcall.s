@@ -9,10 +9,10 @@
 
 // OBJ:      Relocations [
 // OBJ-NEXT:   Section {{.*}} .rel.text {
-// OBJ-NEXT:     0x0  R_ARM_JUMP24 some_label 0x0
-// OBJ-NEXT:     0x4  R_ARM_CALL   some_label 0x0
-// OBJ-NEXT:     0x8  R_ARM_CALL   some_label 0x0
-// OBJ-NEXT:     0xC  R_ARM_JUMP24 some_label 0x0
-// OBJ-NEXT:     0x10 R_ARM_JUMP24 some_label 0x0
+// OBJ-NEXT:     0x0  R_ARM_JUMP24 some_label
+// OBJ-NEXT:     0x4  R_ARM_CALL   some_label
+// OBJ-NEXT:     0x8  R_ARM_CALL   some_label
+// OBJ-NEXT:     0xC  R_ARM_JUMP24 some_label
+// OBJ-NEXT:     0x10 R_ARM_JUMP24 some_label
 // OBJ-NEXT:   }
 // OBJ-NEXT: ]

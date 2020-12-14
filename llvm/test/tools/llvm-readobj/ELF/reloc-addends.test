@@ -31,10 +31,7 @@
 # RUN: llvm-readobj -r %t.le64.rel | FileCheck %s --check-prefix=LLVM-REL64
 # RUN: llvm-readelf -r %t.le64.rel | FileCheck %s --check-prefix=GNU-REL64
 
-## FIXME: We either should not dump an addend or should read it from a
-##        destination location for a SHT_REL case.
-##        See https://bugs.llvm.org/show_bug.cgi?id=44257.
-# LLVM-REL64-COUNT-7:  R_X86_64_NONE - 0x0{{$}}
+# LLVM-REL64-COUNT-7:  R_X86_64_NONE -{{$}}
 # LLVM-REL64-NOT:      R_
 
 # GNU-REL64:         Type               Symbol's Value  Symbol's Name{{$}}
@@ -108,10 +105,7 @@ Sections:
 # RUN: llvm-readobj -r %t.le32.rel | FileCheck %s --check-prefix=LLVM-REL32
 # RUN: llvm-readelf -r %t.le32.rel | FileCheck %s --check-prefix=GNU-REL32
 
-## FIXME: We either should not dump an addend or should read it from a
-##        destination location for a SHT_REL case.
-##        See https://bugs.llvm.org/show_bug.cgi?id=44257.
-# LLVM-REL32-COUNT-7: R_386_NONE - 0x0{{$}}
+# LLVM-REL32-COUNT-7: R_386_NONE -{{$}}
 # LLVM-REL32-NOT:     R_
 
 # GNU-REL32:         Type

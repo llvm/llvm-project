@@ -101,9 +101,9 @@ _start:
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
 // DSOREL-NEXT:  Section {{.*}} .rel.plt {
-// DSOREL-NEXT:    0x302E4 R_ARM_JUMP_SLOT func1 0x0
-// DSOREL-NEXT:    0x302E8 R_ARM_JUMP_SLOT func2 0x0
-// DSOREL-NEXT:    0x302EC R_ARM_JUMP_SLOT func3 0x0
+// DSOREL-NEXT:    0x302E4 R_ARM_JUMP_SLOT func1
+// DSOREL-NEXT:    0x302E8 R_ARM_JUMP_SLOT func2
+// DSOREL-NEXT:    0x302EC R_ARM_JUMP_SLOT func3
 
 // Test a large separation between the .plt and .got.plt
 // The .got.plt and .plt displacement is large but still within the range
@@ -170,9 +170,9 @@ _start:
 // DSORELHIGH-NEXT:     Address: 0x1100000
 // DSORELHIGH: Relocations [
 // DSORELHIGH-NEXT:   Section {{.*}} .rel.plt {
-// DSORELHIGH-NEXT:     0x110000C R_ARM_JUMP_SLOT func1 0x0
-// DSORELHIGH-NEXT:     0x1100010 R_ARM_JUMP_SLOT func2 0x0
-// DSORELHIGH-NEXT:     0x1100014 R_ARM_JUMP_SLOT func3 0x0
+// DSORELHIGH-NEXT:     0x110000C R_ARM_JUMP_SLOT func1
+// DSORELHIGH-NEXT:     0x1100010 R_ARM_JUMP_SLOT func2
+// DSORELHIGH-NEXT:     0x1100014 R_ARM_JUMP_SLOT func3
 
 // Test a very large separation between the .plt and .got.plt so we must use
 // large plt entries that do not have any range restriction.
@@ -238,9 +238,9 @@ _start:
 // DSORELLONG-NEXT:     Address: 0x11111100
 // DSORELLONG: Relocations [
 // DSORELLONG-NEXT:   Section {{.*}} .rel.plt {
-// DSORELLONG-NEXT:     0x1111110C R_ARM_JUMP_SLOT func1 0x0
-// DSORELLONG-NEXT:     0x11111110 R_ARM_JUMP_SLOT func2 0x0
-// DSORELLONG-NEXT:     0x11111114 R_ARM_JUMP_SLOT func3 0x0
+// DSORELLONG-NEXT:     0x1111110C R_ARM_JUMP_SLOT func1
+// DSORELLONG-NEXT:     0x11111110 R_ARM_JUMP_SLOT func2
+// DSORELLONG-NEXT:     0x11111114 R_ARM_JUMP_SLOT func3
 
 // Test a separation between the .plt and .got.plt that is part in range of
 // short table entries and part needing long entries. We use the long entries
@@ -306,6 +306,6 @@ _start:
 // DSORELMIX-NEXT:     ]
 // DSORELMIX-NEXT:     Address: 0x8002020
 // DSORELMIX:   Section {{.*}} .rel.plt {
-// DSORELMIX-NEXT:     0x800202C R_ARM_JUMP_SLOT func1 0x0
-// DSORELMIX-NEXT:     0x8002030 R_ARM_JUMP_SLOT func2 0x0
-// DSORELMIX-NEXT:     0x8002034 R_ARM_JUMP_SLOT func3 0x0
+// DSORELMIX-NEXT:     0x800202C R_ARM_JUMP_SLOT func1
+// DSORELMIX-NEXT:     0x8002030 R_ARM_JUMP_SLOT func2
+// DSORELMIX-NEXT:     0x8002034 R_ARM_JUMP_SLOT func3

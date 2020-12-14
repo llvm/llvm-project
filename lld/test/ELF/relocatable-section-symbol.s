@@ -39,8 +39,8 @@
 
 # REL:      Relocations [
 # REL-NEXT:   Section ({{.*}}) .rel.data {
-# REL-NEXT:     0x0 R_386_32 .text 0x0
-# REL-NEXT:     0x4 R_386_32 .text 0x0
+# REL-NEXT:     0x0 R_386_32 .text
+# REL-NEXT:     0x4 R_386_32 .text
 # REL-NEXT:   }
 # REL-NEXT: ]
 
