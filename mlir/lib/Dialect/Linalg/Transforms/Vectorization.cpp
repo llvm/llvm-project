@@ -216,6 +216,7 @@ private:
       if (!vecType)
         continue;
       if (maxSize < vecType.getNumElements()) {
+        maxSize = vecType.getNumElements();
         largestShape.assign(vecType.getShape().begin(),
                             vecType.getShape().end());
       }
