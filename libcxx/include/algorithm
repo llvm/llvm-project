@@ -4056,7 +4056,7 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
                         ++__i;
                     }
                     // [__first, __i) == *__first and *__first < [__i, __last)
-                    // The first part is sorted, sort the secod part
+                    // The first part is sorted, sort the second part
                     // _VSTD::__sort<_Compare>(__i, __last, __comp);
                     __first = __i;
                     goto __restart;
@@ -4564,7 +4564,7 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
         // swap middle two partitions
         __middle = _VSTD::rotate(__m1, __middle, __m2);
         // __len12 and __len21 now have swapped meanings
-        // merge smaller range with recurisve call and larger with tail recursion elimination
+        // merge smaller range with recursive call and larger with tail recursion elimination
         if (__len11 + __len21 < __len12 + __len22)
         {
             _VSTD::__inplace_merge<_Compare>(__first, __m1, __middle, __comp, __len11, __len21, __buff, __buff_size);

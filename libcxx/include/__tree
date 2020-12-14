@@ -1428,7 +1428,7 @@ private:
     __node_base_pointer&
         __find_leaf(const_iterator __hint,
                     __parent_pointer& __parent, const key_type& __v);
-    // FIXME: Make this function const qualified. Unfortunetly doing so
+    // FIXME: Make this function const qualified. Unfortunately doing so
     // breaks existing code which uses non-const callable comparators.
     template <class _Key>
     __node_base_pointer&
