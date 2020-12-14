@@ -7398,9 +7398,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
 
   if (findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts,
                              0)) {
-    llvm::erase_if(BuildVectorOpds,
-                   [](const Value *V) { return V == nullptr; });
-    llvm::erase_if(InsertElts, [](const Value *V) { return V == nullptr; });
+    llvm::erase_value(BuildVectorOpds, nullptr);
+    llvm::erase_value(InsertElts, nullptr);
     if (BuildVectorOpds.size() >= 2)
       return true;
   }

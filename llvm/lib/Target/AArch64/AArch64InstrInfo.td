@@ -399,6 +399,12 @@ def AArch64call          : SDNode<"AArch64ISD::CALL",
                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                  SDNPVariadic]>;
+
+def AArch64call_rvmarker: SDNode<"AArch64ISD::CALL_RVMARKER",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -2089,6 +2095,8 @@ let isCall = 1, Defs = [LR], Uses = [SP] in {
   def BLRNoIP : Pseudo<(outs), (ins GPR64noip:$Rn), []>,
                 Sched<[WriteBrReg]>,
                 PseudoInstExpansion<(BLR GPR64:$Rn)>;
+  def BLR_RVMARKER : Pseudo<(outs), (ins variable_ops), []>,
+                     Sched<[WriteBrReg]>;
 } // isCall
 
 def : Pat<(AArch64call GPR64:$Rn),
@@ -2097,6 +2105,10 @@ def : Pat<(AArch64call GPR64:$Rn),
 def : Pat<(AArch64call GPR64noip:$Rn),
           (BLRNoIP GPR64noip:$Rn)>,
       Requires<[SLSBLRMitigation]>;
+
+def : Pat<(AArch64call_rvmarker GPR64:$Rn),
+          (BLR_RVMARKER GPR64:$Rn)>,
+      Requires<[NoSLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;

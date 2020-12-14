@@ -1388,7 +1388,7 @@ def ConstantOp : Std_Op<"constant",
     [{ build($_builder, $_state, value.getType(), value); }]>];
 
   let extraClassDeclaration = [{
-    Attribute getValue() { return getAttr("value"); }
+    Attribute getValue() { return (*this)->getAttr("value"); }
 
     /// Returns true if a constant operation can be built with the given value
     /// and result type.

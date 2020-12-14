@@ -904,6 +904,155 @@ entry:
   ret void
 }
 
+@ha4 = global <4 x i32> zeroinitializer, align 8
+@hb4 = global <8 x i32> zeroinitializer, align 8
+@hc4 = global <16 x i32> zeroinitializer, align 8
+
+define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <16 x i32> %c) nounwind {
+; X86-AVX1-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X86-AVX1:       # %bb.0: # %entry
+; X86-AVX1-NEXT:    pushl %ebp
+; X86-AVX1-NEXT:    movl %esp, %ebp
+; X86-AVX1-NEXT:    andl $-32, %esp
+; X86-AVX1-NEXT:    subl $32, %esp
+; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm4
+; X86-AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm5, %xmm5
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
+; X86-AVX1-NEXT:    vpaddd 8(%ebp), %xmm3, %xmm5
+; X86-AVX1-NEXT:    vpaddd 24(%ebp), %xmm3, %xmm3
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
+; X86-AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
+; X86-AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
+; X86-AVX1-NEXT:    vmovdqu %xmm0, ha4
+; X86-AVX1-NEXT:    vmovups %ymm1, hb4
+; X86-AVX1-NEXT:    vmovups %ymm3, hc4+32
+; X86-AVX1-NEXT:    vmovups %ymm2, hc4
+; X86-AVX1-NEXT:    movl %ebp, %esp
+; X86-AVX1-NEXT:    popl %ebp
+; X86-AVX1-NEXT:    vzeroupper
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X86-AVX2:       # %bb.0: # %entry
+; X86-AVX2-NEXT:    pushl %ebp
+; X86-AVX2-NEXT:    movl %esp, %ebp
+; X86-AVX2-NEXT:    andl $-32, %esp
+; X86-AVX2-NEXT:    subl $32, %esp
+; X86-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX2-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm3
+; X86-AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpaddd 8(%ebp), %ymm3, %ymm4
+; X86-AVX2-NEXT:    vpaddd %ymm3, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm4, %ymm3
+; X86-AVX2-NEXT:    vmovdqu %xmm0, ha4
+; X86-AVX2-NEXT:    vmovdqu %ymm1, hb4
+; X86-AVX2-NEXT:    vmovdqu %ymm3, hc4+32
+; X86-AVX2-NEXT:    vmovdqu %ymm2, hc4
+; X86-AVX2-NEXT:    movl %ebp, %esp
+; X86-AVX2-NEXT:    popl %ebp
+; X86-AVX2-NEXT:    vzeroupper
+; X86-AVX2-NEXT:    retl
+;
+; X86-AVX512-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X86-AVX512:       # %bb.0: # %entry
+; X86-AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX512-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm4
+; X86-AVX512-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
+; X86-AVX512-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; X86-AVX512-NEXT:    vshufi32x4 {{.*#+}} zmm3 = zmm3[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X86-AVX512-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
+; X86-AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm2
+; X86-AVX512-NEXT:    vmovdqu %xmm0, ha4
+; X86-AVX512-NEXT:    vmovdqu %ymm1, hb4
+; X86-AVX512-NEXT:    vmovdqu64 %zmm2, hc4
+; X86-AVX512-NEXT:    vzeroupper
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX1-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X64-AVX1:       # %bb.0: # %entry
+; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,2,3,4]
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm5
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm5
+; X64-AVX1-NEXT:    vandps %ymm5, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm6
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm6
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm3, %ymm3
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm6
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vandps %ymm5, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vandps %ymm5, %ymm3, %ymm3
+; X64-AVX1-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm1, {{.*}}(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm3, hc4+{{.*}}(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm2, {{.*}}(%rip)
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X64-AVX2:       # %bb.0: # %entry
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,2,3,4]
+; X64-AVX2-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm4, %ymm4
+; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm3, %ymm3
+; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm2, %ymm2
+; X64-AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; X64-AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; X64-AVX2-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm1, {{.*}}(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm3, hc4+{{.*}}(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm2, {{.*}}(%rip)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X64-AVX512-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm4
+; X64-AVX512-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
+; X64-AVX512-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; X64-AVX512-NEXT:    vshufi32x4 {{.*#+}} zmm3 = zmm3[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
+; X64-AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm2
+; X64-AVX512-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovdqu %ymm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovdqu64 %zmm2, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
+entry:
+  %0 = add <4 x i32> %a, <i32 1, i32 2, i32 3, i32 4>
+  %1 = add <8 x i32> %b, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+  %2 = and <8 x i32> %1, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+  %3 = add <16 x i32> %c, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+  %4 = and <16 x i32> %3, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+  store <4 x i32> %0, <4 x i32>* @ha4, align 8
+  store <8 x i32> %2, <8 x i32>* @hb4, align 8
+  store <16 x i32> %4, <16 x i32>* @hc4, align 8
+  ret void
+}
+
 ;
 ; Subvector Broadcast from register
 ;

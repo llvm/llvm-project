@@ -305,13 +305,6 @@ public:
 
     /// Internal helper to remove the edge to the given function.
     bool removeEdgeInternal(Node &ChildN);
-
-    /// Internal helper to replace an edge key with a new one.
-    ///
-    /// This should be used when the function for a particular node in the
-    /// graph gets replaced and we are updating all of the edges to that node
-    /// to use the new function as the key.
-    void replaceEdgeKey(Function &OldTarget, Function &NewTarget);
   };
 
   /// A node in the call graph.

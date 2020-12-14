@@ -48,21 +48,21 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      some-attr-kind AOp::aAttrAttr()
-// DEF-NEXT:   this->getAttr("aAttr").cast<some-attr-kind>()
+// DEF-NEXT:   (*this)->getAttr("aAttr").cast<some-attr-kind>()
 // DEF:      some-return-type AOp::aAttr() {
 // DEF-NEXT:   auto attr = aAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::bAttrAttr()
-// DEF-NEXT:   return this->getAttr("bAttr").dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr("bAttr").dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AOp::bAttr() {
 // DEF-NEXT:   auto attr = bAttrAttr();
 // DEF-NEXT:   if (!attr)
-// DEF-NEXT:       return some-const-builder-call(::mlir::Builder(this->getContext()), 4.2).some-convert-from-storage();
+// DEF-NEXT:       return some-const-builder-call(::mlir::Builder((*this)->getContext()), 4.2).some-convert-from-storage();
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::cAttrAttr()
-// DEF-NEXT:   return this->getAttr("cAttr").dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr("cAttr").dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AOp::cAttr() {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
@@ -164,11 +164,11 @@ def COp : NS_Op<"c_op", []> {
 }
 
 // DEF-LABEL: COp definitions
-// DEF: ::mlir::Builder(this->getContext()).getI32ArrayAttr({1, 2})
-// DEF: ::mlir::Builder(this->getContext()).getI64ArrayAttr({3, 4})
-// DEF: ::mlir::Builder(this->getContext()).getF32ArrayAttr({5.f, 6.f})
-// DEF: ::mlir::Builder(this->getContext()).getF64ArrayAttr({7., 8.})
-// DEF: ::mlir::Builder(this->getContext()).getStrArrayAttr({"a", "b"})
+// DEF: ::mlir::Builder((*this)->getContext()).getI32ArrayAttr({1, 2})
+// DEF: ::mlir::Builder((*this)->getContext()).getI64ArrayAttr({3, 4})
+// DEF: ::mlir::Builder((*this)->getContext()).getF32ArrayAttr({5.f, 6.f})
+// DEF: ::mlir::Builder((*this)->getContext()).getF64ArrayAttr({7., 8.})
+// DEF: ::mlir::Builder((*this)->getContext()).getStrArrayAttr({"a", "b"})
 
 
 // Test builder method which takes unwrapped values for attributes
