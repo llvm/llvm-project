@@ -275,9 +275,11 @@ namespace std {
 #include <__format/format_args.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
+#include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/formatter.h>
+#include <__format/formatter_integer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
 #include <__variant/monostate.h>
@@ -385,9 +387,6 @@ private:
   template <class _Uv>
   _LIBCPP_HIDDEN auto __handle_format(_Uv __value, auto& __ctx)
       -> decltype(__ctx.out())
-#ifndef _LIBCPP_HAS_NO_INT128
-          requires(!same_as<_Uv, __int128_t> && !same_as<_Uv, __uint128_t>)
-#endif
   {
     // TODO FMT Implement using formatting arguments
     // TODO FMT Improve PoC since using std::to_string is inefficient.
@@ -400,20 +399,6 @@ private:
       *__out_it++ = __str[__i];
     return __out_it;
   }
-#ifndef _LIBCPP_HAS_NO_INT128
-  template <class _Uv>
-  _LIBCPP_HIDDEN auto __handle_format(_Uv __value, auto& __ctx)
-      -> decltype(__ctx.out()) requires(same_as<_Uv, __int128_t> ||
-                                        same_as<_Uv, __uint128_t>) {
-    using _To = conditional_t<is_signed_v<_Uv>, long long, unsigned long long>;
-    // TODO FMT Implement full 128-bit support.
-    if (__value < numeric_limits<_To>::min() ||
-        __value > numeric_limits<_To>::max())
-      __throw_format_error("128-bit value is outside of implemented range");
-
-    return __handle_format(static_cast<_To>(__value), __ctx);
-  }
-#endif
 };
 } // namespace __format
 
@@ -455,50 +440,6 @@ struct _LIBCPP_TEMPLATE_VIS formatter<bool, _CharT> {
     return __out_it;
   }
 };
-
-// Signed integral types.
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<signed char, _CharT>
-    : public __format::__formatter_arithmetic<signed char, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<short, _CharT>
-    : public __format::__formatter_arithmetic<short, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<int, _CharT>
-    : public __format::__formatter_arithmetic<int, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<long, _CharT>
-    : public __format::__formatter_arithmetic<long, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<long long, _CharT>
-    : public __format::__formatter_arithmetic<long long, _CharT> {};
-#ifndef _LIBCPP_HAS_NO_INT128
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<__int128_t, _CharT>
-    : public __format::__formatter_arithmetic<__int128_t, _CharT> {};
-#endif
-
-// Unsigned integral types.
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<unsigned char, _CharT>
-    : public __format::__formatter_arithmetic<unsigned char, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<unsigned short, _CharT>
-    : public __format::__formatter_arithmetic<unsigned short, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<unsigned, _CharT>
-    : public __format::__formatter_arithmetic<unsigned, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<unsigned long, _CharT>
-    : public __format::__formatter_arithmetic<unsigned long, _CharT> {};
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<unsigned long long, _CharT>
-    : public __format::__formatter_arithmetic<unsigned long long, _CharT> {};
-#ifndef _LIBCPP_HAS_NO_INT128
-template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<__uint128_t, _CharT>
-    : public __format::__formatter_arithmetic<__uint128_t, _CharT> {};
-#endif
 
 // Floating point types.
 // TODO FMT There are no replacements for the floating point stubs due to not
