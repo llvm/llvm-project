@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/OrcV1Deprecation.h"
@@ -888,8 +887,7 @@ public:
 /// their addresses may be used as keys for resource management.
 /// JITDylib state changes must be made via an ExecutionSession to guarantee
 /// that they are synchronized with respect to other JITDylib operations.
-class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
-                 public jitlink::JITLinkDylib {
+class JITDylib : public ThreadSafeRefCountedBase<JITDylib> {
   friend class AsynchronousSymbolQuery;
   friend class ExecutionSession;
   friend class Platform;
