@@ -2802,8 +2802,6 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     return false;
 
   assert(ShufMask.size() == 2);
-  // TODO-GFX11: This assertion is no longer true:
-  assert(STI.hasSDWA() && "no target has VOP3P but not SDWA");
 
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -2860,17 +2858,29 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     }
   } else if (Mask[0] == 0 && Mask[1] == 0) {
     if (IsVALU) {
-      // Write low half of the register into the high half.
-      MachineInstr *MovSDWA =
-        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
-        .addImm(0)                             // $src0_modifiers
-        .addReg(SrcVec)                        // $src0
-        .addImm(0)                             // $clamp
-        .addImm(AMDGPU::SDWA::WORD_1)          // $dst_sel
-        .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
-        .addImm(AMDGPU::SDWA::WORD_0)          // $src0_sel
-        .addReg(SrcVec, RegState::Implicit);
-      MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+      if (STI.hasSDWA()) {
+        // Write low half of the register into the high half.
+        MachineInstr *MovSDWA =
+          BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
+          .addImm(0)                             // $src0_modifiers
+          .addReg(SrcVec)                        // $src0
+          .addImm(0)                             // $clamp
+          .addImm(AMDGPU::SDWA::WORD_1)          // $dst_sel
+          .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
+          .addImm(AMDGPU::SDWA::WORD_0)          // $src0_sel
+          .addReg(SrcVec, RegState::Implicit);
+        MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+      } else {
+        // TODO-GFX11: Use V_MOV_B16.
+        Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
+          .addImm(0xFFFF)
+          .addReg(SrcVec);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32), DstReg)
+          .addReg(TmpReg)
+          .addImm(16)
+          .addReg(TmpReg);
+      }
     } else {
       BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), DstReg)
         .addReg(SrcVec)
@@ -2878,17 +2888,29 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     }
   } else if (Mask[0] == 1 && Mask[1] == 1) {
     if (IsVALU) {
-      // Write high half of the register into the low half.
-      MachineInstr *MovSDWA =
-        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
-        .addImm(0)                             // $src0_modifiers
-        .addReg(SrcVec)                        // $src0
-        .addImm(0)                             // $clamp
-        .addImm(AMDGPU::SDWA::WORD_0)          // $dst_sel
-        .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
-        .addImm(AMDGPU::SDWA::WORD_1)          // $src0_sel
-        .addReg(SrcVec, RegState::Implicit);
-      MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+      if (STI.hasSDWA()) {
+        // Write high half of the register into the low half.
+        MachineInstr *MovSDWA =
+          BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
+          .addImm(0)                             // $src0_modifiers
+          .addReg(SrcVec)                        // $src0
+          .addImm(0)                             // $clamp
+          .addImm(AMDGPU::SDWA::WORD_0)          // $dst_sel
+          .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
+          .addImm(AMDGPU::SDWA::WORD_1)          // $src0_sel
+          .addReg(SrcVec, RegState::Implicit);
+        MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+      } else {
+        // TODO-GFX11: Use V_MOV_B16.
+        Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+          .addImm(16)
+          .addReg(SrcVec);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32), DstReg)
+          .addReg(TmpReg)
+          .addImm(16)
+          .addReg(TmpReg);
+      }
     } else {
       BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_HH_B32_B16), DstReg)
         .addReg(SrcVec)
