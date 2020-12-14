@@ -63,7 +63,7 @@ define void @sdwConv2qp_01(fp128* nocapture %a, i128 %b) {
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    mr r4, r5
-; CHECK-NEXT:    bl __floattitf
+; CHECK-NEXT:    bl __floattikf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stxv v2, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -84,7 +84,7 @@ define void @sdwConv2qp_01(fp128* nocapture %a, i128 %b) {
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
 ; CHECK-P8-NEXT:    mr r4, r5
-; CHECK-P8-NEXT:    bl __floattitf
+; CHECK-P8-NEXT:    bl __floattikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r4, 8(r30)
 ; CHECK-P8-NEXT:    std r3, 0(r30)
@@ -272,7 +272,7 @@ define void @udwConv2qp_01(fp128* nocapture %a, i128 %b) {
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    mr r4, r5
-; CHECK-NEXT:    bl __floatuntitf
+; CHECK-NEXT:    bl __floatuntikf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    stxv v2, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -293,7 +293,7 @@ define void @udwConv2qp_01(fp128* nocapture %a, i128 %b) {
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r4
 ; CHECK-P8-NEXT:    mr r4, r5
-; CHECK-P8-NEXT:    bl __floatuntitf
+; CHECK-P8-NEXT:    bl __floatuntikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r4, 8(r30)
 ; CHECK-P8-NEXT:    std r3, 0(r30)
@@ -2146,7 +2146,7 @@ define i128 @qpConv2i128(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    bl __fixtfti
+; CHECK-NEXT:    bl __fixkfti
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -2163,7 +2163,7 @@ define i128 @qpConv2i128(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    ld r5, 0(r3)
 ; CHECK-P8-NEXT:    ld r4, 8(r3)
 ; CHECK-P8-NEXT:    mr r3, r5
-; CHECK-P8-NEXT:    bl __fixtfti
+; CHECK-P8-NEXT:    bl __fixkfti
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -2185,7 +2185,7 @@ define i128 @qpConv2ui128(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    bl __fixunstfti
+; CHECK-NEXT:    bl __fixunskfti
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -2202,7 +2202,7 @@ define i128 @qpConv2ui128(fp128* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    ld r5, 0(r3)
 ; CHECK-P8-NEXT:    ld r4, 8(r3)
 ; CHECK-P8-NEXT:    mr r3, r5
-; CHECK-P8-NEXT:    bl __fixunstfti
+; CHECK-P8-NEXT:    bl __fixunskfti
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
