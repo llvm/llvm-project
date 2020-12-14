@@ -2710,66 +2710,6 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
-/// Given \p BB block, for each instruction in said block, insert trivial
-/// (single value) PHI nodes into each successor block of \p BB block, and
-/// rewrite all the the non-PHI (or PHI uses not in successors of \p BB block)
-/// uses of instructions of \p BB block to use newly-inserted PHI nodes.
-/// NOTE: even though it would be correct to not deal with multi-predecessor
-///       successor blocks, or uses within the \p BB block, we may be dealing
-///       with an unreachable IR, where many invariants don't hold...
-static void FormTrivialSSAPHI(BasicBlock *BB) {
-  SmallSetVector<BasicBlock *, 16> Successors(succ_begin(BB), succ_end(BB));
-
-  // Process instructions in reverse order. There is no correctness reason for
-  // that order, but it allows us to consistently insert new PHI nodes
-  // at the top of blocks, while maintaining their relative order.
-  for (Instruction &DefInstr : make_range(BB->rbegin(), BB->rend())) {
-    SmallVector<std::reference_wrapper<Use>, 16> UsesToRewrite;
-
-    // Cache which uses we'll want to rewrite.
-    copy_if(DefInstr.uses(), std::back_inserter(UsesToRewrite),
-            [BB, &DefInstr, &Successors](Use &U) {
-              auto *User = cast<Instruction>(U.getUser());
-              auto *UserBB = User->getParent();
-              // Generally, ignore users in the same block as the instruction
-              // itself, unless the use[r] either comes before, or is [by] the
-              // instruction itself, which means we are in an unreachable IR.
-              if (UserBB == BB)
-                return !DefInstr.comesBefore(User);
-              // Otherwise, rewrite all non-PHI users,
-              // or PHI users in non-successor blocks.
-              return !isa<PHINode>(User) || !Successors.contains(UserBB);
-            });
-
-    // So, do we have uses to rewrite?
-    if (UsesToRewrite.empty())
-      continue; // Check next remaining instruction.
-
-    SSAUpdater SSAUpdate;
-    SSAUpdate.Initialize(DefInstr.getType(), DefInstr.getName());
-
-    // Create a new PHI node in each successor block.
-    // WARNING: the iteration order is externally-observable,
-    //          and therefore must be stable!
-    for (BasicBlock *Successor : Successors) {
-      IRBuilder<> Builder(&Successor->front());
-      auto *PN = Builder.CreatePHI(DefInstr.getType(), pred_size(Successor),
-                                   DefInstr.getName());
-      // By default, have an 'undef' incoming value for each predecessor.
-      for (BasicBlock *PredsOfSucc : predecessors(Successor))
-        PN->addIncoming(UndefValue::get(DefInstr.getType()), PredsOfSucc);
-      // .. but receive the correct value when coming from the right block.
-      PN->setIncomingValueForBlock(BB, &DefInstr);
-      // And make note of that PHI.
-      SSAUpdate.AddAvailableValue(Successor, PN);
-    }
-
-    // And finally, rewrite all the problematic uses to use the new PHI nodes.
-    while (!UsesToRewrite.empty())
-      SSAUpdate.RewriteUseAfterInsertions(UsesToRewrite.pop_back_val());
-  }
-}
-
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -2852,6 +2792,22 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     if (NumBonusInsts > BonusInstThreshold)
       return Changed;
   }
+
+  // Also, for now, all liveout uses of bonus instructions must be in PHI nodes
+  // in successor blocks as incoming values from the bonus instructions's block,
+  // otherwise we'll fail to update them.
+  // FIXME: We could lift this restriction, but we need to form PHI nodes and
+  // rewrite offending uses, but we can't do that without having a domtree.
+  if (any_of(*BB, [BB](Instruction &I) {
+        return any_of(I.uses(), [BB](Use &U) {
+          auto *User = cast<Instruction>(U.getUser());
+          if (User->getParent() == BB)
+            return false; // Not an external use.
+          auto *PN = dyn_cast<PHINode>(User);
+          return !PN || PN->getIncomingBlock(U) != BB;
+        });
+      }))
+    return Changed;
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.
@@ -2939,11 +2895,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       PBI->swapSuccessors();
     }
 
-    // Ensure that the bonus instructions are *only* used by the PHI nodes,
-    // because the successor basic block is about to get a new predecessor
-    // and non-PHI uses will become invalid.
-    FormTrivialSSAPHI(BB);
-
     BasicBlock *UniqueSucc =
         BI->isConditional()
             ? (PBI->getSuccessor(0) == BB ? TrueDest : FalseDest)
@@ -2988,15 +2939,33 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
       NewBonusInst->takeName(&BonusInst);
       BonusInst.setName(BonusInst.getName() + ".old");
-      BonusInst.replaceUsesWithIf(NewBonusInst, [BB](Use &U) {
-        auto *User = cast<Instruction>(U.getUser());
-        // Ignore the original bonus instructions themselves.
-        if (User->getParent() == BB)
-          return false;
-        // Otherwise, we've got a PHI node. Don't touch incoming values
-        // for same block as the bonus instruction itself.
-        return cast<PHINode>(User)->getIncomingBlock(U) != BB;
-      });
+      BonusInst.replaceUsesWithIf(
+          NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
+            auto *User = cast<Instruction>(U.getUser());
+            // Ignore non-external uses of bonus instructions.
+            if (User->getParent() == BB) {
+              assert(!isa<PHINode>(User) &&
+                     "Non-external users are never PHI instructions.");
+              return false;
+            }
+            (void)BI;
+            assert(isa<PHINode>(User) && "All external users must be PHI's.");
+            auto *PN = cast<PHINode>(User);
+            assert(is_contained(successors(BB), User->getParent()) &&
+                   "All external users must be in successors of BB.");
+            assert((PN->getIncomingBlock(U) == BB ||
+                    PN->getIncomingBlock(U) == PredBlock) &&
+                   "The incoming block for that incoming value external use "
+                   "must be either the original block with bonus instructions, "
+                   "or the new predecessor block.");
+            // UniqueSucc is the block for which we change it's predecessors,
+            // so it is the only block in which we'll need to update PHI nodes.
+            if (User->getParent() != UniqueSucc)
+              return false;
+            // Update the incoming value for the new predecessor.
+            return PN->getIncomingBlock(U) ==
+                   (BI->isConditional() ? PredBlock : BB);
+          });
     }
 
     // Now that the Cond was cloned into the predecessor basic block,
