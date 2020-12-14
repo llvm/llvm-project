@@ -811,7 +811,7 @@ void MemorySSAUpdater::updateExitBlocksForClonedLoop(
 }
 
 void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
-                                    DominatorTree &DT) {
+                                    DominatorTree &DT, bool UpdateDT) {
   SmallVector<CFGUpdate, 4> DeleteUpdates;
   SmallVector<CFGUpdate, 4> RevDeleteUpdates;
   SmallVector<CFGUpdate, 4> InsertUpdates;
@@ -825,10 +825,15 @@ void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
   }
 
   if (!DeleteUpdates.empty()) {
-    SmallVector<CFGUpdate, 0> Empty;
-    // Deletes are reversed applied, because this CFGView is pretending the
-    // deletes did not happen yet, hence the edges still exist.
-    DT.applyUpdates(Empty, RevDeleteUpdates);
+    if (!UpdateDT) {
+      SmallVector<CFGUpdate, 0> Empty;
+      // Deletes are reversed applied, because this CFGView is pretending the
+      // deletes did not happen yet, hence the edges still exist.
+      DT.applyUpdates(Empty, RevDeleteUpdates);
+    } else {
+      // Apply all updates, with the RevDeleteUpdates as PostCFGView.
+      DT.applyUpdates(Updates, RevDeleteUpdates);
+    }
 
     // Note: the MSSA update below doesn't distinguish between a GD with
     // (RevDelete,false) and (Delete, true), but this matters for the DT
@@ -840,6 +845,8 @@ void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
     // the standard update without a postview of the CFG.
     DT.applyUpdates(DeleteUpdates);
   } else {
+    if (UpdateDT)
+      DT.applyUpdates(Updates);
     GraphDiff<BasicBlock *> GD;
     applyInsertUpdates(InsertUpdates, DT, &GD);
   }

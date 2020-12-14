@@ -960,10 +960,11 @@ void LoopUnswitch::emitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
     if (OldBranchSucc != TrueDest && OldBranchSucc != FalseDest) {
       Updates.push_back({DominatorTree::Delete, OldBranchParent, OldBranchSucc});
     }
-    DT->applyUpdates(Updates);
 
     if (MSSAU)
-      MSSAU->applyUpdates(Updates, *DT);
+      MSSAU->applyUpdates(Updates, *DT, /*UpdateDT=*/true);
+    else
+      DT->applyUpdates(Updates);
   }
 
   // If either edge is critical, split it. This helps preserve LoopSimplify
