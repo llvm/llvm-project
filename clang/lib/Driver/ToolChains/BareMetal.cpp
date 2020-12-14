@@ -12,6 +12,7 @@
 #include "InputInfo.h"
 #include "Gnu.h"
 
+#include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -27,12 +28,77 @@ using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 
+static Multilib makeMultilib(StringRef commonSuffix) {
+  return Multilib(commonSuffix, commonSuffix, commonSuffix);
+}
+
+static bool findRISCVMultilibs(const Driver &D,
+                               const llvm::Triple &TargetTriple,
+                               const ArgList &Args, DetectedMultilibs &Result) {
+  Multilib::flags_list Flags;
+  StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
+  StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
+
+  if (TargetTriple.getArch() == llvm::Triple::riscv64) {
+    Multilib Imac = makeMultilib("").flag("+march=rv64imac").flag("+mabi=lp64");
+    Multilib Imafdc = makeMultilib("/rv64imafdc/lp64d")
+                          .flag("+march=rv64imafdc")
+                          .flag("+mabi=lp64d");
+
+    // Multilib reuse
+    bool UseImafdc =
+        (Arch == "rv64imafdc") || (Arch == "rv64gc"); // gc => imafdc
+
+    addMultilibFlag((Arch == "rv64imac"), "march=rv64imac", Flags);
+    addMultilibFlag(UseImafdc, "march=rv64imafdc", Flags);
+    addMultilibFlag(Abi == "lp64", "mabi=lp64", Flags);
+    addMultilibFlag(Abi == "lp64d", "mabi=lp64d", Flags);
+
+    Result.Multilibs = MultilibSet().Either(Imac, Imafdc);
+    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
+  }
+  if (TargetTriple.getArch() == llvm::Triple::riscv32) {
+    Multilib Imac =
+        makeMultilib("").flag("+march=rv32imac").flag("+mabi=ilp32");
+    Multilib I =
+        makeMultilib("/rv32i/ilp32").flag("+march=rv32i").flag("+mabi=ilp32");
+    Multilib Im =
+        makeMultilib("/rv32im/ilp32").flag("+march=rv32im").flag("+mabi=ilp32");
+    Multilib Iac = makeMultilib("/rv32iac/ilp32")
+                       .flag("+march=rv32iac")
+                       .flag("+mabi=ilp32");
+    Multilib Imafc = makeMultilib("/rv32imafc/ilp32f")
+                         .flag("+march=rv32imafc")
+                         .flag("+mabi=ilp32f");
+
+    // Multilib reuse
+    bool UseI = (Arch == "rv32i") || (Arch == "rv32ic");    // ic => i
+    bool UseIm = (Arch == "rv32im") || (Arch == "rv32imc"); // imc => im
+    bool UseImafc = (Arch == "rv32imafc") || (Arch == "rv32imafdc") ||
+                    (Arch == "rv32gc"); // imafdc,gc => imafc
+
+    addMultilibFlag(UseI, "march=rv32i", Flags);
+    addMultilibFlag(UseIm, "march=rv32im", Flags);
+    addMultilibFlag((Arch == "rv32iac"), "march=rv32iac", Flags);
+    addMultilibFlag((Arch == "rv32imac"), "march=rv32imac", Flags);
+    addMultilibFlag(UseImafc, "march=rv32imafc", Flags);
+    addMultilibFlag(Abi == "ilp32", "mabi=ilp32", Flags);
+    addMultilibFlag(Abi == "ilp32f", "mabi=ilp32f", Flags);
+
+    Result.Multilibs = MultilibSet().Either(I, Im, Iac, Imac, Imafc);
+    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
+  }
+  return false;
+}
+
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                            const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
+
+  findMultilibs(D, Triple, Args);
   SmallString<128> SysRoot(computeSysRoot());
   if (!SysRoot.empty()) {
     llvm::sys::path::append(SysRoot, "lib");
@@ -73,6 +139,17 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   return Triple.getEnvironmentName() == "elf";
 }
 
+void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
+                              const ArgList &Args) {
+  DetectedMultilibs Result;
+  if (isRISCVBareMetal(Triple)) {
+    if (findRISCVMultilibs(D, Triple, Args, Result)) {
+      SelectedMultilib = Result.SelectedMultilib;
+      Multilibs = Result.Multilibs;
+    }
+  }
+}
+
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return isARMBareMetal(Triple) || isRISCVBareMetal(Triple);
 }
@@ -91,17 +168,19 @@ std::string BareMetal::getCompilerRTBasename(const llvm::opt::ArgList &,
 std::string BareMetal::getRuntimesDir() const {
   SmallString<128> Dir(getDriver().ResourceDir);
   llvm::sys::path::append(Dir, "lib", "baremetal");
+  Dir += SelectedMultilib.gccSuffix();
   return std::string(Dir.str());
 }
 
 std::string BareMetal::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot;
+    return getDriver().SysRoot + SelectedMultilib.osSuffix();
 
   SmallString<128> SysRootDir;
   llvm::sys::path::append(SysRootDir, getDriver().Dir, "../lib/clang-runtimes",
                           getDriver().getTargetTriple());
 
+  SysRootDir += SelectedMultilib.osSuffix();
   return std::string(SysRootDir);
 }
 
