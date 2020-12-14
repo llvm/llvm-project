@@ -576,6 +576,15 @@ bool isCompute(CallingConv::ID CC);
 LLVM_READNONE
 bool isEntryFunctionCC(CallingConv::ID CC);
 
+// These functions are considered entrypoints into the current module, i.e. they
+// are allowed to be called from outside the current module. This is different
+// from isEntryFunctionCC, which is only true for functions that are entered by
+// the hardware. Module entry points include all entry functions but also
+// include functions that can be called from other functions inside or outside
+// the current module. Module entry functions are allowed to allocate LDS.
+LLVM_READNONE
+bool isModuleEntryFunctionCC(CallingConv::ID CC);
+
 // FIXME: Remove this when calling conventions cleaned up
 LLVM_READNONE
 inline bool isKernel(CallingConv::ID CC) {
