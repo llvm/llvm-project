@@ -27,7 +27,7 @@ define void @qp_trunc(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl truncl
+; CHECK-P8-NEXT:    bl truncf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
@@ -66,7 +66,7 @@ define void @qp_rint(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl rintl
+; CHECK-P8-NEXT:    bl rintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
@@ -105,7 +105,7 @@ define void @qp_nearbyint(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl nearbyintl
+; CHECK-P8-NEXT:    bl nearbyintf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
@@ -144,7 +144,7 @@ define void @qp_round(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl roundl
+; CHECK-P8-NEXT:    bl roundf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
@@ -183,7 +183,7 @@ define void @qp_floor(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl floorl
+; CHECK-P8-NEXT:    bl floorf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
@@ -222,7 +222,7 @@ define void @qp_ceil(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    mr r4, r6
-; CHECK-P8-NEXT:    bl ceill
+; CHECK-P8-NEXT:    bl ceilf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    std r3, 0(r30)
 ; CHECK-P8-NEXT:    std r4, 8(r30)
