@@ -22,6 +22,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include <string>
 #include <vector>
 
@@ -209,6 +210,9 @@ public:
     FPE_Strict
   };
 
+  /// Possible exception handling behavior.
+  using ExceptionHandlingKind = llvm::ExceptionHandling;
+
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
     None,
@@ -381,10 +385,21 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  bool hasSjLjExceptions() const { return SjLjExceptions; }
-  bool hasSEHExceptions() const { return SEHExceptions; }
-  bool hasDWARFExceptions() const { return DWARFExceptions; }
-  bool hasWasmExceptions() const { return WasmExceptions; }
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::Wasm;
+  }
 };
 
 /// Floating point control options
