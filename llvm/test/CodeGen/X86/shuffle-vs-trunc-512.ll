@@ -465,9 +465,9 @@ define <4 x double> @PR34175(<32 x i16>* %p) {
 ;
 ; AVX512BWVL-LABEL: PR34175:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm0
-; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [6755468161056768,6755468161056768,6755468161056768,6755468161056768]
-; AVX512BWVL-NEXT:    vpermi2w 32(%rdi), %ymm0, %ymm1
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,8,16,24,u,u,u,u>
+; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm1
+; AVX512BWVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; AVX512BWVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512BWVL-NEXT:    retq
@@ -484,9 +484,9 @@ define <4 x double> @PR34175(<32 x i16>* %p) {
 ;
 ; AVX512VBMIVL-LABEL: PR34175:
 ; AVX512VBMIVL:       # %bb.0:
-; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm0
-; AVX512VBMIVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [6755468161056768,6755468161056768,6755468161056768,6755468161056768]
-; AVX512VBMIVL-NEXT:    vpermi2w 32(%rdi), %ymm0, %ymm1
+; AVX512VBMIVL-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,8,16,24,u,u,u,u>
+; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm1
+; AVX512VBMIVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
 ; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; AVX512VBMIVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VBMIVL-NEXT:    retq
