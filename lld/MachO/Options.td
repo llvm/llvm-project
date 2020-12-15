@@ -672,7 +672,6 @@ def sub_library : Separate<["-"], "sub_library">,
 def sub_umbrella : Separate<["-"], "sub_umbrella">,
      MetaVarName<"<name>">,
      HelpText<"Re-export the framework as <name>">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
      MetaVarName<"<name>">,
