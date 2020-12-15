@@ -1042,8 +1042,6 @@ public:
     return isUInt<12>(Imm);
   }
 
-  unsigned getNumFlatOffsetBits(bool Signed) const;
-
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that
   /// interprets the offset as signed.
