@@ -44477,8 +44477,8 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   };
 
   // Check if each element of the vector is right-shifted by one.
-  auto LHS = In.getOperand(0);
-  auto RHS = In.getOperand(1);
+  SDValue LHS = In.getOperand(0);
+  SDValue RHS = In.getOperand(1);
   if (!IsConstVectorInRange(RHS, 1, 1))
     return SDValue();
   if (LHS.getOpcode() != ISD::ADD)
