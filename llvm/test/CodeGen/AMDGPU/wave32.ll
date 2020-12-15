@@ -231,9 +231,9 @@ bb13:
 ; GCN:   ; %bb.{{[0-9]+}}: ; %.preheader
 ; GCN:   BB{{.*}}:
 
+; GCN:     global_store_dword
 ; GFX1032: s_or_b32 [[MASK0:s[0-9]+]], [[MASK0]], vcc_lo
 ; GFX1064: s_or_b64 [[MASK0:s\[[0-9:]+\]]], [[MASK0]], vcc
-; GCN:     global_store_dword
 ; GFX1032: s_andn2_b32 [[MASK1:s[0-9]+]], [[MASK1]], exec_lo
 ; GFX1064: s_andn2_b64 [[MASK1:s\[[0-9:]+\]]], [[MASK1]], exec
 ; GFX1032: s_and_b32 [[MASK0]], [[MASK0]], exec_lo
@@ -249,10 +249,12 @@ bb13:
 ; GFX1064: s_andn2_b64 exec, exec, [[ACC]]
 ; GCN:     s_cbranch_execz
 ; GCN:   BB{{.*}}:
-; GCN: s_load_dword [[LOAD:s[0-9]+]]
+
 ; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], exec_lo
 ; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], exec
-; GCN: s_cmp_lt_i32 [[LOAD]], 11
+; GCN: global_load_dword [[LOAD:v[0-9]+]]
+; GFX1032: v_cmp_gt_i32_e32 vcc_lo, 11, [[LOAD]]
+; GFX1064: v_cmp_gt_i32_e32 vcc, 11, [[LOAD]]
 define amdgpu_kernel void @test_loop_with_if_else_break(i32 addrspace(1)* %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
