@@ -12,7 +12,6 @@ class TestSwiftAnyType(lldbtest.TestBase):
     # This test depends on NSObject, so it is not available on non-Darwin
     # platforms.
     @skipUnlessDarwin
-    @skipIf(bugnumber="rdar://problem/66842937")
     def test(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
