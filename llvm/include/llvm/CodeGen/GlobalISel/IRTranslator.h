@@ -260,6 +260,19 @@ private:
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);
 
+  /// When an invoke or a cleanupret unwinds to the next EH pad, there are
+  /// many places it could ultimately go. In the IR, we have a single unwind
+  /// destination, but in the machine CFG, we enumerate all the possible blocks.
+  /// This function skips over imaginary basic blocks that hold catchswitch
+  /// instructions, and finds all the "real" machine
+  /// basic block destinations. As those destinations may not be successors of
+  /// EHPadBB, here we also calculate the edge probability to those
+  /// destinations. The passed-in Prob is the edge probability to EHPadBB.
+  bool findUnwindDestinations(
+      const BasicBlock *EHPadBB, BranchProbability Prob,
+      SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
+          &UnwindDests);
+
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
@@ -659,8 +672,9 @@ private:
   BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
                                        const MachineBasicBlock *Dst) const;
 
-  void addSuccessorWithProb(MachineBasicBlock *Src, MachineBasicBlock *Dst,
-                            BranchProbability Prob);
+  void addSuccessorWithProb(
+      MachineBasicBlock *Src, MachineBasicBlock *Dst,
+      BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
   IRTranslator(CodeGenOpt::Level OptLevel = CodeGenOpt::None);

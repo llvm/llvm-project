@@ -2,7 +2,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "../assembly.h"
+#include "assembly.h"
 
 // Out-of-line LSE atomics helpers. Ported from libgcc library.
 // N = {1, 2, 4, 8}
@@ -113,7 +113,8 @@ HIDDEN(__aarch64_have_lse_atomics)
 .endm
 
 #ifdef L_cas
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_START(NAME(cas))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_END(NAME(cas))
         JUMP_IF_NOT_LSE 8f
 #if SIZE < 16
 #ifdef HAS_ASM_LSE
@@ -166,7 +167,8 @@ END_COMPILERRT_OUTLINE_FUNCTION(NAME(cas))
 #else
 #define SWP .inst 0x38208020 + B + N
 #endif
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(swp))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_START(NAME(swp))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_END(NAME(swp))
         JUMP_IF_NOT_LSE 8f
         SWP    // s(0), s(0), [x1]
         ret
@@ -209,7 +211,8 @@ END_COMPILERRT_OUTLINE_FUNCTION(NAME(swp))
 #define LDOP .inst 0x38200020 + OPN + B + N
 #endif
 
-DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(LDNM))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_START(NAME(LDNM))
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_END(NAME(LDNM))
         JUMP_IF_NOT_LSE 8f
         LDOP // s(0), s(0), [x1]
         ret
