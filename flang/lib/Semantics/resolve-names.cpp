@@ -597,6 +597,7 @@ protected:
 
   bool inExecutionPart_{false};
   bool inSpecificationPart_{false};
+  bool inEquivalenceStmt_{false};
   std::set<SourceName> specPartForwardRefs_;
 
 private:
@@ -2021,7 +2022,11 @@ Symbol *ScopeHandler::FindSymbol(const Scope &scope, const parser::Name &name) {
     }
     return FindSymbol(scope.parent(), name);
   } else {
-    return Resolve(name, scope.FindSymbol(name.source));
+    // In EQUIVALENCE statements only resolve names in the local scope, see
+    // 19.5.1.4, paragraph 2, item (10)
+    return Resolve(name,
+        inEquivalenceStmt_ ? FindInScope(scope, name)
+                           : scope.FindSymbol(name.source));
   }
 }
 
@@ -4347,15 +4352,17 @@ void DeclarationVisitor::Post(const parser::CommonBlockObject &x) {
 
 bool DeclarationVisitor::Pre(const parser::EquivalenceStmt &x) {
   // save equivalence sets to be processed after specification part
-  CheckNotInBlock("EQUIVALENCE"); // C1107
-  for (const std::list<parser::EquivalenceObject> &set : x.v) {
-    equivalenceSets_.push_back(&set);
+  if (CheckNotInBlock("EQUIVALENCE")) { // C1107
+    for (const std::list<parser::EquivalenceObject> &set : x.v) {
+      equivalenceSets_.push_back(&set);
+    }
   }
   return false; // don't implicitly declare names yet
 }
 
 void DeclarationVisitor::CheckEquivalenceSets() {
   EquivalenceSets equivSets{context()};
+  inEquivalenceStmt_ = true;
   for (const auto *set : equivalenceSets_) {
     const auto &source{set->front().v.value().source};
     if (set->size() <= 1) { // R871
@@ -4372,6 +4379,7 @@ void DeclarationVisitor::CheckEquivalenceSets() {
     }
     equivSets.FinishSet(source);
   }
+  inEquivalenceStmt_ = false;
   for (auto &set : equivSets.sets()) {
     if (!set.empty()) {
       currScope().add_equivalenceSet(std::move(set));
