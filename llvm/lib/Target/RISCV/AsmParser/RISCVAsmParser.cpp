@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVAsmBackend.h"
+#include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
@@ -737,13 +738,19 @@ public:
   }
 
   void print(raw_ostream &OS) const override {
+    auto RegName = [](unsigned Reg) {
+      if (Reg)
+        return RISCVInstPrinter::getRegisterName(Reg);
+      else
+        return "noreg";
+    };
+
     switch (Kind) {
     case KindTy::Immediate:
       OS << *getImm();
       break;
     case KindTy::Register:
-      OS << "<register x";
-      OS << getReg() << ">";
+      OS << "<register " << RegName(getReg()) << ">";
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
