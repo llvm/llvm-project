@@ -2415,15 +2415,18 @@ def replaceWithValue;
 // Data type generation
 //===----------------------------------------------------------------------===//
 
-// Define a new type belonging to a dialect and called 'name'.
-class TypeDef<Dialect owningdialect, string name> {
-  Dialect dialect = owningdialect;
+// Define a new type, named `name`, belonging to `dialect` that inherits from
+// the given C++ base class.
+class TypeDef<Dialect dialect, string name,
+              string baseCppClass = "::mlir::Type">
+    : DialectType<dialect, CPred<"">> {
+  // The name of the C++ Type class.
   string cppClassName = name # "Type";
+  // The name of the C++ base class to use for this Type.
+  string cppBaseClassName = baseCppClass;
 
   // Short summary of the type.
   string summary = ?;
-  // The longer description of this type.
-  string description = ?;
 
   // Name of storage class to generate or use.
   string storageClass = name # "TypeStorage";
@@ -2477,6 +2480,15 @@ class TypeDef<Dialect owningdialect, string name> {
   bit genVerifyInvariantsDecl = 0;
   // Extra code to include in the class declaration.
   code extraClassDeclaration = [{}];
+
+  // The predicate for when this type is used as a type constraint.
+  let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
+                                 "::" # cppClassName # ">()">;
+  // A constant builder provided when the type has no parameters.
+  let builderCall = !if(!empty(parameters),
+                           "$_builder.getType<" # dialect.cppNamespace #
+                               "::" # cppClassName # ">()",
+                           "");
 }
 
 // 'Parameters' should be subclasses of this or simple strings (which is a
