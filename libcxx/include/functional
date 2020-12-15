@@ -1609,7 +1609,7 @@ public:
       __builtin_new_allocator::__holder_t __hold =
         __builtin_new_allocator::__allocate_type<__default_alloc_func>(1);
     __default_alloc_func* __res =
-        ::new (__hold.get()) __default_alloc_func(__f_);
+        ::new ((void*)__hold.get()) __default_alloc_func(__f_);
     (void)__hold.release();
     return __res;
   }
@@ -1700,7 +1700,7 @@ template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
 void
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__clone(__base<_Rp(_ArgTypes...)>* __p) const
 {
-    ::new (__p) __func(__f_.__target(), __f_.__get_allocator());
+    ::new ((void*)__p) __func(__f_.__target(), __f_.__get_allocator());
 }
 
 template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
@@ -2154,7 +2154,7 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
         } else {
           __builtin_new_allocator::__holder_t __hold =
               __builtin_new_allocator::__allocate_type<_Fun>(1);
-          __buf_.__large = ::new (__hold.get()) _Fun(_VSTD::move(__f));
+          __buf_.__large = ::new ((void*)__hold.get()) _Fun(_VSTD::move(__f));
           (void)__hold.release();
         }
       }
@@ -2286,7 +2286,7 @@ public:
     }
 
     virtual void __clone(__base<_Rp(_ArgTypes...)>* __p) const {
-        ::new (__p) __func(__f_);
+        ::new ((void*)__p) __func(__f_);
     }
 
     virtual void destroy() _NOEXCEPT {
