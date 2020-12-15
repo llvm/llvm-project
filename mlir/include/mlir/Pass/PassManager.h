@@ -48,8 +48,8 @@ struct PassExecutionState;
 class OpPassManager {
 public:
   enum class Nesting { Implicit, Explicit };
-  OpPassManager(Identifier name, Nesting nesting);
-  OpPassManager(StringRef name, Nesting nesting);
+  OpPassManager(Identifier name, Nesting nesting = Nesting::Explicit);
+  OpPassManager(StringRef name, Nesting nesting = Nesting::Explicit);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();

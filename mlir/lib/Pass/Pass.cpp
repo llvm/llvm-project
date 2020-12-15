@@ -340,22 +340,25 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 
   // Initialize the pass state with a callback for the pass to dynamically
   // execute a pipeline on the currently visited operation.
-  auto dynamic_pipeline_callback =
-      [op, &am, verifyPasses](OpPassManager &pipeline,
-                              Operation *root) -> LogicalResult {
+  PassInstrumentor *pi = am.getPassInstrumentor();
+  PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
+                                                        pass};
+  auto dynamic_pipeline_callback = [&](OpPassManager &pipeline,
+                                       Operation *root) -> LogicalResult {
     if (!op->isAncestor(root))
       return root->emitOpError()
              << "Trying to schedule a dynamic pipeline on an "
                 "operation that isn't "
                 "nested under the current operation the pass is processing";
+    assert(pipeline.getOpName() == root->getName().getStringRef());
 
-    AnalysisManager nestedAm = am.nest(root);
+    AnalysisManager nestedAm = root == op ? am : am.nest(root);
     return OpToOpPassAdaptor::runPipeline(pipeline.getPasses(), root, nestedAm,
-                                          verifyPasses);
+                                          verifyPasses, pi, &parentInfo);
   };
   pass->passState.emplace(op, am, dynamic_pipeline_callback);
+
   // Instrument before the pass has run.
-  PassInstrumentor *pi = am.getPassInstrumentor();
   if (pi)
     pi->runBeforePass(pass, op);
 
@@ -388,7 +391,10 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 /// Run the given operation and analysis manager on a provided op pass manager.
 LogicalResult OpToOpPassAdaptor::runPipeline(
     iterator_range<OpPassManager::pass_iterator> passes, Operation *op,
-    AnalysisManager am, bool verifyPasses) {
+    AnalysisManager am, bool verifyPasses, PassInstrumentor *instrumentor,
+    const PassInstrumentation::PipelineParentInfo *parentInfo) {
+  assert((!instrumentor || parentInfo) &&
+         "expected parent info if instrumentor is provided");
   auto scope_exit = llvm::make_scope_exit([&] {
     // Clear out any computed operation analyses. These analyses won't be used
     // any more in this pipeline, and this helps reduce the current working set
@@ -398,10 +404,13 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
   });
 
   // Run the pipeline over the provided operation.
+  if (instrumentor)
+    instrumentor->runBeforePipeline(op->getName().getIdentifier(), *parentInfo);
   for (Pass &pass : passes)
     if (failed(run(&pass, op, am, verifyPasses)))
       return failure();
-
+  if (instrumentor)
+    instrumentor->runAfterPipeline(op->getName().getIdentifier(), *parentInfo);
   return success();
 }
 
@@ -491,17 +500,10 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
                                        *op.getContext());
         if (!mgr)
           continue;
-        Identifier opName = mgr->getOpName(*getOperation()->getContext());
 
         // Run the held pipeline over the current operation.
-        if (instrumentor)
-          instrumentor->runBeforePipeline(opName, parentInfo);
-        LogicalResult result =
-            runPipeline(mgr->getPasses(), &op, am.nest(&op), verifyPasses);
-        if (instrumentor)
-          instrumentor->runAfterPipeline(opName, parentInfo);
-
-        if (failed(result))
+        if (failed(runPipeline(mgr->getPasses(), &op, am.nest(&op),
+                               verifyPasses, instrumentor, &parentInfo)))
           return signalPassFailure();
       }
     }
@@ -576,13 +578,9 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
               pms, it.first->getName().getIdentifier(), getContext());
           assert(pm && "expected valid pass manager for operation");
 
-          Identifier opName = pm->getOpName(*getOperation()->getContext());
-          if (instrumentor)
-            instrumentor->runBeforePipeline(opName, parentInfo);
-          auto pipelineResult =
-              runPipeline(pm->getPasses(), it.first, it.second, verifyPasses);
-          if (instrumentor)
-            instrumentor->runAfterPipeline(opName, parentInfo);
+          LogicalResult pipelineResult =
+              runPipeline(pm->getPasses(), it.first, it.second, verifyPasses,
+                          instrumentor, &parentInfo);
 
           // Drop this thread from being tracked by the diagnostic handler.
           // After this task has finished, the thread may be used outside of
@@ -848,22 +846,41 @@ void PassManager::addInstrumentation(std::unique_ptr<PassInstrumentation> pi) {
 // AnalysisManager
 //===----------------------------------------------------------------------===//
 
-/// Returns a pass instrumentation object for the current operation.
-PassInstrumentor *AnalysisManager::getPassInstrumentor() const {
-  ParentPointerT curParent = parent;
-  while (auto *parentAM = curParent.dyn_cast<const AnalysisManager *>())
-    curParent = parentAM->parent;
-  return curParent.get<const ModuleAnalysisManager *>()->getPassInstrumentor();
+/// Get an analysis manager for the given operation, which must be a proper
+/// descendant of the current operation represented by this analysis manager.
+AnalysisManager AnalysisManager::nest(Operation *op) {
+  Operation *currentOp = impl->getOperation();
+  assert(currentOp->isProperAncestor(op) &&
+         "expected valid descendant operation");
+
+  // Check for the base case where the provided operation is immediately nested.
+  if (currentOp == op->getParentOp())
+    return nestImmediate(op);
+
+  // Otherwise, we need to collect all ancestors up to the current operation.
+  SmallVector<Operation *, 4> opAncestors;
+  do {
+    opAncestors.push_back(op);
+    op = op->getParentOp();
+  } while (op != currentOp);
+
+  AnalysisManager result = *this;
+  for (Operation *op : llvm::reverse(opAncestors))
+    result = result.nestImmediate(op);
+  return result;
 }
 
-/// Get an analysis manager for the given child operation.
-AnalysisManager AnalysisManager::nest(Operation *op) {
+/// Get an analysis manager for the given immediately nested child operation.
+AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
+  assert(impl->getOperation() == op->getParentOp() &&
+         "expected immediate child operation");
+
   auto it = impl->childAnalyses.find(op);
   if (it == impl->childAnalyses.end())
     it = impl->childAnalyses
-             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op))
+             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op, impl))
              .first;
-  return {this, it->second.get()};
+  return {it->second.get()};
 }
 
 /// Invalidate any non preserved analyses.
