@@ -1894,18 +1894,14 @@ private:
   static void insertAggregateStore(AggregateStoreMap &storeMap,
                                    const Fortran::lower::pft::Variable &var,
                                    mlir::Value aggregateStore) {
-    auto off = std::get<0>(var.getInterval());
-    AggregateStoreKey key = {nullptr, off};
-    if (var.isGlobal())
-      std::get<0>(key) = &var.getAggregateStore().vars[0]->owner();
+    auto off = var.getAggregateStore().getOffset();
+    AggregateStoreKey key = {var.getOwningScope(), off};
     storeMap[key] = aggregateStore;
   }
   static mlir::Value
   getAggregateStore(AggregateStoreMap &storeMap,
                     const Fortran::lower::pft::Variable &alias) {
-    AggregateStoreKey key = {nullptr, alias.getAlias()};
-    if (alias.isGlobal())
-      std::get<0>(key) = &alias.getSymbol().GetUltimate().owner();
+    AggregateStoreKey key = {alias.getOwningScope(), alias.getAlias()};
     auto iter = storeMap.find(key);
     assert(iter != storeMap.end());
     return storeMap.find(key)->second;
@@ -2087,8 +2083,8 @@ private:
 
   /// Does any member of the common block has an initializer ?
   static bool commonBlockHasInit(
-      const Fortran::semantics::CommonBlockDetails &commonDetails) {
-    for (const auto &mem : commonDetails.objects()) {
+      const Fortran::semantics::MutableSymbolVector &cmnBlkMems) {
+    for (const auto &mem : cmnBlkMems) {
       if (const auto *memDet =
               mem->detailsIf<Fortran::semantics::ObjectEntityDetails>())
         if (memDet->init())
@@ -2132,6 +2128,38 @@ private:
     }
     return mlir::TupleType::get(members, builder->getContext());
   }
+
+  /// Common block members may have aliases. They are not in the common block
+  /// member list from the symbol. We need to know about these aliases if they
+  /// have initializer to generate the common initializer.
+  /// This function takes care of adding aliases with initializer to the member
+  /// list.
+  Fortran::semantics::MutableSymbolVector
+  getCommonMembersWithInitAliases(const Fortran::semantics::Symbol &common) {
+    const auto &commonDetails =
+        common.get<Fortran::semantics::CommonBlockDetails>();
+    auto members = commonDetails.objects();
+
+    // The number and size of equivalence and common is expected to be small, so
+    // no effort is given to optimize this loop of complexity equivalenced
+    // common members * common members
+    for (const auto &set : common.owner().equivalenceSets())
+      for (const auto &obj : set) {
+        if (const auto &details =
+                obj.symbol
+                    .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+          const auto *com = FindCommonBlockContaining(obj.symbol);
+          if (!details->init() || com != &common)
+            continue;
+          // This is an alias with an init that belongs to the list
+          if (std::find(members.begin(), members.end(), obj.symbol) ==
+              members.end())
+            members.emplace_back(obj.symbol);
+        }
+      }
+    return members;
+  }
+
   /// Define a global for a common block if it does not already exist in the
   /// mlir module.
   /// There is no "declare" version since there is not a
@@ -2142,12 +2170,11 @@ private:
     auto global = builder->getNamedGlobal(commonName);
     if (global)
       return global;
-    const auto &commonDetails =
-        common.get<Fortran::semantics::CommonBlockDetails>();
+    auto cmnBlkMems = getCommonMembersWithInitAliases(common);
     auto loc = genLocation(common.name());
     auto idxTy = builder->getIndexType();
     auto linkage = builder->createCommonLinkage();
-    if (!common.name().size() || !commonBlockHasInit(commonDetails)) {
+    if (!common.name().size() || !commonBlockHasInit(cmnBlkMems)) {
       const auto sz = static_cast<fir::SequenceType::Extent>(common.size());
       // anonymous COMMON must always be initialized to zero
       // a named COMMON sans initializers is also initialized to zero
@@ -2159,8 +2186,9 @@ private:
       auto init = mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
       return builder->createGlobal(loc, commonTy, commonName, linkage, init);
     }
-    // Named common with initializer
-    auto cmnBlkMems = commonDetails.objects();
+
+    // Named common with initializer, sort members by offset before generating
+    // the type and initializer.
     std::sort(cmnBlkMems.begin(), cmnBlkMems.end(),
               [](auto &s1, auto &s2) { return s1->offset() < s2->offset(); });
     auto commonTy = getTypeOfCommonWithInit(cmnBlkMems, common.size());
