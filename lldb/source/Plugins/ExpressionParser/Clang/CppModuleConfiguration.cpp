@@ -38,9 +38,11 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f) {
 
   // Check for /c++/vX/ that is used by libc++.
   static llvm::Regex libcpp_regex(R"regex(/c[+][+]/v[0-9]/)regex");
-  if (libcpp_regex.match(f.GetPath())) {
-    // Strip away libc++'s /experimental directory if there is one.
-    posix_dir.consume_back("/experimental");
+  // If the path is in the libc++ include directory use it as the found libc++
+  // path. Ignore subdirectories such as /c++/v1/experimental as those don't
+  // need to be specified in the header search.
+  if (libcpp_regex.match(f.GetPath()) &&
+      parent_path(posix_dir, Style::posix).endswith("c++")) {
     return m_std_inc.TrySet(posix_dir);
   }
 
