@@ -50,12 +50,16 @@ static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
 // FrozenRewritePatternList
 //===----------------------------------------------------------------------===//
 
+FrozenRewritePatternList::FrozenRewritePatternList()
+    : impl(std::make_shared<Impl>()) {}
+
 FrozenRewritePatternList::FrozenRewritePatternList(
     OwningRewritePatternList &&patterns)
-    : nativePatterns(std::move(patterns.getNativePatterns())) {
-  PDLPatternModule &pdlPatterns = patterns.getPDLPatterns();
+    : impl(std::make_shared<Impl>()) {
+  impl->nativePatterns = std::move(patterns.getNativePatterns());
 
   // Generate the bytecode for the PDL patterns if any were provided.
+  PDLPatternModule &pdlPatterns = patterns.getPDLPatterns();
   ModuleOp pdlModule = pdlPatterns.getModule();
   if (!pdlModule)
     return;
@@ -64,14 +68,9 @@ FrozenRewritePatternList::FrozenRewritePatternList(
         "failed to lower PDL pattern module to the PDL Interpreter");
 
   // Generate the pdl bytecode.
-  pdlByteCode = std::make_unique<detail::PDLByteCode>(
+  impl->pdlByteCode = std::make_unique<detail::PDLByteCode>(
       pdlModule, pdlPatterns.takeConstraintFunctions(),
       pdlPatterns.takeCreateFunctions(), pdlPatterns.takeRewriteFunctions());
 }
-
-FrozenRewritePatternList::FrozenRewritePatternList(
-    FrozenRewritePatternList &&patterns)
-    : nativePatterns(std::move(patterns.nativePatterns)),
-      pdlByteCode(std::move(patterns.pdlByteCode)) {}
 
 FrozenRewritePatternList::~FrozenRewritePatternList() {}
