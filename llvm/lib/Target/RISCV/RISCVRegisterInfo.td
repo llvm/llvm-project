@@ -413,13 +413,26 @@ def VRM2 : VReg<[vint8m2_t, vint16m2_t, vint32m2_t, vint64m2_t,
              (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
                   V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2), 2>;
 
+def VRM2NoV0 : VReg<[vint8m2_t, vint16m2_t, vint32m2_t, vint64m2_t,
+                     vfloat32m2_t, vfloat64m2_t],
+                 (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
+                      V18M2, V20M2, V22M2, V24M2, V2M2, V4M2, V6M2), 2>;
+
 def VRM4 : VReg<[vint8m4_t, vint16m4_t, vint32m4_t, vint64m4_t,
                  vfloat32m4_t, vfloat64m4_t],
              (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4), 4>;
 
+def VRM4NoV0 : VReg<[vint8m4_t, vint16m4_t, vint32m4_t, vint64m4_t,
+                     vfloat32m4_t, vfloat64m4_t],
+                 (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V4M4), 4>;
+
 def VRM8 : VReg<[vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
                  vfloat32m8_t, vfloat64m8_t],
              (add V8M8, V16M8, V24M8, V0M8), 8>;
+
+def VRM8NoV0 : VReg<[vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
+                     vfloat32m8_t, vfloat64m8_t],
+                 (add V8M8, V16M8, V24M8), 8>;
 
 defvar VMaskVTs = [vbool64_t, vbool32_t, vbool16_t, vbool8_t,
                    vbool4_t, vbool2_t, vbool1_t];

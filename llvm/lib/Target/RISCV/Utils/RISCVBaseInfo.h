@@ -409,6 +409,10 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 namespace RISCVVPseudosTable {
 
+// The definition should be consistent with `class RISCVVPseudo` in
+// RISCVInstrInfoVPseudos.td.
+static const uint8_t InvalidIndex = 0x80;
+
 struct PseudoInfo {
   unsigned int Pseudo;
   unsigned int BaseInstr;
@@ -416,12 +420,15 @@ struct PseudoInfo {
   uint8_t SEWIndex;
   uint8_t MergeOpIndex;
   uint8_t VLMul;
+  bool HasDummyMask;
 
   int getVLIndex() const { return static_cast<int8_t>(VLIndex); }
 
   int getSEWIndex() const { return static_cast<int8_t>(SEWIndex); }
 
   int getMergeOpIndex() const { return static_cast<int8_t>(MergeOpIndex); }
+
+  bool hasDummyMask() const { return HasDummyMask; }
 };
 
 using namespace RISCV;

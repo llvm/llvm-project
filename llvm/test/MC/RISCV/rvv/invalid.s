@@ -616,3 +616,19 @@ vmsge.vx v0, v4, a0, v0.t
 vmsge.vx v8, v4, a0, v0.t, v2
 # CHECK-ERROR: invalid operand for instruction
 # CHECK-ERROR-LABEL: vmsge.vx v8, v4, a0, v0.t, v2
+
+vmerge.vim v0, v1, 1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vim v0, v1, 1, v0
+
+vmerge.vvm v0, v1, v2, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vvm v0, v1, v2, v0
+
+vmerge.vxm v0, v1, x1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vxm v0, v1, x1, v0
+
+vfmerge.vfm v0, v1, f1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vfmerge.vfm v0, v1, f1, v0

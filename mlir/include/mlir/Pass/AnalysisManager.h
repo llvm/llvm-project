@@ -98,7 +98,7 @@ struct AnalysisConcept {
 /// A derived analysis model used to hold a specific analysis object.
 template <typename AnalysisT> struct AnalysisModel : public AnalysisConcept {
   template <typename... Args>
-  explicit AnalysisModel(Args &&... args)
+  explicit AnalysisModel(Args &&...args)
       : analysis(std::forward<Args>(args)...) {}
 
   /// A hook used to query analyses for invalidation.
@@ -198,7 +198,10 @@ private:
 /// An analysis map that contains a map for the current operation, and a set of
 /// maps for any child operations.
 struct NestedAnalysisMap {
-  NestedAnalysisMap(Operation *op) : analyses(op) {}
+  NestedAnalysisMap(Operation *op, PassInstrumentor *instrumentor)
+      : analyses(op), parentOrInstrumentor(instrumentor) {}
+  NestedAnalysisMap(Operation *op, NestedAnalysisMap *parent)
+      : analyses(op), parentOrInstrumentor(parent) {}
 
   /// Get the operation for this analysis map.
   Operation *getOperation() const { return analyses.getOperation(); }
@@ -206,11 +209,34 @@ struct NestedAnalysisMap {
   /// Invalidate any non preserved analyses.
   void invalidate(const PreservedAnalyses &pa);
 
+  /// Returns the parent analysis map for this analysis map, or null if this is
+  /// the top-level map.
+  const NestedAnalysisMap *getParent() const {
+    return parentOrInstrumentor.dyn_cast<NestedAnalysisMap *>();
+  }
+
+  /// Returns a pass instrumentation object for the current operation. This
+  /// value may be null.
+  PassInstrumentor *getPassInstrumentor() const {
+    if (auto *parent = getParent())
+      return parent->getPassInstrumentor();
+    return parentOrInstrumentor.get<PassInstrumentor *>();
+  }
+
   /// The cached analyses for nested operations.
   DenseMap<Operation *, std::unique_ptr<NestedAnalysisMap>> childAnalyses;
 
-  /// The analyses for the owning module.
+  /// The analyses for the owning operation.
   detail::AnalysisMap analyses;
+
+  /// This value has three possible states:
+  /// NestedAnalysisMap*: A pointer to the parent analysis map.
+  /// PassInstrumentor*: This analysis map is the top-level map, and this
+  ///                    pointer is the optional pass instrumentor for the
+  ///                    current compilation.
+  /// nullptr: This analysis map is the top-level map, and there is nop pass
+  ///          instrumentor.
+  PointerUnion<NestedAnalysisMap *, PassInstrumentor *> parentOrInstrumentor;
 };
 } // namespace detail
 
@@ -236,11 +262,11 @@ public:
   template <typename AnalysisT>
   Optional<std::reference_wrapper<AnalysisT>>
   getCachedParentAnalysis(Operation *parentOp) const {
-    ParentPointerT curParent = parent;
-    while (auto *parentAM = curParent.dyn_cast<const AnalysisManager *>()) {
-      if (parentAM->impl->getOperation() == parentOp)
-        return parentAM->getCachedAnalysis<AnalysisT>();
-      curParent = parentAM->parent;
+    const detail::NestedAnalysisMap *curParent = impl;
+    while (auto *parentAM = curParent->getParent()) {
+      if (parentAM->getOperation() == parentOp)
+        return parentAM->analyses.getCachedAnalysis<AnalysisT>();
+      curParent = parentAM;
     }
     return None;
   }
@@ -286,7 +312,8 @@ public:
     return it->second->analyses.getCachedAnalysis<AnalysisT>();
   }
 
-  /// Get an analysis manager for the given child operation.
+  /// Get an analysis manager for the given operation, which must be a proper
+  /// descendant of the current operation represented by this analysis manager.
   AnalysisManager nest(Operation *op);
 
   /// Invalidate any non preserved analyses,
@@ -300,19 +327,15 @@ public:
 
   /// Returns a pass instrumentation object for the current operation. This
   /// value may be null.
-  PassInstrumentor *getPassInstrumentor() const;
+  PassInstrumentor *getPassInstrumentor() const {
+    return impl->getPassInstrumentor();
+  }
 
 private:
-  AnalysisManager(const AnalysisManager *parent,
-                  detail::NestedAnalysisMap *impl)
-      : parent(parent), impl(impl) {}
-  AnalysisManager(const ModuleAnalysisManager *parent,
-                  detail::NestedAnalysisMap *impl)
-      : parent(parent), impl(impl) {}
+  AnalysisManager(detail::NestedAnalysisMap *impl) : impl(impl) {}
 
-  /// A reference to the parent analysis manager, or the top-level module
-  /// analysis manager.
-  ParentPointerT parent;
+  /// Get an analysis manager for the given immediately nested child operation.
+  AnalysisManager nestImmediate(Operation *op);
 
   /// A reference to the impl analysis map within the parent analysis manager.
   detail::NestedAnalysisMap *impl;
@@ -328,23 +351,16 @@ private:
 class ModuleAnalysisManager {
 public:
   ModuleAnalysisManager(Operation *op, PassInstrumentor *passInstrumentor)
-      : analyses(op), passInstrumentor(passInstrumentor) {}
+      : analyses(op, passInstrumentor) {}
   ModuleAnalysisManager(const ModuleAnalysisManager &) = delete;
   ModuleAnalysisManager &operator=(const ModuleAnalysisManager &) = delete;
 
-  /// Returns a pass instrumentation object for the current module. This value
-  /// may be null.
-  PassInstrumentor *getPassInstrumentor() const { return passInstrumentor; }
-
   /// Returns an analysis manager for the current top-level module.
-  operator AnalysisManager() { return AnalysisManager(this, &analyses); }
+  operator AnalysisManager() { return AnalysisManager(&analyses); }
 
 private:
   /// The analyses for the owning module.
   detail::NestedAnalysisMap analyses;
-
-  /// An optional instrumentation object.
-  PassInstrumentor *passInstrumentor;
 };
 
 } // end namespace mlir
