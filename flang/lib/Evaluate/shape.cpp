@@ -643,17 +643,13 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           if (auto sourceTypeAndShape{
                   characteristics::TypeAndShape::Characterize(
                       call.arguments().at(0), context_)}) {
-            auto sourceElements{
-                GetSize(common::Clone(sourceTypeAndShape->shape()))};
-            auto sourceElementBytes{
-                sourceTypeAndShape->MeasureSizeInBytes(&context_)};
+            auto sourceBytes{sourceTypeAndShape->MeasureSizeInBytes(context_)};
             auto moldElementBytes{
-                moldTypeAndShape->MeasureSizeInBytes(&context_)};
-            if (sourceElements && sourceElementBytes && moldElementBytes) {
+                moldTypeAndShape->type().MeasureSizeInBytes(context_, true)};
+            if (sourceBytes && moldElementBytes) {
               ExtentExpr extent{Fold(context_,
-                  ((std::move(*sourceElements) *
-                       std::move(*sourceElementBytes)) +
-                      common::Clone(*moldElementBytes) - ExtentExpr{1}) /
+                  (std::move(*sourceBytes) + common::Clone(*moldElementBytes) -
+                      ExtentExpr{1}) /
                       common::Clone(*moldElementBytes))};
               return Shape{MaybeExtentExpr{std::move(extent)}};
             }

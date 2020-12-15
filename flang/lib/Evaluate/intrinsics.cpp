@@ -685,6 +685,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"array", AnyData, Rank::anyOrAssumedRank}, OptionalDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"sizeof", {{"a", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
+        Rank::scalar, IntrinsicClass::inquiryFunction},
     {"spacing", {{"x", SameReal}}, SameReal},
     {"spread",
         {{"source", SameType, Rank::known}, RequiredDIM,
@@ -742,7 +744,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //  AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
 //  QCMPLX, DFLOAT, QEXT, QFLOAT, QREAL, DNUM,
-//  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF,
+//  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN,
 //  MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR
 //  IARG, IARGC, NARGS, NUMARG, BADDRESS, IADDR, CACHESIZE,
 //  EOF, FP_CLASS, INT_PTR_KIND, MALLOC

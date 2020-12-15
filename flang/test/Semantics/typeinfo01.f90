@@ -59,7 +59,7 @@ module m05
   subroutine s1(x)
     class(t), intent(in) :: x
   end subroutine
-!CHECK: .dt.t, SAVE, TARGET: ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=0_8,parent=NULL(),uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=.p.t,special=NULL())
+!CHECK: .dt.t, SAVE, TARGET: ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=24_8,parent=NULL(),uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=.p.t,special=NULL())
 !CHECK: .p.t, SAVE, TARGET: ObjectEntity type: TYPE(procptrcomponent) shape: 0_8:0_8 init:[procptrcomponent::procptrcomponent(name=.n.p1,offset=0_8,initialization=s1)]
 end module
 
