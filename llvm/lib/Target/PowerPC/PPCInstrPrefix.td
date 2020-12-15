@@ -1600,13 +1600,9 @@ def Extracts {
 let Predicates = [MMA] in {
   def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
-  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
-            Concats.VecsToVecPair0>;
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
-  def : Pat<(v256i1 (int_ppc_mma_assemble_pair v16i8:$vs1, v16i8:$vs0)),
-            Concats.VecsToVecPair0>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
   def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
             Extracts.Vec0>;
@@ -1616,6 +1612,13 @@ let Predicates = [MMA] in {
             Extracts.Vec2>;
   def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
             Extracts.Vec3>;
+}
+
+let Predicates = [PairedVectorMemops] in {
+  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v256i1 (int_ppc_mma_assemble_pair v16i8:$vs1, v16i8:$vs0)),
+            Concats.VecsToVecPair0>;
   def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
   def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),

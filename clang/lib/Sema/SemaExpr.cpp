@@ -6070,7 +6070,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
@@ -19421,7 +19421,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId) case BuiltinType::Id:
