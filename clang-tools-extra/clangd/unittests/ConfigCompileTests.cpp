@@ -200,6 +200,24 @@ TEST_F(ConfigCompileTests, Tidy) {
   EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("StrictMode"), "true");
   EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("example-check.ExampleOption"),
             "0");
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+}
+
+TEST_F(ConfigCompileTests, TidyBadChecks) {
+  Frag.ClangTidy.Add.emplace_back("unknown-check");
+  Frag.ClangTidy.Remove.emplace_back("*");
+  Frag.ClangTidy.Remove.emplace_back("llvm-includeorder");
+  EXPECT_TRUE(compileAndApply());
+  // Ensure bad checks are stripped from the glob.
+  EXPECT_EQ(Conf.ClangTidy.Checks, "-*");
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(
+          AllOf(DiagMessage("clang-tidy check 'unknown-check' was not found"),
+                DiagKind(llvm::SourceMgr::DK_Warning)),
+          AllOf(
+              DiagMessage("clang-tidy check 'llvm-includeorder' was not found"),
+              DiagKind(llvm::SourceMgr::DK_Warning))));
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
