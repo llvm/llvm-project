@@ -87,6 +87,12 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "simplifycfg"
 
+cl::opt<bool> llvm::RequireAndPreserveDomTree(
+    "simplifycfg-require-and-preserve-domtree", cl::Hidden, cl::ZeroOrMore,
+    cl::init(false),
+    cl::desc("Temorary development switch used to gradually uplift SimplifyCFG "
+             "into preserving DomTree,"));
+
 // Chosen as 2 so as to be cheap, but still to have enough power to fold
 // a select, so the "clamp" idiom (of a min followed by a max) will be caught.
 // To catch this, we need to fold a compare and a select, hence '2' being the
