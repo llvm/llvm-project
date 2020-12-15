@@ -16,6 +16,7 @@
 
 #include "Opts.inc"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Option/Arg.h"
