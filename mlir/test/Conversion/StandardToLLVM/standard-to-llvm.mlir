@@ -213,3 +213,13 @@ func @call_zero_result_func() {
   return
 }
 func private @zero_result_func()
+
+// -----
+
+// CHECK-LABEL: func @powf(
+// CHECK-SAME: !llvm.double
+func @powf(%arg0 : f64) {
+  // CHECK: %[[POWF:.*]] = "llvm.intr.pow"(%arg0, %arg0) : (!llvm.double, !llvm.double) -> !llvm.double
+  %0 = std.powf %arg0, %arg0 : f64
+  std.return
+}
