@@ -1272,8 +1272,8 @@ static void __kmp_atfork_prepare(void) {
 }
 
 static void __kmp_atfork_parent(void) {
-  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
   __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
 }
 
 /* Reset the library so execution in the child starts "all over again" with
@@ -1281,6 +1281,7 @@ static void __kmp_atfork_parent(void) {
    allocated by parent, just abandon it to be safe. */
 static void __kmp_atfork_child(void) {
   __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
   /* TODO make sure this is done right for nested/sibling */
   // ATT:  Memory leaks are here? TODO: Check it and fix.
   /* KMP_ASSERT( 0 ); */
@@ -1302,7 +1303,6 @@ static void __kmp_atfork_child(void) {
   }
 #endif // KMP_AFFINITY_SUPPORTED
 
-  __kmp_init_runtime = FALSE;
 #if KMP_USE_MONITOR
   __kmp_init_monitor = 0;
 #endif
@@ -1354,6 +1354,8 @@ static void __kmp_atfork_child(void) {
 #if USE_ITT_BUILD
   __kmp_itt_reset(); // reset ITT's global state
 #endif /* USE_ITT_BUILD */
+
+  __kmp_serial_initialize();
 
   /* This is necessary to make sure no stale data is left around */
   /* AC: customers complain that we use unsafe routines in the atfork
