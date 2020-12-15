@@ -48,6 +48,9 @@ public:
   // Returns the name of the C++ class to generate.
   StringRef getCppClassName() const;
 
+  // Returns the name of the C++ base class to use when generating this type.
+  StringRef getCppBaseClassName() const;
+
   // Returns the name of the storage class for this type.
   StringRef getStorageClassName() const;
 
