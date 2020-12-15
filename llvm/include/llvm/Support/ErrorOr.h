@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_ERROROR_H
 #define LLVM_SUPPORT_ERROROR_H
 
+#include "llvm/Support/AlignOf.h"
 #include <cassert>
 #include <system_error>
 #include <type_traits>
@@ -252,8 +253,8 @@ private:
   }
 
   union {
-    std::aligned_union_t<1, storage_type> TStorage;
-    std::aligned_union_t<1, std::error_code> ErrorStorage;
+    AlignedCharArrayUnion<storage_type> TStorage;
+    AlignedCharArrayUnion<std::error_code> ErrorStorage;
   };
   bool HasError : 1;
 };

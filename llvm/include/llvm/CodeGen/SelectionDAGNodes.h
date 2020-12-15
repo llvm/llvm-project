@@ -38,6 +38,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2634,9 +2635,10 @@ template <> struct GraphTraits<SDNode*> {
 ///
 /// This needs to be a union because the largest node differs on 32 bit systems
 /// with 4 and 8 byte pointer alignment, respectively.
-using LargestSDNode =
-    std::aligned_union_t<1, AtomicSDNode, TargetIndexSDNode, BlockAddressSDNode,
-                         GlobalAddressSDNode, PseudoProbeSDNode>;
+using LargestSDNode = AlignedCharArrayUnion<AtomicSDNode, TargetIndexSDNode,
+                                            BlockAddressSDNode,
+                                            GlobalAddressSDNode,
+                                            PseudoProbeSDNode>;
 
 /// The SDNode class with the greatest alignment requirement.
 using MostAlignedSDNode = GlobalAddressSDNode;

@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(SupportTests
   AlignmentTest.cpp
+  AlignOfTest.cpp
   AllocatorTest.cpp
   AnnotationsTest.cpp
   ARMAttributeParser.cpp
