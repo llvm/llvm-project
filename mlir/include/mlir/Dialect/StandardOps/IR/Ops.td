@@ -2353,6 +2353,39 @@ def OrOp : IntArithmeticOp<"or", [Commutative]> {
 }
 
 //===----------------------------------------------------------------------===//
+// PowFOp
+//===----------------------------------------------------------------------===//
+
+def PowFOp : FloatArithmeticOp<"powf"> {
+  let summary = "floating point raised to the power of operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.powf` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `powf` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
+
+    Example:
+
+    ```mlir
+    // Scalar exponentiation.
+    %a = powf %b, %c : f64
+
+    // SIMD pointwise vector exponentiation
+    %f = powf %g, %h : vector<4xf32>
+
+    // Tensor pointwise exponentiation.
+    %x = powf %y, %z : tensor<4x?xbf16>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 

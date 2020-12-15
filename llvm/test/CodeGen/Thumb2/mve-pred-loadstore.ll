@@ -11,14 +11,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_v4i1(<4 x i1> *%src, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vmsr p0, r0
 ; CHECK-LE-NEXT:    vpsel q1, q2, q1
 ; CHECK-LE-NEXT:    vmov.u8 r0, q1[0]
-; CHECK-LE-NEXT:    vmov.32 q2[0], r0
+; CHECK-LE-NEXT:    vmov.u8 r1, q1[2]
+; CHECK-LE-NEXT:    vmov q2[2], q2[0], r1, r0
 ; CHECK-LE-NEXT:    vmov.u8 r0, q1[1]
-; CHECK-LE-NEXT:    vmov.32 q2[1], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[2]
-; CHECK-LE-NEXT:    vmov.32 q2[2], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[3]
-; CHECK-LE-NEXT:    vmov.32 q2[3], r0
+; CHECK-LE-NEXT:    vmov.u8 r1, q1[3]
 ; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
+; CHECK-LE-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-LE-NEXT:    vcmp.i32 ne, q2, zr
 ; CHECK-LE-NEXT:    vpsel q0, q0, q1
 ; CHECK-LE-NEXT:    bx lr
@@ -31,16 +29,14 @@ define arm_aapcs_vfpcc <4 x i32> @load_v4i1(<4 x i1> *%src, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmsr p0, r0
 ; CHECK-BE-NEXT:    vpsel q1, q2, q1
 ; CHECK-BE-NEXT:    vmov.u8 r0, q1[0]
-; CHECK-BE-NEXT:    vmov.32 q2[0], r0
+; CHECK-BE-NEXT:    vmov.u8 r1, q1[2]
+; CHECK-BE-NEXT:    vmov q2[2], q2[0], r1, r0
 ; CHECK-BE-NEXT:    vmov.u8 r0, q1[1]
-; CHECK-BE-NEXT:    vmov.32 q2[1], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[2]
-; CHECK-BE-NEXT:    vmov.32 q2[2], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[3]
-; CHECK-BE-NEXT:    vmov.32 q2[3], r0
+; CHECK-BE-NEXT:    vmov.u8 r1, q1[3]
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vcmp.i32 ne, q2, zr
+; CHECK-BE-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-BE-NEXT:    vcmp.i32 ne, q2, zr
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
@@ -145,13 +141,11 @@ define arm_aapcs_vfpcc <2 x i64> @load_v2i1(<2 x i1> *%src, <2 x i64> %a) {
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrb r0, [r0]
 ; CHECK-LE-NEXT:    and r1, r0, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
 ; CHECK-LE-NEXT:    ubfx r0, r0, #1, #1
-; CHECK-LE-NEXT:    vmov.32 q1[0], r1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
 ; CHECK-LE-NEXT:    rsbs r0, r0, #0
-; CHECK-LE-NEXT:    vmov.32 q1[1], r1
-; CHECK-LE-NEXT:    vmov.32 q1[2], r0
-; CHECK-LE-NEXT:    vmov.32 q1[3], r0
+; CHECK-LE-NEXT:    vmov q1[2], q1[0], r0, r1
+; CHECK-LE-NEXT:    vmov q1[3], q1[1], r0, r1
 ; CHECK-LE-NEXT:    vand q0, q0, q1
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -162,10 +156,8 @@ define arm_aapcs_vfpcc <2 x i64> @load_v2i1(<2 x i1> *%src, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    and r0, r0, #1
 ; CHECK-BE-NEXT:    rsbs r1, r1, #0
 ; CHECK-BE-NEXT:    rsbs r0, r0, #0
-; CHECK-BE-NEXT:    vmov.32 q1[0], r1
-; CHECK-BE-NEXT:    vmov.32 q1[1], r1
-; CHECK-BE-NEXT:    vmov.32 q1[2], r0
-; CHECK-BE-NEXT:    vmov.32 q1[3], r0
+; CHECK-BE-NEXT:    vmov q1[2], q1[0], r0, r1
+; CHECK-BE-NEXT:    vmov q1[3], q1[1], r0, r1
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:    vand q0, q0, q2
 ; CHECK-BE-NEXT:    bx lr

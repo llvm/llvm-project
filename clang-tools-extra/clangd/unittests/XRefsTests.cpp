@@ -640,6 +640,134 @@ TEST(LocateSymbol, All) {
         struct Fo^o<T*> {};
       )cpp",
 
+      R"cpp(// auto builtin type (not supported)
+        ^auto x = 42;
+      )cpp",
+
+      R"cpp(// auto on lambda
+        auto x = [[[]]]{};
+        ^auto y = x;
+      )cpp",
+
+      R"cpp(// auto on struct
+        namespace ns1 {
+        struct [[S1]] {};
+        } // namespace ns1
+
+        ^auto x = ns1::S1{};
+      )cpp",
+
+      R"cpp(// decltype on struct
+        namespace ns1 {
+        struct [[S1]] {};
+        } // namespace ns1
+
+        ns1::S1 i;
+        ^decltype(i) j;
+      )cpp",
+
+      R"cpp(// decltype(auto) on struct
+        namespace ns1 {
+        struct [[S1]] {};
+        } // namespace ns1
+
+        ns1::S1 i;
+        ns1::S1& j = i;
+        ^decltype(auto) k = j;
+      )cpp",
+
+      R"cpp(// auto on template class
+        template<typename T> class [[Foo]] {};
+
+        ^auto x = Foo<int>();
+      )cpp",
+
+      R"cpp(// auto on template class with forward declared class
+        template<typename T> class [[Foo]] {};
+        class X;
+
+        ^auto x = Foo<X>();
+      )cpp",
+
+      R"cpp(// auto on specialized template class
+        template<typename T> class Foo {};
+        template<> class [[Foo]]<int> {};
+
+        ^auto x = Foo<int>();
+      )cpp",
+
+      R"cpp(// auto on initializer list.
+        namespace std
+        {
+          template<class _E>
+          class [[initializer_list]] {};
+        }
+
+        ^auto i = {1,2};
+      )cpp",
+
+      R"cpp(// auto function return with trailing type
+        struct [[Bar]] {};
+        ^auto test() -> decltype(Bar()) {
+          return Bar();
+        }
+      )cpp",
+
+      R"cpp(// decltype in trailing return type
+        struct [[Bar]] {};
+        auto test() -> ^decltype(Bar()) {
+          return Bar();
+        }
+      )cpp",
+
+      R"cpp(// auto in function return
+        struct [[Bar]] {};
+        ^auto test() {
+          return Bar();
+        }
+      )cpp",
+
+      R"cpp(// auto& in function return
+        struct [[Bar]] {};
+        ^auto& test() {
+          static Bar x;
+          return x;
+        }
+      )cpp",
+
+      R"cpp(// auto* in function return
+        struct [[Bar]] {};
+        ^auto* test() {
+          Bar* x;
+          return x;
+        }
+      )cpp",
+
+      R"cpp(// const auto& in function return
+        struct [[Bar]] {};
+        const ^auto& test() {
+          static Bar x;
+          return x;
+        }
+      )cpp",
+
+      R"cpp(// decltype(auto) in function return
+        struct [[Bar]] {};
+        ^decltype(auto) test() {
+          return Bar();
+        }
+      )cpp",
+
+      R"cpp(// decltype of function with trailing return type.
+        struct [[Bar]] {};
+        auto test() -> decltype(Bar()) {
+          return Bar();
+        }
+        void foo() {
+          ^decltype(test()) i = test();
+        }
+      )cpp",
+
       R"cpp(// Override specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^override {} };
