@@ -22,7 +22,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include <type_traits>
+#include "llvm/Support/AlignOf.h"
 
 namespace llvm {
 
@@ -456,8 +456,9 @@ private:
   /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
   /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
   /// have storage or unique pointers and thus need to be stored by value.
-  std::aligned_union_t<1, const void *, TemplateArgument, TemplateArgumentLoc,
-                       NestedNameSpecifierLoc, QualType, TypeLoc>
+  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
+                              TemplateArgumentLoc, NestedNameSpecifierLoc,
+                              QualType, TypeLoc>
       Storage;
 };
 
