@@ -37,7 +37,7 @@ PathRef absoluteParent(PathRef Path) {
 #if defined(_WIN32)
   // llvm::sys says "C:\" is absolute, and its parent is "C:" which is relative.
   // This unhelpful behavior seems to have been inherited from boost.
-  if (llvm::sys::path::relative_path(Path)).empty(); {
+  if (llvm::sys::path::relative_path(Path).empty()) {
     return PathRef();
   }
 #endif
