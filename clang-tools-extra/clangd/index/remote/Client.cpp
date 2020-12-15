@@ -19,40 +19,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
-#include <atomic>
 #include <chrono>
-#include <memory>
 
 namespace clang {
 namespace clangd {
 namespace remote {
 namespace {
 
-llvm::StringRef toString(const grpc_connectivity_state &State) {
-  switch (State) {
-  case GRPC_CHANNEL_IDLE:
-    return "idle";
-  case GRPC_CHANNEL_CONNECTING:
-    return "connecting";
-  case GRPC_CHANNEL_READY:
-    return "ready";
-  case GRPC_CHANNEL_TRANSIENT_FAILURE:
-    return "transient failure";
-  case GRPC_CHANNEL_SHUTDOWN:
-    return "shutdown";
-  }
-  llvm_unreachable("Not a valid grpc_connectivity_state.");
-}
-
 class IndexClient : public clangd::SymbolIndex {
-  void updateConnectionStatus() const {
-    auto NewStatus = Channel->GetState(/*try_to_connect=*/false);
-    auto OldStatus = ConnectionStatus.exchange(NewStatus);
-    if (OldStatus != NewStatus)
-      vlog("Remote index connection [{0}]: {1} => {2}", ServerAddress,
-           toString(OldStatus), toString(NewStatus));
-  }
-
   template <typename RequestT, typename ReplyT>
   using StreamingCall = std::unique_ptr<grpc::ClientReader<ReplyT>> (
       remote::v1::SymbolIndex::Stub::*)(grpc::ClientContext *,
@@ -63,7 +37,6 @@ class IndexClient : public clangd::SymbolIndex {
   bool streamRPC(ClangdRequestT Request,
                  StreamingCall<RequestT, ReplyT> RPCCall,
                  CallbackT Callback) const {
-    updateConnectionStatus();
     bool FinalResult = false;
     trace::Span Tracer(RequestT::descriptor()->name());
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
@@ -104,21 +77,18 @@ class IndexClient : public clangd::SymbolIndex {
     SPAN_ATTACH(Tracer, "Status", Reader->Finish().ok());
     SPAN_ATTACH(Tracer, "Successful", Successful);
     SPAN_ATTACH(Tracer, "Failed to parse", FailedToParse);
-    updateConnectionStatus();
     return FinalResult;
   }
 
 public:
   IndexClient(
-      std::shared_ptr<grpc::Channel> Channel, llvm::StringRef Address,
-      llvm::StringRef ProjectRoot,
+      std::shared_ptr<grpc::Channel> Channel, llvm::StringRef ProjectRoot,
+      llvm::StringRef Address,
       std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
-      : Stub(remote::v1::SymbolIndex::NewStub(Channel)), Channel(Channel),
-        ServerAddress(Address),
-        ConnectionStatus(Channel->GetState(/*try_to_connect=*/true)),
+      : Stub(remote::v1::SymbolIndex::NewStub(Channel)),
         ProtobufMarshaller(new Marshaller(/*RemoteIndexRoot=*/"",
                                           /*LocalIndexRoot=*/ProjectRoot)),
-        DeadlineWaitingTime(DeadlineTime) {
+        ServerAddress(Address), DeadlineWaitingTime(DeadlineTime) {
     assert(!ProjectRoot.empty());
   }
 
@@ -158,9 +128,6 @@ public:
 
 private:
   std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;
-  std::shared_ptr<grpc::Channel> Channel;
-  llvm::SmallString<256> ServerAddress;
-  mutable std::atomic<grpc_connectivity_state> ConnectionStatus;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
   llvm::SmallString<256> ServerAddress;
   // Each request will be terminated if it takes too long.
@@ -173,8 +140,9 @@ std::unique_ptr<clangd::SymbolIndex> getClient(llvm::StringRef Address,
                                                llvm::StringRef ProjectRoot) {
   const auto Channel =
       grpc::CreateChannel(Address.str(), grpc::InsecureChannelCredentials());
+  Channel->GetState(true);
   return std::unique_ptr<clangd::SymbolIndex>(
-      new IndexClient(Channel, Address, ProjectRoot));
+      new IndexClient(Channel, ProjectRoot, Address));
 }
 
 } // namespace remote
