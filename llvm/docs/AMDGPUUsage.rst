@@ -911,12 +911,12 @@ The AMDGPU backend uses the following ELF header:
 
   * ``ELFABIVERSION_AMDGPU_HSA_V3`` is used to specify the version of AMD HSA
     runtime ABI for code object V3. Specify using the Clang option
-    ``-mcode-object-version=3``.
+    ``-mcode-object-version=3``. This is the default code object
+    version if not specified.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V4`` is used to specify the version of AMD HSA
     runtime ABI for code object V4. Specify using the Clang option
-    ``-mcode-object-version=4``. This is the default code object
-    version if not specified.
+    ``-mcode-object-version=4``.
 
   * ``ELFABIVERSION_AMDGPU_PAL`` is used to specify the version of AMD PAL
     runtime ABI.
@@ -2871,10 +2871,6 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 Code Object V3 Metadata
 +++++++++++++++++++++++
 
-.. warning::
-  Code object V3 is not the default code object version emitted by this version
-  of LLVM.
-
 Code object V3 to V4 metadata is specified by the ``NT_AMDGPU_METADATA`` note
 record (see :ref:`amdgpu-note-records-v3-v4`).
 
@@ -3278,6 +3274,10 @@ same *vendor-name*.
 
 Code Object V4 Metadata
 +++++++++++++++++++++++
+
+.. warning::
+  Code object V4 is not the default code object version emitted by this version
+  of LLVM.
 
 Code object V4 metadata is the same as
 :ref:`amdgpu-amdhsa-code-object-metadata-v3` with the changes and additions
