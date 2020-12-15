@@ -28,6 +28,7 @@
 #include "ConfigFragment.h"
 #include "ConfigProvider.h"
 #include "Features.inc"
+#include "TidyProvider.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/None.h"
@@ -349,11 +350,17 @@ struct FragmentCompiler {
 
   void appendTidyCheckSpec(std::string &CurSpec,
                            const Located<std::string> &Arg, bool IsPositive) {
-    StringRef Str = *Arg;
+    StringRef Str = StringRef(*Arg).trim();
     // Don't support negating here, its handled if the item is in the Add or
     // Remove list.
     if (Str.startswith("-") || Str.contains(',')) {
       diag(Error, "Invalid clang-tidy check name", Arg.Range);
+      return;
+    }
+    if (!Str.contains('*') && !isRegisteredTidyCheck(Str)) {
+      diag(Warning,
+           llvm::formatv("clang-tidy check '{0}' was not found", Str).str(),
+           Arg.Range);
       return;
     }
     CurSpec += ',';
