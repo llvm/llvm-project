@@ -340,9 +340,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtV()) {
     setBooleanVectorContents(ZeroOrOneBooleanContent);
+
     // RVV intrinsics may have illegal operands.
-    for (auto VT : {MVT::i8, MVT::i16, MVT::i32})
-      setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
   }
 
   // Function alignments.
