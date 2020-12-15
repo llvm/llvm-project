@@ -39,4 +39,4 @@ class TestCase(TestBase):
         # Both `std::vector` and the type of the member have forward
         # declarations before their definitions.
         self.expect("expr --raw -- v",
-                    substrs=['(std::__1::vector<int>) $0 = {', 'f = 0x', '}'])
+                    substrs=['(std::__1::vector<int>) $0 = {', 'f = nullptr', '}'])
