@@ -38,6 +38,12 @@
 # CHECK-DAG: __DATA       __data 0x{{0*}}[[#%x, DATA_ADDR + 8]]                       pointer 8   libhello   _hello_its_me
 # CHECK-DAG: __DATA       __data 0x{{0*}}[[#%x, DATA_ADDR + 16]]                      pointer -15 libgoodbye _goodbye_world
 
+# RUN: llvm-nm -m %t/dylink | FileCheck --check-prefix=NM %s
+
+# NM-DAG: _goodbye_world (from libgoodbye)
+# NM-DAG: _hello_its_me (from libhello)
+# NM-DAG: _hello_world (from libhello)
+
 # RUN: llvm-objdump --macho --all-headers %t/dylink | FileCheck %s \
 # RUN:   --check-prefix=LOAD --implicit-check-not LC_LOAD_DYLIB
 ## Check that we don't create duplicate LC_LOAD_DYLIBs.
