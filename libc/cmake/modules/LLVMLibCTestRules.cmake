@@ -111,14 +111,6 @@ function(add_libc_unittest target_name)
     set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})
-    add_custom_target(${fq_target_name})
-
-    # A post build custom command is used to avoid running the command always.
-    add_custom_command(
-      TARGET ${fq_target_name}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E echo ${msg}
-    )
     return()
   endif()
 
