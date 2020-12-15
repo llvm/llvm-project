@@ -93,7 +93,8 @@ private:
   bool emitOpcodePrefix(int MemOperand, const MCInst &MI,
                         const MCSubtargetInfo &STI, raw_ostream &OS) const;
 
-  bool emitREXPrefix(int MemOperand, const MCInst &MI, raw_ostream &OS) const;
+  bool emitREXPrefix(int MemOperand, const MCInst &MI,
+                     const MCSubtargetInfo &STI, raw_ostream &OS) const;
 };
 
 } // end anonymous namespace
@@ -1201,6 +1202,7 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 ///
 /// \returns true if REX prefix is used, otherwise returns false.
 bool X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
+                                     const MCSubtargetInfo &STI,
                                      raw_ostream &OS) const {
   uint8_t REX = [&, MemOperand]() {
     uint8_t REX = 0;
@@ -1221,15 +1223,28 @@ bool X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
     // If it accesses SPL, BPL, SIL, or DIL, then it requires a 0x40 REX prefix.
     for (unsigned i = CurOp; i != NumOps; ++i) {
       const MCOperand &MO = MI.getOperand(i);
-      if (!MO.isReg())
-        continue;
-      unsigned Reg = MO.getReg();
-      if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
-        UsesHighByteReg = true;
-      if (X86II::isX86_64NonExtLowByteReg(Reg))
-        // FIXME: The caller of determineREXPrefix slaps this prefix onto
-        // anything that returns non-zero.
-        REX |= 0x40; // REX fixed encoding prefix
+      if (MO.isReg()) {
+        unsigned Reg = MO.getReg();
+        if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH ||
+            Reg == X86::DH)
+          UsesHighByteReg = true;
+        if (X86II::isX86_64NonExtLowByteReg(Reg))
+          // FIXME: The caller of determineREXPrefix slaps this prefix onto
+          // anything that returns non-zero.
+          REX |= 0x40; // REX fixed encoding prefix
+      } else if (MO.isExpr() &&
+                 STI.getTargetTriple().getEnvironment() == Triple::GNUX32) {
+        // GOTTPOFF and TLSDESC relocations require a REX prefix to allow
+        // linker optimizations: even if the instructions we see may not require
+        // any prefix, they may be replaced by instructions that do. This is
+        // handled as a special case here so that it also works for hand-written
+        // assembly without the user needing to write REX, as with GNU as.
+        const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
+        if (Ref && (Ref->getKind() == MCSymbolRefExpr::VK_GOTTPOFF ||
+                    Ref->getKind() == MCSymbolRefExpr::VK_TLSDESC)) {
+          REX |= 0x40; // REX fixed encoding prefix
+        }
+      }
     }
 
     switch (TSFlags & X86II::FormMask) {
@@ -1352,7 +1367,7 @@ bool X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
   assert((STI.hasFeature(X86::Mode64Bit) || !(TSFlags & X86II::REX_W)) &&
          "REX.W requires 64bit mode.");
   bool HasREX = STI.hasFeature(X86::Mode64Bit)
-                    ? emitREXPrefix(MemOperand, MI, OS)
+                    ? emitREXPrefix(MemOperand, MI, STI, OS)
                     : false;
 
   // 0x0F escape code must be emitted just before the opcode.
