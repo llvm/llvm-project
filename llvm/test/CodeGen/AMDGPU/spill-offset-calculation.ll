@@ -121,8 +121,7 @@ entry:
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4088 ; 4-byte Folded Spill
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4092 ; 4-byte Folded Spill
   ; FLATSCR: s_movk_i32 [[SOFF:s[0-9]+]], 0xff8
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]]          ; 4-byte Folded Spill
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] offset:4 ; 4-byte Folded Spill
+  ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], [[SOFF]]          ; 8-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -154,8 +153,7 @@ entry:
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
   ; FLATSCR: s_movk_i32 [[SOFF:s[0-9]+]], 0xffc
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]]          ; 4-byte Folded Spill
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] offset:4 ; 4-byte Folded Spill
+  ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], [[SOFF]]          ; 8-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -231,8 +229,7 @@ entry:
 
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4088 ; 4-byte Folded Spill
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4092 ; 4-byte Folded Spill
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s32 offset:4088 ; 4-byte Folded Spill
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s32 offset:4092 ; 4-byte Folded Spill
+  ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], s32 offset:4088 ; 8-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -263,9 +260,7 @@ entry:
   ; MUBUF: s_add_u32 s4, s32, 0x3ff00
   ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
   ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 offset:4 ; 4-byte Folded Spill
-  ; FLATSCR: s_add_u32 [[SOFF:s[0-9]+]], s32, 0xffc
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]]          ; 4-byte Folded Spill
-  ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] offset:4 ; 4-byte Folded Spill
+  ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], s32 offset:4092 ; 8-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
