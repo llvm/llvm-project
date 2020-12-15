@@ -973,8 +973,6 @@ def run_suite():
     # Iterating over all possible architecture and compiler combinations.
     os.environ["ARCH"] = configuration.arch
     os.environ["CC"] = configuration.compiler
-    if configuration.swiftCompiler:
-        os.environ["SWIFTC"] = configuration.swiftCompiler
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 

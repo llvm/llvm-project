@@ -116,6 +116,16 @@ class Builder:
         else:
             return ""
 
+    def getSwiftCSpec(self):
+        """
+        Helper function to return the key-value string to specify the Swift
+        compiler used for the make system.
+        """
+        if configuration.swiftCompiler:
+            return "SWIFTC=\"{}\"".format(configuration.swiftCompiler)
+        else:
+            return ""
+
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
@@ -151,6 +161,7 @@ class Builder:
                 self.getArchSpec(architecture),
                 self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
+                self.getSwiftCSpec(),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
@@ -178,6 +189,7 @@ class Builder:
                 self.getArchSpec(architecture),
                 self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
+                self.getSwiftCSpec(),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
@@ -204,6 +216,7 @@ class Builder:
                 self.getArchSpec(architecture),
                 self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
+                self.getSwiftCSpec(),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
@@ -230,6 +243,7 @@ class Builder:
                 self.getArchSpec(architecture),
                 self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
+                self.getSwiftCSpec(),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),

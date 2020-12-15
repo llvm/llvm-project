@@ -125,6 +125,7 @@ class BuilderDarwin(Builder):
                 self.getArchSpec(architecture),
                 self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
+                self.getSwiftCSpec(),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(), "all",
