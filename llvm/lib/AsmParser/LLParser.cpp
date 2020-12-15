@@ -1353,6 +1353,9 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
       break;
     case lltok::kw_naked: B.addAttribute(Attribute::Naked); break;
     case lltok::kw_nobuiltin: B.addAttribute(Attribute::NoBuiltin); break;
+    case lltok::kw_nocallback:
+      B.addAttribute(Attribute::NoCallback);
+      break;
     case lltok::kw_noduplicate: B.addAttribute(Attribute::NoDuplicate); break;
     case lltok::kw_nofree: B.addAttribute(Attribute::NoFree); break;
     case lltok::kw_noimplicitfloat:
