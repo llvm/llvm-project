@@ -158,3 +158,23 @@ void dev_lambda_capture_by_copy(int *out) {
   });
 }
 
+// Texture references are special. As far as C++ is concerned they are host
+// variables that are referenced from device code. However, they are handled
+// very differently by the compiler under the hood and such references are
+// allowed. Compiler should produce no warning here, but it should diagnose the
+// same case without the device_builtin_texture_type attribute.
+template <class, int = 1, int = 1>
+struct __attribute__((device_builtin_texture_type)) texture {
+  static texture<int> ref;
+  __device__ int c() {
+    auto &x = ref;
+  }
+};
+
+template <class, int = 1, int = 1>
+struct  not_a_texture {
+  static not_a_texture<int> ref;
+  __device__ int c() {
+    auto &x = ref; // dev-error {{reference to __host__ variable 'ref' in __device__ function}}
+  }
+};
