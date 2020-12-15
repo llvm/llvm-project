@@ -116,7 +116,7 @@
 // DEF:      clang{{.*}}" "-cc1"
 // DEF-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // DEF-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// DEF-SAME: "-fsjlj-exceptions"
+// DEF-SAME: "-exception-model=sjlj"
 // DEF:      nld"
 // DEF-SAME: "--sysroot=[[SYSROOT]]"
 // DEF-SAME: "-dynamic-linker" "/opt/nec/ve/lib/ld-linux-ve.so.1"
