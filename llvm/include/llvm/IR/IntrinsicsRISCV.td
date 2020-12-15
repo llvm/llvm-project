@@ -66,3 +66,43 @@ let TargetPrefix = "riscv" in {
   defm int_riscv_masked_cmpxchg : MaskedAtomicRMWFiveArgIntrinsics;
 
 } // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// Vectors
+
+class RISCVVIntrinsic {
+  // These intrinsics may accept illegal integer values in their llvm_any_ty
+  // operand, so they have to be extended. If set to zero then the intrinsic
+  // does not have any operand that must be extended.
+  Intrinsic IntrinsicID = !cast<Intrinsic>(NAME);
+  bits<4> ExtendOperand = 0;
+}
+
+let TargetPrefix = "riscv" in {
+  // For destination vector type is the same as first source vector.
+  // Input: (vector_in, vector_in/scalar_in, vl)
+  class RISCVBinaryAAXNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  // For destination vector type is the same as first source vector (with mask).
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl)
+  class RISCVBinaryAAXMask
+       : Intrinsic<[llvm_anyvector_ty],
+                   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                    llvm_anyvector_ty, llvm_anyint_ty],
+                   [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 3;
+  }
+
+  multiclass RISCVBinaryAAX {
+    def "int_riscv_" # NAME : RISCVBinaryAAXNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMask;
+  }
+
+  defm vadd : RISCVBinaryAAX;
+  defm vsub : RISCVBinaryAAX;
+  defm vrsub : RISCVBinaryAAX;
+} // TargetPrefix = "riscv"
