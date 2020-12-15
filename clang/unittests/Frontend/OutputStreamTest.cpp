@@ -100,4 +100,5 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
   EXPECT_TRUE(!VerboseBuffer.empty());
   EXPECT_TRUE(StringRef(VerboseBuffer.data()).contains("errors generated"));
 }
-}
+
+} // anonymous namespace
