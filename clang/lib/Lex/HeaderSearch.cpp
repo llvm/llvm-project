@@ -1499,22 +1499,20 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
   return true;
 }
 
-static const FileEntry *getPrivateModuleMap(const FileEntry *File,
-                                            FileManager &FileMgr) {
-  StringRef Filename = llvm::sys::path::filename(File->getName());
-  SmallString<128>  PrivateFilename(File->getDir()->getName());
+static Optional<FileEntryRef> getPrivateModuleMap(FileEntryRef File,
+                                                  FileManager &FileMgr) {
+  StringRef Filename = llvm::sys::path::filename(File.getName());
+  SmallString<128> PrivateFilename(File.getDir().getName());
   if (Filename == "module.map")
     llvm::sys::path::append(PrivateFilename, "module_private.map");
   else if (Filename == "module.modulemap")
     llvm::sys::path::append(PrivateFilename, "module.private.modulemap");
   else
-    return nullptr;
-  if (auto File = FileMgr.getFile(PrivateFilename))
-    return *File;
-  return nullptr;
+    return None;
+  return FileMgr.getOptionalFileRef(PrivateFilename);
 }
 
-bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem,
+bool HeaderSearch::loadModuleMapFile(FileEntryRef File, bool IsSystem,
                                      FileID ID, unsigned *Offset,
                                      StringRef OriginalModuleMapFile) {
   // Find the directory for the module. For frameworks, that may require going
@@ -1536,7 +1534,7 @@ bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem,
         Dir = FakeFile->getDir();
       }
     } else {
-      Dir = File->getDir();
+      Dir = File.getDir();
     }
 
     StringRef DirName(Dir->getName());
@@ -1563,11 +1561,9 @@ bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem,
 }
 
 HeaderSearch::LoadModuleMapResult
-HeaderSearch::loadModuleMapFileImpl(const FileEntry *File, bool IsSystem,
+HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
                                     const DirectoryEntry *Dir, FileID ID,
                                     unsigned *Offset) {
-  assert(File && "expected FileEntry");
-
   // Check whether we've already loaded this module map, and mark it as being
   // loaded in case we recursively try to load it from itself.
   auto AddResult = LoadedModuleMaps.insert(std::make_pair(File, true));
@@ -1580,8 +1576,8 @@ HeaderSearch::loadModuleMapFileImpl(const FileEntry *File, bool IsSystem,
   }
 
   // Try to load a corresponding private module map.
-  if (const FileEntry *PMMFile = getPrivateModuleMap(File, FileMgr)) {
-    if (ModMap.parseModuleMapFile(PMMFile, IsSystem, Dir)) {
+  if (Optional<FileEntryRef> PMMFile = getPrivateModuleMap(File, FileMgr)) {
+    if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
     }
@@ -1591,24 +1587,24 @@ HeaderSearch::loadModuleMapFileImpl(const FileEntry *File, bool IsSystem,
   return LMM_NewlyLoaded;
 }
 
-const FileEntry *
+Optional<FileEntryRef>
 HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
   if (!HSOpts->ImplicitModuleMaps)
-    return nullptr;
+    return None;
   // For frameworks, the preferred spelling is Modules/module.modulemap, but
   // module.map at the framework root is also accepted.
   SmallString<128> ModuleMapFileName(Dir->getName());
   if (IsFramework)
     llvm::sys::path::append(ModuleMapFileName, "Modules");
   llvm::sys::path::append(ModuleMapFileName, "module.modulemap");
-  if (auto F = FileMgr.getFile(ModuleMapFileName))
-    return *F;
+  if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
+    return F;
 
   // Continue to allow module.map
   ModuleMapFileName = Dir->getName();
   llvm::sys::path::append(ModuleMapFileName, "module.map");
-  if (auto F = FileMgr.getFile(ModuleMapFileName))
-    return *F;
+  if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
+    return F;
 
   // For frameworks, allow to have a private module map with a preferred
   // spelling when a public module map is absent.
@@ -1616,10 +1612,10 @@ HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
     ModuleMapFileName = Dir->getName();
     llvm::sys::path::append(ModuleMapFileName, "Modules",
                             "module.private.modulemap");
-    if (auto F = FileMgr.getFile(ModuleMapFileName))
-      return *F;
+    if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
+      return F;
   }
-  return nullptr;
+  return None;
 }
 
 Module *HeaderSearch::loadFrameworkModule(StringRef Name,
@@ -1663,9 +1659,10 @@ HeaderSearch::loadModuleMapFile(const DirectoryEntry *Dir, bool IsSystem,
   if (KnownDir != DirectoryHasModuleMap.end())
     return KnownDir->second ? LMM_AlreadyLoaded : LMM_InvalidModuleMap;
 
-  if (const FileEntry *ModuleMapFile = lookupModuleMapFile(Dir, IsFramework)) {
+  if (Optional<FileEntryRef> ModuleMapFile =
+          lookupModuleMapFile(Dir, IsFramework)) {
     LoadModuleMapResult Result =
-        loadModuleMapFileImpl(ModuleMapFile, IsSystem, Dir);
+        loadModuleMapFileImpl(*ModuleMapFile, IsSystem, Dir);
     // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
     // E.g. Foo.framework/Modules/module.modulemap
     //      ^Dir                  ^ModuleMapFile
