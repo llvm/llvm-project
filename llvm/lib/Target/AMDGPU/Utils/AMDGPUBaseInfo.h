@@ -742,6 +742,13 @@ Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                 int64_t ByteOffset);
 
+/// For FLAT segment the offset must be positive;
+/// MSB is ignored and forced to zero.
+///
+/// \return The number of bits available for the offset field in flat
+/// instructions.
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed);
+
 /// \returns true if this offset is small enough to fit in the SMRD
 /// offset field.  \p ByteOffset should be the offset in bytes and
 /// not the encoded offset.
