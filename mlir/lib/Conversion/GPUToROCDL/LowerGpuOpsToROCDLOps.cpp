@@ -84,7 +84,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
                       LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::SinOp, LLVM::SqrtOp>();
+                      LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -123,6 +123,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                                  "__ocml_log10_f64");
   patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__ocml_log2_f32",
                                                 "__ocml_log2_f64");
+  patterns.insert<OpToFuncCallLowering<PowFOp>>(converter, "__ocml_pow_f32",
+                                                "__ocml_pow_f64");
   patterns.insert<OpToFuncCallLowering<RsqrtOp>>(converter, "__ocml_rsqrt_f32",
                                                  "__ocml_rsqrt_f64");
   patterns.insert<OpToFuncCallLowering<SinOp>>(converter, "__ocml_sin_f32",
