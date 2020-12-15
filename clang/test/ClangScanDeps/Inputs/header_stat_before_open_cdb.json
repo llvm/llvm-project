@@ -3,5 +3,10 @@
   "directory": "DIR",
   "command": "clang -E DIR/header_stat_before_open_input.m -iframework Inputs/frameworks",
   "file": "DIR/header_stat_before_open_input.m"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E DIR/header_stat_before_open_input_clangcl.m -Xclang -iframework -Xclang Inputs/frameworks",
+  "file": "DIR/header_stat_before_open_input_clangcl.m"
 }
 ]
