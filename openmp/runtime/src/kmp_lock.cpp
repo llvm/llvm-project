@@ -1891,20 +1891,6 @@ static float percent(kmp_uint32 count, kmp_uint32 total) {
   return (total == 0) ? 0.0 : (100.0 * count) / total;
 }
 
-static FILE *__kmp_open_stats_file() {
-  if (strcmp(__kmp_speculative_statsfile, "-") == 0)
-    return stdout;
-
-  size_t buffLen = KMP_STRLEN(__kmp_speculative_statsfile) + 20;
-  char buffer[buffLen];
-  KMP_SNPRINTF(&buffer[0], buffLen, __kmp_speculative_statsfile,
-               (kmp_int32)getpid());
-  FILE *result = fopen(&buffer[0], "w");
-
-  // Maybe we should issue a warning here...
-  return result ? result : stdout;
-}
-
 void __kmp_print_speculative_stats() {
   kmp_adaptive_lock_statistics_t total = destroyedStats;
   kmp_adaptive_lock_info_t *lck;
@@ -1921,7 +1907,16 @@ void __kmp_print_speculative_stats() {
   if (totalSections <= 0)
     return;
 
-  FILE *statsFile = __kmp_open_stats_file();
+  kmp_safe_raii_file_t statsFile;
+  if (strcmp(__kmp_speculative_statsfile, "-") == 0) {
+    statsFile.set_stdout();
+  } else {
+    size_t buffLen = KMP_STRLEN(__kmp_speculative_statsfile) + 20;
+    char buffer[buffLen];
+    KMP_SNPRINTF(&buffer[0], buffLen, __kmp_speculative_statsfile,
+                 (kmp_int32)getpid());
+    statsFile.open(buffer, "w");
+  }
 
   fprintf(statsFile, "Speculative lock statistics (all approximate!)\n");
   fprintf(statsFile, " Lock parameters: \n"
@@ -1953,9 +1948,6 @@ void __kmp_print_speculative_stats() {
   fprintf(statsFile, " Hard failures                    : %10d (%5.1f%%)\n",
           t->hardFailedSpeculations,
           percent(t->hardFailedSpeculations, totalSpeculations));
-
-  if (statsFile != stdout)
-    fclose(statsFile);
 }
 
 #define KMP_INC_STAT(lck, stat) (lck->lk.adaptive.stats.stat++)

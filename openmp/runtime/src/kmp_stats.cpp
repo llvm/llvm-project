@@ -692,8 +692,7 @@ void kmp_stats_output_module::windupExplicitTimers() {
 void kmp_stats_output_module::printPloticusFile() {
   int i;
   int size = __kmp_stats_list->size();
-  FILE *plotOut = fopen(plotFileName, "w+");
-
+  kmp_safe_raii_file_t plotOut(plotFileName, "w+");
   fprintf(plotOut, "#proc page\n"
                    "   pagesize: 15 10\n"
                    "   scale: 1.0\n\n");
@@ -746,7 +745,6 @@ void kmp_stats_output_module::printPloticusFile() {
   fprintf(plotOut, "#proc legend\n"
                    "   format: down\n"
                    "   location: max max\n\n");
-  fclose(plotOut);
   return;
 }
 
@@ -797,14 +795,16 @@ void kmp_stats_output_module::outputStats(const char *heading) {
                                        normal timer stats */
   statistic allCounters[COUNTER_LAST];
 
-  FILE *statsOut =
-      !outputFileName.empty() ? fopen(outputFileName.c_str(), "a+") : stderr;
-  if (!statsOut)
-    statsOut = stderr;
+  kmp_safe_raii_file_t statsOut;
+  if (!outputFileName.empty()) {
+    statsOut.open(outputFileName.c_str(), "a+");
+  } else {
+    statsOut.set_stderr();
+  }
 
-  FILE *eventsOut;
+  kmp_safe_raii_file_t eventsOut;
   if (eventPrintingEnabled()) {
-    eventsOut = fopen(eventsFileName, "w+");
+    eventsOut.open(eventsFileName, "w+");
   }
 
   printHeaderInfo(statsOut);
@@ -855,16 +855,12 @@ void kmp_stats_output_module::outputStats(const char *heading) {
 
   if (eventPrintingEnabled()) {
     printPloticusFile();
-    fclose(eventsOut);
   }
 
   fprintf(statsOut, "Aggregate for all threads\n");
   printTimerStats(statsOut, &allStats[0], &totalStats[0]);
   fprintf(statsOut, "\n");
   printCounterStats(statsOut, &allCounters[0]);
-
-  if (statsOut != stderr)
-    fclose(statsOut);
 }
 
 /* *************  exported C functions ************** */
