@@ -121,11 +121,11 @@ static const EHPersonality &getCPersonality(const TargetInfo &Target,
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
-  if (L.SjLjExceptions)
+  if (L.hasSjLjExceptions())
     return EHPersonality::GNU_C_SJLJ;
-  if (L.DWARFExceptions)
+  if (L.hasDWARFExceptions())
     return EHPersonality::GNU_C;
-  if (L.SEHExceptions)
+  if (L.hasSEHExceptions())
     return EHPersonality::GNU_C_SEH;
   return EHPersonality::GNU_C;
 }
@@ -149,9 +149,9 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
     LLVM_FALLTHROUGH;
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
-    if (L.SjLjExceptions)
+    if (L.hasSjLjExceptions())
       return EHPersonality::GNU_ObjC_SJLJ;
-    if (L.SEHExceptions)
+    if (L.hasSEHExceptions())
       return EHPersonality::GNU_ObjC_SEH;
     return EHPersonality::GNU_ObjC;
   }
@@ -165,13 +165,13 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
     return EHPersonality::MSVC_CxxFrameHandler3;
   if (T.isOSAIX())
     return EHPersonality::XL_CPlusPlus;
-  if (L.SjLjExceptions)
+  if (L.hasSjLjExceptions())
     return EHPersonality::GNU_CPlusPlus_SJLJ;
-  if (L.DWARFExceptions)
+  if (L.hasDWARFExceptions())
     return EHPersonality::GNU_CPlusPlus;
-  if (L.SEHExceptions)
+  if (L.hasSEHExceptions())
     return EHPersonality::GNU_CPlusPlus_SEH;
-  if (L.WasmExceptions)
+  if (L.hasWasmExceptions())
     return EHPersonality::GNU_Wasm_CPlusPlus;
   return EHPersonality::GNU_CPlusPlus;
 }
@@ -476,7 +476,7 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in wasm
-    if (CGM.getLangOpts().WasmExceptions) {
+    if (CGM.getLangOpts().hasWasmExceptions()) {
       if (EST == EST_DynamicNone)
         EHStack.pushTerminate();
       else
@@ -564,7 +564,7 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in wasm
-    if (CGM.getLangOpts().WasmExceptions) {
+    if (CGM.getLangOpts().hasWasmExceptions()) {
       if (EST == EST_DynamicNone)
         EHStack.popTerminate();
       return;
