@@ -4,7 +4,7 @@
 ; 'if conversion'.
 
 ; RUN: opt < %s -simplifycfg -S > %t.xform
-; RUN:   not grep phi %t.xform 
+; RUN:   not grep phi %t.xform
 ; RUN:   grep ret %t.xform
 
 declare void @use(i1)

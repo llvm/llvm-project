@@ -1,6 +1,6 @@
-; This test checks to make sure that 'br X, Dest, Dest' is folded into 
+; This test checks to make sure that 'br X, Dest, Dest' is folded into
 ; 'br Dest'.  This can only happen after the 'Z' block is eliminated.  This is
-; due to the fact that the SimplifyCFG function does not use 
+; due to the fact that the SimplifyCFG function does not use
 ; the ConstantFoldTerminator function.
 
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s
