@@ -11,16 +11,14 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm9
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} zmm14 = [4,22,1,17,4,22,1,17,4,22,1,17,4,22,1,17]
-; CHECK-NEXT:    # zmm14 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm14 = [4,22,1,17]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm14
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} zmm10 = [4,30,1,22,4,30,1,22,4,30,1,22,4,30,1,22]
-; CHECK-NEXT:    # zmm10 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm10 = [4,30,1,22]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm10
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm7 = [85899345925,85899345925,85899345925,85899345925,85899345925,85899345925,85899345925,85899345925]
-; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm7
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm8 = [4,28,1,29]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm8
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm7 = <5,20,u,u>
+; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm7
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm4 = [4,21,1,7]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm4
 ; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm5

@@ -6673,23 +6673,26 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   // Insert constant bits from a base and sub vector sources.
   if (Op.getOpcode() == ISD::INSERT_SUBVECTOR) {
-    // TODO - support insert_subvector through bitcasts.
-    if (EltSizeInBits != VT.getScalarSizeInBits())
-      return false;
+    // If bitcasts to larger elements we might lose track of undefs - don't
+    // allow any to be safe.
+    unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
+    bool AllowUndefs = EltSizeInBits >= SrcEltSizeInBits;
 
-    APInt UndefSubElts;
-    SmallVector<APInt, 32> EltSubBits;
-    if (getTargetConstantBitsFromNode(Op.getOperand(1), EltSizeInBits,
+    APInt UndefSrcElts, UndefSubElts;
+    SmallVector<APInt, 32> EltSrcBits, EltSubBits;
+    if (getTargetConstantBitsFromNode(Op.getOperand(1), SrcEltSizeInBits,
                                       UndefSubElts, EltSubBits,
-                                      AllowWholeUndefs, AllowPartialUndefs) &&
-        getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
-                                      UndefElts, EltBits, AllowWholeUndefs,
-                                      AllowPartialUndefs)) {
+                                      AllowWholeUndefs && AllowUndefs,
+                                      AllowPartialUndefs && AllowUndefs) &&
+        getTargetConstantBitsFromNode(Op.getOperand(0), SrcEltSizeInBits,
+                                      UndefSrcElts, EltSrcBits,
+                                      AllowWholeUndefs && AllowUndefs,
+                                      AllowPartialUndefs && AllowUndefs)) {
       unsigned BaseIdx = Op.getConstantOperandVal(2);
-      UndefElts.insertBits(UndefSubElts, BaseIdx);
+      UndefSrcElts.insertBits(UndefSubElts, BaseIdx);
       for (unsigned i = 0, e = EltSubBits.size(); i != e; ++i)
-        EltBits[BaseIdx + i] = EltSubBits[i];
-      return true;
+        EltSrcBits[BaseIdx + i] = EltSubBits[i];
+      return CastBitData(UndefSrcElts, EltSrcBits);
     }
   }
 
@@ -10165,17 +10168,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue VectorConstant = materializeVectorConstant(Op, DAG, Subtarget))
     return VectorConstant;
 
-  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
-  if (SDValue AddSub = lowerToAddSubOrFMAddSub(BV, Subtarget, DAG))
-    return AddSub;
-  if (SDValue HorizontalOp = LowerToHorizontalOp(BV, Subtarget, DAG))
-    return HorizontalOp;
-  if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, Subtarget, DAG))
-    return Broadcast;
-  if (SDValue BitOp = lowerBuildVectorToBitOp(BV, Subtarget, DAG))
-    return BitOp;
-
   unsigned EVTBits = EltVT.getSizeInBits();
+  APInt UndefMask = APInt::getNullValue(NumElems);
   APInt ZeroMask = APInt::getNullValue(NumElems);
   APInt NonZeroMask = APInt::getNullValue(NumElems);
   bool IsAllConstants = true;
@@ -10183,8 +10177,10 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumConstants = NumElems;
   for (unsigned i = 0; i < NumElems; ++i) {
     SDValue Elt = Op.getOperand(i);
-    if (Elt.isUndef())
+    if (Elt.isUndef()) {
+      UndefMask.setBit(i);
       continue;
+    }
     Values.insert(Elt);
     if (!isa<ConstantSDNode>(Elt) && !isa<ConstantFPSDNode>(Elt)) {
       IsAllConstants = false;
@@ -10197,12 +10193,44 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // All undef vector. Return an UNDEF. All zero vectors were handled above.
+  if (NonZeroMask == 0) {
+    assert(UndefMask.isAllOnesValue() && "Fully undef mask expected");
+    return DAG.getUNDEF(VT);
+  }
+
+  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
+
+  // If the upper elts of a ymm/zmm are undef/zero then we might be better off
+  // lowering to a smaller build vector and padding with undef/zero.
+  if ((VT.is256BitVector() || VT.is512BitVector()) &&
+      !isFoldableUseOfShuffle(BV)) {
+    unsigned UpperElems = NumElems / 2;
+    APInt UndefOrZeroMask = UndefMask | ZeroMask;
+    unsigned NumUpperUndefsOrZeros = UndefOrZeroMask.countLeadingOnes();
+    if (NumUpperUndefsOrZeros >= UpperElems) {
+      if (VT.is512BitVector() &&
+          NumUpperUndefsOrZeros >= (NumElems - (NumElems / 4)))
+        UpperElems = NumElems - (NumElems / 4);
+      bool UndefUpper = UndefMask.countLeadingOnes() >= UpperElems;
+      MVT LowerVT = MVT::getVectorVT(EltVT, NumElems - UpperElems);
+      SDValue NewBV =
+          DAG.getBuildVector(LowerVT, dl, Op->ops().drop_back(UpperElems));
+      return widenSubVector(VT, NewBV, !UndefUpper, Subtarget, DAG, dl);
+    }
+  }
+
+  if (SDValue AddSub = lowerToAddSubOrFMAddSub(BV, Subtarget, DAG))
+    return AddSub;
+  if (SDValue HorizontalOp = LowerToHorizontalOp(BV, Subtarget, DAG))
+    return HorizontalOp;
+  if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, Subtarget, DAG))
+    return Broadcast;
+  if (SDValue BitOp = lowerBuildVectorToBitOp(BV, Subtarget, DAG))
+    return BitOp;
+
   unsigned NumZero = ZeroMask.countPopulation();
   unsigned NumNonZero = NonZeroMask.countPopulation();
-
-  // All undef vector. Return an UNDEF.  All zero vectors were handled above.
-  if (NumNonZero == 0)
-    return DAG.getUNDEF(VT);
 
   // If we are inserting one variable into a vector of non-zero constants, try
   // to avoid loading each constant element as a scalar. Load the constants as a
