@@ -107,8 +107,8 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
   bits<4> elements    = 0;
 }
 
-class MTBUF_Real <MTBUF_Pseudo ps> :
-  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []> {
+class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
+  InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []> {
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
@@ -2306,24 +2306,87 @@ defm BUFFER_WBINVL1_VOL       : MUBUF_Real_gfx7<0x070>;
 def  BUFFER_WBINVL1_gfx6_gfx7 : MUBUF_Real_gfx6_gfx7<0x071, BUFFER_WBINVL1>;
 
 //===----------------------------------------------------------------------===//
-// Base ENC_MTBUF for GFX6, GFX7, GFX10.
+// Base ENC_MTBUF for GFX6, GFX7, GFX10, GFX11.
 //===----------------------------------------------------------------------===//
 
-class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
-    MTBUF_Real<ps>, Enc64, SIMCInstr<ps.PseudoInstr, ef> {
+class Base_MTBUF_Real_gfx6_gfx7_gfx10_gfx11<MTBUF_Pseudo ps, int ef,
+                                            string real_name = ps.Mnemonic> :
+  MTBUF_Real<ps, real_name>, Enc64, SIMCInstr<ps.PseudoInstr, ef> {
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
-  let Inst{12}    = ps.offen;
-  let Inst{13}    = ps.idxen;
   let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
-  let Inst{18-16} = op;
   let Inst{31-26} = 0x3a; //encoding
   let Inst{39-32} = !if(ps.has_vaddr, vaddr, ?);
   let Inst{47-40} = !if(ps.has_vdata, vdata, ?);
   let Inst{52-48} = !if(ps.has_srsrc, srsrc{6-2}, ?);
-  let Inst{54}    = !if(ps.has_slc, slc, ?);
-  let Inst{55}    = !if(ps.has_tfe, tfe, ?);
   let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
 }
+
+class Base_MTBUF_Real_gfx11<bits<4> op, MTBUF_Pseudo ps,
+                            string real_name = ps.Mnemonic> :
+  Base_MTBUF_Real_gfx6_gfx7_gfx10_gfx11<ps, SIEncodingFamily.GFX11, real_name> {
+  let Inst{12}    = !if(ps.has_slc, slc, ?);
+  let Inst{13}    = !if(ps.has_dlc, dlc, ps.dlc_value);
+  let Inst{18-15} = op;
+  let Inst{25-19} = format;
+  let Inst{53}    = !if(ps.has_tfe, tfe, ?);
+  let Inst{54}    = ps.offen;
+  let Inst{55}    = ps.idxen;
+}
+
+class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
+  Base_MTBUF_Real_gfx6_gfx7_gfx10_gfx11<ps, ef> {
+  let Inst{12}    = ps.offen;
+  let Inst{13}    = ps.idxen;
+  let Inst{18-16} = op;
+  let Inst{54}    = !if(ps.has_slc, slc, ?);
+  let Inst{55}    = !if(ps.has_tfe, tfe, ?);
+}
+
+//===----------------------------------------------------------------------===//
+// MTBUF - GFX11.
+//===----------------------------------------------------------------------===//
+
+let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
+multiclass MTBUF_Real_AllAddr_gfx11_Renamed_Impl<bits<4> op, string real_name> {
+  def _BOTHEN_gfx11 :
+    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
+  def _IDXEN_gfx11 :
+    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN"), real_name>;
+  def _OFFEN_gfx11 :
+    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN"), real_name>;
+  def _OFFSET_gfx11 :
+    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET"), real_name>;
+}
+
+multiclass MTBUF_Real_AllAddr_gfx11_Impl<bits<4> op, MTBUF_Pseudo ps>
+ : MTBUF_Real_AllAddr_gfx11_Renamed_Impl<op, ps.Mnemonic>;
+multiclass MTBUF_Real_AllAddr_gfx11<bits<4> op>
+ : MTBUF_Real_AllAddr_gfx11_Impl<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
+
+
+class Pre_gfx11_MTBUF_Name <MTBUF_Pseudo ps, string real_name>
+  : MnemonicAlias<ps.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
+multiclass MTBUF_Real_AllAddr_gfx11_Renamed<bits<4> op, string real_name>
+  : MTBUF_Real_AllAddr_gfx11_Renamed_Impl<op, real_name> {
+  def : Pre_gfx11_MTBUF_Name<!cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
+}
+
+defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_Renamed<0x008, "tbuffer_load_d16_format_x">;
+defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx11_Renamed<0x009, "tbuffer_load_d16_format_xy">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Real_AllAddr_gfx11_Renamed<0x00a, "tbuffer_load_d16_format_xyz">;
+defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Real_AllAddr_gfx11_Renamed<0x00b, "tbuffer_load_d16_format_xyzw">;
+defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx11<0x000>;
+defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx11<0x001>;
+defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx11<0x002>;
+defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx11<0x003>;
+defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Real_AllAddr_gfx11_Renamed<0x00c, "tbuffer_store_d16_format_x">;
+defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Real_AllAddr_gfx11_Renamed<0x00d, "tbuffer_store_d16_format_xy">;
+defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Real_AllAddr_gfx11_Renamed<0x00e, "tbuffer_store_d16_format_xyz">;
+defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Real_AllAddr_gfx11_Renamed<0x00f, "tbuffer_store_d16_format_xyzw">;
+defm TBUFFER_STORE_FORMAT_X        : MTBUF_Real_AllAddr_gfx11<0x004>;
+defm TBUFFER_STORE_FORMAT_XY       : MTBUF_Real_AllAddr_gfx11<0x005>;
+defm TBUFFER_STORE_FORMAT_XYZ      : MTBUF_Real_AllAddr_gfx11<0x006>;
+defm TBUFFER_STORE_FORMAT_XYZW     : MTBUF_Real_AllAddr_gfx11<0x007>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF - GFX10.
@@ -2336,7 +2399,7 @@ class MTBUF_Real_gfx10<bits<4> op, MTBUF_Pseudo ps> :
   let Inst{53} = op{3};
 }
 
-let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
+let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass MTBUF_Real_AllAddr_gfx10<bits<4> op> {
     def _BOTHEN_gfx10 :
       MTBUF_Real_gfx10<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
@@ -2347,7 +2410,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     def _OFFSET_gfx10 :
       MTBUF_Real_gfx10<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET")>;
   }
-} // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
+} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
 defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx10<0x008>;
 defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Real_AllAddr_gfx10<0x009>;

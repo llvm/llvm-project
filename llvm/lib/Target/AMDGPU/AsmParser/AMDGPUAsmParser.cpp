@@ -5348,7 +5348,7 @@ AMDGPUAsmParser::parseSymbolicSplitFormat(StringRef FormatStr,
   Nfmt = (Nfmt == NFMT_UNDEF) ? NFMT_DEFAULT : Nfmt;
 
   if (isGFX10Plus()) {
-    auto Ufmt = convertDfmtNfmt2Ufmt(Dfmt, Nfmt);
+    auto Ufmt = convertDfmtNfmt2Ufmt(Dfmt, Nfmt, getSTI());
     if (Ufmt == UFMT_UNDEF) {
       Error(FormatLoc, "unsupported format");
       return MatchOperand_ParseFail;
@@ -5367,7 +5367,7 @@ AMDGPUAsmParser::parseSymbolicUnifiedFormat(StringRef FormatStr,
                                             int64_t &Format) {
   using namespace llvm::AMDGPU::MTBUFFormat;
 
-  auto Id = getUnifiedFormat(FormatStr);
+  auto Id = getUnifiedFormat(FormatStr, getSTI());
   if (Id == UFMT_UNDEF)
     return MatchOperand_NoMatch;
 
