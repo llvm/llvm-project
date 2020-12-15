@@ -19,7 +19,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "Unknown Config key Foo",
+# CHECK-NEXT:        "message": "Unknown Config key 'Foo'",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 3,
