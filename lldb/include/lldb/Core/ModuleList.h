@@ -139,13 +139,7 @@ public:
   ///
   /// \param[in] module_sp
   ///     A shared pointer to a module to replace in this collection.
-  ///
-  /// \param[in] old_modules
-  ///     Optional pointer to a vector which, if provided, will have shared
-  ///     pointers to the replaced module(s) appended to it.
-  void ReplaceEquivalent(
-      const lldb::ModuleSP &module_sp,
-      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules = nullptr);
+  void ReplaceEquivalent(const lldb::ModuleSP &module_sp);
 
   /// Append a module to the module list, if it is not already there.
   ///
