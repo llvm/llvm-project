@@ -161,15 +161,17 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Value *CastedPtr = Builder.CreateBitCast(SrcPtr, MinVecTy->getPointerTo(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
 
-  // If the insert type does not match the target's minimum vector type,
-  // use an identity shuffle to shrink/grow the vector.
-  if (Ty != MinVecTy) {
-    unsigned OutputNumElts = Ty->getNumElements();
-    SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
-    for (unsigned i = 0; i < OutputNumElts && i < MinVecNumElts; ++i)
-      Mask[i] = i;
-    VecLd = Builder.CreateShuffleVector(VecLd, Mask);
-  }
+  // Set everything but element 0 to undef to prevent poison from propagating
+  // from the extra loaded memory. This will also optionally shrink/grow the
+  // vector from the loaded size to the output size.
+  // We assume this operation has no cost in codegen.
+  // Note that we could use freeze to avoid poison problems, but then we might
+  // still need a shuffle to change the vector size.
+  unsigned OutputNumElts = Ty->getNumElements();
+  SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
+  Mask[0] = 0;
+  VecLd = Builder.CreateShuffleVector(VecLd, Mask);
+
   replaceValue(I, *VecLd);
   ++NumVecLoad;
   return true;
