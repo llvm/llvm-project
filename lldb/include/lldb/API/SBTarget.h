@@ -560,6 +560,12 @@ public:
                              uint32_t column, lldb::addr_t offset,
                              SBFileSpecList &module_list);
 
+  lldb::SBBreakpoint
+  BreakpointCreateByLocation(const lldb::SBFileSpec &file_spec, uint32_t line,
+                             uint32_t column, lldb::addr_t offset,
+                             SBFileSpecList &module_list,
+                             bool move_to_nearest_code);
+
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
