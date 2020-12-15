@@ -15,7 +15,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -168,33 +168,32 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
   return {};
 }
 
-static Optional<DylibFile *> makeDylibFromTapi(MemoryBufferRef mbref,
-                                               DylibFile *umbrella) {
-  Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
-  if (!result) {
-    error("could not load TAPI file at " + mbref.getBufferIdentifier() + ": " +
-          toString(result.takeError()));
-    return {};
-  }
-  return make<DylibFile>(**result, umbrella);
-}
-
-static DenseSet<CachedHashStringRef> loadedDylibs;
+// It's not uncommon to have multiple attempts to load a single dylib,
+// especially if it's a commonly re-exported core library.
+static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
 Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
                                        DylibFile *umbrella) {
   StringRef path = mbref.getBufferIdentifier();
-  if (loadedDylibs.contains(CachedHashStringRef(path)))
-    return {};
-  loadedDylibs.insert(CachedHashStringRef(path));
+  DylibFile *&file = loadedDylibs[CachedHashStringRef(path)];
+  if (file)
+    return file;
 
   file_magic magic = identify_magic(mbref.getBuffer());
-  if (magic == file_magic::tapi_file)
-    return makeDylibFromTapi(mbref, umbrella);
-
-  assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
-         magic == file_magic::macho_dynamically_linked_shared_lib_stub);
-  return make<DylibFile>(mbref, umbrella);
+  if (magic == file_magic::tapi_file) {
+    Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
+    if (!result) {
+      error("could not load TAPI file at " + mbref.getBufferIdentifier() +
+            ": " + toString(result.takeError()));
+      return {};
+    }
+    file = make<DylibFile>(**result, umbrella);
+  } else {
+    assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
+           magic == file_magic::macho_dynamically_linked_shared_lib_stub);
+    file = make<DylibFile>(mbref, umbrella);
+  }
+  return file;
 }
 
 uint32_t macho::getModTime(StringRef path) {

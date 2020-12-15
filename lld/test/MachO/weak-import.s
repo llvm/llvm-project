@@ -6,6 +6,10 @@
 
 # RUN: %lld -weak-lSystem %t/test.o -weak_framework CoreFoundation -weak_library %t/libfoo.dylib -o %t/test
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s -DDIR=%t
+# RUN: %lld -weak-lSystem %t/test.o \
+# RUN:   -framework CoreFoundation -weak_framework CoreFoundation -framework CoreFoundation \
+# RUN:   %t/libfoo.dylib -weak_library %t/libfoo.dylib %t/libfoo.dylib -o %t/test
+# RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s -DDIR=%t
 
 # CHECK:          cmd LC_LOAD_WEAK_DYLIB
 # CHECK-NEXT: cmdsize
