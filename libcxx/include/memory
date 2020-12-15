@@ -2594,7 +2594,7 @@ struct __shared_ptr_emplace
     _Tp* __get_elem() _NOEXCEPT { return _VSTD::addressof(__data_.second()); }
 
     _LIBCPP_HIDE_FROM_ABI
-    _Alloc& __get_alloc() _NOEXCEPT { return __data_.first(); }
+    _Alloc* __get_alloc() _NOEXCEPT { return _VSTD::addressof(__data_.first()); }
 
 private:
     virtual void __on_zero_shared() _NOEXCEPT {
@@ -2604,8 +2604,8 @@ private:
     virtual void __on_zero_shared_weak() _NOEXCEPT {
         using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
         using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
-        _ControlBlockAlloc __tmp(__get_alloc());
-        __get_alloc().~_Alloc();
+        _ControlBlockAlloc __tmp(*__get_alloc());
+        __get_alloc()->~_Alloc();
         allocator_traits<_ControlBlockAlloc>::deallocate(__tmp,
             pointer_traits<_ControlBlockPointer>::pointer_to(*this), 1);
     }
