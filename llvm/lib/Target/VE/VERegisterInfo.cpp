@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -109,6 +110,29 @@ VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return &VE::I64RegClass;
 }
 
+static unsigned offsetToDisp(MachineInstr &MI) {
+  // Default offset in instruction's operands (reg+reg+imm).
+  unsigned OffDisp = 2;
+
+#define RRCAS_multi_cases(NAME) NAME##rir : case NAME##rii
+
+  {
+    using namespace llvm::VE;
+    switch (MI.getOpcode()) {
+    case RRCAS_multi_cases(TS1AML):
+    case RRCAS_multi_cases(TS1AMW):
+    case RRCAS_multi_cases(CASL):
+    case RRCAS_multi_cases(CASW):
+      // These instructions use AS format (reg+imm).
+      OffDisp = 1;
+      break;
+    }
+  }
+#undef RRCAS_multi_cases
+
+  return OffDisp;
+}
+
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
                       MachineInstr &MI, const DebugLoc &dl,
                       unsigned FIOperandNum, int Offset, Register FrameReg) {
@@ -116,7 +140,7 @@ static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
   // VE has 32 bit offset field, so no need to expand a target instruction.
   // Directly encode it.
   MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
-  MI.getOperand(FIOperandNum + 2).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum + offsetToDisp(MI)).ChangeToImmediate(Offset);
 }
 
 void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -134,7 +158,7 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset;
   Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
 
-  Offset += MI.getOperand(FIOperandNum + 2).getImm();
+  Offset += MI.getOperand(FIOperandNum + offsetToDisp(MI)).getImm();
 
   if (MI.getOpcode() == VE::STQrii) {
     const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
