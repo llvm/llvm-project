@@ -1201,7 +1201,10 @@ enum ScalarEpilogueLowering {
   CM_ScalarEpilogueNotAllowedLowTripLoop,
 
   // Loop hint predicate indicating an epilogue is undesired.
-  CM_ScalarEpilogueNotNeededUsePredicate
+  CM_ScalarEpilogueNotNeededUsePredicate,
+
+  // Directive indicating we must either tail fold or not vectorize
+  CM_ScalarEpilogueNotAllowedUsePredicate
 };
 
 /// LoopVectorizationCostModel - estimates the expected speedups due to
@@ -5463,6 +5466,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
     return MaxVF;
+  case CM_ScalarEpilogueNotAllowedUsePredicate:
+    LLVM_FALLTHROUGH;
   case CM_ScalarEpilogueNotNeededUsePredicate:
     LLVM_DEBUG(
         dbgs() << "LV: vector predicate hint/switch found.\n"
@@ -5522,16 +5527,17 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // If there was a tail-folding hint/switch, but we can't fold the tail by
   // masking, fallback to a vectorization with a scalar epilogue.
   if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
-    if (PreferPredicateOverEpilogue == PreferPredicateTy::PredicateOrDontVectorize) {
-      LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
-      return None;
-    }
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                          "scalar epilogue instead.\n");
     ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
     return MaxVF;
   }
 
+  if (ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate) {
+    LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
+    return None;
+  }
+  
   if (TC == 0) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
@@ -8855,22 +8861,29 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                           Hints.getForce() != LoopVectorizeHints::FK_Enabled))
     return CM_ScalarEpilogueNotAllowedOptSize;
 
-  bool PredicateOptDisabled = PreferPredicateOverEpilogue.getNumOccurrences() &&
-                              !PreferPredicateOverEpilogue;
+  // 2) If set, obey the directives
+  if (PreferPredicateOverEpilogue.getNumOccurrences()) {
+    switch (PreferPredicateOverEpilogue) {
+    case PreferPredicateTy::ScalarEpilogue:
+      return CM_ScalarEpilogueAllowed;
+    case PreferPredicateTy::PredicateElseScalarEpilogue:
+      return CM_ScalarEpilogueNotNeededUsePredicate;
+    case PreferPredicateTy::PredicateOrDontVectorize:
+      return CM_ScalarEpilogueNotAllowedUsePredicate;
+    };
+  }
 
-  // 2) Next, if disabling predication is requested on the command line, honour
-  // this and request a scalar epilogue.
-  if (PredicateOptDisabled)
+  // 3) If set, obey the hints
+  switch (Hints.getPredicate()) {
+  case LoopVectorizeHints::FK_Enabled:
+    return CM_ScalarEpilogueNotNeededUsePredicate;
+  case LoopVectorizeHints::FK_Disabled:
     return CM_ScalarEpilogueAllowed;
+  };
 
-  // 3) and 4) look if enabling predication is requested on the command line,
-  // with a loop hint, or if the TTI hook indicates this is profitable, request
-  // predication.
-  if (PreferPredicateOverEpilogue ||
-      Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
-      (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
-                                        LVL.getLAI()) &&
-       Hints.getPredicate() != LoopVectorizeHints::FK_Disabled))
+  // 4) if the TTI hook indicates this is profitable, request predication.
+  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
+                                       LVL.getLAI()))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;
