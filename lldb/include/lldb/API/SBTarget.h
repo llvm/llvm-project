@@ -9,6 +9,8 @@
 #ifndef LLDB_API_SBTARGET_H
 #define LLDB_API_SBTARGET_H
 
+#include "lldb/lldb-private-enumerations.h"
+
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
@@ -560,6 +562,12 @@ public:
                              uint32_t column, lldb::addr_t offset,
                              SBFileSpecList &module_list);
 
+  lldb::SBBreakpoint
+  BreakpointCreateByLocation(const lldb::SBFileSpec &file_spec, uint32_t line,
+                             uint32_t column, lldb::addr_t offset,
+                             SBFileSpecList &module_list,
+                             bool move_to_nearest_code);
+
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
@@ -858,6 +866,11 @@ protected:
   void SetSP(const lldb::TargetSP &target_sp);
 
 private:
+  lldb::SBBreakpoint BreakpointCreateByLocationImpl(
+      const lldb::SBFileSpec &file_spec, uint32_t line, uint32_t column,
+      lldb::addr_t offset, SBFileSpecList &module_list,
+      const lldb_private::LazyBool move_to_nearest_code);
+
   lldb::TargetSP m_opaque_sp;
 };
 

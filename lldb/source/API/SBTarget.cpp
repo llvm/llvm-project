@@ -757,14 +757,10 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                                        offset, sb_module_list));
 }
 
-SBBreakpoint SBTarget::BreakpointCreateByLocation(
-    const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
-    lldb::addr_t offset, SBFileSpecList &sb_module_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t, uint32_t,
-                      lldb::addr_t, lldb::SBFileSpecList &),
-                     sb_file_spec, line, column, offset, sb_module_list);
-
+SBBreakpoint SBTarget::BreakpointCreateByLocationImpl(
+    const lldb::SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
+    lldb::addr_t offset, SBFileSpecList &sb_module_list,
+    const LazyBool move_to_nearest_code) {
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
   if (target_sp && line != 0) {
@@ -774,7 +770,6 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
     const LazyBool skip_prologue = eLazyBoolCalculate;
     const bool internal = false;
     const bool hardware = false;
-    const LazyBool move_to_nearest_code = eLazyBoolCalculate;
     const FileSpecList *module_list = nullptr;
     if (sb_module_list.GetSize() > 0) {
       module_list = sb_module_list.get();
@@ -784,7 +779,34 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
         skip_prologue, internal, hardware, move_to_nearest_code);
   }
 
-  return LLDB_RECORD_RESULT(sb_bp);
+  return sb_bp;
+}
+
+SBBreakpoint SBTarget::BreakpointCreateByLocation(
+    const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
+    lldb::addr_t offset, SBFileSpecList &sb_module_list) {
+  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
+                     (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                      lldb::addr_t, lldb::SBFileSpecList &),
+                     sb_file_spec, line, column, offset, sb_module_list);
+
+  return LLDB_RECORD_RESULT(BreakpointCreateByLocationImpl(
+      sb_file_spec, line, column, offset, sb_module_list, eLazyBoolCalculate));
+}
+
+SBBreakpoint SBTarget::BreakpointCreateByLocation(
+    const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
+    lldb::addr_t offset, SBFileSpecList &sb_module_list,
+    bool move_to_nearest_code) {
+  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
+                     (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                      lldb::addr_t, lldb::SBFileSpecList &, bool),
+                     sb_file_spec, line, column, offset, sb_module_list,
+                     move_to_nearest_code);
+
+  return LLDB_RECORD_RESULT(BreakpointCreateByLocationImpl(
+      sb_file_spec, line, column, offset, sb_module_list,
+      move_to_nearest_code ? eLazyBoolYes : eLazyBoolNo));
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
@@ -2489,6 +2511,9 @@ void RegisterMethods<SBTarget>(Registry &R) {
                        BreakpointCreateByLocation,
                        (const lldb::SBFileSpec &, uint32_t, uint32_t,
                         lldb::addr_t, lldb::SBFileSpecList &));
+  LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
+                       (const lldb::SBFileSpec &, uint32_t, uint32_t,
+                        lldb::addr_t, lldb::SBFileSpecList &, bool));
   LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
                        (const char *, const char *));
   LLDB_REGISTER_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
