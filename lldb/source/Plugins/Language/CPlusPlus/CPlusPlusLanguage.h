@@ -88,6 +88,10 @@ public:
   HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics() override;
 
+  bool IsNilReference(ValueObject &valobj) override;
+
+  llvm::StringRef GetNilReferenceSummaryString() override { return "nullptr"; }
+
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }

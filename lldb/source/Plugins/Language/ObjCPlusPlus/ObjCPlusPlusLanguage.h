@@ -27,6 +27,8 @@ public:
     return lldb::eLanguageTypeObjC_plus_plus;
   }
 
+  llvm::StringRef GetNilReferenceSummaryString() override { return "nil"; }
+
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }
