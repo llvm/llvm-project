@@ -2944,12 +2944,16 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     // and non-PHI uses will become invalid.
     FormTrivialSSAPHI(BB);
 
+    BasicBlock *UniqueSucc =
+        BI->isConditional()
+            ? (PBI->getSuccessor(0) == BB ? TrueDest : FalseDest)
+            : TrueDest;
+
     // Before cloning instructions, notify the successor basic block that it
     // is about to have a new predecessor. This will update PHI nodes,
     // which will allow us to update live-out uses of bonus instructions.
     if (BI->isConditional())
-      AddPredecessorToBlock(PBI->getSuccessor(0) == BB ? TrueDest : FalseDest,
-                            PredBlock, BB, MSSAU);
+      AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
 
     // If we have bonus instructions, clone them into the predecessor block.
     // Note that there may be multiple predecessor blocks, so we cannot move
@@ -3011,7 +3015,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       if (PBI->getSuccessor(0) == BB) {
         if (HasWeights) {
           // PBI: br i1 %x, BB, FalseDest
-          // BI:  br i1 %y, TrueDest, FalseDest
+          // BI:  br i1 %y, UniqueSucc, FalseDest
           // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
           NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
           // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
@@ -3022,12 +3026,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
                                    (SuccFalseWeight + SuccTrueWeight) +
                                PredTrueWeight * SuccFalseWeight);
         }
-        PBI->setSuccessor(0, TrueDest);
+        PBI->setSuccessor(0, UniqueSucc);
       }
       if (PBI->getSuccessor(1) == BB) {
         if (HasWeights) {
           // PBI: br i1 %x, TrueDest, BB
-          // BI:  br i1 %y, TrueDest, FalseDest
+          // BI:  br i1 %y, TrueDest, UniqueSucc
           // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
           //              FalseWeight for PBI * TrueWeight for BI.
           NewWeights.push_back(PredTrueWeight *
@@ -3036,7 +3040,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
           // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
           NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
         }
-        PBI->setSuccessor(1, FalseDest);
+        PBI->setSuccessor(1, UniqueSucc);
       }
       if (NewWeights.size() == 2) {
         // Halve the weights if any of them cannot fit in an uint32_t
@@ -3054,7 +3058,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
             PHIs[i]->getIncomingValueForBlock(PBI->getParent()));
         assert(PBI_C->getType()->isIntegerTy(1));
         Instruction *MergedCond = nullptr;
-        if (PBI->getSuccessor(0) == TrueDest) {
+        if (PBI->getSuccessor(0) == UniqueSucc) {
           // Create (PBI_Cond and PBI_C) or (!PBI_Cond and BI_Value)
           // PBI_C is true: PBI_Cond or (!PBI_Cond and BI_Value)
           //       is false: !PBI_Cond and BI_Value
@@ -3083,13 +3087,13 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
 	PHIs[i]->setIncomingValueForBlock(PBI->getParent(), MergedCond);
       }
 
-      // PBI is changed to branch to TrueDest below. Remove itself from
+      // PBI is changed to branch to UniqueSucc below. Remove itself from
       // potential phis from all other successors.
       if (MSSAU)
-        MSSAU->changeCondBranchToUnconditionalTo(PBI, TrueDest);
+        MSSAU->changeCondBranchToUnconditionalTo(PBI, UniqueSucc);
 
       // Change PBI from Conditional to Unconditional.
-      BranchInst *New_PBI = BranchInst::Create(TrueDest, PBI);
+      BranchInst *New_PBI = BranchInst::Create(UniqueSucc, PBI);
       EraseTerminatorAndDCECond(PBI, MSSAU);
       PBI = New_PBI;
     }
