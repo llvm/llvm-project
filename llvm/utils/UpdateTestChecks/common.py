@@ -261,10 +261,10 @@ class function_body(object):
 def get_failed_prefixes(func_dict):
   # This returns the list of those prefixes that failed to match any function,
   # because there were conflicting bodies produced by different RUN lines, in
-  # all instances of the prefix. Effectivelly, this prefix is unused and should
+  # all instances of the prefix. Effectively, this prefix is unused and should
   # be removed.
   for prefix in func_dict:
-    if (not [fct for fct in func_dict[prefix] 
+    if func_dict[prefix] and (not [fct for fct in func_dict[prefix] 
          if func_dict[prefix][fct] is not None]):
       yield prefix
 
