@@ -418,17 +418,23 @@ struct Variable {
   /// mapped onto another variable. Aliasing variables will be pointers into
   /// interval stores and may overlap each other.
   struct AggregateStore {
-    AggregateStore(Interval &&interval, bool isDeclaration = false)
-        : interval{std::move(interval)}, isDecl{isDeclaration} {}
-    AggregateStore(Interval &&interval,
+    AggregateStore(Interval &&interval, const Fortran::semantics::Scope &scope,
+                   bool isDeclaration = false)
+        : interval{std::move(interval)}, scope{&scope}, isDecl{isDeclaration} {}
+    AggregateStore(Interval &&interval, const Fortran::semantics::Scope &scope,
                    const llvm::SmallVector<const semantics::Symbol *, 8> &vars,
                    bool isDeclaration = false)
-        : interval{std::move(interval)}, vars{vars}, isDecl{isDeclaration} {}
+        : interval{std::move(interval)}, scope{&scope}, vars{vars},
+          isDecl{isDeclaration} {}
 
     bool isGlobal() const { return vars.size() > 0; }
     bool isDeclaration() const { return isDecl; }
+    /// Get offset of the aggregate inside its scope.
+    std::size_t getOffset() const { return std::get<0>(interval); }
 
     Interval interval{};
+    /// scope in which the interval is.
+    const Fortran::semantics::Scope *scope;
     llvm::SmallVector<const semantics::Symbol *, 8> vars{};
     /// Is this a declaration of a storage defined in another scope ?
     bool isDecl;
@@ -437,8 +443,6 @@ struct Variable {
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
                     int depth = 0)
       : var{Nominal(&sym, depth, global)} {}
-  explicit Variable(Interval &&interval)
-      : var{AggregateStore(std::move(interval))} {}
   explicit Variable(AggregateStore &&istore) : var{std::move(istore)} {}
 
   /// Return the front-end symbol for a nominal variable.
@@ -475,6 +479,14 @@ struct Variable {
   /// Is this a declaration of a variable owned by another scope ?
   bool isDeclaration() const {
     return std::visit([](const auto &x) { return x.isDeclaration(); }, var);
+  }
+
+  const Fortran::semantics::Scope *getOwningScope() const {
+    return std::visit(
+        common::visitors{
+            [](const Nominal &x) { return &x.symbol->GetUltimate().owner(); },
+            [](const AggregateStore &agg) { return agg.scope; }},
+        var);
   }
 
   bool isHeapAlloc() const {

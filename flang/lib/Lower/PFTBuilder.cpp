@@ -1207,22 +1207,6 @@ static bool symbolIsGlobal(const semantics::Symbol &sym) {
 }
 
 namespace {
-/// Helper structure to keep track of where equivalence are coming from.
-/// This information needs not to be retained in the Variable::AggregateStore
-/// afterwards.
-struct ScopedAggregateStore : lower::pft::Variable::AggregateStore {
-  ScopedAggregateStore(lower::pft::Variable::Interval &&interval,
-                       const semantics::Scope &scope)
-      : AggregateStore{std::move(interval)}, scope{scope} {}
-  ScopedAggregateStore(
-      lower::pft::Variable::Interval &&interval,
-      const llvm::SmallVector<const semantics::Symbol *, 8> &vars,
-      const semantics::Scope &scope)
-      : AggregateStore{std::move(interval), vars}, scope{scope} {}
-  auto getOffset() const { return std::get<0>(interval); }
-  const semantics::Scope &scope;
-};
-
 /// This helper class is for sorting the symbols in the symbol table. We want
 /// the symbols in an order such that a symbol will be visited after those it
 /// depends upon. Otherwise this sort is stable and preserves the order of the
@@ -1237,21 +1221,19 @@ struct SymbolDependenceDepth {
       const auto &ultimate = iter.second.get().GetUltimate();
       if (skipSymbol(ultimate))
         continue;
-      analyzeAliases(ultimate.owner());
+      bool isDeclaration = scope != ultimate.owner();
+      analyzeAliases(ultimate.owner(), isDeclaration);
     }
     // add all aggregate stores to the front of the work list
     adjustSize(1);
     // The copy in the loop matters, 'stores' will still be used.
     for (auto st : stores) {
-      auto isDeclaration = scope != st.scope;
-      lower::pft::Variable::AggregateStore store(
-          std::move(st.interval), std::move(st.vars), isDeclaration);
       vars[0].emplace_back(std::move(st));
     }
   }
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
-  void analyzeAliases(const semantics::Scope &scope) {
+  void analyzeAliases(const semantics::Scope &scope, bool isDeclaration) {
     if (scope.equivalenceSets().empty())
       return;
     if (scopeAnlyzedForAliases.find(&scope) != scopeAnlyzedForAliases.end())
@@ -1308,11 +1290,12 @@ struct SymbolDependenceDepth {
           auto *gsym = gvarIter->second;
           LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
                                   << ") added as global " << *gsym << '\n');
-          stores.emplace_back(std::move(interval), pair.second, scope);
+          stores.emplace_back(std::move(interval), scope, pair.second,
+                              isDeclaration);
         } else {
           LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
                                   << ") added\n");
-          stores.emplace_back(std::move(interval), scope);
+          stores.emplace_back(std::move(interval), scope, isDeclaration);
         }
       }
     }
@@ -1407,7 +1390,8 @@ struct SymbolDependenceDepth {
     vars.resize(1);
   }
 
-  ScopedAggregateStore *findStoreIfAlias(const Fortran::evaluate::Symbol &sym) {
+  Fortran::lower::pft::Variable::AggregateStore *
+  findStoreIfAlias(const Fortran::evaluate::Symbol &sym) {
     const auto &ultimate = sym.GetUltimate();
     const auto &scope = ultimate.owner();
     // Expect the total number of EQUIVALENCE sets to be small for a typical
@@ -1417,7 +1401,7 @@ struct SymbolDependenceDepth {
       LLVM_DEBUG(llvm::dbgs() << "scope: " << scope << '\n');
       auto off = ultimate.offset();
       for (auto &v : stores) {
-        if (v.scope == scope) {
+        if (v.scope == &scope) {
           auto bot = std::get<0>(v.interval);
           if (off >= bot && off < bot + std::get<1>(v.interval))
             return &v;
@@ -1456,7 +1440,7 @@ private:
   std::vector<std::vector<lower::pft::Variable>> &vars;
   llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
   llvm::SmallSet<const semantics::Scope *, 4> scopeAnlyzedForAliases;
-  std::vector<ScopedAggregateStore> stores;
+  std::vector<Fortran::lower::pft::Variable::AggregateStore> stores;
   bool reentrant;
 };
 } // namespace
