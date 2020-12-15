@@ -1468,6 +1468,20 @@ define <4 x i32> @splat_assoc_add(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %r
 }
 
+define <vscale x 4 x i32> @vsplat_assoc_add(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: @vsplat_assoc_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 4 x i32> [[X:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 317426, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = add <vscale x 4 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+
+  %splatx = shufflevector <vscale x 4 x i32> %x, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %a = add <vscale x 4 x i32> %y, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 317426, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  %r = add <vscale x 4 x i32> %splatx, %a
+  ret <vscale x 4 x i32> %r
+}
+
 ; Undefs in splat mask are replaced with defined splat index
 
 define <4 x i32> @splat_assoc_add_undef_mask_elts(<4 x i32> %x, <4 x i32> %y) {
