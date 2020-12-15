@@ -682,6 +682,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/allocator_traits.h>
 #include <__memory/base.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/utilities.h>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif
@@ -3299,28 +3300,21 @@ shared_ptr<_Tp>::reset(_Yp* __p, _Dp __d, _Alloc __a)
     shared_ptr(__p, __d, __a).swap(*this);
 }
 
-template<class _Tp, class _Alloc, class ..._Args>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    !is_array<_Tp>::value,
-    shared_ptr<_Tp>
->::type
-allocate_shared(const _Alloc& __a, _Args&& ...__args)
+//
+// std::allocate_shared and std::make_shared
+//
+template<class _Tp, class _Alloc, class ..._Args, class = _EnableIf<!is_array<_Tp>::value> >
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
     static_assert(is_constructible<_Tp, _Args...>::value,
         "allocate_shared/make_shared: the type is not constructible from the provided arguments");
-
-    typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
-    typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
-    typedef __allocator_destructor<_A2> _D2;
-
-    _A2 __a2(__a);
-    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-    ::new ((void*)_VSTD::addressof(*__hold2.get())) _CntrlBlk(__a, _VSTD::forward<_Args>(__args)...);
-
-    typename shared_ptr<_Tp>::element_type *__p = __hold2->__get_elem();
-    return shared_ptr<_Tp>::__create_with_control_block(__p, _VSTD::addressof(*__hold2.release()));
+    using _ControlBlock = __shared_ptr_emplace<_Tp, _Alloc>;
+    using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
+    __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
+    ::new ((void*)_VSTD::addressof(*__guard.__get())) _ControlBlock(__a, _VSTD::forward<_Args>(__args)...);
+    auto __control_block = __guard.__release_ptr();
+    return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), _VSTD::addressof(*__control_block));
 }
 
 template<class _Tp, class ..._Args, class = _EnableIf<!is_array<_Tp>::value> >
