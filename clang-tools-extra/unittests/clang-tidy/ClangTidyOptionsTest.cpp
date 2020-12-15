@@ -195,8 +195,9 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   CheckOptions["test.BoolIFalseValue"] = "0";
   CheckOptions["test.BoolTrueValue"] = "true";
   CheckOptions["test.BoolFalseValue"] = "false";
+  CheckOptions["test.BoolTrueShort"] = "Y";
+  CheckOptions["test.BoolFalseShort"] = "N";
   CheckOptions["test.BoolUnparseable"] = "Nothing";
-  CheckOptions["test.BoolCaseMismatch"] = "True";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
@@ -227,12 +228,11 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolIFalseValue"), false);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueValue"), true);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseValue"), false);
+  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueShort"), true);
+  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseShort"), false);
   CHECK_ERROR_INT(TestCheck.getIntLocal<bool>("BoolUnparseable"),
                   "invalid configuration value 'Nothing' for option "
                   "'test.BoolUnparseable'; expected a bool");
-  CHECK_ERROR_INT(TestCheck.getIntLocal<bool>("BoolCaseMismatch"),
-                  "invalid configuration value 'True' for option "
-                  "'test.BoolCaseMismatch'; expected a bool");
 
 #undef CHECK_ERROR_INT
 }
