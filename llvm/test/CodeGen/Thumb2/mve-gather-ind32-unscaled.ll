@@ -462,17 +462,15 @@ define arm_aapcs_vfpcc <4 x i32> @qi4(<4 x i32*> %p) {
 ; CHECK-NEXT:    vmov.i32 q1, #0x10
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r3, [r3]
-; CHECK-NEXT:    vmov.32 q0[0], r0
 ; CHECK-NEXT:    ldr r1, [r1]
-; CHECK-NEXT:    vmov.32 q0[1], r3
 ; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    vmov.32 q0[2], r1
-; CHECK-NEXT:    vmov.32 q0[3], r2
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %g = getelementptr inbounds i32, <4 x i32*> %p, i32 4

@@ -4,10 +4,8 @@
 define arm_aapcs_vfpcc <4 x i32> @vcreate_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: vcreate_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r1
-; CHECK-NEXT:    vmov.32 q0[1], r0
-; CHECK-NEXT:    vmov.32 q0[2], r3
-; CHECK-NEXT:    vmov.32 q0[3], r2
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r1
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %conv = zext i32 %a to i64
@@ -27,10 +25,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_0123(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_0123:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], r2
-; CHECK-NEXT:    vmov.32 q0[3], r3
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 0
@@ -43,10 +39,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_3210(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_3210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r3
-; CHECK-NEXT:    vmov.32 q0[1], r2
-; CHECK-NEXT:    vmov.32 q0[2], r1
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r3
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 3
@@ -59,10 +53,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_0213(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_0213:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r2
-; CHECK-NEXT:    vmov.32 q0[2], r1
-; CHECK-NEXT:    vmov.32 q0[3], r3
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 0
@@ -75,8 +67,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_0220(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_0220:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r3
-; CHECK-NEXT:    vmov.32 q0[2], r2
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 0
@@ -89,9 +80,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_321(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_321:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[1], r2
 ; CHECK-NEXT:    vmov.32 q0[2], r1
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 3
@@ -104,8 +94,7 @@ define arm_aapcs_vfpcc <4 x i32> @insert_310(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_310:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 3
@@ -117,8 +106,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_320(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_320:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[2], r1
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
 ; CHECK-NEXT:    vmov.32 q0[3], r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -131,8 +119,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_31(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 3
@@ -165,9 +152,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_210(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 2
@@ -179,8 +165,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @insert_20(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: insert_20:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %v1 = insertelement <4 x i32> undef, i32 %a, i32 2
@@ -245,28 +230,26 @@ entry:
 define hidden <8 x i16> @create_i16(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d, i16 zeroext %a2, i16 zeroext %b2, i16 zeroext %c2, i16 zeroext %d2) local_unnamed_addr #0 {
 ; CHECK-LABEL: create_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    orr.w r0, r1, r0, lsl #16
-; CHECK-NEXT:    lsll r2, r5, #16
-; CHECK-NEXT:    ldrd lr, r4, [sp, #16]
-; CHECK-NEXT:    orr.w r1, r2, r3
-; CHECK-NEXT:    ldr.w r12, [sp, #24]
-; CHECK-NEXT:    orrs r0, r5
-; CHECK-NEXT:    vmov.32 q0[0], r1
+; CHECK-NEXT:    .save {r5, r6, r7, lr}
+; CHECK-NEXT:    push {r5, r6, r7, lr}
 ; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    vmov.32 q0[1], r0
-; CHECK-NEXT:    ldr r0, [sp, #28]
-; CHECK-NEXT:    lsll r12, r7, #16
-; CHECK-NEXT:    orr.w r4, r4, lr, lsl #16
-; CHECK-NEXT:    orr.w r0, r0, r12
-; CHECK-NEXT:    orrs r7, r4
-; CHECK-NEXT:    vmov.32 q0[2], r0
-; CHECK-NEXT:    vmov.32 q0[3], r7
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    lsll r2, r7, #16
+; CHECK-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-NEXT:    orr.w r12, r2, r3
+; CHECK-NEXT:    ldr r2, [sp, #24]
+; CHECK-NEXT:    ldr r3, [sp, #28]
+; CHECK-NEXT:    orrs r0, r7
+; CHECK-NEXT:    lsll r2, r5, #16
+; CHECK-NEXT:    orrs r2, r3
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r12
+; CHECK-NEXT:    ldrd r1, r2, [sp, #16]
+; CHECK-NEXT:    orr.w r1, r2, r1, lsl #16
+; CHECK-NEXT:    orrs r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r5, r6, r7, pc}
 entry:
   %conv = zext i16 %a to i64
   %shl = shl nuw i64 %conv, 48
@@ -325,59 +308,59 @@ entry:
 define hidden <16 x i8> @create_i8(i8 zeroext %a1, i8 zeroext %b1, i8 zeroext %c1, i8 zeroext %d1, i8 zeroext %a2, i8 zeroext %b2, i8 zeroext %c2, i8 zeroext %d2, i8 zeroext %a3, i8 zeroext %b3, i8 zeroext %c3, i8 zeroext %d3, i8 zeroext %a4, i8 zeroext %b4, i8 zeroext %c4, i8 zeroext %d4) local_unnamed_addr #0 {
 ; CHECK-LABEL: create_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, r9, r11, lr}
-; CHECK-NEXT:    push.w {r4, r5, r7, r9, r11, lr}
-; CHECK-NEXT:    ldr.w r12, [sp, #28]
-; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    ldr r4, [sp, #24]
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    lsll r12, r11, #16
-; CHECK-NEXT:    lsls r1, r1, #16
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    orr.w r0, r1, r0, lsl #22
-; CHECK-NEXT:    orr.w r12, r12, r4
-; CHECK-NEXT:    ldr r4, [sp, #32]
-; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    orr.w r0, r0, r2, lsl #8
-; CHECK-NEXT:    lsll r4, r7, #8
-; CHECK-NEXT:    add r0, r3
-; CHECK-NEXT:    orr.w r12, r12, r4
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEXT:    ldr r4, [sp, #36]
-; CHECK-NEXT:    orrs r0, r5
-; CHECK-NEXT:    ldr r2, [sp, #56]
-; CHECK-NEXT:    orr.w r0, r0, r11
-; CHECK-NEXT:    orr.w r4, r4, r12
-; CHECK-NEXT:    vmov.32 q0[0], r4
-; CHECK-NEXT:    orrs r0, r7
-; CHECK-NEXT:    vmov.32 q0[1], r0
-; CHECK-NEXT:    ldr r0, [sp, #60]
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    ldr r6, [sp, #32]
+; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    lsll r4, r11, #16
+; CHECK-NEXT:    mov lr, r1
+; CHECK-NEXT:    lsll r6, r7, #24
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    orr.w r1, r6, r4
+; CHECK-NEXT:    ldr r4, [sp, #40]
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r0, r1, #16
-; CHECK-NEXT:    lsll r2, r3, #24
-; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    ldr r2, [sp, #64]
+; CHECK-NEXT:    ldr r6, [sp, #68]
+; CHECK-NEXT:    lsll r4, r3, #8
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    orrs r1, r4
+; CHECK-NEXT:    ldr r4, [sp, #44]
+; CHECK-NEXT:    lsll r6, r5, #16
 ; CHECK-NEXT:    mov.w r9, #0
-; CHECK-NEXT:    lsll r2, r9, #8
-; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    ldr r2, [sp, #68]
-; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    ldr r2, [sp, #40]
-; CHECK-NEXT:    vmov.32 q0[2], r0
-; CHECK-NEXT:    ldr r0, [sp, #44]
-; CHECK-NEXT:    lsls r0, r0, #16
-; CHECK-NEXT:    orr.w r0, r0, r2, lsl #22
-; CHECK-NEXT:    ldr r2, [sp, #48]
+; CHECK-NEXT:    orr.w r8, r1, r4
+; CHECK-NEXT:    ldr r4, [sp, #64]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    lsll r4, r1, #24
+; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    ldr r6, [sp, #72]
+; CHECK-NEXT:    lsll r6, r9, #8
+; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    ldr r6, [sp, #76]
+; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    lsl.w r6, lr, #16
+; CHECK-NEXT:    orr.w r0, r6, r0, lsl #22
+; CHECK-NEXT:    vmov q0[2], q0[0], r4, r8
 ; CHECK-NEXT:    orr.w r0, r0, r2, lsl #8
 ; CHECK-NEXT:    ldr r2, [sp, #52]
-; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    add r0, r12
+; CHECK-NEXT:    orrs r0, r7
+; CHECK-NEXT:    orr.w r0, r0, r11
+; CHECK-NEXT:    lsls r2, r2, #16
 ; CHECK-NEXT:    orrs r0, r3
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    orr.w r0, r0, r9
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    ldr r3, [sp, #48]
+; CHECK-NEXT:    orr.w r2, r2, r3, lsl #22
+; CHECK-NEXT:    ldr r3, [sp, #56]
+; CHECK-NEXT:    orr.w r2, r2, r3, lsl #8
+; CHECK-NEXT:    ldr r3, [sp, #60]
+; CHECK-NEXT:    add r2, r3
+; CHECK-NEXT:    orrs r1, r2
+; CHECK-NEXT:    orrs r1, r5
+; CHECK-NEXT:    orr.w r1, r1, r9
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop.w {r4, r5, r7, r9, r11, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r11, pc}
 entry:
   %conv = zext i8 %a1 to i64
   %shl = shl nuw nsw i64 %conv, 54
