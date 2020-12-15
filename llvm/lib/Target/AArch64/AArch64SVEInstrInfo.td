@@ -575,7 +575,7 @@ let Predicates = [HasSVE] in {
   }
 
   // Select elements from either vector (predicated)
-  defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
+  defm SEL_ZPZZ   : sve_int_sel_vvv<"sel", vselect>;
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", int_aarch64_sve_splice>;
 
@@ -1062,7 +1062,7 @@ let Predicates = [HasSVE] in {
   def PRFS_PRR : sve_mem_prfm_ss<0b101, "prfw", GPR64NoXZRshifted32>;
   def PRFD_PRR : sve_mem_prfm_ss<0b111, "prfd", GPR64NoXZRshifted64>;
 
-multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instruction RegImmInst, Instruction RegRegInst, int scale, ComplexPattern AddrCP> {
+  multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instruction RegImmInst, Instruction RegRegInst, int scale, ComplexPattern AddrCP> {
     // reg + imm
     let AddedComplexity = 2 in {
       def _reg_imm : Pat<(prefetch (PredTy PPR_3b:$gp), (am_sve_indexed_s6 GPR64sp:$base, simm6s1:$offset), (i32 sve_prfop:$prfop)),
@@ -1735,7 +1735,6 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
     def : Pat<(nxv2f64 (bitconvert (nxv2i64 ZPR:$src))), (nxv2f64 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8f16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv4f32 ZPR:$src))), (nxv2f64 ZPR:$src)>;
-
   }
 
   let Predicates = [IsLE, HasBF16, HasSVE] in {
@@ -2434,6 +2433,7 @@ let Predicates = [HasSVE2] in {
             (UMULH_ZZZ_S $Op1, $Op2)>;
   def : Pat<(nxv2i64 (int_aarch64_sve_umulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
             (UMULH_ZZZ_D $Op1, $Op2)>;
+
   // SVE2 complex integer dot product (indexed)
   defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot", int_aarch64_sve_cdot_lane>;
 
