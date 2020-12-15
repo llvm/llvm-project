@@ -23,7 +23,10 @@
 #define DEVICE __device__
 #define INLINE __forceinline__ DEVICE
 #define NOINLINE __noinline__ DEVICE
-#define SHARED __shared__
+
+#define SHARED(NAME) __shared__ NAME
+#define EXTERN_SHARED(NAME) __shared__ NAME
+
 #define ALIGN(N) __align__(N)
 
 ////////////////////////////////////////////////////////////////////////////////
