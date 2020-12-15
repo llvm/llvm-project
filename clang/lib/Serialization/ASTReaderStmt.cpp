@@ -614,7 +614,7 @@ void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
         E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
 
-  E->setDecl(readDeclAs<ValueDecl>());
+  E->D = readDeclAs<ValueDecl>();
   E->setLocation(readSourceLocation());
   E->DNLoc = Record.readDeclarationNameLoc(E->getDecl()->getDeclName());
 }
