@@ -2358,13 +2358,6 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
        ast_child_is_deref_of_parent, valobj, ast_language_flags));
 }
 
-uint32_t
-TypeSystemSwiftTypeRef::GetIndexOfChildWithName(opaque_compiler_type_t type,
-                                                const char *name,
-                                                bool omit_empty_base_classes) {
-  return m_swift_ast_context->GetIndexOfChildWithName(
-      ReconstructType(type), name, omit_empty_base_classes);
-}
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     opaque_compiler_type_t type, const char *name, bool omit_empty_base_classes,
     std::vector<uint32_t> &child_indexes) {

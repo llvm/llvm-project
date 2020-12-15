@@ -7438,21 +7438,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
   return 0;
 }
 
-/// Get the index of the child of "clang_type" whose name matches. This
-/// function doesn't descend into the children, but only looks one
-/// level deep and name matches can include base class names.
-uint32_t
-SwiftASTContext::GetIndexOfChildWithName(opaque_compiler_type_t type,
-                                         const char *name,
-                                         bool omit_empty_base_classes) {
-  VALID_OR_RETURN(UINT32_MAX);
-
-  std::vector<uint32_t> child_indexes;
-  size_t num_child_indexes = GetIndexOfChildMemberWithName(
-      type, name, omit_empty_base_classes, child_indexes);
-  return num_child_indexes == 1 ? child_indexes.front() : UINT32_MAX;
-}
-
 size_t SwiftASTContext::GetNumTemplateArguments(opaque_compiler_type_t type) {
   if (!type)
     return 0;

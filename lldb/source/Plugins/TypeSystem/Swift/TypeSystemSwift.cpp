@@ -101,3 +101,13 @@ bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
   return Flags(GetTypeInfo(type, nullptr))
       .AnySet(eTypeInstanceIsPointer | eTypeIsReference);
 }
+
+uint32_t
+TypeSystemSwift::GetIndexOfChildWithName(opaque_compiler_type_t type,
+                                         const char *name,
+                                         bool omit_empty_base_classes) {
+  std::vector<uint32_t> child_indexes;
+  size_t num_child_indexes = GetIndexOfChildMemberWithName(
+      type, name, omit_empty_base_classes, child_indexes);
+  return num_child_indexes == 1 ? child_indexes.front() : UINT32_MAX;
+}

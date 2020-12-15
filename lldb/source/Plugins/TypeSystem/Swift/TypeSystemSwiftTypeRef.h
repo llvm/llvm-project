@@ -165,9 +165,6 @@ public:
       uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) override;
-  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   const char *name,
-                                   bool omit_empty_base_classes) override;
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
                                 const char *name, bool omit_empty_base_classes,
