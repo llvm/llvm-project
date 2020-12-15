@@ -1,0 +1,19 @@
+add_mlir_conversion_library(MLIRArmSVEToLLVM
+  ArmSVEToLLVM.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ArmSVEToLLVM
+
+  DEPENDS
+  MLIRConversionPassIncGen
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRArmSVE
+  MLIRLLVMArmSVE
+  MLIRLLVMIR
+  MLIRStandardToLLVM
+  MLIRTransforms
+  )
