@@ -514,3 +514,15 @@ namespace type_of_pack {
     }
   };
 }
+
+namespace match_type_after_substitution {
+  template<typename T> struct X {};
+  X<int> y;
+  template<typename T, X<T> &Y> struct B {
+    typedef B<T, Y> Self;
+  };
+
+  // These two formulations should resolve to the same type.
+  typedef B<int, y> Z;
+  typedef Z::Self Z;
+}

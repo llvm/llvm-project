@@ -4210,17 +4210,10 @@ static void __kmp_aux_affinity_initialize(void) {
         }
       }
 
-      FILE *f = fopen("/proc/cpuinfo", "r");
-      if (f == NULL) {
-        msg_id = kmp_i18n_str_CantOpenCpuinfo;
-      } else {
-        file_name = "/proc/cpuinfo";
-        depth =
-            __kmp_affinity_create_cpuinfo_map(&address2os, &line, &msg_id, f);
-        fclose(f);
-        if (depth == 0) {
-          KMP_EXIT_AFF_NONE;
-        }
+      kmp_safe_raii_file_t f("/proc/cpuinfo", "r");
+      depth = __kmp_affinity_create_cpuinfo_map(&address2os, &line, &msg_id, f);
+      if (depth == 0) {
+        KMP_EXIT_AFF_NONE;
       }
     }
 
@@ -4313,8 +4306,10 @@ static void __kmp_aux_affinity_initialize(void) {
 
   else if (__kmp_affinity_top_method == affinity_top_method_cpuinfo) {
     const char *filename;
+    const char *env_var = nullptr;
     if (__kmp_cpuinfo_file != NULL) {
       filename = __kmp_cpuinfo_file;
+      env_var = "KMP_CPUINFO_FILE";
     } else {
       filename = "/proc/cpuinfo";
     }
@@ -4323,20 +4318,9 @@ static void __kmp_aux_affinity_initialize(void) {
       KMP_INFORM(AffParseFilename, "KMP_AFFINITY", filename);
     }
 
-    FILE *f = fopen(filename, "r");
-    if (f == NULL) {
-      int code = errno;
-      if (__kmp_cpuinfo_file != NULL) {
-        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
-                    KMP_HNT(NameComesFrom_CPUINFO_FILE), __kmp_msg_null);
-      } else {
-        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
-                    __kmp_msg_null);
-      }
-    }
+    kmp_safe_raii_file_t f(filename, "r", env_var);
     int line = 0;
     depth = __kmp_affinity_create_cpuinfo_map(&address2os, &line, &msg_id, f);
-    fclose(f);
     if (depth < 0) {
       KMP_ASSERT(msg_id != kmp_i18n_null);
       if (line > 0) {
