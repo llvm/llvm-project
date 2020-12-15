@@ -1798,9 +1798,17 @@ private:
     } else {
       TODO("global"); // Procedure pointer or something else
     }
-    if (global)
-      return global;
-    global = builder->createGlobal(loc, genType(var), globalName, linkage);
+    // Creates undefined initializer for globals without initialziers
+    if (!global) {
+      auto symTy = genType(var);
+      global = builder->createGlobal(
+          loc, symTy, globalName, isConst,
+          [&](Fortran::lower::FirOpBuilder &builder) {
+            builder.create<fir::HasValueOp>(
+                loc, builder.create<fir::UndefOp>(loc, symTy));
+          },
+          linkage);
+    }
     // Set public visibility to prevent global definition to be optimized out
     // even if they have no initializer and are unused in this compilation unit.
     global.setVisibility(mlir::SymbolTable::Visibility::Public);
@@ -3068,7 +3076,14 @@ private:
         uniquer.doGenerated("ModuleSham"),
         mlir::FunctionType::get(llvm::None, llvm::None, context));
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
-    mlir::StringAttr externalLinkage;
+    // linkOnce linkage allows the definition to be kept by LLVM
+    // even if it is unused and there is not init (other than undef).
+    // Emitting llvm :'@glob = global type undef' would also work, but mlir
+    // always insert "external" and removes the undef init when lowering a
+    // global without explicit linkage. This ends-up in llvm removing the
+    // symbol if unsued potentially creating linking issues. Hence the use
+    // of linkOnce.
+    auto linkOnce = builder->createLinkOnceLinkage();
     for (const auto &var : mod.getOrderedSymbolTable()) {
       // Only define variable owned by this module
       if (var.isDeclaration())
@@ -3082,7 +3097,7 @@ private:
       if (var.isAggregateStore()) {
         auto &aggregate = var.getAggregateStore();
         auto aggName = mangleGlobalAggregateStore(aggregate);
-        defineGlobalAggregateStore(aggregate, aggName, externalLinkage);
+        defineGlobalAggregateStore(aggregate, aggName, linkOnce);
         continue;
       }
       const auto &sym = var.getSymbol();
@@ -3094,7 +3109,7 @@ private:
         // Do nothing. Mapping will be done on user side.
       } else {
         auto globalName = mangleName(sym);
-        defineGlobal(var, globalName, externalLinkage);
+        defineGlobal(var, globalName, linkOnce);
       }
     }
     if (auto *region = func.getCallableRegion())

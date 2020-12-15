@@ -8,8 +8,8 @@ module m1
   real :: x
   integer :: y(100)
 end module
-! CHECK: fir.global @_QMm1Ex : f32
-! CHECK: fir.global @_QMm1Ey : !fir.array<100xi32>
+! CHECK: fir.global linkonce @_QMm1Ex : f32
+! CHECK: fir.global linkonce @_QMm1Ey : !fir.array<100xi32>
 
 ! Module modEq1 defines data that is equivalenced and not used in this
 ! file.
@@ -21,10 +21,10 @@ module modEq1
   real :: y2(10)
   equivalence (x1(1), x2(5), x3(10)), (y1, y2(5))
 end module
-! CHECK-LABEL: fir.global @_QMmodeq1Ex1 : tuple<!fir.array<36xi8>, !fir.array<40xi8>> {
+! CHECK-LABEL: fir.global linkonce @_QMmodeq1Ex1 : tuple<!fir.array<36xi8>, !fir.array<40xi8>> {
   ! CHECK: %[[undef:.*]] = fir.undefined tuple<!fir.array<36xi8>, !fir.array<40xi8>>
   ! CHECK: fir.has_value %[[undef]] : tuple<!fir.array<36xi8>, !fir.array<40xi8>>
-! CHECK-LABEL: fir.global @_QMmodeq1Ey1 : tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>> {
+! CHECK-LABEL: fir.global linkonce @_QMmodeq1Ey1 : tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>> {
   ! CHECK: %[[undef:.*]] = fir.undefined tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
   ! CHECK: %[[cst:.*]] = constant 4.200000e+01 : f32
   ! CHECK: %[[init:.*]] = fir.insert_value %[[undef]], %[[cst]], %c1{{.*}} : (tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>, f32, index) -> tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
