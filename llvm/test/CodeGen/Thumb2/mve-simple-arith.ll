@@ -37,22 +37,20 @@ define arm_aapcs_vfpcc <2 x i64> @add_int64_t(<2 x i64> %src1, <2 x i64> %src2) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov r3, s2
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    vmov r0, s5
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    adds.w lr, r3, r2
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov r3, s1
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    adc.w r12, r1, r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s7
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], lr
-; CHECK-NEXT:    vmov.32 q0[3], r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, lr
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r12
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = add nsw <2 x i64> %src1, %src2
@@ -188,22 +186,20 @@ define arm_aapcs_vfpcc <2 x i64> @sub_int64_t(<2 x i64> %src1, <2 x i64> %src2) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    vmov r0, s3
-; CHECK-NEXT:    vmov r1, s7
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r3, s4
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    subs.w lr, r3, r2
-; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    vmov r3, s5
+; CHECK-NEXT:    vmov r2, s6
+; CHECK-NEXT:    vmov r3, s7
 ; CHECK-NEXT:    sbc.w r12, r1, r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    subs r0, r2, r0
 ; CHECK-NEXT:    sbc.w r1, r3, r1
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], lr
-; CHECK-NEXT:    vmov.32 q0[3], r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, lr
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r12
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = sub nsw <2 x i64> %src2, %src1
@@ -352,11 +348,9 @@ define arm_aapcs_vfpcc <2 x i64> @mul_int64_t(<2 x i64> %src1, <2 x i64> %src2) 
 ; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    mla r0, r2, r0, lr
 ; CHECK-NEXT:    vmov r2, s3
-; CHECK-NEXT:    vmov.32 q0[0], r12
-; CHECK-NEXT:    vmov.32 q0[1], r0
-; CHECK-NEXT:    vmov.32 q0[2], r4
+; CHECK-NEXT:    vmov q0[2], q0[0], r4, r12
 ; CHECK-NEXT:    mla r1, r2, r3, r1
-; CHECK-NEXT:    vmov.32 q0[3], r1
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = mul nsw <2 x i64> %src1, %src2

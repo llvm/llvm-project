@@ -8,17 +8,15 @@ define arm_aapcs_vfpcc <4 x i32> @unscaled_i32_i32_gather(i8* %base, <4 x i32>* 
 ; NOGATSCAT-NEXT:    vldrw.u32 q0, [r1]
 ; NOGATSCAT-NEXT:    vadd.i32 q0, q0, r0
 ; NOGATSCAT-NEXT:    vmov r0, s0
-; NOGATSCAT-NEXT:    vmov r3, s1
 ; NOGATSCAT-NEXT:    vmov r1, s2
-; NOGATSCAT-NEXT:    vmov r2, s3
+; NOGATSCAT-NEXT:    vmov r2, s1
+; NOGATSCAT-NEXT:    vmov r3, s3
 ; NOGATSCAT-NEXT:    ldr r0, [r0]
-; NOGATSCAT-NEXT:    ldr r3, [r3]
-; NOGATSCAT-NEXT:    vmov.32 q0[0], r0
 ; NOGATSCAT-NEXT:    ldr r1, [r1]
-; NOGATSCAT-NEXT:    vmov.32 q0[1], r3
 ; NOGATSCAT-NEXT:    ldr r2, [r2]
-; NOGATSCAT-NEXT:    vmov.32 q0[2], r1
-; NOGATSCAT-NEXT:    vmov.32 q0[3], r2
+; NOGATSCAT-NEXT:    ldr r3, [r3]
+; NOGATSCAT-NEXT:    vmov q0[2], q0[0], r1, r0
+; NOGATSCAT-NEXT:    vmov q0[3], q0[1], r3, r2
 ; NOGATSCAT-NEXT:    bx lr
 ;
 ; NOMVE-LABEL: unscaled_i32_i32_gather:
