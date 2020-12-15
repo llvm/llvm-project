@@ -394,3 +394,17 @@ gpu.module @test_module {
   }) : () -> ()
 }
 
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_powf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_pow(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_pow
+  func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = std.pow %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__nv_powf(%{{.*}}, %{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.pow %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__nv_pow(%{{.*}}, %{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return %result32, %result64 : f32, f64
+  }
+}
