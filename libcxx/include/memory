@@ -3307,8 +3307,6 @@ template<class _Tp, class _Alloc, class ..._Args, class = _EnableIf<!is_array<_T
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
-    static_assert(is_constructible<_Tp, _Args...>::value,
-        "allocate_shared/make_shared: the type is not constructible from the provided arguments");
     using _ControlBlock = __shared_ptr_emplace<_Tp, _Alloc>;
     using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
     __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
