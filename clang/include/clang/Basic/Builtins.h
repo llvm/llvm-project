@@ -158,6 +158,13 @@ public:
     return strchr(getRecord(ID).Attributes, 't') != nullptr;
   }
 
+  /// Determines whether a declaration of this builtin should be recognized
+  /// even if the type doesn't match the specified signature.
+  bool allowTypeMismatch(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'T') != nullptr ||
+           hasCustomTypechecking(ID);
+  }
+
   /// Determines whether this builtin has a result or any arguments which
   /// are pointer types.
   bool hasPtrArgsOrResult(unsigned ID) const {
