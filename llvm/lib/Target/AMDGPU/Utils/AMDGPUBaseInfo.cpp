@@ -1526,6 +1526,14 @@ Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
   return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset) : None;
 }
 
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9.
+  if (AMDGPU::isGFX10(ST))
+    return Signed ? 12 : 11;
+
+  return Signed ? 13 : 12;
+}
+
 // Given Imm, split it into the values to put into the SOffset and ImmOffset
 // fields in an MUBUF instruction. Return false if it is not possible (due to a
 // hardware bug needing a workaround).

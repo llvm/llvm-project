@@ -3646,22 +3646,20 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
     return false;
   }
 
-  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9.
   // For FLAT segment the offset must be positive;
   // MSB is ignored and forced to zero.
-  unsigned OffsetSize = isGFX9() ? 13 : 12;
   if (TSFlags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch)) {
+    unsigned OffsetSize = AMDGPU::getNumFlatOffsetBits(getSTI(), true);
     if (!isIntN(OffsetSize, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            isGFX9() ? "expected a 13-bit signed offset" :
-                       "expected a 12-bit signed offset");
+            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
       return false;
     }
   } else {
-    if (!isUIntN(OffsetSize - 1, Op.getImm())) {
+    unsigned OffsetSize = AMDGPU::getNumFlatOffsetBits(getSTI(), false);
+    if (!isUIntN(OffsetSize, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            isGFX9() ? "expected a 12-bit unsigned offset" :
-                       "expected an 11-bit unsigned offset");
+            Twine("expected a ") + Twine(OffsetSize) + "-bit unsigned offset");
       return false;
     }
   }
