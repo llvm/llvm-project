@@ -1489,6 +1489,27 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+static SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG,
+                              const VETargetLowering &TLI,
+                              const VESubtarget *Subtarget) {
+  SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = TLI.getPointerTy(MF.getDataLayout());
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+
+  unsigned Depth = Op.getConstantOperandVal(0);
+  const VERegisterInfo *RegInfo = Subtarget->getRegisterInfo();
+  unsigned FrameReg = RegInfo->getFrameRegister(MF);
+  SDValue FrameAddr =
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameReg, PtrVT);
+  while (Depth--)
+    FrameAddr = DAG.getLoad(Op.getValueType(), DL, DAG.getEntryNode(),
+                            FrameAddr, MachinePointerInfo());
+  return FrameAddr;
+}
+
 static SDValue getSplatValue(SDNode *N) {
   if (auto *BuildVec = dyn_cast<BuildVectorSDNode>(N)) {
     return BuildVec->getSplatValue();
@@ -1529,6 +1550,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerConstantPool(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::FRAMEADDR:
+    return lowerFRAMEADDR(Op, DAG, *this, Subtarget);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:
