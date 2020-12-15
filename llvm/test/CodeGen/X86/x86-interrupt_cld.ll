@@ -8,7 +8,7 @@
 ; CHECK: cld
 ; CHECK: call
 
-define x86_intrcc void @foo(i8* %frame) {
+define x86_intrcc void @foo(i8* byval(i8) %frame) {
   call void @bar()
   ret void
 }
