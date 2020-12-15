@@ -687,6 +687,18 @@ public:
   ~buffer_ostream() override { OS << str(); }
 };
 
+class buffer_unique_ostream : public raw_svector_ostream {
+  std::unique_ptr<raw_ostream> OS;
+  SmallVector<char, 0> Buffer;
+
+  virtual void anchor() override;
+
+public:
+  buffer_unique_ostream(std::unique_ptr<raw_ostream> OS)
+      : raw_svector_ostream(Buffer), OS(std::move(OS)) {}
+  ~buffer_unique_ostream() override { *OS << str(); }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_RAW_OSTREAM_H
