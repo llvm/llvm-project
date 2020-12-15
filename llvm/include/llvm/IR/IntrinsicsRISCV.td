@@ -96,13 +96,44 @@ let TargetPrefix = "riscv" in {
                    [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
+  // For destination vector type is NOT the same as first source vector.
+  // Input: (vector_in, vector_in/scalar_in, vl)
+  class RISCVBinaryABXNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  // For destination vector type is NOT the same as first source vector (with mask).
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl)
+  class RISCVBinaryABXMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     llvm_anyvector_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 3;
+  }
 
   multiclass RISCVBinaryAAX {
     def "int_riscv_" # NAME : RISCVBinaryAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMask;
   }
+  multiclass RISCVBinaryABX {
+    def "int_riscv_" # NAME : RISCVBinaryABXNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVBinaryABXMask;
+  }
 
   defm vadd : RISCVBinaryAAX;
   defm vsub : RISCVBinaryAAX;
   defm vrsub : RISCVBinaryAAX;
+
+  defm vwaddu : RISCVBinaryABX;
+  defm vwadd : RISCVBinaryABX;
+  defm vwaddu_w : RISCVBinaryAAX;
+  defm vwadd_w : RISCVBinaryAAX;
+  defm vwsubu : RISCVBinaryABX;
+  defm vwsub : RISCVBinaryABX;
+  defm vwsubu_w : RISCVBinaryAAX;
+  defm vwsub_w : RISCVBinaryAAX;
+
 } // TargetPrefix = "riscv"
