@@ -24,22 +24,19 @@ namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
-  Hi,
-  Lo, // Hi/Lo operations, typically on a global address.
-
-  GETFUNPLT,   // load function address through %plt insturction
-  GETTLSADDR,  // load address for TLS access
-  GETSTACKTOP, // retrieve address of stack top (first address of
-               // locals and temporaries)
-
-  MEMBARRIER, // Compiler barrier only; generate a no-op.
-  TS1AM,      // A TS1AM instruction used for 1/2 bytes swap.
-
-  VEC_BROADCAST, // 0: scalar value, 1: VL
-
   CALL,            // A call instruction.
-  RET_FLAG,        // Return with a flag operand.
+  GETFUNPLT,       // Load function address through %plt insturction.
+  GETTLSADDR,      // Load address for TLS access.
+  GETSTACKTOP,     // Retrieve address of stack top (first address of
+                   // locals and temporaries).
   GLOBAL_BASE_REG, // Global base reg for PIC.
+  Hi,              // Hi/Lo operations, typically on a global address.
+  Lo,              // Hi/Lo operations, typically on a global address.
+  MEMBARRIER,      // Compiler barrier only; generate a no-op.
+  RET_FLAG,        // Return with a flag operand.
+  TS1AM,           // A TS1AM instruction used for 1/2 bytes swap.
+  VEC_BROADCAST,   // A vector broadcast instruction.
+                   //   0: scalar value, 1: VL
 
 // VVP_* nodes.
 #define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
