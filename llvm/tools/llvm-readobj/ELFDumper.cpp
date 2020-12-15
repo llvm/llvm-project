@@ -3528,16 +3528,17 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
 
   Str = printEnum(e.e_type, makeArrayRef(ElfObjectFileType));
-  if (e.e_type >= ET_LOPROC) {
-    Str = "Processor Specific: (" + Str + ")";
-  } else if (e.e_type >= ET_LOOS) {
-    Str = "OS Specific: (" + Str + ")";
-  } else if (makeArrayRef(ElfObjectFileType).end() ==
-             llvm::find_if(ElfObjectFileType,
-                           [&](const EnumEntry<unsigned> &E) {
-                             return E.Value == e.e_type;
-                           }))
-    Str = "<unknown>: " + Str;
+  if (makeArrayRef(ElfObjectFileType).end() ==
+      llvm::find_if(ElfObjectFileType, [&](const EnumEntry<unsigned> &E) {
+        return E.Value == e.e_type;
+      })) {
+    if (e.e_type >= ET_LOPROC)
+      Str = "Processor Specific: (" + Str + ")";
+    else if (e.e_type >= ET_LOOS)
+      Str = "OS Specific: (" + Str + ")";
+    else
+      Str = "<unknown>: " + Str;
+  }
   printFields(OS, "Type:", Str);
 
   Str = printEnum(e.e_machine, makeArrayRef(ElfMachineType));
