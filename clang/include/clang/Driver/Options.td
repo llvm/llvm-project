@@ -1265,13 +1265,22 @@ def fencoding_EQ : Joined<["-"], "fencoding=">, Group<f_Group>;
 def ferror_limit_EQ : Joined<["-"], "ferror-limit=">, Group<f_Group>, Flags<[CoreOption]>;
 defm exceptions : OptInFFlag<"exceptions", "Enable", "Disable", " support for exception handling">;
 def fdwarf_exceptions : Flag<["-"], "fdwarf-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use DWARF style exceptions">;
+  HelpText<"Use DWARF style exceptions">;
 def fsjlj_exceptions : Flag<["-"], "fsjlj-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use SjLj style exceptions">;
+  HelpText<"Use SjLj style exceptions">;
 def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use SEH style exceptions">;
+  HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use WebAssembly style exceptions">;
+  HelpText<"Use WebAssembly style exceptions">;
+def exception_model : Separate<["-"], "exception-model">,
+  Flags<[CC1Option, NoDriverOption]>, HelpText<"The exception model: dwarf|sjlj|seh|wasm">,
+  Values<"dwarf,sjlj,seh,wasm">,
+  NormalizedValuesScope<"llvm::ExceptionHandling">,
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
+  MarshallingInfoString<"LangOpts->ExceptionHandling", "None">,
+  AutoNormalizeEnum;
+def exception_model_EQ : Joined<["-"], "exception-model=">,
+  Flags<[CC1Option, NoDriverOption]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable support for ignoring exception handling constructs">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">,
