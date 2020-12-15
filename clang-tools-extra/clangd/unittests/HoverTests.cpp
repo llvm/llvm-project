@@ -2019,6 +2019,56 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Definition = "@interface MYObject\n@end";
           }},
+      {
+          R"cpp(// this expr
+          // comment
+          namespace ns {
+            class Foo {
+              Foo* bar() {
+                return [[t^his]];
+              }
+            };
+          }
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "Foo *"; }},
+      {
+          R"cpp(// this expr for template class
+          namespace ns {
+            template <typename T>
+            class Foo {
+              Foo* bar() const {
+                return [[t^his]];
+              }
+            };
+          }
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "const Foo<T> *"; }},
+      {
+          R"cpp(// this expr for specialization class
+          namespace ns {
+            template <typename T> class Foo {};
+            template <>
+            struct Foo<int> {
+              Foo* bar() {
+                return [[thi^s]];
+              }
+            };
+          }
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "Foo<int> *"; }},
+      {
+          R"cpp(// this expr for partial specialization struct
+          namespace ns {
+            template <typename T, typename F> struct Foo {};
+            template <typename F>
+            struct Foo<int, F> {
+              Foo* bar() const {
+                return [[thi^s]];
+              }
+            };
+          }
+          )cpp",
+          [](HoverInfo &HI) { HI.Name = "const Foo<int, F> *"; }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
