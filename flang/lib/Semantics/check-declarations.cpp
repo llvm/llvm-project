@@ -1498,7 +1498,7 @@ void CheckHelper::CheckProcBinding(
 
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
-  common::Restorer<const Symbol *> restorer{innermostSymbol_};
+  common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
   if (const Symbol * symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
   }

@@ -70,20 +70,18 @@ public:
   }
 };
 
-template <u32 EntriesArraySize = 32U, u32 DefaultMaxEntriesCount = 32U,
-          uptr DefaultMaxEntrySize = 1UL << 19,
-          s32 MinReleaseToOsIntervalMs = INT32_MIN,
-          s32 MaxReleaseToOsIntervalMs = INT32_MAX>
-class MapAllocatorCache {
+template <typename Config> class MapAllocatorCache {
 public:
   // Ensure the default maximum specified fits the array.
-  static_assert(DefaultMaxEntriesCount <= EntriesArraySize, "");
+  static_assert(Config::SecondaryCacheDefaultMaxEntriesCount <=
+                    Config::SecondaryCacheEntriesArraySize,
+                "");
 
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
     setOption(Option::MaxCacheEntriesCount,
-              static_cast<sptr>(DefaultMaxEntriesCount));
+              static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntriesCount));
     setOption(Option::MaxCacheEntrySize,
-              static_cast<sptr>(DefaultMaxEntrySize));
+              static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntrySize));
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
   void init(s32 ReleaseToOsInterval) {
@@ -162,13 +160,14 @@ public:
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
       const s32 Interval =
-          Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
-              MinReleaseToOsIntervalMs);
+          Max(Min(static_cast<s32>(Value),
+                  Config::SecondaryCacheMaxReleaseToOsIntervalMs),
+              Config::SecondaryCacheMinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     } else if (O == Option::MaxCacheEntriesCount) {
       const u32 MaxCount = static_cast<u32>(Value);
-      if (MaxCount > EntriesArraySize)
+      if (MaxCount > Config::SecondaryCacheEntriesArraySize)
         return false;
       atomic_store_relaxed(&MaxEntriesCount, MaxCount);
       return true;
@@ -192,11 +191,11 @@ private:
       void *MapBase;
       uptr MapSize;
       MapPlatformData Data;
-    } MapInfo[EntriesArraySize];
+    } MapInfo[Config::SecondaryCacheEntriesArraySize];
     uptr N = 0;
     {
       ScopedLock L(Mutex);
-      for (uptr I = 0; I < EntriesArraySize; I++) {
+      for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++) {
         if (!Entries[I].Block)
           continue;
         MapInfo[N].MapBase = reinterpret_cast<void *>(Entries[I].MapBase);
@@ -217,7 +216,7 @@ private:
     ScopedLock L(Mutex);
     if (!EntriesCount)
       return;
-    for (uptr I = 0; I < EntriesArraySize; I++) {
+    for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++) {
       if (!Entries[I].Block || !Entries[I].Time || Entries[I].Time > Time)
         continue;
       releasePagesToOS(Entries[I].Block, 0,
@@ -237,7 +236,7 @@ private:
   };
 
   HybridMutex Mutex;
-  CachedBlock Entries[EntriesArraySize];
+  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize];
   u32 EntriesCount;
   atomic_u32 MaxEntriesCount;
   atomic_uptr MaxEntrySize;

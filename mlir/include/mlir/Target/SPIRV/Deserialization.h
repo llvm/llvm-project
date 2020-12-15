@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the entry points for serialize and deserialize SPIR-V
-// binary modules.
+// This file declares the entry points for deserializing SPIR-V binary modules.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_SERIALIZATION_H_
-#define MLIR_DIALECT_SPIRV_SERIALIZATION_H_
+#ifndef MLIR_TARGET_SPIRV_DESERIALIZATION_H
+#define MLIR_TARGET_SPIRV_DESERIALIZATION_H
 
 #include "mlir/Support/LLVM.h"
 
@@ -21,14 +20,7 @@ struct LogicalResult;
 class MLIRContext;
 
 namespace spirv {
-class ModuleOp;
 class OwningSPIRVModuleRef;
-
-/// Serializes the given SPIR-V `module` and writes to `binary`. On failure,
-/// reports errors to the error handler registered with the MLIR context for
-/// `module`.
-LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary,
-                        bool emitDebugInfo = false);
 
 /// Deserializes the given SPIR-V `binary` module and creates a MLIR ModuleOp
 /// in the given `context`. Returns the ModuleOp on success; otherwise, reports
@@ -40,4 +32,4 @@ OwningSPIRVModuleRef deserialize(ArrayRef<uint32_t> binary,
 } // end namespace spirv
 } // end namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_SERIALIZATION_H_
+#endif // MLIR_TARGET_SPIRV_DESERIALIZATION_H

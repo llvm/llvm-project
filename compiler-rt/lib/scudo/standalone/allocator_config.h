@@ -32,7 +32,13 @@ struct DefaultConfig {
   // 512KB regions
   typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
 #endif
-  typedef MapAllocator<MapAllocatorCache<>> Secondary;
+  typedef MapAllocatorCache<DefaultConfig> SecondaryCache;
+  static const u32 SecondaryCacheEntriesArraySize = 32U;
+  static const u32 SecondaryCacheDefaultMaxEntriesCount = 32U;
+  static const uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 19;
+  static const s32 SecondaryCacheMinReleaseToOsIntervalMs = INT32_MIN;
+  static const s32 SecondaryCacheMaxReleaseToOsIntervalMs = INT32_MAX;
+
   template <class A> using TSDRegistryT = TSDRegistryExT<A>; // Exclusive
 };
 
@@ -47,9 +53,13 @@ struct AndroidConfig {
   // 256KB regions
   typedef SizeClassAllocator32<SizeClassMap, 18U, 1000, 1000> Primary;
 #endif
-  // Cache blocks up to 2MB
-  typedef MapAllocator<MapAllocatorCache<256U, 32U, 2UL << 20, 0, 1000>>
-      Secondary;
+  typedef MapAllocatorCache<AndroidConfig> SecondaryCache;
+  static const u32 SecondaryCacheEntriesArraySize = 256U;
+  static const u32 SecondaryCacheDefaultMaxEntriesCount = 32U;
+  static const uptr SecondaryCacheDefaultMaxEntrySize = 2UL << 20;
+  static const s32 SecondaryCacheMinReleaseToOsIntervalMs = 0;
+  static const s32 SecondaryCacheMaxReleaseToOsIntervalMs = 1000;
+
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U, 2U>; // Shared, max 8 TSDs.
 };
@@ -63,7 +73,13 @@ struct AndroidSvelteConfig {
   // 64KB regions
   typedef SizeClassAllocator32<SizeClassMap, 16U, 1000, 1000> Primary;
 #endif
-  typedef MapAllocator<MapAllocatorCache<16U, 4U, 1UL << 18, 0, 0>> Secondary;
+  typedef MapAllocatorCache<AndroidSvelteConfig> SecondaryCache;
+  static const u32 SecondaryCacheEntriesArraySize = 16U;
+  static const u32 SecondaryCacheDefaultMaxEntriesCount = 4U;
+  static const uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 18;
+  static const s32 SecondaryCacheMinReleaseToOsIntervalMs = 0;
+  static const s32 SecondaryCacheMaxReleaseToOsIntervalMs = 0;
+
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 2U, 1U>; // Shared, max 2 TSDs.
 };
@@ -72,7 +88,7 @@ struct AndroidSvelteConfig {
 struct FuchsiaConfig {
   // 1GB Regions
   typedef SizeClassAllocator64<DefaultSizeClassMap, 30U> Primary;
-  typedef MapAllocator<MapAllocatorNoCache> Secondary;
+  typedef MapAllocatorNoCache SecondaryCache;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
 };

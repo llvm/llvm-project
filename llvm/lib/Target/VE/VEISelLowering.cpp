@@ -73,8 +73,6 @@ bool VETargetLowering::CanLowerReturn(
 static const MVT AllVectorVTs[] = {MVT::v256i32, MVT::v512i32, MVT::v256i64,
                                    MVT::v256f32, MVT::v512f32, MVT::v256f64};
 
-static const MVT AllMaskVTs[] = {MVT::v256i1, MVT::v512i1};
-
 void VETargetLowering::initRegisterClasses() {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &VE::I32RegClass);
@@ -86,8 +84,8 @@ void VETargetLowering::initRegisterClasses() {
   if (Subtarget->enableVPU()) {
     for (MVT VecVT : AllVectorVTs)
       addRegisterClass(VecVT, &VE::V64RegClass);
-    for (MVT MaskVT : AllMaskVTs)
-      addRegisterClass(MaskVT, &VE::VMRegClass);
+    addRegisterClass(MVT::v256i1, &VE::VMRegClass);
+    addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
   }
 }
 

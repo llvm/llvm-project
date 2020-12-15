@@ -67,7 +67,7 @@ bool PPCFunctionInfo::isLiveInZExt(Register VReg) const {
 
 void PPCFunctionInfo::appendParameterType(ParamType Type) {
   uint32_t CopyParamType = ParameterType;
-  unsigned Bits = 0;
+  int Bits = 0;
 
   // If it is fixed type, we only need to increase the FixedParamNum, for
   // the bit encode of fixed type is bit of zero, we do not need to change the

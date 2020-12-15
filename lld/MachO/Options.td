@@ -290,7 +290,6 @@ def mark_dead_strippable_dylib : Flag<["-"], "mark_dead_strippable_dylib">,
 def compatibility_version : Separate<["-"], "compatibility_version">,
      MetaVarName<"<version>">,
      HelpText<"Compatibility <version> of this library">,
-     Flags<[HelpHidden]>,
      Group<grp_dylib>;
 def dylib_compatibility_version : Separate<["-"], "dylib_compatibility_version">,
      MetaVarName<"<version>">,
@@ -301,7 +300,6 @@ def dylib_compatibility_version : Separate<["-"], "dylib_compatibility_version">
 def current_version : Separate<["-"], "current_version">,
      MetaVarName<"<version>">,
      HelpText<"Current <version> of this library">,
-     Flags<[HelpHidden]>,
      Group<grp_dylib>;
 def dylib_current_version : Separate<["-"], "dylib_current_version">,
      MetaVarName<"<version>">,

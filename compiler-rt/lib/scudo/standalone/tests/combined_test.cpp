@@ -401,7 +401,7 @@ struct DeathConfig {
   using DeathSizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
   typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
       Primary;
-  typedef scudo::MapAllocator<scudo::MapAllocatorNoCache> Secondary;
+  typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
 };
 

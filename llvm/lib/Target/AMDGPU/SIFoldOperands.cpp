@@ -1257,8 +1257,11 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
+  SmallPtrSet<MachineInstr *, 16> Folded;
   for (FoldCandidate &Fold : FoldList) {
     assert(!Fold.isReg() || Fold.OpToFold);
+    if (Folded.count(Fold.UseMI))
+      continue;
     if (Fold.isReg() && Fold.OpToFold->getReg().isVirtual()) {
       Register Reg = Fold.OpToFold->getReg();
       MachineInstr *DefMI = Fold.OpToFold->getParent();
@@ -1278,7 +1281,8 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI << '\n');
-      tryFoldInst(TII, Fold.UseMI);
+      if (tryFoldInst(TII, Fold.UseMI))
+        Folded.insert(Fold.UseMI);
     } else if (Fold.isCommuted()) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
