@@ -31,6 +31,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -191,8 +192,9 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   return Changed;
 }
 
-static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                const SimplifyCFGOptions &Options) {
+static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
+                                    DominatorTree *DT,
+                                    const SimplifyCFGOptions &Options) {
   bool EverChanged = removeUnreachableBlocks(F);
   EverChanged |= mergeEmptyReturnBlocks(F);
   EverChanged |= iterativelySimplifyCFG(F, TTI, Options);
@@ -214,6 +216,22 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
   } while (EverChanged);
 
   return true;
+}
+
+static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
+                                DominatorTree *DT,
+                                const SimplifyCFGOptions &Options) {
+  assert((!RequireAndPreserveDomTree ||
+          (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
+         "Original domtree is invalid?");
+
+  bool Changed = simplifyFunctionCFGImpl(F, TTI, DT, Options);
+
+  assert((!RequireAndPreserveDomTree ||
+          (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
+         "Failed to maintain validity of domtree!");
+
+  return Changed;
 }
 
 // Command-line settings override compile-time settings.
@@ -245,14 +263,19 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   Options.AC = &AM.getResult<AssumptionAnalysis>(F);
+  DominatorTree *DT = nullptr;
+  if (RequireAndPreserveDomTree)
+    DT = &AM.getResult<DominatorTreeAnalysis>(F);
   if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
     Options.setSimplifyCondBranch(false).setFoldTwoEntryPHINode(false);
   } else {
     Options.setSimplifyCondBranch(true).setFoldTwoEntryPHINode(true);
   }
-  if (!simplifyFunctionCFG(F, TTI, Options))
+  if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
+  if (RequireAndPreserveDomTree)
+    PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<GlobalsAA>();
   return PA;
 }
@@ -278,6 +301,9 @@ struct CFGSimplifyPass : public FunctionPass {
       return false;
 
     Options.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    DominatorTree *DT = nullptr;
+    if (RequireAndPreserveDomTree)
+      DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
       Options.setSimplifyCondBranch(false)
              .setFoldTwoEntryPHINode(false);
@@ -287,11 +313,15 @@ struct CFGSimplifyPass : public FunctionPass {
     }
 
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return simplifyFunctionCFG(F, TTI, Options);
+    return simplifyFunctionCFG(F, TTI, DT, Options);
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
+    if (RequireAndPreserveDomTree)
+      AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    if (RequireAndPreserveDomTree)
+      AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
