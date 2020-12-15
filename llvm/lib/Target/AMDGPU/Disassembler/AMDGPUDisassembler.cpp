@@ -1348,7 +1348,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
   StringRef Indent = "\t";
   PRINT_DIRECTIVE(
       ".amdhsa_system_sgpr_private_segment_wavefront_offset",
-      COMPUTE_PGM_RSRC2_ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET);
+      COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
   PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_x",
                   COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X);
   PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_y",
