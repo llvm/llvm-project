@@ -4028,4 +4028,63 @@ int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
 #endif /* USE_ITT_BUILD */
                                kmp_int32 is_constrained);
 
+/// This class safely opens and closes a C-style FILE* object using RAII
+/// semantics. There are also methods which allow using stdout or stderr as
+/// the underlying FILE* object. With the implicit conversion operator to
+/// FILE*, an object with this type can be used in any function which takes
+/// a FILE* object e.g., fprintf().
+/// No close method is needed at use sites.
+class kmp_safe_raii_file_t {
+  FILE *f;
+
+  void close() {
+    if (f && f != stdout && f != stderr) {
+      fclose(f);
+      f = nullptr;
+    }
+  }
+
+public:
+  kmp_safe_raii_file_t() : f(nullptr) {}
+  kmp_safe_raii_file_t(const char *filename, const char *mode,
+                       const char *env_var = nullptr)
+      : f(nullptr) {
+    open(filename, mode, env_var);
+  }
+  ~kmp_safe_raii_file_t() { close(); }
+
+  /// Open filename using mode. This is automatically closed in the destructor.
+  /// The env_var parameter indicates the environment variable the filename
+  /// came from if != nullptr.
+  void open(const char *filename, const char *mode,
+            const char *env_var = nullptr) {
+    KMP_ASSERT(!f);
+    f = fopen(filename, mode);
+    if (!f) {
+      int code = errno;
+      if (env_var) {
+        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
+                    KMP_HNT(CheckEnvVar, env_var, filename), __kmp_msg_null);
+      } else {
+        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
+                    __kmp_msg_null);
+      }
+    }
+  }
+  /// Set the FILE* object to stdout and output there
+  /// No open call should happen before this call.
+  void set_stdout() {
+    KMP_ASSERT(!f);
+    f = stdout;
+  }
+  /// Set the FILE* object to stderr and output there
+  /// No open call should happen before this call.
+  void set_stderr() {
+    KMP_ASSERT(!f);
+    f = stderr;
+  }
+  operator bool() { return bool(f); }
+  operator FILE *() { return f; }
+};
+
 #endif /* KMP_H */
