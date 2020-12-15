@@ -26,23 +26,168 @@ namespace clang {
 namespace clangd {
 namespace {
 
-TEST(GetDeducedType, KwAutoExpansion) {
+TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
   struct Test {
     StringRef AnnotatedCode;
     const char *DeducedType;
   } Tests[] = {
       {"^auto i = 0;", "int"},
       {"^auto f(){ return 1;};", "int"},
+      {
+          R"cpp( // auto on struct in a namespace
+              namespace ns1 { struct S {}; }
+              ^auto v = ns1::S{};
+          )cpp",
+          "struct ns1::S",
+      },
+      {
+          R"cpp( // decltype on struct
+              namespace ns1 { struct S {}; }
+              ns1::S i;
+              ^decltype(i) j;
+          )cpp",
+          "ns1::S",
+      },
+      {
+          R"cpp(// decltype(auto) on struct&
+            namespace ns1 {
+            struct S {};
+            } // namespace ns1
+
+            ns1::S i;
+            ns1::S& j = i;
+            ^decltype(auto) k = j;
+          )cpp",
+          "struct ns1::S &",
+      },
+      {
+          R"cpp( // auto on template class
+              class X;
+              template<typename T> class Foo {};
+              ^auto v = Foo<X>();
+          )cpp",
+          "class Foo<class X>",
+      },
+      {
+          R"cpp( // auto on initializer list.
+              namespace std
+              {
+                template<class _E>
+                class [[initializer_list]] {};
+              }
+
+              ^auto i = {1,2};
+          )cpp",
+          "class std::initializer_list<int>",
+      },
+      {
+          R"cpp( // auto in function return type with trailing return type
+            struct Foo {};
+            ^auto test() -> decltype(Foo()) {
+              return Foo();
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // decltype in trailing return type
+            struct Foo {};
+            auto test() -> ^decltype(Foo()) {
+              return Foo();
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // auto in function return type
+            struct Foo {};
+            ^auto test() {
+              return Foo();
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // auto& in function return type
+            struct Foo {};
+            ^auto& test() {
+              static Foo x;
+              return x;
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // auto* in function return type
+            struct Foo {};
+            ^auto* test() {
+              Foo *x;
+              return x;
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // const auto& in function return type
+            struct Foo {};
+            const ^auto& test() {
+              static Foo x;
+              return x;
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // decltype(auto) in function return (value)
+            struct Foo {};
+            ^decltype(auto) test() {
+              return Foo();
+            }
+          )cpp",
+          "struct Foo",
+      },
+      {
+          R"cpp( // decltype(auto) in function return (ref)
+            struct Foo {};
+            ^decltype(auto) test() {
+              static Foo x;
+              return (x);
+            }
+          )cpp",
+          "struct Foo &",
+      },
+      {
+          R"cpp( // decltype(auto) in function return (const ref)
+            struct Foo {};
+            ^decltype(auto) test() {
+              static const Foo x;
+              return (x);
+            }
+          )cpp",
+          "const struct Foo &",
+      },
+      {
+          R"cpp( // auto on alias
+            struct Foo {};
+            using Bar = Foo;
+            ^auto x = Bar();
+          )cpp",
+          // FIXME: it'd be nice if this resolved to the alias instead
+          "struct Foo",
+      },
   };
   for (Test T : Tests) {
     Annotations File(T.AnnotatedCode);
     auto AST = TestTU::withCode(File.code()).build();
     SourceManagerForFile SM("foo.cpp", File.code());
 
+    SCOPED_TRACE(File.code());
+    EXPECT_FALSE(File.points().empty());
     for (Position Pos : File.points()) {
       auto Location = sourceLocationInMainFile(SM.get(), Pos);
       ASSERT_TRUE(!!Location) << llvm::toString(Location.takeError());
       auto DeducedType = getDeducedType(AST.getASTContext(), *Location);
+      ASSERT_TRUE(DeducedType);
       EXPECT_EQ(DeducedType->getAsString(), T.DeducedType);
     }
   }

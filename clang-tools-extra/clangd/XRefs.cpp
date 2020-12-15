@@ -463,6 +463,42 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   return Result;
 }
 
+std::vector<LocatedSymbol> locateSymbolForType(const ParsedAST &AST,
+                                               const QualType &Type) {
+  const auto &SM = AST.getSourceManager();
+  auto MainFilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  if (!MainFilePath) {
+    elog("Failed to get a path for the main file, so no symbol.");
+    return {};
+  }
+
+  auto Decls = targetDecl(DynTypedNode::create(Type.getNonReferenceType()),
+                          DeclRelation::TemplatePattern | DeclRelation::Alias);
+  if (Decls.empty())
+    return {};
+
+  std::vector<LocatedSymbol> Results;
+  const auto &ASTContext = AST.getASTContext();
+
+  for (const NamedDecl *D : Decls) {
+    D = getPreferredDecl(D);
+
+    auto Loc = makeLocation(ASTContext, nameLocation(*D, SM), *MainFilePath);
+    if (!Loc)
+      continue;
+
+    Results.emplace_back();
+    Results.back().Name = printName(ASTContext, *D);
+    Results.back().PreferredDeclaration = *Loc;
+    if (const NamedDecl *Def = getDefinition(D))
+      Results.back().Definition =
+          makeLocation(ASTContext, nameLocation(*Def, SM), *MainFilePath);
+  }
+
+  return Results;
+}
+
 bool tokenSpelledAt(SourceLocation SpellingLoc, const syntax::TokenBuffer &TB) {
   auto ExpandedTokens = TB.expandedTokens(
       TB.sourceManager().getMacroArgExpandedLocation(SpellingLoc));
@@ -707,15 +743,31 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     return {};
   }
 
-  const syntax::Token *TouchedIdentifier =
-      syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
-  if (TouchedIdentifier)
-    if (auto Macro =
-            locateMacroReferent(*TouchedIdentifier, AST, *MainFilePath))
-      // Don't look at the AST or index if we have a macro result.
-      // (We'd just return declarations referenced from the macro's
-      // expansion.)
-      return {*std::move(Macro)};
+  const syntax::Token *TouchedIdentifier = nullptr;
+  auto TokensTouchingCursor =
+      syntax::spelledTokensTouching(*CurLoc, AST.getTokens());
+  for (const syntax::Token &Tok : TokensTouchingCursor) {
+    if (Tok.kind() == tok::identifier) {
+      if (auto Macro = locateMacroReferent(Tok, AST, *MainFilePath))
+        // Don't look at the AST or index if we have a macro result.
+        // (We'd just return declarations referenced from the macro's
+        // expansion.)
+        return {*std::move(Macro)};
+
+      TouchedIdentifier = &Tok;
+      break;
+    }
+
+    if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
+      // go-to-definition on auto should find the definition of the deduced
+      // type, if possible
+      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+        auto LocSym = locateSymbolForType(AST, *Deduced);
+        if (!LocSym.empty())
+          return LocSym;
+      }
+    }
+  }
 
   ASTNodeKind NodeKind;
   auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
