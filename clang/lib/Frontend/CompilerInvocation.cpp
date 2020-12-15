@@ -2981,10 +2981,14 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_fe_invalid_exception_model)
           << Opt.getName() << T.str();
 
-    Opts.SjLjExceptions = Opt.matches(options::OPT_fsjlj_exceptions);
-    Opts.SEHExceptions = Opt.matches(options::OPT_fseh_exceptions);
-    Opts.DWARFExceptions = Opt.matches(options::OPT_fdwarf_exceptions);
-    Opts.WasmExceptions = Opt.matches(options::OPT_fwasm_exceptions);
+    if (Opt.matches(options::OPT_fsjlj_exceptions))
+      Opts.setExceptionHandling(llvm::ExceptionHandling::SjLj);
+    else if (Opt.matches(options::OPT_fseh_exceptions))
+      Opts.setExceptionHandling(llvm::ExceptionHandling::WinEH);
+    else if (Opt.matches(options::OPT_fdwarf_exceptions))
+      Opts.setExceptionHandling(llvm::ExceptionHandling::DwarfCFI);
+    else if (Opt.matches(options::OPT_fwasm_exceptions))
+      Opts.setExceptionHandling(llvm::ExceptionHandling::Wasm);
   }
 
   Opts.ExternCNoUnwind = Args.hasArg(OPT_fexternc_nounwind);
