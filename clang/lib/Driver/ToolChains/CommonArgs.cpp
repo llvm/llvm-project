@@ -1549,7 +1549,7 @@ unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
     const Driver &D, const llvm::opt::ArgList &Args, bool Diagnose) {
   const unsigned MinCodeObjVer = 2;
   const unsigned MaxCodeObjVer = 4;
-  unsigned CodeObjVer = 4;
+  unsigned CodeObjVer = 3;
 
   // Emit warnings for legacy options even if they are overridden.
   if (Diagnose) {
