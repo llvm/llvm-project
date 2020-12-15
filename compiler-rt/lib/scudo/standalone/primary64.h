@@ -40,21 +40,14 @@ namespace scudo {
 // The memory used by this allocator is never unmapped, but can be partially
 // released if the platform allows for it.
 
-template <class SizeClassMapT, uptr RegionSizeLog,
-          s32 MinReleaseToOsIntervalMs = INT32_MIN,
-          s32 MaxReleaseToOsIntervalMs = INT32_MAX,
-          bool MaySupportMemoryTagging = false>
-class SizeClassAllocator64 {
+template <typename Config> class SizeClassAllocator64 {
 public:
-  typedef SizeClassMapT SizeClassMap;
-  typedef SizeClassAllocator64<
-      SizeClassMap, RegionSizeLog, MinReleaseToOsIntervalMs,
-      MaxReleaseToOsIntervalMs, MaySupportMemoryTagging>
-      ThisT;
+  typedef typename Config::SizeClassMap SizeClassMap;
+  typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
   static const bool SupportsMemoryTagging =
-      MaySupportMemoryTagging && archSupportsMemoryTagging();
+      allocatorSupportsMemoryTagging<Config>();
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
@@ -178,9 +171,9 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval =
-          Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
-              MinReleaseToOsIntervalMs);
+      const s32 Interval = Max(
+          Min(static_cast<s32>(Value), Config::PrimaryMaxReleaseToOsIntervalMs),
+          Config::PrimaryMinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -258,7 +251,7 @@ public:
   AtomicOptions Options;
 
 private:
-  static const uptr RegionSize = 1UL << RegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::PrimaryRegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr PrimarySize = RegionSize * NumClasses;
 
@@ -308,7 +301,7 @@ private:
   }
 
   uptr getRegionBaseByClassId(uptr ClassId) const {
-    return PrimaryBase + (ClassId << RegionSizeLog);
+    return PrimaryBase + (ClassId << Config::PrimaryRegionSizeLog);
   }
 
   NOINLINE TransferBatch *populateFreeList(CacheT *C, uptr ClassId,

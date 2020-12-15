@@ -401,10 +401,15 @@ struct DeathSizeClassConfig {
 
 static const scudo::uptr DeathRegionSizeLog = 20U;
 struct DeathConfig {
+  static const bool MaySupportMemoryTagging = false;
+
   // Tiny allocator, its Primary only serves chunks of four sizes.
-  using DeathSizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
-  typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
-      Primary;
+  using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
+  typedef scudo::SizeClassAllocator64<DeathConfig> Primary;
+  static const scudo::uptr PrimaryRegionSizeLog = DeathRegionSizeLog;
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
 };
@@ -460,13 +465,13 @@ TEST(ScudoCombinedTest, FullRegion) {
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
   for (scudo::uptr ClassId = 1U;
-       ClassId <= DeathConfig::DeathSizeClassMap::LargestClassId; ClassId++) {
+       ClassId <= DeathConfig::SizeClassMap::LargestClassId; ClassId++) {
     const scudo::uptr Size =
-        DeathConfig::DeathSizeClassMap::getSizeByClassId(ClassId);
+        DeathConfig::SizeClassMap::getSizeByClassId(ClassId);
     // Allocate enough to fill all of the regions above this one.
     const scudo::uptr MaxNumberOfChunks =
         ((1U << DeathRegionSizeLog) / Size) *
-        (DeathConfig::DeathSizeClassMap::LargestClassId - ClassId + 1);
+        (DeathConfig::SizeClassMap::LargestClassId - ClassId + 1);
     void *P;
     for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
       P = Allocator->allocate(Size - 64U, Origin);
