@@ -420,6 +420,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <type_traits>
 #include <cstddef>
 #include <initializer_list>
+#include <__memory/base.h>
 #include <version>
 
 #include <__debug>
