@@ -1,4 +1,4 @@
-; -simplifycfg is not folding blocks if there is a PHI node involved.  This 
+; -simplifycfg is not folding blocks if there is a PHI node involved.  This
 ; should be fixed eventually
 
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s

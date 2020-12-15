@@ -85,7 +85,7 @@ std::string lld::toString(const InputFile *f) {
       .str();
 }
 
-std::vector<InputFile *> macho::inputFiles;
+SetVector<InputFile *> macho::inputFiles;
 std::unique_ptr<TarWriter> macho::tar;
 int InputFile::idCount = 0;
 
@@ -508,15 +508,22 @@ static bool isImplicitlyLinked(StringRef path) {
   if (!config->implicitDylibs)
     return false;
 
-  return path::parent_path(path) == "/usr/lib";
-  // TODO: check for public frameworks too. We'll need to implement
-  // -sub_umbrella first to write a test case.
+  if (path::parent_path(path) == "/usr/lib")
+    return true;
+
+  // Match /System/Library/Frameworks/$FOO.framework/**/$FOO
+  if (path.consume_front("/System/Library/Frameworks/")) {
+    StringRef frameworkName = path.take_until([](char c) { return c == '.'; });
+    return path::filename(path) == frameworkName;
+  }
+
+  return false;
 }
 
 void loadReexport(StringRef path, DylibFile *umbrella) {
   Optional<DylibFile *> reexport = loadReexportHelper(path, umbrella);
   if (reexport && isImplicitlyLinked(path))
-    inputFiles.push_back(*reexport);
+    inputFiles.insert(*reexport);
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
@@ -670,7 +677,7 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
           " has unhandled file type");
     return;
   }
-  inputFiles.push_back(file);
+  inputFiles.insert(file);
 
   // ld64 doesn't demangle sym here even with -demangle. Match that, so
   // intentionally no call to toMachOString() here.

@@ -73,23 +73,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// IndexType
-//===----------------------------------------------------------------------===//
-
-/// Index is a special integer-like type with unknown platform-dependent bit
-/// width.
-class IndexType : public Type::TypeBase<IndexType, Type, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Get an instance of the IndexType.
-  static IndexType get(MLIRContext *context);
-
-  /// Storage bit width used for IndexType by internal compiler data structures.
-  static constexpr unsigned kInternalStorageBitWidth = 64;
-};
-
-//===----------------------------------------------------------------------===//
 // IntegerType
 //===----------------------------------------------------------------------===//
 
@@ -188,67 +171,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// BFloat16Type
-
-class BFloat16Type
-    : public Type::TypeBase<BFloat16Type, FloatType, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Return an instance of the bfloat16 type.
-  static BFloat16Type get(MLIRContext *context);
-};
-
-inline FloatType FloatType::getBF16(MLIRContext *ctx) {
-  return BFloat16Type::get(ctx);
-}
-
-//===----------------------------------------------------------------------===//
-// Float16Type
-
-class Float16Type : public Type::TypeBase<Float16Type, FloatType, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Return an instance of the float16 type.
-  static Float16Type get(MLIRContext *context);
-};
-
-inline FloatType FloatType::getF16(MLIRContext *ctx) {
-  return Float16Type::get(ctx);
-}
-
-//===----------------------------------------------------------------------===//
-// Float32Type
-
-class Float32Type : public Type::TypeBase<Float32Type, FloatType, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Return an instance of the float32 type.
-  static Float32Type get(MLIRContext *context);
-};
-
-inline FloatType FloatType::getF32(MLIRContext *ctx) {
-  return Float32Type::get(ctx);
-}
-
-//===----------------------------------------------------------------------===//
-// Float64Type
-
-class Float64Type : public Type::TypeBase<Float64Type, FloatType, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Return an instance of the float64 type.
-  static Float64Type get(MLIRContext *context);
-};
-
-inline FloatType FloatType::getF64(MLIRContext *ctx) {
-  return Float64Type::get(ctx);
-}
-
-//===----------------------------------------------------------------------===//
 // FunctionType
 //===----------------------------------------------------------------------===//
 
@@ -274,20 +196,6 @@ public:
   /// Returns a new function type without the specified arguments and results.
   FunctionType getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
                                         ArrayRef<unsigned> resultIndices);
-};
-
-//===----------------------------------------------------------------------===//
-// NoneType
-//===----------------------------------------------------------------------===//
-
-/// NoneType is a unit type, i.e. a type with exactly one possible value, where
-/// its value does not have a defined dynamic representation.
-class NoneType : public Type::TypeBase<NoneType, Type, TypeStorage> {
-public:
-  using Base::Base;
-
-  /// Get an instance of the NoneType.
-  static NoneType get(MLIRContext *context);
 };
 
 //===----------------------------------------------------------------------===//
@@ -720,17 +628,42 @@ public:
     return getTypes()[index];
   }
 };
+} // end namespace mlir
+
+//===----------------------------------------------------------------------===//
+// Tablegen Type Declarations
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/IR/BuiltinTypes.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Deferred Method Definitions
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
 inline bool BaseMemRefType::classof(Type type) {
   return type.isa<MemRefType, UnrankedMemRefType>();
 }
 
 inline bool FloatType::classof(Type type) {
   return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type>();
+}
+
+inline FloatType FloatType::getBF16(MLIRContext *ctx) {
+  return BFloat16Type::get(ctx);
+}
+
+inline FloatType FloatType::getF16(MLIRContext *ctx) {
+  return Float16Type::get(ctx);
+}
+
+inline FloatType FloatType::getF32(MLIRContext *ctx) {
+  return Float32Type::get(ctx);
+}
+
+inline FloatType FloatType::getF64(MLIRContext *ctx) {
+  return Float64Type::get(ctx);
 }
 
 inline bool ShapedType::classof(Type type) {

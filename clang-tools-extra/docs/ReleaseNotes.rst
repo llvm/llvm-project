@@ -73,6 +73,9 @@ Improvements to clang-tidy
   <clang-tidy/checks/cppcoreguidelines-init-variables>` and
   :doc:`modernize-make-unique <clang-tidy/checks/modernize-make-unique>`.
 
+- CheckOptions that take boolean values now support all spellings supported in 
+  the `YAML format <https://yaml.org/type/bool.html>`_.
+
 New modules
 ^^^^^^^^^^^
 

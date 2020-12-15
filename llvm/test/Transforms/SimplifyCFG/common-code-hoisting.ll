@@ -12,7 +12,7 @@
 ;   void loop(int width) {
 ;       if(width < 1)
 ;           return;
-;       for(int i = 0; i < width - 1; ++i) {
+;       for(int i = 0; i < width - 1;+i) {
 ;           f0();
 ;           f1();
 ;       }

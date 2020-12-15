@@ -31,6 +31,10 @@ StringRef TypeDef::getCppClassName() const {
   return def->getValueAsString("cppClassName");
 }
 
+StringRef TypeDef::getCppBaseClassName() const {
+  return def->getValueAsString("cppBaseClassName");
+}
+
 bool TypeDef::hasDescription() const {
   const llvm::RecordVal *s = def->getValue("description");
   return s != nullptr && isa<llvm::StringInit>(s->getValue());

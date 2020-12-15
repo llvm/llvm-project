@@ -123,20 +123,20 @@ func @tensor_from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
   return %0 : tensor<2xindex>
 }
 
-// The dynamic_tensor_from_elements op clones each op in its body.
-// Make sure that regions nested within such ops are recursively converted.
-// CHECK-LABEL: func @recursively_convert_cloned_regions
-func @recursively_convert_cloned_regions(%arg0: tensor<*xf32>, %arg1: index, %arg2: i1) -> tensor<?xindex> {
-  %tensor = dynamic_tensor_from_elements %arg1 {
+// The dynamic_tensor_from_elements op needs to put its body into the
+// resulting scf.parallel. To handle unknown ops in the body, it cannot clone
+// the body because that would require the cloned ops to be legalized
+// immediately, which is usually not possible since they might be from various
+// other dialects.
+//
+// CHECK-LABEL: func @unknown_ops_in_body
+func @unknown_ops_in_body(%arg0: index) -> tensor<?xindex> {
+  // CHECK-NOT: dynamic_tensor_from_elements
+  %tensor = dynamic_tensor_from_elements %arg0 {
   ^bb0(%iv: index):
-    %48 = scf.if %arg2 -> (index) {
-      scf.yield %iv : index
-    } else {
-      // CHECK-NOT: dim{{.*}}tensor
-      %50 = dim %arg0, %iv : tensor<*xf32>
-      scf.yield %50 : index
-    }
-    yield %48 : index
+    // CHECK: test.source
+    %0 = "test.source"() : () -> index
+    yield %0 : index
   } : tensor<?xindex>
   return %tensor : tensor<?xindex>
 }

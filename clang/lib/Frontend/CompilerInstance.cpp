@@ -1182,10 +1182,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
 
-  // Delete the temporary module map file.
-  // FIXME: Even though we're executing under crash protection, it would still
-  // be nice to do this with RemoveFileOnSignal when we can. However, that
-  // doesn't make sense for all clients, so clean this up manually.
+  // Delete any remaining temporary files related to Instance, in case the
+  // module generation thread crashed.
   Instance.clearOutputFiles(/*EraseFiles=*/true);
 
   return !Instance.getDiagnostics().hasErrorOccurred();

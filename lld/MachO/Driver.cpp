@@ -274,8 +274,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          inputFiles.push_back(
-              make<ObjFile>(member.mbref, member.modTime, path));
+          inputFiles.insert(make<ObjFile>(member.mbref, member.modTime, path));
           printArchiveMemberLoad(
               (forceLoadArchive ? "-force_load" : "-all_load"),
               inputFiles.back());
@@ -293,7 +292,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (hasObjCSection(member.mbref)) {
-            inputFiles.push_back(
+            inputFiles.insert(
                 make<ObjFile>(member.mbref, member.modTime, path));
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -325,7 +324,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     // print the .a name here.
     if (config->printEachFile && magic != file_magic::archive)
       lld::outs() << toString(newFile) << '\n';
-    inputFiles.push_back(newFile);
+    inputFiles.insert(newFile);
   }
   return newFile;
 }
@@ -489,12 +488,13 @@ static void parseOrderFile(StringRef path) {
 // with a path of .*/libfoo.{dylib, tbd}.
 // XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
 // I'm not sure what the use case for that is.
-static bool markSubLibrary(StringRef searchName) {
+static bool markReexport(StringRef searchName, ArrayRef<StringRef> extensions) {
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       StringRef filename = path::filename(dylibFile->getName());
       if (filename.consume_front(searchName) &&
-          (filename == ".dylib" || filename == ".tbd")) {
+          (filename.empty() ||
+           find(extensions, filename) != extensions.end())) {
         dylibFile->reexport = true;
         return true;
       }
@@ -521,7 +521,7 @@ static void compileBitcodeFiles() {
       lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
-    inputFiles.push_back(file);
+    inputFiles.insert(file);
 }
 
 // Replaces common symbols with defined symbols residing in __common sections.
@@ -837,11 +837,17 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
-  for (opt::Arg *arg : args.filtered(OPT_sub_library)) {
+  for (opt::Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
     config->hasReexports = true;
     StringRef searchName = arg->getValue();
-    if (!markSubLibrary(searchName))
-      error("-sub_library " + searchName + " does not match a supplied dylib");
+    std::vector<StringRef> extensions;
+    if (arg->getOption().getID() == OPT_sub_library)
+      extensions = {".dylib", ".tbd"};
+    else
+      extensions = {".tbd"};
+    if (!markReexport(searchName, extensions))
+      error(arg->getSpelling() + " " + searchName +
+            " does not match a supplied dylib");
   }
 
   // Parse LTO options.
@@ -873,7 +879,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef fileName = arg->getValue(2);
     Optional<MemoryBufferRef> buffer = readFile(fileName);
     if (buffer)
-      inputFiles.push_back(make<OpaqueFile>(*buffer, segName, sectName));
+      inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
   }
 
   // Initialize InputSections.

@@ -11,9 +11,6 @@ include "mlir/IR/OpBase.td"
 // DECL: class DialectAsmPrinter;
 // DECL: } // namespace mlir
 
-// DECL: ::mlir::Type generatedTypeParser(::mlir::MLIRContext* ctxt, ::mlir::DialectAsmParser& parser, ::llvm::StringRef mnenomic);
-// DECL: ::mlir::LogicalResult generatedTypePrinter(::mlir::Type type, ::mlir::DialectAsmPrinter& printer);
-
 // DEF: #ifdef GET_TYPEDEF_LIST
 // DEF: #undef GET_TYPEDEF_LIST
 // DEF: ::mlir::test::SimpleAType,

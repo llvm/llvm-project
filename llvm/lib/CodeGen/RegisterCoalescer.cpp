@@ -211,6 +211,18 @@ namespace {
     /// live interval update is costly.
     void lateLiveIntervalUpdate();
 
+    /// Check if the incoming value defined by a COPY at \p SLRQ in the subrange
+    /// has no value defined in the predecessors. If the incoming value is the
+    /// same as defined by the copy itself, the value is considered undefined.
+    bool copyValueUndefInPredecessors(LiveRange &S,
+                                      const MachineBasicBlock *MBB,
+                                      LiveQueryResult SLRQ);
+
+    /// Set necessary undef flags on subregister uses after pruning out undef
+    /// lane segments from the subrange.
+    void setUndefOnPrunedSubRegUses(LiveInterval &LI, Register Reg,
+                                    LaneBitmask PrunedLanes);
+
     /// Attempt to join intervals corresponding to SrcReg/DstReg, which are the
     /// src/dst of the copy instruction CopyMI.  This returns true if the copy
     /// was successfully coalesced away. If it is not currently possible to
@@ -1809,6 +1821,49 @@ bool RegisterCoalescer::canJoinPhys(const CoalescerPair &CP) {
   return false;
 }
 
+bool RegisterCoalescer::copyValueUndefInPredecessors(
+    LiveRange &S, const MachineBasicBlock *MBB, LiveQueryResult SLRQ) {
+  for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+    SlotIndex PredEnd = LIS->getMBBEndIdx(Pred);
+    if (VNInfo *V = S.getVNInfoAt(PredEnd.getPrevSlot())) {
+      // If this is a self loop, we may be reading the same value.
+      if (V->id != SLRQ.valueOutOrDead()->id)
+        return false;
+    }
+  }
+
+  return true;
+}
+
+void RegisterCoalescer::setUndefOnPrunedSubRegUses(LiveInterval &LI,
+                                                   Register Reg,
+                                                   LaneBitmask PrunedLanes) {
+  // If we had other instructions in the segment reading the undef sublane
+  // value, we need to mark them with undef.
+  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    unsigned SubRegIdx = MO.getSubReg();
+    if (SubRegIdx == 0 || MO.isUndef())
+      continue;
+
+    LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
+    SlotIndex Pos = LIS->getInstructionIndex(*MO.getParent());
+    for (LiveInterval::SubRange &S : LI.subranges()) {
+      if (!S.liveAt(Pos) && (PrunedLanes & SubRegMask).any()) {
+        MO.setIsUndef();
+        break;
+      }
+    }
+  }
+
+  LI.removeEmptySubRanges();
+
+  // A def of a subregister may be a use of other register lanes. Replacing
+  // such a def with a def of a different register will eliminate the use,
+  // and may cause the recorded live range to be larger than the actual
+  // liveness in the program IR.
+  LIS->shrinkToUses(&LI);
+}
+
 bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   Again = false;
   LLVM_DEBUG(dbgs() << LIS->getInstructionIndex(*CopyMI) << '\t' << *CopyMI);
@@ -1868,16 +1923,35 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
       VNInfo *ReadVNI = LRQ.valueIn();
       assert(ReadVNI && "No value before copy and no <undef> flag.");
       assert(ReadVNI != DefVNI && "Cannot read and define the same value.");
-      LI.MergeValueNumberInto(DefVNI, ReadVNI);
+
+      // Track incoming undef lanes we need to eliminate from the subrange.
+      LaneBitmask PrunedLanes;
+      MachineBasicBlock *MBB = CopyMI->getParent();
 
       // Process subregister liveranges.
       for (LiveInterval::SubRange &S : LI.subranges()) {
         LiveQueryResult SLRQ = S.Query(CopyIdx);
         if (VNInfo *SDefVNI = SLRQ.valueDefined()) {
-          VNInfo *SReadVNI = SLRQ.valueIn();
-          S.MergeValueNumberInto(SDefVNI, SReadVNI);
+          if (VNInfo *SReadVNI = SLRQ.valueIn())
+            SDefVNI = S.MergeValueNumberInto(SDefVNI, SReadVNI);
+
+          // If this copy introduced an undef subrange from an incoming value,
+          // we need to eliminate the undef live in values from the subrange.
+          if (copyValueUndefInPredecessors(S, MBB, SLRQ)) {
+            LLVM_DEBUG(dbgs() << "Incoming sublane value is undef at copy\n");
+            PrunedLanes |= S.LaneMask;
+            S.removeValNo(SDefVNI);
+          }
         }
       }
+
+      LI.MergeValueNumberInto(DefVNI, ReadVNI);
+      if (PrunedLanes.any()) {
+        LLVM_DEBUG(dbgs() << "Pruning undef incoming lanes: "
+                          << PrunedLanes << '\n');
+        setUndefOnPrunedSubRegUses(LI, CP.getSrcReg(), PrunedLanes);
+      }
+
       LLVM_DEBUG(dbgs() << "\tMerged values:          " << LI << '\n');
     }
     deleteInstr(CopyMI);

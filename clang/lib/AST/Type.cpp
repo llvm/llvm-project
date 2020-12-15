@@ -3084,7 +3084,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \
     return #Name;
 #include "clang/Basic/PPCTypes.def"
@@ -4107,7 +4107,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
     case BuiltinType::BuiltinFn:
