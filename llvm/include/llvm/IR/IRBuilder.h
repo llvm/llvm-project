@@ -301,7 +301,7 @@ public:
     }
   }
 
-  void setConstrainedFPCallAttr(CallBase *I) {
+  void setConstrainedFPCallAttr(CallInst *I) {
     I->addAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
   }
 
@@ -1023,21 +1023,16 @@ public:
                            ArrayRef<Value *> Args,
                            ArrayRef<OperandBundleDef> OpBundles,
                            const Twine &Name = "") {
-    InvokeInst *II =
-        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args, OpBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(II);
-    return Insert(II, Name);
+    return Insert(
+        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args, OpBundles),
+        Name);
   }
   InvokeInst *CreateInvoke(FunctionType *Ty, Value *Callee,
                            BasicBlock *NormalDest, BasicBlock *UnwindDest,
                            ArrayRef<Value *> Args = None,
                            const Twine &Name = "") {
-    InvokeInst *II =
-        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(II);
-    return Insert(II, Name);
+    return Insert(InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args),
+                  Name);
   }
 
   InvokeInst *CreateInvoke(FunctionCallee Callee, BasicBlock *NormalDest,
