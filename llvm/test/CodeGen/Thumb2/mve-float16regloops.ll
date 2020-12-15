@@ -1077,34 +1077,36 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    sub sp, #24
 ; CHECK-NEXT:    cmp r3, #8
 ; CHECK-NEXT:    blo.w .LBB16_12
-; CHECK-NEXT:  @ %bb.1: @ %entry
-; CHECK-NEXT:    lsrs.w r12, r3, #2
+; CHECK-NEXT:  @ %bb.1: @ %if.then
+; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    cmp.w r7, r3, lsr #2
 ; CHECK-NEXT:    beq.w .LBB16_12
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
 ; CHECK-NEXT:    ldrh r4, [r0]
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    ldrd r5, r3, [r0, #4]
+; CHECK-NEXT:    lsr.w r9, r3, #2
+; CHECK-NEXT:    ldrd r5, r12, [r0, #4]
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    sub.w r0, r4, #8
 ; CHECK-NEXT:    and r8, r0, #7
 ; CHECK-NEXT:    add.w r7, r0, r0, lsr #29
-; CHECK-NEXT:    asr.w lr, r7, #3
-; CHECK-NEXT:    cmp.w lr, #1
+; CHECK-NEXT:    asrs r6, r7, #3
+; CHECK-NEXT:    cmp r6, #1
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    asrgt r6, r7, #3
+; CHECK-NEXT:    asrgt r3, r7, #3
 ; CHECK-NEXT:    add.w r7, r5, r4, lsl #1
-; CHECK-NEXT:    subs r7, #2
-; CHECK-NEXT:    str r7, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    rsbs r7, r4, #0
-; CHECK-NEXT:    str r7, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    add.w r7, r3, #16
-; CHECK-NEXT:    str r6, [sp] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp] @ 4-byte Spill
+; CHECK-NEXT:    subs r3, r7, #2
+; CHECK-NEXT:    str r3, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    rsbs r3, r4, #0
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    add.w r3, r12, #16
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    str r7, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    b .LBB16_4
 ; CHECK-NEXT:  .LBB16_3: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    subs.w r12, r12, #1
+; CHECK-NEXT:    subs.w r9, r9, #1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #8
 ; CHECK-NEXT:    add.w r0, r5, r0, lsl #1
@@ -1115,16 +1117,16 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    @ Child Loop BB16_6 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB16_10 Depth 2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #8
-; CHECK-NEXT:    ldrh.w lr, [r3, #14]
-; CHECK-NEXT:    ldrh r0, [r3, #12]
+; CHECK-NEXT:    ldrh.w lr, [r12, #14]
+; CHECK-NEXT:    ldrh.w r0, [r12, #12]
 ; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    ldrh r4, [r3, #10]
-; CHECK-NEXT:    ldrh r7, [r3, #8]
-; CHECK-NEXT:    ldrh r6, [r3, #6]
-; CHECK-NEXT:    ldrh.w r9, [r3, #4]
-; CHECK-NEXT:    ldrh.w r11, [r3, #2]
-; CHECK-NEXT:    ldrh.w r10, [r3]
+; CHECK-NEXT:    ldrh.w r4, [r12, #10]
+; CHECK-NEXT:    ldrh.w r7, [r12, #8]
+; CHECK-NEXT:    ldrh.w r3, [r12, #6]
+; CHECK-NEXT:    ldrh.w r6, [r12, #4]
+; CHECK-NEXT:    ldrh.w r11, [r12, #2]
+; CHECK-NEXT:    ldrh.w r10, [r12]
 ; CHECK-NEXT:    vstrb.8 q0, [r1], #8
 ; CHECK-NEXT:    vldrw.u32 q0, [r5]
 ; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
@@ -1134,10 +1136,10 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    adds r1, r5, #6
 ; CHECK-NEXT:    vfma.f16 q0, q1, r11
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #4]
-; CHECK-NEXT:    vfma.f16 q0, q1, r9
+; CHECK-NEXT:    vfma.f16 q0, q1, r6
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    add.w r1, r5, #10
-; CHECK-NEXT:    vfma.f16 q0, q1, r6
+; CHECK-NEXT:    vfma.f16 q0, q1, r3
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #8]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r7
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
