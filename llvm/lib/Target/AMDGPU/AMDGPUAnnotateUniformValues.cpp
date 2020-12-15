@@ -110,7 +110,9 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
       BasicBlock::iterator(Load) : BB->end();
     auto Q = MDR->getPointerDependencyFrom(
         MemoryLocation::getBeforeOrAfter(Ptr), true, StartIt, BB, Load);
-    if (Q.isClobber() || Q.isUnknown())
+    if (Q.isClobber() || Q.isUnknown() ||
+        // Store defines the load and thus clobbers it.
+        (Q.isDef() && Q.getInst()->mayWriteToMemory()))
       return true;
   }
   return false;
