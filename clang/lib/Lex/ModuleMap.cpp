@@ -973,9 +973,9 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
           // We haven't looked here before. Load a module map, if there is
           // one.
           bool IsFrameworkDir = Parent.endswith(".framework");
-          if (Optional<FileEntryRef> ModMapFile =
-                  HeaderInfo.lookupModuleMapFile(*ParentDir, IsFrameworkDir)) {
-            parseModuleMapFile(*ModMapFile, Attrs.IsSystem, *ParentDir);
+          if (const FileEntry *ModMapFile =
+                HeaderInfo.lookupModuleMapFile(*ParentDir, IsFrameworkDir)) {
+            parseModuleMapFile(ModMapFile, Attrs.IsSystem, *ParentDir);
             inferred = InferredDirectories.find(*ParentDir);
           }
 
@@ -2163,12 +2163,12 @@ void ModuleMapParser::parseExternModuleDecl() {
     llvm::sys::path::append(ModuleMapFileName, FileName);
     FileNameRef = ModuleMapFileName;
   }
-  if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))
+  if (auto File = SourceMgr.getFileManager().getFile(FileNameRef))
     Map.parseModuleMapFile(
         *File, /*IsSystem=*/false,
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
-            : File->getDir(),
+            : (*File)->getDir(),
         FileID(), nullptr, ExternLoc);
 }
 
@@ -2984,7 +2984,7 @@ bool ModuleMapParser::parseModuleMapFile() {
   } while (true);
 }
 
-bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
+bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
                                    const DirectoryEntry *Dir, FileID ID,
                                    unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
