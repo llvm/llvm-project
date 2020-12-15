@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
