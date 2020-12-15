@@ -37,7 +37,6 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   if (IsDescriptor(details.type())) {
     return true;
   }
-  // TODO: Automatic (adjustable) arrays - are they descriptors?
   for (const ShapeSpec &shapeSpec : details.shape()) {
     const auto &lb{shapeSpec.lbound().GetExplicit()};
     const auto &ub{shapeSpec.ubound().GetExplicit()};

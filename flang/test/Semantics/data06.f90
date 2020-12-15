@@ -45,6 +45,6 @@ subroutine s1
   data jx/t1()/
   !ERROR: DATA statement value could not be converted to the type 'INTEGER(4)' of the object 'jx'
   data jx/.false./
-  !ERROR: must be a constant
+  !ERROR: DATA statement value 'jy' for 'jx' is not a constant
   data jx/jy/
 end subroutine
