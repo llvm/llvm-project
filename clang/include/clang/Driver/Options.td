@@ -960,11 +960,14 @@ def dM : Flag<["-"], "dM">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
 def dependency_file : Separate<["-"], "dependency-file">, Flags<[CC1Option]>,
-  HelpText<"Filename (or -) to write dependency output to">;
+  HelpText<"Filename (or -) to write dependency output to">,
+  MarshallingInfoString<"DependencyOutputOpts.OutputFile">;
 def dependency_dot : Separate<["-"], "dependency-dot">, Flags<[CC1Option]>,
-  HelpText<"Filename to write DOT-formatted header dependencies to">;
+  HelpText<"Filename to write DOT-formatted header dependencies to">,
+  MarshallingInfoString<"DependencyOutputOpts.DOTOutputFile">;
 def module_dependency_dir : Separate<["-"], "module-dependency-dir">,
-  Flags<[CC1Option]>, HelpText<"Directory to dump module dependencies to">;
+  Flags<[CC1Option]>, HelpText<"Directory to dump module dependencies to">,
+  MarshallingInfoString<"DependencyOutputOpts.ModuleDependencyOutputDir">;
 def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
   Flags<[NoXarchOption, RenderAsInput]>,
   HelpText<"Directory to output dSYM's (if any) to">, MetaVarName<"<dir>">;
@@ -4514,7 +4517,8 @@ def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">,
   MarshallingInfoFlag<"DependencyOutputOpts.IncludeModuleFiles">;
 def header_include_file : Separate<["-"], "header-include-file">,
-  HelpText<"Filename (or -) to write header include output to">;
+  HelpText<"Filename (or -) to write header include output to">,
+  MarshallingInfoString<"DependencyOutputOpts.HeaderIncludeOutputFile">;
 def show_includes : Flag<["--"], "show-includes">,
   HelpText<"Print cl.exe style /showIncludes to stdout">;
 

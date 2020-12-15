@@ -1447,10 +1447,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
 static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
                                       ArgList &Args) {
-  Opts.OutputFile = std::string(Args.getLastArgValue(OPT_dependency_file));
   Opts.Targets = Args.getAllArgValues(OPT_MT);
-  Opts.HeaderIncludeOutputFile =
-      std::string(Args.getLastArgValue(OPT_header_include_file));
   if (Args.hasArg(OPT_show_includes)) {
     // Writing both /showIncludes and preprocessor output to stdout
     // would produce interleaved output, so use stderr for /showIncludes.
@@ -1462,9 +1459,6 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   } else {
     Opts.ShowIncludesDest = ShowIncludesDestination::None;
   }
-  Opts.DOTOutputFile = std::string(Args.getLastArgValue(OPT_dependency_dot));
-  Opts.ModuleDependencyOutputDir =
-      std::string(Args.getLastArgValue(OPT_module_dependency_dir));
   // Add sanitizer blacklists as extra dependencies.
   // They won't be discovered by the regular preprocessor, so
   // we let make / ninja to know about this implicit dependency.
