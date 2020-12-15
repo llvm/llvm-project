@@ -6593,6 +6593,11 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   unsigned NewOp = Node->getOpcode() == ISD::FMINNUM ?
     ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
   EVT VT = Node->getValueType(0);
+
+  if (VT.isScalableVector())
+    report_fatal_error(
+        "Expanding fminnum/fmaxnum for scalable vectors is undefined.");
+
   if (isOperationLegalOrCustom(NewOp, VT)) {
     SDValue Quiet0 = Node->getOperand(0);
     SDValue Quiet1 = Node->getOperand(1);
@@ -8142,6 +8147,11 @@ SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) cons
 
   EVT VT = VecOp.getValueType();
   EVT EltVT = VT.getVectorElementType();
+
+  if (VT.isScalableVector())
+    report_fatal_error(
+        "Expanding reductions for scalable vectors is undefined.");
+
   unsigned NumElts = VT.getVectorNumElements();
 
   SmallVector<SDValue, 8> Ops;

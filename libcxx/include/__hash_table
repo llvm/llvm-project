@@ -1929,7 +1929,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
 // Prepare the container for an insertion of the value __cp_val with the hash
 // __cp_hash. This does a lookup into the container to see if __cp_value is
 // already present, and performs a rehash if necessary. Returns a pointer to the
-// last occurance of __cp_val in the map.
+// last occurrence of __cp_val in the map.
 //
 // Note that this function does forward exceptions if key_eq() throws, and never
 // mutates __value or actually inserts into the map.

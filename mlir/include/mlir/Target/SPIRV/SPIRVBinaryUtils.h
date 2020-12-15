@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_SPIRV_BINARY_UTILS_H_
-#define MLIR_DIALECT_SPIRV_SPIRV_BINARY_UTILS_H_
+#ifndef MLIR_TARGET_SPIRV_BINARY_UTILS_H_
+#define MLIR_TARGET_SPIRV_BINARY_UTILS_H_
 
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Support/LogicalResult.h"
@@ -44,4 +44,4 @@ LogicalResult encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
 } // end namespace spirv
 } // end namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_SPIRV_BINARY_UTILS_H_
+#endif // MLIR_TARGET_SPIRV_BINARY_UTILS_H_

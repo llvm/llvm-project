@@ -1,3 +1,4 @@
+// UNSUPPORTED: powerpc64
 // Tests that __asan_handle_no_return properly unpoisons the signal alternate
 // stack.
 

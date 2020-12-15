@@ -103,6 +103,9 @@ def NoAlias : EnumAttr<"noalias">;
 /// Callee isn't recognized as a builtin.
 def NoBuiltin : EnumAttr<"nobuiltin">;
 
+/// Function cannot enter into caller's translation unit.
+def NoCallback : EnumAttr<"nocallback">;
+
 /// Function creates no aliases of pointer.
 def NoCapture : EnumAttr<"nocapture">;
 

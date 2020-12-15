@@ -21,6 +21,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -379,8 +380,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->importTable = args.hasArg(OPT_import_table);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
-  config->ltoNewPassManager = args.hasFlag(OPT_lto_new_pass_manager,
-                                           OPT_no_lto_new_pass_manager, false);
+  config->ltoNewPassManager =
+      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+                   LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 0);

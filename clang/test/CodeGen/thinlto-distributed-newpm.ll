@@ -183,7 +183,6 @@
 ; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main
 ; CHECK-O: Running pass: LoopLoadEliminationPass on main
-; CHECK-O: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %b
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: SLPVectorizerPass on main

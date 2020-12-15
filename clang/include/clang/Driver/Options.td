@@ -1265,13 +1265,22 @@ def fencoding_EQ : Joined<["-"], "fencoding=">, Group<f_Group>;
 def ferror_limit_EQ : Joined<["-"], "ferror-limit=">, Group<f_Group>, Flags<[CoreOption]>;
 defm exceptions : OptInFFlag<"exceptions", "Enable", "Disable", " support for exception handling">;
 def fdwarf_exceptions : Flag<["-"], "fdwarf-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use DWARF style exceptions">;
+  HelpText<"Use DWARF style exceptions">;
 def fsjlj_exceptions : Flag<["-"], "fsjlj-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use SjLj style exceptions">;
+  HelpText<"Use SjLj style exceptions">;
 def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use SEH style exceptions">;
+  HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Use WebAssembly style exceptions">;
+  HelpText<"Use WebAssembly style exceptions">;
+def exception_model : Separate<["-"], "exception-model">,
+  Flags<[CC1Option, NoDriverOption]>, HelpText<"The exception model: dwarf|sjlj|seh|wasm">,
+  Values<"dwarf,sjlj,seh,wasm">,
+  NormalizedValuesScope<"llvm::ExceptionHandling">,
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
+  MarshallingInfoString<"LangOpts->ExceptionHandling", "None">,
+  AutoNormalizeEnum;
+def exception_model_EQ : Joined<["-"], "exception-model=">,
+  Flags<[CC1Option, NoDriverOption]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable support for ignoring exception handling constructs">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">,
@@ -3354,7 +3363,8 @@ def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,
       Flags<[CC1Option, NoXarchOption]>;
 
 def working_directory : JoinedOrSeparate<["-"], "working-directory">, Flags<[CC1Option]>,
-  HelpText<"Resolve file paths relative to the specified directory">;
+  HelpText<"Resolve file paths relative to the specified directory">,
+  MarshallingInfoString<"FileSystemOpts.WorkingDir">;
 def working_directory_EQ : Joined<["-"], "working-directory=">, Flags<[CC1Option]>,
   Alias<working_directory>;
 
@@ -3933,7 +3943,7 @@ def target_feature : Separate<["-"], "target-feature">,
 def triple : Separate<["-"], "triple">,
   HelpText<"Specify target triple (e.g. i686-apple-darwin9)">,
   MarshallingInfoString<"TargetOpts->Triple", "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
-  AlwaysEmit, Normalizer<"normalizeTriple">, DenormalizeString;
+  AlwaysEmit, Normalizer<"normalizeTriple">;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">;
 def target_sdk_version_EQ : Joined<["-"], "target-sdk-version=">,
@@ -3998,7 +4008,8 @@ def analyzer_viz_egraph_graphviz : Flag<["-"], "analyzer-viz-egraph-graphviz">,
   HelpText<"Display exploded graph using GraphViz">,
   MarshallingInfoFlag<"AnalyzerOpts->visualizeExplodedGraphWithGraphViz">;
 def analyzer_dump_egraph : Separate<["-"], "analyzer-dump-egraph">,
-  HelpText<"Dump exploded graph to the specified file">;
+  HelpText<"Dump exploded graph to the specified file">,
+  MarshallingInfoString<"AnalyzerOpts->DumpExplodedGraphTo">;
 def analyzer_dump_egraph_EQ : Joined<["-"], "analyzer-dump-egraph=">, Alias<analyzer_dump_egraph>;
 
 def analyzer_inline_max_stack_depth : Separate<["-"], "analyzer-inline-max-stack-depth">,

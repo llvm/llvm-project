@@ -79,7 +79,7 @@ define <2 x i32> @test5(<8 x i32> %v) {
 ;
 ; AVX2-LABEL: test5:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [17179869187,17179869187,17179869187,17179869187]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [3,4,4,4]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -177,7 +177,7 @@ define <2 x i32> @test10(<8 x i32> %v) {
 ;
 ; AVX2-LABEL: test10:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [17179869187,17179869187,17179869187,17179869187]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [3,4,4,4]
 ; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper

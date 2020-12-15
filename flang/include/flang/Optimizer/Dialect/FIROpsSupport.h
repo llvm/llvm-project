@@ -18,7 +18,7 @@ namespace fir {
 /// return true iff the Operation is a non-volatile LoadOp
 inline bool nonVolatileLoad(mlir::Operation *op) {
   if (auto load = dyn_cast<fir::LoadOp>(op))
-    return !load.getAttr("volatile");
+    return !load->getAttr("volatile");
   return false;
 }
 

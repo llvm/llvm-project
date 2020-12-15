@@ -177,9 +177,9 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     OutMI.addOperand(MCOp);
   }
 
-  // Unmasked pseudo instructions define MergeOpIndex to -1.
-  // Append dummy mask operand to V instructions.
-  if (RVV->getMergeOpIndex() == -1)
+  // Unmasked pseudo instructions need to append dummy mask operand to
+  // V instructions. All V instructions are modeled as the masked version.
+  if (RVV->hasDummyMask())
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
 
   return true;

@@ -2710,66 +2710,6 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
-/// Given \p BB block, for each instruction in said block, insert trivial
-/// (single value) PHI nodes into each successor block of \p BB block, and
-/// rewrite all the the non-PHI (or PHI uses not in successors of \p BB block)
-/// uses of instructions of \p BB block to use newly-inserted PHI nodes.
-/// NOTE: even though it would be correct to not deal with multi-predecessor
-///       successor blocks, or uses within the \p BB block, we may be dealing
-///       with an unreachable IR, where many invariants don't hold...
-static void FormTrivialSSAPHI(BasicBlock *BB) {
-  SmallSetVector<BasicBlock *, 16> Successors(succ_begin(BB), succ_end(BB));
-
-  // Process instructions in reverse order. There is no correctness reason for
-  // that order, but it allows us to consistently insert new PHI nodes
-  // at the top of blocks, while maintaining their relative order.
-  for (Instruction &DefInstr : make_range(BB->rbegin(), BB->rend())) {
-    SmallVector<std::reference_wrapper<Use>, 16> UsesToRewrite;
-
-    // Cache which uses we'll want to rewrite.
-    copy_if(DefInstr.uses(), std::back_inserter(UsesToRewrite),
-            [BB, &DefInstr, &Successors](Use &U) {
-              auto *User = cast<Instruction>(U.getUser());
-              auto *UserBB = User->getParent();
-              // Generally, ignore users in the same block as the instruction
-              // itself, unless the use[r] either comes before, or is [by] the
-              // instruction itself, which means we are in an unreachable IR.
-              if (UserBB == BB)
-                return !DefInstr.comesBefore(User);
-              // Otherwise, rewrite all non-PHI users,
-              // or PHI users in non-successor blocks.
-              return !isa<PHINode>(User) || !Successors.contains(UserBB);
-            });
-
-    // So, do we have uses to rewrite?
-    if (UsesToRewrite.empty())
-      continue; // Check next remaining instruction.
-
-    SSAUpdater SSAUpdate;
-    SSAUpdate.Initialize(DefInstr.getType(), DefInstr.getName());
-
-    // Create a new PHI node in each successor block.
-    // WARNING: the iteration order is externally-observable,
-    //          and therefore must be stable!
-    for (BasicBlock *Successor : Successors) {
-      IRBuilder<> Builder(&Successor->front());
-      auto *PN = Builder.CreatePHI(DefInstr.getType(), pred_size(Successor),
-                                   DefInstr.getName());
-      // By default, have an 'undef' incoming value for each predecessor.
-      for (BasicBlock *PredsOfSucc : predecessors(Successor))
-        PN->addIncoming(UndefValue::get(DefInstr.getType()), PredsOfSucc);
-      // .. but receive the correct value when coming from the right block.
-      PN->setIncomingValueForBlock(BB, &DefInstr);
-      // And make note of that PHI.
-      SSAUpdate.AddAvailableValue(Successor, PN);
-    }
-
-    // And finally, rewrite all the problematic uses to use the new PHI nodes.
-    while (!UsesToRewrite.empty())
-      SSAUpdate.RewriteUseAfterInsertions(UsesToRewrite.pop_back_val());
-  }
-}
-
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -2852,6 +2792,22 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     if (NumBonusInsts > BonusInstThreshold)
       return Changed;
   }
+
+  // Also, for now, all liveout uses of bonus instructions must be in PHI nodes
+  // in successor blocks as incoming values from the bonus instructions's block,
+  // otherwise we'll fail to update them.
+  // FIXME: We could lift this restriction, but we need to form PHI nodes and
+  // rewrite offending uses, but we can't do that without having a domtree.
+  if (any_of(*BB, [BB](Instruction &I) {
+        return any_of(I.uses(), [BB](Use &U) {
+          auto *User = cast<Instruction>(U.getUser());
+          if (User->getParent() == BB)
+            return false; // Not an external use.
+          auto *PN = dyn_cast<PHINode>(User);
+          return !PN || PN->getIncomingBlock(U) != BB;
+        });
+      }))
+    return Changed;
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.
@@ -2939,17 +2895,16 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       PBI->swapSuccessors();
     }
 
-    // Ensure that the bonus instructions are *only* used by the PHI nodes,
-    // because the successor basic block is about to get a new predecessor
-    // and non-PHI uses will become invalid.
-    FormTrivialSSAPHI(BB);
+    BasicBlock *UniqueSucc =
+        BI->isConditional()
+            ? (PBI->getSuccessor(0) == BB ? TrueDest : FalseDest)
+            : TrueDest;
 
     // Before cloning instructions, notify the successor basic block that it
     // is about to have a new predecessor. This will update PHI nodes,
     // which will allow us to update live-out uses of bonus instructions.
     if (BI->isConditional())
-      AddPredecessorToBlock(PBI->getSuccessor(0) == BB ? TrueDest : FalseDest,
-                            PredBlock, BB, MSSAU);
+      AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
 
     // If we have bonus instructions, clone them into the predecessor block.
     // Note that there may be multiple predecessor blocks, so we cannot move
@@ -2984,15 +2939,33 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
       NewBonusInst->takeName(&BonusInst);
       BonusInst.setName(BonusInst.getName() + ".old");
-      BonusInst.replaceUsesWithIf(NewBonusInst, [BB](Use &U) {
-        auto *User = cast<Instruction>(U.getUser());
-        // Ignore the original bonus instructions themselves.
-        if (User->getParent() == BB)
-          return false;
-        // Otherwise, we've got a PHI node. Don't touch incoming values
-        // for same block as the bonus instruction itself.
-        return cast<PHINode>(User)->getIncomingBlock(U) != BB;
-      });
+      BonusInst.replaceUsesWithIf(
+          NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
+            auto *User = cast<Instruction>(U.getUser());
+            // Ignore non-external uses of bonus instructions.
+            if (User->getParent() == BB) {
+              assert(!isa<PHINode>(User) &&
+                     "Non-external users are never PHI instructions.");
+              return false;
+            }
+            (void)BI;
+            assert(isa<PHINode>(User) && "All external users must be PHI's.");
+            auto *PN = cast<PHINode>(User);
+            assert(is_contained(successors(BB), User->getParent()) &&
+                   "All external users must be in successors of BB.");
+            assert((PN->getIncomingBlock(U) == BB ||
+                    PN->getIncomingBlock(U) == PredBlock) &&
+                   "The incoming block for that incoming value external use "
+                   "must be either the original block with bonus instructions, "
+                   "or the new predecessor block.");
+            // UniqueSucc is the block for which we change it's predecessors,
+            // so it is the only block in which we'll need to update PHI nodes.
+            if (User->getParent() != UniqueSucc)
+              return false;
+            // Update the incoming value for the new predecessor.
+            return PN->getIncomingBlock(U) ==
+                   (BI->isConditional() ? PredBlock : BB);
+          });
     }
 
     // Now that the Cond was cloned into the predecessor basic block,
@@ -3011,7 +2984,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       if (PBI->getSuccessor(0) == BB) {
         if (HasWeights) {
           // PBI: br i1 %x, BB, FalseDest
-          // BI:  br i1 %y, TrueDest, FalseDest
+          // BI:  br i1 %y, UniqueSucc, FalseDest
           // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
           NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
           // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
@@ -3022,12 +2995,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
                                    (SuccFalseWeight + SuccTrueWeight) +
                                PredTrueWeight * SuccFalseWeight);
         }
-        PBI->setSuccessor(0, TrueDest);
+        PBI->setSuccessor(0, UniqueSucc);
       }
       if (PBI->getSuccessor(1) == BB) {
         if (HasWeights) {
           // PBI: br i1 %x, TrueDest, BB
-          // BI:  br i1 %y, TrueDest, FalseDest
+          // BI:  br i1 %y, TrueDest, UniqueSucc
           // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
           //              FalseWeight for PBI * TrueWeight for BI.
           NewWeights.push_back(PredTrueWeight *
@@ -3036,7 +3009,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
           // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
           NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
         }
-        PBI->setSuccessor(1, FalseDest);
+        PBI->setSuccessor(1, UniqueSucc);
       }
       if (NewWeights.size() == 2) {
         // Halve the weights if any of them cannot fit in an uint32_t
@@ -3054,7 +3027,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
             PHIs[i]->getIncomingValueForBlock(PBI->getParent()));
         assert(PBI_C->getType()->isIntegerTy(1));
         Instruction *MergedCond = nullptr;
-        if (PBI->getSuccessor(0) == TrueDest) {
+        if (PBI->getSuccessor(0) == UniqueSucc) {
           // Create (PBI_Cond and PBI_C) or (!PBI_Cond and BI_Value)
           // PBI_C is true: PBI_Cond or (!PBI_Cond and BI_Value)
           //       is false: !PBI_Cond and BI_Value
@@ -3083,13 +3056,13 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
 	PHIs[i]->setIncomingValueForBlock(PBI->getParent(), MergedCond);
       }
 
-      // PBI is changed to branch to TrueDest below. Remove itself from
+      // PBI is changed to branch to UniqueSucc below. Remove itself from
       // potential phis from all other successors.
       if (MSSAU)
-        MSSAU->changeCondBranchToUnconditionalTo(PBI, TrueDest);
+        MSSAU->changeCondBranchToUnconditionalTo(PBI, UniqueSucc);
 
       // Change PBI from Conditional to Unconditional.
-      BranchInst *New_PBI = BranchInst::Create(TrueDest, PBI);
+      BranchInst *New_PBI = BranchInst::Create(UniqueSucc, PBI);
       EraseTerminatorAndDCECond(PBI, MSSAU);
       PBI = New_PBI;
     }

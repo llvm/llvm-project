@@ -731,6 +731,32 @@ static Register getVM512Upper(Register reg) {
 
 static Register getVM512Lower(Register reg) { return getVM512Upper(reg) + 1; }
 
+// Expand pseudo logical vector instructions for VM512 registers.
+static void expandPseudoLogM(MachineInstr &MI, const MCInstrDesc &MCID) {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register VMXu = getVM512Upper(MI.getOperand(0).getReg());
+  Register VMXl = getVM512Lower(MI.getOperand(0).getReg());
+  Register VMYu = getVM512Upper(MI.getOperand(1).getReg());
+  Register VMYl = getVM512Lower(MI.getOperand(1).getReg());
+
+  switch (MI.getOpcode()) {
+  default: {
+    Register VMZu = getVM512Upper(MI.getOperand(2).getReg());
+    Register VMZl = getVM512Lower(MI.getOperand(2).getReg());
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXu).addUse(VMYu).addUse(VMZu);
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXl).addUse(VMYl).addUse(VMZl);
+    break;
+  }
+  case VE::NEGMy:
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXu).addUse(VMYu);
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXl).addUse(VMYl);
+    break;
+  }
+  MI.eraseFromParent();
+}
+
 static void addOperandsForVFMK(MachineInstrBuilder &MIB, MachineInstr &MI,
                                bool Upper) {
   // VM512
@@ -811,6 +837,25 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case VE::GETSTACKTOP: {
     return expandGetStackTopPseudo(MI);
   }
+
+  case VE::ANDMyy:
+    expandPseudoLogM(MI, get(VE::ANDMmm));
+    return true;
+  case VE::ORMyy:
+    expandPseudoLogM(MI, get(VE::ORMmm));
+    return true;
+  case VE::XORMyy:
+    expandPseudoLogM(MI, get(VE::XORMmm));
+    return true;
+  case VE::EQVMyy:
+    expandPseudoLogM(MI, get(VE::EQVMmm));
+    return true;
+  case VE::NNDMyy:
+    expandPseudoLogM(MI, get(VE::NNDMmm));
+    return true;
+  case VE::NEGMy:
+    expandPseudoLogM(MI, get(VE::NEGMm));
+    return true;
 
   case VE::LVMyir:
   case VE::LVMyim:

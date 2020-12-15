@@ -941,6 +941,11 @@ public:
   /// applies when shouldMaximizeVectorBandwidth returns true.
   unsigned getMinimumVF(unsigned ElemWidth) const;
 
+  /// \return The maximum vectorization factor for types of given element
+  /// bit width and opcode, or 0 if there is no maximum VF.
+  /// Currently only used by the SLP vectorizer.
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
+
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
   /// profitable without finding other extensions fed by the same input.
@@ -1498,6 +1503,7 @@ public:
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
   virtual bool shouldMaximizeVectorBandwidth(bool OptSize) const = 0;
   virtual unsigned getMinimumVF(unsigned ElemWidth) const = 0;
+  virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const = 0;
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() const = 0;
@@ -1916,6 +1922,9 @@ public:
   }
   unsigned getMinimumVF(unsigned ElemWidth) const override {
     return Impl.getMinimumVF(ElemWidth);
+  }
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override {
+    return Impl.getMaximumVF(ElemWidth, Opcode);
   }
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) override {

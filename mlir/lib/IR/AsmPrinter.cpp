@@ -429,6 +429,7 @@ private:
   /// The following are hooks of `OpAsmPrinter` that are not necessary for
   /// determining potential aliases.
   void printAffineMapOfSSAIds(AffineMapAttr, ValueRange) override {}
+  void printNewline() override {}
   void printOperand(Value) override {}
   void printOperand(Value, raw_ostream &os) override {
     // Users expect the output string to have at least the prefixed % to signal
@@ -2217,6 +2218,13 @@ public:
 
   /// Return the current stream of the printer.
   raw_ostream &getStream() const override { return os; }
+
+  /// Print a newline and indent the printer to the start of the current
+  /// operation.
+  void printNewline() override {
+    os << newLine;
+    os.indent(currentIndent);
+  }
 
   /// Print the given type.
   void printType(Type type) override { ModulePrinter::printType(type); }

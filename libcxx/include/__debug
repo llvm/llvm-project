@@ -221,7 +221,7 @@ public:
 
     template <class _Cont>
     _LIBCPP_INLINE_VISIBILITY static __c_node* __create_C_node(void *__mem, void *__c, __c_node *__next) {
-        return ::new(__mem) _C_node<_Cont>(__c, __next);
+        return ::new (__mem) _C_node<_Cont>(__c, __next);
     }
 
     template <class _Cont>

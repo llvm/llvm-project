@@ -1163,6 +1163,15 @@ public:
       const SCEV *S, const Loop *L,
       SmallPtrSetImpl<const SCEVPredicate *> &Preds);
 
+  /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
+  /// constant, and None if it isn't.
+  ///
+  /// This is intended to be a cheaper version of getMinusSCEV.  We can be
+  /// frugal here since we just bail out of actually constructing and
+  /// canonicalizing an expression in the cases where the result isn't going
+  /// to be a constant.
+  Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
+
   /// Update no-wrap flags of an AddRec. This may drop the cached info about
   /// this AddRec (such as range info) in case if new flags may potentially
   /// sharpen it.
@@ -1883,15 +1892,6 @@ private:
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(const SCEV *Expr, const SCEV *&L, const SCEV *&R,
                       SCEV::NoWrapFlags &Flags);
-
-  /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
-  /// constant, and None if it isn't.
-  ///
-  /// This is intended to be a cheaper version of getMinusSCEV.  We can be
-  /// frugal here since we just bail out of actually constructing and
-  /// canonicalizing an expression in the cases where the result isn't going
-  /// to be a constant.
-  Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
   /// Drop memoized information computed for S.
   void forgetMemoizedResults(const SCEV *S);

@@ -395,7 +395,9 @@ macro(darwin_add_builtin_libraries)
   set(CMAKE_CXX_FLAGS "")
   set(CMAKE_ASM_FLAGS "")
 
-  set(PROFILE_SOURCES ../profile/InstrProfiling 
+  append_string_if(COMPILER_RT_HAS_ASM_LSE " -DHAS_ASM_LSE" CFLAGS)
+
+  set(PROFILE_SOURCES ../profile/InstrProfiling
                       ../profile/InstrProfilingBuffer
                       ../profile/InstrProfilingPlatformDarwin
                       ../profile/InstrProfilingWriter

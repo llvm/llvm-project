@@ -652,7 +652,7 @@ __assoc_state<_Rp>::set_value(_Arg&& __arg)
     unique_lock<mutex> __lk(this->__mut_);
     if (this->__has_value())
         __throw_future_error(future_errc::promise_already_satisfied);
-    ::new(&__value_) _Rp(_VSTD::forward<_Arg>(__arg));
+    ::new ((void*)&__value_) _Rp(_VSTD::forward<_Arg>(__arg));
     this->__state_ |= base::__constructed | base::ready;
     __cv_.notify_all();
 }
@@ -665,7 +665,7 @@ __assoc_state<_Rp>::set_value_at_thread_exit(_Arg&& __arg)
     unique_lock<mutex> __lk(this->__mut_);
     if (this->__has_value())
         __throw_future_error(future_errc::promise_already_satisfied);
-    ::new(&__value_) _Rp(_VSTD::forward<_Arg>(__arg));
+    ::new ((void*)&__value_) _Rp(_VSTD::forward<_Arg>(__arg));
     this->__state_ |= base::__constructed;
     __thread_local_data()->__make_ready_at_thread_exit(this);
 }
@@ -1328,7 +1328,7 @@ promise<_Rp>::promise(allocator_arg_t, const _Alloc& __a0)
     typedef __allocator_destructor<_A2> _D2;
     _A2 __a(__a0);
     unique_ptr<_State, _D2> __hold(__a.allocate(1), _D2(__a, 1));
-    ::new(static_cast<void*>(_VSTD::addressof(*__hold.get()))) _State(__a0);
+    ::new ((void*)_VSTD::addressof(*__hold.get())) _State(__a0);
     __state_ = _VSTD::addressof(*__hold.release());
 }
 
@@ -1471,7 +1471,7 @@ promise<_Rp&>::promise(allocator_arg_t, const _Alloc& __a0)
     typedef __allocator_destructor<_A2> _D2;
     _A2 __a(__a0);
     unique_ptr<_State, _D2> __hold(__a.allocate(1), _D2(__a, 1));
-    ::new(static_cast<void*>(_VSTD::addressof(*__hold.get()))) _State(__a0);
+    ::new ((void*)_VSTD::addressof(*__hold.get())) _State(__a0);
     __state_ = _VSTD::addressof(*__hold.release());
 }
 
@@ -1590,7 +1590,7 @@ promise<void>::promise(allocator_arg_t, const _Alloc& __a0)
     typedef __allocator_destructor<_A2> _D2;
     _A2 __a(__a0);
     unique_ptr<_State, _D2> __hold(__a.allocate(1), _D2(__a, 1));
-    ::new(static_cast<void*>(_VSTD::addressof(*__hold.get()))) _State(__a0);
+    ::new ((void*)_VSTD::addressof(*__hold.get())) _State(__a0);
     __state_ = _VSTD::addressof(*__hold.release());
 }
 
@@ -1655,7 +1655,7 @@ void
 __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__move_to(
                               __packaged_task_base<_Rp(_ArgTypes...)>* __p) _NOEXCEPT
 {
-    ::new (__p) __packaged_task_func(_VSTD::move(__f_.first()), _VSTD::move(__f_.second()));
+    ::new ((void*)__p) __packaged_task_func(_VSTD::move(__f_.first()), _VSTD::move(__f_.second()));
 }
 
 template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
@@ -1748,7 +1748,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
     typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
-        ::new (&__buf_) _FF(_VSTD::forward<_Fp>(__f));
+        ::new ((void*)&__buf_) _FF(_VSTD::forward<_Fp>(__f));
         __f_ = (__base*)&__buf_;
     }
     else
@@ -1757,7 +1757,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
         _Ap __a;
         typedef __allocator_destructor<_Ap> _Dp;
         unique_ptr<__base, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-        ::new (__hold.get()) _FF(_VSTD::forward<_Fp>(__f), allocator<_FR>(__a));
+        ::new ((void*)__hold.get()) _FF(_VSTD::forward<_Fp>(__f), allocator<_FR>(__a));
         __f_ = __hold.release();
     }
 }
@@ -1773,7 +1773,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(
     if (sizeof(_FF) <= sizeof(__buf_))
     {
         __f_ = (__base*)&__buf_;
-        ::new (__f_) _FF(_VSTD::forward<_Fp>(__f));
+        ::new ((void*)__f_) _FF(_VSTD::forward<_Fp>(__f));
     }
     else
     {
@@ -1781,7 +1781,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(
         _Ap __a(__a0);
         typedef __allocator_destructor<_Ap> _Dp;
         unique_ptr<__base, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-        ::new (static_cast<void*>(_VSTD::addressof(*__hold.get())))
+        ::new ((void*)_VSTD::addressof(*__hold.get()))
             _FF(_VSTD::forward<_Fp>(__f), _Alloc(__a));
         __f_ = _VSTD::addressof(*__hold.release());
     }

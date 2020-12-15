@@ -9846,14 +9846,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
 
       Type *ArgMemTy = nullptr;
-      if (F.getCallingConv() == CallingConv::X86_INTR) {
-        // IA Interrupt passes frame (1st parameter) by value in the stack.
-        if (ArgNo == 0) {
-          Flags.setByVal();
-          // FIXME: Dependence on pointee element type. See bug 46672.
-          ArgMemTy = Arg.getType()->getPointerElementType();
-        }
-      }
       if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated() ||
           Flags.isByRef()) {
         if (!ArgMemTy)
