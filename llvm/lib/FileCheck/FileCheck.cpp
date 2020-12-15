@@ -2078,9 +2078,6 @@ static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     PrintDiag = !Diags;
   }
 
-  // If the current position is at the end of a line, advance to the start of
-  // the next line.
-  Buffer = Buffer.substr(Buffer.find_first_not_of(" \t\n\r"));
   FileCheckDiag::MatchType MatchTy = ExpectedMatch
                                          ? FileCheckDiag::MatchNoneButExpected
                                          : FileCheckDiag::MatchNoneAndExcluded;

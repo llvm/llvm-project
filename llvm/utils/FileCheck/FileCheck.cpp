@@ -248,7 +248,10 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   // Labels for input lines.
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "L:";
-  OS << "     labels line number L of the input file\n";
+  OS << "     labels line number L of the input file\n"
+     << "           An extra space is added after each input line to represent"
+     << " the\n"
+     << "           newline character\n";
 
   // Labels for annotation lines.
   OS << "  - ";
@@ -662,15 +665,16 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
           COS.resetColor();
         else if (WasInMatch && !InMatch)
           COS.changeColor(raw_ostream::CYAN, true, true);
-        if (*InputFilePtr == '\n')
+        if (*InputFilePtr == '\n') {
           Newline = true;
-        else
+          COS << ' ';
+        } else
           COS << *InputFilePtr;
         ++InputFilePtr;
       }
     }
     *LineOS << '\n';
-    unsigned InputLineWidth = InputFilePtr - InputFileLine - Newline;
+    unsigned InputLineWidth = InputFilePtr - InputFileLine;
 
     // Print any annotations.
     while (AnnotationItr != AnnotationEnd &&
