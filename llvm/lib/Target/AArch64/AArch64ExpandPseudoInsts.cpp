@@ -638,14 +638,45 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
 
   MachineInstr *OriginalCall;
   MachineOperand &CallTarget = MI.getOperand(0);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
-         "invalid operand for regular call");
-  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
-  OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  OriginalCall->addOperand(CallTarget);
+  unsigned RegMaskStartIdx;
+  if (MI.getOperand(1).isImm()) {
+    // Pointer auth call.
+    MachineOperand &Discriminator = MI.getOperand(2);
+    assert(MI.getOperand(1).isImm() &&
+           "first operand of ptrauth call must be an immediate");
+    int64_t Imm = MI.getOperand(1).getImm();
+    assert((Imm == 0 || Imm == 1) && "invalid ptrauth immediate");
+    assert(Discriminator.isReg() &&
+           "ptrauth discriminator call must be a register");
 
-  unsigned RegMaskStartIdx = 1;
-  // Skip register arguments. Those are added during ISel, but are not
+    if (Discriminator.getReg() != AArch64::XZR) {
+      unsigned Opc = Imm == 0 ? AArch64::BLRAA : AArch64::BLRAB;
+      OriginalCall =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+      OriginalCall->addOperand(CallTarget);
+      OriginalCall->addOperand(Discriminator);
+    } else {
+      assert(Discriminator.getReg() == AArch64::XZR &&
+             "*z versions of ptrauth calls need XZR as register operand");
+      unsigned Opc = Imm == 0 ? AArch64::BLRAAZ : AArch64::BLRABZ;
+      OriginalCall =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+      OriginalCall->addOperand(CallTarget);
+    }
+
+    RegMaskStartIdx = 3;
+  } else {
+    // Regular call.
+    assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+           "invalid operand for regular call");
+    unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+    OriginalCall =
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+    OriginalCall->addOperand(CallTarget);
+    RegMaskStartIdx = 1;
+  }
+
+  // Skip argument register arguments. Those are added during ISel, but are not
   // needed for the concrete branch.
   while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
     assert(MI.getOperand(RegMaskStartIdx).isReg() &&
