@@ -38,15 +38,12 @@ define arm_aapcs_vfpcc <2 x i64> @shl_qq_int64_t(<2 x i64> %src1, <2 x i64> %src
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.32 q2[0], r2
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.32 q2[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov.32 q2[2], r2
-; CHECK-NEXT:    vmov.32 q2[3], r1
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov r12, s6
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    lsll r0, r3, r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = shl <2 x i64> %src1, %src2
@@ -90,22 +87,21 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shru_qq_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shru_qq_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r5, lr}
+; CHECK-NEXT:    push {r5, lr}
 ; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov r5, s1
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    rsbs r2, r2, #0
-; CHECK-NEXT:    lsll r0, r1, r2
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov.32 q2[0], r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vmov.32 q2[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    rsbs r2, r2, #0
-; CHECK-NEXT:    lsll r0, r1, r2
-; CHECK-NEXT:    vmov.32 q2[2], r0
-; CHECK-NEXT:    vmov.32 q2[3], r1
-; CHECK-NEXT:    vmov q0, q2
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    lsll r0, r5, r2
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    lsll r2, r3, r1
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r5
+; CHECK-NEXT:    pop {r5, pc}
 entry:
   %0 = lshr <2 x i64> %src1, %src2
   ret <2 x i64> %0
@@ -152,15 +148,12 @@ define arm_aapcs_vfpcc <2 x i64> @shrs_qq_int64_t(<2 x i64> %src1, <2 x i64> %sr
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    asrl r2, r1, r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.32 q2[0], r2
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.32 q2[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    asrl r2, r1, r0
-; CHECK-NEXT:    vmov.32 q2[2], r2
-; CHECK-NEXT:    vmov.32 q2[3], r1
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov r12, s6
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    asrl r0, r3, r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = ashr <2 x i64> %src1, %src2
@@ -203,15 +196,12 @@ define arm_aapcs_vfpcc <2 x i64> @shl_qi_int64_t(<2 x i64> %src1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    lsll r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    lsll r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    lsll r2, r3, #4
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = shl <2 x i64> %src1, <i64 4, i64 4>
@@ -254,15 +244,12 @@ define arm_aapcs_vfpcc <2 x i64> @shru_qi_int64_t(<2 x i64> %src1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    lsrl r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    lsrl r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    lsrl r2, r3, #4
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr <2 x i64> %src1, <i64 4, i64 4>
@@ -305,15 +292,12 @@ define arm_aapcs_vfpcc <2 x i64> @shrs_qi_int64_t(<2 x i64> %src1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    asrl r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    asrl r0, r1, #4
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    asrl r2, r3, #4
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = ashr <2 x i64> %src1, <i64 4, i64 4>
@@ -361,16 +345,13 @@ define arm_aapcs_vfpcc <2 x i64> @shl_qr_int64_t(<2 x i64> %src1, i64 %src2) {
 ; CHECK-LABEL: shl_qr_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[0], r2
+; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    lsll r12, r1, r0
 ; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[2], r2
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    lsll r2, r3, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <2 x i64> undef, i64 %src2, i32 0
@@ -422,18 +403,15 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shru_qr_int64_t(<2 x i64> %src1, i64 %src2) {
 ; CHECK-LABEL: shru_qr_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    rsb.w r12, r0, #0
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    lsll r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[2], r2
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    lsll r2, r1, r12
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    lsll r0, r3, r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <2 x i64> undef, i64 %src2, i32 0
@@ -486,16 +464,13 @@ define arm_aapcs_vfpcc <2 x i64> @shrs_qr_int64_t(<2 x i64> %src1, i64 %src2) {
 ; CHECK-LABEL: shrs_qr_int64_t:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    asrl r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[0], r2
+; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    asrl r12, r1, r0
 ; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    asrl r2, r1, r0
-; CHECK-NEXT:    vmov.32 q1[2], r2
-; CHECK-NEXT:    vmov.32 q1[3], r1
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    asrl r2, r3, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <2 x i64> undef, i64 %src2, i32 0

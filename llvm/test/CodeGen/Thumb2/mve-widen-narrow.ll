@@ -276,44 +276,36 @@ define void @foo_int32_int8_both(<16 x i32>* %dest, <16 x i8>* readonly %src, i3
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
 ; CHECK-NEXT:    vmov.u16 r2, q1[4]
-; CHECK-NEXT:    vmov.32 q0[0], r2
+; CHECK-NEXT:    vmov.u16 r3, q1[6]
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
 ; CHECK-NEXT:    vmov.u16 r2, q1[5]
-; CHECK-NEXT:    vmov.32 q0[1], r2
-; CHECK-NEXT:    vmov.u16 r2, q1[6]
-; CHECK-NEXT:    vmov.32 q0[2], r2
-; CHECK-NEXT:    vmov.u16 r2, q1[7]
-; CHECK-NEXT:    vmov.32 q0[3], r2
+; CHECK-NEXT:    vmov.u16 r3, q1[7]
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
+; CHECK-NEXT:    vmov.u16 r2, q1[2]
 ; CHECK-NEXT:    vmovlb.u16 q2, q0
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
 ; CHECK-NEXT:    vmov.u16 r1, q1[0]
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
-; CHECK-NEXT:    vmov.32 q2[0], r1
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
 ; CHECK-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-NEXT:    vmov.32 q2[1], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[2]
-; CHECK-NEXT:    vmov.32 q2[2], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[3]
-; CHECK-NEXT:    vmov.32 q2[3], r1
+; CHECK-NEXT:    vmov.u16 r2, q1[3]
+; CHECK-NEXT:    vmov q2[3], q2[1], r2, r1
 ; CHECK-NEXT:    vmov.u16 r1, q0[4]
 ; CHECK-NEXT:    vmovlb.u16 q1, q2
+; CHECK-NEXT:    vmov.u16 r2, q0[6]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #32]
-; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
 ; CHECK-NEXT:    vmov.u16 r1, q0[5]
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    vmov.32 q1[2], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
-; CHECK-NEXT:    vmov.32 q1[3], r1
+; CHECK-NEXT:    vmov.u16 r2, q0[7]
+; CHECK-NEXT:    vmov q1[3], q1[1], r2, r1
 ; CHECK-NEXT:    vmov.u16 r1, q0[0]
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
+; CHECK-NEXT:    vmov.u16 r2, q0[2]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
 ; CHECK-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    vmov.32 q1[2], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    vmov.32 q1[3], r1
+; CHECK-NEXT:    vmov.u16 r2, q0[3]
+; CHECK-NEXT:    vmov q1[3], q1[1], r2, r1
 ; CHECK-NEXT:    vmovlb.u16 q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
