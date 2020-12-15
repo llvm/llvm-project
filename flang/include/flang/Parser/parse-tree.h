@@ -426,8 +426,9 @@ struct DeclarationConstruct {
 
 // R504 specification-part -> [use-stmt]... [import-stmt]... [implicit-part]
 //                            [declaration-construct]...
-// TODO: transfer any statements after the last IMPLICIT (if any)
-// from the implicit part to the declaration constructs
+// PARAMETER, FORMAT, and ENTRY statements that appear before any other
+// kind of declaration-construct will be parsed into the implicit-part,
+// even if there are no IMPLICIT statements.
 struct SpecificationPart {
   TUPLE_CLASS_BOILERPLATE(SpecificationPart);
   std::tuple<std::list<OpenACCDeclarativeConstruct>,
@@ -859,13 +860,6 @@ struct LiteralConstant {
       RealLiteralConstant, ComplexLiteralConstant, BOZLiteralConstant,
       CharLiteralConstant, LogicalLiteralConstant>
       u;
-};
-
-// R604 constant ->  literal-constant | named-constant
-// Renamed to dodge a clash with Constant<> template class.
-struct ConstantValue {
-  UNION_CLASS_BOILERPLATE(ConstantValue);
-  std::variant<LiteralConstant, NamedConstant> u;
 };
 
 // R807 access-spec -> PUBLIC | PRIVATE
@@ -1412,14 +1406,15 @@ using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
 //        signed-int-literal-constant | signed-real-literal-constant |
 //        null-init | initial-data-target |
 //        structure-constructor
+// N.B. Parsing ambiguities abound here without recourse to symbols
+// (see comments on R845's parser).
 struct DataStmtConstant {
   UNION_CLASS_BOILERPLATE(DataStmtConstant);
   CharBlock source;
   mutable TypedExpr typedExpr;
-  std::variant<Scalar<ConstantValue>, Scalar<ConstantSubobject>,
-      SignedIntLiteralConstant, SignedRealLiteralConstant,
-      SignedComplexLiteralConstant, NullInit, InitialDataTarget,
-      StructureConstructor>
+  std::variant<LiteralConstant, SignedIntLiteralConstant,
+      SignedRealLiteralConstant, SignedComplexLiteralConstant, NullInit,
+      common::Indirection<Designator>, StructureConstructor>
       u;
 };
 
@@ -2100,11 +2095,11 @@ WRAPPER_CLASS(EndBlockStmt, std::optional<Name>);
 // R1109 block-specification-part ->
 //         [use-stmt]... [import-stmt]...
 //         [[declaration-construct]... specification-construct]
-WRAPPER_CLASS(BlockSpecificationPart, SpecificationPart);
-// TODO: Because BlockSpecificationPart just wraps the more general
+// N.B. Because BlockSpecificationPart just wraps the more general
 // SpecificationPart, it can misrecognize an ImplicitPart as part of
 // the BlockSpecificationPart during parsing, and we have to detect and
 // flag such usage in semantics.
+WRAPPER_CLASS(BlockSpecificationPart, SpecificationPart);
 
 // R1107 block-construct ->
 //         block-stmt [block-specification-part] block end-block-stmt
@@ -2227,8 +2222,9 @@ WRAPPER_CLASS(EndDoStmt, std::optional<Name>);
 
 // R1119 do-construct -> do-stmt block end-do
 // R1120 do-stmt -> nonlabel-do-stmt | label-do-stmt
-// TODO: deprecated: DO loop ending on statement types other than END DO and
-// CONTINUE; multiple "label DO" loops ending on the same label
+// Deprecated, but supported: "label DO" loops ending on statements other
+// than END DO and CONTINUE, and multiple "label DO" loops ending on the
+// same label.
 struct DoConstruct {
   TUPLE_CLASS_BOILERPLATE(DoConstruct);
   const std::optional<LoopControl> &GetLoopControl() const;

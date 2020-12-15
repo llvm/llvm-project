@@ -329,7 +329,14 @@ bool DataInitializationCompiler::InitElement(
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
-    if (auto converted{ConvertElement(*expr, *designatorType)}) {
+    if (expr->Rank() > 0) {
+      // Because initial-data-target is ambiguous with scalar-constant and
+      // scalar-constant-subobject at parse time, enforcement of scalar-*
+      // must be deferred to here.
+      exprAnalyzer_.Say(
+          "DATA statement value initializes '%s' with an array"_err_en_US,
+          DescribeElement());
+    } else if (auto converted{ConvertElement(*expr, *designatorType)}) {
       // value non-pointer initialization
       if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
