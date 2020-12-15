@@ -86,6 +86,9 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %[[I6:.*]] = muli %[[I2]], %[[I2]] : i32
   %i6 = muli %i2, %i2 : i32
 
+  // CHECK: %[[F7:.*]] = powf %[[F2]], %[[F2]] : f32
+  %f7 = powf %f2, %f2 : f32
+
   // CHECK: %[[C0:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
   %c0 = "std.create_complex"(%f2, %f2) : (f32, f32) -> complex<f32>
 
