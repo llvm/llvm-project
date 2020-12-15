@@ -497,7 +497,7 @@ static mlir::FuncOp getFuncOp(mlir::Location loc,
                               const RuntimeFunction &runtime) {
   auto function = builder.addNamedFunction(
       loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
-  function.setAttr("fir.runtime", builder.getUnitAttr());
+  function->setAttr("fir.runtime", builder.getUnitAttr());
   return function;
 }
 
@@ -769,7 +769,7 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
   if (!function) {
     // First time this wrapper is needed, build it.
     function = builder.createFunction(loc, wrapperName, funcType);
-    function.setAttr("fir.intrinsic", builder.getUnitAttr());
+    function->setAttr("fir.intrinsic", builder.getUnitAttr());
     function.addEntryBlock();
 
     // Create local context to emit code into the newly created function
