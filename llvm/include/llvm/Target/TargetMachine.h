@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class AAManager;
 class Function;
 class GlobalValue;
 class MachineModuleInfoWrapperPass;
@@ -321,6 +322,10 @@ public:
   /// (similar to adjustPassManager for Legacy Pass manager).
   virtual void registerPassBuilderCallbacks(PassBuilder &,
                                             bool DebugPassManager) {}
+
+  /// Allow the target to register alias analyses with the AAManager for use
+  /// with the new pass manager. Only affects the "default" AAManager.
+  virtual void registerAliasAnalyses(AAManager &) {}
 
   /// Add passes to the specified pass manager to get the specified file
   /// emitted.  Typically this will involve several steps of code generation.
