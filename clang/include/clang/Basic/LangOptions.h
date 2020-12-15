@@ -22,6 +22,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include <string>
 #include <vector>
 
@@ -30,6 +31,8 @@ namespace clang {
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
+  friend class CompilerInvocation;
+
 public:
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
@@ -209,6 +212,9 @@ public:
     FPE_Strict
   };
 
+  /// Possible exception handling behavior.
+  using ExceptionHandlingKind = llvm::ExceptionHandling;
+
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
     None,
@@ -379,6 +385,22 @@ public:
   /// Check if leaf functions are also signed.
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
+
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == llvm::ExceptionHandling::Wasm;
   }
 };
 
