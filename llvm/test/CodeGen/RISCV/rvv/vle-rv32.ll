@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-v -verify-machineinstrs \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-v -mattr=+experimental-zfh \
+; RUN:   -mattr=+f -verify-machineinstrs \
 ; RUN:   --riscv-no-aliases < %s | FileCheck %s
 declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32(
   <vscale x 1 x i32>*,
