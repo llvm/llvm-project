@@ -42,6 +42,10 @@ public:
   value_sequence_iterator(const value_sequence_iterator &) = default;
   value_sequence_iterator(value_sequence_iterator &&Arg)
       : Value(std::move(Arg.Value)) {}
+  value_sequence_iterator &operator=(const value_sequence_iterator &Arg) {
+    Value = Arg.Value;
+    return *this;
+  }
 
   template <typename U, typename Enabler = decltype(ValueT(std::declval<U>()))>
   value_sequence_iterator(U &&Value) : Value(std::forward<U>(Value)) {}

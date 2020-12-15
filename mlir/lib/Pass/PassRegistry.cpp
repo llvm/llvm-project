@@ -291,11 +291,15 @@ private:
 /// given to enable accurate error reporting.
 LogicalResult TextualPipeline::initialize(StringRef text,
                                           raw_ostream &errorStream) {
+  if (text.empty())
+    return success();
+
   // Build a source manager to use for error reporting.
   llvm::SourceMgr pipelineMgr;
-  pipelineMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(
-                                     text, "MLIR Textual PassPipeline Parser"),
-                                 llvm::SMLoc());
+  pipelineMgr.AddNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBuffer(text, "MLIR Textual PassPipeline Parser",
+                                       /*RequiresNullTerminator=*/false),
+      llvm::SMLoc());
   auto errorHandler = [&](const char *rawLoc, Twine msg) {
     pipelineMgr.PrintMessage(errorStream, llvm::SMLoc::getFromPointer(rawLoc),
                              llvm::SourceMgr::DK_Error, msg);
@@ -327,7 +331,7 @@ LogicalResult TextualPipeline::parsePipelineText(StringRef text,
     pipeline.emplace_back(/*name=*/text.substr(0, pos).trim());
 
     // If we have a single terminating name, we're done.
-    if (pos == text.npos)
+    if (pos == StringRef::npos)
       break;
 
     text = text.substr(pos);
@@ -338,9 +342,19 @@ LogicalResult TextualPipeline::parsePipelineText(StringRef text,
       text = text.substr(1);
 
       // Skip over everything until the closing '}' and store as options.
-      size_t close = text.find('}');
+      size_t close = StringRef::npos;
+      for (unsigned i = 0, e = text.size(), braceCount = 1; i < e; ++i) {
+        if (text[i] == '{') {
+          ++braceCount;
+          continue;
+        }
+        if (text[i] == '}' && --braceCount == 0) {
+          close = i;
+          break;
+        }
+      }
 
-      // TODO: Handle skipping over quoted sub-strings.
+      // Check to see if a closing options brace was found.
       if (close == StringRef::npos) {
         return errorHandler(
             /*rawLoc=*/text.data() - 1,
