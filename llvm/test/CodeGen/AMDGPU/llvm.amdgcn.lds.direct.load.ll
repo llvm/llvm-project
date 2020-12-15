@@ -9,14 +9,14 @@
 ; GFX11: lds_direct_load v{{[0-9]+}}
 ; GFX11: s_waitcnt expcnt(2)
 ; GFX11: v_add_f32
-; GFX11: buffer_store_dword
+; GFX11: buffer_store_b32
 ; GFX11: s_waitcnt expcnt(1)
-; GFX11: buffer_store_dword
+; GFX11: buffer_store_b32
 ; GFX11: s_waitcnt expcnt(0)
-; GFX11: buffer_store_dword
-; GFX11: buffer_store_dword
-; GFX11: buffer_store_dword
-; GFX11: buffer_store_dword
+; GFX11: buffer_store_b32
+; GFX11: buffer_store_b32
+; GFX11: buffer_store_b32
+; GFX11: buffer_store_b32
 define amdgpu_ps void @lds_direct_load(<4 x i32> inreg %buf, i32 inreg %arg0,
                                        i32 inreg %arg1, i32 inreg %arg2) #0 {
 main_body:

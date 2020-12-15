@@ -375,7 +375,9 @@ protected:
   bool HasDot6Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
-  bool HasAtomicFaddInsts;
+  bool HasAtomicFaddRtnInsts;
+  bool HasAtomicFaddNoRtnInsts;
+  bool HasAtomicPkFaddNoRtnInsts;
   bool EnableSRAMECC;
   bool DoesNotSupportSRAMECC;
   bool HasNoSdstCMPX;
@@ -901,8 +903,16 @@ public:
     return HasPkFmacF16Inst;
   }
 
-  bool hasAtomicFaddInsts() const {
-    return HasAtomicFaddInsts;
+  bool hasAtomicFaddRtnInsts() const {
+    return HasAtomicFaddRtnInsts;
+  }
+
+  bool hasAtomicFaddNoRtnInsts() const {
+    return HasAtomicFaddNoRtnInsts;
+  }
+
+  bool hasAtomicPkFaddNoRtnInsts() const {
+    return HasAtomicPkFaddNoRtnInsts;
   }
 
   bool isSRAMECCEnabled() const {

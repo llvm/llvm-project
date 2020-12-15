@@ -751,14 +751,14 @@ let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
 } // End SubtargetPredicate = isGFX10Plus, is_flat_global = 1
 
 let is_flat_global = 1 in {
-let OtherPredicates = [HasAtomicFaddInsts] in {
+let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
   defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
     "global_atomic_add_f32", VGPR_32, f32
   >;
+let OtherPredicates = [HasAtomicPkFaddNoRtnInsts] in
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_NO_RTN <
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
-} // End OtherPredicates = [HasAtomicFaddInsts]
 } // End is_flat_global = 1
 
 //===----------------------------------------------------------------------===//
@@ -1179,10 +1179,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", atomic_swap_global_64, i64
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", AMDGPUatomic_cmp_swap_global_64, i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", atomic_load_xor_global_64, i64>;
 
-let OtherPredicates = [HasAtomicFaddInsts] in {
+let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
 defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_ADD_F32,    atomic_load_fadd_global_noret_32, f32>;
+let OtherPredicates = [HasAtomicPkFaddNoRtnInsts] in
 defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_PK_ADD_F16, atomic_load_fadd_v2f16_global_noret_32, v2f16>;
-}
 
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
@@ -1678,9 +1678,7 @@ defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x023>;
 defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_ScratchAllAddr_gfx10<0x024>;
 defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x025>;
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
-
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Real_AllAddr_vi <0x04d>;
+let SubtargetPredicate = HasAtomicPkFaddNoRtnInsts in
 defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Real_AllAddr_vi <0x04e>;
-
-} // End SubtargetPredicate = HasAtomicFaddInsts

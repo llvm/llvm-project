@@ -489,11 +489,28 @@ def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
 
-def FeatureAtomicFaddInsts : SubtargetFeature<"atomic-fadd-insts",
-  "HasAtomicFaddInsts",
+def FeatureAtomicFaddRtnInsts : SubtargetFeature<"atomic-fadd-rtn-insts",
+  "HasAtomicFaddRtnInsts",
   "true",
-  "Has buffer_atomic_add_f32, buffer_atomic_pk_add_f16, global_atomic_add_f32, "
-  "global_atomic_pk_add_f16 instructions",
+  "Has buffer_atomic_add_f32 and global_atomic_add_f32 instructions that "
+  "return original value",
+  [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
+  "HasAtomicFaddNoRtnInsts",
+  "true",
+  "Has buffer_atomic_add_f32 and global_atomic_add_f32 instructions that "
+  "don't return original value",
+  [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicPkFaddNoRtnInsts
+  : SubtargetFeature<"atomic-pk-fadd-no-rtn-insts",
+  "HasAtomicPkFaddNoRtnInsts",
+  "true",
+  "Has buffer_atomic_pk_add_f16 and global_atomic_pk_add_f16 instructions that "
+  "don't return original value",
   [FeatureFlatGlobalInsts]
 >;
 
@@ -909,7 +926,8 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureDot6Insts,
    FeatureMAIInsts,
    FeaturePkFmacF16Inst,
-   FeatureAtomicFaddInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicPkFaddNoRtnInsts,
    FeatureSRAMECC,
    FeatureMFMAInlineLiteralBug,
    FeatureImageGather4D16Bug]>;
@@ -1028,6 +1046,8 @@ def FeatureISAVersion11_0_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
    FeatureDoesNotSupportXNACK]>;
 
 //===----------------------------------------------------------------------===//
@@ -1345,8 +1365,13 @@ def HasMadMacF32Insts : Predicate<"Subtarget->hasMadMacF32Insts()">,
 def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
 
-def HasAtomicFaddInsts : Predicate<"Subtarget->hasAtomicFaddInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicFaddInsts)>;
+def HasAtomicFaddRtnInsts : Predicate<"Subtarget->hasAtomicFaddRtnInsts()">,
+  AssemblerPredicate<(all_of FeatureAtomicFaddRtnInsts)>;
+def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
+  AssemblerPredicate<(all_of FeatureAtomicFaddNoRtnInsts)>;
+def HasAtomicPkFaddNoRtnInsts
+  : Predicate<"Subtarget->hasAtomicPkFaddNoRtnInsts()">,
+  AssemblerPredicate<(all_of FeatureAtomicPkFaddNoRtnInsts)>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
