@@ -1370,10 +1370,10 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
 
 ## Type Definitions
 
-MLIR defines the TypeDef class hierarchy to enable generation of data types
-from their specifications. A type is defined by specializing the TypeDef
-class with concrete contents for all the fields it requires. For example, an
-integer type could be defined as:
+MLIR defines the TypeDef class hierarchy to enable generation of data types from
+their specifications. A type is defined by specializing the TypeDef class with
+concrete contents for all the fields it requires. For example, an integer type
+could be defined as:
 
 ```tablegen
 // All of the types will extend this class.
@@ -1414,45 +1414,43 @@ def IntegerType : Test_Type<"TestInteger"> {
 ### Type name
 
 The name of the C++ class which gets generated defaults to
-`<classParamName>Type` (e.g. `TestIntegerType` in the above example). This
-can be overridden via the `cppClassName` field. The field `mnemonic` is
-to specify the asm name for parsing. It is optional and not specifying it
-will imply that no parser or printer methods are attached to this class.
+`<classParamName>Type` (e.g. `TestIntegerType` in the above example). This can
+be overridden via the `cppClassName` field. The field `mnemonic` is to specify
+the asm name for parsing. It is optional and not specifying it will imply that
+no parser or printer methods are attached to this class.
 
 ### Type documentation
 
-The `summary` and `description` fields exist and are to be used the same way
-as in Operations. Namely, the summary should be a one-liner and `description`
+The `summary` and `description` fields exist and are to be used the same way as
+in Operations. Namely, the summary should be a one-liner and `description`
 should be a longer explanation.
 
 ### Type parameters
 
-The `parameters` field is a list of the types parameters. If no parameters
-are specified (the default), this type is considered a singleton type.
-Parameters are in the `"c++Type":$paramName` format.
-To use C++ types as parameters which need allocation in the storage
-constructor, there are two options:
+The `parameters` field is a list of the types parameters. If no parameters are
+specified (the default), this type is considered a singleton type. Parameters
+are in the `"c++Type":$paramName` format. To use C++ types as parameters which
+need allocation in the storage constructor, there are two options:
 
-- Set `hasCustomStorageConstructor` to generate the TypeStorage class with
-a constructor which is just declared -- no definition -- so you can write it
-yourself.
-- Use the `TypeParameter` tablegen class instead of the "c++Type" string.
+-   Set `hasCustomStorageConstructor` to generate the TypeStorage class with a
+    constructor which is just declared -- no definition -- so you can write it
+    yourself.
+-   Use the `TypeParameter` tablegen class instead of the "c++Type" string.
 
 ### TypeParameter tablegen class
 
-This is used to further specify attributes about each of the types
-parameters. It includes documentation (`description` and `syntax`), the C++
-type to use, and a custom allocator to use in the storage constructor method.
+This is used to further specify attributes about each of the types parameters.
+It includes documentation (`description` and `syntax`), the C++ type to use, and
+a custom allocator to use in the storage constructor method.
 
 ```tablegen
 // DO NOT DO THIS!
-let parameters = (ins
-  "ArrayRef<int>":$dims);
+let parameters = (ins "ArrayRef<int>":$dims);
 ```
 
-The default storage constructor blindly copies fields by value. It does not
-know anything about the types. In this case, the ArrayRef<int> requires
-allocation with `dims = allocator.copyInto(dims)`.
+The default storage constructor blindly copies fields by value. It does not know
+anything about the types. In this case, the ArrayRef<int> requires allocation
+with `dims = allocator.copyInto(dims)`.
 
 You can specify the necessary constructor by specializing the `TypeParameter`
 tblgen class:
@@ -1460,28 +1458,29 @@ tblgen class:
 ```tablegen
 class ArrayRefIntParam :
     TypeParameter<"::llvm::ArrayRef<int>", "Array of ints"> {
-  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+  let allocator = "$_dst = $_allocator.copyInto($_self);";
 }
 
 ...
 
-let parameters = (ins
-  ArrayRefIntParam:$dims);
+let parameters = (ins ArrayRefIntParam:$dims);
 ```
 
 The `allocator` code block has the following substitutions:
-- `$_allocator` is the TypeStorageAllocator in which to allocate objects.
-- `$_dst` is the variable in which to place the allocated data.
+
+-   `$_allocator` is the TypeStorageAllocator in which to allocate objects.
+-   `$_dst` is the variable in which to place the allocated data.
 
 MLIR includes several specialized classes for common situations:
-- `StringRefParameter<descriptionOfParam>` for StringRefs.
-- `ArrayRefParameter<arrayOf, descriptionOfParam>` for ArrayRefs of value
-types
-- `SelfAllocationParameter<descriptionOfParam>` for C++ classes which contain
-a method called `allocateInto(StorageAllocator &allocator)` to allocate
-itself into `allocator`.
-- `ArrayRefOfSelfAllocationParameter<arrayOf, descriptionOfParam>` for arrays
-of objects which self-allocate as per the last specialization.
+
+-   `StringRefParameter<descriptionOfParam>` for StringRefs.
+-   `ArrayRefParameter<arrayOf, descriptionOfParam>` for ArrayRefs of value
+    types
+-   `SelfAllocationParameter<descriptionOfParam>` for C++ classes which contain
+    a method called `allocateInto(StorageAllocator &allocator)` to allocate
+    itself into `allocator`.
+-   `ArrayRefOfSelfAllocationParameter<arrayOf, descriptionOfParam>` for arrays
+    of objects which self-allocate as per the last specialization.
 
 If we were to use one of these included specializations:
 
@@ -1495,45 +1494,46 @@ let parameters = (ins
 
 If a mnemonic is specified, the `printer` and `parser` code fields are active.
 The rules for both are:
-- If null, generate just the declaration.
-- If non-null and non-empty, use the code in the definition. The `$_printer`
-or `$_parser` substitutions are valid and should be used.
-- It is an error to have an empty code block.
 
-For each dialect, two "dispatch" functions will be created: one for parsing
-and one for printing. You should add calls to these in your
-`Dialect::printType` and `Dialect::parseType` methods. They are created in
-the dialect's namespace and their function signatures are:
+-   If null, generate just the declaration.
+-   If non-null and non-empty, use the code in the definition. The `$_printer`
+    or `$_parser` substitutions are valid and should be used.
+-   It is an error to have an empty code block.
+
+For each dialect, two "dispatch" functions will be created: one for parsing and
+one for printing. You should add calls to these in your `Dialect::printType` and
+`Dialect::parseType` methods. They are static functions placed alongside the
+type class definitions and have the following function signatures:
+
 ```c++
-Type generatedTypeParser(MLIRContext* ctxt, DialectAsmParser& parser,
-                         StringRef mnemonic);
+static Type generatedTypeParser(MLIRContext* ctxt, DialectAsmParser& parser, StringRef mnemonic);
 LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
 ```
 
-The mnemonic, parser, and printer fields are optional. If they're not
-defined, the generated code will not include any parsing or printing code and
-omit the type from the dispatch functions above. In this case, the dialect
-author is responsible for parsing/printing the types in `Dialect::printType`
-and `Dialect::parseType`.
+The mnemonic, parser, and printer fields are optional. If they're not defined,
+the generated code will not include any parsing or printing code and omit the
+type from the dispatch functions above. In this case, the dialect author is
+responsible for parsing/printing the types in `Dialect::printType` and
+`Dialect::parseType`.
 
 ### Other fields
 
-- If the `genStorageClass` field is set to 1 (the default) a storage class is
-generated with member variables corresponding to each of the specified
-`parameters`.
-- If the `genAccessors` field is 1 (the default) accessor methods will be
-generated on the Type class (e.g. `int getWidth() const` in the example
-above).
-- If the `genVerifyInvariantsDecl` field is set, a declaration for a method
-`static LogicalResult verifyConstructionInvariants(Location, parameters...)`
-is added to the class as well as a `getChecked(Location, parameters...)`
-method which gets the result of `verifyConstructionInvariants` before calling
-`get`.
-- The `storageClass` field can be used to set the name of the storage class.
-- The `storageNamespace` field is used to set the namespace where the storage
-class should sit. Defaults to "detail".
-- The `extraClassDeclaration` field is used to include extra code in the
-class declaration.
+-   If the `genStorageClass` field is set to 1 (the default) a storage class is
+    generated with member variables corresponding to each of the specified
+    `parameters`.
+-   If the `genAccessors` field is 1 (the default) accessor methods will be
+    generated on the Type class (e.g. `int getWidth() const` in the example
+    above).
+-   If the `genVerifyInvariantsDecl` field is set, a declaration for a method
+    `static LogicalResult verifyConstructionInvariants(Location, parameters...)`
+    is added to the class as well as a `getChecked(Location, parameters...)`
+    method which gets the result of `verifyConstructionInvariants` before
+    calling `get`.
+-   The `storageClass` field can be used to set the name of the storage class.
+-   The `storageNamespace` field is used to set the namespace where the storage
+    class should sit. Defaults to "detail".
+-   The `extraClassDeclaration` field is used to include extra code in the class
+    declaration.
 
 ## Debugging Tips
 
