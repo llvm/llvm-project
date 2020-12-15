@@ -239,7 +239,7 @@ class HeaderSearch {
 
   /// Set of module map files we've already loaded, and a flag indicating
   /// whether they were valid or not.
-  llvm::DenseMap<FileEntryRef, bool> LoadedModuleMaps;
+  llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
 
   /// Uniqued set of framework names, which is used to track which
   /// headers were included as framework headers.
@@ -560,8 +560,8 @@ public:
 
   /// Try to find a module map file in the given directory, returning
   /// \c nullptr if none is found.
-  Optional<FileEntryRef> lookupModuleMapFile(const DirectoryEntry *Dir,
-                                             bool IsFramework);
+  const FileEntry *lookupModuleMapFile(const DirectoryEntry *Dir,
+                                       bool IsFramework);
 
   /// Determine whether there is a module map that may map the header
   /// with the given file name to a (sub)module.
@@ -603,8 +603,8 @@ public:
   ///        used to resolve paths within the module (this is required when
   ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(FileEntryRef File, bool IsSystem, FileID ID = FileID(),
-                         unsigned *Offset = nullptr,
+  bool loadModuleMapFile(const FileEntry *File, bool IsSystem,
+                         FileID ID = FileID(), unsigned *Offset = nullptr,
                          StringRef OriginalModuleMapFile = StringRef());
 
   /// Collect the set of all known, top-level modules.
@@ -794,7 +794,8 @@ private:
     LMM_InvalidModuleMap
   };
 
-  LoadModuleMapResult loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
+  LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
+                                            bool IsSystem,
                                             const DirectoryEntry *Dir,
                                             FileID ID = FileID(),
                                             unsigned *Offset = nullptr);
