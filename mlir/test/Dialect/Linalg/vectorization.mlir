@@ -169,7 +169,7 @@ func @generic_vectorize(%arg0: memref<4x256xf32>, %arg1: memref<4x256xf32>,
     %11 = mulf %arg5, %8 : f32
     %12 = rsqrt %arg5 : f32
     %13 = select %7, %arg5, %arg6 : f32
-    %14 = subf %arg5, %arg6 : f32
+    %14 = subf %arg5, %arg4 : f32
     %15 = tanh %arg5 : f32
     linalg.yield %6, %8, %c1_f32, %9, %10, %11, %12, %13, %14, %15 : f32, f32,
       f32, f32, f32, f32, f32, f32, f32, f32
@@ -196,7 +196,8 @@ func @generic_vectorize(%arg0: memref<4x256xf32>, %arg1: memref<4x256xf32>,
 //       CHECK:   %[[MUL:.*]] = mulf %[[V3]], %[[CST0]] : vector<4x256xf32>
 //       CHECK:   %[[RSQRT:.*]] = rsqrt %[[V3]] : vector<4x256xf32>
 //       CHECK:   %[[SEL:.*]] = select %[[CMP]], %[[V3]], %[[V1]] : vector<4x256xi1>, vector<4x256xf32>
-//       CHECK:   %[[SUB:.*]] = subf %[[V3]], %[[V1]] : vector<4x256xf32>
+//       CHECK:   %[[V0B:.*]] = vector.broadcast %[[V0]] : vector<256xf32> to vector<4x256xf32>
+//       CHECK:   %[[SUB:.*]] = subf %[[V3]], %[[V0B]] : vector<4x256xf32>
 //       CHECK:   %[[TAN:.*]] = tanh %[[V3]] : vector<4x256xf32>
 //       CHECK:   vector.transfer_write %[[ADD]], %[[ARG0]][%[[C0]], %[[C0]]] {{.*}} : vector<4x256xf32>, memref<4x256xf32>
 //       CHECK:   vector.transfer_write %[[CST0]], %[[ARG0]][%[[C0]], %[[C0]]] {{.*}} : vector<4x256xf32>, memref<4x256xf32>
