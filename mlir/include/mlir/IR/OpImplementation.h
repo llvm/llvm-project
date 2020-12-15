@@ -36,6 +36,10 @@ public:
   virtual ~OpAsmPrinter();
   virtual raw_ostream &getStream() const = 0;
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation.
+  virtual void printNewline() = 0;
+
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
