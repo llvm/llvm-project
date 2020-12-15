@@ -5514,6 +5514,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned Opc = IsTailCall ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
 
+  // Calls marked with "rv_marker" are special. They should be expanded to the
+  // call, directly followed by a special marker sequence. Use the CALL_RVMARKER
+  // to do that.
+  if (CLI.CB && CLI.CB->hasRetAttr("rv_marker")) {
+    assert(!IsTailCall && "tail calls cannot be marked with rv_marker");
+    Opc = AArch64ISD::CALL_RVMARKER;
+  }
+
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -5531,7 +5539,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (Key > 1)
       report_fatal_error("Unsupported key kind for authenticating call");
 
-    Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
+    if (Opc != AArch64ISD::CALL_RVMARKER)
+      Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
     Ops.push_back(CLI.PAI->Discriminator);
   }
@@ -5578,17 +5587,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = AArch64ISD::CALL;
-  // Calls marked with "rv_marker" are special. They should be expanded to the
-  // call, directly followed by a special marker sequence. Use the CALL_RVMARKER
-  // to do that.
-  if (CLI.CB && CLI.CB->hasRetAttr("rv_marker")) {
-    assert(!IsTailCall && "tail calls cannot be marked with rv_marker");
-    CallOpc = AArch64ISD::CALL_RVMARKER;
-  }
-
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
