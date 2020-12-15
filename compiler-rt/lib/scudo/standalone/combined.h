@@ -930,7 +930,7 @@ public:
   }
 
 private:
-  using SecondaryT = typename Params::Secondary;
+  using SecondaryT = MapAllocator<typename Params::SecondaryCache>;
   typedef typename PrimaryT::SizeClassMap SizeClassMap;
 
   static const uptr MinAlignmentLog = SCUDO_MIN_ALIGNMENT_LOG;

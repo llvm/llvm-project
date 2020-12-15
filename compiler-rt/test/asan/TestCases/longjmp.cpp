@@ -1,3 +1,4 @@
+// UNSUPPORTED: powerpc64
 // RUN: %clangxx_asan -O %s -o %t && %run %t
 
 #include <assert.h>

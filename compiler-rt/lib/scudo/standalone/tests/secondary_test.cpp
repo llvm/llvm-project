@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "allocator_config.h"
 #include "secondary.h"
 
 #include <stdio.h>
@@ -54,14 +55,24 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
   Str.output();
 }
 
+struct TestConfig {
+  static const scudo::u32 SecondaryCacheEntriesArraySize = 128U;
+  static const scudo::u32 SecondaryCacheDefaultMaxEntriesCount = 64U;
+  static const scudo::uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 20;
+  static const scudo::s32 SecondaryCacheMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 SecondaryCacheMaxReleaseToOsIntervalMs = INT32_MAX;
+};
+
 TEST(ScudoSecondaryTest, SecondaryBasic) {
   testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorNoCache>>();
-  testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorCache<>>>();
   testSecondaryBasic<
-      scudo::MapAllocator<scudo::MapAllocatorCache<128U, 64U, 1UL << 20>>>();
+      scudo::MapAllocator<scudo::MapAllocatorCache<scudo::DefaultConfig>>>();
+  testSecondaryBasic<
+      scudo::MapAllocator<scudo::MapAllocatorCache<TestConfig>>>();
 }
 
-using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorCache<>>;
+using LargeAllocator =
+    scudo::MapAllocator<scudo::MapAllocatorCache<scudo::DefaultConfig>>;
 
 // This exercises a variety of combinations of size and alignment for the
 // MapAllocator. The size computation done here mimic the ones done by the

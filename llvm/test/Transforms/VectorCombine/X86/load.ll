@@ -284,6 +284,21 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref(<8 x i16>* align 16 derefere
   ret <8 x i16> %r
 }
 
+; TODO: Verify that alignment of the new load is not over-specified.
+
+define <8 x i16> @gep01_load_i16_insert_v8i16_deref_minalign(<8 x i16>* align 2 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref_minalign(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 8
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 0, i64 1
+  %s = load i16, i16* %gep, align 8
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep10_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(32) %p) {
