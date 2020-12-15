@@ -81,17 +81,24 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                                                          timm:$offset),
                                (implicit EFLAGS)]>;
 
-// The VAARG_64 pseudo-instruction takes the address of the va_list,
-// and places the address of the next argument into a register.
-let Defs = [EFLAGS] in
+// The VAARG_64 and VAARG_X32 pseudo-instructions take the address of the
+// va_list, and place the address of the next argument into a register.
+let Defs = [EFLAGS] in {
 def VAARG_64 : I<0, Pseudo,
                  (outs GR64:$dst),
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_64 $dst, $ap, $size, $mode, $align",
                  [(set GR64:$dst,
                     (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align)),
-                  (implicit EFLAGS)]>;
-
+                  (implicit EFLAGS)]>, Requires<[In64BitMode, IsLP64]>;
+def VAARG_X32 : I<0, Pseudo,
+                 (outs GR32:$dst),
+                 (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
+                 "#VAARG_X32 $dst, $ap, $size, $mode, $align",
+                 [(set GR32:$dst,
+                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align)),
+                  (implicit EFLAGS)]>, Requires<[In64BitMode, NotLP64]>;
+}
 
 // When using segmented stacks these are lowered into instructions which first
 // check if the current stacklet has enough free memory. If it does, memory is
