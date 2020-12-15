@@ -116,7 +116,7 @@ const char *RealOutputEditingBase::FormatExponent(
     }
   }
   *--exponent = expo < 0 ? '-' : '+';
-  if (edit.expoDigits || exponent + 3 == eEnd) {
+  if (edit.expoDigits || edit.IsListDirected() || exponent + 3 == eEnd) {
     *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G'
   }
   length = eEnd - exponent;
