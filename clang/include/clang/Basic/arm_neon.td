@@ -786,9 +786,6 @@ def VMUL_N_A64 : IOpInst<"vmul_n", "..1", "Qd", OP_MUL_N>;
 def FMLA_N : SOpInst<"vfma_n", "...1", "dQd", OP_FMLA_N>;
 def FMLS_N : SOpInst<"vfms_n", "...1", "fdQfQd", OP_FMLS_N>;
 
-def MLA_N : SOpInst<"vmla_n", "...1", "Qd", OP_MLA_N>;
-def MLS_N : SOpInst<"vmls_n", "...1", "Qd", OP_MLS_N>;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 def BSL : SInst<"vbsl", ".U..", "dPlQdQPl">;
@@ -868,7 +865,7 @@ def CFMGT  : SOpInst<"vcgt", "U..", "lUldQdQlQUl", OP_GT>;
 def CFMLT  : SOpInst<"vclt", "U..", "lUldQdQlQUl", OP_LT>;
 
 def CMEQ  : SInst<"vceqz", "U.",
-                  "csilfUcUsUiUlPcPsPlQcQsQiQlQfQUcQUsQUiQUlQPcQPsdQdQPl">;
+                  "csilfUcUsUiUlPcPlQcQsQiQlQfQUcQUsQUiQUlQPcdQdQPl">;
 def CMGE  : SInst<"vcgez", "U.", "csilfdQcQsQiQlQfQd">;
 def CMLE  : SInst<"vclez", "U.", "csilfdQcQsQiQlQfQd">;
 def CMGT  : SInst<"vcgtz", "U.", "csilfdQcQsQiQlQfQd">;
