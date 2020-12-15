@@ -289,8 +289,7 @@ void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
            evaluateBB);
 }
 
-bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
-                                                 const DOTFuncInfo *CFGInfo) {
+bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node) {
   // If both restricting flags are false, all nodes are displayed.
   if (!HideUnreachablePaths && !HideDeoptimizePaths)
     return false;
