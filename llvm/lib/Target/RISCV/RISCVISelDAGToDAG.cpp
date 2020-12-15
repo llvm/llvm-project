@@ -432,6 +432,52 @@ bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
   return true;
 }
 
+bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
+  if (N.getOpcode() != ISD::SPLAT_VECTOR &&
+      N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64)
+    return false;
+  SplatVal = N.getOperand(0);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
+  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+      !isa<ConstantSDNode>(N.getOperand(0)))
+    return false;
+
+  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+
+  // TODO: First truncate the constant to the vector element type since the
+  // bits will be implicitly truncated anyway. This would catch cases where the
+  // immediate was zero-extended instead of sign-extended: we would still want
+  // to match (i8 -1) -> (XLenVT 255) as a simm5, for example
+  if (!isInt<5>(SplatImm))
+    return false;
+
+  SplatVal =
+      CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
+
+  return true;
+}
+
+bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
+  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+      !isa<ConstantSDNode>(N.getOperand(0)))
+    return false;
+
+  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+
+  if (!isUInt<5>(SplatImm))
+    return false;
+
+  SplatVal =
+      CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
+
+  return true;
+}
+
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)
