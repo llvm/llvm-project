@@ -698,6 +698,8 @@ private:
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
 
+  SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
+
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
