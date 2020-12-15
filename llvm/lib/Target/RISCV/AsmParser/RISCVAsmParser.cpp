@@ -2306,7 +2306,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     unsigned Opcode = Inst.getOpcode();
     if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
         Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
-        Opcode == RISCV::VSBC_VXM)
+        Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||
+        Opcode == RISCV::VMERGE_VIM || Opcode == RISCV::VMERGE_VVM ||
+        Opcode == RISCV::VMERGE_VXM)
       return Error(Loc, "The destination vector register group cannot be V0.");
 
     // Regardless masked or unmasked version, the number of operands is the
