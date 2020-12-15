@@ -1,14 +1,3 @@
-// main.swift
-//
-// This source file is part of the Swift.org open source project
-//
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
-//
-// -----------------------------------------------------------------------------
 import Foundation
 
 func main() {
@@ -18,17 +7,7 @@ func main() {
   var c: NSObject = "hi" as NSString
   var d: AnyObject = "hi" as NSString
 
-   //% self.expect('frame variable -d run -- a', substrs=['Int64(3)'])
-   //% self.expect('frame variable -d run -- b', substrs=['Int64(3)'])
-
-   //% self.expect('frame variable -d run -- c', substrs=['"hi"'])
-   //% self.expect('frame variable -d run -- d', substrs=['"hi"'])
-
-   //% self.expect('expr -d run -- a', substrs=['Int64(3)'])
-   //% self.expect('expr -d run -- b', substrs=['Int64(3)'])
-
-   //% self.expect('expr -d run -- c', substrs=['"hi"'])
-   //% self.expect('expr -d run -- d', substrs=['"hi"'])
+  print("break here")
 }
 
 main()
