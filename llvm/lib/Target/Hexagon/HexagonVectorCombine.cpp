@@ -292,7 +292,7 @@ template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
   return getIfUnordered(dyn_cast<StoreInst>(In));
 }
 
-#if !defined(_MSC_VER) || _MSC_VER >= 1920
+#if !defined(_MSC_VER) || _MSC_VER >= 1924
 // VS2017 has trouble compiling this:
 // error C2976: 'std::map': too few template arguments
 template <typename Pred, typename... Ts>
