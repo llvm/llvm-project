@@ -25,6 +25,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -195,7 +196,9 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
                                     DominatorTree *DT,
                                     const SimplifyCFGOptions &Options) {
-  bool EverChanged = removeUnreachableBlocks(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+  bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   EverChanged |= mergeEmptyReturnBlocks(F);
   EverChanged |= iterativelySimplifyCFG(F, TTI, Options);
 
@@ -207,12 +210,12 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   // iterate between the two optimizations.  We structure the code like this to
   // avoid rerunning iterativelySimplifyCFG if the second pass of
   // removeUnreachableBlocks doesn't do anything.
-  if (!removeUnreachableBlocks(F))
+  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr))
     return true;
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, Options);
-    EverChanged |= removeUnreachableBlocks(F);
+    EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   } while (EverChanged);
 
   return true;
