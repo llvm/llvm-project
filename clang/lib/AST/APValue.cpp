@@ -952,8 +952,10 @@ void APValue::setLValue(LValueBase B, const CharUnits &O,
                         bool IsNullPtr) {
   MutableArrayRef<APValue::LValuePathEntry> InternalPath =
       setLValueUninit(B, O, Path.size(), IsOnePastTheEnd, IsNullPtr);
-  memcpy(InternalPath.data(), Path.data(),
-         Path.size() * sizeof(LValuePathEntry));
+  if (Path.size()) {
+    memcpy(InternalPath.data(), Path.data(),
+           Path.size() * sizeof(LValuePathEntry));
+  }
 }
 
 void APValue::setUnion(const FieldDecl *Field, const APValue &Value) {
