@@ -6,7 +6,6 @@ Test the lldb command line completion mechanism.
 
 import os
 from multiprocessing import Process
-import psutil
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -119,6 +118,18 @@ class CommandLineCompletionTestCase(TestBase):
             self.complete_from_to('process ' + subcommand + ' mac',
                                   'process ' + subcommand + ' mach-o-core')
 
+    def completions_contain_str(self, input, needle):
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        num_matches = interp.HandleCompletion(input, len(input), 0, -1, match_strings)
+        found_needle = False
+        for match in match_strings:
+          if needle in match:
+            found_needle = True
+            break
+        self.assertTrue(found_needle, "Returned completions: " + "\n".join(match_strings))
+
+
     @skipIfRemote
     def test_common_completion_process_pid_and_name(self):
         # The LLDB process itself and the process already attached to are both
@@ -136,9 +147,8 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('platform process attach -p ', [str(pid)])
         self.complete_from_to('platform process info ', [str(pid)])
 
-        pname = psutil.Process(pid).name()  # FIXME: psutil doesn't work for remote
-        self.complete_from_to('process attach -n ', [str(pname)])
-        self.complete_from_to('platform process attach -n ', [str(pname)])
+        self.completions_contain_str('process attach -n ', "a.out")
+        self.completions_contain_str('platform process attach -n ', "a.out")
 
     def test_process_signal(self):
         # The tab completion for "process signal"  won't work without a running process.
