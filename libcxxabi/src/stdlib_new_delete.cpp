@@ -93,8 +93,7 @@ _LIBCXXABI_WEAK
 void
 operator delete(void* ptr) _NOEXCEPT
 {
-    if (ptr)
-        ::free(ptr);
+    ::free(ptr);
 }
 
 _LIBCXXABI_WEAK
