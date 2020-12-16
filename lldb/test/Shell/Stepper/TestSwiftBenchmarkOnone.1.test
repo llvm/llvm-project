@@ -1,8 +1,5 @@
 # REQUIRES: swift_Benchmark_Onone
 #
-# XFAIL: *
-# rdar://problem/70552614
-#
 # - Don't capture a reproducer (it can easily exceed 1GB).
 # - Skip `po` testing for now (until we can un-XFAIL `frame var` testing).
 # - Just run benchmark #1 for now (there are more; --list lists all of them). 
