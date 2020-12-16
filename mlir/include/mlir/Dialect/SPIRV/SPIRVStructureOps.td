@@ -608,9 +608,12 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [InModuleScope
   let autogenSerialization = 0;
 }
 
-def SPV_YieldOp : SPV_Op<"mlir.yield", [NoSideEffect, Terminator]> {
-  let summary = "Yields the result computed in `spv.SpecConstantOperation`'s"
-                "region back to the parent op.";
+def SPV_YieldOp : SPV_Op<"mlir.yield", [
+    HasParent<"SpecConstantOperationOp">, NoSideEffect, Terminator]> {
+  let summary = [{
+    Yields the result computed in `spv.SpecConstantOperation`'s
+    region back to the parent op.
+  }];
 
   let description = [{
     This op is a special terminator whose only purpose is to terminate
@@ -639,12 +642,16 @@ def SPV_YieldOp : SPV_Op<"mlir.yield", [NoSideEffect, Terminator]> {
   let autogenSerialization = 0;
 
   let assemblyFormat = "attr-dict $operand `:` type($operand)";
+
+  let verifier = [{ return success(); }];
 }
 
 def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
-                                         InFunctionScope, NoSideEffect,
-                                         IsolatedFromAbove]> {
-  let summary = "Declare a new specialization constant that results from doing an operation.";
+       NoSideEffect, InFunctionScope,
+       SingleBlockImplicitTerminator<"YieldOp">]> {
+  let summary = [{
+    Declare a new specialization constant that results from doing an operation.
+  }];
 
   let description = [{
     This op declares a SPIR-V specialization constant that results from
@@ -653,12 +660,8 @@ def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
     In the `spv` dialect, this op is modelled as follows:
 
     ```
-    spv-spec-constant-operation-op ::= `"spv.SpecConstantOperation"`
-                                         `(`ssa-id (`, ` ssa-id)`)`
-                                       `({`
-                                         ssa-id = spirv-op
-                                         `spv.mlir.yield` ssa-id
-                                       `})` `:` function-type
+    spv-spec-constant-operation-op ::= `spv.SpecConstantOperation` `wraps`
+                                         generic-spirv-op `:` function-type
     ```
 
     In particular, an `spv.SpecConstantOperation` contains exactly one
@@ -712,17 +715,15 @@ def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
     #### Example:
     ```mlir
     %0 = spv.constant 1: i32
+    %1 = spv.constant 1: i32
 
-    %1 = "spv.SpecConstantOperation"(%0) ({
-      %ret = spv.IAdd %0, %0 : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32) -> i32
+    %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
     ```
   }];
 
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let arguments = (ins);
 
-  let results = (outs AnyType:$results);
+  let results = (outs AnyType:$result);
 
   let regions = (region SizedRegion<1>:$body);
 
