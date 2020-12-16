@@ -10,38 +10,68 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Main.h"
 
+#include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
+
+llvm::cl::opt<bool>
+    GenWrapper("gen-wrapper",
+               llvm::cl::desc("Generate a C wrapper for <name>."));
+llvm::cl::opt<bool> GenAlias("gen-alias",
+                             llvm::cl::desc("Generate a C alias for <name>."));
 
 llvm::cl::opt<std::string>
     FunctionName("name", llvm::cl::desc("Name of the function to be wrapped."),
                  llvm::cl::value_desc("<function name>"), llvm::cl::Required);
-llvm::cl::opt<std::string>
-    AliaseeString("aliasee",
-                  llvm::cl::desc("Declare as an alias to this C name."),
-                  llvm::cl::value_desc("<aliasee string>"));
-llvm::cl::opt<std::string>
-    AliaseeFile("aliasee-file",
-                llvm::cl::desc("Declare as an alias to the C name read from "
-                               "this file."),
-                llvm::cl::value_desc("<path to a file containing alias name>"));
+llvm::cl::opt<std::string> MangledNameString(
+    "mangled-name", llvm::cl::desc("Declare as an alias to this mangled name."),
+    llvm::cl::value_desc("<aliasee string>"));
+llvm::cl::opt<std::string> MangledNameFile(
+    "mangled-name-file",
+    llvm::cl::desc("Declare as an alias to the C name read from "
+                   "this file."),
+    llvm::cl::value_desc("<path to a file containing alias name>"));
 llvm::cl::opt<std::string>
     AppendToFile("append-to-file",
                  llvm::cl::desc("Append the generated content at the end of "
                                 "the contents of this file."),
                  llvm::cl::value_desc("<path to a file>"));
 
-static std::string GetAliaseeName() {
-  if (AliaseeString.size() > 0)
-    return AliaseeString;
+void validateOpts() {
+  int ActionCount = 0;
+  if (GenWrapper)
+    ++ActionCount;
+  if (GenAlias)
+    ++ActionCount;
+  if (ActionCount != 1) {
+    llvm::PrintFatalError("Exactly one of {--gen-wrapper, --gen-alias} "
+                          "should be specified");
+  }
+  if (!MangledNameString.empty() && !MangledNameFile.empty()) {
+    llvm::PrintFatalError("The options 'mangled-name' and 'mangled-name-file' "
+                          "cannot be specified simultaneously.");
+  }
+}
 
-  auto ErrorOrBuf = llvm::MemoryBuffer::getFile(AliaseeFile);
+static std::string getMangledName() {
+  if (!MangledNameString.empty())
+    return MangledNameString;
+
+  if (MangledNameFile.empty())
+    llvm::PrintFatalError("At least one of --mangled-name or "
+                          "--mangled-name-file should be specified.");
+
+  auto ErrorOrBuf = llvm::MemoryBuffer::getFile(MangledNameFile);
   if (!ErrorOrBuf)
-    llvm::PrintFatalError("Unable to read the aliasee file " + AliaseeFile);
+    llvm::PrintFatalError("Unable to read the mangled name file " +
+                          MangledNameFile);
   llvm::StringRef FileContent = ErrorOrBuf.get()->getBuffer().trim();
   llvm::SmallVector<llvm::StringRef> Lines;
   FileContent.split(Lines, '\n');
@@ -50,47 +80,32 @@ static std::string GetAliaseeName() {
       return std::string(L);
   }
   llvm::PrintFatalError("Did not find an LLVM libc mangled name in " +
-                        AliaseeFile);
+                        MangledNameFile);
   return std::string();
 }
 
-static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
-  if (!AliaseeString.empty() && !AliaseeFile.empty()) {
-    llvm::PrintFatalError("The options 'aliasee' and 'aliasee-file' cannot "
-                          "be specified simultaniously.");
+void writeAppendToFile(llvm::raw_ostream &OS) {
+  auto ErrorOrBuf = llvm::MemoryBuffer::getFile(AppendToFile);
+  if (!ErrorOrBuf) {
+    llvm::PrintFatalError("Unable to read the file '" + AppendToFile +
+                          "' to append to.");
   }
+  OS << ErrorOrBuf.get()->getBuffer().trim() << '\n';
+}
 
-  llvm_libc::APIIndexer Indexer(Records);
+llvm::Record *getFunctionSpec(const llvm_libc::APIIndexer &Indexer) {
   auto Iter = Indexer.FunctionSpecMap.find(FunctionName);
   if (Iter == Indexer.FunctionSpecMap.end()) {
     llvm::PrintFatalError("Function '" + FunctionName +
                           "' not found in any standard spec.");
   }
-
-  bool EmitAlias = !(AliaseeString.empty() && AliaseeFile.empty());
-
-  if (!EmitAlias && AppendToFile.empty()) {
-    // If not emitting an alias, and not appending to another file,
-    // we should include the implementation header to ensure the wrapper
-    // compiles.
-    // To avoid all confusion, we include the implementation header using the
-    // full path (relative to the libc directory.)
-    std::string Header = Indexer.FunctionToHeaderMap[FunctionName];
-    auto RelPath =
-        llvm::StringRef(Header).drop_back(2); // Drop the ".h" suffix.
-    OS << "#include \"src/" << RelPath << "/" << FunctionName << ".h\"\n";
-  }
-  if (!AppendToFile.empty()) {
-    auto ErrorOrBuf = llvm::MemoryBuffer::getFile(AppendToFile);
-    if (!ErrorOrBuf) {
-      llvm::PrintFatalError("Unable to read the file '" + AppendToFile +
-                            "' to append to.");
-    }
-    OS << ErrorOrBuf.get()->getBuffer().trim() << '\n';
-  }
-
   auto &NameSpecPair = *Iter;
-  llvm::Record *FunctionSpec = NameSpecPair.second;
+  return NameSpecPair.second;
+}
+
+std::pair<std::string, bool> writeFunctionHeader(llvm_libc::APIIndexer &Indexer,
+                                                 llvm::Record *FunctionSpec,
+                                                 llvm::raw_ostream &OS) {
   llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
   llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
   std::string ReturnTypeString = Indexer.getTypeAsString(ReturnType);
@@ -133,22 +148,51 @@ static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
       CallArgs << ", ";
     }
   }
+  return make_pair(CallArgs.str(), ShouldReturn);
+}
 
-  if (EmitAlias) {
-    OS << ") __attribute__((alias(\"" << GetAliaseeName() << "\")));\n";
+static bool generateWrapper(llvm::raw_ostream &OS,
+                            llvm::RecordKeeper &Records) {
+  llvm_libc::APIIndexer Indexer(Records);
+  llvm::Record *FunctionSpec = getFunctionSpec(Indexer);
+  if (AppendToFile.empty()) {
+    std::string Header = Indexer.FunctionToHeaderMap[FunctionName];
+    auto RelPath =
+        llvm::StringRef(Header).drop_back(2); // Drop the ".h" suffix.
+    OS << "#include \"src/" << RelPath << "/" << FunctionName << ".h\"\n";
   } else {
-    // TODO: Arg types of the C++ implementation functions need not
-    // match the standard types. Either handle such differences here, or
-    // avoid such a thing in the implementations.
-    OS << ") {\n"
-       << "  " << (ShouldReturn ? "return " : "")
-       << "__llvm_libc::" << FunctionName << "(" << CallArgs.str() << ");\n"
-       << "}\n";
+    writeAppendToFile(OS);
   }
+  auto Pair = writeFunctionHeader(Indexer, FunctionSpec, OS);
+  OS << ") {\n"
+     << "  " << (Pair.second ? "return " : "")
+     << "__llvm_libc::" << FunctionName << "(" << Pair.first << ");\n"
+     << "}\n";
   return false;
+}
+
+static bool generateAlias(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
+  if (!AppendToFile.empty())
+    writeAppendToFile(OS);
+  llvm_libc::APIIndexer Indexer(Records);
+  llvm::Record *FunctionSpec = getFunctionSpec(Indexer);
+  auto Pair = writeFunctionHeader(Indexer, FunctionSpec, OS);
+  OS << ") __attribute__((alias(\"" << getMangledName() << "\")));\n";
+  return false;
+}
+
+static bool wrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
+  validateOpts();
+
+  if (GenWrapper)
+    return generateWrapper(OS, Records);
+  if (GenAlias)
+    return generateAlias(OS, Records);
+
+  __builtin_unreachable();
 }
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  return TableGenMain(argv[0], WrapperGenMain);
+  return TableGenMain(argv[0], wrapperGenMain);
 }
