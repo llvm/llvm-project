@@ -674,6 +674,10 @@ auto AlignVectors::move(const MoveGroup &Move) const -> bool {
 }
 
 auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
+  // TODO: Needs support for masked loads/stores of "scalar" vectors.
+  if (!Move.IsHvx)
+    return false;
+
   // Return the element with the maximum alignment from Range,
   // where GetValue obtains the value to compare from an element.
   auto getMaxOf = [](auto Range, auto GetValue) {
