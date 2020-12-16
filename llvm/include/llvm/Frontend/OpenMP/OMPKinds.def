@@ -1224,27 +1224,3 @@ OMP_LAST_TRAIT_PROPERTY(
 #undef __OMP_REQUIRES_TRAIT
 #undef OMP_REQUIRES_TRAIT
 ///}
-
-
-/// Assumption clauses
-///
-///{
-
-#ifdef OMP_ASSUME_CLAUSE
-#define __OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList, HasExpression) \
-OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList, HasExpression)
-#else
-#define __OMP_ASSUME_CLAUSE(...)
-#endif
-
-__OMP_ASSUME_CLAUSE("ext_", true, false, false)
-__OMP_ASSUME_CLAUSE("absent", false, true, false)
-__OMP_ASSUME_CLAUSE("contains", false, true, false)
-__OMP_ASSUME_CLAUSE("holds", false, false, true)
-__OMP_ASSUME_CLAUSE("no_openmp", false, false, false)
-__OMP_ASSUME_CLAUSE("no_openmp_routines", false, false, false)
-__OMP_ASSUME_CLAUSE("no_parallelism", false, false, false)
-
-#undef __OMP_ASSUME_CLAUSE
-#undef OMP_ASSUME_CLAUSE
-///}
