@@ -35,7 +35,6 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <set>
 
@@ -3196,64 +3195,6 @@ Sema::ActOnOpenMPRequiresDirective(SourceLocation Loc,
   return DeclGroupPtrTy::make(DeclGroupRef(D));
 }
 
-void Sema::ActOnOpenMPAssumesDirective(SourceLocation Loc,
-                                       OpenMPDirectiveKind DKind,
-                                       ArrayRef<StringRef> Assumptions,
-                                       bool SkippedClauses) {
-  if (!SkippedClauses && Assumptions.empty())
-    Diag(Loc, diag::err_omp_no_clause_for_directive)
-        << llvm::omp::getAllAssumeClauseOptions()
-        << llvm::omp::getOpenMPDirectiveName(DKind);
-
-  auto *AA = AssumptionAttr::Create(Context, llvm::join(Assumptions, ","), Loc);
-  if (DKind == llvm::omp::Directive::OMPD_begin_assumes) {
-    OMPAssumeScoped.push_back(AA);
-    return;
-  }
-
-  // Global assumes without assumption clauses are ignored.
-  if (Assumptions.empty())
-    return;
-
-  assert(DKind == llvm::omp::Directive::OMPD_assumes &&
-         "Unexpected omp assumption directive!");
-  OMPAssumeGlobal.push_back(AA);
-
-  // The OMPAssumeGlobal scope above will take care of new declarations but
-  // we also want to apply the assumption to existing ones, e.g., to
-  // declarations in included headers. To this end, we traverse all existing
-  // declaration contexts and annotate function declarations here.
-  SmallVector<DeclContext *, 8> DeclContexts;
-  auto *Ctx = CurContext;
-  while (Ctx->getLexicalParent())
-    Ctx = Ctx->getLexicalParent();
-  DeclContexts.push_back(Ctx);
-  while (!DeclContexts.empty()) {
-    DeclContext *DC = DeclContexts.pop_back_val();
-    for (auto *SubDC : DC->decls()) {
-      if (SubDC->isInvalidDecl())
-        continue;
-      if (auto *CTD = dyn_cast<ClassTemplateDecl>(SubDC)) {
-        DeclContexts.push_back(CTD->getTemplatedDecl());
-        for (auto *S : CTD->specializations())
-          DeclContexts.push_back(S);
-        continue;
-      }
-      if (auto *DC = dyn_cast<DeclContext>(SubDC))
-        DeclContexts.push_back(DC);
-      if (auto *F = dyn_cast<FunctionDecl>(SubDC)) {
-        F->addAttr(AA);
-        continue;
-      }
-    }
-  }
-}
-
-void Sema::ActOnOpenMPEndAssumesDirective() {
-  assert(isInOpenMPAssumeScope() && "Not in OpenMP assumes scope!");
-  OMPAssumeScoped.pop_back();
-}
-
 OMPRequiresDecl *Sema::CheckOMPRequiresDecl(SourceLocation Loc,
                                             ArrayRef<OMPClause *> ClauseList) {
   /// For target specific clauses, the requires directive cannot be
@@ -5993,27 +5934,6 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
   }
 
   FD->setParams(Params);
-}
-
-void Sema::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
-  if (D->isInvalidDecl())
-    return;
-  FunctionDecl *FD = nullptr;
-  if (auto *UTemplDecl = dyn_cast<FunctionTemplateDecl>(D))
-    FD = UTemplDecl->getTemplatedDecl();
-  else
-    FD = cast<FunctionDecl>(D);
-  assert(FD && "Expected a function declaration!");
-
-  // If we are intantiating templates we do *not* apply scoped assumptions but
-  // only global ones. We apply scoped assumption to the template definition
-  // though.
-  if (!inTemplateInstantiation()) {
-    for (AssumptionAttr *AA : OMPAssumeScoped)
-      FD->addAttr(AA);
-  }
-  for (AssumptionAttr *AA : OMPAssumeGlobal)
-    FD->addAttr(AA);
 }
 
 Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
