@@ -14,8 +14,8 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__POWERPC__) || defined(__powerpc__) || defined(__ppc__)
-#define SEPARATOR @
+#if defined(__APPLE__) && defined(__aarch64__)
+#define SEPARATOR %%
 #else
 #define SEPARATOR ;
 #endif
