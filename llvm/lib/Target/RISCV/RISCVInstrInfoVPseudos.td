@@ -714,11 +714,11 @@ multiclass VPatBinaryV_I<string intrinsic, string instruction> {
 }
 
 multiclass VPatBinaryV_VV_VX_VI<string intrinsic, string instruction,
-                                list<VTypeInfo> vtilist>
+                                list<VTypeInfo> vtilist, Operand ImmType = simm5>
 {
   defm "" : VPatBinaryV_VV<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryV_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, simm5>;
+  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
 }
 
 multiclass VPatBinaryV_VV_VX<string intrinsic, string instruction,
@@ -934,6 +934,13 @@ defm PseudoVMSBC       : VPseudoBinaryM_VM_XM<"@earlyclobber $rd">;
 defm PseudoVMSBC       : VPseudoBinaryM_V_X<"@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
+// 12.6. Vector Single-Width Bit Shift Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVSLL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
+defm PseudoVSRL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
+defm PseudoVSRA        : VPseudoBinaryV_VV_VX_VI<uimm5>;
+
+//===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
 
@@ -973,5 +980,15 @@ defm "" : VPatBinaryM_V_X_I<"int_riscv_vmadc", "PseudoVMADC">;
 defm "" : VPatBinaryV_VM_XM<"int_riscv_vsbc", "PseudoVSBC">;
 defm "" : VPatBinaryM_VM_XM<"int_riscv_vmsbc_borrow_in", "PseudoVMSBC">;
 defm "" : VPatBinaryM_V_X<"int_riscv_vmsbc", "PseudoVMSBC">;
+
+//===----------------------------------------------------------------------===//
+// 12.6. Vector Single-Width Bit Shift Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsll", "PseudoVSLL", AllIntegerVectors,
+                               uimm5>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsrl", "PseudoVSRL", AllIntegerVectors,
+                               uimm5>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors,
+                               uimm5>;
 
 } // Predicates = [HasStdExtV]
