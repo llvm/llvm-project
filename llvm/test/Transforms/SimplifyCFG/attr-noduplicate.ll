@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; This test checks that the SimplifyCFG pass won't duplicate a call to a
 ; function marked noduplicate.
