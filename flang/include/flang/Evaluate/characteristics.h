@@ -149,7 +149,7 @@ public:
       bool isElemental = false, bool thisIsDeferredShape = false,
       bool thatIsDeferredShape = false) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext * = nullptr) const;
+      FoldingContext &) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

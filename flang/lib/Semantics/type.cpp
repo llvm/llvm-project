@@ -8,6 +8,7 @@
 
 #include "flang/Semantics/type.h"
 #include "check-declarations.h"
+#include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
@@ -248,6 +249,7 @@ void DerivedTypeSpec::Instantiate(
         }
       }
     }
+    ComputeOffsets(context, const_cast<Scope &>(typeScope));
     return;
   }
   Scope &newScope{containingScope.MakeScope(Scope::Kind::DerivedType)};
@@ -306,6 +308,7 @@ void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
   for (const auto &pair : fromScope) {
     InstantiateComponent(*pair.second);
   }
+  ComputeOffsets(context_, scope_);
 }
 
 void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
