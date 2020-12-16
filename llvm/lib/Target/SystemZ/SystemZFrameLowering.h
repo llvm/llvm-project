@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZFRAMELOWERING_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZFRAMELOWERING_H
 
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/TypeSize.h"
@@ -63,6 +64,12 @@ public:
   int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const;
 
   bool usePackedStack(MachineFunction &MF) const;
+
+  // Return the offset of the backchain.
+  unsigned getBackchainOffset(MachineFunction &MF) const {
+    // The back chain is stored topmost with packed-stack.
+    return usePackedStack(MF) ? SystemZMC::CallFrameSize - 8 : 0;
+  }
 };
 } // end namespace llvm
 

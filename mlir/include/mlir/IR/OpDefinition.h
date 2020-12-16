@@ -119,7 +119,8 @@ public:
   Operation *getParentOp() { return getOperation()->getParentOp(); }
 
   /// Return the closest surrounding parent operation that is of type 'OpTy'.
-  template <typename OpTy> OpTy getParentOfType() {
+  template <typename OpTy>
+  OpTy getParentOfType() {
     return getOperation()->getParentOfType<OpTy>();
   }
 
@@ -166,7 +167,8 @@ public:
   Attribute getAttr(StringRef name) { return state->getAttr(name); }
 
   /// If the operation has an attribute of the specified type, return it.
-  template <typename AttrClass> AttrClass getAttrOfType(StringRef name) {
+  template <typename AttrClass>
+  AttrClass getAttrOfType(StringRef name) {
     return getAttr(name).dyn_cast_or_null<AttrClass>();
   }
 

@@ -269,8 +269,11 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
   // Now walk the identified inner loops.
   bool Changed = false;
   for (Loop *L : Worklist) {
+    if (!L->isLoopSimplifyForm() || !L->isRotatedForm() ||
+        !L->getExitingBlock())
+      continue;
     const LoopAccessInfo &LAI = GetLAA(*L);
-    if (L->isLoopSimplifyForm() && !LAI.hasConvergentOp() &&
+    if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,

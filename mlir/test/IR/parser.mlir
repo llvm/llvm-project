@@ -1174,10 +1174,17 @@ func private @ptr_to_function() -> !unreg.ptr<() -> ()>
 // CHECK-LABEL: func private @escaped_string_char(i1 {foo.value = "\0A"})
 func private @escaped_string_char(i1 {foo.value = "\n"})
 
-// CHECK-LABEL: func @wrapped_keyword_test
-func @wrapped_keyword_test() {
-  // CHECK: test.wrapped_keyword foo.keyword
-  test.wrapped_keyword foo.keyword
+// CHECK-LABEL: func @parse_integer_literal_test
+func @parse_integer_literal_test() {
+  // CHECK: test.parse_integer_literal : 5
+  test.parse_integer_literal : 5
+  return
+}
+
+// CHECK-LABEL: func @parse_wrapped_keyword_test
+func @parse_wrapped_keyword_test() {
+  // CHECK: test.parse_wrapped_keyword foo.keyword
+  test.parse_wrapped_keyword foo.keyword
   return
 }
 

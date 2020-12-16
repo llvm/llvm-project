@@ -133,16 +133,21 @@ define i32 @cttz_decrement(i32 %n) {
 ; ALL-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; ALL-NEXT:    br i1 [[TOBOOL4]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; ALL:       while.body.preheader:
+; ALL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[N]], i1 true)
+; ALL-NEXT:    [[TMP1:%.*]] = sub i32 32, [[TMP0]]
+; ALL-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
 ; ALL-NEXT:    br label [[WHILE_BODY:%.*]]
 ; ALL:       while.body:
+; ALL-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], [[WHILE_BODY]] ]
 ; ALL-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 32, [[WHILE_BODY_PREHEADER]] ]
 ; ALL-NEXT:    [[N_ADDR_05:%.*]] = phi i32 [ [[SHL:%.*]], [[WHILE_BODY]] ], [ [[N]], [[WHILE_BODY_PREHEADER]] ]
 ; ALL-NEXT:    [[SHL]] = shl i32 [[N_ADDR_05]], 1
 ; ALL-NEXT:    [[INC]] = add nsw i32 [[I_06]], -1
-; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL]], 0
+; ALL-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; ALL-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; ALL:       while.end.loopexit:
-; ALL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ]
+; ALL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP2]], [[WHILE_BODY]] ]
 ; ALL-NEXT:    br label [[WHILE_END]]
 ; ALL:       while.end:
 ; ALL-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ 32, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
@@ -187,16 +192,23 @@ while.end:                                        ; preds = %while.end.loopexit,
 define i32 @cttz_shl_decrement(i32 %n) {
 ; ALL-LABEL: @cttz_shl_decrement(
 ; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TMP0:%.*]] = shl i32 [[N:%.*]], 1
+; ALL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false)
+; ALL-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
+; ALL-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
+; ALL-NEXT:    [[TMP4:%.*]] = sub i32 31, [[TMP2]]
 ; ALL-NEXT:    br label [[WHILE_COND:%.*]]
 ; ALL:       while.cond:
-; ALL-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N:%.*]], [[ENTRY:%.*]] ], [ [[SHL:%.*]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TCDEC:%.*]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[SHL:%.*]], [[WHILE_COND]] ]
 ; ALL-NEXT:    [[I_0:%.*]] = phi i32 [ 31, [[ENTRY]] ], [ [[INC:%.*]], [[WHILE_COND]] ]
 ; ALL-NEXT:    [[SHL]] = shl i32 [[N_ADDR_0]], 1
-; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL]], 0
+; ALL-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; ALL-NEXT:    [[INC]] = add nsw i32 [[I_0]], -1
 ; ALL-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_COND]]
 ; ALL:       while.end:
-; ALL-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ [[I_0]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[WHILE_COND]] ]
 ; ALL-NEXT:    ret i32 [[I_0_LCSSA]]
 ;
 entry:

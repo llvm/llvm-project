@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/Serialization.h"
+#include "mlir/Target/SPIRV/Serialization.h"
 
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
@@ -2139,6 +2139,7 @@ LogicalResult Serializer::emitDebugLine(SmallVectorImpl<uint32_t> &binary,
   return success();
 }
 
+namespace mlir {
 LogicalResult spirv::serialize(spirv::ModuleOp module,
                                SmallVectorImpl<uint32_t> &binary,
                                bool emitDebugInfo) {
@@ -2156,3 +2157,4 @@ LogicalResult spirv::serialize(spirv::ModuleOp module,
   serializer.collect(binary);
   return success();
 }
+} // namespace mlir

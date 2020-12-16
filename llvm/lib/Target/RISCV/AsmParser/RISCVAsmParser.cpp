@@ -280,10 +280,7 @@ struct RISCVOperand : public MCParsedAsmOperand {
   };
 
   struct VTypeOp {
-    RISCVVSEW Sew;
-    RISCVVLMUL Lmul;
-    bool TailAgnostic;
-    bool MaskAgnostic;
+    unsigned Val;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -720,7 +717,7 @@ public:
   }
 
   StringRef getSysReg() const {
-    assert(Kind == KindTy::SystemRegister && "Invalid access!");
+    assert(Kind == KindTy::SystemRegister && "Invalid type access!");
     return StringRef(SysReg.Data, SysReg.Length);
   }
 
@@ -734,55 +731,9 @@ public:
     return Tok;
   }
 
-  static StringRef getSEWStr(RISCVVSEW Sew) {
-    switch (Sew) {
-    case RISCVVSEW::SEW_8:
-      return "e8";
-    case RISCVVSEW::SEW_16:
-      return "e16";
-    case RISCVVSEW::SEW_32:
-      return "e32";
-    case RISCVVSEW::SEW_64:
-      return "e64";
-    case RISCVVSEW::SEW_128:
-      return "e128";
-    case RISCVVSEW::SEW_256:
-      return "e256";
-    case RISCVVSEW::SEW_512:
-      return "e512";
-    case RISCVVSEW::SEW_1024:
-      return "e1024";
-    }
-    llvm_unreachable("Unknown SEW.");
-  }
-
-  static StringRef getLMULStr(RISCVVLMUL Lmul) {
-    switch (Lmul) {
-    case RISCVVLMUL::LMUL_1:
-      return "m1";
-    case RISCVVLMUL::LMUL_2:
-      return "m2";
-    case RISCVVLMUL::LMUL_4:
-      return "m4";
-    case RISCVVLMUL::LMUL_8:
-      return "m8";
-    case RISCVVLMUL::LMUL_F2:
-      return "mf2";
-    case RISCVVLMUL::LMUL_F4:
-      return "mf4";
-    case RISCVVLMUL::LMUL_F8:
-      return "mf8";
-    }
-    llvm_unreachable("Unknown LMUL.");
-  }
-
-  StringRef getVType(SmallString<32> &Buf) const {
-    assert(Kind == KindTy::VType && "Invalid access!");
-    Buf.append(getSEWStr(VType.Sew));
-    Buf.append(",");
-    Buf.append(getLMULStr(VType.Lmul));
-
-    return Buf.str();
+  unsigned getVType() const {
+    assert(Kind == KindTy::VType && "Invalid type access!");
+    return VType.Val;
   }
 
   void print(raw_ostream &OS) const override {
@@ -801,8 +752,9 @@ public:
       OS << "<sysreg: " << getSysReg() << '>';
       break;
     case KindTy::VType:
-      SmallString<32> VTypeBuf;
-      OS << "<vtype: " << getVType(VTypeBuf) << '>';
+      OS << "<vtype: ";
+      RISCVVType::printVType(getVType(), OS);
+      OS << '>';
       break;
     }
   }
@@ -848,21 +800,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand>
-  createVType(unsigned Sew, unsigned Lmul, bool Fractional, bool TailAgnostic,
-              bool MaskAgnostic, SMLoc S, bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S,
+                                                   bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
-    unsigned SewLog2 = Log2_32(Sew / 8);
-    unsigned LmulLog2 = Log2_32(Lmul);
-    Op->VType.Sew = static_cast<RISCVVSEW>(SewLog2);
-    if (Fractional) {
-      unsigned Flmul = 8 - LmulLog2;
-      Op->VType.Lmul = static_cast<RISCVVLMUL>(Flmul);
-    } else {
-      Op->VType.Lmul = static_cast<RISCVVLMUL>(LmulLog2);
-    }
-    Op->VType.TailAgnostic = TailAgnostic;
-    Op->VType.MaskAgnostic = MaskAgnostic;
+    Op->VType.Val = VTypeI;
     Op->StartLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
@@ -927,9 +868,7 @@ public:
 
   void addVTypeIOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    unsigned VTypeI = RISCVVType::encodeVTYPE(
-        VType.Lmul, VType.Sew, VType.TailAgnostic, VType.MaskAgnostic);
-    Inst.addOperand(MCOperand::createImm(VTypeI));
+    Inst.addOperand(MCOperand::createImm(getVType()));
   }
 
   // Returns the rounding mode represented by this RISCVOperand. Should only
@@ -1628,8 +1567,15 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::EndOfStatement)
     return MatchOperand_NoMatch;
 
-  Operands.push_back(RISCVOperand::createVType(
-      Sew, Lmul, Fractional, TailAgnostic, MaskAgnostic, S, isRV64()));
+  unsigned SewLog2 = Log2_32(Sew / 8);
+  unsigned LmulLog2 = Log2_32(Lmul);
+  RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
+  RISCVVLMUL VLMUL =
+      static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+
+  unsigned VTypeI =
+      RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
+  Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
 
   return MatchOperand_Success;
 }

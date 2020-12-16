@@ -1,8 +1,11 @@
-add_mlir_unittest(MLIRSPIRVTests
+add_mlir_unittest(MLIRSPIRVImportExportTests
   DeserializationTest.cpp
   SerializationTest.cpp
 )
-target_link_libraries(MLIRSPIRVTests
+target_link_libraries(MLIRSPIRVImportExportTests
   PRIVATE
+  MLIRIR
   MLIRSPIRV
-  MLIRSPIRVSerialization)
+  MLIRSPIRVDeserialization
+  MLIRSPIRVSerialization
+)

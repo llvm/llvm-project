@@ -185,7 +185,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
 }
 
 void CompilerInvocation::SetDefaultFortranOpts() {
-  auto fortranOptions = fortranOpts();
+  auto &fortranOptions = fortranOpts();
 
   // These defaults are based on the defaults in f18/f18.cpp.
   std::vector<std::string> searchDirectories{"."s};

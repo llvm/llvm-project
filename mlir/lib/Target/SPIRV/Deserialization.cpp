@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/Serialization.h"
+#include "mlir/Target/SPIRV/Deserialization.h"
 
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
@@ -21,6 +20,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
@@ -2781,6 +2781,7 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
 #include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
 } // namespace
 
+namespace mlir {
 spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
                                                MLIRContext *context) {
   Deserializer deserializer(binary, context);
@@ -2790,3 +2791,4 @@ spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
 
   return deserializer.collect();
 }
+} // namespace mlir

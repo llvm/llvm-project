@@ -19,6 +19,9 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   MLIRAVX512ToLLVM
   MLIRLLVMArmNeon
   MLIRLLVMAVX512
+  MLIRArmSVE
+  MLIRArmSVEToLLVM
+  MLIRLLVMArmSVE
   MLIRLLVMIR
   MLIRStandardToLLVM
   MLIRTargetLLVMIRModuleTranslation

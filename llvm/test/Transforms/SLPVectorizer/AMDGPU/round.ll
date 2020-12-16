@@ -18,9 +18,9 @@ bb:
   ret <2 x half> %tmp5
 }
 
-; TODO: Should probably not really be vectorizing this
 ; GCN-LABEL: @round_v2f32(
-; GCN: call <2 x float> @llvm.round.v2f32
+; GCN: call float @llvm.round.f32(
+; GCN: call float @llvm.round.f32(
 define <2 x float> @round_v2f32(<2 x float> %arg) {
 bb:
   %tmp = extractelement <2 x float> %arg, i64 0
