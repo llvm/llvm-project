@@ -238,6 +238,55 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq(PassManagerChangedByFlag))));
 }
 
+// Boolean option that gets the CC1Option flag from a let statement (which
+// is applied **after** the record is defined):
+//
+//   let Flags = [CC1Option] in {
+//     defm option : BoolOption<...>;
+//   }
+
+TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNone) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getCodeGenOpts().DebugPassManager);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdebug-pass-manager"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-debug-pass-manager"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentPos) {
+  const char *Args[] = {"-fdebug-pass-manager"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getCodeGenOpts().DebugPassManager);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdebug-pass-manager")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-debug-pass-manager"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNeg) {
+  const char *Args[] = {"-fno-debug-pass-manager"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getCodeGenOpts().DebugPassManager);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-debug-pass-manager"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdebug-pass-manager"))));
+}
+
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
   const char *Args[] = {"-fmodules-strict-context-hash"};
 
