@@ -93,6 +93,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -282,10 +283,36 @@ static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
 
 static void denormalizeString(SmallVectorImpl<const char *> &Args,
                               const char *Spelling,
-                              CompilerInvocation::StringAllocator SA,
-                              unsigned TableIndex, const std::string &Value) {
+                              CompilerInvocation::StringAllocator SA, unsigned,
+                              Twine Value) {
   Args.push_back(Spelling);
   Args.push_back(SA(Value));
+}
+
+template <typename T,
+          std::enable_if_t<!std::is_convertible<T, Twine>::value &&
+                               std::is_constructible<Twine, T>::value,
+                           bool> = false>
+static void denormalizeString(SmallVectorImpl<const char *> &Args,
+                              const char *Spelling,
+                              CompilerInvocation::StringAllocator SA,
+                              unsigned TableIndex, T Value) {
+  denormalizeString(Args, Spelling, SA, TableIndex, Twine(Value));
+}
+
+template <typename IntTy>
+static Optional<IntTy> normalizeStringIntegral(OptSpecifier Opt, int,
+                                               const ArgList &Args,
+                                               DiagnosticsEngine &Diags) {
+  auto *Arg = Args.getLastArg(Opt);
+  if (!Arg)
+    return None;
+  IntTy Res;
+  if (StringRef(Arg->getValue()).getAsInteger(0, Res)) {
+    Diags.Report(diag::err_drv_invalid_int_value)
+        << Arg->getAsString(Args) << Arg->getValue();
+  }
+  return Res;
 }
 
 static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
@@ -521,14 +548,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
         .Case("true", true)
         .Case("false", false)
         .Default(false);
-
-  Opts.AnalyzeSpecificFunction =
-      std::string(Args.getLastArgValue(OPT_analyze_function));
-  Opts.maxBlockVisitOnPath =
-      getLastArgIntValue(Args, OPT_analyzer_max_loop, 4, Diags);
-  Opts.InlineMaxStackDepth =
-      getLastArgIntValue(Args, OPT_analyzer_inline_max_stack_depth,
-                         Opts.InlineMaxStackDepth, Diags);
 
   Opts.CheckersAndPackages.clear();
   for (const Arg *A :
