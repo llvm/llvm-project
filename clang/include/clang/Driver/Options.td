@@ -994,7 +994,8 @@ def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
 def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">;
+  HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
+  MarshallingInfoStringInt<"LangOpts->MaxTokens">;
 def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
 def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
 def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
@@ -1212,7 +1213,10 @@ defm complete_member_pointers : BoolOption<"complete-member-pointers",
             " would be significant under the Microsoft ABI">, "f">,
   Group<f_clang_Group>;
 def fcf_runtime_abi_EQ : Joined<["-"], "fcf-runtime-abi=">, Group<f_Group>,
-    Flags<[CC1Option]>;
+    Flags<[CC1Option]>, Values<"unspecified,standalone,objc,swift,swift-5.0,swift-4.2,swift-4.1">,
+    NormalizedValuesScope<"LangOptions::CoreFoundationABI">,
+    NormalizedValues<["ObjectiveC", "ObjectiveC", "ObjectiveC", "Swift5_0", "Swift5_0", "Swift4_2", "Swift4_1"]>,
+    MarshallingInfoString<"LangOpts->CFRuntime", "ObjectiveC">, AutoNormalizeEnum;
 defm constant_cfstrings : BoolFOption<"constant-cfstrings",
   "LangOpts->NoConstantCFStrings", DefaultsToFalse,
   ChangedBy<NegFlag, [], "Disable creation of CodeFoundation-type constant strings">,
@@ -1420,7 +1424,8 @@ defm sanitize_memory_use_after_dtor : BoolOption<"sanitize-memory-use-after-dtor
   Group<f_clang_Group>;
 def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-padding=">,
                                         Group<f_clang_Group>,
-                                        HelpText<"Level of field padding for AddressSanitizer">;
+                                        HelpText<"Level of field padding for AddressSanitizer">,
+                                        MarshallingInfoStringInt<"LangOpts->SanitizeAddressFieldPadding">;
 defm sanitize_address_use_after_scope : BoolOption<"sanitize-address-use-after-scope",
   "CodeGenOpts.SanitizeAddressUseAfterScope", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Enable">, ResetBy<NegFlag, [CoreOption, NoXarchOption], "Disable">,
@@ -1739,7 +1744,10 @@ defm experimental_relative_cxx_abi_vtables : BoolFOption<"experimental-relative-
 
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Group<f_Group>,
-  HelpText<"Enable implicit vector bit-casts">, Values<"none,integer,all">, Flags<[CC1Option]>;
+  HelpText<"Enable implicit vector bit-casts">, Values<"none,integer,all">, Flags<[CC1Option]>,
+  NormalizedValuesScope<"LangOptions::LaxVectorConversionKind">,
+  NormalizedValues<["None", "Integer", "All"]>,
+  MarshallingInfoString<"LangOpts->LaxVectorConversions", "All">, AutoNormalizeEnum;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["integer"]>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
@@ -1791,7 +1799,12 @@ defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   ChangedBy<PosFlag, [], "Parse templated function definitions at the end of the translation unit">,
   ResetBy<NegFlag, [NoXarchOption], "Disable delayed template parsing">,
   BothFlags<[CoreOption]>>;
-def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>, Flags<[CC1Option]>;
+def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>, Flags<[CC1Option]>,
+  Values<"single,multiple,virtual">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["PPTMK_FullGeneralitySingleInheritance", "PPTMK_FullGeneralityMultipleInheritance",
+                    "PPTMK_FullGeneralityVirtualInheritance"]>,
+  MarshallingInfoString<"LangOpts->MSPointerToMemberRepresentationMethod", "PPTMK_BestCase">,
+  AutoNormalizeEnum;
 def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the module cache path">;
@@ -1880,7 +1893,8 @@ def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[NoXarchOption,CC1Option]>, MetaVarName<"<name>">,
-  HelpText<"Specify the name of the module to build">;
+  HelpText<"Specify the name of the module to build">,
+  MarshallingInfoString<"LangOpts->ModuleName">;
 def fmodule_name : Separate<["-"], "fmodule-name">, Alias<fmodule_name_EQ>;
 def fmodule_implementation_of : Separate<["-"], "fmodule-implementation-of">,
   Flags<[CC1Option]>, Alias<fmodule_name_EQ>;
@@ -2035,7 +2049,8 @@ def fno_aligned_allocation: Flag<["-"], "fno-aligned-allocation">,
   Group<f_Group>, Flags<[CC1Option]>;
 def fnew_alignment_EQ : Joined<["-"], "fnew-alignment=">,
   HelpText<"Specifies the largest alignment guaranteed by '::operator new(size_t)'">,
-  MetaVarName<"<align>">, Group<f_Group>, Flags<[CC1Option]>;
+  MetaVarName<"<align>">, Group<f_Group>, Flags<[CC1Option]>,
+  MarshallingInfoStringInt<"LangOpts->NewAlignOverride">;
 def : Separate<["-"], "fnew-alignment">, Alias<fnew_alignment_EQ>;
 def : Flag<["-"], "faligned-new">, Alias<faligned_allocation>;
 def : Flag<["-"], "fno-aligned-new">, Alias<fno_aligned_allocation>;
@@ -2120,9 +2135,11 @@ def foutput_class_dir_EQ : Joined<["-"], "foutput-class-dir=">, Group<f_Group>;
 def fpack_struct : Flag<["-"], "fpack-struct">, Group<f_Group>;
 def fno_pack_struct : Flag<["-"], "fno-pack-struct">, Group<f_Group>;
 def fpack_struct_EQ : Joined<["-"], "fpack-struct=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Specify the default maximum struct packing alignment">;
+  HelpText<"Specify the default maximum struct packing alignment">,
+  MarshallingInfoStringInt<"LangOpts->PackStruct">;
 def fmax_type_align_EQ : Joined<["-"], "fmax-type-align=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Specify the maximum alignment to enforce on pointers lacking an explicit alignment">;
+  HelpText<"Specify the maximum alignment to enforce on pointers lacking an explicit alignment">,
+  MarshallingInfoStringInt<"LangOpts->MaxTypeAlign">;
 def fno_max_type_align : Flag<["-"], "fno-max-type-align">, Group<f_Group>;
 defm pascal_strings : BoolFOption<"pascal-strings",
   "LangOpts->PascalStrings", DefaultsToFalse,
@@ -2217,12 +2234,16 @@ def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
            "address. The reference stack guard value is stored in a global variable.">;
 def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<"Initialize trivial automatic stack variables: uninitialized (default)"
-  " | pattern">, Values<"uninitialized,pattern">;
+  " | pattern">, Values<"uninitialized,zero,pattern">,
+  NormalizedValuesScope<"LangOptions::TrivialAutoVarInitKind">,
+  NormalizedValues<["Uninitialized", "Zero", "Pattern"]>,
+  MarshallingInfoString<"LangOpts->TrivialAutoVarInit", "Uninitialized">, AutoNormalizeEnum;
 def enable_trivial_var_init_zero : Flag<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
   Flags<[CC1Option, CoreOption]>,
   HelpText<"Trivial automatic variable initialization to zero is only here for benchmarks, it'll eventually be removed, and I'm OK with that because I'm only using it to benchmark">;
 def ftrivial_auto_var_init_stop_after : Joined<["-"], "ftrivial-auto-var-init-stop-after=">, Group<f_Group>,
-  Flags<[CC1Option, CoreOption]>, HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">;
+  Flags<[CC1Option, CoreOption]>, HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">,
+  MarshallingInfoStringInt<"LangOpts->TrivialAutoVarInitStopAfter">;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>, Flags<[CoreOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
 def fno_standalone_debug : Flag<["-"], "fno-standalone-debug">, Group<f_Group>, Flags<[CoreOption]>,
@@ -2287,7 +2308,8 @@ def : Flag<["-"], "fno-tree-slp-vectorize">, Alias<fno_slp_vectorize>;
 def Wlarge_by_value_copy_def : Flag<["-"], "Wlarge-by-value-copy">,
   HelpText<"Warn if a function definition returns or accepts an object larger "
            "in bytes than a given value">, Flags<[HelpHidden]>;
-def Wlarge_by_value_copy_EQ : Joined<["-"], "Wlarge-by-value-copy=">, Flags<[CC1Option]>;
+def Wlarge_by_value_copy_EQ : Joined<["-"], "Wlarge-by-value-copy=">, Flags<[CC1Option]>,
+  MarshallingInfoStringInt<"LangOpts->NumLargeByValueCopy">;
 
 // These "special" warning flags are effectively processed as f_Group flags by the driver:
 // Just silence warnings about -Wlarger-than for now.
@@ -2661,7 +2683,8 @@ def mfancy_math_387 : Flag<["-"], "mfancy-math-387">, Group<clang_ignored_m_Grou
 def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_Group>,
   HelpText<"Generate branches with extended addressability, usually via indirect jumps.">;
 def mdouble_EQ : Joined<["-"], "mdouble=">, Group<m_Group>, Values<"32,64">, Flags<[CC1Option]>,
-  HelpText<"Force double to be 32 bits or 64 bits">;
+  HelpText<"Force double to be 32 bits or 64 bits">,
+  MarshallingInfoStringInt<"LangOpts->DoubleSize", "0">;
 def LongDouble_Group : OptionGroup<"<LongDouble group>">, Group<m_Group>,
   DocName<"Long double flags">,
   DocBrief<[{Selects the long double implementation}]>;
@@ -4878,7 +4901,8 @@ def fno_wchar : Flag<["-"], "fno-wchar">,
   HelpText<"Disable C++ builtin type wchar_t">;
 def fconstant_string_class : Separate<["-"], "fconstant-string-class">,
   MetaVarName<"<class name>">,
-  HelpText<"Specify the class to use for constant Objective-C string objects.">;
+  HelpText<"Specify the class to use for constant Objective-C string objects.">,
+  MarshallingInfoString<"LangOpts->ObjCConstantStringClass">;
 def fobjc_arc_cxxlib_EQ : Joined<["-"], "fobjc-arc-cxxlib=">,
   HelpText<"Objective-C++ Automatic Reference Counting standard library kind">, Values<"libc++,libstdc++,none">;
 def fobjc_runtime_has_weak : Flag<["-"], "fobjc-runtime-has-weak">,
@@ -4892,7 +4916,8 @@ def fencode_extended_block_signature : Flag<["-"], "fencode-extended-block-signa
   HelpText<"enable extended encoding of block type signature">,
   MarshallingInfoFlag<"LangOpts->EncodeExtendedBlockSig">;
 def function_alignment : Separate<["-"], "function-alignment">,
-    HelpText<"default alignment for functions">;
+    HelpText<"default alignment for functions">,
+    MarshallingInfoStringInt<"LangOpts->FunctionAlignment">;
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">;
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
@@ -4916,26 +4941,38 @@ def static_define : Flag<["-"], "static-define">,
   HelpText<"Should __STATIC__ be defined">,
   MarshallingInfoFlag<"LangOpts->Static">;
 def stack_protector : Separate<["-"], "stack-protector">,
-  HelpText<"Enable stack protectors">;
+  HelpText<"Enable stack protectors">, Values<"0,1,2,3">,
+  NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["SSPOff", "SSPOn", "SSPStrong", "SSPReq"]>,
+  MarshallingInfoString<"LangOpts->StackProtector", "SSPOff">, AutoNormalizeEnum;
 def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">,
   HelpText<"Lower bound for a buffer to be considered for stack protection">;
+// FIXME: diagnose if target does not support protected visibility
+// Good place for this is CompilerInvocation::fixupInvocation. Do the same for parseVisibility.
 def fvisibility : Separate<["-"], "fvisibility">,
-  HelpText<"Default type and symbol visibility">;
+  HelpText<"Default type and symbol visibility">, Values<"default,hidden,internal,protected">,
+  NormalizedValues<["DefaultVisibility", "HiddenVisibility", "HiddenVisibility", "ProtectedVisibility"]>,
+  MarshallingInfoString<"LangOpts->ValueVisibilityMode", "DefaultVisibility">, AutoNormalizeEnum;
 def ftype_visibility : Separate<["-"], "ftype-visibility">,
   HelpText<"Default type visibility">;
 def fapply_global_visibility_to_externs : Flag<["-"], "fapply-global-visibility-to-externs">,
   HelpText<"Apply global symbol visibility to external declarations without an explicit visibility">,
   MarshallingInfoFlag<"LangOpts->SetVisibilityForExternDecls">;
 def ftemplate_depth : Separate<["-"], "ftemplate-depth">,
-  HelpText<"Maximum depth of recursive template instantiation">;
+  HelpText<"Maximum depth of recursive template instantiation">,
+  MarshallingInfoStringInt<"LangOpts->InstantiationDepth", "1024">;
 def foperator_arrow_depth : Separate<["-"], "foperator-arrow-depth">,
-  HelpText<"Maximum number of 'operator->'s to call for a member access">;
+  HelpText<"Maximum number of 'operator->'s to call for a member access">,
+  MarshallingInfoStringInt<"LangOpts->ArrowDepth", "256">;
 def fconstexpr_depth : Separate<["-"], "fconstexpr-depth">,
-  HelpText<"Maximum depth of recursive constexpr function calls">;
+  HelpText<"Maximum depth of recursive constexpr function calls">,
+  MarshallingInfoStringInt<"LangOpts->ConstexprCallDepth", "512">;
 def fconstexpr_steps : Separate<["-"], "fconstexpr-steps">,
-  HelpText<"Maximum number of steps in constexpr function evaluation">;
+  HelpText<"Maximum number of steps in constexpr function evaluation">,
+  MarshallingInfoStringInt<"LangOpts->ConstexprStepLimit", "1048576">;
 def fbracket_depth : Separate<["-"], "fbracket-depth">,
-  HelpText<"Maximum nesting level for parentheses, brackets, and braces">;
+  HelpText<"Maximum nesting level for parentheses, brackets, and braces">,
+  MarshallingInfoStringInt<"LangOpts->BracketDepth", "256">;
 defm const_strings : BoolFOption<"const-strings",
   "LangOpts->ConstStrings", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Use">, ResetBy<NegFlag, [], "Don't use">,
@@ -4947,7 +4984,10 @@ def ffake_address_space_map : Flag<["-"], "ffake-address-space-map">,
   HelpText<"Use a fake address space map; OpenCL testing purposes only">,
   MarshallingInfoFlag<"LangOpts->FakeAddressSpaceMap">;
 def faddress_space_map_mangling_EQ : Joined<["-"], "faddress-space-map-mangling=">, MetaVarName<"<yes|no|target>">,
-  HelpText<"Set the mode for address space map based mangling; OpenCL testing purposes only">;
+  HelpText<"Set the mode for address space map based mangling; OpenCL testing purposes only">,
+  Values<"target,no,yes">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["ASMM_Target", "ASMM_Off", "ASMM_On"]>,
+  MarshallingInfoString<"LangOpts->AddressSpaceMapMangling", "ASMM_Target">, AutoNormalizeEnum;
 def funknown_anytype : Flag<["-"], "funknown-anytype">,
   HelpText<"Enable parser support for the __unknown_anytype type; for testing purposes only">,
   MarshallingInfoFlag<"LangOpts->ParseUnknownAnytype">;
@@ -4966,8 +5006,10 @@ def fno_deprecated_macro : Flag<["-"], "fno-deprecated-macro">,
   HelpText<"Undefines the __DEPRECATED macro">;
 def fobjc_subscripting_legacy_runtime : Flag<["-"], "fobjc-subscripting-legacy-runtime">,
   HelpText<"Allow Objective-C array and dictionary subscripting in legacy runtime">;
+// TODO: Enforce values valid for MSVtorDispMode.
 def vtordisp_mode_EQ : Joined<["-"], "vtordisp-mode=">,
-  HelpText<"Control vtordisp placement on win32 targets">;
+  HelpText<"Control vtordisp placement on win32 targets">,
+  MarshallingInfoStringInt<"LangOpts->VtorDispMode", "1">;
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
   HelpText<"Use the native half type for __fp16 instead of promoting to float">;
 def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
@@ -4975,7 +5017,10 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
 def fallow_half_arguments_and_returns : Flag<["-"], "fallow-half-arguments-and-returns">,
   HelpText<"Allow function arguments and returns of type half">;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
-  HelpText<"Set default calling convention">, Values<"cdecl,fastcall,stdcall,vectorcall,regcall">;
+  HelpText<"Set default calling convention">, Values<"cdecl,fastcall,stdcall,vectorcall,regcall">,
+  NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall"]>,
+  MarshallingInfoString<"LangOpts->DefaultCallingConv", "DCC_None">, AutoNormalizeEnum;
 def finclude_default_header : Flag<["-"], "finclude-default-header">,
   HelpText<"Include default header file for OpenCL">,
   MarshallingInfoFlag<"LangOpts->IncludeDefaultHeader">;
@@ -4986,7 +5031,9 @@ def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,
   MarshallingInfoFlag<"CodeGenOpts.PreserveVec3Type">;
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
-  HelpText<"Select underlying type for wchar_t">, Values<"char,short,int">;
+  HelpText<"Select underlying type for wchar_t">, Values<"char,short,int">,
+  NormalizedValues<["1", "2", "4"]>,
+  MarshallingInfoString<"LangOpts->WCharSize", "0">, AutoNormalizeEnum;
 defm signed_wchar : BoolFOption<"signed-wchar",
   "LangOpts->WCharIsSigned", DefaultsToTrue,
   ChangedBy<NegFlag, [], "Use an unsigned">, ResetBy<PosFlag, [], "Use a signed">,

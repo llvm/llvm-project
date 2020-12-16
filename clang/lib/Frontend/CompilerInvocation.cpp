@@ -352,7 +352,8 @@ static T extractMaskValue(T KeyPath) {
 }
 
 static void FixupInvocation(CompilerInvocation &Invocation,
-                            DiagnosticsEngine &Diags) {
+                            DiagnosticsEngine &Diags,
+                            InputArgList &Args) {
   LangOptions &LangOpts = *Invocation.getLangOpts();
   DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
@@ -366,10 +367,12 @@ static void FixupInvocation(CompilerInvocation &Invocation,
 
   LangOpts.ForceEmitVTables = CodeGenOpts.ForceEmitVTables;
   LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;
+  LangOpts.CurrentModule = LangOpts.ModuleName;
 
   llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
 
   llvm::Triple T(TargetOpts.Triple);
+  llvm::Triple::ArchType Arch = T.getArch();
 
   if (LangOpts.getExceptionHandling() != llvm::ExceptionHandling::None &&
       T.isWindowsMSVCEnvironment())
@@ -378,6 +381,28 @@ static void FixupInvocation(CompilerInvocation &Invocation,
 
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
+
+  if (LangOpts.NewAlignOverride &&
+      !llvm::isPowerOf2_32(LangOpts.NewAlignOverride)) {
+    Arg *A = Args.getLastArg(OPT_fnew_alignment_EQ);
+    Diags.Report(diag::err_fe_invalid_alignment)
+        << A->getAsString(Args) << A->getValue();
+    LangOpts.NewAlignOverride = 0;
+  }
+
+  if (Arg *A = Args.getLastArg(OPT_fdefault_calling_conv_EQ)) {
+    auto DefaultCC = LangOpts.getDefaultCallingConv();
+
+    bool emitError = (DefaultCC == LangOptions::DCC_FastCall ||
+                      DefaultCC == LangOptions::DCC_StdCall) &&
+                     Arch != llvm::Triple::x86;
+    emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
+                  DefaultCC == LangOptions::DCC_RegCall) &&
+                 !T.isX86();
+    if (emitError)
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getSpelling() << T.getTriple();
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2605,24 +2630,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.GNUInline = 1;
   }
 
-  if (const auto *A = Args.getLastArg(OPT_fcf_runtime_abi_EQ))
-    Opts.CFRuntime =
-        llvm::StringSwitch<LangOptions::CoreFoundationABI>(A->getValue())
-            .Cases("unspecified", "standalone", "objc",
-                   LangOptions::CoreFoundationABI::ObjectiveC)
-            .Cases("swift", "swift-5.0",
-                   LangOptions::CoreFoundationABI::Swift5_0)
-            .Case("swift-4.2", LangOptions::CoreFoundationABI::Swift4_2)
-            .Case("swift-4.1", LangOptions::CoreFoundationABI::Swift4_1)
-            .Default(LangOptions::CoreFoundationABI::ObjectiveC);
-
-  // The value-visibility mode defaults to "default".
-  if (Arg *visOpt = Args.getLastArg(OPT_fvisibility)) {
-    Opts.setValueVisibilityMode(parseVisibility(visOpt, Args, Diags));
-  } else {
-    Opts.setValueVisibilityMode(DefaultVisibility);
-  }
-
   // The type-visibility mode defaults to the value-visibility mode.
   if (Arg *typeVisOpt = Args.getLastArg(OPT_ftype_visibility)) {
     Opts.setTypeVisibilityMode(parseVisibility(typeVisOpt, Args, Diags));
@@ -2696,20 +2703,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DollarIdents = Args.hasFlag(OPT_fdollars_in_identifiers,
                                    OPT_fno_dollars_in_identifiers,
                                    Opts.DollarIdents);
-  Opts.setVtorDispMode(
-      MSVtorDispMode(getLastArgIntValue(Args, OPT_vtordisp_mode_EQ, 1, Diags)));
-  if (Arg *A = Args.getLastArg(OPT_flax_vector_conversions_EQ)) {
-    using LaxKind = LangOptions::LaxVectorConversionKind;
-    if (auto Kind = llvm::StringSwitch<Optional<LaxKind>>(A->getValue())
-                        .Case("none", LaxKind::None)
-                        .Case("integer", LaxKind::Integer)
-                        .Case("all", LaxKind::All)
-                        .Default(llvm::None))
-      Opts.setLaxVectorConversions(*Kind);
-    else
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
-  }
 
   // -ffixed-point
   Opts.FixedPoint =
@@ -2752,15 +2745,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CharIsSigned = Opts.OpenCL || !Args.hasArg(OPT_fno_signed_char);
   Opts.WChar = Opts.CPlusPlus && !Args.hasArg(OPT_fno_wchar);
   Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus20);
-  if (const Arg *A = Args.getLastArg(OPT_fwchar_type_EQ)) {
-    Opts.WCharSize = llvm::StringSwitch<unsigned>(A->getValue())
-                         .Case("char", 1)
-                         .Case("short", 2)
-                         .Case("int", 4)
-                         .Default(0);
-    if (Opts.WCharSize == 0)
-      Diags.Report(diag::err_fe_invalid_wchar_type) << A->getValue();
-  }
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
@@ -2769,33 +2753,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                    Opts.AlignedAllocation);
   Opts.AlignedAllocationUnavailable =
       Opts.AlignedAllocation && Args.hasArg(OPT_aligned_alloc_unavailable);
-  Opts.NewAlignOverride =
-      getLastArgIntValue(Args, OPT_fnew_alignment_EQ, 0, Diags);
-  if (Opts.NewAlignOverride && !llvm::isPowerOf2_32(Opts.NewAlignOverride)) {
-    Arg *A = Args.getLastArg(OPT_fnew_alignment_EQ);
-    Diags.Report(diag::err_fe_invalid_alignment) << A->getAsString(Args)
-                                                 << A->getValue();
-    Opts.NewAlignOverride = 0;
-  }
   if (Args.hasArg(OPT_fconcepts_ts))
     Diags.Report(diag::warn_fe_concepts_ts_flag);
   Opts.MathErrno = !Opts.OpenCL && Args.hasArg(OPT_fmath_errno);
-  Opts.InstantiationDepth =
-      getLastArgIntValue(Args, OPT_ftemplate_depth, 1024, Diags);
-  Opts.ArrowDepth =
-      getLastArgIntValue(Args, OPT_foperator_arrow_depth, 256, Diags);
-  Opts.ConstexprCallDepth =
-      getLastArgIntValue(Args, OPT_fconstexpr_depth, 512, Diags);
-  Opts.ConstexprStepLimit =
-      getLastArgIntValue(Args, OPT_fconstexpr_steps, 1048576, Diags);
-  Opts.BracketDepth = getLastArgIntValue(Args, OPT_fbracket_depth, 256, Diags);
-  Opts.NumLargeByValueCopy =
-      getLastArgIntValue(Args, OPT_Wlarge_by_value_copy_EQ, 0, Diags);
-  Opts.ObjCConstantStringClass =
-      std::string(Args.getLastArgValue(OPT_fconstant_string_class));
-  Opts.PackStruct = getLastArgIntValue(Args, OPT_fpack_struct_EQ, 0, Diags);
-  Opts.MaxTypeAlign = getLastArgIntValue(Args, OPT_fmax_type_align_EQ, 0, Diags);
-  Opts.DoubleSize = getLastArgIntValue(Args, OPT_mdouble_EQ, 0, Diags);
   Opts.LongDoubleSize = Args.hasArg(OPT_mlong_double_128)
                             ? 128
                             : Args.hasArg(OPT_mlong_double_64) ? 64 : 0;
@@ -2805,8 +2765,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                         || Args.hasArg(OPT_fdump_record_layouts);
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
-  Opts.ModuleName = std::string(Args.getLastArgValue(OPT_fmodule_name_EQ));
-  Opts.CurrentModule = Opts.ModuleName;
   Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
   llvm::sort(Opts.ModuleFeatures);
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
@@ -2830,75 +2788,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DeclSpecKeyword =
       Args.hasFlag(OPT_fdeclspec, OPT_fno_declspec,
                    (Opts.MicrosoftExt || Opts.Borland || Opts.CUDA));
-
-  if (Arg *A = Args.getLastArg(OPT_faddress_space_map_mangling_EQ)) {
-    switch (llvm::StringSwitch<unsigned>(A->getValue())
-      .Case("target", LangOptions::ASMM_Target)
-      .Case("no", LangOptions::ASMM_Off)
-      .Case("yes", LangOptions::ASMM_On)
-      .Default(255)) {
-    default:
-      Diags.Report(diag::err_drv_invalid_value)
-        << "-faddress-space-map-mangling=" << A->getValue();
-      break;
-    case LangOptions::ASMM_Target:
-      Opts.setAddressSpaceMapMangling(LangOptions::ASMM_Target);
-      break;
-    case LangOptions::ASMM_On:
-      Opts.setAddressSpaceMapMangling(LangOptions::ASMM_On);
-      break;
-    case LangOptions::ASMM_Off:
-      Opts.setAddressSpaceMapMangling(LangOptions::ASMM_Off);
-      break;
-    }
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_fms_memptr_rep_EQ)) {
-    LangOptions::PragmaMSPointersToMembersKind InheritanceModel =
-        llvm::StringSwitch<LangOptions::PragmaMSPointersToMembersKind>(
-            A->getValue())
-            .Case("single",
-                  LangOptions::PPTMK_FullGeneralitySingleInheritance)
-            .Case("multiple",
-                  LangOptions::PPTMK_FullGeneralityMultipleInheritance)
-            .Case("virtual",
-                  LangOptions::PPTMK_FullGeneralityVirtualInheritance)
-            .Default(LangOptions::PPTMK_BestCase);
-    if (InheritanceModel == LangOptions::PPTMK_BestCase)
-      Diags.Report(diag::err_drv_invalid_value)
-          << "-fms-memptr-rep=" << A->getValue();
-
-    Opts.setMSPointerToMemberRepresentationMethod(InheritanceModel);
-  }
-
-  // Check for MS default calling conventions being specified.
-  if (Arg *A = Args.getLastArg(OPT_fdefault_calling_conv_EQ)) {
-    LangOptions::DefaultCallingConvention DefaultCC =
-        llvm::StringSwitch<LangOptions::DefaultCallingConvention>(A->getValue())
-            .Case("cdecl", LangOptions::DCC_CDecl)
-            .Case("fastcall", LangOptions::DCC_FastCall)
-            .Case("stdcall", LangOptions::DCC_StdCall)
-            .Case("vectorcall", LangOptions::DCC_VectorCall)
-            .Case("regcall", LangOptions::DCC_RegCall)
-            .Default(LangOptions::DCC_None);
-    if (DefaultCC == LangOptions::DCC_None)
-      Diags.Report(diag::err_drv_invalid_value)
-          << "-fdefault-calling-conv=" << A->getValue();
-
-    llvm::Triple T(TargetOpts.Triple);
-    llvm::Triple::ArchType Arch = T.getArch();
-    bool emitError = (DefaultCC == LangOptions::DCC_FastCall ||
-                      DefaultCC == LangOptions::DCC_StdCall) &&
-                     Arch != llvm::Triple::x86;
-    emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
-                  DefaultCC == LangOptions::DCC_RegCall) &&
-                 !T.isX86();
-    if (emitError)
-      Diags.Report(diag::err_drv_argument_not_allowed_with)
-          << A->getSpelling() << T.getTriple();
-    else
-      Opts.setDefaultCallingConv(DefaultCC);
-  }
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
@@ -3084,42 +2973,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
   Opts.setFPExceptionMode(FPEB);
 
-  unsigned SSP = getLastArgIntValue(Args, OPT_stack_protector, 0, Diags);
-  switch (SSP) {
-  default:
-    Diags.Report(diag::err_drv_invalid_value)
-      << Args.getLastArg(OPT_stack_protector)->getAsString(Args) << SSP;
-    break;
-  case 0: Opts.setStackProtector(LangOptions::SSPOff); break;
-  case 1: Opts.setStackProtector(LangOptions::SSPOn);  break;
-  case 2: Opts.setStackProtector(LangOptions::SSPStrong); break;
-  case 3: Opts.setStackProtector(LangOptions::SSPReq); break;
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_ftrivial_auto_var_init)) {
-    StringRef Val = A->getValue();
-    if (Val == "uninitialized")
-      Opts.setTrivialAutoVarInit(
-          LangOptions::TrivialAutoVarInitKind::Uninitialized);
-    else if (Val == "zero")
-      Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Zero);
-    else if (Val == "pattern")
-      Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Pattern);
-    else
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_ftrivial_auto_var_init_stop_after)) {
-    int Val = std::stoi(A->getValue());
-    Opts.TrivialAutoVarInitStopAfter = Val;
-  }
-
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
-  // -fsanitize-address-field-padding=N has to be a LangOpt, parse it here.
-  Opts.SanitizeAddressFieldPadding =
-      getLastArgIntValue(Args, OPT_fsanitize_address_field_padding, 0, Diags);
   Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
   std::vector<std::string> systemBlacklists =
       Args.getAllArgValues(OPT_fsanitize_system_blacklist);
@@ -3168,8 +3024,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << A->getValue();
     }
   }
-
-  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
 
   if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
     StringRef SignScope = A->getValue();
@@ -3483,9 +3337,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     }
   }
 
-  LangOpts.FunctionAlignment =
-      getLastArgIntValue(Args, OPT_function_alignment, 0, Diags);
-
   if (LangOpts.CUDA) {
     // During CUDA device-side compilation, the aux triple is the
     // triple used for host compilation.
@@ -3526,7 +3377,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Res.getCodeGenOpts().Argv0 = Argv0;
   Res.getCodeGenOpts().CommandLineArgs = CommandLineArgs;
 
-  FixupInvocation(Res, Diags);
+  FixupInvocation(Res, Diags, Args);
 
   return Success;
 }
