@@ -8,14 +8,6 @@
 
 #include "LdExpTest.h"
 
-#include "include/math.h"
 #include "src/math/ldexpl.h"
-#include "utils/CPP/Functional.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/ManipulationFunctions.h"
-#include "utils/FPUtil/TestHelpers.h"
-#include "utils/UnitTest/Test.h"
-
-#include <limits.h>
 
 LIST_LDEXP_TESTS(long double, __llvm_libc::ldexpl)
