@@ -16,6 +16,7 @@ static_library("IR") {
   sources = [
     "AbstractCallSite.cpp",
     "AsmWriter.cpp",
+    "Assumptions.cpp",
     "Attributes.cpp",
     "AutoUpgrade.cpp",
     "BasicBlock.cpp",
