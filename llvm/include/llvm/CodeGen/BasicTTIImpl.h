@@ -114,12 +114,14 @@ private:
 
   /// Estimate a cost of subvector extraction as a sequence of extract and
   /// insert operations.
-  unsigned getExtractSubvectorOverhead(FixedVectorType *VTy, int Index,
+  unsigned getExtractSubvectorOverhead(VectorType *VTy, int Index,
                                        FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only extract subvectors from vectors");
     int NumSubElts = SubVTy->getNumElements();
-    assert((Index + NumSubElts) <= (int)VTy->getNumElements() &&
+    assert((!isa<FixedVectorType>(VTy) ||
+            (Index + NumSubElts) <=
+                (int)cast<FixedVectorType>(VTy)->getNumElements()) &&
            "SK_ExtractSubvector index out of range");
 
     unsigned Cost = 0;
@@ -137,12 +139,14 @@ private:
 
   /// Estimate a cost of subvector insertion as a sequence of extract and
   /// insert operations.
-  unsigned getInsertSubvectorOverhead(FixedVectorType *VTy, int Index,
+  unsigned getInsertSubvectorOverhead(VectorType *VTy, int Index,
                                       FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only insert subvectors into vectors");
     int NumSubElts = SubVTy->getNumElements();
-    assert((Index + NumSubElts) <= (int)VTy->getNumElements() &&
+    assert((!isa<FixedVectorType>(VTy) ||
+            (Index + NumSubElts) <=
+                (int)cast<FixedVectorType>(VTy)->getNumElements()) &&
            "SK_InsertSubvector index out of range");
 
     unsigned Cost = 0;
@@ -723,10 +727,10 @@ public:
     case TTI::SK_PermuteTwoSrc:
       return getPermuteShuffleOverhead(cast<FixedVectorType>(Tp));
     case TTI::SK_ExtractSubvector:
-      return getExtractSubvectorOverhead(cast<FixedVectorType>(Tp), Index,
+      return getExtractSubvectorOverhead(Tp, Index,
                                          cast<FixedVectorType>(SubTp));
     case TTI::SK_InsertSubvector:
-      return getInsertSubvectorOverhead(cast<FixedVectorType>(Tp), Index,
+      return getInsertSubvectorOverhead(Tp, Index,
                                         cast<FixedVectorType>(SubTp));
     }
     llvm_unreachable("Unknown TTI::ShuffleKind");
@@ -1254,6 +1258,26 @@ public:
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
+    }
+    case Intrinsic::experimental_vector_extract: {
+      // FIXME: Handle case where a scalable vector is extracted from a scalable
+      // vector
+      if (isa<ScalableVectorType>(RetTy))
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
+      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
+                                     cast<VectorType>(Args[0]->getType()),
+                                     Index, cast<VectorType>(RetTy));
+    }
+    case Intrinsic::experimental_vector_insert: {
+      // FIXME: Handle case where a scalable vector is inserted into a scalable
+      // vector
+      if (isa<ScalableVectorType>(Args[1]->getType()))
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
+      return thisT()->getShuffleCost(
+          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), Index,
+          cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
