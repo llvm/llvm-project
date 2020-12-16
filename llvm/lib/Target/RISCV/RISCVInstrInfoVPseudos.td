@@ -1011,6 +1011,14 @@ defm PseudoVNSRL       : VPseudoBinaryV_WV_WX_WI;
 defm PseudoVNSRA       : VPseudoBinaryV_WV_WX_WI;
 
 //===----------------------------------------------------------------------===//
+// 12.9. Vector Integer Min/Max Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVMINU       : VPseudoBinaryV_VV_VX;
+defm PseudoVMIN        : VPseudoBinaryV_VV_VX;
+defm PseudoVMAXU       : VPseudoBinaryV_VV_VX;
+defm PseudoVMAX        : VPseudoBinaryV_VV_VX;
+
+//===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
 
@@ -1066,5 +1074,13 @@ defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsrl", "PseudoVNSRL">;
 defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsra", "PseudoVNSRA">;
+
+//===----------------------------------------------------------------------===//
+// 12.9. Vector Integer Min/Max Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vminu", "PseudoVMINU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmin", "PseudoVMIN", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmaxu", "PseudoVMAXU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmax", "PseudoVMAX", AllIntegerVectors>;
 
 } // Predicates = [HasStdExtV]
