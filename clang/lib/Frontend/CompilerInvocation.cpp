@@ -2028,10 +2028,8 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
 
 static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
                                   const std::string &WorkingDir) {
-  Opts.Sysroot = std::string(Args.getLastArgValue(OPT_isysroot, "/"));
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
-  Opts.ResourceDir = std::string(Args.getLastArgValue(OPT_resource_dir));
 
   // Canonicalize -fmodules-cache-path before storing it.
   SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
@@ -2044,8 +2042,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   llvm::sys::path::remove_dots(P);
   Opts.ModuleCachePath = std::string(P.str());
 
-  Opts.ModuleUserBuildPath =
-      std::string(Args.getLastArgValue(OPT_fmodules_user_build_path));
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
     StringRef Val = A->getValue();
@@ -2057,14 +2053,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
-  Opts.ModuleCachePruneInterval =
-      getLastArgIntValue(Args, OPT_fmodules_prune_interval, 7 * 24 * 60 * 60);
-  Opts.ModuleCachePruneAfter =
-      getLastArgIntValue(Args, OPT_fmodules_prune_after, 31 * 24 * 60 * 60);
-  Opts.BuildSessionTimestamp =
-      getLastArgUInt64Value(Args, OPT_fbuild_session_timestamp, 0);
-  if (const Arg *A = Args.getLastArg(OPT_fmodule_format_EQ))
-    Opts.ModuleFormat = A->getValue();
 
   for (const auto *A : Args.filtered(OPT_fmodules_ignore_macro)) {
     StringRef MacroDef = A->getValue();
