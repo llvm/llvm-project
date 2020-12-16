@@ -2690,7 +2690,8 @@ def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-versio
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption]>;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[NoXarchOption]>;
-def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>, Flags<[CC1Option]>;
+def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>, Flags<[CC1Option]>,
+  MarshallingInfoString<"TargetOpts->CodeModel", [{"default"}]>;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>, Flags<[NoXarchOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
            "12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)">;
@@ -2760,7 +2761,10 @@ def mno_stack_arg_probe : Flag<["-"], "mno-stack-arg-probe">, Group<m_Group>, Fl
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">;
 def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Set EABI type, e.g. 4, 5 or gnu (default depends on triple)">, Values<"default,4,5,gnu">;
+  HelpText<"Set EABI type, e.g. 4, 5 or gnu (default depends on triple)">, Values<"default,4,5,gnu">,
+  MarshallingInfoString<"TargetOpts->EABIVersion", "Default">,
+  NormalizedValuesScope<"llvm::EABI">,
+  NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>, AutoNormalizeEnum;
 
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>, Flags<[CC1Option]>,
@@ -4052,9 +4056,11 @@ let Flags = [CC1Option, NoDriverOption] in {
 let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
 
 def target_cpu : Separate<["-"], "target-cpu">,
-  HelpText<"Target a specific cpu type">;
+  HelpText<"Target a specific cpu type">,
+  MarshallingInfoString<"TargetOpts->CPU">;
 def tune_cpu : Separate<["-"], "tune-cpu">,
-  HelpText<"Tune for a specific cpu type">;
+  HelpText<"Tune for a specific cpu type">,
+  MarshallingInfoString<"TargetOpts->TuneCPU">;
 def target_feature : Separate<["-"], "target-feature">,
   HelpText<"Target specific attributes">;
 def triple : Separate<["-"], "triple">,
@@ -4062,17 +4068,20 @@ def triple : Separate<["-"], "triple">,
   MarshallingInfoString<"TargetOpts->Triple", "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
   AlwaysEmit, Normalizer<"normalizeTriple">;
 def target_abi : Separate<["-"], "target-abi">,
-  HelpText<"Target a particular ABI type">;
+  HelpText<"Target a particular ABI type">,
+  MarshallingInfoString<"TargetOpts->ABI">;
 def target_sdk_version_EQ : Joined<["-"], "target-sdk-version=">,
   HelpText<"The version of target SDK used for compilation">;
 
 }
 
 def target_linker_version : Separate<["-"], "target-linker-version">,
-  HelpText<"Target linker version">;
+  HelpText<"Target linker version">,
+  MarshallingInfoString<"TargetOpts->LinkerVersion">;
 def triple_EQ : Joined<["-"], "triple=">, Alias<triple>;
 def mfpmath : Separate<["-"], "mfpmath">,
-  HelpText<"Which unit to use for fp math">;
+  HelpText<"Which unit to use for fp math">,
+  MarshallingInfoString<"TargetOpts->FPMath">;
 
 def fpadding_on_unsigned_fixed_point : Flag<["-"], "fpadding-on-unsigned-fixed-point">,
   HelpText<"Force each unsigned fixed point type to have an extra bit of padding to align their scales with those of signed fixed point types">;

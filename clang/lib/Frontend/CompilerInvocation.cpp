@@ -244,10 +244,10 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
   return None;
 }
 
-static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
-                                  CompilerInvocation::StringAllocator SA,
-                                  unsigned TableIndex, unsigned Value) {
+static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
+                                      const char *Spelling,
+                                      CompilerInvocation::StringAllocator SA,
+                                      unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   if (auto MaybeEnumVal = findValueTableByValue(Table, Value)) {
@@ -257,6 +257,15 @@ static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
     llvm_unreachable("The simple enum value was not correctly defined in "
                      "the tablegen option description");
   }
+}
+
+template <typename T>
+static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
+                                  const char *Spelling,
+                                  CompilerInvocation::StringAllocator SA,
+                                  unsigned TableIndex, T Value) {
+  return denormalizeSimpleEnumImpl(Args, Spelling, SA, TableIndex,
+                                   static_cast<unsigned>(Value));
 }
 
 static void denormalizeSimpleEnumJoined(SmallVectorImpl<const char *> &Args,
@@ -3357,28 +3366,7 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 
 static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
                             DiagnosticsEngine &Diags) {
-  Opts.CodeModel = std::string(Args.getLastArgValue(OPT_mcmodel_EQ, "default"));
-  Opts.ABI = std::string(Args.getLastArgValue(OPT_target_abi));
-  if (Arg *A = Args.getLastArg(OPT_meabi)) {
-    StringRef Value = A->getValue();
-    llvm::EABI EABIVersion = llvm::StringSwitch<llvm::EABI>(Value)
-                                 .Case("default", llvm::EABI::Default)
-                                 .Case("4", llvm::EABI::EABI4)
-                                 .Case("5", llvm::EABI::EABI5)
-                                 .Case("gnu", llvm::EABI::GNU)
-                                 .Default(llvm::EABI::Unknown);
-    if (EABIVersion == llvm::EABI::Unknown)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << Value;
-    else
-      Opts.EABIVersion = EABIVersion;
-  }
-  Opts.CPU = std::string(Args.getLastArgValue(OPT_target_cpu));
-  Opts.TuneCPU = std::string(Args.getLastArgValue(OPT_tune_cpu));
-  Opts.FPMath = std::string(Args.getLastArgValue(OPT_mfpmath));
   Opts.FeaturesAsWritten = Args.getAllArgValues(OPT_target_feature);
-  Opts.LinkerVersion =
-      std::string(Args.getLastArgValue(OPT_target_linker_version));
   Opts.OpenCLExtensionsAsWritten = Args.getAllArgValues(OPT_cl_ext_EQ);
   Opts.AllowAMDGPUUnsafeFPAtomics =
       Args.hasFlag(options::OPT_munsafe_fp_atomics,
