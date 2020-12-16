@@ -45,16 +45,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb clang-format-11
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
 RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-compile to 32 bits
-# Make a symbolic link to git-clang-format (pointing to git-clang-format-<version>), if it doesn't exist.
-RUN which git-clang-format || $(cd /usr/bin/ && ln -s $(ls git-clang-format-* | sort -rV | head -n 1) git-clang-format)
 
 # Install the most recently released LLVM
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++
 RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang
+
+RUN apt-get update && apt-get install -y clang-format-11
+# Make a symbolic link to git-clang-format (pointing to git-clang-format-<version>), if it doesn't exist.
+RUN which git-clang-format || $(cd /usr/bin/ && ln -s $(ls git-clang-format-* | sort -rV | head -n 1) git-clang-format)
 
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
