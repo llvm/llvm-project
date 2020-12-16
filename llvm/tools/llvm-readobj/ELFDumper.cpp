@@ -2087,7 +2087,10 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
 
 template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   auto toMappedAddr = [&](uint64_t Tag, uint64_t VAddr) -> const uint8_t * {
-    auto MappedAddrOrError = Obj.toMappedAddr(VAddr);
+    auto MappedAddrOrError = Obj.toMappedAddr(VAddr, [&](const Twine &Msg) {
+      this->reportUniqueWarning(Msg);
+      return Error::success();
+    });
     if (!MappedAddrOrError) {
       this->reportUniqueWarning("unable to parse DT_" +
                                 Obj.getDynamicTagAsString(Tag) + ": " +
