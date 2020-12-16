@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -loop-deletion -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -sccp -loop-deletion -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare double @sqrt(double) readnone nounwind
 %empty = type {}
