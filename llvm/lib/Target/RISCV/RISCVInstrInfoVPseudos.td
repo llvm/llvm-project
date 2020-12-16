@@ -277,6 +277,68 @@ class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins> :
   let VLMul = m.value;
 }
 
+class VPseudoUSLoadNoMask<VReg RetClass>:
+      Pseudo<(outs RetClass:$rd),
+             (ins GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 2;
+  let SEWIndex = 3;
+  let HasDummyMask = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoUSLoadMask<VReg RetClass>:
+      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+              (ins GetVRegNoV0<RetClass>.R:$merge,
+                   GPR:$rs1,
+                   VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Constraints = "$rd = $merge";
+  let Uses = [VL, VTYPE];
+  let VLIndex = 4;
+  let SEWIndex = 5;
+  let MergeOpIndex = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoUSStoreNoMask<VReg StClass>:
+      Pseudo<(outs),
+              (ins StClass:$rd, GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 2;
+  let SEWIndex = 3;
+  let HasDummyMask = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoUSStoreMask<VReg StClass>:
+      Pseudo<(outs),
+              (ins StClass:$rd, GPR:$rs1, VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 3;
+  let SEWIndex = 4;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
@@ -340,6 +402,28 @@ class VPseudoBinaryCarryIn<VReg RetClass,
   let MergeOpIndex = InvalidIndex.V;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   let VLMul = MInfo.value;
+}
+
+multiclass VPseudoUSLoad {
+  foreach lmul = MxList.m in {
+    defvar LInfo = lmul.MX;
+    defvar vreg = lmul.vrclass;
+    let VLMul = lmul.value in {
+      def "_V_" # LInfo : VPseudoUSLoadNoMask<vreg>;
+      def "_V_" # LInfo # "_MASK" : VPseudoUSLoadMask<vreg>;
+    }
+  }
+}
+
+multiclass VPseudoUSStore {
+  foreach lmul = MxList.m in {
+    defvar LInfo = lmul.MX;
+    defvar vreg = lmul.vrclass;
+    let VLMul = lmul.value in {
+      def "_V_" # LInfo : VPseudoUSStoreNoMask<vreg>;
+      def "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg>;
+    }
+  }
 }
 
 multiclass VPseudoBinary<VReg RetClass,
@@ -519,8 +603,32 @@ multiclass VPseudoBinaryV_WV_WX_WI {
 }
 
 //===----------------------------------------------------------------------===//
-// Helpers to define the different patterns.
+// Helpers to define the SDNode patterns.
 //===----------------------------------------------------------------------===//
+
+multiclass VPatUSLoadStoreSDNode<LLVMType type,
+                                 LLVMType mask_type,
+                                 int sew,
+                                 LMULInfo vlmul,
+                                 RegisterClass reg_rs1,
+                                 VReg reg_class>
+{
+  defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
+  defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
+  // Load
+  def : Pat<(type (load reg_rs1:$rs1)),
+            (load_instr reg_rs1:$rs1, VLMax, sew)>;
+  // Store
+  def : Pat<(store type:$rs2, reg_rs1:$rs1),
+            (store_instr reg_class:$rs2, reg_rs1:$rs1, VLMax, sew)>;
+}
+
+multiclass VPatUSLoadStoreSDNodes<RegisterClass reg_rs1> {
+  foreach vti = AllVectors in
+    defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.Mask, vti.SEW, vti.LMul,
+                                    reg_rs1, vti.RegClass>;
+}
+
 class VPatBinarySDNode<SDNode vop,
                        string instruction_name,
                        ValueType result_type,
@@ -546,6 +654,9 @@ multiclass VPatBinarySDNode<SDNode vop, string instruction_name>
                            vti.LMul, vti.RegClass, vti.RegClass>;
 }
 
+//===----------------------------------------------------------------------===//
+// Helpers to define the intrinsic patterns.
+//===----------------------------------------------------------------------===//
 class VPatBinaryNoMask<string intrinsic_name,
                        string inst,
                        string kind,
@@ -922,83 +1033,10 @@ def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>
 // 7. Vector Loads and Stores
 //===----------------------------------------------------------------------===//
 
-// Pseudos.
+// Pseudos Unit-Stride Loads and Stores
 foreach eew = EEWList in {
-  foreach lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar vreg = lmul.vrclass;
-    defvar vlmul = lmul.value;
-    defvar constraint = "$rd = $merge";
-
-    let mayLoad = 1, mayStore = 0, hasSideEffects = 0,
-        usesCustomInserter = 1,
-        VLMul = vlmul in
-    {
-      let Uses = [VL, VTYPE], VLIndex = 4, SEWIndex = 5, MergeOpIndex = 1,
-          Constraints = constraint,
-          BaseInstr = !cast<Instruction>("VLE" # eew # "_V") in
-          def "PseudoVLE" # eew # "_V_" # LInfo
-            : Pseudo<(outs vreg:$rd),
-                     (ins vreg:$merge, GPR:$rs1, VMaskOp:$mask, GPR:$vl,
-                      ixlenimm:$sew),
-                     []>,
-              RISCVVPseudo;
-    }
-
-    let mayLoad = 0, mayStore = 1, hasSideEffects = 0,
-        usesCustomInserter = 1,
-        VLMul = vlmul in
-    {
-      // Masked stores do not have a merge operand as merge is done in memory
-      let Uses = [VL, VTYPE],
-          VLIndex = 3, SEWIndex = 4, MergeOpIndex = -1,
-          BaseInstr = !cast<Instruction>("VSE" # eew # "_V") in
-        def "PseudoVSE" # eew # "_V_" # LInfo
-            : Pseudo<(outs),
-                     (ins vreg:$rd, GPR:$rs1, VMaskOp:$mask, GPR:$vl,
-                          ixlenimm:$sew),
-                     []>,
-              RISCVVPseudo;
-    }
-  }
-}
-
-// Patterns.
-multiclass pat_load_store<LLVMType type,
-                          LLVMType mask_type,
-                          int sew,
-                          LMULInfo vlmul,
-                          VReg reg_class>
-{
-  defvar load_instr = !cast<Instruction>("PseudoVLE" # sew # "_V_"# vlmul.MX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE" # sew # "_V_"# vlmul.MX);
-  // Load
-  def : Pat<(type (load GPR:$rs1)),
-            (load_instr (type (IMPLICIT_DEF)),
-             GPR:$rs1,
-             (mask_type zero_reg),
-             VLMax, sew)>;
-  def : Pat<(type (load AddrFI:$rs1)),
-             (load_instr (type (IMPLICIT_DEF)),
-             AddrFI:$rs1,
-             (mask_type zero_reg),
-             VLMax, sew)>;
-
-  // Store
-  def : Pat<(store type:$rs2, GPR:$rs1),
-            (store_instr reg_class:$rs2, GPR:$rs1,
-             (mask_type zero_reg),
-              VLMax, sew)>;
-  def : Pat<(store type:$rs2, AddrFI:$rs1),
-            (store_instr reg_class:$rs2, AddrFI:$rs1,
-             (mask_type zero_reg),
-             VLMax, sew)>;
-}
-
-foreach vti = AllVectors in
-{
-  defm : pat_load_store<vti.Vector, vti.Mask,
-                        vti.SEW, vti.LMul, vti.RegClass>;
+  defm PseudoVLE # eew : VPseudoUSLoad;
+  defm PseudoVSE # eew : VPseudoUSStore;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1078,6 +1116,12 @@ defm PseudoVFRSUB      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 let Predicates = [HasStdExtV] in {
 
 // Whole-register vector patterns.
+
+// 7.4. Vector Unit-Stride Instructions
+defm "" : VPatUSLoadStoreSDNodes<GPR>;
+defm "" : VPatUSLoadStoreSDNodes<AddrFI>;
+
+// 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinarySDNode<add, "PseudoVADD">;
 
 //===----------------------------------------------------------------------===//
