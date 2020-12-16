@@ -1386,7 +1386,7 @@ void AArch64InstPrinter::printAdrpLabel(const MCInst *MI, uint64_t Address,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    const int64_t Offset = Op.getImm() << 12;
+    const int64_t Offset = Op.getImm() * 4096;
     if (PrintBranchImmAsAddress)
       O << formatHex((Address & -4096) + Offset);
     else
