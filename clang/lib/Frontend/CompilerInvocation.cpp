@@ -197,12 +197,11 @@ static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
   };
 }
 
-static auto makeBooleanOptionDenormalizer(bool Value,
-                                          const char *OtherSpelling) {
-  return [Value, OtherSpelling](
-             SmallVectorImpl<const char *> &Args, const char *Spelling,
-             CompilerInvocation::StringAllocator, unsigned, bool KeyPath) {
-    Args.push_back(KeyPath == Value ? Spelling : OtherSpelling);
+static auto makeBooleanOptionDenormalizer(bool Value) {
+  return [Value](SmallVectorImpl<const char *> &Args, const char *Spelling,
+                 CompilerInvocation::StringAllocator, unsigned, bool KeyPath) {
+    if (KeyPath == Value)
+      Args.push_back(Spelling);
   };
 }
 

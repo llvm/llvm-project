@@ -269,7 +269,7 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentPos) {
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdebug-pass-manager")));
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fdebug-pass-manager")), 1);
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-debug-pass-manager"))));
 }
 
