@@ -38,6 +38,7 @@ static_library("Analysis") {
     "ConstraintSystem.cpp",
     "CostModel.cpp",
     "DDG.cpp",
+    "DDGPrinter.cpp",
     "Delinearization.cpp",
     "DemandedBits.cpp",
     "DependenceAnalysis.cpp",
