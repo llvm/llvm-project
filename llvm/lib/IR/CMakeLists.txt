@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMCore
   AbstractCallSite.cpp
   AsmWriter.cpp
+  Assumptions.cpp
   Attributes.cpp
   AutoUpgrade.cpp
   BasicBlock.cpp
