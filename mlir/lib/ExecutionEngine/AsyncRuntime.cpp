@@ -24,10 +24,14 @@
 #include <thread>
 #include <vector>
 
+using namespace mlir::runtime;
+
 //===----------------------------------------------------------------------===//
 // Async runtime API.
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
+namespace runtime {
 namespace {
 
 // Forward declare class defined below.
@@ -65,12 +69,6 @@ private:
 
   std::atomic<int32_t> numRefCountedObjects;
 };
-
-// Returns the default per-process instance of an async runtime.
-AsyncRuntime *getDefaultAsyncRuntimeInstance() {
-  static auto runtime = std::make_unique<AsyncRuntime>();
-  return runtime.get();
-}
 
 // -------------------------------------------------------------------------- //
 // A base class for all reference counted objects created by the async runtime.
@@ -110,6 +108,12 @@ private:
 
 } // namespace
 
+// Returns the default per-process instance of an async runtime.
+static AsyncRuntime *getDefaultAsyncRuntimeInstance() {
+  static auto runtime = std::make_unique<AsyncRuntime>();
+  return runtime.get();
+}
+
 struct AsyncToken : public RefCounted {
   // AsyncToken created with a reference count of 2 because it will be returned
   // to the `async.execute` caller and also will be later on emplaced by the
@@ -139,6 +143,9 @@ struct AsyncGroup : public RefCounted {
 
   std::vector<std::function<void()>> awaiters;
 };
+
+} // namespace runtime
+} // namespace mlir
 
 // Adds references to reference counted runtime object.
 extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
