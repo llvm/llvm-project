@@ -328,6 +328,9 @@ static void FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.DisableFree = FrontendOpts.DisableFree;
   FrontendOpts.GenerateGlobalModuleIndex = FrontendOpts.UseGlobalModuleIndex;
 
+  LangOpts.ForceEmitVTables = CodeGenOpts.ForceEmitVTables;
+  LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;
+
   llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
 
   llvm::Triple T(TargetOpts.Triple);
@@ -336,6 +339,9 @@ static void FixupInvocation(CompilerInvocation &Invocation,
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str();
+
+  if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
+    Diags.Report(diag::warn_c_kext);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2431,9 +2437,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (Args.hasArg(OPT_fno_dllexport_inlines))
-    Opts.DllExportInlines = false;
-
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
     if (Name == "full" || Name == "branch") {
@@ -2462,7 +2465,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       LangStd = OpenCLLangStd;
   }
 
-  Opts.SYCL = Args.hasArg(options::OPT_fsycl);
   Opts.SYCLIsDevice = Opts.SYCL && Args.hasArg(options::OPT_fsycl_is_device);
   if (Opts.SYCL) {
     // -sycl-std applies to any SYCL source, not only those containing kernels,
@@ -2479,9 +2481,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       }
     }
   }
-
-  Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
-  Opts.DeclareOpenCLBuiltins = Args.hasArg(OPT_fdeclare_opencl_builtins);
 
   llvm::Triple T(TargetOpts.Triple);
   CompilerInvocation::setLangDefaults(Opts, IK, T, PPOpts, LangStd);
@@ -2509,25 +2508,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Args.hasArg(OPT_fno_operator_names))
     Opts.CXXOperatorNames = 0;
 
-  if (Args.hasArg(OPT_fcuda_is_device))
-    Opts.CUDAIsDevice = 1;
-
-  if (Args.hasArg(OPT_fcuda_allow_variadic_functions))
-    Opts.CUDAAllowVariadicFunctions = 1;
-
-  if (Args.hasArg(OPT_fno_cuda_host_device_constexpr))
-    Opts.CUDAHostDeviceConstexpr = 0;
-
-  if (Args.hasArg(OPT_fgpu_exclude_wrong_side_overloads))
-    Opts.GPUExcludeWrongSideOverloads = 1;
-
-  if (Args.hasArg(OPT_fgpu_defer_diag))
-    Opts.GPUDeferDiag = 1;
-
   if (Opts.CUDAIsDevice && Args.hasArg(OPT_fcuda_approx_transcendentals))
     Opts.CUDADeviceApproxTranscendentals = 1;
 
-  Opts.GPURelocatableDeviceCode = Args.hasArg(OPT_fgpu_rdc);
   if (Args.hasArg(OPT_fgpu_allow_device_init)) {
     if (Opts.HIP)
       Opts.GPUAllowDeviceInit = 1;
@@ -2535,7 +2518,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::warn_ignored_hip_only_option)
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
-  Opts.HIPUseNewLaunchAPI = Args.hasArg(OPT_fhip_new_launch_api);
   if (Opts.HIP)
     Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
         Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);
@@ -2585,9 +2567,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.ObjCWeak = Opts.ObjCWeakRuntime;
     }
 
-    if (Args.hasArg(OPT_fno_objc_infer_related_result_type))
-      Opts.ObjCInferRelatedResultType = 0;
-
     if (Args.hasArg(OPT_fobjc_subscripting_legacy_runtime))
       Opts.ObjCSubscriptingLegacyRuntime =
         (Opts.ObjCRuntime.getKind() == ObjCRuntime::FragileMacOSX);
@@ -2616,18 +2595,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.GNUInline = 1;
   }
 
-  if (Args.hasArg(OPT_fapple_kext)) {
-    if (!Opts.CPlusPlus)
-      Diags.Report(diag::warn_c_kext);
-    else
-      Opts.AppleKext = 1;
-  }
-
-  if (Args.hasArg(OPT_print_ivar_layout))
-    Opts.ObjCGCBitmapPrint = 1;
-
-  if (Args.hasArg(OPT_fno_constant_cfstrings))
-    Opts.NoConstantCFStrings = 1;
   if (const auto *A = Args.getLastArg(OPT_fcf_runtime_abi_EQ))
     Opts.CFRuntime =
         llvm::StringSwitch<LangOptions::CoreFoundationABI>(A->getValue())
@@ -2638,12 +2605,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
             .Case("swift-4.2", LangOptions::CoreFoundationABI::Swift4_2)
             .Case("swift-4.1", LangOptions::CoreFoundationABI::Swift4_1)
             .Default(LangOptions::CoreFoundationABI::ObjectiveC);
-
-  if (Args.hasArg(OPT_fzvector))
-    Opts.ZVector = 1;
-
-  if (Args.hasArg(OPT_pthread))
-    Opts.POSIXThreads = 1;
 
   // The value-visibility mode defaults to "default".
   if (Arg *visOpt = Args.getLastArg(OPT_fvisibility)) {
@@ -2658,18 +2619,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   } else {
     Opts.setTypeVisibilityMode(Opts.getValueVisibilityMode());
   }
-
-  if (Args.hasArg(OPT_fvisibility_inlines_hidden))
-    Opts.InlineVisibilityHidden = 1;
-
-  if (Args.hasArg(OPT_fvisibility_inlines_hidden_static_local_var))
-    Opts.VisibilityInlinesHiddenStaticLocalVar = 1;
-
-  if (Args.hasArg(OPT_fvisibility_global_new_delete_hidden))
-    Opts.GlobalAllocationFunctionVisibilityHidden = 1;
-
-  if (Args.hasArg(OPT_fapply_global_visibility_to_externs))
-    Opts.SetVisibilityForExternDecls = 1;
 
   if (Args.hasArg(OPT_fvisibility_from_dllstorageclass)) {
     Opts.VisibilityFromDLLStorageClass = 1;
@@ -2712,7 +2661,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   else if (Args.hasArg(OPT_fwrapv))
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
 
-  Opts.MSVCCompat = Args.hasArg(OPT_fms_compatibility);
   Opts.MicrosoftExt = Opts.MSVCCompat || Args.hasArg(OPT_fms_extensions);
   Opts.AsmBlocks = Args.hasArg(OPT_fasm_blocks) || Opts.MicrosoftExt;
   Opts.MSCompatibilityVersion = 0;
@@ -2738,13 +2686,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DollarIdents = Args.hasFlag(OPT_fdollars_in_identifiers,
                                    OPT_fno_dollars_in_identifiers,
                                    Opts.DollarIdents);
-  Opts.PascalStrings = Args.hasArg(OPT_fpascal_strings);
   Opts.setVtorDispMode(
       MSVtorDispMode(getLastArgIntValue(Args, OPT_vtordisp_mode_EQ, 1, Diags)));
-  Opts.Borland = Args.hasArg(OPT_fborland_extensions);
-  Opts.WritableStrings = Args.hasArg(OPT_fwritable_strings);
-  Opts.ConstStrings = Args.hasFlag(OPT_fconst_strings, OPT_fno_const_strings,
-                                   Opts.ConstStrings);
   if (Arg *A = Args.getLastArg(OPT_flax_vector_conversions_EQ)) {
     using LaxKind = LangOptions::LaxVectorConversionKind;
     if (auto Kind = llvm::StringSwitch<Optional<LaxKind>>(A->getValue())
@@ -2757,12 +2700,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
   }
-  if (Args.hasArg(OPT_fno_threadsafe_statics))
-    Opts.ThreadsafeStatics = 0;
-  Opts.Exceptions = Args.hasArg(OPT_fexceptions);
-  Opts.IgnoreExceptions = Args.hasArg(OPT_fignore_exceptions);
-  Opts.ObjCExceptions = Args.hasArg(OPT_fobjc_exceptions);
-  Opts.CXXExceptions = Args.hasArg(OPT_fcxx_exceptions);
 
   // -ffixed-point
   Opts.FixedPoint =
@@ -2774,14 +2711,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                    /*Default=*/false) &&
       Opts.FixedPoint;
 
-  Opts.ExternCNoUnwind = Args.hasArg(OPT_fexternc_nounwind);
-  Opts.TraditionalCPP = Args.hasArg(OPT_traditional_cpp);
-
   Opts.RTTI = Opts.CPlusPlus && !Args.hasArg(OPT_fno_rtti);
   Opts.RTTIData = Opts.RTTI && !Args.hasArg(OPT_fno_rtti_data);
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
-  Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
   Opts.Coroutines = Opts.CPlusPlus20 || Args.hasArg(OPT_fcoroutines_ts);
 
   Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
@@ -2794,10 +2727,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                    Opts.DoubleSquareBracketAttributes);
 
   Opts.CPlusPlusModules = Opts.CPlusPlus20;
-  Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);
   Opts.Modules =
       Args.hasArg(OPT_fmodules) || Opts.ModulesTS || Opts.CPlusPlusModules;
-  Opts.ModulesStrictDeclUse = Args.hasArg(OPT_fmodules_strict_decluse);
   Opts.ModulesDeclUse =
       Args.hasArg(OPT_fmodules_decluse) || Opts.ModulesStrictDeclUse;
   // FIXME: We only need this in C++ modules / Modules TS if we might textually
@@ -2805,13 +2736,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ModulesLocalVisibility =
       Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS ||
       Opts.CPlusPlusModules;
-  Opts.ModulesCodegen = Args.hasArg(OPT_fmodules_codegen);
-  Opts.ModulesDebugInfo = Args.hasArg(OPT_fmodules_debuginfo);
   Opts.ModulesSearchAll = Opts.Modules &&
     !Args.hasArg(OPT_fno_modules_search_all) &&
     Args.hasArg(OPT_fmodules_search_all);
-  Opts.ModulesErrorRecovery = !Args.hasArg(OPT_fno_modules_error_recovery);
-  Opts.ImplicitModules = !Args.hasArg(OPT_fno_implicit_modules);
   Opts.CharIsSigned = Opts.OpenCL || !Args.hasArg(OPT_fno_signed_char);
   Opts.WChar = Opts.CPlusPlus && !Args.hasArg(OPT_fno_wchar);
   Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus20);
@@ -2824,16 +2751,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (Opts.WCharSize == 0)
       Diags.Report(diag::err_fe_invalid_wchar_type) << A->getValue();
   }
-  Opts.WCharIsSigned = Args.hasFlag(OPT_fsigned_wchar, OPT_fno_signed_wchar, true);
-  Opts.ShortEnums = Args.hasArg(OPT_fshort_enums);
-  Opts.Freestanding = Args.hasArg(OPT_ffreestanding);
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
-  Opts.NoMathBuiltin = Args.hasArg(OPT_fno_math_builtin);
-  Opts.RelaxedTemplateTemplateArgs =
-      Args.hasArg(OPT_frelaxed_template_template_args);
-  Opts.SizedDeallocation = Args.hasArg(OPT_fsized_deallocation);
   Opts.AlignedAllocation =
       Args.hasFlag(OPT_faligned_allocation, OPT_fno_aligned_allocation,
                    Opts.AlignedAllocation);
@@ -2847,16 +2767,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                                                  << A->getValue();
     Opts.NewAlignOverride = 0;
   }
-  Opts.ConceptSatisfactionCaching =
-      !Args.hasArg(OPT_fno_concept_satisfaction_caching);
   if (Args.hasArg(OPT_fconcepts_ts))
     Diags.Report(diag::warn_fe_concepts_ts_flag);
-  Opts.RecoveryAST = Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast);
-  Opts.RecoveryASTType =
-      Args.hasFlag(OPT_frecovery_ast_type, OPT_fno_recovery_ast_type);
-  Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
-  Opts.AccessControl = !Args.hasArg(OPT_fno_access_control);
-  Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
   Opts.MathErrno = !Opts.OpenCL && Args.hasArg(OPT_fmath_errno);
   Opts.InstantiationDepth =
       getLastArgIntValue(Args, OPT_ftemplate_depth, 1024, Diags);
@@ -2866,52 +2778,25 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fconstexpr_depth, 512, Diags);
   Opts.ConstexprStepLimit =
       getLastArgIntValue(Args, OPT_fconstexpr_steps, 1048576, Diags);
-  Opts.EnableNewConstInterp =
-      Args.hasArg(OPT_fexperimental_new_constant_interpreter);
   Opts.BracketDepth = getLastArgIntValue(Args, OPT_fbracket_depth, 256, Diags);
-  Opts.DelayedTemplateParsing = Args.hasArg(OPT_fdelayed_template_parsing);
   Opts.NumLargeByValueCopy =
       getLastArgIntValue(Args, OPT_Wlarge_by_value_copy_EQ, 0, Diags);
-  Opts.MSBitfields = Args.hasArg(OPT_mms_bitfields);
   Opts.ObjCConstantStringClass =
       std::string(Args.getLastArgValue(OPT_fconstant_string_class));
-  Opts.ObjCDefaultSynthProperties =
-    !Args.hasArg(OPT_disable_objc_default_synthesize_properties);
-  Opts.EncodeExtendedBlockSig =
-    Args.hasArg(OPT_fencode_extended_block_signature);
-  Opts.EmitAllDecls = Args.hasArg(OPT_femit_all_decls);
   Opts.PackStruct = getLastArgIntValue(Args, OPT_fpack_struct_EQ, 0, Diags);
   Opts.MaxTypeAlign = getLastArgIntValue(Args, OPT_fmax_type_align_EQ, 0, Diags);
-  Opts.AlignDouble = Args.hasArg(OPT_malign_double);
   Opts.DoubleSize = getLastArgIntValue(Args, OPT_mdouble_EQ, 0, Diags);
   Opts.LongDoubleSize = Args.hasArg(OPT_mlong_double_128)
                             ? 128
                             : Args.hasArg(OPT_mlong_double_64) ? 64 : 0;
-  Opts.PPCIEEELongDouble = Args.hasArg(OPT_mabi_EQ_ieeelongdouble);
   Opts.EnableAIXExtendedAltivecABI = Args.hasArg(OPT_mabi_EQ_vec_extabi);
   Opts.PICLevel = getLastArgIntValue(Args, OPT_pic_level, 0, Diags);
-  Opts.ROPI = Args.hasArg(OPT_fropi);
-  Opts.RWPI = Args.hasArg(OPT_frwpi);
-  Opts.PIE = Args.hasArg(OPT_pic_is_pie);
-  Opts.Static = Args.hasArg(OPT_static_define);
-  Opts.DumpRecordLayoutsSimple = Args.hasArg(OPT_fdump_record_layouts_simple);
   Opts.DumpRecordLayouts = Opts.DumpRecordLayoutsSimple
                         || Args.hasArg(OPT_fdump_record_layouts);
-  Opts.DumpVTableLayouts = Args.hasArg(OPT_fdump_vtable_layouts);
-  Opts.SpellChecking = !Args.hasArg(OPT_fno_spell_checking);
-  Opts.NoBitFieldTypeAlign = Args.hasArg(OPT_fno_bitfield_type_align);
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
-  Opts.HexagonQdsp6Compat = Args.hasArg(OPT_mqdsp6_compat);
-  Opts.FakeAddressSpaceMap = Args.hasArg(OPT_ffake_address_space_map);
-  Opts.ParseUnknownAnytype = Args.hasArg(OPT_funknown_anytype);
-  Opts.DebuggerSupport = Args.hasArg(OPT_fdebugger_support);
-  Opts.DebuggerCastResultToId = Args.hasArg(OPT_fdebugger_cast_result_to_id);
-  Opts.DebuggerObjCLiteral = Args.hasArg(OPT_fdebugger_objc_literal);
-  Opts.ApplePragmaPack = Args.hasArg(OPT_fapple_pragma_pack);
   Opts.ModuleName = std::string(Args.getLastArgValue(OPT_fmodule_name_EQ));
   Opts.CurrentModule = Opts.ModuleName;
-  Opts.AppExt = Args.hasArg(OPT_fapplication_extension);
   Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
   llvm::sort(Opts.ModuleFeatures);
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
@@ -2920,8 +2805,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // is enabled.
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
                             | Opts.NativeHalfArgsAndReturns;
-  Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
-  Opts.Cmse = Args.hasArg(OPT_mcmse); // Armv8-M Security Extensions
 
   Opts.ArmSveVectorBits =
       getLastArgIntValue(Args, options::OPT_msve_vector_bits_EQ, 0, Diags);
@@ -3007,11 +2890,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDefaultCallingConv(DefaultCC);
   }
 
-  Opts.SemanticInterposition = Args.hasArg(OPT_fsemantic_interposition);
-  // An explicit -fno-semantic-interposition infers dso_local.
-  Opts.ExplicitNoSemanticInterposition =
-      Args.hasArg(OPT_fno_semantic_interposition);
-
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
     if (Opts.getDefaultCallingConv() != LangOptions::DCC_None)
@@ -3027,8 +2905,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  // Check if -fopenmp is specified and set default version to 5.0.
-  Opts.OpenMP = Args.hasArg(options::OPT_fopenmp) ? 50 : 0;
   // Check if -fopenmp-simd is specified.
   bool IsSimdSpecified =
       Args.hasFlag(options::OPT_fopenmp_simd, options::OPT_fno_openmp_simd,
@@ -3082,11 +2958,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
         Opts.OpenMPCUDAReductionBufNum, Diags);
   }
-
-  // Prevent auto-widening the representation of loop counters during an
-  // OpenMP collapse clause.
-  Opts.OpenMPOptimisticCollapse =
-      Args.hasArg(options::OPT_fopenmp_optimistic_collapse) ? 1 : 0;
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
@@ -3181,12 +3052,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
-  auto FPRM = llvm::RoundingMode::NearestTiesToEven;
-  if (Args.hasArg(OPT_frounding_math)) {
-    FPRM = llvm::RoundingMode::Dynamic;
-  }
-  Opts.setFPRoundingMode(FPRM);
-
   if (Args.hasArg(OPT_ftrapping_math)) {
     Opts.setFPExceptionMode(LangOptions::FPE_Strict);
   }
@@ -3208,9 +3073,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
   Opts.setFPExceptionMode(FPEB);
-
-  Opts.RetainCommentsFromSystemHeaders =
-      Args.hasArg(OPT_fretain_comments_from_system_headers);
 
   unsigned SSP = getLastArgIntValue(Args, OPT_stack_protector, 0, Diags);
   switch (SSP) {
@@ -3262,14 +3124,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.getAllArgValues(OPT_fxray_never_instrument);
   Opts.XRayAttrListFiles = Args.getAllArgValues(OPT_fxray_attr_list);
 
-  // -fforce-emit-vtables
-  Opts.ForceEmitVTables = Args.hasArg(OPT_fforce_emit_vtables);
-
-  // -fallow-editor-placeholders
-  Opts.AllowEditorPlaceholders = Args.hasArg(OPT_fallow_editor_placeholders);
-
-  Opts.RegisterStaticDestructors = !Args.hasArg(OPT_fno_cxx_static_destructors);
-
   if (Arg *A = Args.getLastArg(OPT_fclang_abi_compat_EQ)) {
     Opts.setClangABICompat(LangOptions::ClangABI::Latest);
 
@@ -3305,12 +3159,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
-  Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
-  Opts.PCHInstantiateTemplates = Args.hasArg(OPT_fpch_instantiate_templates);
-
-  Opts.MatrixTypes = Args.hasArg(OPT_fenable_matrix);
-
   Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
 
   if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
@@ -3344,17 +3192,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       }
     }
   }
-
-  Opts.BranchTargetEnforcement = Args.hasArg(OPT_mbranch_target_enforce);
-  Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
-
-  Opts.CompatibilityQualifiedIdBlockParamTypeChecking =
-      Args.hasArg(OPT_fcompatibility_qualified_id_block_param_type_checking);
-
-  Opts.RelativeCXXABIVTables =
-      Args.hasFlag(OPT_fexperimental_relative_cxx_abi_vtables,
-                   OPT_fno_experimental_relative_cxx_abi_vtables,
-                   /*default=*/false);
 
   std::string ThreadModel =
       std::string(Args.getLastArgValue(OPT_mthread_model, "posix"));
@@ -3640,7 +3477,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     // PIClevel and PIELevel are needed during code generation and this should be
     // set regardless of the input type.
     LangOpts.PICLevel = getLastArgIntValue(Args, OPT_pic_level, 0, Diags);
-    LangOpts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, LangOpts.Sanitize);
   } else {
