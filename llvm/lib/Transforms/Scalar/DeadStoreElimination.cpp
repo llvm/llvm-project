@@ -264,11 +264,9 @@ static MemoryLocation getLocForWrite(Instruction *Inst,
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 
-  if (auto *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
-    // memcpy/memmove/memset.
-    MemoryLocation Loc = MemoryLocation::getForDest(MI);
-    return Loc;
-  }
+  // memcpy/memmove/memset.
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(Inst))
+    return MemoryLocation::getForDest(MI);
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
@@ -1760,7 +1758,7 @@ struct DSEState {
 
   /// Returns true if \p UseInst completely overwrites \p DefLoc
   /// (stored by \p DefInst).
-  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *DefInst,
+  bool isCompleteOverwrite(const MemoryLocation &DefLoc, Instruction *DefInst,
                            Instruction *UseInst) {
     // UseInst has a MemoryDef associated in MemorySSA. It's possible for a
     // MemoryDef to not write to memory, e.g. a volatile load is modeled as a
@@ -1858,7 +1856,7 @@ struct DSEState {
 
   /// Returns true if \p MaybeTerm is a memory terminator for \p Loc from
   /// instruction \p AccessI.
-  bool isMemTerminator(MemoryLocation Loc, Instruction *AccessI,
+  bool isMemTerminator(const MemoryLocation &Loc, Instruction *AccessI,
                        Instruction *MaybeTerm) {
     Optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
         getLocForTerminator(MaybeTerm);
@@ -1884,7 +1882,7 @@ struct DSEState {
   }
 
   // Returns true if \p Use may read from \p DefLoc.
-  bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+  bool isReadClobber(const MemoryLocation &DefLoc, Instruction *UseInst) {
     if (isNoopIntrinsic(UseInst))
       return false;
 
@@ -1941,9 +1939,10 @@ struct DSEState {
   // MemoryUse (read).
   Optional<MemoryAccess *>
   getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *StartAccess,
-                  MemoryLocation DefLoc, const Value *DefUO, CheckCache &Cache,
-                  unsigned &ScanLimit, unsigned &WalkerStepLimit,
-                  bool IsMemTerm, unsigned &PartialLimit) {
+                  const MemoryLocation &DefLoc, const Value *DefUO,
+                  CheckCache &Cache, unsigned &ScanLimit,
+                  unsigned &WalkerStepLimit, bool IsMemTerm,
+                  unsigned &PartialLimit) {
     if (ScanLimit == 0 || WalkerStepLimit == 0) {
       LLVM_DEBUG(dbgs() << "\n    ...  hit scan limit\n");
       return None;
@@ -2440,7 +2439,8 @@ struct DSEState {
 
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
-  bool storeIsNoop(MemoryDef *Def, MemoryLocation DefLoc, const Value *DefUO) {
+  bool storeIsNoop(MemoryDef *Def, const MemoryLocation &DefLoc,
+                   const Value *DefUO) {
     StoreInst *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
     if (!Store)
       return false;
