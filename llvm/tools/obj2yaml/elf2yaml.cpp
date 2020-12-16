@@ -661,8 +661,10 @@ template <class ELFT>
 Error ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                                   StringRef StrTable, ELFYAML::Symbol &S) {
   S.Type = Sym->getType();
-  S.Value = Sym->st_value;
-  S.Size = Sym->st_size;
+  if (Sym->st_value)
+    S.Value = (yaml::Hex64)Sym->st_value;
+  if (Sym->st_size)
+    S.Size = (yaml::Hex64)Sym->st_size;
   S.Other = Sym->st_other;
   S.Binding = Sym->getBinding();
 
