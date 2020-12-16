@@ -131,7 +131,8 @@ define i32 @xvtdivdp_shift(<2 x double> %a, <2 x double> %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvtdivdp cr0, v2, v3
 ; CHECK-NEXT:    mfocrf r3, 128
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    rlwinm r3, r3, 28, 31, 31
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %a, <2 x double> %b)
