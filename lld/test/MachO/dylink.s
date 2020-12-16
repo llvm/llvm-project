@@ -4,8 +4,9 @@
 # RUN:   -o %t/libhello.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libgoodbye.s \
 # RUN:   -o %t/libgoodbye.o
-# RUN: %lld -dylib -install_name \
-# RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
+# RUN: %lld -dylib -install_name @executable_path/libhello.dylib \
+# RUN:   -compatibility_version 10 -current_version 11 \
+# RUN:   %t/libhello.o -o %t/libhello.dylib
 # RUN: %lld -dylib -install_name \
 # RUN:   @executable_path/libgoodbye.dylib %t/libgoodbye.o -o %t/libgoodbye.dylib
 
@@ -51,12 +52,15 @@
 # RUN: llvm-objdump --macho --all-headers %t/dylink | FileCheck %s \
 # RUN:   --check-prefix=LOAD --implicit-check-not LC_LOAD_DYLIB
 
-# LOAD:              cmd LC_LOAD_DYLIB
-# LOAD-NEXT:     cmdsize
-# LOAD-NEXT:        name @executable_path/libhello.dylib
-# LOAD:              cmd LC_LOAD_DYLIB
-# LOAD-NEXT:     cmdsize
-# LOAD-NEXT:        name @executable_path/libgoodbye.dylib
+# LOAD:                        cmd LC_LOAD_DYLIB
+# LOAD-NEXT:               cmdsize
+# LOAD-NEXT:                  name @executable_path/libhello.dylib
+# LOAD-NEXT:            time stamp
+# LOAD-NEXT:       current version 11.0.0
+# LOAD-NEXT: compatibility version 10.0.0
+# LOAD:                        cmd LC_LOAD_DYLIB
+# LOAD-NEXT:               cmdsize
+# LOAD-NEXT:                  name @executable_path/libgoodbye.dylib
 
 .section __TEXT,__text
 .globl _main
