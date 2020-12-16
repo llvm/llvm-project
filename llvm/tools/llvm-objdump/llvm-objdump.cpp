@@ -1340,13 +1340,21 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
 static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
   assert(Obj->isELF());
   if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    return Elf32LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    return Elf64LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    return Elf32BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
-    return Elf64BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   llvm_unreachable("Unsupported binary format");
 }
 
@@ -1362,7 +1370,9 @@ addDynamicElfSymbols(const ELFObjectFile<ELFT> *Obj,
     // ELFSymbolRef::getAddress() returns size instead of value for common
     // symbols which is not desirable for disassembly output. Overriding.
     if (SymbolType == ELF::STT_COMMON)
-      Address = Obj->getSymbol(Symbol.getRawDataRefImpl())->st_value;
+      Address = unwrapOrError(Obj->getSymbol(Symbol.getRawDataRefImpl()),
+                              Obj->getFileName())
+                    ->st_value;
 
     StringRef Name = unwrapOrError(Symbol.getName(), Obj->getFileName());
     if (Name.empty())
