@@ -68,18 +68,6 @@ namespace llvm {
     /// Check whether this has a trivial destructor.
     bool hasTrivialDestructor() const { return Loc.hasTrivialDestructor(); }
 
-    /// Create a new DebugLoc.
-    ///
-    /// Create a new DebugLoc at the specified line/col and scope/inline.  This
-    /// forwards to \a DILocation::get().
-    ///
-    /// If \c !Scope, returns a default-constructed \a DebugLoc.
-    ///
-    /// FIXME: Remove this.  Users should use DILocation::get().
-    static DebugLoc get(unsigned Line, unsigned Col, const MDNode *Scope,
-                        const MDNode *InlinedAt = nullptr,
-                        bool ImplicitCode = false);
-
     enum { ReplaceLastInlinedAt = true };
     /// Rebuild the entire inlined-at chain for this instruction so that the top of
     /// the chain now is inlined-at the new call site.
