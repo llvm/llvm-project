@@ -40,6 +40,14 @@ enum MachOARM64RelocationKind : Edge::Kind {
 
 } // namespace MachO_arm64_Edges
 
+/// Create a LinkGraph from a MachO/arm64 relocatable object.
+///
+/// Note: The graph does not take ownership of the underlying buffer, nor copy
+/// its contents. The caller is responsible for ensuring that the object buffer
+/// outlives the graph.
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer);
+
 /// jit-link the given object buffer, which must be a MachO arm64 object file.
 ///
 /// If PrePrunePasses is empty then a default mark-live pass will be inserted
@@ -49,7 +57,8 @@ enum MachOARM64RelocationKind : Edge::Kind {
 /// If PostPrunePasses is empty then a default GOT-and-stubs insertion pass will
 /// be inserted. If PostPrunePasses is not empty then the caller is responsible
 /// for including a pass to insert GOT and stub edges.
-void jitLink_MachO_arm64(std::unique_ptr<JITLinkContext> Ctx);
+void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
+                      std::unique_ptr<JITLinkContext> Ctx);
 
 /// Return the string name of the given MachO arm64 edge kind.
 StringRef getMachOARM64RelocationKindName(Edge::Kind R);

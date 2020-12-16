@@ -18,11 +18,20 @@
 namespace llvm {
 namespace jitlink {
 
+/// Create a LinkGraph from a MachO relocatable object.
+///
+/// Note: The graph does not take ownership of the underlying buffer, nor copy
+/// its contents. The caller is responsible for ensuring that the object buffer
+/// outlives the graph.
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer);
+
 /// jit-link the given ObjBuffer, which must be a MachO object file.
 ///
 /// Uses conservative defaults for GOT and stub handling based on the target
 /// platform.
-void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx);
+void link_MachO(std::unique_ptr<LinkGraph> G,
+                std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm
