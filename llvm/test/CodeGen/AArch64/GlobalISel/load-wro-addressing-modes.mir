@@ -428,3 +428,39 @@ body:             |
     $x1 = COPY %load(s64)
     RET_ReallyLR implicit $x1
 ...
+---
+name:            zext_shl_LDRWroW
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+body:             |
+  bb.1:
+    liveins: $w0, $x1
+
+    ; We try to look through the G_ZEXT of the SHL here.
+
+    ; CHECK-LABEL: name: zext_shl_LDRWroW
+    ; CHECK: liveins: $w0, $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK: [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 7
+    ; CHECK: [[LDRWroW:%[0-9]+]]:gpr32 = LDRWroW [[COPY1]], [[ANDWri]], 0, 1 :: (load 4)
+    ; CHECK: $w0 = COPY [[LDRWroW]]
+    ; CHECK: RET_ReallyLR implicit $w0
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(p0) = COPY $x1
+    %2:gpr(s32) = G_CONSTANT i32 255
+    %3:gpr(s32) = G_AND %0, %2
+    %13:gpr(s64) = G_CONSTANT i64 2
+    %12:gpr(s32) = G_SHL %3, %13(s64)
+    %6:gpr(s64) = G_ZEXT %12(s32)
+    %7:gpr(p0) = G_PTR_ADD %1, %6(s64)
+    %9:gpr(s32) = G_LOAD %7(p0) :: (load 4)
+    $w0 = COPY %9(s32)
+    RET_ReallyLR implicit $w0
+
+...
