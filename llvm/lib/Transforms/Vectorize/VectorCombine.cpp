@@ -143,7 +143,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     return false;
 
   // Original pattern: insertelt undef, load [free casts of] PtrOp, 0
-  Align Alignment = Load->getAlign();
+  // Use the greater of the alignment on the load or its source pointer.
+  Align Alignment = std::max(SrcPtr->getPointerAlignment(DL), Load->getAlign());
   Type *LoadTy = Load->getType();
   int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
