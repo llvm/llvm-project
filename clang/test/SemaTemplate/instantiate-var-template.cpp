@@ -40,3 +40,10 @@ namespace PR24483 {
   template<typename... T> A<T...> models;
   template<> struct B models<>; // expected-error {{incomplete type 'struct B'}} expected-note {{forward declaration}}
 }
+
+namespace InvalidInsertPos {
+  template<typename T, int N> T v;
+  template<int N> decltype(v<int, N-1>) v<int, N>;
+  template<> int v<int, 0>;
+  int k = v<int, 500>;
+}

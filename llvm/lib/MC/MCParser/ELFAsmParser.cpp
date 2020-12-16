@@ -644,10 +644,13 @@ EndStmt:
       !(SectionName == ".eh_frame" && Type == ELF::SHT_PROGBITS))
     Error(loc, "changed section type for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getType()));
-  if (Section->getFlags() != Flags)
+  // Check that flags are used consistently. However, the GNU assembler permits
+  // to leave out in subsequent uses of the same sections; for compatibility,
+  // do likewise.
+  if ((Flags || Size || !TypeName.empty()) && Section->getFlags() != Flags)
     Error(loc, "changed section flags for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getFlags()));
-  if (Section->getEntrySize() != Size)
+  if ((Flags || Size || !TypeName.empty()) && Section->getEntrySize() != Size)
     Error(loc, "changed section entsize for " + SectionName +
                    ", expected: " + Twine(Section->getEntrySize()));
 
