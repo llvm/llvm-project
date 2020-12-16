@@ -7,7 +7,7 @@ define void @WhileWithLoopInvariantOperation.21() {
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, 32(%rax)
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967295,0,0,0,0,0,0]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,0,0]
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
 while.1.body.preheader:
   %0 = load i8*, i8** undef, align 8, !invariant.load !0, !dereferenceable !1, !align !2

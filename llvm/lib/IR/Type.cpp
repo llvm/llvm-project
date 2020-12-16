@@ -275,11 +275,6 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
   return Entry;
 }
 
-bool IntegerType::isPowerOf2ByteWidth() const {
-  unsigned BitWidth = getBitWidth();
-  return (BitWidth > 7) && isPowerOf2_32(BitWidth);
-}
-
 APInt IntegerType::getMask() const {
   return APInt::getAllOnesValue(getBitWidth());
 }

@@ -145,10 +145,11 @@ public:
 
   int Rank() const { return GetRank(shape_); }
   bool IsCompatibleWith(parser::ContextualMessages &, const TypeAndShape &that,
-      const char *thisIs = "POINTER", const char *thatIs = "TARGET",
-      bool isElemental = false) const;
+      const char *thisIs = "pointer", const char *thatIs = "target",
+      bool isElemental = false, bool thisIsDeferredShape = false,
+      bool thatIsDeferredShape = false) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext * = nullptr) const;
+      FoldingContext &) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

@@ -238,3 +238,30 @@ module m11c
   !ERROR: Generic interface 'g' has ambiguous derived types from modules 'm11a' and 'm11b'
   use m11b
 end module
+
+module m12a
+  interface ga
+    module procedure sa
+  end interface
+contains
+  subroutine sa(i)
+  end
+end
+module m12b
+  use m12a
+  interface gb
+    module procedure sb
+  end interface
+contains
+  subroutine sb(x)
+  end
+end
+module m12c
+  use m12b, only: gc => gb
+end
+module m12d
+  use m12a, only: g => ga
+  use m12c, only: g => gc
+  interface g
+  end interface
+end module

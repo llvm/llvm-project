@@ -431,8 +431,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const UseErrorDetails &x) {
             os << " uses:";
+            char sep{':'};
             for (const auto &[location, module] : x.occurrences()) {
-              os << " from " << module->GetName().value() << " at " << location;
+              os << sep << " from " << module->GetName().value() << " at "
+                 << location;
+              sep = ',';
             }
           },
           [](const HostAssocDetails &) {},

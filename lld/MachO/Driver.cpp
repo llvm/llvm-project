@@ -40,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TextAPI/MachO/PackedVersion.h"
 
 #include <algorithm>
 
@@ -274,8 +275,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          inputFiles.push_back(
-              make<ObjFile>(member.mbref, member.modTime, path));
+          inputFiles.insert(make<ObjFile>(member.mbref, member.modTime, path));
           printArchiveMemberLoad(
               (forceLoadArchive ? "-force_load" : "-all_load"),
               inputFiles.back());
@@ -293,7 +293,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (hasObjCSection(member.mbref)) {
-            inputFiles.push_back(
+            inputFiles.insert(
                 make<ObjFile>(member.mbref, member.modTime, path));
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -325,7 +325,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     // print the .a name here.
     if (config->printEachFile && magic != file_magic::archive)
       lld::outs() << toString(newFile) << '\n';
-    inputFiles.push_back(newFile);
+    inputFiles.insert(newFile);
   }
   return newFile;
 }
@@ -489,12 +489,13 @@ static void parseOrderFile(StringRef path) {
 // with a path of .*/libfoo.{dylib, tbd}.
 // XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
 // I'm not sure what the use case for that is.
-static bool markSubLibrary(StringRef searchName) {
+static bool markReexport(StringRef searchName, ArrayRef<StringRef> extensions) {
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       StringRef filename = path::filename(dylibFile->getName());
       if (filename.consume_front(searchName) &&
-          (filename == ".dylib" || filename == ".tbd")) {
+          (filename.empty() ||
+           find(extensions, filename) != extensions.end())) {
         dylibFile->reexport = true;
         return true;
       }
@@ -521,7 +522,7 @@ static void compileBitcodeFiles() {
       lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
-    inputFiles.push_back(file);
+    inputFiles.insert(file);
 }
 
 // Replaces common symbols with defined symbols residing in __common sections.
@@ -673,34 +674,13 @@ static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
     return 0;
   }
 
-  llvm::VersionTuple version;
-  if (version.tryParse(arg->getValue()) || version.getBuild().hasValue()) {
+  PackedVersion version;
+  if (!version.parse32(arg->getValue())) {
     error(arg->getAsString(args) + ": malformed version");
     return 0;
   }
 
-  unsigned major = version.getMajor();
-  if (major > UINT16_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(major) +
-          " out of range");
-    return 0;
-  }
-
-  unsigned minor = version.getMinor().getValueOr(0);
-  if (minor > UINT8_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(minor) +
-          " out of range");
-    return 0;
-  }
-
-  unsigned subminor = version.getSubminor().getValueOr(0);
-  if (subminor > UINT8_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(subminor) +
-          " out of range");
-    return 0;
-  }
-
-  return (major << 16) | (minor << 8) | subminor;
+  return version.rawValue();
 }
 
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
@@ -837,11 +817,17 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
-  for (opt::Arg *arg : args.filtered(OPT_sub_library)) {
+  for (opt::Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
     config->hasReexports = true;
     StringRef searchName = arg->getValue();
-    if (!markSubLibrary(searchName))
-      error("-sub_library " + searchName + " does not match a supplied dylib");
+    std::vector<StringRef> extensions;
+    if (arg->getOption().getID() == OPT_sub_library)
+      extensions = {".dylib", ".tbd"};
+    else
+      extensions = {".tbd"};
+    if (!markReexport(searchName, extensions))
+      error(arg->getSpelling() + " " + searchName +
+            " does not match a supplied dylib");
   }
 
   // Parse LTO options.
@@ -873,7 +859,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef fileName = arg->getValue(2);
     Optional<MemoryBufferRef> buffer = readFile(fileName);
     if (buffer)
-      inputFiles.push_back(make<OpaqueFile>(*buffer, segName, sectName));
+      inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
   }
 
   // Initialize InputSections.

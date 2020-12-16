@@ -302,16 +302,13 @@ void PassTiming::startAnalysisTimer(StringRef name, TypeID id) {
 void PassTiming::runAfterPass(Pass *pass, Operation *) {
   Timer *timer = popLastActiveTimer();
 
-  // If this is a pass adaptor, then we need to merge in the timing data for the
-  // pipelines running on other threads.
-  if (isa<OpToOpPassAdaptor>(pass)) {
-    auto toMerge = pipelinesToMerge.find({llvm::get_threadid(), pass});
-    if (toMerge != pipelinesToMerge.end()) {
-      for (auto &it : toMerge->second)
-        timer->mergeChild(std::move(it));
-      pipelinesToMerge.erase(toMerge);
-    }
-    return;
+  // Check to see if we need to merge in the timing data for the pipelines
+  // running on other threads.
+  auto toMerge = pipelinesToMerge.find({llvm::get_threadid(), pass});
+  if (toMerge != pipelinesToMerge.end()) {
+    for (auto &it : toMerge->second)
+      timer->mergeChild(std::move(it));
+    pipelinesToMerge.erase(toMerge);
   }
 
   timer->stop();

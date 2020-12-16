@@ -187,6 +187,11 @@ namespace Auto {
     int &r = f(B<&a>());
     float &s = f(B<&b>());
 
+    void type_affects_identity(B<&a>) {}
+    void type_affects_identity(B<(const int*)&a>) {}
+    void type_affects_identity(B<(void*)&a>) {}
+    void type_affects_identity(B<(const void*)&a>) {}
+
     // pointers to members
     template<typename T, auto *T::*p> struct B<p> {};
     template<typename T, auto **T::*p> struct B<p> {};
@@ -197,6 +202,12 @@ namespace Auto {
     auto t = f(B<&X::n>()); // expected-error {{no match}}
     char &u = f(B<&X::p>());
     short &v = f(B<&X::pp>());
+
+    struct Y : X {};
+    void type_affects_identity(B<&X::n>) {}
+    void type_affects_identity(B<(int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
+    void type_affects_identity(B<(const int X::*)&X::n>) {}
+    void type_affects_identity(B<(const int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
 
     // A case where we need to do auto-deduction, and check whether the
     // resulting dependent types match during partial ordering. These
@@ -456,4 +467,39 @@ namespace PR46637 {
   void *f();
   X<f> y;
   int n = y.call(); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'void *'}}
+}
+
+namespace PR48517 {
+  template<const int *P> struct A { static constexpr const int *p = P; };
+  template<typename T> auto make_nonconst() {
+    static int n;
+    return A<&n>();
+  };
+  using T = decltype(make_nonconst<int>()); // expected-note {{previous}}
+  using U = decltype(make_nonconst<float>());
+  static_assert(T::p != U::p);
+  using T = U; // expected-error {{different types}}
+
+  template<typename T> auto make_const() {
+    static constexpr int n = 42;
+    return A<&n>();
+  };
+  using V = decltype(make_const<int>()); // expected-note {{previous}}
+  using W = decltype(make_const<float>());
+  static_assert(*V::p == *W::p);
+  static_assert(V::p != W::p);
+  using V = W; // expected-error {{different types}}
+
+  template<auto V> struct Q {
+    using X = int;
+    static_assert(V == "primary template should not be instantiated");
+  };
+  template<typename T> struct R {
+    int n;
+    constexpr int f() {
+      return Q<&R::n>::X;
+    }
+  };
+  template<> struct Q<&R<int>::n> { static constexpr int X = 1; };
+  static_assert(R<int>().f() == 1);
 }

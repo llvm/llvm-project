@@ -1520,8 +1520,8 @@ void declare_target_to()
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK26
 
-// CK26-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 4096, i64 4, i64 {{.+}}]
-// Map types: OMP_MAP_TO | MAP_ALWAYS | OMP_MAP_IMPLICIT = 533
+// CK26-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 4, i64 4096, i64 {{.+}}]
+// Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_PTR_AND_OBJ | OMP_MAP_IMPLICIT = 531
 // CK26-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 531, i64 531, i64 531]
 
 float Vector[1024];

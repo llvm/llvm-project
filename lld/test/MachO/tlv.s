@@ -1,9 +1,14 @@
 # REQUIRES: x86
 # RUN: mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
+
 # RUN: %lld -lSystem -o %t/test %t/test.o
 # RUN: llvm-readobj --file-headers %t/test | FileCheck %s --check-prefix=HEADER
-# RUN: llvm-objdump -D %t/test | FileCheck %s
+# RUN: llvm-objdump -D --bind --rebase %t/test | FileCheck %s
+
+# RUN: %lld -lSystem -pie -o %t/test %t/test.o
+# RUN: llvm-readobj --file-headers %t/test | FileCheck %s --check-prefix=HEADER
+# RUN: llvm-objdump -D --bind --rebase %t/test | FileCheck %s
 
 # HEADER: MH_HAS_TLV_DESCRIPTORS
 
@@ -35,6 +40,13 @@
 # CHECK-NEXT:  00 00
 # CHECK-NEXT:  00 00
 # CHECK-NEXT:  00 00
+
+## Make sure we don't emit rebase opcodes for relocations in __thread_vars.
+# CHECK:       Rebase table:
+# CHECK-NEXT:  segment  section            address     type
+# CHECK-NEXT:  Bind table:
+# CHECK:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
+# CHECK:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
 
 .globl _main
 _main:

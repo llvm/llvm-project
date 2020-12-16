@@ -25,6 +25,7 @@
 ; CHECK-NEXT:       Inliner for always_inline functions
 ;                   A No-Op Barrier Pass
 ; CHECK:            FunctionPass Manager
+; CHECK-NEXT:         Annotation Remarks
 ; CHECK-NEXT:         Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
 

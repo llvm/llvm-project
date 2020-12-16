@@ -26,8 +26,8 @@ TEST(FloorfTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::floorf(inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::floorf(negInf));
 
-  ASSERT_NE(isnan(nan), 0);
-  ASSERT_NE(isnan(__llvm_libc::floorf(nan)), 0);
+  ASSERT_NE(isnan(aNaN), 0);
+  ASSERT_NE(isnan(__llvm_libc::floorf(aNaN)), 0);
 }
 
 TEST(FloorfTest, RoundedNumbers) {

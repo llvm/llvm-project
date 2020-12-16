@@ -486,13 +486,15 @@ protected:
     // Function body
     BasicBlock* Entry = BasicBlock::Create(C, "", OldFunc);
     IBuilder.SetInsertPoint(Entry);
-    DebugLoc Loc = DebugLoc::get(3, 2, Subprogram);
+    DebugLoc Loc = DILocation::get(Subprogram->getContext(), 3, 2, Subprogram);
     IBuilder.SetCurrentDebugLocation(Loc);
     AllocaInst* Alloca = IBuilder.CreateAlloca(IntegerType::getInt32Ty(C));
-    IBuilder.SetCurrentDebugLocation(DebugLoc::get(4, 2, Subprogram));
+    IBuilder.SetCurrentDebugLocation(
+        DILocation::get(Subprogram->getContext(), 4, 2, Subprogram));
     Value* AllocaContent = IBuilder.getInt32(1);
     Instruction* Store = IBuilder.CreateStore(AllocaContent, Alloca);
-    IBuilder.SetCurrentDebugLocation(DebugLoc::get(5, 2, Subprogram));
+    IBuilder.SetCurrentDebugLocation(
+        DILocation::get(Subprogram->getContext(), 5, 2, Subprogram));
 
     // Create a local variable around the alloca
     auto *IntType = DBuilder.createBasicType("int", 32, dwarf::DW_ATE_signed);
@@ -515,8 +517,9 @@ protected:
         DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, StructType, true);
     auto *Scope = DBuilder.createLexicalBlock(
         DBuilder.createLexicalBlockFile(InlinedSP, File), File, 1, 1);
-    auto InlinedDL =
-        DebugLoc::get(9, 4, Scope, DebugLoc::get(5, 2, Subprogram));
+    auto InlinedDL = DILocation::get(
+        Subprogram->getContext(), 9, 4, Scope,
+        DILocation::get(Subprogram->getContext(), 5, 2, Subprogram));
     IBuilder.SetCurrentDebugLocation(InlinedDL);
     DBuilder.insertDeclare(Alloca, InlinedVar, E, InlinedDL, Store);
     IBuilder.CreateStore(IBuilder.getInt32(2), Alloca);

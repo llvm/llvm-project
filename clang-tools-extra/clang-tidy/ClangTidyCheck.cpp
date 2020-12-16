@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -108,13 +109,14 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
 
 static llvm::Expected<bool> getAsBool(StringRef Value,
                                       const llvm::Twine &LookupName) {
-  if (Value == "true")
-    return true;
-  if (Value == "false")
-    return false;
-  bool Result;
-  if (!Value.getAsInteger(10, Result))
-    return Result;
+
+  if (llvm::Optional<bool> Parsed = llvm::yaml::parseBool(Value))
+    return *Parsed;
+  // To maintain backwards compatability, we support parsing numbers as
+  // booleans, even though its not supported in YAML.
+  long long Number;
+  if (!Value.getAsInteger(10, Number))
+    return Number != 0;
   return llvm::make_error<UnparseableIntegerOptionError>(LookupName.str(),
                                                          Value.str(), true);
 }

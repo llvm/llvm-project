@@ -16,6 +16,7 @@ module __Fortran_builtins
   integer, parameter, private :: int64 = selected_int_kind(18)
 
   intrinsic :: __builtin_c_f_pointer
+  intrinsic :: sizeof ! extension
 
   type :: __builtin_event_type
     integer(kind=int64) :: __count

@@ -236,14 +236,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBR:
-    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R1D);
+    LoweredMI = MCInstBuilder(SystemZ::BR)
+      .addReg(MI->getOperand(0).getReg());
     break;
 
   case SystemZ::CallBCR:
     LoweredMI = MCInstBuilder(SystemZ::BCR)
       .addImm(MI->getOperand(0).getImm())
       .addImm(MI->getOperand(1).getImm())
-      .addReg(SystemZ::R1D);
+      .addReg(MI->getOperand(2).getReg());
     break;
 
   case SystemZ::CRBCall:
@@ -251,7 +252,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -260,7 +261,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -269,7 +270,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -278,7 +279,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -287,7 +288,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -296,7 +297,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -305,7 +306,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -314,7 +315,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 

@@ -285,9 +285,12 @@ def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
   let options = [
-    Option<"disableCanonicalization", "disable-simplify", "bool",
-           /*default=*/"false",
-           "Disable running simplifications during inlining">,
+    Option<"defaultPipelineStr", "default-pipeline", "std::string",
+           /*default=*/"", "The default optimizer pipeline used for callables">,
+    ListOption<"opPipelineStrs", "op-pipelines", "std::string",
+               "Callable operation specific optimizer pipelines (in the form "
+               "of `dialect.op(pipeline)`)",
+               "llvm::cl::MiscFlags::CommaSeparated">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,

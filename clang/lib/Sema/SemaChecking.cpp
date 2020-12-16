@@ -3198,7 +3198,7 @@ static QualType DecodePPCMMATypeFromStr(ASTContext &Context, const char *&Str,
     Str = End;
     QualType Type;
     switch (size) {
-  #define PPC_MMA_VECTOR_TYPE(typeName, Id, size) \
+  #define PPC_VECTOR_TYPE(typeName, Id, size) \
     case size: Type = Context.Id##Ty; break;
   #include "clang/Basic/PPCTypes.def"
     default: llvm_unreachable("Invalid PowerPC MMA vector type");
@@ -3316,7 +3316,7 @@ bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
     return false;
 
   QualType CoreType = Type.getCanonicalType().getUnqualifiedType();
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) || CoreType == Context.Id##Ty
+#define PPC_VECTOR_TYPE(Name, Id, Size) || CoreType == Context.Id##Ty
   if (false
 #include "clang/Basic/PPCTypes.def"
      ) {

@@ -1,0 +1,14 @@
+# REQUIRES: x86-registered-target
+
+# RUN: cp -f %S/Inputs/common-label-different-bodies-1.ll %t-1.ll
+# RUN: cp -f %S/Inputs/common-label-different-bodies-2.ll %t-2.ll
+# RUN: cp -f %S/Inputs/common-label-different-bodies-3.ll %t-3.ll
+# RUN: %update_llc_test_checks %t-1.ll
+# RUN: %update_llc_test_checks %t-2.ll
+# RUN: %update_llc_test_checks %t-3.ll
+# RUN: FileCheck --input-file=%t-1.ll %s
+# RUN: FileCheck --input-file=%t-2.ll %s
+# RUN: FileCheck --input-file=%t-3.ll %s
+
+# CHECK: B-LABEL: fold_v2i64
+# CHECK-NOT: A-LABEL: fold_v2i64

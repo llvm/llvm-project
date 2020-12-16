@@ -5,13 +5,13 @@ flat_load_dword v1, v[3:4]
 // GFX10: encoding: [0x00,0x00,0x30,0xdc,0x03,0x00,0x7d,0x01]
 
 flat_load_dword v1, v[3:4] offset:-1
-// GFX10-ERR: :28: error: expected an 11-bit unsigned offset
+// GFX10-ERR: :28: error: expected a 11-bit unsigned offset
 
 flat_load_dword v1, v[3:4] offset:2047
 // GFX10: encoding: [0xff,0x07,0x30,0xdc,0x03,0x00,0x7d,0x01]
 
 flat_load_dword v1, v[3:4] offset:2048
-// GFX10-ERR: error: expected an 11-bit unsigned offset
+// GFX10-ERR: error: expected a 11-bit unsigned offset
 
 flat_load_dword v1, v[3:4] offset:4 glc
 // GFX10: encoding: [0x04,0x00,0x31,0xdc,0x03,0x00,0x7d,0x01]

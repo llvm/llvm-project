@@ -163,9 +163,7 @@ void AssumptionCache::unregisterAssumption(CallInst *CI) {
       AffectedValues.erase(AVI);
   }
 
-  AssumeHandles.erase(
-      remove_if(AssumeHandles, [CI](ResultElem &RE) { return CI == RE; }),
-      AssumeHandles.end());
+  erase_value(AssumeHandles, CI);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {

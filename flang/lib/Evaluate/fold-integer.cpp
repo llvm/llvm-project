@@ -587,6 +587,22 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         return Expr<T>{ConvertToType<T>(Fold(context, std::move(product)))};
       }
     }
+  } else if (name == "sizeof") { // in bytes; extension
+    if (auto info{
+            characteristics::TypeAndShape::Characterize(args[0], context)}) {
+      if (auto bytes{info->MeasureSizeInBytes(context)}) {
+        return Expr<T>{Fold(context, ConvertToType<T>(std::move(*bytes)))};
+      }
+    }
+  } else if (name == "storage_size") { // in bits
+    if (const auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
+      if (auto type{expr->GetType()}) {
+        if (auto bytes{type->MeasureSizeInBytes(context, true)}) {
+          return Expr<T>{
+              Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
+        }
+      }
+    }
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }

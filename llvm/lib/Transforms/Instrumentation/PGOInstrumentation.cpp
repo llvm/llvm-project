@@ -252,6 +252,30 @@ static cl::opt<bool> PGOInstrumentEntry(
     "pgo-instrument-entry", cl::init(false), cl::Hidden,
     cl::desc("Force to instrument function entry basicblock."));
 
+static cl::opt<bool> PGOVerifyHotBFI(
+    "pgo-verify-hot-bfi", cl::init(false), cl::Hidden,
+    cl::desc("Print out the non-match BFI count if a hot raw profile count "
+             "becomes non-hot, or a cold raw profile count becomes hot. "
+             "The print is enabled under -Rpass-analysis=pgo, or "
+             "internal option -pass-remakrs-analysis=pgo."));
+
+static cl::opt<bool> PGOVerifyBFI(
+    "pgo-verify-bfi", cl::init(false), cl::Hidden,
+    cl::desc("Print out mismatched BFI counts after setting profile metadata "
+             "The print is enabled under -Rpass-analysis=pgo, or "
+             "internal option -pass-remakrs-analysis=pgo."));
+
+static cl::opt<unsigned> PGOVerifyBFIRatio(
+    "pgo-verify-bfi-ratio", cl::init(5), cl::Hidden,
+    cl::desc("Set the threshold for pgo-verify-big -- only print out "
+             "mismatched BFI if the difference percentage is greater than "
+             "this value (in percentage)."));
+
+static cl::opt<unsigned> PGOVerifyBFICutoff(
+    "pgo-verify-bfi-cutoff", cl::init(1), cl::Hidden,
+    cl::desc("Set the threshold for pgo-verify-bfi -- skip the counts whose "
+             "profile count value is below."));
+
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<PGOViewCountsType> PGOViewCounts;
@@ -1616,6 +1640,82 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+// Compare the profile count values with BFI count values, and print out
+// the non-matching ones.
+static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
+                          BranchProbabilityInfo &NBPI,
+                          uint64_t HotCountThreshold,
+                          uint64_t ColdCountThreshold) {
+  Function &F = Func.getFunc();
+  BlockFrequencyInfo NBFI(F, NBPI, LI);
+  //  bool PrintFunc = false;
+  bool HotBBOnly = PGOVerifyHotBFI;
+  std::string Msg;
+  OptimizationRemarkEmitter ORE(&F);
+
+  unsigned BBNum = 0, BBMisMatchNum = 0, NonZeroBBNum = 0;
+  for (auto &BBI : F) {
+    uint64_t CountValue = 0;
+    uint64_t BFICountValue = 0;
+
+    if (Func.getBBInfo(&BBI).CountValid)
+      CountValue = Func.getBBInfo(&BBI).CountValue;
+
+    BBNum++;
+    if (CountValue)
+      NonZeroBBNum++;
+    auto BFICount = NBFI.getBlockProfileCount(&BBI);
+    if (BFICount)
+      BFICountValue = BFICount.getValue();
+
+    if (HotBBOnly) {
+      bool rawIsHot = CountValue >= HotCountThreshold;
+      bool BFIIsHot = BFICountValue >= HotCountThreshold;
+      bool rawIsCold = CountValue <= ColdCountThreshold;
+      bool ShowCount = false;
+      if (rawIsHot && !BFIIsHot) {
+        Msg = "raw-Hot to BFI-nonHot";
+        ShowCount = true;
+      } else if (rawIsCold && BFIIsHot) {
+        Msg = "raw-Cold to BFI-Hot";
+        ShowCount = true;
+      }
+      if (!ShowCount)
+        continue;
+    } else {
+      if ((CountValue < PGOVerifyBFICutoff) &&
+          (BFICountValue < PGOVerifyBFICutoff))
+        continue;
+      uint64_t Diff = (BFICountValue >= CountValue)
+                          ? BFICountValue - CountValue
+                          : CountValue - BFICountValue;
+      if (Diff < CountValue / 100 * PGOVerifyBFIRatio)
+        continue;
+    }
+    BBMisMatchNum++;
+
+    ORE.emit([&]() {
+      OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "bfi-verify",
+                                        F.getSubprogram(), &BBI);
+      Remark << "BB " << ore::NV("Block", BBI.getName())
+             << " Count=" << ore::NV("Count", CountValue)
+             << " BFI_Count=" << ore::NV("Count", BFICountValue);
+      if (!Msg.empty())
+        Remark << " (" << Msg << ")";
+      return Remark;
+    });
+  }
+  if (BBMisMatchNum)
+    ORE.emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "bfi-verify",
+                                        F.getSubprogram(), &F.getEntryBlock())
+             << "In Func " << ore::NV("Function", F.getName())
+             << ": Num_of_BB=" << ore::NV("Count", BBNum)
+             << ", Num_of_non_zerovalue_BB=" << ore::NV("Count", NonZeroBBNum)
+             << ", Num_of_mis_matching_BB=" << ore::NV("Count", BBMisMatchNum);
+    });
+}
+
 static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
     function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
@@ -1740,6 +1840,18 @@ static bool annotateAllFunctions(
         dbgs() << "pgo-view-raw-counts: " << Func.getFunc().getName() << "\n";
         Func.dumpInfo();
       }
+    }
+
+    // Verify BlockFrequency information.
+    if (PGOVerifyBFI || PGOVerifyHotBFI) {
+      LoopInfo LI{DominatorTree(F)};
+      BranchProbabilityInfo NBPI(F, LI);
+      uint64_t HotCountThreshold = 0, ColdCountThreshold = 0;
+      if (PGOVerifyHotBFI) {
+        HotCountThreshold = PSI->getOrCompHotCountThreshold();
+        ColdCountThreshold = PSI->getOrCompColdCountThreshold();
+      }
+      verifyFuncBFI(Func, LI, NBPI, HotCountThreshold, ColdCountThreshold);
     }
   }
 
