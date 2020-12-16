@@ -105,15 +105,10 @@ namespace {
 /// functionality, i.e. we will traverse if the mapped value also has a mapping.
 struct ConversionValueMapping {
   /// Lookup a mapped value within the map. If a mapping for the provided value
-  /// does not exist then return the provided value.
-  Value lookupOrDefault(Value from) const;
-
-  /// Lookup the latest legal value within the map. If a mapping for the
-  /// provided value does not exist then return the provided value. If
-  /// `converter` is non-null, returns the most recently mapped value with the
-  /// legal type. If an operand of that type does not exist, defaults to normal
-  /// behavior.
-  Value lookupLatestLegal(Value from, TypeConverter *converter) const;
+  /// does not exist then return the provided value. If `desiredType` is
+  /// non-null, returns the most recently mapped value with that type. If an
+  /// operand of that type does not exist, defaults to normal behavior.
+  Value lookupOrDefault(Value from, Type desiredType = nullptr) const;
 
   /// Lookup a mapped value within the map, or return null if a mapping does not
   /// exist. If a mapping exists, this follows the same behavior of
@@ -132,24 +127,22 @@ private:
 };
 } // end anonymous namespace
 
-Value ConversionValueMapping::lookupOrDefault(Value from) const {
-  // If this value had a valid mapping, unmap that value as well in the case
-  // that it was also replaced.
-  while (auto mappedValue = mapping.lookupOrNull(from))
-    from = mappedValue;
-  return from;
-}
+Value ConversionValueMapping::lookupOrDefault(Value from,
+                                              Type desiredType) const {
+  // If there was no desired type, simply find the leaf value.
+  if (!desiredType) {
+    // If this value had a valid mapping, unmap that value as well in the case
+    // that it was also replaced.
+    while (auto mappedValue = mapping.lookupOrNull(from))
+      from = mappedValue;
+    return from;
+  }
 
-Value ConversionValueMapping::lookupLatestLegal(
-    Value from, TypeConverter *converter) const {
-  if (!converter)
-    return lookupOrDefault(from);
-
-  // Otherwise, try to find the deepest value that has the legal type.
-  Value legalValue;
+  // Otherwise, try to find the deepest value that has the desired type.
+  Value desiredValue;
   do {
-    if (converter->isLegal(from.getType()))
-      legalValue = from;
+    if (from.getType() == desiredType)
+      desiredValue = from;
 
     Value mappedValue = mapping.lookupOrNull(from);
     if (!mappedValue)
@@ -158,7 +151,7 @@ Value ConversionValueMapping::lookupLatestLegal(
   } while (true);
 
   // If the desired value was found use it, otherwise default to the leaf value.
-  return legalValue ? legalValue : from;
+  return desiredValue ? desiredValue : from;
 }
 
 Value ConversionValueMapping::lookupOrNull(Value from) const {
@@ -1046,41 +1039,22 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     Value operand = it.value();
     Type origType = operand.getType();
 
-    Value newOperand = mapping.lookupLatestLegal(operand, converter);
-
-    // Handle the case where the conversion was 1->1 and the new operand type
-    // isn't legal.
-    Type newOperandType = newOperand.getType();
+    // If a converter was provided, get the desired legal types for this
+    // operand.
+    Type desiredType;
     if (converter) {
-      if (!converter->isLegal(newOperandType)) {
-        legalTypes.clear();
-
-        // If there is no legal conversion, fail to match this pattern.
-        if (failed(converter->convertType(origType, legalTypes))) {
-          return notifyMatchFailure(loc, [=](Diagnostic &diag) {
-            diag << "unable to convert type for operand #" << it.index()
-                 << ", type was " << origType;
-          });
-        }
-        // TODO: There currently isn't any mechanism to do 1->N type conversion
-        // via the PatternRewriter replacement API, so for now we just ignore
-        // it.
-        if (legalTypes.size() != 1) {
-          remapped.push_back(newOperand);
-          continue;
-        }
-        Type desiredType = legalTypes.front();
-        newOperand = converter->materializeTargetConversion(
-            rewriter, loc, desiredType, newOperand);
-        if (!newOperand) {
-          return notifyMatchFailure(loc, [=](Diagnostic &diag) {
-            diag << "unable to materialize a conversion for "
-                    "operand #"
-                 << it.index() << ", from " << newOperandType << " to "
-                 << desiredType;
-          });
-        }
+      // If there is no legal conversion, fail to match this pattern.
+      legalTypes.clear();
+      if (failed(converter->convertType(origType, legalTypes))) {
+        return notifyMatchFailure(loc, [=](Diagnostic &diag) {
+          diag << "unable to convert type for operand #" << it.index()
+               << ", type was " << origType;
+        });
       }
+      // TODO: There currently isn't any mechanism to do 1->N type conversion
+      // via the PatternRewriter replacement API, so for now we just ignore it.
+      if (legalTypes.size() == 1)
+        desiredType = legalTypes.front();
     } else {
       // TODO: What we should do here is just set `desiredType` to `origType`
       // and then handle the necessary type conversions after the conversion
@@ -1088,7 +1062,24 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       // receiving the new operands even if the types change, so we keep the
       // original behavior here for now until all of the patterns relying on
       // this get updated.
+    }
+    Value newOperand = mapping.lookupOrDefault(operand, desiredType);
+
+    // Handle the case where the conversion was 1->1 and the new operand type
+    // isn't legal.
+    Type newOperandType = newOperand.getType();
+    if (converter && desiredType && newOperandType != desiredType) {
       // Attempt to materialize a conversion for this new value.
+      newOperand = converter->materializeTargetConversion(
+          rewriter, loc, desiredType, newOperand);
+      if (!newOperand) {
+        return notifyMatchFailure(loc, [=](Diagnostic &diag) {
+          diag << "unable to materialize a conversion for "
+                  "operand #"
+               << it.index() << ", from " << newOperandType << " to "
+               << desiredType;
+        });
+      }
     }
     remapped.push_back(newOperand);
   }
