@@ -106,8 +106,8 @@ struct Symbol {
   Optional<StringRef> Section;
   Optional<ELF_SHN> Index;
   ELF_STB Binding;
-  llvm::yaml::Hex64 Value;
-  llvm::yaml::Hex64 Size;
+  Optional<llvm::yaml::Hex64> Value;
+  Optional<llvm::yaml::Hex64> Size;
   Optional<uint8_t> Other;
 
   Optional<uint32_t> StName;
