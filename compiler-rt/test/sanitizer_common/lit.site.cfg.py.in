@@ -5,7 +5,7 @@ config.name_suffix = "@CONFIG_NAME@"
 config.tool_name = "@SANITIZER_COMMON_LIT_TEST_MODE@"
 config.target_cflags = "@SANITIZER_COMMON_TEST_TARGET_CFLAGS@"
 config.target_arch = "@SANITIZER_COMMON_TEST_TARGET_ARCH@"
-config.binary_path = "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
+config.binary_path = "@LLVM_BINARY_DIR@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
