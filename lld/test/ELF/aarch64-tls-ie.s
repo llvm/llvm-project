@@ -34,9 +34,9 @@
 ## Page(0x2200B8) - Page(0x210000) = 0x10000 = 65536
 ## 0x2200B8 & 0xff8 = 0xB8 = 184
 # CHECK:     <_start>:
-# CHECK-NEXT: 210278: adrp x0, #65536
+# CHECK-NEXT: 210278: adrp x0, 0x220000
 # CHECK-NEXT: 21027c: ldr  x0, [x0, #824]
-# CHECK-NEXT: 210280: adrp x0, #65536
+# CHECK-NEXT: 210280: adrp x0, 0x220000
 # CHECK-NEXT: 210284: ldr  x0, [x0, #832]
 
 .globl _start
