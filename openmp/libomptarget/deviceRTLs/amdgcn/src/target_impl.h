@@ -74,8 +74,9 @@ INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
   return (((uint64_t)hi) << 32) | (uint64_t)lo;
 }
 
-static const __kmpc_impl_lanemask_t __kmpc_impl_all_lanes =
-    UINT64_C(0xffffffffffffffff);
+enum : __kmpc_impl_lanemask_t {
+  __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
+};
 
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt();
 
