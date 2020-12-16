@@ -150,7 +150,8 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 
 bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     const TypeAndShape &that, const char *thisIs, const char *thatIs,
-    bool isElemental) const {
+    bool isElemental, bool thisIsDeferredShape,
+    bool thatIsDeferredShape) const {
   if (!type_.IsTkCompatibleWith(that.type_)) {
     const auto &len{that.LEN()};
     messages.Say(
@@ -161,7 +162,8 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
   }
   return isElemental ||
       CheckConformance(messages, shape_, that.shape_, thisIs, thatIs, false,
-          false /* no scalar expansion */);
+          false /* no scalar expansion */, thisIsDeferredShape,
+          thatIsDeferredShape);
 }
 
 std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
