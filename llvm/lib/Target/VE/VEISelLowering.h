@@ -24,23 +24,21 @@ namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
-  Hi,
-  Lo, // Hi/Lo operations, typically on a global address.
-
-  GETFUNPLT,   // load function address through %plt insturction
-  GETTLSADDR,  // load address for TLS access
-  GETSTACKTOP, // retrieve address of stack top (first address of
-               // locals and temporaries)
-
-  MEMBARRIER, // Compiler barrier only; generate a no-op.
-
-  VEC_BROADCAST,    // 0: scalar value, 1: VL
-
   CALL,            // A call instruction.
-  RET_FLAG,        // Return with a flag operand.
+  GETFUNPLT,       // Load function address through %plt insturction.
+  GETTLSADDR,      // Load address for TLS access.
+  GETSTACKTOP,     // Retrieve address of stack top (first address of
+                   // locals and temporaries).
   GLOBAL_BASE_REG, // Global base reg for PIC.
+  Hi,              // Hi/Lo operations, typically on a global address.
+  Lo,              // Hi/Lo operations, typically on a global address.
+  MEMBARRIER,      // Compiler barrier only; generate a no-op.
+  RET_FLAG,        // Return with a flag operand.
+  TS1AM,           // A TS1AM instruction used for 1/2 bytes swap.
+  VEC_BROADCAST,   // A vector broadcast instruction.
+                   //   0: scalar value, 1: VL
 
-  // VVP_* nodes.
+// VVP_* nodes.
 #define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
 #include "VVPNodes.def"
 };
@@ -95,6 +93,8 @@ public:
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 
   /// Custom Lower {
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -109,6 +109,7 @@ public:
   // EK_LabelDifference32.
 
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
@@ -123,6 +124,12 @@ public:
 
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
+
+  /// Replace the results of node with an illegal result
+  /// type with new values built out of custom code.
+  ///
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
 
   /// VVP Lowering {
   SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;

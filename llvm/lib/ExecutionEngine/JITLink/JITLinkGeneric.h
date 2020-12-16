@@ -32,9 +32,11 @@ namespace jitlink {
 /// remaining linker work) to allow them to be performed asynchronously.
 class JITLinkerBase {
 public:
-  JITLinkerBase(std::unique_ptr<JITLinkContext> Ctx, PassConfiguration Passes)
-      : Ctx(std::move(Ctx)), Passes(std::move(Passes)) {
+  JITLinkerBase(std::unique_ptr<JITLinkContext> Ctx,
+                std::unique_ptr<LinkGraph> G, PassConfiguration Passes)
+      : Ctx(std::move(Ctx)), G(std::move(G)), Passes(std::move(Passes)) {
     assert(this->Ctx && "Ctx can not be null");
+    assert(this->G && "G can not be null");
   }
 
   virtual ~JITLinkerBase();
@@ -50,8 +52,7 @@ protected:
   using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
 
   // Phase 1:
-  //   1.1: Build link graph
-  //   1.2: Run pre-prune passes
+  //   1.1: Run pre-prune passes
   //   1.2: Prune graph
   //   1.3: Run post-prune passes
   //   1.4: Sort blocks into segments
@@ -71,11 +72,6 @@ protected:
   // Phase 3:
   //   3.1: Call OnFinalized callback, handing off allocation.
   void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
-
-  // Build a graph from the given object buffer.
-  // To be implemented by the client.
-  virtual Expected<std::unique_ptr<LinkGraph>>
-  buildGraph(MemoryBufferRef ObjBuffer) = 0;
 
   // For debug dumping of the link graph.
   virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
@@ -113,8 +109,8 @@ private:
   void dumpGraph(raw_ostream &OS);
 
   std::unique_ptr<JITLinkContext> Ctx;
-  PassConfiguration Passes;
   std::unique_ptr<LinkGraph> G;
+  PassConfiguration Passes;
   std::unique_ptr<JITLinkMemoryManager::Allocation> Alloc;
 };
 

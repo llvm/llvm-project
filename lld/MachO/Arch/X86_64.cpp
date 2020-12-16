@@ -248,7 +248,11 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
         return;
       }
     }
-    addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+    // References from thread-local variable sections are treated as offsets
+    // relative to the start of the referent section, and therefore have no
+    // need of rebase opcodes.
+    if (!(isThreadLocalVariables(isec->flags) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
     break;
   }
   case X86_64_RELOC_SIGNED:

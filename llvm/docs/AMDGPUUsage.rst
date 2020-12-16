@@ -3584,8 +3584,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
-     448     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _BUFFER                         SGPR user data registers
+     458:448 7 bits  *See separate bits below.*      Enable the setup of the
+                                                     SGPR user data registers
                                                      (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -3596,12 +3596,15 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``compute_pgm_rsrc2.user_sgpr.user_sgpr_count``.
                                                      Any requests beyond 16
                                                      will be ignored.
-     449     1 bit   ENABLE_SGPR_DISPATCH_PTR        *see above*
-     450     1 bit   ENABLE_SGPR_QUEUE_PTR           *see above*
-     451     1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR *see above*
-     452     1 bit   ENABLE_SGPR_DISPATCH_ID         *see above*
-     453     1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT   *see above*
-     454     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     *see above*
+     >448    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
+                     _BUFFER
+     >449    1 bit   ENABLE_SGPR_DISPATCH_PTR
+     >450    1 bit   ENABLE_SGPR_QUEUE_PTR
+     >451    1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR
+     >452    1 bit   ENABLE_SGPR_DISPATCH_ID
+     >453    1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT
+
+     >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
      457:455 3 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-9
@@ -3915,8 +3918,12 @@ The fields used by CP for code objects before V3 also match those specified in
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     0       1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _WAVEFRONT_OFFSET               SGPR wavefront scratch offset
+     0       1 bit   ENABLE_PRIVATE_SEGMENT          Enable the setup of the
+                                                     private segment.
+
+                                                     In addition, enable the
+                                                     setup of the SGPR
+                                                     wavefront scratch offset
                                                      system register (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -4155,14 +4162,18 @@ SGPR register initial state is defined in
                 (kernel descriptor enable  of
                 field)                     SGPRs
      ========== ========================== ====== ==============================
-     First      Private Segment Buffer     4      V# that can be used, together
-                (enable_sgpr_private              with Scratch Wavefront Offset
-                _segment_buffer)                  as an offset, to access the
+     First      Private Segment Buffer     4      This is 4 SGPRs:
+                (enable_sgpr_private
+                _segment_buffer)
+                                                  V# that can be used,
+                                                  together with Scratch
+                                                  Wavefront Offset as an
+                                                  offset, to access the
                                                   private memory space using a
                                                   segment address.
 
-                                                  CP uses the value provided by
-                                                  the runtime.
+                                                  CP uses the value provided
+                                                  by the runtime.
      then       Dispatch Ptr               2      64-bit address of AQL dispatch
                 (enable_sgpr_dispatch_ptr)        packet for kernel dispatch
                                                   actually executing.
@@ -4327,16 +4338,18 @@ SGPR register initial state is defined in
      then       Work-Group Info            1      {first_wavefront, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
                 _info)                            threadgroup_size_in_wavefronts[5:0]}
-     then       Scratch Wavefront Offset   1      32-bit byte offset from base
-                (enable_sgpr_private              of scratch base of queue
-                _segment_wavefront_offset)        executing the kernel
+     then       Scratch Wavefront Offset   1      This is 1 SGPR:
+                (enable_sgpr_private
+                _segment_wavefront_offset)
+                                                  32-bit byte offset from base
+                                                  of scratch base of queue
+                                                  executing the kernel
                                                   dispatch. Must be used as an
-                                                  offset with Private
-                                                  segment address when using
-                                                  Scratch Segment Buffer. It
-                                                  must be used to set up FLAT
-                                                  SCRATCH for flat addressing
-                                                  (see
+                                                  offset with Private segment
+                                                  address when using Scratch
+                                                  Segment Buffer. It must be
+                                                  used to set up FLAT SCRATCH
+                                                  for flat addressing (see
                                                   :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`).
      ========== ========================== ====== ==============================
 
@@ -4381,8 +4394,8 @@ The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
-Flat Scratch register pair are adjacent SGPRs so they can be moved as a 64-bit
-value to the hardware required SGPRn-3 and SGPRn-4 respectively.
+See :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch` for Flat Scratch register
+pair initialization.
 
 The global segment can be accessed either using buffer instructions (GFX6 which
 has V# 64-bit address support), flat instructions (GFX7-GFX10), or global
@@ -4461,39 +4474,40 @@ pointer are replaced with immediate ``0`` offsets.
 Flat Scratch
 ++++++++++++
 
-If the kernel or any function it calls may use flat operations to access
-scratch memory, the prolog code must set up the FLAT_SCRATCH register pair
-(FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which are in SGPRn-4/SGPRn-3). Initialization
-uses Flat Scratch Init and Scratch Wavefront Offset SGPR registers (see
-:ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
-
 GFX6
   Flat scratch is not supported.
 
-GFX7-GFX8
+GFX7-GFX10
+  If the kernel or any function it calls may use flat operations to access
+  scratch memory, the prolog code must set up the FLAT_SCRATCH register pair
+  (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which are in SGPRn-4/SGPRn-3). Initialization
+  uses Flat Scratch Init and Scratch Wavefront Offset SGPR registers (see
+  :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
-  1. The low word of Flat Scratch Init is 32-bit byte offset from
-     ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
-     being managed by SPI for the queue executing the kernel dispatch. This is
-     the same value used in the Scratch Segment Buffer V# base address. The
-     prolog must add the value of Scratch Wavefront Offset to get the
-     wavefront's byte scratch backing memory offset from
-     ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since FLAT_SCRATCH_LO is in units of 256
-     bytes, the offset must be right shifted by 8 before moving into
-     FLAT_SCRATCH_LO.
-  2. The second word of Flat Scratch Init is 32-bit byte size of a single
-     work-items scratch memory usage. This is directly loaded from the kernel
-     dispatch packet Private Segment Byte Size and rounded up to a multiple of
-     DWORD. Having CP load it once avoids loading it at the beginning of every
-     wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT
-     SCRATCH SIZE.
+  GFX7-GFX8
 
-GFX9-GFX10
-  The Flat Scratch Init is the 64-bit address of the base of scratch backing
-  memory being managed by SPI for the queue executing the kernel dispatch. The
-  prolog must add the value of Scratch Wavefront Offset and moved to the
-  FLAT_SCRATCH pair for use as the flat scratch base in flat memory
-  instructions.
+    1. The low word of Flat Scratch Init is 32-bit byte offset from
+       ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
+       being managed by SPI for the queue executing the kernel dispatch. This is
+       the same value used in the Scratch Segment Buffer V# base address. The
+       prolog must add the value of Scratch Wavefront Offset to get the
+       wavefront's byte scratch backing memory offset from
+       ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since FLAT_SCRATCH_LO is in units of 256
+       bytes, the offset must be right shifted by 8 before moving into
+       FLAT_SCRATCH_LO.
+    2. The second word of Flat Scratch Init is 32-bit byte size of a single
+       work-items scratch memory usage. This is directly loaded from the kernel
+       dispatch packet Private Segment Byte Size and rounded up to a multiple of
+       DWORD. Having CP load it once avoids loading it at the beginning of every
+       wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT
+       SCRATCH SIZE.
+
+  GFX9-GFX10
+    The Flat Scratch Init is the 64-bit address of the base of scratch backing
+    memory being managed by SPI for the queue executing the kernel dispatch. The
+    prolog must add the value of the wave's Scratch Wavefront Offset and moved
+    as a 64-bit value to the FLAT_SCRATCH pair for use as the flat scratch base
+    in flat memory instructions.
 
 .. _amdgpu-amdhsa-kernel-prolog-private-segment-buffer:
 
@@ -9223,7 +9237,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
-     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET in
+     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX10   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.

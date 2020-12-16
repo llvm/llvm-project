@@ -4422,7 +4422,7 @@ UnaryOperator::UnaryOperator(const ASTContext &Ctx, Expr *input, Opcode opc,
   UnaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
-  setDependence(computeDependence(this));
+  setDependence(computeDependence(this, Ctx));
 }
 
 UnaryOperator *UnaryOperator::Create(const ASTContext &C, Expr *input,

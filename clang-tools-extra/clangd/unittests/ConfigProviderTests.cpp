@@ -79,6 +79,12 @@ CompileFlags:
   Unknown: 42
 )yaml";
 
+const char *AddFooWithTypoErr = R"yaml(
+CompileFlags:
+  Add: foo
+  Removr: 42
+)yaml";
+
 const char *AddBarBaz = R"yaml(
 CompileFlags:
   Add: bar
@@ -95,7 +101,7 @@ TEST(ProviderTest, FromYAMLFile) {
   auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
   auto Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
   EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
   Diags.clear();
@@ -104,6 +110,16 @@ TEST(ProviderTest, FromYAMLFile) {
   EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached, not re-parsed";
   EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+
+  FS.Files["foo.yaml"] = AddFooWithTypoErr;
+  Cfg = P->getConfig(Params(), Diags.callback());
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(DiagMessage(
+          "Unknown CompileFlags key 'Removr'; did you mean 'Remove'?")));
+  EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+  Diags.clear();
 
   FS.Files["foo.yaml"] = AddBarBaz;
   Cfg = P->getConfig(Params(), Diags.callback());
@@ -143,7 +159,7 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
 
   Cfg = P->getConfig(ABCParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
   // FIXME: fails on windows: paths have mixed slashes like C:\a/b\c.yaml
   EXPECT_THAT(Diags.Files,
               ElementsAre(testPath("a/foo.yaml"), testPath("a/b/c/foo.yaml")));
@@ -178,7 +194,7 @@ TEST(ProviderTest, Staleness) {
   FS.Files["foo.yaml"] = AddFooWithErr;
   auto Cfg = P->getConfig(StaleOK, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
   Diags.clear();
 

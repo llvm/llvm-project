@@ -3,7 +3,7 @@ define i32 @test() {
 entry:
 	br label %T
 T:
-	%C = phi i1 [false, %entry] 
+	%C = phi i1 [false, %entry]
 	br i1 %C, label %X, label %Y
 X:
 	ret i32 2

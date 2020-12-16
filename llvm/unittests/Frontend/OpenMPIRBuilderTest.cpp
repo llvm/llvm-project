@@ -45,7 +45,7 @@ protected:
     F->setSubprogram(SP);
     auto Scope = DIB.createLexicalBlockFile(SP, File, 0);
     DIB.finalize();
-    DL = DebugLoc::get(3, 7, Scope);
+    DL = DILocation::get(Ctx, 3, 7, Scope);
   }
 
   void TearDown() override {

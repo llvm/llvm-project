@@ -30,6 +30,22 @@ define i32 @bad_use(i32 %0) {
   ret i32 %2
 }
 
+define i32 @ok_use_assume(i32 %0) {
+; CHECK-LABEL: define {{[^@]+}}@ok_use_assume
+; CHECK-SAME: (i32 [[TMP0:%.*]]) {
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) [[ATTR1:#.*]]
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @no_openmp_use(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  call void @use(i32 %0) "no_openmp"
+  call void @use(i32 %0) "no_openmp_routines"
+  call void @no_openmp_use(i32 %0)
+  %2 = add nsw i32 %0, 1
+  ret i32 %2
+}
+
 define void @indirect_call(void ()* %0) {
 ; CHECK-LABEL: define {{[^@]+}}@indirect_call
 ; CHECK-SAME: (void ()* [[TMP0:%.*]])
@@ -77,6 +93,7 @@ declare dso_local void @omp_set_num_threads(i32)
 declare dso_local i32 @omp_get_max_threads()
 
 declare dso_local void @use(i32)
+declare dso_local void @no_openmp_use(i32) "no_openmp"
 
 define internal void @.omp_outlined.(i32* %0, i32* %1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
@@ -258,6 +275,33 @@ define void @bad_use_test(i1 %0) {
 
 3:                                                ; preds = %1
   %4 = call i32 @bad_use(i32 10)
+  br label %5
+
+5:                                                ; preds = %3, %1
+  %6 = call i32 @omp_get_max_threads()
+  call void @use(i32 %6)
+  ret void
+}
+
+define void @ok_use_assume_test(i1 %0) {
+; CHECK-LABEL: define {{[^@]+}}@ok_use_assume_test
+; CHECK-SAME: (i1 [[TMP0:%.*]]) {
+; CHECK-NEXT:    call void @omp_set_num_threads(i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i1 [[TMP0]], false
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @ok_use_assume(i32 10)
+; CHECK-NEXT:    br label [[TMP5]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @use(i32 2)
+; CHECK-NEXT:    ret void
+;
+  call void @omp_set_num_threads(i32 2)
+  %2 = icmp eq i1 %0, 0
+  br i1 %2, label %5, label %3
+
+3:                                                ; preds = %1
+  %4 = call i32 @ok_use_assume(i32 10)
   br label %5
 
 5:                                                ; preds = %3, %1

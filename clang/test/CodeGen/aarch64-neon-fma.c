@@ -26,16 +26,6 @@ float32x4_t test_vmlaq_n_f32(float32x4_t a, float32x4_t b, float32_t c) {
   return vmlaq_n_f32(a, b, c);
 }
 
-// CHECK-LABEL: define <2 x double> @test_vmlaq_n_f64(<2 x double> %a, <2 x double> %b, double %c) #1 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %c, i32 0
-// CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %c, i32 1
-// CHECK:   [[MUL_I:%.*]] = fmul <2 x double> %b, [[VECINIT1_I]]
-// CHECK:   [[ADD_I:%.*]] = fadd <2 x double> %a, [[MUL_I]]
-// CHECK:   ret <2 x double> [[ADD_I]]
-float64x2_t test_vmlaq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
-  return vmlaq_n_f64(a, b, c);
-}
-
 // CHECK-LABEL: define <4 x float> @test_vmlsq_n_f32(<4 x float> %a, <4 x float> %b, float %c) #1 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %c, i32 1
@@ -56,16 +46,6 @@ float32x4_t test_vmlsq_n_f32(float32x4_t a, float32x4_t b, float32_t c) {
 // CHECK:   ret <2 x float> [[SUB_I]]
 float32x2_t test_vmls_n_f32(float32x2_t a, float32x2_t b, float32_t c) {
   return vmls_n_f32(a, b, c);
-}
-
-// CHECK-LABEL: define <2 x double> @test_vmlsq_n_f64(<2 x double> %a, <2 x double> %b, double %c) #1 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %c, i32 0
-// CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %c, i32 1
-// CHECK:   [[MUL_I:%.*]] = fmul <2 x double> %b, [[VECINIT1_I]]
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x double> %a, [[MUL_I]]
-// CHECK:   ret <2 x double> [[SUB_I]]
-float64x2_t test_vmlsq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
-  return vmlsq_n_f64(a, b, c);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmla_lane_f32_0(<2 x float> %a, <2 x float> %b, <2 x float> %v) #0 {

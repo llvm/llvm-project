@@ -1201,7 +1201,10 @@ enum ScalarEpilogueLowering {
   CM_ScalarEpilogueNotAllowedLowTripLoop,
 
   // Loop hint predicate indicating an epilogue is undesired.
-  CM_ScalarEpilogueNotNeededUsePredicate
+  CM_ScalarEpilogueNotNeededUsePredicate,
+
+  // Directive indicating we must either tail fold or not vectorize
+  CM_ScalarEpilogueNotAllowedUsePredicate
 };
 
 /// LoopVectorizationCostModel - estimates the expected speedups due to
@@ -3406,14 +3409,7 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   Value *Count = getOrCreateTripCount(L);
   Value *VectorTripCount = getOrCreateVectorTripCount(L);
 
-  // We need the OrigLoop (scalar loop part) latch terminator to help
-  // produce correct debug info for the middle block BB instructions.
-  // The legality check stage guarantees that the loop will have a single
-  // latch.
-  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
-         "Scalar loop latch terminator isn't a branch");
-  BranchInst *ScalarLatchBr =
-      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
+  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
 
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
@@ -3425,16 +3421,16 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
                            VectorTripCount, "cmp.n",
                            LoopMiddleBlock->getTerminator());
 
-    // Here we use the same DebugLoc as the scalar loop latch branch instead
+    // Here we use the same DebugLoc as the scalar loop latch terminator instead
     // of the corresponding compare because they may have ended up with
     // different line numbers and we want to avoid awkward line stepping while
     // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchBr->getDebugLoc());
+    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   }
 
   BranchInst *BrInst =
       BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
-  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
@@ -5463,6 +5459,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
     return MaxVF;
+  case CM_ScalarEpilogueNotAllowedUsePredicate:
+    LLVM_FALLTHROUGH;
   case CM_ScalarEpilogueNotNeededUsePredicate:
     LLVM_DEBUG(
         dbgs() << "LV: vector predicate hint/switch found.\n"
@@ -5522,16 +5520,17 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // If there was a tail-folding hint/switch, but we can't fold the tail by
   // masking, fallback to a vectorization with a scalar epilogue.
   if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
-    if (PreferPredicateOverEpilogue == PreferPredicateTy::PredicateOrDontVectorize) {
-      LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
-      return None;
-    }
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                          "scalar epilogue instead.\n");
     ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
     return MaxVF;
   }
 
+  if (ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate) {
+    LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
+    return None;
+  }
+  
   if (TC == 0) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
@@ -7466,16 +7465,23 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
 
 void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
-  BasicBlock *Latch = OrigLoop->getLoopLatch();
 
-  // We create new control-flow for the vectorized loop, so the original
-  // condition will be dead after vectorization if it's only used by the
-  // branch.
-  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
-  if (Cmp && Cmp->hasOneUse()) {
-    DeadInstructions.insert(Cmp);
+  // We create new control-flow for the vectorized loop, so the original exit
+  // conditions will be dead after vectorization if it's only used by the
+  // terminator
+  SmallVector<BasicBlock*> ExitingBlocks;
+  OrigLoop->getExitingBlocks(ExitingBlocks);
+  for (auto *BB : ExitingBlocks) {
+    auto *Cmp = dyn_cast<Instruction>(BB->getTerminator()->getOperand(0));
+    if (!Cmp || !Cmp->hasOneUse())
+      continue;
+
+    // TODO: we should introduce a getUniqueExitingBlocks on Loop
+    if (!DeadInstructions.insert(Cmp).second)
+      continue;
 
     // The operands of the icmp is often a dead trunc, used by IndUpdate.
+    // TODO: can recurse through operands in general
     for (Value *Op : Cmp->operands()) {
       if (isa<TruncInst>(Op) && Op->hasOneUse())
           DeadInstructions.insert(cast<Instruction>(Op));
@@ -7485,6 +7491,7 @@ void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
   // We create new "steps" for induction variable updates to which the original
   // induction variables map. An original update instruction will be dead if
   // all its users except the induction variable are dead.
+  auto *Latch = OrigLoop->getLoopLatch();
   for (auto &Induction : Legal->getInductionVars()) {
     PHINode *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
@@ -8855,22 +8862,29 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                           Hints.getForce() != LoopVectorizeHints::FK_Enabled))
     return CM_ScalarEpilogueNotAllowedOptSize;
 
-  bool PredicateOptDisabled = PreferPredicateOverEpilogue.getNumOccurrences() &&
-                              !PreferPredicateOverEpilogue;
+  // 2) If set, obey the directives
+  if (PreferPredicateOverEpilogue.getNumOccurrences()) {
+    switch (PreferPredicateOverEpilogue) {
+    case PreferPredicateTy::ScalarEpilogue:
+      return CM_ScalarEpilogueAllowed;
+    case PreferPredicateTy::PredicateElseScalarEpilogue:
+      return CM_ScalarEpilogueNotNeededUsePredicate;
+    case PreferPredicateTy::PredicateOrDontVectorize:
+      return CM_ScalarEpilogueNotAllowedUsePredicate;
+    };
+  }
 
-  // 2) Next, if disabling predication is requested on the command line, honour
-  // this and request a scalar epilogue.
-  if (PredicateOptDisabled)
+  // 3) If set, obey the hints
+  switch (Hints.getPredicate()) {
+  case LoopVectorizeHints::FK_Enabled:
+    return CM_ScalarEpilogueNotNeededUsePredicate;
+  case LoopVectorizeHints::FK_Disabled:
     return CM_ScalarEpilogueAllowed;
+  };
 
-  // 3) and 4) look if enabling predication is requested on the command line,
-  // with a loop hint, or if the TTI hook indicates this is profitable, request
-  // predication.
-  if (PreferPredicateOverEpilogue ||
-      Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
-      (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
-                                        LVL.getLAI()) &&
-       Hints.getPredicate() != LoopVectorizeHints::FK_Disabled))
+  // 4) if the TTI hook indicates this is profitable, request predication.
+  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
+                                       LVL.getLAI()))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;

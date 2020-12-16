@@ -16,7 +16,7 @@
 // RUN: %clang -target x86_64-windows-gnu -fseh-exceptions -fdwarf-exceptions -c %s -### 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-DWARF
 
-// CHECK-SEH: "-fseh-exceptions"
-// CHECK-SJLJ: "-fsjlj-exceptions"
-// CHECK-DWARF-NOT: "-fsjlj-exceptions"
-// CHECK-DWARF-NOT: "-fseh-exceptions"
+// CHECK-SEH: "-exception-model=seh"
+// CHECK-SJLJ: "-exception-model=sjlj"
+// CHECK-DWARF-NOT: "-exception-model=sjlj"
+// CHECK-DWARF-NOT: "-exception-model=seh"

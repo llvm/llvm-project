@@ -1,4 +1,4 @@
-; This test checks to make sure that 'br X, Dest, Dest' is folded into 
+; This test checks to make sure that 'br X, Dest, Dest' is folded into
 ; 'br Dest'
 
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s

@@ -243,12 +243,16 @@
   DECLARE_FUNC_ENCODING                                                        \
   name:
 
-#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
+// TODO(ilinpv) START & END parts will be merged when assembly parser bug
+// (kristina) in MasmParser::parseDirectiveCFIStartProc() is fixed.
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_START(name)               \
   DEFINE_CODE_STATE                                                            \
   FUNC_ALIGN                                                                   \
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
-  DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
+  DECLARE_SYMBOL_VISIBILITY(name)
+
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_END(name)                 \
   CFI_START SEPARATOR                                                          \
   DECLARE_FUNC_ENCODING                                                        \
   name: SEPARATOR BTI_C

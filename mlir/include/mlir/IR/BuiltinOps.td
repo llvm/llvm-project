@@ -14,16 +14,9 @@
 #ifndef BUILTIN_OPS
 #define BUILTIN_OPS
 
+include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
-
-def Builtin_Dialect : Dialect {
-  let summary =
-    "A dialect containing the builtin Attributes, Operations, and Types";
-
-  let name = "";
-  let cppNamespace = "::mlir";
-}
 
 // Base class for Builtin dialect ops.
 class Builtin_Op<string mnemonic, list<OpTrait> traits = []> :

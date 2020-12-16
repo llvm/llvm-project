@@ -199,7 +199,7 @@ def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
 def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
   CCIfType<[i1], CCPromoteToType<i32>>,
-  CCIfType<[i1, i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
   CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1], CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,

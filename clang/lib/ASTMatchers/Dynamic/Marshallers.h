@@ -161,8 +161,10 @@ template <> struct ArgTypeTraits<unsigned> {
 template <> struct ArgTypeTraits<attr::Kind> {
 private:
   static Optional<attr::Kind> getAttrKind(llvm::StringRef AttrKind) {
+    if (!AttrKind.consume_front("attr::"))
+      return llvm::None;
     return llvm::StringSwitch<Optional<attr::Kind>>(AttrKind)
-#define ATTR(X) .Case("attr::" #X, attr:: X)
+#define ATTR(X) .Case(#X, attr::X)
 #include "clang/Basic/AttrList.inc"
         .Default(llvm::None);
   }
@@ -189,8 +191,10 @@ public:
 template <> struct ArgTypeTraits<CastKind> {
 private:
   static Optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
+    if (!AttrKind.consume_front("CK_"))
+      return llvm::None;
     return llvm::StringSwitch<Optional<CastKind>>(AttrKind)
-#define CAST_OPERATION(Name) .Case("CK_" #Name, CK_##Name)
+#define CAST_OPERATION(Name) .Case(#Name, CK_##Name)
 #include "clang/AST/OperationKinds.def"
         .Default(llvm::None);
   }
@@ -265,11 +269,12 @@ template <> struct ArgTypeTraits<UnaryExprOrTypeTrait> {
 private:
   static Optional<UnaryExprOrTypeTrait>
   getUnaryOrTypeTraitKind(llvm::StringRef ClauseKind) {
+    if (!ClauseKind.consume_front("UETT_"))
+      return llvm::None;
     return llvm::StringSwitch<Optional<UnaryExprOrTypeTrait>>(ClauseKind)
-#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                          \
-  .Case("UETT_" #Name, UETT_##Name)
+#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) .Case(#Name, UETT_##Name)
 #define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
-  .Case("UETT_" #Name, UETT_##Name)
+  .Case(#Name, UETT_##Name)
 #include "clang/Basic/TokenKinds.def"
         .Default(llvm::None);
   }

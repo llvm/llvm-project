@@ -200,7 +200,6 @@ public:
   NODE_ENUM(ConnectSpec::CharExpr, Kind)
   NODE(ConnectSpec, Newunit)
   NODE(ConnectSpec, Recl)
-  NODE(parser, ConstantValue)
   NODE(parser, ContainsStmt)
   NODE(parser, Contiguous)
   NODE(parser, ContiguousStmt)

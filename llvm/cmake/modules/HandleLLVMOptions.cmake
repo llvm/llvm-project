@@ -904,7 +904,8 @@ option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (dep
 mark_as_advanced(LLVM_ENABLE_IR_PGO)
 
 set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR or Frontend")
-mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
+set(LLVM_VP_COUNTERS_PER_SITE "1.5" CACHE STRING "Value profile counters to use per site for IR PGO with Clang")
+mark_as_advanced(LLVM_BUILD_INSTRUMENTED LLVM_VP_COUNTERS_PER_SITE)
 string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
 
 if (LLVM_BUILD_INSTRUMENTED)
@@ -922,7 +923,7 @@ if (LLVM_BUILD_INSTRUMENTED)
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
         CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11 AND
         LLVM_LINK_LLVM_DYLIB)
-      append("-Xclang -mllvm -Xclang -vp-counters-per-site=1.5"
+      append("-Xclang -mllvm -Xclang -vp-counters-per-site=${LLVM_VP_COUNTERS_PER_SITE}"
         CMAKE_CXX_FLAGS
         CMAKE_C_FLAGS)
     endif()

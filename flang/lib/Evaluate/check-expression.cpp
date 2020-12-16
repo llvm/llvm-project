@@ -411,8 +411,6 @@ public:
       }
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      // TODO: what about EQUIVALENCE with data in COMMON?
-      // TODO: does this work for blank COMMON?
       if (object->commonBlock()) {
         return std::nullopt;
       }

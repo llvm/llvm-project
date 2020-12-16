@@ -1740,6 +1740,8 @@ implemented directly in terms of :ref:`extended vector support
 <langext-vectors>` instead of builtins, in order to reduce the number of
 builtins that we need to implement.
 
+.. _langext-__builtin_assume:
+
 ``__builtin_assume``
 ------------------------------
 

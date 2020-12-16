@@ -68,7 +68,6 @@ static cl::opt<bool> HideMemoryTransferLatency(
              " transfers"),
     cl::Hidden, cl::init(false));
 
-
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -439,8 +438,7 @@ private:
   /// instruction \p Before is reached.
   bool getValues(AllocaInst &Array, Instruction &Before) {
     // Initialize container.
-    const uint64_t NumValues =
-        Array.getAllocatedType()->getArrayNumElements();
+    const uint64_t NumValues = Array.getAllocatedType()->getArrayNumElements();
     StoredValues.assign(NumValues, nullptr);
     LastAccesses.assign(NumValues, nullptr);
 
@@ -462,8 +460,8 @@ private:
 
       auto *S = cast<StoreInst>(&I);
       int64_t Offset = -1;
-      auto *Dst = GetPointerBaseWithConstantOffset(S->getPointerOperand(),
-                                                   Offset, DL);
+      auto *Dst =
+          GetPointerBaseWithConstantOffset(S->getPointerOperand(), Offset, DL);
       if (Dst == &Array) {
         int64_t Idx = Offset / PointerSize;
         StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
@@ -1783,7 +1781,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
                                     InternalControlVar &ICV) const {
 
     const auto *CB = dyn_cast<CallBase>(I);
-    if (!CB)
+    if (!CB || CB->hasFnAttr("no_openmp") ||
+        CB->hasFnAttr("no_openmp_routines"))
       return None;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());

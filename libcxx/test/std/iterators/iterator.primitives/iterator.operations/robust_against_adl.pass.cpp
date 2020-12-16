@@ -20,7 +20,7 @@ struct Intable {
     operator int() const { return 1; }
 };
 
-int main() {
+int main(int, char**) {
     Holder<Incomplete> *a[2] = {};
     Holder<Incomplete> **p = a;
 #if TEST_STD_VER >= 17
@@ -31,4 +31,6 @@ int main() {
 #endif
     std::advance(p, Intable<Holder<Incomplete> >());
     (void)std::distance(p, p);
+
+    return 0;
 }

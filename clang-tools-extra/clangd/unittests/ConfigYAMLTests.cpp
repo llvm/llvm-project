@@ -113,7 +113,7 @@ CompileFlags: {$unexpected^
 
   ASSERT_THAT(
       Diags.Diagnostics,
-      ElementsAre(AllOf(DiagMessage("Unknown If key UnknownCondition"),
+      ElementsAre(AllOf(DiagMessage("Unknown If key 'UnknownCondition'"),
                         DiagKind(llvm::SourceMgr::DK_Warning),
                         DiagPos(YAML.range("unknown").start),
                         DiagRange(YAML.range("unknown"))),

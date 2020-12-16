@@ -426,6 +426,13 @@ struct ConstantValueNoDiag {
   }
   static constexpr double k = 1;
 };
+template <typename T, int N>
+struct ConstantValueNoDiagDependentValue {
+  float4 f(float4 x) {
+    return k * x;
+  }
+  static constexpr double k = N;
+};
 
 // The following two both diagnose because they cause a truncation.  Test both
 // the dependent type and non-dependent type versions.
@@ -436,6 +443,14 @@ struct DiagTrunc {
     return k * x;
   }
   static constexpr double k = 1340282346638528859811704183484516925443.000000;
+};
+template <typename T, int N>
+struct DiagTruncDependentValue {
+  float4 f(float4 x) {
+    // expected-error@+1{{as implicit conversion would cause truncation}}
+    return k * x;
+  }
+  static constexpr double k = N + 1340282346638528859811704183484516925443.000000;
 };
 template <typename T>
 struct DiagTruncDependentType {
@@ -467,8 +482,10 @@ void use() {
   NormalMember<double>().f(theFloat4);
 #if __cplusplus >= 201103L
   ConstantValueNoDiag<double>().f(theFloat4);
-  // expected-note@+1{{in instantiation of member function}}
+  ConstantValueNoDiagDependentValue<double, 1>().f(theFloat4);
   DiagTrunc<double>().f(theFloat4);
+  // expected-note@+1{{in instantiation of member function}}
+  DiagTruncDependentValue<double, 0>().f(theFloat4);
   // expected-note@+1{{in instantiation of member function}}
   DiagTruncDependentType<double>().f(theFloat4);
   PR45298Consumer<double>().f(theFloat4);

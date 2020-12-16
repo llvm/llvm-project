@@ -828,7 +828,8 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
   write32le(loc, val);
 }
 
-void X86_64::relaxGot(uint8_t *loc, const Relocation &, uint64_t val) const {
+void X86_64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  checkInt(loc, val, 32, rel);
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
 

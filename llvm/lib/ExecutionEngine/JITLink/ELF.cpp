@@ -50,32 +50,39 @@ Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
   return ELF::EM_NONE;
 }
 
-void jitLink_ELF(std::unique_ptr<JITLinkContext> Ctx) {
-  StringRef Buffer = Ctx->getObjectBuffer().getBuffer();
-  if (Buffer.size() < ELF::EI_MAG3 + 1) {
-    Ctx->notifyFailed(make_error<JITLinkError>("Truncated ELF buffer"));
-    return;
-  }
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
+  StringRef Buffer = ObjectBuffer.getBuffer();
+  if (Buffer.size() < ELF::EI_MAG3 + 1)
+    return make_error<JITLinkError>("Truncated ELF buffer");
 
-  if (memcmp(Buffer.data(), ELF::ElfMagic, strlen(ELF::ElfMagic)) != 0) {
-    Ctx->notifyFailed(make_error<JITLinkError>("ELF magic not valid"));
-    return;
-  }
+  if (memcmp(Buffer.data(), ELF::ElfMagic, strlen(ELF::ElfMagic)) != 0)
+    return make_error<JITLinkError>("ELF magic not valid");
 
   Expected<uint16_t> TargetMachineArch = readTargetMachineArch(Buffer);
-  if (!TargetMachineArch) {
-    Ctx->notifyFailed(TargetMachineArch.takeError());
-    return;
-  }
+  if (!TargetMachineArch)
+    return TargetMachineArch.takeError();
 
   switch (*TargetMachineArch) {
   case ELF::EM_X86_64:
-    jitLink_ELF_x86_64(std::move(Ctx));
+    return createLinkGraphFromELFObject_x86_64(std::move(ObjectBuffer));
+  default:
+    return make_error<JITLinkError>(
+        "Unsupported target machine architecture in ELF object " +
+        ObjectBuffer.getBufferIdentifier());
+  }
+}
+
+void link_ELF(std::unique_ptr<LinkGraph> G,
+              std::unique_ptr<JITLinkContext> Ctx) {
+  switch (G->getTargetTriple().getArch()) {
+  case Triple::x86_64:
+    link_ELF_x86_64(std::move(G), std::move(Ctx));
     return;
   default:
     Ctx->notifyFailed(make_error<JITLinkError>(
-        "Unsupported target machine architecture in ELF object " +
-        Ctx->getObjectBuffer().getBufferIdentifier()));
+        "Unsupported target machine architecture in ELF link graph " +
+        G->getName()));
     return;
   }
 }

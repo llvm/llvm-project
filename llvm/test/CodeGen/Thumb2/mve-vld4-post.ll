@@ -119,43 +119,41 @@ define <8 x i64> *@vld4_v2i64(<8 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK-NEXT:    vmov.f32 s14, s20
 ; CHECK-NEXT:    vmov.f32 s19, s23
 ; CHECK-NEXT:    vmov.f32 s15, s21
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    vmov r3, s14
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s12
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s6, s10
 ; CHECK-NEXT:    vmov.f32 s2, s8
 ; CHECK-NEXT:    vmov.f32 s3, s9
 ; CHECK-NEXT:    vmov.f32 s7, s11
-; CHECK-NEXT:    vmov r12, s19
-; CHECK-NEXT:    vmov lr, s15
-; CHECK-NEXT:    vmov r4, s6
-; CHECK-NEXT:    vmov r5, s2
-; CHECK-NEXT:    vmov r7, s0
+; CHECK-NEXT:    vmov r12, s17
+; CHECK-NEXT:    vmov lr, s13
+; CHECK-NEXT:    vmov r4, s4
+; CHECK-NEXT:    vmov r5, s0
+; CHECK-NEXT:    vmov r7, s2
 ; CHECK-NEXT:    adds r6, r3, r2
-; CHECK-NEXT:    vmov r2, s7
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    adc.w r12, r12, lr
 ; CHECK-NEXT:    adds r5, r5, r4
-; CHECK-NEXT:    vmov r4, s16
+; CHECK-NEXT:    vmov r4, s18
 ; CHECK-NEXT:    adcs r2, r3
 ; CHECK-NEXT:    adds.w lr, r5, r6
 ; CHECK-NEXT:    adc.w r12, r12, r2
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    vmov r6, s17
-; CHECK-NEXT:    vmov r5, s13
-; CHECK-NEXT:    vmov r3, s4
+; CHECK-NEXT:    vmov r2, s14
+; CHECK-NEXT:    vmov r6, s19
+; CHECK-NEXT:    vmov r5, s15
+; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    adds r2, r2, r4
-; CHECK-NEXT:    vmov r4, s1
+; CHECK-NEXT:    vmov r4, s3
 ; CHECK-NEXT:    adcs r6, r5
-; CHECK-NEXT:    vmov r5, s5
+; CHECK-NEXT:    vmov r5, s7
 ; CHECK-NEXT:    adds r3, r3, r7
 ; CHECK-NEXT:    adcs r4, r5
 ; CHECK-NEXT:    adds r2, r2, r3
 ; CHECK-NEXT:    adc.w r3, r4, r6
-; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[1], r3
-; CHECK-NEXT:    vmov.32 q0[2], lr
-; CHECK-NEXT:    vmov.32 q0[3], r12
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, lr
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r12
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    add sp, #4

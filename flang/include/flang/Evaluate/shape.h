@@ -211,7 +211,8 @@ std::optional<ConstantSubscripts> GetConstantExtents(
 bool CheckConformance(parser::ContextualMessages &, const Shape &left,
     const Shape &right, const char *leftIs = "left operand",
     const char *rightIs = "right operand", bool leftScalarExpandable = true,
-    bool rightScalarExpandable = true);
+    bool rightScalarExpandable = true, bool leftIsDeferredShape = false,
+    bool rightIsDeferredShape = false);
 
 // Increments one-based subscripts in element order (first varies fastest)
 // and returns true when they remain in range; resets them all to one and
