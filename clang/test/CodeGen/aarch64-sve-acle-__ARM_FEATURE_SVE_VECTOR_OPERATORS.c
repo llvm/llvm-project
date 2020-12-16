@@ -51,34 +51,22 @@ vec2048 x2048 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0,
 typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-LABEL: define <16 x i8> @f2(<16 x i8> %x)
 // CHECK128-NEXT:  entry:
-// CHECK128-NEXT:    %x.addr = alloca <16 x i8>, align 16
-// CHECK128-NEXT:    %saved-call-rvalue = alloca <vscale x 16 x i8>, align 16
-// CHECK128-NEXT:    store <16 x i8> %x, <16 x i8>* %x.addr, align 16
-// CHECK128-NEXT:    %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-// CHECK128-NEXT:    %1 = bitcast <16 x i8>* %x.addr to <vscale x 16 x i8>*
-// CHECK128-NEXT:    %2 = load <vscale x 16 x i8>, <vscale x 16 x i8>* %1, align 16
-// CHECK128-NEXT:    %3 = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> %0, <vscale x 16 x i8> %2, i32 1)
-// CHECK128-NEXT:    store <vscale x 16 x i8> %3, <vscale x 16 x i8>* %saved-call-rvalue, align 16
-// CHECK128-NEXT:    %castFixedSve = bitcast <vscale x 16 x i8>* %saved-call-rvalue to <16 x i8>*
-// CHECK128-NEXT:    %4 = load <16 x i8>, <16 x i8>* %castFixedSve, align 16
-// CHECK128-NEXT:    ret <16 x i8> %4
+// CHECK128-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+// CHECK128-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[X:%.*]], i64 0)
+// CHECK128-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK128-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP1]], i64 0)
+// CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
 // CHECK-LABEL: define void @f2(
 // CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noalias nocapture sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, <[[#div(VBITS,8)]] x i8>* nocapture readonly %0)
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %x.addr = alloca <[[#div(VBITS,8)]] x i8>, align 16
-// CHECK-NEXT:   %saved-call-rvalue = alloca <vscale x 16 x i8>, align 16
-// CHECK-NEXT:   %x = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* %0, align 16
-// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> %x, <[[#div(VBITS,8)]] x i8>* %x.addr, align 16
-// CHECK-NEXT:   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-// CHECK-NEXT:   %2 = bitcast <[[#div(VBITS,8)]] x i8>* %x.addr to <vscale x 16 x i8>*
-// CHECK-NEXT:   %3 = load <vscale x 16 x i8>, <vscale x 16 x i8>* %2, align 16
-// CHECK-NEXT:   %4 = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, i32 1)
-// CHECK-NEXT:   store <vscale x 16 x i8> %4, <vscale x 16 x i8>* %saved-call-rvalue, align 16
-// CHECK-NEXT:   %castFixedSve = bitcast <vscale x 16 x i8>* %saved-call-rvalue to <[[#div(VBITS,8)]] x i8>*
-// CHECK-NEXT:   %5 = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* %castFixedSve, align 16
-// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> %5, <[[#div(VBITS,8)]] x i8>* %agg.result, align 16
-// CHECK-NEXT:   ret void
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v[[#div(VBITS,8)]]i8(<vscale x 16 x i8> undef, <[[#div(VBITS,8)]] x i8> [[X]], i64 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP1]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <[[#div(VBITS,8)]] x i8> @llvm.experimental.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    store <[[#div(VBITS,8)]] x i8> [[CASTFIXEDSVE]], <[[#div(VBITS,8)]] x i8>* [[AGG_RESULT:%.*]], align 16, [[TBAA6]]
+// CHECK-NEXT:    ret void
 vec_int8 f2(vec_int8 x) { return svasrd_x(svptrue_b8(), x, 1); }
 #endif
 
@@ -90,24 +78,24 @@ void f3(vec1);
 typedef svint8_t vec2 __attribute__((arm_sve_vector_bits(N)));
 
 // CHECK128-LABEL: define void @g(<vscale x 16 x i8> %x.coerce)
-// CHECK128-NEXT: entry:
-// CHECK128-NEXT:  %x = alloca <16 x i8>, align 16
-// CHECK128-NEXT:      %0 = bitcast <16 x i8>* %x to <vscale x 16 x i8>*
-// CHECK128-NEXT:    store <vscale x 16 x i8> %x.coerce, <vscale x 16 x i8>* %0, align 16
-// CHECK128-NEXT:    %x1 = load <16 x i8>, <16 x i8>* %x, align 16,
-// CHECK128-NEXT:    call void @f3(<16 x i8> %x1) #4
-// CHECK128-NEXT:      ret void
+// CHECK128-NEXT:  entry:
+// CHECK128-NEXT:    [[X:%.*]] = alloca <16 x i8>, align 16
+// CHECK128-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8>* [[X]] to <vscale x 16 x i8>*
+// CHECK128-NEXT:    store <vscale x 16 x i8> [[X_COERCE:%.*]], <vscale x 16 x i8>* [[TMP0]], align 16
+// CHECK128-NEXT:    [[X1:%.*]] = load <16 x i8>, <16 x i8>* [[X]], align 16, [[TBAA6:!tbaa !.*]]
+// CHECK128-NEXT:    call void @f3(<16 x i8> [[X1]]) [[ATTR5:#.*]]
+// CHECK128-NEXT:    ret void
 
 // CHECK-LABEL: define void @g(<vscale x 16 x i8> %x.coerce)
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %x = alloca <[[#div(VBITS,8)]] x i8>, align 16
-// CHECK-NEXT:   %indirect-arg-temp = alloca <[[#div(VBITS,8)]] x i8>, align 16
-// CHECK-NEXT:   %0 = bitcast <[[#div(VBITS,8)]] x i8>* %x to <vscale x 16 x i8>*
-// CHECK-NEXT:   store <vscale x 16 x i8> %x.coerce, <vscale x 16 x i8>* %0
-// CHECK-NEXT:   %x1 = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* %x, align 16
-// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> %x1, <[[#div(VBITS,8)]] x i8>* %indirect-arg-temp
-// CHECK-NEXT:   call void @f3(<[[#div(VBITS,8)]] x i8>* nonnull %indirect-arg-temp)
-// CHECK-NEXT:   ret void
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[X:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16
+// CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <[[#div(VBITS,8)]] x i8>* [[X]] to <vscale x 16 x i8>*
+// CHECK-NEXT:    store <vscale x 16 x i8> [[X_COERCE:%.*]], <vscale x 16 x i8>* [[TMP0]], align 16
+// CHECK-NEXT:    [[X1:%.*]] = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* [[X]], align 16, [[TBAA6]]
+// CHECK-NEXT:    store <[[#div(VBITS,8)]] x i8> [[X1]], <[[#div(VBITS,8)]] x i8>* [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6]]
+// CHECK-NEXT:    call void @f3(<[[#div(VBITS,8)]] x i8>* nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECK-NEXT:    ret void
 
 // CHECK128-LABEL: declare void @f3(<16 x i8>)
 
