@@ -128,4 +128,29 @@ SmallString<32> XCOFF::parseParmsType(uint32_t Value, unsigned ParmsNum) {
   return ParmsType;
 }
 
+SmallString<32> XCOFF::getExtendedTBTableFlagString(uint8_t Flag) {
+  SmallString<32> Res;
+
+  if (Flag & ExtendedTBTableFlag::TB_OS1)
+    Res += "TB_OS1 ";
+  if (Flag & ExtendedTBTableFlag::TB_RESERVED)
+    Res += "TB_RESERVED ";
+  if (Flag & ExtendedTBTableFlag::TB_SSP_CANARY)
+    Res += "TB_SSP_CANARY ";
+  if (Flag & ExtendedTBTableFlag::TB_OS2)
+    Res += "TB_OS2 ";
+  if (Flag & ExtendedTBTableFlag::TB_EH_INFO)
+    Res += "TB_EH_INFO ";
+  if (Flag & ExtendedTBTableFlag::TB_LONGTBTABLE2)
+    Res += "TB_LONGTBTABLE2 ";
+
+  // Two of the bits that haven't got used in the mask.
+  if (Flag & 0x06)
+    Res += "Unknown ";
+
+  // Pop the last space.
+  Res.pop_back();
+  return Res;
+}
+
 #undef RELOC_CASE
