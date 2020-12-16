@@ -19,7 +19,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
-#include <io.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -352,13 +351,13 @@ std::error_code is_local(const Twine &path, bool &result) {
 static std::error_code realPathFromHandle(HANDLE H,
                                           SmallVectorImpl<wchar_t> &Buffer) {
   DWORD CountChars = ::GetFinalPathNameByHandleW(
-      H, Buffer.begin(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
-  if (CountChars > Buffer.capacity()) {
+      H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED);
+  if (CountChars && CountChars >= Buffer.capacity()) {
     // The buffer wasn't big enough, try again.  In this case the return value
     // *does* indicate the size of the null terminator.
     Buffer.reserve(CountChars);
     CountChars = ::GetFinalPathNameByHandleW(
-        H, Buffer.data(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+        H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED);
   }
   if (CountChars == 0)
     return mapWindowsError(GetLastError());
