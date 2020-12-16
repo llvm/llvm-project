@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -simplifycfg -disable-output
+; RUN: opt < %s -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; PR867
 
 target datalayout = "E-p:32:32"

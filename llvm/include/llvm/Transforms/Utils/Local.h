@@ -189,6 +189,7 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 /// providing the set of loop headers that SimplifyCFG should not eliminate.
 extern cl::opt<bool> RequireAndPreserveDomTree;
 bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
+                 DomTreeUpdater *DTU = nullptr,
                  const SimplifyCFGOptions &Options = {},
                  SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 
