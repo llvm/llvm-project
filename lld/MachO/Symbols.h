@@ -55,7 +55,12 @@ public:
     llvm_unreachable("attempt to get an offset from a non-defined symbol");
   }
 
-  virtual bool isWeakDef() const { llvm_unreachable("cannot be weak"); }
+  virtual bool isWeakDef() const { llvm_unreachable("cannot be weak def"); }
+
+  // Only undefined or dylib symbols can be weak references. A weak reference
+  // need not be satisfied at runtime, e.g. due to the symbol not being
+  // available on a given target platform.
+  virtual bool isWeakRef() const { llvm_unreachable("cannot be a weak ref"); }
 
   virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
 
@@ -111,11 +116,21 @@ private:
   const bool external : 1;
 };
 
+// Indicates whether & how a dylib symbol is referenced.
+enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
+
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name) : Symbol(UndefinedKind, name) {}
+  Undefined(StringRefZ name, RefState refState)
+      : Symbol(UndefinedKind, name), refState(refState) {
+    assert(refState != RefState::Unreferenced);
+  }
+
+  bool isWeakRef() const override { return refState == RefState::Weak; }
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
+
+  RefState refState : 2;
 };
 
 // On Unix, it is traditionally allowed to write variable definitions without
@@ -149,10 +164,14 @@ public:
 
 class DylibSymbol : public Symbol {
 public:
-  DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef, bool isTlv)
-      : Symbol(DylibKind, name), file(file), weakDef(isWeakDef), tlv(isTlv) {}
+  DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef,
+              RefState refState, bool isTlv)
+      : Symbol(DylibKind, name), file(file), refState(refState),
+        weakDef(isWeakDef), tlv(isTlv) {}
 
   bool isWeakDef() const override { return weakDef; }
+  bool isWeakRef() const override { return refState == RefState::Weak; }
+  bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
   bool hasStubsHelper() const { return stubsHelperIndex != UINT32_MAX; }
 
@@ -162,9 +181,11 @@ public:
   uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 
+  RefState refState : 2;
+
 private:
-  const bool weakDef;
-  const bool tlv;
+  const bool weakDef : 1;
+  const bool tlv : 1;
 };
 
 class LazySymbol : public Symbol {

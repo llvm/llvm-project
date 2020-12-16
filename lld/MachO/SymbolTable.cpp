@@ -62,15 +62,21 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
   return s;
 }
 
-Symbol *SymbolTable::addUndefined(StringRef name) {
+Symbol *SymbolTable::addUndefined(StringRef name, bool isWeakRef) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
+  auto refState = isWeakRef ? RefState::Weak : RefState::Strong;
+
   if (wasInserted)
-    replaceSymbol<Undefined>(s, name);
-  else if (LazySymbol *lazy = dyn_cast<LazySymbol>(s))
+    replaceSymbol<Undefined>(s, name, refState);
+  else if (auto *lazy = dyn_cast<LazySymbol>(s))
     lazy->fetchArchiveMember();
+  else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
+    dynsym->refState = std::max(dynsym->refState, refState);
+  else if (auto *undefined = dyn_cast<Undefined>(s))
+    undefined->refState = std::max(undefined->refState, refState);
   return s;
 }
 
@@ -101,14 +107,21 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  if (!wasInserted && isWeakDef)
-    if (auto *defined = dyn_cast<Defined>(s))
-      if (!defined->isWeakDef())
+  auto refState = RefState::Unreferenced;
+  if (!wasInserted) {
+    if (auto *defined = dyn_cast<Defined>(s)) {
+      if (isWeakDef && !defined->isWeakDef())
         defined->overridesWeakDef = true;
+    } else if (auto *undefined = dyn_cast<Undefined>(s)) {
+      refState = undefined->refState;
+    } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+      refState = dysym->refState;
+    }
+  }
 
   if (wasInserted || isa<Undefined>(s) ||
       (isa<DylibSymbol>(s) && !isWeakDef && s->isWeakDef()))
-    replaceSymbol<DylibSymbol>(s, file, name, isWeakDef, isTlv);
+    replaceSymbol<DylibSymbol>(s, file, name, isWeakDef, refState, isTlv);
 
   return s;
 }
