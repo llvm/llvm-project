@@ -15,6 +15,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"])
     def test_gui(self):
         self.build()
 
