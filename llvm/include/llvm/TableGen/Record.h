@@ -1445,6 +1445,8 @@ class Record {
   SmallVector<SMLoc, 4> Locs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
+  // Vector of [source location, condition Init, message Init].
+  SmallVector<std::tuple<SMLoc, Init *, Init *>, 0> Assertions;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1519,6 +1521,10 @@ public:
 
   ArrayRef<RecordVal> getValues() const { return Values; }
 
+  ArrayRef<std::tuple<SMLoc, Init *, Init *>> getAssertions() const {
+    return Assertions;
+  }
+
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
   }
@@ -1574,6 +1580,10 @@ public:
 
   void removeValue(StringRef Name) {
     removeValue(StringInit::get(Name));
+  }
+
+  void addAssertion(SMLoc Loc, Init *Condition, Init *Message) {
+    Assertions.push_back(std::make_tuple(Loc, Condition, Message));
   }
 
   bool isSubClassOf(const Record *R) const {
