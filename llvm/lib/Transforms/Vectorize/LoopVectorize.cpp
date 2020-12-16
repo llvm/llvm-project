@@ -3409,14 +3409,7 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   Value *Count = getOrCreateTripCount(L);
   Value *VectorTripCount = getOrCreateVectorTripCount(L);
 
-  // We need the OrigLoop (scalar loop part) latch terminator to help
-  // produce correct debug info for the middle block BB instructions.
-  // The legality check stage guarantees that the loop will have a single
-  // latch.
-  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
-         "Scalar loop latch terminator isn't a branch");
-  BranchInst *ScalarLatchBr =
-      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
+  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
 
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
@@ -3428,16 +3421,16 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
                            VectorTripCount, "cmp.n",
                            LoopMiddleBlock->getTerminator());
 
-    // Here we use the same DebugLoc as the scalar loop latch branch instead
+    // Here we use the same DebugLoc as the scalar loop latch terminator instead
     // of the corresponding compare because they may have ended up with
     // different line numbers and we want to avoid awkward line stepping while
     // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchBr->getDebugLoc());
+    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   }
 
   BranchInst *BrInst =
       BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
-  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
