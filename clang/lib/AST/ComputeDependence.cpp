@@ -37,9 +37,38 @@ ExprDependence clang::computeDependence(ParenExpr *E) {
   return E->getSubExpr()->getDependence();
 }
 
-ExprDependence clang::computeDependence(UnaryOperator *E) {
-  return toExprDependence(E->getType()->getDependence()) |
-         E->getSubExpr()->getDependence();
+ExprDependence clang::computeDependence(UnaryOperator *E,
+                                        const ASTContext &Ctx) {
+  ExprDependence Dep = toExprDependence(E->getType()->getDependence()) |
+                       E->getSubExpr()->getDependence();
+
+  // C++ [temp.dep.constexpr]p5:
+  //   An expression of the form & qualified-id where the qualified-id names a
+  //   dependent member of the current instantiation is value-dependent. An
+  //   expression of the form & cast-expression is also value-dependent if
+  //   evaluating cast-expression as a core constant expression succeeds and
+  //   the result of the evaluation refers to a templated entity that is an
+  //   object with static or thread storage duration or a member function.
+  //
+  // What this amounts to is: constant-evaluate the operand and check whether it
+  // refers to a templated entity other than a variable with local storage.
+  if (Ctx.getLangOpts().CPlusPlus11 && E->getOpcode() == UO_AddrOf &&
+      !(Dep & ExprDependence::Value)) {
+    Expr::EvalResult Result;
+    SmallVector<PartialDiagnosticAt, 8> Diag;
+    Result.Diag = &Diag;
+    if (E->getSubExpr()->EvaluateAsConstantExpr(Result, Ctx) && Diag.empty() &&
+        Result.Val.isLValue()) {
+      auto *VD = Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
+      if (VD && VD->isTemplated()) {
+        auto *VarD = dyn_cast<VarDecl>(VD);
+        if (!VarD || !VarD->hasLocalStorage())
+          Dep |= ExprDependence::Value;
+      }
+    }
+  }
+
+  return Dep;
 }
 
 ExprDependence clang::computeDependence(UnaryExprOrTypeTraitExpr *E) {
