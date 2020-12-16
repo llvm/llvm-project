@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -simplifycfg -S | FileCheck -enable-var-scope %s
+; RUN: opt < %s -mem2reg -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck -enable-var-scope %s
 
 define i32 @test(i32 %x) {
 ; CHECK-LABEL: @test

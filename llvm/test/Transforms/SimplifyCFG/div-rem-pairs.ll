@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 ; We could hoist the div/rem in these tests because it's safe to do so.
 ; PR31028 - https://bugs.llvm.org/show_bug.cgi?id=31028
