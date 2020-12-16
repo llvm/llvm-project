@@ -3227,7 +3227,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (FunctionDecl *Pattern =
               Function->getInstantiatedFromMemberFunction()) {
 
-        if (Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (TSK != TSK_ImplicitInstantiation &&
+            Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo =
@@ -3272,7 +3273,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if (Var->isStaticDataMember()) {
-        if (Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (TSK != TSK_ImplicitInstantiation &&
+            Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo = Var->getMemberSpecializationInfo();
@@ -3289,7 +3291,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             SuppressNew)
           continue;
 
-        if (TSK == TSK_ExplicitInstantiationDefinition) {
+        if (TSK != TSK_ExplicitInstantiationDeclaration) {
           // C++0x [temp.explicit]p8:
           //   An explicit instantiation definition that names a class template
           //   specialization explicitly instantiates the class template

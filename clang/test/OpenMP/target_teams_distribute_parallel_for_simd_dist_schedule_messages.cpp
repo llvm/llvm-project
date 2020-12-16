@@ -45,7 +45,7 @@ T tmain(T argc) {
 #pragma omp target teams distribute parallel for simd dist_schedule (static, S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 0; i < 10; ++i) foo();
 
-#pragma omp target teams distribute parallel for simd dist_schedule (static, argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error3 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+#pragma omp target teams distribute parallel for simd dist_schedule (static, argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error 2{{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
 
   return T();
