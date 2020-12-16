@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -mem2reg -simplifycfg | \
+; RUN: opt < %s -instcombine -mem2reg -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | \
 ; RUN:   llvm-dis | grep -v store | not grep "i32 1"
 
 ; Test to make sure that instcombine does not accidentally propagate the load
