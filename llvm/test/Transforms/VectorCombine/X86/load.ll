@@ -175,7 +175,7 @@ define double @larger_fp_scalar_256bit_vec(<8 x float>* align 32 dereferenceable
 define <4 x float> @load_f32_insert_v4f32(float* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
@@ -201,7 +201,7 @@ define <4 x float> @casted_load_f32_insert_v4f32(<4 x float>* align 4 dereferenc
 define <4 x i32> @load_i32_insert_v4i32(i32* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_i32_insert_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
@@ -434,7 +434,7 @@ define <4 x float> @load_f32_insert_v4f32_deref(float* align 4 dereferenceable(1
 define <8 x i32> @load_i32_insert_v8i32(i32* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_i32_insert_v8i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
@@ -458,7 +458,7 @@ define <8 x i32> @casted_load_i32_insert_v8i32(<4 x i32>* align 4 dereferenceabl
 define <16 x float> @load_f32_insert_v16f32(float* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v16f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <16 x float> [[R]]
 ;
@@ -470,7 +470,7 @@ define <16 x float> @load_f32_insert_v16f32(float* align 16 dereferenceable(16) 
 define <2 x float> @load_f32_insert_v2f32(float* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v2f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <2 x i32> <i32 0, i32 undef>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
@@ -525,7 +525,7 @@ define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr
 define <4 x float> @load_v2f32_extract_insert_v4f32(<2 x float>* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v2f32_extract_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float>* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
@@ -538,7 +538,7 @@ define <4 x float> @load_v2f32_extract_insert_v4f32(<2 x float>* align 16 derefe
 define <4 x float> @load_v8f32_extract_insert_v4f32(<8 x float>* align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v8f32_extract_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x float>* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
