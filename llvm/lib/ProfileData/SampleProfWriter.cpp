@@ -166,6 +166,18 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
+    const StringMap<FunctionSamples> &Profiles) {
+  if (!FunctionSamples::ProfileIsProbeBased)
+    return sampleprof_error::success;
+  auto &OS = *OutputStream;
+  for (const auto &Entry : Profiles) {
+    writeNameIdx(Entry.first());
+    encodeULEB128(Entry.second.getFunctionHash(), OS);
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   if (!UseMD5)
     return SampleProfileWriterBinary::writeNameTable();
@@ -209,6 +221,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   // The setting of SecFlagCompress should happen before markSectionStart.
   if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
     setToCompressSection(SecProfileSymbolList);
+  if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
+    addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
 
   uint64_t SectionStart = markSectionStart(Type);
   switch (Type) {
@@ -228,6 +242,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     break;
   case SecFuncOffsetTable:
     if (auto EC = writeFuncOffsetTable())
+      return EC;
+    break;
+  case SecFuncMetadata:
+    if (std::error_code EC = writeFuncMetadata(ProfileMap))
       return EC;
     break;
   case SecProfileSymbolList:
@@ -255,6 +273,8 @@ std::error_code SampleProfileWriterExtBinary::writeSections(
   if (auto EC = writeOneSection(SecProfileSymbolList, ProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecFuncOffsetTable, ProfileMap))
+    return EC;
+  if (auto EC = writeOneSection(SecFuncMetadata, ProfileMap))
     return EC;
   return sampleprof_error::success;
 }
@@ -319,6 +339,13 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
         return EC;
     }
   Indent -= 1;
+
+  if (Indent == 0) {
+    if (FunctionSamples::ProfileIsProbeBased) {
+      OS.indent(Indent + 1);
+      OS << "!CFGChecksum: " << S.getFunctionHash() << "\n";
+    }
+  }
 
   return sampleprof_error::success;
 }
