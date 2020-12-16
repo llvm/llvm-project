@@ -26,8 +26,7 @@ TEST(RoundfTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::roundf(inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::roundf(negInf));
 
-  ASSERT_NE(isnan(aNaN), 0);
-  ASSERT_NE(isnan(__llvm_libc::roundf(aNaN)), 0);
+  EXPECT_FP_EQ(aNaN, __llvm_libc::roundf(aNaN));
 }
 
 TEST(RoundfTest, RoundedNumbers) {
