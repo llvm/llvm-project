@@ -1,7 +1,6 @@
-; Note: Verify bfi counter after loading the profile.
-; RUN: llvm-profdata merge %S/Inputs/bfi_verification.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-verify-bfi-ratio=2 -pgo-verify-bfi=true -pgo-fix-entry-count=false -pass-remarks-analysis=pgo 2>&1 | FileCheck %s --check-prefix=THRESHOLD-CHECK
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-verify-hot-bfi=true -pgo-fix-entry-count=false -pass-remarks-analysis=pgo 2>&1 | FileCheck %s --check-prefix=HOTONLY-CHECK
+; Note: Scaling the func entry count (using the sum of count value) so that BFI counter value is close to raw profile counter values.
+; RUN: llvm-profdata merge %S/Inputs/fix_bfi.proftext -o %t.profdata
+; RUN: opt -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-fix-entry-count=true < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -97,15 +96,6 @@ if.then25:
 if.end26:
   ret void
 }
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB do.body Count=39637749 BFI_Count=40801304
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB while.cond Count=80655628 BFI_Count=83956530
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB while.body Count=41017879 BFI_Count=42370585
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB while.cond3 Count=71254487 BFI_Count=73756204
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB while.body7 Count=31616738 BFI_Count=32954900
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB while.end8 Count=39637749 BFI_Count=40801304
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB if.then Count=32743703 BFI_Count=33739540
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB if.end Count=39637749 BFI_Count=40801304
-; THRESHOLD-CHECK: remark: <unknown>:0:0: BB if.then25 Count=6013544 BFI_Count=6277124
-; THRESHOLD-CHECK: remark: <unknown>:0:0: In Func sort_basket: Num_of_BB=14, Num_of_non_zerovalue_BB=14, Num_of_mis_matching_BB=9
-; HOTONLY-CHECK: remark: <unknown>:0:0: BB if.then25 Count=6013544 BFI_Count=6277124 (raw-Cold to BFI-Hot)
-; HOTONLY-CHECK: remark: <unknown>:0:0: In Func sort_basket: Num_of_BB=14, Num_of_non_zerovalue_BB=14, Num_of_mis_matching_BB=1
+
+; CHECK: define dso_local void @sort_basket(i64 %min, i64 %max) #0 !prof [[ENTRY_COUNT:![0-9]+]]
+; CHECK: [[ENTRY_COUNT]] = !{!"function_entry_count", i64 12949310}
