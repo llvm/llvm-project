@@ -403,12 +403,14 @@ define <4 x float> @load_f32_insert_v4f32_volatile(float* align 16 dereferenceab
   ret <4 x float> %r
 }
 
-; Negative test? - pointer is not as aligned as load.
+; Pointer is not as aligned as load, but that's ok.
+; The new load uses the larger alignment value.
 
 define <4 x float> @load_f32_insert_v4f32_align(float* align 1 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32_align(
-; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = load float, float* %p, align 4
