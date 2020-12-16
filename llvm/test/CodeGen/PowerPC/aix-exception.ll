@@ -98,6 +98,29 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:  	bl .__cxa_end_catch[PR]
 ; ASM:  	nop
 ; ASM:  	b L..BB1_2
+
+; ASM:  L.._Z9catchFuncv0:
+; ASM:    .vbyte  4, 0x00000000                   # Traceback table begin
+; ASM:    .byte   0x00                            # Version = 0
+; ASM:    .byte   0x09                            # Language = CPlusPlus
+; ASM:    .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM:                                    # +HasTraceBackTableOffset, -IsInternalProcedure
+; ASM:                                    # -HasControlledStorage, -IsTOCless
+; ASM:                                    # +IsFloatingPointPresent
+; ASM:                                    # -IsFloatingPointOperationLogOrAbortEnabled
+; ASM:    .byte   0x41                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
+; ASM:                                    # OnConditionDirective = 0, -IsCRSaved, +IsLRSaved
+; ASM:    .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; ASM:    .byte   0x40                            # -HasVectorInfo, +HasExtensionTable, NumOfGPRsSaved = 0
+; ASM:    .byte   0x00                            # NumberOfFixedParms = 0
+; ASM:    .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
+; ASM:    .vbyte  4, L.._Z9catchFuncv0-._Z9catchFuncv # Function size
+; ASM:    .vbyte  2, 0x000d                       # Function name len = 13
+; ASM:    .byte   '_,'Z,'9,'c,'a,'t,'c,'h,'F,'u,'n,'c,'v # Function Name
+; ASM:    .byte   0x08                            # ExtensionTableFlag = TB_EH_INFO
+; ASM:    .align  2
+; ASM32:  .vbyte  4, L..C1-TOC[TC0]               # EHInfo Table
+; ASM64:  .vbyte  8, L..C1-TOC[TC0]               # EHInfo Table
 ; ASM:  L..func_end0:
 
 ; ASM:  	.csect .gcc_except_table[RO],2
@@ -129,6 +152,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM64: 	.vbyte	8, L..C0-TOC[TC0]               # TypeInfo 1
 ; ASM:  L..ttbase0:
 ; ASM:  	.align	2
+
 ; ASM:  	.csect .eh_info_table[RW],2
 ; ASM:  __ehinfo.1:
 ; ASM:  	.vbyte	4, 0
@@ -142,6 +166,8 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:    .toc
 ; ASM:  L..C0:
 ; ASM:    .tc _ZTIi[TC],_ZTIi[UA]
+; ASM:  L..C1:
+; ASM:    .tc __ehinfo.1[TC],__ehinfo.1
 
 declare i8* @__cxa_allocate_exception(i32)
 declare void @__cxa_throw(i8*, i8*, i8*)
