@@ -467,7 +467,9 @@ void Writer::createLoadCommands() {
       // loaded via LC_LOAD_WEAK_DYLIB.
       LoadCommandType lcType =
           dylibFile->forceWeakImport ? LC_LOAD_WEAK_DYLIB : LC_LOAD_DYLIB;
-      in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName));
+      in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName,
+                                              dylibFile->compatibilityVersion,
+                                              dylibFile->currentVersion));
       dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
