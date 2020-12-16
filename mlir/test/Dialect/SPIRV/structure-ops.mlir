@@ -757,6 +757,7 @@ spv.module Logical GLSL450 {
   // expected-error @+1 {{unsupported composite type}}
   spv.specConstantComposite @scc (@sc1) : !spv.coopmatrix<8x16xf32, Device>
 }
+
 //===----------------------------------------------------------------------===//
 // spv.SpecConstantOperation
 //===----------------------------------------------------------------------===//
@@ -765,16 +766,15 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
+    // CHECK: [[LHS:%.*]] = spv.constant
     %0 = spv.constant 1: i32
-    %2 = spv.constant 1: i32
+    // CHECK: [[RHS:%.*]] = spv.constant
+    %1 = spv.constant 1: i32
 
-    %1 = "spv.SpecConstantOperation"(%0, %0) ({
-    ^bb(%lhs : i32, %rhs : i32):
-      %ret = spv.IAdd %lhs, %rhs : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32, i32) -> i32
+    // CHECK: spv.SpecConstantOperation wraps "spv.IAdd"([[LHS]], [[RHS]]) : (i32, i32) -> i32
+    %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
 
-    spv.ReturnValue %1 : i32
+    spv.ReturnValue %2 : i32
   }
 }
 
@@ -783,96 +783,8 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
     %0 = spv.constant 1: i32
-    %2 = spv.constant 1: i32
-
-    // expected-error @+1 {{invalid number of operands; expected 2, actual 1}}
-    %1 = "spv.SpecConstantOperation"(%0) ({
-    ^bb(%lhs : i32, %rhs : i32):
-      %ret = spv.IAdd %lhs, %rhs : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32) -> i32
-
-    spv.ReturnValue %1 : i32
-  }
-}
-
-// -----
-
-spv.module Logical GLSL450 {
-  spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
-    %2 = spv.constant 1: i32
-
-    // expected-error @+1 {{invalid number of region arguments; expected 2, actual 1}}
-    %1 = "spv.SpecConstantOperation"(%0, %0) ({
-    ^bb(%lhs : i32):
-      %ret = spv.IAdd %lhs, %lhs : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32, i32) -> i32
-
-    spv.ReturnValue %1 : i32
-  }
-}
-
-// -----
-
-spv.module Logical GLSL450 {
-  spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
-    // expected-error @+1 {{expected parent op to be 'spv.SpecConstantOperation'}}
+    // expected-error @+1 {{op expects parent op 'spv.SpecConstantOperation'}}
     spv.mlir.yield %0 : i32
-  }
-}
-
-// -----
-
-spv.module Logical GLSL450 {
-  spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
-
-    %1 = "spv.SpecConstantOperation"(%0, %0) ({
-    ^bb(%lhs : i32, %rhs : i32):
-      %ret = spv.ISub %lhs, %rhs : i32
-      // expected-error @+1 {{expected operand to be defined by preceeding op}}
-      spv.mlir.yield %lhs : i32
-    }) : (i32, i32) -> i32
-
-    spv.ReturnValue %1 : i32
-  }
-}
-
-// -----
-
-spv.module Logical GLSL450 {
-  spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
-
-    // expected-error @+1 {{expected exactly 2 nested ops}}
-    %1 = "spv.SpecConstantOperation"(%0, %0) ({
-    ^bb(%lhs : i32, %rhs : i32):
-      %ret = spv.IAdd %lhs, %rhs : i32
-      %ret2 = spv.IAdd %lhs, %rhs : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32, i32) -> i32
-
-    spv.ReturnValue %1 : i32
-  }
-}
-
-// -----
-
-spv.module Logical GLSL450 {
-  spv.func @foo() -> i32 "None" {
-    %0 = spv.constant 1: i32
-
-    // expected-error @+1 {{expected terminator to be a yield op}}
-    %1 = "spv.SpecConstantOperation"(%0, %0) ({
-    ^bb(%lhs : i32, %rhs : i32):
-      %ret = spv.IAdd %lhs, %rhs : i32
-      spv.ReturnValue %ret : i32
-    }) : (i32, i32) -> i32
-
-    spv.ReturnValue %1 : i32
   }
 }
 
@@ -883,11 +795,8 @@ spv.module Logical GLSL450 {
     %0 = spv.Variable : !spv.ptr<i32, Function>
 
     // expected-error @+1 {{invalid enclosed op}}
-    %2 = "spv.SpecConstantOperation"(%0) ({
-    ^bb(%arg0 : !spv.ptr<i32, Function>):
-      %ret = spv.Load "Function" %arg0 : i32
-      spv.mlir.yield %ret : i32
-    }) : (!spv.ptr<i32, Function>) -> i32
+    %1 = spv.SpecConstantOperation wraps "spv.Load"(%0) {memory_access = 0 : i32} : (!spv.ptr<i32, Function>) -> i32
+    spv.Return
   }
 }
 
@@ -898,11 +807,9 @@ spv.module Logical GLSL450 {
     %0 = spv.Variable : !spv.ptr<i32, Function>
     %1 = spv.Load "Function" %0 : i32
 
-    // expected-error @+1 {{invalid operand}}
-    %2 = "spv.SpecConstantOperation"(%1, %1) ({
-    ^bb(%lhs: i32, %rhs: i32):
-      %ret = spv.IAdd %lhs, %lhs : i32
-      spv.mlir.yield %ret : i32
-    }) : (i32, i32) -> i32
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%1, %1) : (i32, i32) -> i32
+
+    spv.Return
   }
 }
