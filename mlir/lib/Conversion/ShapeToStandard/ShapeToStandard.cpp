@@ -103,9 +103,9 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
   auto erasedRankType =
       RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
   Value rankErasedLhs =
-      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.lhs());
+      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.lhs());
   Value rankErasedRhs =
-      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.rhs());
+      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.rhs());
   Value lesserRankOperand =
       rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedLhs, rankErasedRhs);
   Value greaterRankOperand =
@@ -186,7 +186,7 @@ LogicalResult ConstShapeOpConverter::matchAndRewrite(
   Value tensor =
       rewriter.create<TensorFromElementsOp>(loc, indexTy, extentOperands);
   Type resultTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
-  rewriter.replaceOpWithNewOp<TensorCastOp>(op, tensor, resultTy);
+  rewriter.replaceOpWithNewOp<tensor::CastOp>(op, resultTy, tensor);
   return success();
 }
 
@@ -246,9 +246,9 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
   auto erasedRankType =
       RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
   Value rankErasedLhs =
-      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.lhs());
+      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.lhs());
   Value rankErasedRhs =
-      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.rhs());
+      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.rhs());
   Value lesserRankOperand =
       rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedLhs, rankErasedRhs);
   Value greaterRankOperand =
@@ -528,8 +528,8 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
     // Materialize extent tensor.
     Value staticExtentTensor = rewriter.create<TensorFromElementsOp>(
         loc, rewriter.getIndexType(), extentValues);
-    rewriter.replaceOpWithNewOp<TensorCastOp>(op, staticExtentTensor,
-                                              op.getType());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
+                                                staticExtentTensor);
     return success();
   }
 
@@ -561,8 +561,8 @@ public:
     if (!adaptor.input().getType().isa<RankedTensorType>())
       return rewriter.notifyMatchFailure(op, "input needs to be a tensor");
 
-    rewriter.replaceOpWithNewOp<TensorCastOp>(op, adaptor.input(),
-                                              op.getType());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
+                                                adaptor.input());
     return success();
   }
 };

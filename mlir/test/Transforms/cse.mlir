@@ -68,10 +68,10 @@ func @different_ops() -> (i32, i32) {
 /// types.
 // CHECK-LABEL: @different_results
 func @different_results(%arg0: tensor<*xf32>) -> (tensor<?x?xf32>, tensor<4x?xf32>) {
-  // CHECK: %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
-  // CHECK-NEXT: %1 = tensor_cast %arg0 : tensor<*xf32> to tensor<4x?xf32>
-  %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
-  %1 = tensor_cast %arg0 : tensor<*xf32> to tensor<4x?xf32>
+  // CHECK: %0 = tensor.cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
+  // CHECK-NEXT: %1 = tensor.cast %arg0 : tensor<*xf32> to tensor<4x?xf32>
+  %0 = tensor.cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
+  %1 = tensor.cast %arg0 : tensor<*xf32> to tensor<4x?xf32>
 
   // CHECK-NEXT: return %0, %1 : tensor<?x?xf32>, tensor<4x?xf32>
   return %0, %1 : tensor<?x?xf32>, tensor<4x?xf32>

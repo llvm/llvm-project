@@ -651,7 +651,7 @@ struct ReplaceStaticShapeDims : OpRewritePattern<InitTensorOp> {
     auto newOp =
         rewriter.create<InitTensorOp>(op.getLoc(), newType, dynamicSizes,
                                       rewriter.getI64ArrayAttr(staticSizes));
-    rewriter.replaceOpWithNewOp<TensorCastOp>(op, op.getType(), newOp);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
 };
@@ -1815,12 +1815,12 @@ struct FoldTensorCastOp : public RewritePattern {
     if (!linalgOp)
       return failure();
 
-    // If no operand comes from a TensorCastOp and can be folded then fail.
+    // If no operand comes from a tensor::CastOp and can be folded then fail.
     bool hasTensorCastOperand =
         llvm::any_of(linalgOp.getShapedOperands(), [&](Value v) {
           if (v.isa<BlockArgument>())
             return false;
-          auto castOp = v.getDefiningOp<TensorCastOp>();
+          auto castOp = v.getDefiningOp<tensor::CastOp>();
           return castOp && canFoldIntoConsumerOp(castOp);
         });
     if (!hasTensorCastOperand)
@@ -1832,7 +1832,7 @@ struct FoldTensorCastOp : public RewritePattern {
     newOperands.reserve(op->getNumOperands());
     // Inputs may fold.
     for (Value v : linalgOp.getInputs()) {
-      auto tensorCastOp = v.getDefiningOp<TensorCastOp>();
+      auto tensorCastOp = v.getDefiningOp<tensor::CastOp>();
       newOperands.push_back(
           canFoldIntoConsumerOp(tensorCastOp) ? tensorCastOp.source() : v);
     }
@@ -1841,7 +1841,7 @@ struct FoldTensorCastOp : public RewritePattern {
                        linalgOp.getOutputBuffers().end());
     // Init tensors may fold, in which case the resultType must also change.
     for (Value v : linalgOp.getInitTensors()) {
-      auto tensorCastOp = v.getDefiningOp<TensorCastOp>();
+      auto tensorCastOp = v.getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : v);
       newResultTypes.push_back(newOperands.back().getType());

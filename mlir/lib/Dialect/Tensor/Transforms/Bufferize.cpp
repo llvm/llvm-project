@@ -20,6 +20,20 @@
 using namespace mlir;
 
 namespace {
+class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resultType = getTypeConverter()->convertType(op.getType());
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 class BufferizeExtractOp : public OpConversionPattern<tensor::ExtractOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -37,7 +51,7 @@ public:
 void mlir::populateTensorBufferizePatterns(
     MLIRContext *context, BufferizeTypeConverter &typeConverter,
     OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeExtractOp>(typeConverter, context);
+  patterns.insert<BufferizeCastOp, BufferizeExtractOp>(typeConverter, context);
 }
 
 namespace {
@@ -49,7 +63,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     ConversionTarget target(*context);
 
     populateTensorBufferizePatterns(context, typeConverter, patterns);
-    target.addIllegalOp<tensor::ExtractOp>();
+    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
     target.addLegalDialect<StandardOpsDialect>();
 
     if (failed(

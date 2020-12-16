@@ -34,7 +34,7 @@ namespace linalg {
 class LinalgDependenceGraph;
 
 /// A struct containing the Linalg producer before and after fusion.
-/// When operating on tensors, `fusedProducer` may feed into a `tensor_cast` op
+/// When operating on tensors, `fusedProducer` may feed into a `tensor.cast` op
 /// before the consumer Linalg op, until enough canonicalizations have applied.
 struct FusionInfo {
   LinalgOp originalProducer;
