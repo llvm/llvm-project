@@ -17,13 +17,13 @@ using FPBits = __llvm_libc::fputil::FPBits<float>;
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(FmaxfTest, NaNArg) {
-  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(nan, inf));
-  EXPECT_FP_EQ(negInf, __llvm_libc::fmaxf(negInf, nan));
-  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(nan, 0.0f));
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, nan));
-  EXPECT_FP_EQ(-1.2345f, __llvm_libc::fmaxf(nan, -1.2345f));
-  EXPECT_FP_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, nan));
-  EXPECT_NE(isnan(__llvm_libc::fmaxf(nan, nan)), 0);
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(aNaN, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fmaxf(negInf, aNaN));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(aNaN, 0.0f));
+  EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, aNaN));
+  EXPECT_FP_EQ(-1.2345f, __llvm_libc::fmaxf(aNaN, -1.2345f));
+  EXPECT_FP_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, aNaN));
+  EXPECT_NE(isnan(__llvm_libc::fmaxf(aNaN, aNaN)), 0);
 }
 
 TEST(FmaxfTest, InfArg) {
