@@ -25,7 +25,7 @@
 # LOAD-NEXT:               cmdsize
 # LOAD-NEXT:                  name /usr/lib/libSystem.B.dylib
 # LOAD-NEXT:            time stamp
-# LOAD-NEXT:       current version 1.1.0
+# LOAD-NEXT:       current version 1.1.1
 # LOAD-NEXT: compatibility version
 
 .section __TEXT,__text
