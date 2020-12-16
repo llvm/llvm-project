@@ -21,6 +21,7 @@ namespace llvm {
 
 class GlobalValue;
 class MachineModuleInfo;
+class MachineFunction;
 class MCContext;
 class MCExpr;
 class MCSection;
@@ -218,6 +219,10 @@ class TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
 public:
   TargetLoweringObjectFileXCOFF() = default;
   ~TargetLoweringObjectFileXCOFF() override = default;
+
+  static bool ShouldEmitEHBlock(const MachineFunction *MF);
+
+  static MCSymbol *getEHInfoTableSymbol(const MachineFunction *MF);
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
