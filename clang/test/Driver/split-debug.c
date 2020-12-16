@@ -59,8 +59,8 @@
 
 /// Invoke objcopy if not using the integrated assembler.
 // RUN: %clang -### -c -target x86_64-unknown-linux-gnu -fno-integrated-as -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=OBJCOPY
-// OBJCOPY:      objcopy" "--extract-dwo"
-// OBJCOPY-NEXT: objcopy" "--strip-dwo"
+// OBJCOPY:      objcopy{{(.exe)?}}" "--extract-dwo"
+// OBJCOPY-NEXT: objcopy{{(.exe)?}}" "--strip-dwo"
 
 /// ... but not for assembly output.
 // RUN: %clang -### -S -target x86_64-unknown-linux-gnu -fno-integrated-as -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=NOOBJCOPY
