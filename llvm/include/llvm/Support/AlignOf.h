@@ -20,9 +20,10 @@ namespace llvm {
 /// A suitably aligned and sized character array member which can hold elements
 /// of any type.
 ///
-/// These types may be arrays, structs, or any other types. This exposes a
-/// `buffer` member which can be used as suitable storage for a placement new of
-/// any of these types.
+/// This template is equivalent to std::aligned_union_t<1, ...>, but we cannot
+/// use it due to a bug in the MSVC x86 compiler:
+/// https://github.com/microsoft/STL/issues/1533
+/// Using `alignas` here works around the bug.
 template <typename T, typename... Ts> struct AlignedCharArrayUnion {
   using AlignedUnion = std::aligned_union_t<1, T, Ts...>;
   alignas(alignof(AlignedUnion)) char buffer[sizeof(AlignedUnion)];

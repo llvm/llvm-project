@@ -510,7 +510,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // block.
     assert(SP == BB && "CFG broken");
     SP = nullptr;
-    return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU);
+    return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, "", /*Before=*/true);
   }
 
   // Otherwise, if BB has a single successor, split it at the bottom of the
@@ -537,7 +537,10 @@ llvm::SplitAllCriticalEdges(Function &F,
 
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
+                             MemorySSAUpdater *MSSAU, const Twine &BBName,
+                             bool Before) {
+  if (Before)
+    return splitBlockBefore(Old, SplitPt, DT, LI, MSSAU, BBName);
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
@@ -566,6 +569,51 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
   if (MSSAU)
     MSSAU->moveAllAfterSpliceBlocks(Old, New, &*(New->begin()));
 
+  return New;
+}
+
+BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
+                                   DominatorTree *DT, LoopInfo *LI,
+                                   MemorySSAUpdater *MSSAU,
+                                   const Twine &BBName) {
+
+  BasicBlock::iterator SplitIt = SplitPt->getIterator();
+  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
+    ++SplitIt;
+  std::string Name = BBName.str();
+  BasicBlock *New = Old->splitBasicBlock(
+      SplitIt, Name.empty() ? Old->getName() + ".split" : Name,
+      /* Before=*/true);
+
+  // The new block lives in whichever loop the old one did. This preserves
+  // LCSSA as well, because we force the split point to be after any PHI nodes.
+  if (LI)
+    if (Loop *L = LI->getLoopFor(Old))
+      L->addBasicBlockToLoop(New, *LI);
+
+  if (DT) {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+    // New dominates Old. The predecessor nodes of the Old node dominate
+    // New node.
+    DTUpdates.push_back({DominatorTree::Insert, New, Old});
+    for (BasicBlock *Pred : predecessors(New))
+      if (DT->getNode(Pred)) {
+        DTUpdates.push_back({DominatorTree::Insert, Pred, New});
+        DTUpdates.push_back({DominatorTree::Delete, Pred, Old});
+      }
+
+    DTU.applyUpdates(DTUpdates);
+    DTU.flush();
+
+    // Move MemoryAccesses still tracked in Old, but part of New now.
+    // Update accesses in successor blocks accordingly.
+    if (MSSAU) {
+      MSSAU->applyUpdates(DTUpdates, *DT);
+      if (VerifyMemorySSA)
+        MSSAU->getMemorySSA()->verifyMemorySSA();
+    }
+  }
   return New;
 }
 

@@ -229,9 +229,9 @@ DataInitializationCompiler::ConvertElement(
     // (most) other Fortran compilers do.  Pad on the right with spaces
     // when short, truncate the right if long.
     // TODO: big-endian targets
-    std::size_t bytes{static_cast<std::size_t>(evaluate::ToInt64(
-        type.MeasureSizeInBytes(&exprAnalyzer_.GetFoldingContext()))
-                                                   .value())};
+    auto bytes{static_cast<std::size_t>(evaluate::ToInt64(
+        type.MeasureSizeInBytes(exprAnalyzer_.GetFoldingContext(), false))
+                                            .value())};
     evaluate::BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
       char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
@@ -349,8 +349,8 @@ bool DataInitializationCompiler::InitElement(
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};
-      switch (
-          GetImage().Add(offsetSymbol.offset(), offsetSymbol.size(), folded)) {
+      switch (GetImage().Add(
+          offsetSymbol.offset(), offsetSymbol.size(), folded, context)) {
       case evaluate::InitialImage::Ok:
         return true;
       case evaluate::InitialImage::NotAConstant:
@@ -434,15 +434,15 @@ static bool CombineSomeEquivalencedInits(
     // Compute the minimum common granularity
     if (auto dyType{evaluate::DynamicType::From(symbol)}) {
       minElementBytes = evaluate::ToInt64(
-          dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
+          dyType->MeasureSizeInBytes(exprAnalyzer.GetFoldingContext(), true))
                             .value_or(1);
     }
     for (const Symbol *s : conflicts) {
       if (auto dyType{evaluate::DynamicType::From(*s)}) {
-        minElementBytes = std::min(minElementBytes,
-            static_cast<std::size_t>(evaluate::ToInt64(
-                dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
-                                         .value_or(1)));
+        minElementBytes = std::min<std::size_t>(minElementBytes,
+            evaluate::ToInt64(dyType->MeasureSizeInBytes(
+                                  exprAnalyzer.GetFoldingContext(), true))
+                .value_or(1));
       } else {
         minElementBytes = 1;
       }

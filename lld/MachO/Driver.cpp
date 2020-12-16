@@ -40,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TextAPI/MachO/PackedVersion.h"
 
 #include <algorithm>
 
@@ -673,34 +674,13 @@ static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
     return 0;
   }
 
-  llvm::VersionTuple version;
-  if (version.tryParse(arg->getValue()) || version.getBuild().hasValue()) {
+  PackedVersion version;
+  if (!version.parse32(arg->getValue())) {
     error(arg->getAsString(args) + ": malformed version");
     return 0;
   }
 
-  unsigned major = version.getMajor();
-  if (major > UINT16_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(major) +
-          " out of range");
-    return 0;
-  }
-
-  unsigned minor = version.getMinor().getValueOr(0);
-  if (minor > UINT8_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(minor) +
-          " out of range");
-    return 0;
-  }
-
-  unsigned subminor = version.getSubminor().getValueOr(0);
-  if (subminor > UINT8_MAX) {
-    error(arg->getAsString(args) + ": component " + Twine(subminor) +
-          " out of range");
-    return 0;
-  }
-
-  return (major << 16) | (minor << 8) | subminor;
+  return version.rawValue();
 }
 
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,

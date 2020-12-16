@@ -61,10 +61,10 @@ subroutine test
   dt0x = dt0(ip0=null())
   dt0x = dt0(ip0=null(ip0))
   dt0x = dt0(ip0=null(mold=ip0))
-  !ERROR: TARGET type 'REAL(4)' is not compatible with POINTER type 'INTEGER(4)'
+  !ERROR: function result type 'REAL(4)' is not compatible with pointer type 'INTEGER(4)'
   !ERROR: pointer 'ip0' is associated with the result of a reference to function 'null' whose pointer result has an incompatible type or shape
   dt0x = dt0(ip0=null(mold=rp0))
-  !ERROR: TARGET type 'REAL(4)' is not compatible with POINTER type 'INTEGER(4)'
+  !ERROR: function result type 'REAL(4)' is not compatible with pointer type 'INTEGER(4)'
   !ERROR: pointer 'ip1' is associated with the result of a reference to function 'null' whose pointer result has an incompatible type or shape
   dt1x = dt1(ip1=null(mold=rp1))
   dt2x = dt2(pps0=null())

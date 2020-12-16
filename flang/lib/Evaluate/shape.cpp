@@ -643,17 +643,13 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           if (auto sourceTypeAndShape{
                   characteristics::TypeAndShape::Characterize(
                       call.arguments().at(0), context_)}) {
-            auto sourceElements{
-                GetSize(common::Clone(sourceTypeAndShape->shape()))};
-            auto sourceElementBytes{
-                sourceTypeAndShape->MeasureSizeInBytes(&context_)};
+            auto sourceBytes{sourceTypeAndShape->MeasureSizeInBytes(context_)};
             auto moldElementBytes{
-                moldTypeAndShape->MeasureSizeInBytes(&context_)};
-            if (sourceElements && sourceElementBytes && moldElementBytes) {
+                moldTypeAndShape->type().MeasureSizeInBytes(context_, true)};
+            if (sourceBytes && moldElementBytes) {
               ExtentExpr extent{Fold(context_,
-                  ((std::move(*sourceElements) *
-                       std::move(*sourceElementBytes)) +
-                      common::Clone(*moldElementBytes) - ExtentExpr{1}) /
+                  (std::move(*sourceBytes) + common::Clone(*moldElementBytes) -
+                      ExtentExpr{1}) /
                       common::Clone(*moldElementBytes))};
               return Shape{MaybeExtentExpr{std::move(extent)}};
             }
@@ -683,7 +679,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
 // that they conform
 bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
     const Shape &right, const char *leftIs, const char *rightIs,
-    bool leftScalarExpandable, bool rightScalarExpandable) {
+    bool leftScalarExpandable, bool rightScalarExpandable,
+    bool leftIsDeferredShape, bool rightIsDeferredShape) {
   int n{GetRank(left)};
   if (n == 0 && leftScalarExpandable) {
     return true;
@@ -698,15 +695,18 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
     return false;
   }
   for (int j{0}; j < n; ++j) {
-    auto leftDim{ToInt64(left[j])};
-    auto rightDim{ToInt64(right[j])};
-    if (!leftDim || !rightDim) {
-      return false;
-    }
-    if (*leftDim != *rightDim) {
-      messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
-                   "but %4$s has extent %5$jd"_err_en_US,
-          j + 1, leftIs, *leftDim, rightIs, *rightDim);
+    if (auto leftDim{ToInt64(left[j])}) {
+      if (auto rightDim{ToInt64(right[j])}) {
+        if (*leftDim != *rightDim) {
+          messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
+                       "but %4$s has extent %5$jd"_err_en_US,
+              j + 1, leftIs, *leftDim, rightIs, *rightDim);
+          return false;
+        }
+      } else if (!rightIsDeferredShape) {
+        return false;
+      }
+    } else if (!leftIsDeferredShape) {
       return false;
     }
   }

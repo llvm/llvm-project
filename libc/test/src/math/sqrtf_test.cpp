@@ -23,12 +23,12 @@ constexpr UIntType HiddenBit =
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(SqrtfTest, SpecialValues) {
-  ASSERT_FP_EQ(nan, __llvm_libc::sqrtf(nan));
+  ASSERT_FP_EQ(aNaN, __llvm_libc::sqrtf(aNaN));
   ASSERT_FP_EQ(inf, __llvm_libc::sqrtf(inf));
-  ASSERT_FP_EQ(nan, __llvm_libc::sqrtf(negInf));
+  ASSERT_FP_EQ(aNaN, __llvm_libc::sqrtf(negInf));
   ASSERT_FP_EQ(0.0f, __llvm_libc::sqrtf(0.0f));
   ASSERT_FP_EQ(-0.0f, __llvm_libc::sqrtf(-0.0f));
-  ASSERT_FP_EQ(nan, __llvm_libc::sqrtf(-1.0f));
+  ASSERT_FP_EQ(aNaN, __llvm_libc::sqrtf(-1.0f));
   ASSERT_FP_EQ(1.0f, __llvm_libc::sqrtf(1.0f));
   ASSERT_FP_EQ(2.0f, __llvm_libc::sqrtf(4.0f));
   ASSERT_FP_EQ(3.0f, __llvm_libc::sqrtf(9.0f));

@@ -176,10 +176,10 @@ class MarshallingInfoBitfieldFlag<code keypath, code value>
 
 // Marshalling info for booleans. Applied to the flag setting keypath to false.
 class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, code name,
-                                 code other_value, code other_name, string other_spelling>
+                                 code other_value, code other_name>
   : MarshallingInfoFlag<keypath, defaultvalue> {
   code Normalizer = "makeBooleanOptionNormalizer("#value#", "#other_value#", OPT_"#other_name#")";
-  code Denormalizer = "makeBooleanOptionDenormalizer("#value#", \""#other_spelling#"\")";
+  code Denormalizer = "makeBooleanOptionDenormalizer("#value#")";
 }
 
 // Mixins for additional marshalling attributes.

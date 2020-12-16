@@ -2371,38 +2371,40 @@ void ModuleVisitor::DoAddUse(const SourceName &location,
     const SourceName &localName, Symbol &localSymbol, const Symbol &useSymbol) {
   localSymbol.attrs() = useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
   localSymbol.flags() = useSymbol.flags();
+  const Symbol &useUltimate{useSymbol.GetUltimate()};
   if (auto *useDetails{localSymbol.detailsIf<UseDetails>()}) {
-    const Symbol &ultimate{localSymbol.GetUltimate()};
-    if (ultimate == useSymbol.GetUltimate()) {
+    const Symbol &localUltimate{localSymbol.GetUltimate()};
+    if (localUltimate == useUltimate) {
       // use-associating the same symbol again -- ok
-    } else if (ultimate.has<GenericDetails>() &&
-        useSymbol.has<GenericDetails>()) {
+    } else if (localUltimate.has<GenericDetails>() &&
+        useUltimate.has<GenericDetails>()) {
       // use-associating generics with the same names: merge them into a
       // new generic in this scope
-      auto generic1{ultimate.get<GenericDetails>()};
-      AddGenericUse(generic1, localName, useSymbol);
+      auto generic1{localUltimate.get<GenericDetails>()};
+      AddGenericUse(generic1, localName, useUltimate);
       generic1.AddUse(localSymbol);
       // useSymbol has specific g and so does generic1
-      auto &generic2{useSymbol.get<GenericDetails>()};
+      auto &generic2{useUltimate.get<GenericDetails>()};
       if (generic1.derivedType() && generic2.derivedType() &&
           generic1.derivedType() != generic2.derivedType()) {
         Say(location,
             "Generic interface '%s' has ambiguous derived types"
             " from modules '%s' and '%s'"_err_en_US,
             localSymbol.name(), GetUsedModule(*useDetails).name(),
-            useSymbol.owner().GetName().value());
+            useUltimate.owner().GetName().value());
         context().SetError(localSymbol);
       } else {
         generic1.CopyFrom(generic2);
       }
       EraseSymbol(localSymbol);
-      MakeSymbol(localSymbol.name(), ultimate.attrs(), std::move(generic1));
+      MakeSymbol(
+          localSymbol.name(), localUltimate.attrs(), std::move(generic1));
     } else {
       ConvertToUseError(localSymbol, location, *useModuleScope_);
     }
   } else if (auto *genericDetails{localSymbol.detailsIf<GenericDetails>()}) {
-    if (const auto *useDetails{useSymbol.detailsIf<GenericDetails>()}) {
-      AddGenericUse(*genericDetails, localName, useSymbol);
+    if (const auto *useDetails{useUltimate.detailsIf<GenericDetails>()}) {
+      AddGenericUse(*genericDetails, localName, useUltimate);
       if (genericDetails->derivedType() && useDetails->derivedType() &&
           genericDetails->derivedType() != useDetails->derivedType()) {
         Say(location,

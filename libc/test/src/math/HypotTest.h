@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
-#include "include/math.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/Hypot.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+
+#include <math.h>
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 

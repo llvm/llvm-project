@@ -1064,10 +1064,11 @@ private:
   /// is \c NULL.
   bool matchesDecl(const Decl *Node, ASTMatchFinder *Finder,
                    BoundNodesTreeBuilder *Builder) const {
-    if (Finder->isTraversalIgnoringImplicitNodes() && Node->isImplicit())
-      return false;
-    return Node != nullptr && this->InnerMatcher.matches(
-                                  DynTypedNode::create(*Node), Finder, Builder);
+    return Node != nullptr &&
+           !(Finder->isTraversalIgnoringImplicitNodes() &&
+             Node->isImplicit()) &&
+           this->InnerMatcher.matches(DynTypedNode::create(*Node), Finder,
+                                      Builder);
   }
 };
 
