@@ -820,7 +820,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
       return Builder.CreateBitCast(Val, VecTy);
     };
 
-    for (int i = -1; i != NumSectors; ++i) {
+    // Create an extra "undef" sector at the beginning and at the end.
+    // They will be used as the left/right filler in the vlalign step.
+    for (int i = -1; i != NumSectors + 1; ++i) {
       ByteSpan Section = VSpan.section(i * ScLen, ScLen).normalize();
       Value *AccumV = UndefValue::get(SecTy);
       Value *AccumM = HVC.getNullValue(SecTy);
@@ -838,14 +840,14 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     }
 
     // vlalign
-    for (int j = 1; j != NumSectors + 1; ++j) {
+    for (int j = 1; j != NumSectors + 2; ++j) {
       ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanV[j - 1].Seg.Val,
                                            ASpanV[j].Seg.Val, AlignVal);
       ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanM[j - 1].Seg.Val,
                                            ASpanM[j].Seg.Val, AlignVal);
     }
 
-    for (int i = 0; i != NumSectors; ++i) {
+    for (int i = 0; i != NumSectors + 1; ++i) {
       Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
       Value *Val = ASpanV[i].Seg.Val;
       Value *Mask = ASpanM[i].Seg.Val; // bytes
