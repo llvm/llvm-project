@@ -35,6 +35,7 @@ namespace llvm {
 
 namespace jitlink {
 class EHFrameRegistrar;
+class LinkGraph;
 class Symbol;
 } // namespace jitlink
 
@@ -118,9 +119,13 @@ public:
     return *this;
   }
 
-  /// Emit the object.
+  /// Emit an object file.
   void emit(std::unique_ptr<MaterializationResponsibility> R,
             std::unique_ptr<MemoryBuffer> O) override;
+
+  /// Emit a LinkGraph.
+  void emit(std::unique_ptr<MaterializationResponsibility> R,
+            std::unique_ptr<jitlink::LinkGraph> G);
 
   /// Instructs this ObjectLinkingLayer instance to override the symbol flags
   /// found in the AtomGraph with the flags supplied by the

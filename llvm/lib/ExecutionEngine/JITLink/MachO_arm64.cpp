@@ -26,7 +26,7 @@ namespace {
 class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj)
-      : MachOLinkGraphBuilder(Obj),
+      : MachOLinkGraphBuilder(Obj, Triple("arm64-apple-darwin")),
         NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
@@ -501,20 +501,13 @@ class MachOJITLinker_arm64 : public JITLinker<MachOJITLinker_arm64> {
 
 public:
   MachOJITLinker_arm64(std::unique_ptr<JITLinkContext> Ctx,
+                       std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
   StringRef getEdgeKindName(Edge::Kind R) const override {
     return getMachOARM64RelocationKindName(R);
-  }
-
-  Expected<std::unique_ptr<LinkGraph>>
-  buildGraph(MemoryBufferRef ObjBuffer) override {
-    auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjBuffer);
-    if (!MachOObj)
-      return MachOObj.takeError();
-    return MachOLinkGraphBuilder_arm64(**MachOObj).buildGraph();
   }
 
   static Error targetOutOfRangeError(const Block &B, const Edge &E) {
@@ -681,13 +674,22 @@ private:
   uint64_t NullValue = 0;
 };
 
-void jitLink_MachO_arm64(std::unique_ptr<JITLinkContext> Ctx) {
-  PassConfiguration Config;
-  Triple TT("arm64-apple-ios");
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
+  auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
+  if (!MachOObj)
+    return MachOObj.takeError();
+  return MachOLinkGraphBuilder_arm64(**MachOObj).buildGraph();
+}
 
-  if (Ctx->shouldAddDefaultTargetPasses(TT)) {
+void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
+                      std::unique_ptr<JITLinkContext> Ctx) {
+
+  PassConfiguration Config;
+
+  if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add a mark-live pass.
-    if (auto MarkLive = Ctx->getMarkLivePass(TT))
+    if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
@@ -699,11 +701,11 @@ void jitLink_MachO_arm64(std::unique_ptr<JITLinkContext> Ctx) {
     });
   }
 
-  if (auto Err = Ctx->modifyPassConfig(TT, Config))
+  if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
     return Ctx->notifyFailed(std::move(Err));
 
   // Construct a JITLinker and run the link function.
-  MachOJITLinker_arm64::link(std::move(Ctx), std::move(Config));
+  MachOJITLinker_arm64::link(std::move(Ctx), std::move(G), std::move(Config));
 }
 
 StringRef getMachOARM64RelocationKindName(Edge::Kind R) {
