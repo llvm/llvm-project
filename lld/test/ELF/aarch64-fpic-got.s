@@ -17,7 +17,7 @@
 ## page(0x220320) - page(0x210000) = 65536
 ## page(0x220320) & 0xff8 = 800
 # DIS:      <_start>:
-# DIS-NEXT: 210258: adrp x0, #65536
+# DIS-NEXT: 210258: adrp x0, 0x220000
 # DIS-NEXT: 21025c: ldr x0, [x0, #800]
 
 .globl _start

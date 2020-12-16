@@ -1377,7 +1377,8 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
   }
 }
 
-void AArch64InstPrinter::printAdrpLabel(const MCInst *MI, unsigned OpNum,
+void AArch64InstPrinter::printAdrpLabel(const MCInst *MI, uint64_t Address,
+                                        unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -1385,7 +1386,11 @@ void AArch64InstPrinter::printAdrpLabel(const MCInst *MI, unsigned OpNum,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    O << "#" << formatImm(Op.getImm() * (1 << 12));
+    const int64_t Offset = Op.getImm() << 12;
+    if (PrintBranchImmAsAddress)
+      O << formatHex((Address & -4096) + Offset);
+    else
+      O << "#" << Offset;
     return;
   }
 
