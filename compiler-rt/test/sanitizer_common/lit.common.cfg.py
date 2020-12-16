@@ -43,6 +43,14 @@ elif config.android:
   # which does not work for abort()-terminated programs.
   default_tool_options += ['abort_on_error=0']
 
+# If the user has a poisoned *SAN_SYMBOLIZER_PATH (like what's setup by
+# build/envsetup.sh on Android), then they can end up with an out-of-date
+# symbolizer for the tests. Ensure they get the one from the recent build tree.
+symbolizer_path="''"
+if len(config.binary_path):
+  symbolizer_path = os.path.join(config.binary_path, "llvm-symbolizer")
+default_tool_options += ['external_symbolizer_path=' + symbolizer_path]
+
 default_tool_options_str = ':'.join(default_tool_options)
 if default_tool_options_str:
   config.environment[tool_options] = default_tool_options_str
