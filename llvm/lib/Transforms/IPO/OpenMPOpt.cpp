@@ -1768,7 +1768,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
                                     InternalControlVar &ICV) const {
 
     const auto *CB = dyn_cast<CallBase>(I);
-    if (!CB)
+    if (!CB || CB->hasFnAttr("no_openmp") ||
+        CB->hasFnAttr("no_openmp_routines"))
       return None;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
