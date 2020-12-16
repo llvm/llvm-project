@@ -141,3 +141,29 @@ namespace templated {
     void operator delete(typename id_struct<D>::type *, std::destroying_delete_t); // expected-error {{use 'D<T> *'}}
   };
 }
+
+namespace dtor_access {
+  struct S {
+    void operator delete(S *p, std::destroying_delete_t);
+  private:
+    ~S(); // expected-note {{here}}
+  };
+
+  // FIXME: PR47474: GCC accepts this, and it seems somewhat reasonable to
+  // allow, even though [expr.delete]p12 says this is ill-formed.
+  void f() { delete new S; } // expected-error {{calling a private destructor}}
+
+  struct T {
+    void operator delete(T *, std::destroying_delete_t);
+  protected:
+    virtual ~T(); // expected-note {{here}}
+  };
+
+  struct U : T {
+    void operator delete(void *);
+  private:
+    ~U() override;
+  };
+
+  void g() { delete (T *)new U; } // expected-error {{calling a protected destructor}}
+}
