@@ -25,6 +25,8 @@ typedef uint32_t omp_lock_t; /* arbitrary type of the right length */
 // OpenMP interface
 ////////////////////////////////////////////////////////////////////////////////
 
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads(void);
+
 EXTERN int omp_get_device_num(void);
 EXTERN int omp_ext_get_warp_id(void);
 EXTERN int omp_ext_get_lane_id(void);

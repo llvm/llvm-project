@@ -151,6 +151,12 @@ DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
+
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads(void)
+{
+  return GetNumberOfThreadsInBlock();
+}
+
 // global_allocate is hostrpc service to return pointer to device memory
 // In the future, we will implement a heap allocation and minimize
 // host service calls. 
