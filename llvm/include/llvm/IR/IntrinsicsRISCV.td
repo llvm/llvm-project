@@ -193,4 +193,7 @@ let TargetPrefix = "riscv" in {
   defm vmaxu : RISCVBinaryAAX;
   defm vmax : RISCVBinaryAAX;
 
+  defm vfadd : RISCVBinaryAAX;
+  defm vfsub : RISCVBinaryAAX;
+  defm vfrsub : RISCVBinaryAAX;
 } // TargetPrefix = "riscv"

@@ -84,18 +84,22 @@ class ToFPR32<ValueType type, DAGOperand operand, string name> {
 // Vector register and vector group type information.
 //===----------------------------------------------------------------------===//
 
-class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M>
+class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
+                ValueType Scal = XLenVT, RegisterClass ScalarReg = GPR>
 {
   ValueType Vector = Vec;
   ValueType Mask = Mas;
   int SEW = Sew;
   VReg RegClass = Reg;
   LMULInfo LMul = M;
+  ValueType Scalar = Scal;
+  RegisterClass ScalarRegClass = ScalarReg;
 }
 
-class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas,
-                          int Sew, VReg Reg, LMULInfo M>
-    : VTypeInfo<Vec, Mas, Sew, Reg, M>
+class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas, int Sew,
+                     VReg Reg, LMULInfo M, ValueType Scal = XLenVT,
+                     RegisterClass ScalarReg = GPR>
+    : VTypeInfo<Vec, Mas, Sew, Reg, M, Scal, ScalarReg>
 {
   ValueType VectorM1 = VecM1;
 }
@@ -128,6 +132,42 @@ defset list<VTypeInfo> AllVectors = {
     def VI64M2: GroupVTypeInfo<vint64m2_t,vint64m1_t,vbool32_t,64,VRM2, V_M2>;
     def VI64M4: GroupVTypeInfo<vint64m4_t,vint64m1_t,vbool16_t,64,VRM4, V_M4>;
     def VI64M8: GroupVTypeInfo<vint64m8_t,vint64m1_t,vbool8_t, 64,VRM8, V_M8>;
+  }
+
+  defset list<VTypeInfo> AllFloatVectors = {
+    defset list<VTypeInfo> NoGroupFloatVectors = {
+      def VF16MF4: VTypeInfo<vfloat16mf4_t, vbool64_t, 16, VR, V_MF4, f16, FPR16>;
+      def VF16MF2: VTypeInfo<vfloat16mf2_t, vbool32_t, 16, VR, V_MF2, f16, FPR16>;
+      def VF16M1:  VTypeInfo<vfloat16m1_t,  vbool16_t, 16, VR, V_M1,  f16, FPR16>;
+
+      def VF32MF2: VTypeInfo<vfloat32mf2_t,vbool64_t, 32, VR, V_MF2, f32, FPR32>;
+      def VF32M1:  VTypeInfo<vfloat32m1_t, vbool32_t, 32, VR, V_M1,  f32, FPR32>;
+
+      def VF64M1: VTypeInfo<vfloat64m1_t, vbool64_t, 64, VR, V_M1, f64, FPR64>;
+    }
+
+    defset list<GroupVTypeInfo> GroupFloatVectors = {
+      def VF16M2: GroupVTypeInfo<vfloat16m2_t, vfloat16m1_t, vbool8_t, 16,
+                                  VRM2, V_M2, f16, FPR16>;
+      def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
+                                  VRM4, V_M4, f16, FPR16>;
+      def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
+                                  VRM8, V_M8, f16, FPR16>;
+
+      def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
+                                  VRM2, V_M2, f32, FPR32>;
+      def VF32M4: GroupVTypeInfo<vfloat32m4_t, vfloat32m1_t, vbool8_t,  32,
+                                  VRM4, V_M4, f32, FPR32>;
+      def VF32M8: GroupVTypeInfo<vfloat32m8_t, vfloat32m1_t, vbool4_t,  32,
+                                  VRM8, V_M8, f32, FPR32>;
+
+      def VF64M2: GroupVTypeInfo<vfloat64m2_t, vfloat64m1_t, vbool32_t, 64,
+                                  VRM2, V_M2, f64, FPR64>;
+      def VF64M4: GroupVTypeInfo<vfloat64m4_t, vfloat64m1_t, vbool16_t, 64,
+                                  VRM4, V_M4, f64, FPR64>;
+      def VF64M8: GroupVTypeInfo<vfloat64m8_t, vfloat64m1_t, vbool8_t,  64,
+                                  VRM8, V_M8, f64, FPR64>;
+    }
   }
 }
 
@@ -320,9 +360,10 @@ multiclass VPseudoBinaryV_VV {
     defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m>;
 }
 
-multiclass VPseudoBinaryV_VX {
+multiclass VPseudoBinaryV_VX<bit IsFloat> {
   foreach m = MxList.m in
-    defm _VX : VPseudoBinary<m.vrclass, m.vrclass, GPR, m>;
+    defm !if(!eq(IsFloat, 0), "_VX", "_VF") : VPseudoBinary<m.vrclass, m.vrclass,
+                             !if(!eq(IsFloat, 0), GPR, FPR32), m>;
 }
 
 multiclass VPseudoBinaryV_VI<Operand ImmType = simm5> {
@@ -414,17 +455,17 @@ multiclass VPseudoBinaryV_IM<bit CarryOut = 0, bit CarryIn = 1,
 
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5> {
   defm "" : VPseudoBinaryV_VV;
-  defm "" : VPseudoBinaryV_VX;
+  defm "" : VPseudoBinaryV_VX</*IsFloat=*/0>;
   defm "" : VPseudoBinaryV_VI<ImmType>;
 }
 
-multiclass VPseudoBinaryV_VV_VX {
+multiclass VPseudoBinaryV_VV_VX<bit IsFloat = 0> {
   defm "" : VPseudoBinaryV_VV;
-  defm "" : VPseudoBinaryV_VX;
+  defm "" : VPseudoBinaryV_VX<IsFloat>;
 }
 
 multiclass VPseudoBinaryV_VX_VI<Operand ImmType = simm5> {
-  defm "" : VPseudoBinaryV_VX;
+  defm "" : VPseudoBinaryV_VX</*IsFloat=*/0>;
   defm "" : VPseudoBinaryV_VI<ImmType>;
 }
 
@@ -624,10 +665,11 @@ multiclass VPatBinaryV_VV<string intrinsic, string instruction,
 multiclass VPatBinaryV_VX<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
-    defm : VPatBinary<intrinsic, instruction, "VX",
-                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
+    defm : VPatBinary<intrinsic, instruction,
+                      !if(!eq(vti.Scalar, XLenVT), "VX", "VF"),
+                      vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
                       vti.SEW, vti.LMul, vti.RegClass,
-                      vti.RegClass, GPR>;
+                      vti.RegClass, vti.ScalarRegClass>;
 }
 
 multiclass VPatBinaryV_VI<string intrinsic, string instruction,
@@ -1018,9 +1060,22 @@ defm PseudoVMIN        : VPseudoBinaryV_VV_VX;
 defm PseudoVMAXU       : VPseudoBinaryV_VV_VX;
 defm PseudoVMAX        : VPseudoBinaryV_VV_VX;
 
+} // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+//===----------------------------------------------------------------------===//
+// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFADD       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFSUB       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFRSUB      : VPseudoBinaryV_VX</*IsFloat=*/1>;
+
+} // Predicates = [HasStdExtV, HasStdExtF]
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtV] in {
 
 // Whole-register vector patterns.
 defm "" : VPatBinarySDNode<add, "PseudoVADD">;
@@ -1084,3 +1139,13 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vmaxu", "PseudoVMAXU", AllIntegerVectors>
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vmax", "PseudoVMAX", AllIntegerVectors>;
 
 } // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+//===----------------------------------------------------------------------===//
+// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfadd", "PseudoVFADD", AllFloatVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
+defm "" : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
+
+} // Predicates = [HasStdExtV, HasStdExtF]
