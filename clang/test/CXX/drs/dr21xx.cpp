@@ -31,6 +31,23 @@ namespace dr2100 { // dr2100: 12
 #endif
   };
   int q = A<int>().f() + A<int>().g();
+
+  // Corresponding constructs where the address is not taken are not
+  // value-dependent.
+  template<int N, bool = true> struct Y {};
+  template<typename T> struct B {
+    static const int n = 1;
+    int f() {
+      return Y<n>::declared_later; // expected-error {{no member named 'declared_later'}}
+    }
+    int g() {
+      static const int n = 2;
+      return Y<n>::declared_later; // expected-error {{no member named 'declared_later'}}
+    }
+  };
+  template<int N> struct Y<N> {
+    static const int declared_later = 0;
+  };
 }
 
 namespace dr2103 { // dr2103: yes
