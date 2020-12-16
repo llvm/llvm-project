@@ -1935,6 +1935,18 @@ void bar()
       matches(Code, callExpr(traverse(TK_IgnoreUnlessSpelledInSource,
                                       hasAnyArgument(floatLiteral())))));
 
+  EXPECT_TRUE(matches(
+      R"cpp(
+void takesBool(bool){}
+
+template <typename T>
+void neverInstantiatedTemplate() {
+  takesBool(T{});
+}
+)cpp",
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               callExpr(unless(callExpr(hasDeclaration(functionDecl())))))));
+
   EXPECT_TRUE(
       matches(VarDeclCode, varDecl(traverse(TK_IgnoreUnlessSpelledInSource,
                                             hasType(builtinType())))));
