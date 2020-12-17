@@ -1,5 +1,4 @@
-// RUN: mlir-opt -split-input-file %s | FileCheck %s
-// | mlir-opt | FileCheck %s
+// RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 // TODO: Re-enable LLVM lowering test after IndexedGenericOp is lowered.
 //
@@ -698,3 +697,42 @@ func @memref_reshape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>) -> (
 // CHECK-LABEL: func @memref_reshape_zero_dim
 //       CHECK:   linalg.reshape %{{.*}} [] : memref<1x1xf32> into memref<f32>
 //       CHECK:   linalg.reshape %{{.*}} [] : memref<f32> into memref<1x1xf32>
+
+// -----
+
+func @init_tensor(%arg0 : index, %arg1 : index)
+{
+  %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
+  %1 = linalg.init_tensor [4, %arg0, %arg1, 5] : tensor<4x?x?x5xf32>
+  return
+}
+// CHECK-LABEL: func @init_tensor
+//       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
+//       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
+
+// -----
+
+func @init_tensor_err(%arg0 : index, %arg1 : index)
+{
+  // expected-error @+1 {{specified type 'tensor<4x?x?x5xf32>' does not match the inferred type 'tensor<4x5x?x?xf32>'}}
+  %1 = linalg.init_tensor [4, 5, %arg0, %arg1] : tensor<4x?x?x5xf32>
+  return
+}
+
+// -----
+
+func @init_tensor_err(%arg0 : index)
+{
+  // expected-error @+1 {{expected 4 sizes values}}
+  %1 = linalg.init_tensor [4, 5, %arg0] : tensor<4x?x?x5xf32>
+  return
+}
+
+// -----
+
+func @init_tensor_err(%arg0 : index)
+{
+  // expected-error @+1 {{expected 2 dynamic sizes values}}
+  %1 = "linalg.init_tensor"(%arg0) {static_sizes = [4, -1, -1, 5]} : (index) -> tensor<4x?x?x5xf32>
+  return
+}
