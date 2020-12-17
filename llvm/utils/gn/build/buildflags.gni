@@ -28,4 +28,11 @@ declare_args() {
 declare_args() {
   # Whether to build with optimizations.
   is_optimized = !is_debug
+
+  # Debug info symbol level.
+  if (is_debug) {
+    symbol_level = 2
+  } else {
+    symbol_level = 0
+  }
 }
