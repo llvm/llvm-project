@@ -393,7 +393,7 @@ int clangTidyMain(int argc, const char **argv) {
         getVfsFromFile(VfsOverlay, BaseFS);
     if (!VfsFromFile)
       return 1;
-    BaseFS->pushOverlay(VfsFromFile);
+    BaseFS->pushOverlay(std::move(VfsFromFile));
   }
 
   auto OwningOptionsProvider = createOptionsProvider(BaseFS);
