@@ -1472,11 +1472,29 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+/// Fold dim of a dim of a cast into the the dim of the source of the tensor
+/// cast.
+template <typename CastOpTy>
+struct DimOfCastOp : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = dimOp.memrefOrTensor().getDefiningOp<CastOpTy>();
+    if (!castOp)
+      return failure();
+    Value newSource = castOp.getOperand();
+    rewriter.replaceOpWithNewOp<DimOp>(dimOp, newSource, dimOp.index());
+    return success();
+  }
+};
+
 } // end anonymous namespace.
 
 void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                         MLIRContext *context) {
-  results.insert<DimOfMemRefReshape>(context);
+  results.insert<DimOfMemRefReshape, DimOfCastOp<TensorCastOp>>(context);
 }
 
 // ---------------------------------------------------------------------------
