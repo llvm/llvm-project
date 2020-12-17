@@ -3,6 +3,7 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+// CHECK: target.detach-on-error
 
 import Cocoa
 // CHECK-NOT: error
