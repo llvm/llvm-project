@@ -76,17 +76,12 @@ public:
     if (UNLIKELY(!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed))))
       Seed = static_cast<u32>(
           Time ^ (reinterpret_cast<uptr>(SizeClassInfoArray) >> 6));
-    const uptr PageSize = getPageSizeCached();
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
       Sci->RandState = getRandomU32(&Seed);
       // Sci->MaxRegionIndex is already initialized to 0.
       Sci->MinRegionIndex = NumRegions;
-      // See comment in the 64-bit primary about releasing smaller size classes.
-      Sci->CanRelease = (I != SizeClassMap::BatchClassId) &&
-                        (getSizeByClassId(I) >= (PageSize / 32));
-      if (Sci->CanRelease)
-        Sci->ReleaseInfo.LastReleaseAtNs = Time;
+      Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
@@ -137,7 +132,7 @@ public:
     ScopedLock L(Sci->Mutex);
     Sci->FreeList.push_front(B);
     Sci->Stats.PushedBlocks += B->getCount();
-    if (Sci->CanRelease)
+    if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Sci, ClassId);
   }
 
@@ -217,6 +212,8 @@ public:
   uptr releaseToOS() {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
       TotalReleasedBytes += releaseToOSMaybe(Sci, I, /*Force=*/true);
@@ -262,7 +259,6 @@ private:
     uptr CurrentRegion;
     uptr CurrentRegionAllocated;
     SizeClassStats Stats;
-    bool CanRelease;
     u32 RandState;
     uptr AllocatedUser;
     // Lowest & highest region index allocated for this size class, to avoid
