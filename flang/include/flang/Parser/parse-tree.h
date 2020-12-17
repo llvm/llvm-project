@@ -3852,6 +3852,12 @@ struct AccDeclarativeDirective {
 };
 
 // OpenACC Clauses
+struct AccBindClause {
+  UNION_CLASS_BOILERPLATE(AccBindClause);
+  std::variant<Name, ScalarDefaultCharExpr> u;
+  CharBlock source;
+};
+
 struct AccDefaultClause {
   ENUM_CLASS(Arg, None, Present)
   WRAPPER_CLASS_BOILERPLATE(AccDefaultClause, Arg);
@@ -4048,7 +4054,8 @@ struct OpenACCCombinedConstruct {
 struct OpenACCDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenACCStandaloneDeclarativeConstruct> u;
+  std::variant<OpenACCStandaloneDeclarativeConstruct, OpenACCRoutineConstruct>
+      u;
 };
 
 // OpenACC directives enclosing do loop
@@ -4068,8 +4075,8 @@ struct OpenACCStandaloneConstruct {
 struct OpenACCConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCConstruct);
   std::variant<OpenACCBlockConstruct, OpenACCCombinedConstruct,
-      OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCRoutineConstruct,
-      OpenACCCacheConstruct, OpenACCWaitConstruct, OpenACCAtomicConstruct>
+      OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCCacheConstruct,
+      OpenACCWaitConstruct, OpenACCAtomicConstruct>
       u;
 };
 

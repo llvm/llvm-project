@@ -48,7 +48,7 @@ def ACCC_Attach : Clause<"attach"> {
 
 // 2.15.1
 def ACCC_Bind : Clause<"bind"> {
-  let flangClassValue = "Name";
+  let flangClassValue = "AccBindClause";
 }
 
 // 2.12
