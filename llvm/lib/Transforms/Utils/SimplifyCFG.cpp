@@ -6322,7 +6322,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
 
   // Check to see if we can constant propagate this terminator instruction
   // away...
-  Changed |= ConstantFoldTerminator(BB, true);
+  Changed |= ConstantFoldTerminator(BB, /*DeleteDeadConditions=*/true,
+                                    /*TLI=*/nullptr, DTU);
 
   // Check for and eliminate duplicate PHI nodes in this block.
   Changed |= EliminateDuplicatePHINodes(BB);
