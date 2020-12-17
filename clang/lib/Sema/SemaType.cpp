@@ -2783,6 +2783,10 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
       checkForSwiftCC(paramIndex);
       continue;
 
+    case ParameterABI::SwiftAsyncContext:
+      // FIXME: might want to require swiftasynccc when it exists
+      continue;
+
     // swift_error parameters must be preceded by a swift_context parameter.
     case ParameterABI::SwiftErrorResult:
       checkForSwiftCC(paramIndex);
