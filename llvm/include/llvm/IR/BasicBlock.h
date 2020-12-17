@@ -398,22 +398,49 @@ public:
 
   /// Split the basic block into two basic blocks at the specified instruction.
   ///
-  /// Note that all instructions BEFORE the specified iterator stay as part of
-  /// the original basic block, an unconditional branch is added to the original
-  /// BB, and the rest of the instructions in the BB are moved to the new BB,
-  /// including the old terminator.  The newly formed BasicBlock is returned.
-  /// This function invalidates the specified iterator.
+  /// If \p Before is true, splitBasicBlockBefore handles the
+  /// block splitting. Otherwise, execution proceeds as described below.
+  ///
+  /// Note that all instructions BEFORE the specified iterator
+  /// stay as part of the original basic block, an unconditional branch is added
+  /// to the original BB, and the rest of the instructions in the BB are moved
+  /// to the new BB, including the old terminator.  The newly formed basic block
+  /// is returned. This function invalidates the specified iterator.
   ///
   /// Note that this only works on well formed basic blocks (must have a
-  /// terminator), and 'I' must not be the end of instruction list (which would
-  /// cause a degenerate basic block to be formed, having a terminator inside of
-  /// the basic block).
+  /// terminator), and \p 'I' must not be the end of instruction list (which
+  /// would cause a degenerate basic block to be formed, having a terminator
+  /// inside of the basic block).
   ///
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
-  BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "");
-  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "") {
-    return splitBasicBlock(I->getIterator(), BBName);
+  BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "",
+                              bool Before = false);
+  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "",
+                              bool Before = false) {
+    return splitBasicBlock(I->getIterator(), BBName, Before);
+  }
+
+  /// Split the basic block into two basic blocks at the specified instruction
+  /// and insert the new basic blocks as the predecessor of the current block.
+  ///
+  /// This function ensures all instructions AFTER and including the specified
+  /// iterator \p I are part of the original basic block. All Instructions
+  /// BEFORE the iterator \p I are moved to the new BB and an unconditional
+  /// branch is added to the new BB. The new basic block is returned.
+  ///
+  /// Note that this only works on well formed basic blocks (must have a
+  /// terminator), and \p 'I' must not be the end of instruction list (which
+  /// would cause a degenerate basic block to be formed, having a terminator
+  /// inside of the basic block).  \p 'I' cannot be a iterator for a PHINode
+  /// with multiple incoming blocks.
+  ///
+  /// Also note that this doesn't preserve any passes. To split blocks while
+  /// keeping loop information consistent, use the SplitBlockBefore utility
+  /// function.
+  BasicBlock *splitBasicBlockBefore(iterator I, const Twine &BBName = "");
+  BasicBlock *splitBasicBlockBefore(Instruction *I, const Twine &BBName = "") {
+    return splitBasicBlockBefore(I->getIterator(), BBName);
   }
 
   /// Returns true if there are any uses of this basic block other than
