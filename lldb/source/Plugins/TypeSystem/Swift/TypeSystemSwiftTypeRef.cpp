@@ -35,6 +35,9 @@
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
 
+#include <algorithm>
+#include <sstream>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -1538,6 +1541,24 @@ bool Equivalent(llvm::Optional<T> l, T r) {
   return Equivalent(l, llvm::Optional<T>(r));
 }
 
+template <typename T>
+bool Equivalent(const std::vector<T> &l, const std::vector<T> &r) {
+  if (std::equal(l.begin(), l.end(), r.begin(), r.end()))
+    return true;
+
+  auto join = [](const std::vector<T> &v) -> std::string {
+    if (v.empty())
+      return {};
+    std::ostringstream buf;
+    buf << v[0];
+    for (size_t i = 1; i < v.size(); ++i)
+      buf << ", " << v[i];
+    return buf.str();
+  };
+  llvm::dbgs() << join(l) << " != " << join(r) << "\n";
+  return false;
+}
+
 } // namespace
 #endif
 
@@ -2367,6 +2388,37 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+      if (auto index_size = runtime->GetIndexOfChildMemberWithName(
+              GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
+              child_indexes)) {
+#ifndef NDEBUG
+        // This block is a custom VALIDATE_AND_RETURN implementation to support
+        // checking the return value, plus the by-ref `child_indexes`.
+        if (!m_swift_ast_context)
+          return *index_size;
+        auto v_type = ReconstructType(type);
+        std::vector<uint32_t> v_child_indexes;
+        auto v_index_size = m_swift_ast_context->GetIndexOfChildMemberWithName(
+            v_type, name, exe_ctx, omit_empty_base_classes, v_child_indexes);
+        bool equivalent =
+            !v_type || (Equivalent(*index_size, v_index_size) &&
+                        Equivalent(child_indexes, v_child_indexes));
+        if (!equivalent)
+          llvm::dbgs() << "failing type was " << (const char *)type << "\n";
+        assert(equivalent &&
+               "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+#endif
+        return *index_size;
+      }
+
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Using SwiftASTContext::GetIndexOfChildMemberWithName fallback for "
+            "type %s",
+            AsMangledName(type));
+
   return m_swift_ast_context->GetIndexOfChildMemberWithName(
       ReconstructType(type), name, exe_ctx, omit_empty_base_classes,
       child_indexes);
