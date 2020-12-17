@@ -509,7 +509,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Convert I42 to I43.
     if (t.isInteger(42)) {
-      results.push_back(IntegerType::get(43, t.getContext()));
+      results.push_back(IntegerType::get(t.getContext(), 43));
       return success();
     }
 

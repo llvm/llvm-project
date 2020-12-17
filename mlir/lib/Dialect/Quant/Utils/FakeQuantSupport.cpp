@@ -18,7 +18,7 @@ static bool getDefaultStorageParams(unsigned numBits, bool narrowRange,
                                     int64_t &qmax) {
   // Hard-coded type mapping from TFLite.
   if (numBits <= 8) {
-    storageType = IntegerType::get(8, ctx);
+    storageType = IntegerType::get(ctx, 8);
     if (isSigned) {
       qmin = -128;
       qmax = 127;
@@ -27,7 +27,7 @@ static bool getDefaultStorageParams(unsigned numBits, bool narrowRange,
       qmax = 255;
     }
   } else if (numBits <= 16) {
-    storageType = IntegerType::get(16, ctx);
+    storageType = IntegerType::get(ctx, 16);
     if (isSigned) {
       qmin = -32768;
       qmax = 32767;
@@ -36,7 +36,7 @@ static bool getDefaultStorageParams(unsigned numBits, bool narrowRange,
       qmax = 65535;
     }
   } else if (numBits <= 32) {
-    storageType = IntegerType::get(32, ctx);
+    storageType = IntegerType::get(ctx, 32);
     if (isSigned) {
       qmin = std::numeric_limits<int32_t>::min();
       qmax = std::numeric_limits<int32_t>::max();

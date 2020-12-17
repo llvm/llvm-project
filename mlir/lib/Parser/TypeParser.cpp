@@ -338,7 +338,7 @@ Type Parser::parseNonFunctionType() {
       signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
 
     consumeToken(Token::inttype);
-    return IntegerType::get(width.getValue(), signSemantics, getContext());
+    return IntegerType::get(getContext(), width.getValue(), signSemantics);
   }
 
   // float-type
@@ -432,7 +432,7 @@ Type Parser::parseTupleType() {
       parseToken(Token::greater, "expected '>' in tuple type"))
     return nullptr;
 
-  return TupleType::get(types, getContext());
+  return TupleType::get(getContext(), types);
 }
 
 /// Parse a vector type.

@@ -63,7 +63,7 @@ void Value::setType(Type newType) {
     return;
   auto newTypes = llvm::to_vector<4>(curTypes);
   newTypes[resultNo] = newType;
-  owner->resultType = TupleType::get(newTypes, newType.getContext());
+  owner->resultType = TupleType::get(newType.getContext(), newTypes);
 }
 
 /// If this value is the result of an Operation, return the operation that

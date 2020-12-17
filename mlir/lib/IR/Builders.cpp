@@ -52,27 +52,27 @@ FloatType Builder::getF64Type() { return FloatType::getF64(context); }
 
 IndexType Builder::getIndexType() { return IndexType::get(context); }
 
-IntegerType Builder::getI1Type() { return IntegerType::get(1, context); }
+IntegerType Builder::getI1Type() { return IntegerType::get(context, 1); }
 
-IntegerType Builder::getI32Type() { return IntegerType::get(32, context); }
+IntegerType Builder::getI32Type() { return IntegerType::get(context, 32); }
 
-IntegerType Builder::getI64Type() { return IntegerType::get(64, context); }
+IntegerType Builder::getI64Type() { return IntegerType::get(context, 64); }
 
 IntegerType Builder::getIntegerType(unsigned width) {
-  return IntegerType::get(width, context);
+  return IntegerType::get(context, width);
 }
 
 IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
   return IntegerType::get(
-      width, isSigned ? IntegerType::Signed : IntegerType::Unsigned, context);
+      context, width, isSigned ? IntegerType::Signed : IntegerType::Unsigned);
 }
 
 FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
-  return FunctionType::get(inputs, results, context);
+  return FunctionType::get(context, inputs, results);
 }
 
 TupleType Builder::getTupleType(TypeRange elementTypes) {
-  return TupleType::get(elementTypes, context);
+  return TupleType::get(context, elementTypes);
 }
 
 NoneType Builder::getNoneType() { return NoneType::get(context); }

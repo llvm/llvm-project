@@ -76,25 +76,25 @@ static Value allocBuffer(const LinalgPromotionOptions &options,
   IntegerAttr alignment_attr;
   if (alignment.hasValue())
     alignment_attr =
-        IntegerAttr::get(IntegerType::get(64, ctx), alignment.getValue());
+        IntegerAttr::get(IntegerType::get(ctx, 64), alignment.getValue());
   if (!dynamicBuffers)
     if (auto cst = size.getDefiningOp<ConstantIndexOp>())
       return options.useAlloca
                  ? std_alloca(MemRefType::get(width * cst.getValue(),
-                                              IntegerType::get(8, ctx)),
+                                              IntegerType::get(ctx, 8)),
                               ValueRange{}, alignment_attr)
                        .value
                  : std_alloc(MemRefType::get(width * cst.getValue(),
-                                             IntegerType::get(8, ctx)),
+                                             IntegerType::get(ctx, 8)),
                              ValueRange{}, alignment_attr)
                        .value;
   Value mul =
       folded_std_muli(folder, folded_std_constant_index(folder, width), size);
   return options.useAlloca
-             ? std_alloca(MemRefType::get(-1, IntegerType::get(8, ctx)), mul,
+             ? std_alloca(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
                           alignment_attr)
                    .value
-             : std_alloc(MemRefType::get(-1, IntegerType::get(8, ctx)), mul,
+             : std_alloc(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
                          alignment_attr)
                    .value;
 }

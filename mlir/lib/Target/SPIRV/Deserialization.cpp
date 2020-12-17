@@ -1182,7 +1182,7 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
     // signless semantics for such cases.
     auto sign = operands[2] == 1 ? IntegerType::SignednessSemantics::Signed
                                  : IntegerType::SignednessSemantics::Signless;
-    typeMap[operands[0]] = IntegerType::get(operands[1], sign, context);
+    typeMap[operands[0]] = IntegerType::get(context, operands[1], sign);
   } break;
   case spirv::Opcode::OpTypeFloat: {
     if (operands.size() != 2)
@@ -1345,7 +1345,7 @@ LogicalResult Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   if (!isVoidType(returnType)) {
     returnTypes = llvm::makeArrayRef(returnType);
   }
-  typeMap[operands[0]] = FunctionType::get(argTypes, returnTypes, context);
+  typeMap[operands[0]] = FunctionType::get(context, argTypes, returnTypes);
   return success();
 }
 

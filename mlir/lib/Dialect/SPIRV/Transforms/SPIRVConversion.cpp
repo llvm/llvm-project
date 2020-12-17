@@ -93,7 +93,7 @@ Type SPIRVTypeConverter::getIndexType(MLIRContext *context) {
   // instructions. The Vulkan spec requires the builtins like
   // GlobalInvocationID, etc. to be 32-bit (unsigned) integers which should be
   // SExtended to 64-bit for index computations.
-  return IntegerType::get(32, context);
+  return IntegerType::get(context, 32);
 }
 
 /// Mapping between SPIR-V storage classes to memref memory spaces.
@@ -260,8 +260,8 @@ convertScalarType(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
 
   auto intType = type.cast<IntegerType>();
   LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");
-  return IntegerType::get(/*width=*/32, intType.getSignedness(),
-                          targetEnv.getContext());
+  return IntegerType::get(targetEnv.getContext(), /*width=*/32,
+                          intType.getSignedness());
 }
 
 /// Converts a vector `type` to a suitable type under the given `targetEnv`.
