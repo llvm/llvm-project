@@ -63,11 +63,11 @@ void t72() { t71(); }
 // CHECK: call void @t71() [[COLDSITE:#[0-9]+]]
 // CHECK: declare void @t71() [[COLDDECL:#[0-9]+]]
 
-// CHECK: define void @t10() [[NUW]] section "SECT" {
-void t10(void) __attribute__((section("SECT")));
+// CHECK: define void @t10() [[NUW]] section "xSECT" {
+void t10(void) __attribute__((section("xSECT")));
 void t10(void) {}
-// CHECK: define void @t11() [[NUW]] section "SECT" {
-void __attribute__((section("SECT"))) t11(void) {}
+// CHECK: define void @t11() [[NUW]] section "xSECT" {
+void __attribute__((section("xSECT"))) t11(void) {}
 
 // CHECK: define i32 @t19() [[NUW]] {
 extern int t19(void) __attribute__((weak_import));
