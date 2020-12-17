@@ -102,6 +102,7 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
 
   ModuleSP executable_sp = GetTargetExecutable();
   ResolveExecutableModule(executable_sp);
+  m_rendezvous.UpdateExecutablePath();
 
   // find the main process load offset
   addr_t load_offset = ComputeLoadOffset();
