@@ -257,6 +257,13 @@ public:
     return {};
   }
 
+  llvm::Optional<size_t> GetIndexOfChildMemberWithName(
+      CompilerType type, const char *name, ExecutionContext *exe_ctx,
+      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+    STUB_LOG();
+    return {};
+  }
+
   CompilerType GetChildCompilerTypeAtIndex(
       CompilerType type, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
@@ -2142,6 +2149,13 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 llvm::Optional<unsigned>
 SwiftLanguageRuntime::GetNumChildren(CompilerType type, ValueObject *valobj) {
   FORWARD(GetNumChildren, type, valobj);
+}
+
+llvm::Optional<size_t> SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
+    CompilerType type, const char *name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  FORWARD(GetIndexOfChildMemberWithName, type, name, exe_ctx,
+          omit_empty_base_classes, child_indexes);
 }
 
 CompilerType SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(

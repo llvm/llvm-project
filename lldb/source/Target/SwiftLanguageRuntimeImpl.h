@@ -120,6 +120,10 @@ public:
   llvm::Optional<unsigned> GetNumChildren(CompilerType type,
                                           ValueObject *valobj);
 
+  llvm::Optional<size_t> GetIndexOfChildMemberWithName(
+      CompilerType type, const char *name, ExecutionContext *exe_ctx,
+      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);
+
   CompilerType GetChildCompilerTypeAtIndex(
       CompilerType type, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
