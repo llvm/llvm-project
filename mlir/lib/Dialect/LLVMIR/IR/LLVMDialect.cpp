@@ -1067,40 +1067,190 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
 // Verifier for LLVM::DialectCastOp.
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(DialectCastOp op) {
-  auto verifyMLIRCastType = [&op](Type type) -> LogicalResult {
-    if (auto llvmType = type.dyn_cast<LLVM::LLVMType>()) {
-      if (llvmType.isVectorTy())
-        llvmType = llvmType.getVectorElementType();
-      if (llvmType.isIntegerTy() || llvmType.isBFloatTy() ||
-          llvmType.isHalfTy() || llvmType.isFloatTy() ||
-          llvmType.isDoubleTy()) {
-        return success();
-      }
-      return op.emitOpError("type must be non-index integer types, float "
-                            "types, or vector of mentioned types.");
-    }
-    if (auto vectorType = type.dyn_cast<VectorType>()) {
-      if (vectorType.getShape().size() > 1)
-        return op.emitOpError("only 1-d vector is allowed");
-      type = vectorType.getElementType();
-    }
-    if (type.isSignlessIntOrFloat())
+/// Checks if `llvmType` is dialect cast-compatible with `index` type. Does not
+/// report the error, the user is expected to produce an appropriate message.
+// TODO: make the size depend on data layout rather than on the conversion
+// pass option, and pull that information here.
+static LogicalResult verifyCastWithIndex(LLVMType llvmType) {
+  return success(llvmType.isa<LLVMIntegerType>());
+}
+
+/// Checks if `llvmType` is dialect cast-compatible with built-in `type` and
+/// reports errors to the location of `op`.
+static LogicalResult verifyCast(DialectCastOp op, LLVMType llvmType,
+                                Type type) {
+  // Index is compatible with any integer.
+  if (type.isIndex()) {
+    if (succeeded(verifyCastWithIndex(llvmType)))
       return success();
-    // Note that memrefs are not supported. We currently don't have a use case
-    // for it, but even if we do, there are challenges:
-    // * if we allow memrefs to cast from/to memref descriptors, then the
-    // semantics of the cast op depends on the implementation detail of the
-    // descriptor.
-    // * if we allow memrefs to cast from/to bare pointers, some users might
-    // alternatively want metadata that only present in the descriptor.
-    //
-    // TODO: re-evaluate the memref cast design when it's needed.
-    return op.emitOpError("type must be non-index integer types, float types, "
-                          "or vector of mentioned types.");
-  };
-  return failure(failed(verifyMLIRCastType(op.in().getType())) ||
-                 failed(verifyMLIRCastType(op.getType())));
+
+    return op.emitOpError("invalid cast between index and non-integer type");
+  }
+
+  // Simple one-to-one mappings for floating point types.
+  if (type.isF16()) {
+    if (llvmType.isa<LLVMHalfType>())
+      return success();
+    return op.emitOpError(
+        "invalid cast between f16 and a type other than !llvm.half");
+  }
+  if (type.isBF16()) {
+    if (llvmType.isa<LLVMBFloatType>())
+      return success();
+    return op->emitOpError(
+        "invalid cast between bf16 and a type other than !llvm.bfloat");
+  }
+  if (type.isF32()) {
+    if (llvmType.isa<LLVMFloatType>())
+      return success();
+    return op->emitOpError(
+        "invalid cast between f32 and a type other than !llvm.float");
+  }
+  if (type.isF64()) {
+    if (llvmType.isa<LLVMDoubleType>())
+      return success();
+    return op->emitOpError(
+        "invalid cast between f64 and a type other than !llvm.double");
+  }
+
+  // Singless integers are compatible with LLVM integer of the same bitwidth.
+  if (type.isSignlessInteger()) {
+    auto llvmInt = llvmType.dyn_cast<LLVMIntegerType>();
+    if (!llvmInt)
+      return op->emitOpError(
+          "invalid cast between integer and non-integer type");
+    if (llvmInt.getBitWidth() == type.getIntOrFloatBitWidth())
+      return success();
+
+    return op->emitOpError(
+        "invalid cast between integers with mismatching bitwidth");
+  }
+
+  // Vectors are compatible if they are 1D non-scalable, and their element types
+  // are compatible.
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    if (vectorType.getRank() != 1)
+      return op->emitOpError("only 1-d vector is allowed");
+
+    auto llvmVector = llvmType.dyn_cast<LLVMVectorType>();
+    if (llvmVector.isa<LLVMScalableVectorType>())
+      return op->emitOpError("only fixed-sized vector is allowed");
+
+    if (vectorType.getDimSize(0) != llvmVector.getVectorNumElements())
+      return op->emitOpError(
+          "invalid cast between vectors with mismatching sizes");
+
+    return verifyCast(op, llvmVector.getElementType(),
+                      vectorType.getElementType());
+  }
+
+  if (auto memrefType = type.dyn_cast<MemRefType>()) {
+    // Bare pointer convention: statically-shaped memref is compatible with an
+    // LLVM pointer to the element type.
+    if (auto ptrType = llvmType.dyn_cast<LLVMPointerType>()) {
+      if (!memrefType.hasStaticShape())
+        return op->emitOpError(
+            "unexpected bare pointer for dynamically shaped memref");
+      if (memrefType.getMemorySpace() != ptrType.getAddressSpace())
+        return op->emitError("invalid conversion between memref and pointer in "
+                             "different memory spaces");
+
+      return verifyCast(op, ptrType.getElementType(),
+                        memrefType.getElementType());
+    }
+
+    // Otherwise, memrefs are convertible to a descriptor, which is a structure
+    // type.
+    auto structType = llvmType.dyn_cast<LLVMStructType>();
+    if (!structType)
+      return op->emitOpError("invalid cast between a memref and a type other "
+                             "than pointer or memref descriptor");
+
+    unsigned expectedNumElements = memrefType.getRank() == 0 ? 3 : 5;
+    if (structType.getBody().size() != expectedNumElements) {
+      return op->emitOpError() << "expected memref descriptor with "
+                               << expectedNumElements << " elements";
+    }
+
+    // The first two elements are pointers to the element type.
+    auto allocatedPtr = structType.getBody()[0].dyn_cast<LLVMPointerType>();
+    if (!allocatedPtr ||
+        allocatedPtr.getAddressSpace() != memrefType.getMemorySpace())
+      return op->emitOpError("expected first element of a memref descriptor to "
+                             "be a pointer in the address space of the memref");
+    if (failed(verifyCast(op, allocatedPtr.getElementType(),
+                          memrefType.getElementType())))
+      return failure();
+
+    auto alignedPtr = structType.getBody()[1].dyn_cast<LLVMPointerType>();
+    if (!alignedPtr ||
+        alignedPtr.getAddressSpace() != memrefType.getMemorySpace())
+      return op->emitOpError(
+          "expected second element of a memref descriptor to "
+          "be a pointer in the address space of the memref");
+    if (failed(verifyCast(op, alignedPtr.getElementType(),
+                          memrefType.getElementType())))
+      return failure();
+
+    // The second element (offset) is an equivalent of index.
+    if (failed(verifyCastWithIndex(structType.getBody()[2])))
+      return op->emitOpError("expected third element of a memref descriptor to "
+                             "be index-compatible integers");
+
+    // 0D memrefs don't have sizes/strides.
+    if (memrefType.getRank() == 0)
+      return success();
+
+    // Sizes and strides are rank-sized arrays of `index` equivalents.
+    auto sizes = structType.getBody()[3].dyn_cast<LLVMArrayType>();
+    if (!sizes || failed(verifyCastWithIndex(sizes.getElementType())) ||
+        sizes.getNumElements() != memrefType.getRank())
+      return op->emitOpError(
+          "expected fourth element of a memref descriptor "
+          "to be an array of <rank> index-compatible integers");
+
+    auto strides = structType.getBody()[4].dyn_cast<LLVMArrayType>();
+    if (!strides || failed(verifyCastWithIndex(strides.getElementType())) ||
+        strides.getNumElements() != memrefType.getRank())
+      return op->emitOpError(
+          "expected fifth element of a memref descriptor "
+          "to be an array of <rank> index-compatible integers");
+
+    return success();
+  }
+
+  // Unranked memrefs are compatible with their descriptors.
+  if (auto unrankedMemrefType = type.dyn_cast<UnrankedMemRefType>()) {
+    auto structType = llvmType.dyn_cast<LLVMStructType>();
+    if (!structType || structType.getBody().size() != 2)
+      return op->emitOpError(
+          "expected descriptor to be a struct with two elements");
+
+    if (failed(verifyCastWithIndex(structType.getBody()[0])))
+      return op->emitOpError("expected first element of a memref descriptor to "
+                             "be an index-compatible integer");
+
+    auto ptrType = structType.getBody()[1].dyn_cast<LLVMPointerType>();
+    if (!ptrType || !ptrType.getPointerElementTy().isIntegerTy(8))
+      return op->emitOpError("expected second element of a memref descriptor "
+                             "to be an !llvm.ptr<i8>");
+
+    return success();
+  }
+
+  // Everything else is not supported.
+  return op->emitError("unsupported cast");
+}
+
+static LogicalResult verify(DialectCastOp op) {
+  if (auto llvmType = op.getType().dyn_cast<LLVMType>())
+    return verifyCast(op, llvmType, op.in().getType());
+
+  auto llvmType = op.in().getType().dyn_cast<LLVMType>();
+  if (!llvmType)
+    return op->emitOpError("expected one LLVM type and one built-in type");
+
+  return verifyCast(op, llvmType, op.getType());
 }
 
 // Parses one of the keywords provided in the list `keywords` and returns the
