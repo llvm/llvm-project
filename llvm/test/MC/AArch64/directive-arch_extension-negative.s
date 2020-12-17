@@ -51,12 +51,12 @@ casa w5, w7, [x20]
 
 .arch_extension nopredres
 cfp rctx, x0
-// CHECK: error: CFPRCTX requires predres
+// CHECK: error: CFPRCTX requires: predres
 // CHECK-NEXT: cfp rctx, x0
 
 .arch_extension noccdp
 dc cvadp, x7
-// CHECK: error: DC CVADP requires ccdp
+// CHECK: error: DC CVADP requires: ccdp
 // CHECK-NEXT: dc cvadp, x7
 
 .arch_extension nomte
@@ -66,17 +66,17 @@ irg x0, x1
 
 .arch_extension notlb-rmi
 tlbi vmalle1os
-// CHECK: error: TLBI VMALLE1OS requires tlb-rmi
+// CHECK: error: TLBI VMALLE1OS requires: tlb-rmi
 // CHECK-NEXT: tlbi vmalle1os
 
 .arch_extension nopan-rwv
 at s1e1wp, x2
-// CHECK: error: AT S1E1WP requires pan-rwv
+// CHECK: error: AT S1E1WP requires: pan-rwv
 // CHECK-NEXT: at s1e1wp, x2
 
 .arch_extension noccpp
 dc cvap, x7
-// CHECK: error: DC CVAP requires ccpp
+// CHECK: error: DC CVAP requires: ccpp
 // CHECK-NEXT: dc cvap, x7
 
 .arch_extension norcpc
