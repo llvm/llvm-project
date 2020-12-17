@@ -322,10 +322,10 @@ public:
       return It;
     }
 
-    bool operator==(const RepeatedSubstringIterator &Other) {
+    bool operator==(const RepeatedSubstringIterator &Other) const {
       return N == Other.N;
     }
-    bool operator!=(const RepeatedSubstringIterator &Other) {
+    bool operator!=(const RepeatedSubstringIterator &Other) const {
       return !(*this == Other);
     }
 

@@ -121,12 +121,12 @@ public:
 
   bool valid() const { return BorrowedImpl != nullptr; }
 
-  bool operator==(const RefType &Other) const {
-    if (BorrowedImpl != Other.BorrowedImpl)
+  friend bool operator==(const RefType &LHS, const RefType &RHS) {
+    if (LHS.BorrowedImpl != RHS.BorrowedImpl)
       return false;
-    if (ViewOffset != Other.ViewOffset)
+    if (LHS.ViewOffset != RHS.ViewOffset)
       return false;
-    if (Length != Other.Length)
+    if (LHS.Length != RHS.Length)
       return false;
     return true;
   }
