@@ -1,49 +1,296 @@
 # 'llvm' Dialect
 
-This dialect wraps the LLVM IR types and instructions into MLIR types and
-operations. It provides several additional operations that are necessary to
-cover for the differences in the IR structure (e.g., MLIR does not have `phi`
-operations and LLVM IR does not have a `constant` operation).
+This dialect maps [LLVM IR](https://llvm.org/docs/LangRef.html) into MLIR by
+defining the corresponding operations and types. LLVM IR metadata is usually
+represented as MLIR attributes, which offer additional structure verification.
 
-In this document, we use "LLVM IR" to designate the
+We use "LLVM IR" to designate the
 [intermediate representation of LLVM](https://llvm.org/docs/LangRef.html) and
-"LLVM IR _dialect_" to refer to the MLIR dialect reflecting LLVM instructions
-and types.
+"LLVM _dialect_" or "LLVM IR _dialect_" to refer to this MLIR dialect.
+
+Unless explicitly stated otherwise, the semantics of the LLVM dialect operations
+must correspond to the semantics of LLVM IR instructions and any divergence is
+considered a bug. The dialect also contains auxiliary operations that smoothen
+the differences in the IR structure, e.g., MLIR does not have `phi` operations
+and LLVM IR does not have a `constant` operation. These auxiliary operations are
+systematically prefixed with `mlir`, e.g. `llvm.mlir.constant` where `llvm.` is
+the dialect namespace prefix.
 
 [TOC]
 
-## Context and Module Association
+## Dependency on LLVM IR
 
-The LLVM IR dialect object _contains_ an LLVM Context and an LLVM Module that it
-uses to define, print, parse and manage LLVM IR types. These objects can be
-obtained from the dialect object using `.getLLVMContext()` and
-`getLLVMModule()`. All LLVM IR objects that interact with the LLVM IR dialect
-must exist in the dialect's context.
+LLVM dialect is not expected to depend on any object that requires an
+`LLVMContext`, such as an LLVM IR instruction or type. Instead, MLIR provides
+thread-safe alternatives compatible with the rest of the infrastructure. The
+dialect is allowed to depend on the LLVM IR objects that don't require a
+context, such as data layout and triple description.
+
+## Module Structure
+
+IR modules use the built-in MLIR `ModuleOp` and support all its features. In
+particular, modules can be named, nested and are subject to symbol visibility.
+Modules can contain any operations, including LLVM functions and globals.
+
+### Data Layout and Triple
+
+An IR module may have an optional data layout and triple information attached
+using MLIR attributes `llvm.data_layout` and `llvm.triple`, respectively. Both
+are string attributes with the
+[same syntax](https://llvm.org/docs/LangRef.html#data-layout) as in LLVM IR and
+are verified to be correct. They can be defined as follows.
+
+```mlir
+module attributes {llvm.data_layout = "e",
+                   llvm.target_triple = "aarch64-linux-android"} {
+  // module contents
+}
+```
 
 ## Types
 
-The LLVM IR dialect defines a single MLIR type, `LLVM::LLVMType`, that can wrap
-any existing LLVM IR type. Its syntax is as follows
+LLVM dialect defines a set of types that correspond to LLVM IR types. The
+dialect type system is _closed_: types from other dialects are not allowed
+within LLVM dialect aggregate types. This property allows for more concise
+custom syntax and ensures easy translation to LLVM IR.
+
+Similarly to other MLIR context-owned objects, the creation and manipulation of
+LLVM dialect types is thread-safe.
+
+MLIR does not support module-scoped named type declarations, e.g. `%s = type
+{i32, i32}` in LLVM IR. Instead, types must be fully specified at each use,
+except for recursive types where only the first reference to a named type needs
+to be fully specified. MLIR type aliases are supported for top-level types, i.e.
+they cannot be used inside the type due to type system closedness.
+
+The general syntax of LLVM dialect types is `!llvm.`, followed by a type kind
+identifier (e.g., `ptr` for pointer or `struct` for structure) and by an
+optional list of type parameters in angle brackets. The dialect follows MLIR
+style for types with nested angle brackets and keyword specifiers rather than
+using different bracket styles to differentiate types. Inside angle brackets,
+the `!llvm` prefix is omitted for brevity; thanks to closedness of the type
+system, all types are assumed to be defined in the LLVM dialect. For example,
+`!llvm.ptr<struct<packed, (i8, i32)>>` is a pointer to a packed structure type
+containing an 8-bit and a 32-bit integer.
+
+### Simple Types
+
+The following non-parametric types are supported.
+
+-   `!llvm.bfloat` (`LLVMBFloatType`) - 16-bit “brain” floating-point value
+    (7-bit significand).
+-   `!llvm.half` (`LLVMHalfType`) - 16-bit floating-point value as per
+    IEEE-754-2008.
+-   `!llvm.float` (`LLVMFloatType`) - 32-bit floating-point value as per
+    IEEE-754-2008.
+-   `!llvm.double` (`LLVMDoubleType`) - 64-bit floating-point value as per
+    IEEE-754-2008.
+-   `!llvm.fp128` (`LLVMFP128Type`) - 128-bit floating-point value as per
+    IEEE-754-2008.
+-   `!llvm.x86_fp80` (`LLVMX86FP80Type`) - 80-bit floating-point value (x87).
+-   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
+    machine.
+-   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
+    64 bits).
+-   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an
+    operation.
+-   `!llvm.metadata` (`LLVMMetadataType`) - LLVM IR metadata, to be used only if
+    the metadata cannot be represented as structured MLIR attributes.
+-   `!llvm.void` (`LLVMVoidType`) - does not represent any value; can only
+    appear in function results.
+
+These types represent a single value (or an absence thereof in case of `void`)
+and correspond to their LLVM IR counterparts.
+
+### Parametric Types
+
+#### Integer Types
+
+Integer types are parametric in MLIR terminology, with their bitwidth being a
+type parameter. They are expressed as follows:
 
 ```
-type ::= `!llvm<"` llvm-canonical-type `">
-llvm-canonical-type ::= <canonical textual representation defined by LLVM>
+  llvm-int-type ::= `!llvm.i` integer-literal
 ```
 
-For example, one can use primitive types `!llvm.i32`, pointer types
-`!llvm<"i8*">`, vector types `!llvm<"<4 x float>">` or structure types
-`!llvm<"{i32, float}">`. The parsing and printing of the canonical form are
-delegated to the LLVM assembly parser and printer.
+and represented internally as `LLVMIntegerType`. For example, `i1` is a 1-bit
+integer type (bool) and `i32` as a 32-bit integer type.
 
-LLVM IR dialect types contain an `llvm::Type*` object that can be obtained by
-calling `.getUnderlyingType()` and used in LLVM API calls directly. These
-objects are allocated within the LLVM context associated with the LLVM IR
-dialect and may be linked to the properties of the associated LLVM module.
+#### Pointer Types
 
-LLVM IR dialect type can be constructed from any `llvm::Type*` that is
-associated with the LLVM context of the dialect. In this document, we use the
-term "wrapped LLVM IR type" to refer to the LLVM IR dialect type containing a
-specific LLVM IR type.
+Pointer types specify an address in memory.
+
+Pointer types are parametric types parameterized by the element type and the
+address space. The address space is an integer, but this choice may be
+reconsidered if MLIR implements named address spaces. Their syntax is as
+follows:
+
+```
+  llvm-ptr-type ::= `!llvm.ptr<` llvm-type (`,` integer-literal)? `>`
+```
+
+where the optional integer literal corresponds to the memory space. Both cases
+are represented by `LLVMPointerType` internally.
+
+#### Vector Types
+
+Vector types represent sequences of elements, typically when multiple data
+elements are processed by a single instruction (SIMD). Vectors are thought of as
+stored in registers and therefore vector elements can only be addressed through
+constant indices.
+
+Vector types are parameterized by the size, which may be either _fixed_ or a
+multiple of some fixed size in case of _scalable_ vectors, and the element type.
+Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
+still considered 1D. Their syntax is as follows:
+
+```
+  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` llvm-type `>`
+```
+
+Internally, fixed vector types are represented as `LLVMFixedVectorType` and
+scalable vector types are represented as `LLVMScalableVectorType`. Both classes
+derive`LLVMVectorType`.
+
+#### Array Types
+
+Array types represent sequences of elements in memory. Unlike vectors, array
+elements can be addressed with a value unknown at compile time, and can be
+nested. Only 1D arrays are allowed though.
+
+Array types are parameterized by the fixed size and the element type.
+Syntactically, their representation is close to vectors:
+
+```
+  llvm-array-type ::= `!llvm.array<` integer-literal `x` llvm-type `>`
+```
+
+and are internally represented as `LLVMArrayType`.
+
+#### Function Types
+
+Function types represent the type of a function, i.e. its signature.
+
+Function types are parameterized by the result type, the list of argument types
+and by an optional "variadic" flag. Unlike built-in `FunctionType`, LLVM dialect
+functions (`LLVMFunctionType`) always have single result, which may be
+`!llvm.void` if the function does not return anything. The syntax is as follows:
+
+```
+  llvm-func-type ::= `!llvm.func<` llvm-type `(` llvm-type-list (`,` `...`)?
+                     `)` `>`
+```
+
+For example,
+
+```mlir
+!llvm.func<void ()>            // a function with no arguments;
+!llvm.func<i32 (float, i32)>  // a function with two arguments and a result;
+!llvm.func<void (i32, ...)>   // a variadic function with at least one argument.
+```
+
+In the LLVM dialect, functions are not first-class objects and one cannot have a
+value of function type. Instead, one can take the address of a function and
+operate on pointers to functions.
+
+### Structure Types
+
+The structure type is used to represent a collection of data members together in
+memory. The elements of a structure may be any type that has a size.
+
+Structure types are represented in a single dedicated class
+mlir::LLVM::LLVMStructType. Internally, the struct type stores a (potentially
+empty) name, a (potentially empty) list of contained types and a bitmask
+indicating whether the struct is named, opaque, packed or uninitialized.
+Structure types that don't have a name are referred to as _literal_ structs.
+Such structures are uniquely identified by their contents. _Identified_ structs
+on the other hand are uniquely identified by the name.
+
+#### Identified Structure Types
+
+Identified structure types are uniqued using their name in a given context.
+Attempting to construct an identified structure with the same name a structure
+that already exists in the context *will result in the existing structure being
+returned*. **MLIR does not auto-rename identified structs in case of name
+conflicts** because there is no naming scope equivalent to a module in LLVM IR
+since MLIR modules can be arbitrarily nested.
+
+Programmatically, identified structures can be constructed in an _uninitialized_
+state. In this case, they are given a name but the body must be set up by a
+later call, using MLIR's type mutation mechanism. Such uninitialized types can
+be used in type construction, but must be eventually initialized for IR to be
+valid. This mechanism allows for constructing _recursive_ or mutually referring
+structure types: an uninitialized type can be used in its own initialization.
+
+Once the type is initialized, its body cannot be changed anymore. Any further
+attempts to modify the body will fail and return failure to the caller _unless
+the type is initialized with the exact same body_. Type initialization is
+thread-safe; however, if a concurrent thread initializes the type before the
+current thread, the initialization may return failure.
+
+The syntax for identified structure types is as follows.
+
+```
+llvm-ident-struct-type ::= `!llvm.struct<` string-literal, `opaque` `>`
+                         | `!llvm.struct<` string-literal, `packed`?
+                            `(` llvm-type-or-ref-list  `)` `>`
+llvm-type-or-ref-list ::= <maybe empty comma-separated list of llvm-type-or-ref>
+llvm-type-or-ref ::= <any llvm type>
+                   | `!llvm.struct<` string-literal >
+```
+
+The body of the identified struct is printed in full unless the it is
+transitively contained in the same struct. In the latter case, only the
+identifier is printed. For example, the structure containing the pointer to
+itself is represented as `!llvm.struct<"A", (ptr<"A">)>`, and the structure `A`
+containing two pointers to the structure `B` containing a pointer to the
+structure `A` is represented as `!llvm.struct<"A", (ptr<"B", (ptr<"A">)>,
+ptr<"B", (ptr<"A">))>`. Note that the structure `B` is "unrolled" for both
+elements. _A structure with the same name but different body is a syntax error._
+**The user must ensure structure name uniqueness across all modules processed in
+a given MLIR context.** Stucture names are arbitrary string literals and may
+include, e.g., spaces and keywords.
+
+Identified structs may be _opaque_. In this case, the body is unknown but the
+structure type is considered _initialized_ and is valid in the IR.
+
+#### Literal Structure Types
+
+Literal structures are uniqued according to the list of elements they contain,
+and can optionally be packed. The syntax for such structs is as follows.
+
+```
+llvm-literal-struct-type ::= `!llvm.struct<` `packed`? `(` llvm-type-list `)`
+                             `>`
+llvm-type-list ::= <maybe empty comma-separated list of llvm types w/o `!llvm`>
+```
+
+Literal structs cannot be recursive, but can contain other structs. Therefore,
+they must be constructed in a single step with the entire list of contained
+elements provided.
+
+#### Examples of Structure Types
+
+```mlir
+!llvm.struct<>                  // NOT allowed
+!llvm.struct<()>                // empty, literal
+!llvm.struct<(i32)>             // literal
+!llvm.struct<(struct<(i32)>)>   // struct containing a struct
+!llvm.struct<packed (i8, i32)>  // packed struct
+!llvm.struct<"a">               // recursive reference, only allowed within
+                                // another struct, NOT allowed at top level
+!llvm.struct<"a", ptr<struct<"a">>>  // supported example of recursive reference
+!llvm.struct<"a", ()>           // empty, named (necessary to differentiate from
+                                // recursive reference)
+!llvm.struct<"a", opaque>       // opaque, named
+!llvm.struct<"a", (i32)>        // named
+!llvm.struct<"a", packed (i8, i32)>  // named, packed
+```
+
+### Unsupported Types
+
+LLVM IR `label` type does not have a counterpart in the LLVM dialect since, in
+MLIR, blocks are not values and don't need a type.
 
 ## Operations
 
