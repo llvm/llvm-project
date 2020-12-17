@@ -88,15 +88,15 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
   ; CHECK: bb.1:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
   ; CHECK: bb.2:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
   ; CHECK: bb.3:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
   ; CHECK: bb.4:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
   ; CHECK: bb.5:
   ; CHECK:   $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0:
@@ -139,12 +139,14 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
-  ; CHECK:   BL @OUTLINED_FUNCTION_2
+  ; CHECK:   BL @OUTLINED_FUNCTION_1
   ; CHECK: bb.1:
-  ; CHECK:   BL @OUTLINED_FUNCTION_2
+  ; CHECK:   BL @OUTLINED_FUNCTION_1
   ; CHECK: bb.2:
-  ; CHECK:   BL @OUTLINED_FUNCTION_2
+  ; CHECK:   BL @OUTLINED_FUNCTION_1
   ; CHECK: bb.3:
+  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK: bb.4:
   ; CHECK:   $sp = frame-destroy LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $lr
   ; CHECK:   BX_RET 14 /* CC::al */, $noreg
   bb.0:
@@ -172,6 +174,14 @@ body:             |
     $r4 = MOVi 2, 14, $noreg, $noreg
     BL @bar, implicit-def dead $lr, implicit $sp
   bb.3:
+    BL @bar, implicit-def dead $lr, implicit $sp
+    $r0 = MOVi 2, 14, $noreg, $noreg
+    $r1 = MOVi 2, 14, $noreg, $noreg
+    $r2 = MOVi 2, 14, $noreg, $noreg
+    $r3 = MOVi 2, 14, $noreg, $noreg
+    $r4 = MOVi 2, 14, $noreg, $noreg
+    BL @bar, implicit-def dead $lr, implicit $sp
+  bb.4:
     BX_RET 14, $noreg
 ...
 ---
@@ -186,12 +196,14 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
   ; CHECK: bb.1:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
   ; CHECK: bb.2:
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_4
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
   ; CHECK: bb.3:
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_3
+  ; CHECK: bb.4:
   ; CHECK:   $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0:
     tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
@@ -212,6 +224,12 @@ body:             |
     $r2 = t2MOVi 2, 14, $noreg, $noreg
     tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
   bb.3:
+    tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
+    $r0 = t2MOVi 2, 14, $noreg, $noreg
+    $r1 = t2MOVi 2, 14, $noreg, $noreg
+    $r2 = t2MOVi 2, 14, $noreg, $noreg
+    tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
+  bb.4:
     tBX_RET 14, $noreg
 ...
 ---
@@ -227,19 +245,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
   ; CHECK:   BL @"\01mcount", csr_aapcs, implicit-def dead $lr, implicit $sp
-  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   BL @OUTLINED_FUNCTION_2
   ; CHECK: bb.1:
   ; CHECK:   BL @"\01mcount", csr_aapcs, implicit-def dead $lr, implicit $sp
-  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   BL @OUTLINED_FUNCTION_2
   ; CHECK: bb.2:
   ; CHECK:   BL @"\01mcount", csr_aapcs, implicit-def dead $lr, implicit $sp
-  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   BL @OUTLINED_FUNCTION_2
   ; CHECK: bb.3:
   ; CHECK:   BL @"\01mcount", csr_aapcs, implicit-def dead $lr, implicit $sp
-  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   BL @OUTLINED_FUNCTION_2
   ; CHECK: bb.4:
   ; CHECK:   BL @"\01mcount", csr_aapcs, implicit-def dead $lr, implicit $sp
-  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   BL @OUTLINED_FUNCTION_2
   ; CHECK: bb.5:
   ; CHECK:   $sp = frame-destroy LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $lr
   ; CHECK:   BX_RET 14 /* CC::al */, $noreg
@@ -307,16 +325,6 @@ body:             |
 
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_1
   ; CHECK: bb.0:
-  ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-  ; CHECK:   $r0 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
-
-  ; CHECK-LABEL: name: OUTLINED_FUNCTION_2
-  ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -330,20 +338,17 @@ body:             |
   ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK:   TAILJMPd @bar, implicit $sp
 
-  ; CHECK-LABEL: name: OUTLINED_FUNCTION_3
+  ; CHECK-LABEL: name: OUTLINED_FUNCTION_2
   ; CHECK: bb.0:
-  ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
+  ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
+  ; CHECK:   $r0 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r1 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r3 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r4 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
 
-  ; CHECK-LABEL: name: OUTLINED_FUNCTION_4
+  ; CHECK-LABEL: name: OUTLINED_FUNCTION_3
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
@@ -355,6 +360,19 @@ body:             |
   ; CHECK:   $r2 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK:   tTAILJMPdND @bar, 14 /* CC::al */, $noreg, implicit $sp
+
+  ; CHECK-LABEL: name: OUTLINED_FUNCTION_4
+  ; CHECK: bb.0:
+  ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
+  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
+  ; CHECK:   $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
 
 
 
