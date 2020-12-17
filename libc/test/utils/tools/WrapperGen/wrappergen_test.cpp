@@ -238,7 +238,7 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
 
   ASSERT_EQ(STDErrOutput,
             "error: The options 'mangled-name' and 'mangled-name-file' "
-            "cannot be specified simultaniously.\n");
+            "cannot be specified simultaneously.\n");
 
   auto STDOutOrError = llvm::MemoryBuffer::getFile(STDOutFile.get().TmpName);
   std::string STDOutOutput = STDOutOrError.get()->getBuffer().str();
