@@ -120,12 +120,6 @@ static cl::opt<cl::boolOrDefault> DebugifyAndStripAll(
         "Debugify MIR before and Strip debug after "
         "each pass except those known to be unsafe when debug info is present"),
     cl::ZeroOrMore);
-static cl::opt<cl::boolOrDefault> DebugifyCheckAndStripAll(
-    "debugify-check-and-strip-all-safe", cl::Hidden,
-    cl::desc(
-        "Debugify MIR before, by checking and stripping the debug info after, "
-        "each pass except those known to be unsafe when debug info is present"),
-    cl::ZeroOrMore);
 enum RunOutliner { AlwaysOutline, NeverOutline, TargetDefault };
 // Enable or disable the MachineOutliner.
 static cl::opt<RunOutliner> EnableMachineOutliner(
@@ -631,26 +625,15 @@ void TargetPassConfig::addStripDebugPass() {
   PM->add(createStripDebugMachineModulePass(/*OnlyDebugified=*/true));
 }
 
-void TargetPassConfig::addCheckDebugPass() {
-  PM->add(createCheckDebugMachineModulePass());
-}
-
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
-  if (AllowDebugify && DebugifyIsSafe &&
-      (DebugifyAndStripAll == cl::BOU_TRUE ||
-       DebugifyCheckAndStripAll == cl::BOU_TRUE))
+  if (AllowDebugify && DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
     addDebugifyPass();
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner,
                                             bool AllowVerify, bool AllowStrip) {
-  if (DebugifyIsSafe) {
-    if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
-      addCheckDebugPass();
-      addStripDebugPass();
-    } else if (DebugifyAndStripAll == cl::BOU_TRUE)
-      addStripDebugPass();
-  }
+  if (DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
+    addStripDebugPass();
   if (AllowVerify)
     addVerifyPass(Banner);
 }
