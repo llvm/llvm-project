@@ -6,8 +6,8 @@ define i32 @test_preserve_and(i8* %a, i8* %b, i8* %c, i8* %d) {
 ; CHECK-LABEL: define {{.*}} @test_preserve_and({{.*}}
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8* [[A:%.*]], [[B:%.*]], !annotation !0
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]], !annotation !0
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C_1]], [[C_2]], !annotation !0
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !annotation !0
 ; CHECK:       trap: ; preds = %entry
 ; CHECK-NEXT:    call void @fn1()
@@ -39,8 +39,8 @@ define i32 @test_preserve_or(i8* %a, i8* %b, i8* %c, i8* %d) {
 ; CHECK-LABEL: define {{.*}} @test_preserve_or({{.*}}
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8* [[A:%.*]], [[B:%.*]], !annotation !0
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]], !annotation !0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_1]], [[C_2]], !annotation !0
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[TRAP:%.*]], label [[CONT1:%.*]], !annotation !0
 ; CHECK:       trap: ; preds = %entry
 ; CHECK-NEXT:    call void @fn1()
@@ -73,9 +73,9 @@ define i32 @test_preserve_or_not(i8* %a, i8* %b, i8* %c, i8* %d) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8* [[A:%.*]], [[B:%.*]], !annotation !0
 ; CHECK-NEXT:    [[C_2:%.*]] = xor i1 [[C_1]], true
-; CHECK-NEXT:    [[C_2_NOT:%.*]] = xor i1 [[C_2]], true
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2_NOT]], [[C_3]]
+; CHECK-NEXT:    [[C_2_NOT:%.*]] = xor i1 [[C_2]], true, !annotation !0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]], !annotation !0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2_NOT]], [[C_3]], !annotation !0
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[TRAP:%.*]], label [[CONT1:%.*]], !annotation !0
 ; CHECK:       trap: ; preds = %entry
 ; CHECK-NEXT:    call void @fn1()
@@ -111,7 +111,7 @@ define i32 @test_or_not_no_annotation(i8* %a, i8* %b, i8* %c, i8* %d) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8* [[A:%.*]], [[B:%.*]], !annotation !0
 ; CHECK-NEXT:    [[C_2:%.*]] = xor i1 [[C_1]], true
 ; CHECK-NEXT:    [[C_2_NOT:%.*]] = xor i1 [[C_2]], true
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8* [[C:%.*]], [[D:%.*]], !annotation !0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2_NOT]], [[C_3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[TRAP:%.*]], label [[CONT1:%.*]], !annotation !0
 ; CHECK:       trap: ; preds = %entry
