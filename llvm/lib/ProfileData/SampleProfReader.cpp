@@ -83,25 +83,51 @@ static bool ParseHead(const StringRef &Input, StringRef &FName,
 /// Returns true if line offset \p L is legal (only has 16 bits).
 static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 
+/// Parse \p Input that contains metadata.
+/// Possible metadata:
+/// - CFG Checksum information:
+///     !CFGChecksum: 12345
+/// Stores the FunctionHash (a.k.a. CFG Checksum) into \p FunctionHash.
+static bool parseMetadata(const StringRef &Input, uint64_t &FunctionHash) {
+  if (!Input.startswith("!CFGChecksum:"))
+    return false;
+
+  StringRef CFGInfo = Input.substr(strlen("!CFGChecksum:")).trim();
+  return !CFGInfo.getAsInteger(10, FunctionHash);
+}
+
+enum class LineType {
+  CallSiteProfile,
+  BodyProfile,
+  Metadata,
+};
+
 /// Parse \p Input as line sample.
 ///
 /// \param Input input line.
-/// \param IsCallsite true if the line represents an inlined callsite.
+/// \param LineTy Type of this line.
 /// \param Depth the depth of the inline stack.
 /// \param NumSamples total samples of the line/inlined callsite.
 /// \param LineOffset line offset to the start of the function.
 /// \param Discriminator discriminator of the line.
 /// \param TargetCountMap map from indirect call target to count.
+/// \param FunctionHash the function's CFG hash, used by pseudo probe.
 ///
 /// returns true if parsing is successful.
-static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
+static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
                       uint64_t &NumSamples, uint32_t &LineOffset,
                       uint32_t &Discriminator, StringRef &CalleeName,
-                      DenseMap<StringRef, uint64_t> &TargetCountMap) {
+                      DenseMap<StringRef, uint64_t> &TargetCountMap,
+                      uint64_t &FunctionHash) {
   for (Depth = 0; Input[Depth] == ' '; Depth++)
     ;
   if (Depth == 0)
     return false;
+
+  if (Depth == 1 && Input[Depth] == '!') {
+    LineTy = LineType::Metadata;
+    return parseMetadata(Input.substr(Depth), FunctionHash);
+  }
 
   size_t n1 = Input.find(':');
   StringRef Loc = Input.substr(Depth, n1 - Depth);
@@ -119,7 +145,7 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
 
   StringRef Rest = Input.substr(n1 + 2);
   if (Rest[0] >= '0' && Rest[0] <= '9') {
-    IsCallsite = false;
+    LineTy = LineType::BodyProfile;
     size_t n3 = Rest.find(' ');
     if (n3 == StringRef::npos) {
       if (Rest.getAsInteger(10, NumSamples))
@@ -176,7 +202,7 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
       n3 = n4;
     }
   } else {
-    IsCallsite = true;
+    LineTy = LineType::CallSiteProfile;
     size_t n3 = Rest.find_last_of(':');
     CalleeName = Rest.substr(0, n3);
     if (Rest.substr(n3 + 1).getAsInteger(10, NumSamples))
@@ -198,6 +224,11 @@ std::error_code SampleProfileReaderText::readImpl() {
   InlineCallStack InlineStack;
   int CSProfileCount = 0;
   int RegularProfileCount = 0;
+  uint32_t ProbeProfileCount = 0;
+
+  // SeenMetadata tracks whether we have processed metadata for the current
+  // top-level function profile.
+  bool SeenMetadata = false;
 
   for (; !LineIt.is_at_eof(); ++LineIt) {
     if ((*LineIt)[(*LineIt).find_first_not_of(' ')] == '#')
@@ -222,6 +253,7 @@ std::error_code SampleProfileReaderText::readImpl() {
                     "Expected 'mangled_name:NUM:NUM', found " + *LineIt);
         return sampleprof_error::malformed;
       }
+      SeenMetadata = false;
       SampleContext FContext(FName);
       if (FContext.hasContext())
         ++CSProfileCount;
@@ -239,25 +271,35 @@ std::error_code SampleProfileReaderText::readImpl() {
       uint64_t NumSamples;
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
-      bool IsCallsite;
       uint32_t Depth, LineOffset, Discriminator;
-      if (!ParseLine(*LineIt, IsCallsite, Depth, NumSamples, LineOffset,
-                     Discriminator, FName, TargetCountMap)) {
+      LineType LineTy;
+      uint64_t FunctionHash;
+      if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
+                     Discriminator, FName, TargetCountMap, FunctionHash)) {
         reportError(LineIt.line_number(),
                     "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
                         *LineIt);
         return sampleprof_error::malformed;
       }
-      if (IsCallsite) {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
+      if (SeenMetadata && LineTy != LineType::Metadata) {
+        // Metadata must be put at the end of a function profile.
+        reportError(LineIt.line_number(),
+                    "Found non-metadata after metadata: " + *LineIt);
+        return sampleprof_error::malformed;
+      }
+      while (InlineStack.size() > Depth) {
+        InlineStack.pop_back();
+      }
+      switch (LineTy) {
+      case LineType::CallSiteProfile: {
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
             LineLocation(LineOffset, Discriminator))[std::string(FName)];
         FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
-      } else {
+        break;
+      }
+      case LineType::BodyProfile: {
         while (InlineStack.size() > Depth) {
           InlineStack.pop_back();
         }
@@ -269,6 +311,15 @@ std::error_code SampleProfileReaderText::readImpl() {
         }
         MergeResult(Result, FProfile.addBodySamples(LineOffset, Discriminator,
                                                     NumSamples));
+        break;
+      }
+      case LineType::Metadata: {
+        FunctionSamples &FProfile = *InlineStack.back();
+        FProfile.setFunctionHash(FunctionHash);
+        ++ProbeProfileCount;
+        SeenMetadata = true;
+        break;
+      }
       }
     }
   }
@@ -276,6 +327,10 @@ std::error_code SampleProfileReaderText::readImpl() {
   assert((RegularProfileCount == 0 || CSProfileCount == 0) &&
          "Cannot have both context-sensitive and regular profile");
   ProfileIsCS = (CSProfileCount > 0);
+  assert((ProbeProfileCount == 0 || ProbeProfileCount == Profiles.size()) &&
+         "Cannot have both probe-based profiles and regular profiles");
+  ProfileIsProbeBased = (ProbeProfileCount > 0);
+  FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
 
   if (Result == sampleprof_error::success)
     computeSummary();
@@ -540,6 +595,13 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (std::error_code EC = readFuncOffsetTable())
       return EC;
     break;
+  case SecFuncMetadata:
+    ProfileIsProbeBased =
+        hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
+    FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
+    if (std::error_code EC = readFuncMetadata())
+      return EC;
+    break;
   case SecProfileSymbolList:
     if (std::error_code EC = readProfileSymbolList())
       return EC;
@@ -802,6 +864,23 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5) {
   if (IsMD5)
     return readMD5NameTable();
   return SampleProfileReaderBinary::readNameTable();
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
+  if (!ProfileIsProbeBased)
+    return sampleprof_error::success;
+  for (unsigned I = 0; I < Profiles.size(); ++I) {
+    auto FName(readStringFromTable());
+    if (std::error_code EC = FName.getError())
+      return EC;
+
+    auto Checksum = readNumber<uint64_t>();
+    if (std::error_code EC = Checksum.getError())
+      return EC;
+
+    Profiles[*FName].setFunctionHash(*Checksum);
+  }
+  return sampleprof_error::success;
 }
 
 std::error_code SampleProfileReaderCompactBinary::readNameTable() {

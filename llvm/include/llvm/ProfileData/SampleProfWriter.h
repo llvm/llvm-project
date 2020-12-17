@@ -200,6 +200,8 @@ protected:
   // Helper function to write name table.
   virtual std::error_code writeNameTable() override;
 
+  std::error_code writeFuncMetadata(const StringMap<FunctionSamples> &Profiles);
+
   // Functions to write various kinds of sections.
   std::error_code
   writeNameTableSection(const StringMap<FunctionSamples> &ProfileMap);
@@ -270,11 +272,10 @@ private:
     // SecFuncOffsetTable section is written after SecLBRProfile in the
     // profile because FuncOffsetTable needs to be populated while section
     // SecLBRProfile is written.
-    SectionHdrLayout = {{SecProfSummary, 0, 0, 0},
-                        {SecNameTable, 0, 0, 0},
-                        {SecFuncOffsetTable, 0, 0, 0},
-                        {SecLBRProfile, 0, 0, 0},
-                        {SecProfileSymbolList, 0, 0, 0}};
+    SectionHdrLayout = {
+        {SecProfSummary, 0, 0, 0},       {SecNameTable, 0, 0, 0},
+        {SecFuncOffsetTable, 0, 0, 0},   {SecLBRProfile, 0, 0, 0},
+        {SecProfileSymbolList, 0, 0, 0}, {SecFuncMetadata, 0, 0, 0}};
   };
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) override;

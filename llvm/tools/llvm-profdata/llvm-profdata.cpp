@@ -660,6 +660,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
+  Optional<bool> ProfileIsProbeBased;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context);
     if (std::error_code EC = ReaderOrErr.getError()) {
@@ -680,6 +681,11 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
     }
 
     StringMap<FunctionSamples> &Profiles = Reader->getProfiles();
+    if (ProfileIsProbeBased &&
+        ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
+      exitWithError(
+          "cannot merge probe-based profile with non-probe-based profile");
+    ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
     for (StringMap<FunctionSamples>::iterator I = Profiles.begin(),
                                               E = Profiles.end();
          I != E; ++I) {
@@ -1822,6 +1828,9 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
     exitWithErrorCode(EC, BaseFilename);
   if (std::error_code EC = TestReader->read())
     exitWithErrorCode(EC, TestFilename);
+  if (BaseReader->profileIsProbeBased() != TestReader->profileIsProbeBased())
+    exitWithError(
+        "cannot compare probe-based profile with non-probe-based profile");
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in
   // profile summary.
