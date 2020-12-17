@@ -849,7 +849,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     }
     break;
     }
-  } else if (CnVal == 8) {
+  } else if (CnVal == 8 || CnVal == 9) {
     // TLBI aliases
     const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByEncoding(Encoding);
     if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
@@ -1415,6 +1415,22 @@ void AArch64InstPrinter::printBarrierOption(const MCInst *MI, unsigned OpNo,
     auto DB = AArch64DB::lookupDBByEncoding(Val);
     Name = DB ? DB->Name : "";
   }
+  if (!Name.empty())
+    O << Name;
+  else
+    O << "#" << Val;
+}
+
+void AArch64InstPrinter::printBarriernXSOption(const MCInst *MI, unsigned OpNo,
+                                               const MCSubtargetInfo &STI,
+                                               raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  assert(MI->getOpcode() == AArch64::DSBnXS);
+
+  StringRef Name;
+  auto DB = AArch64DBnXS::lookupDBnXSByEncoding(Val);
+  Name = DB ? DB->Name : "";
+
   if (!Name.empty())
     O << Name;
   else

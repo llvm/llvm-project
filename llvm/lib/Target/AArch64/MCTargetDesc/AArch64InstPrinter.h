@@ -160,6 +160,8 @@ protected:
                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printBarrierOption(const MCInst *MI, unsigned OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBarriernXSOption(const MCInst *MI, unsigned OpNum,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printMSRSystemRegister(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printMRSSystemRegister(const MCInst *MI, unsigned OpNum,
