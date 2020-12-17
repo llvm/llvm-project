@@ -265,15 +265,11 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
         Worklist.push_back(PostProcessPN);
 
     // Keep track of PHI nodes that we want to remove because they did not have
-    // any uses rewritten. If the new PHI is used, store it so that we can
-    // try to propagate dbg.value intrinsics to it.
-    SmallVector<PHINode *, 2> NeedDbgValues;
+    // any uses rewritten.
     for (PHINode *PN : AddedPHIs)
       if (PN->use_empty())
         LocalPHIsToRemove.insert(PN);
-      else
-        NeedDbgValues.push_back(PN);
-    insertDebugValuesForPHIs(InstBB, NeedDbgValues);
+
     Changed = true;
   }
 
