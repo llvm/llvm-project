@@ -79,6 +79,37 @@ class RISCVVIntrinsic {
 }
 
 let TargetPrefix = "riscv" in {
+  // For unit stride load
+  // Input: (pointer, vl)
+  class RISCVUSLoad
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyint_ty],
+                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For unit stride load with mask
+  // Input: (maskedoff, pointer, mask, vl)
+  class RISCVUSLoadMask
+        : Intrinsic<[llvm_anyvector_ty ],
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyvector_ty, llvm_anyint_ty],
+                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For unit stride store
+  // Input: (vector_in, pointer, vl)
+  class RISCVUSStore
+        : Intrinsic<[],
+                    [llvm_anyvector_ty,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyint_ty],
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For unit stride store with mask
+  // Input: (vector_in, pointer, mask, vl)
+  class RISCVUSStoreMask
+        : Intrinsic<[],
+                    [llvm_anyvector_ty,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyvector_ty, llvm_anyint_ty],
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first source vector.
   // Input: (vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryAAXNoMask
@@ -87,6 +118,7 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
   }
+
   // For destination vector type is the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl)
   class RISCVBinaryAAXMask
@@ -142,6 +174,15 @@ let TargetPrefix = "riscv" in {
     let ExtendOperand = 2;
   }
 
+  multiclass RISCVUSLoad {
+    def "int_riscv_" # NAME : RISCVUSLoad;
+    def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
+  }
+  multiclass RISCVUSStore {
+    def "int_riscv_" # NAME : RISCVUSStore;
+    def "int_riscv_" # NAME # "_mask" : RISCVUSStoreMask;
+  }
+
   multiclass RISCVBinaryAAX {
     def "int_riscv_" # NAME : RISCVBinaryAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMask;
@@ -159,6 +200,9 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVBinaryMaskOut {
     def "int_riscv_" # NAME : RISCVBinaryMOut;
   }
+
+  defm vle : RISCVUSLoad;
+  defm vse : RISCVUSStore;
 
   defm vadd : RISCVBinaryAAX;
   defm vsub : RISCVBinaryAAX;
