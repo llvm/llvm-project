@@ -341,6 +341,8 @@ def ACC_Parallel : Directive<"parallel"> {
 
 // 2.5.2
 def ACC_Serial : Directive<"serial"> {
+  // Spec line 950-951: clause is as for the parallel construct except that the
+  // num_gangs, num_workers, and vector_length clauses are not permitted.
   let allowedClauses = [
     VersionedClause<ACCC_Attach>,
     VersionedClause<ACCC_Copy>,
@@ -349,10 +351,10 @@ def ACC_Serial : Directive<"serial"> {
     VersionedClause<ACCC_Create>,
     VersionedClause<ACCC_DevicePtr>,
     VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_FirstPrivate>,
     VersionedClause<ACCC_NoCreate>,
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
+    VersionedClause<ACCC_FirstPrivate>,
     VersionedClause<ACCC_Wait>
   ];
   let allowedOnceClauses = [
