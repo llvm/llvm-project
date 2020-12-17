@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s --match-full-lines
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s --match-full-lines
 
 ; Make sure we reset the debug location when folding instructions.
 ; CHECK: [[VAL:%.*]] = and i32 %c2, %k

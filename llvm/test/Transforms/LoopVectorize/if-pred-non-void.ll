@@ -1,4 +1,4 @@
-; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -verify-loop-info -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -verify-loop-info -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ; RUN: opt -S -force-vector-width=1 -force-vector-interleave=2 -loop-vectorize -verify-loop-info < %s | FileCheck %s --check-prefix=UNROLL-NO-VF
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -192,7 +192,7 @@ if.then:                                          ; preds = %check, %for.body
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %check
-  %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %check ] 
+  %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %check ]
   store i32 %ysd.0, i32* %isd, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 128

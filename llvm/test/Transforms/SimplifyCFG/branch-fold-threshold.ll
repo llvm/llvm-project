@@ -1,6 +1,6 @@
-; RUN: opt %s -simplifycfg -S | FileCheck %s --check-prefix=NORMAL
-; RUN: opt %s -simplifycfg -S -bonus-inst-threshold=2 | FileCheck %s --check-prefix=AGGRESSIVE
-; RUN: opt %s -simplifycfg -S -bonus-inst-threshold=4 | FileCheck %s --check-prefix=WAYAGGRESSIVE
+; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=NORMAL
+; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=2 | FileCheck %s --check-prefix=AGGRESSIVE
+; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=4 | FileCheck %s --check-prefix=WAYAGGRESSIVE
 ; RUN: opt %s -passes=simplify-cfg -S | FileCheck %s --check-prefix=NORMAL
 ; RUN: opt %s -passes='simplify-cfg<bonus-inst-threshold=2>' -S | FileCheck %s --check-prefix=AGGRESSIVE
 ; RUN: opt %s -passes='simplify-cfg<bonus-inst-threshold=4>' -S | FileCheck %s --check-prefix=WAYAGGRESSIVE
