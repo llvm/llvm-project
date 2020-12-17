@@ -44,7 +44,7 @@ void test2(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
 
 // CHECK-LABEL: @test3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[RESP:%.*]] to <256 x i1>*
 // CHECK-NEXT:    store <256 x i1> [[TMP0]], <256 x i1>* [[TMP1]], align 32, !tbaa !6
 // CHECK-NEXT:    ret void
@@ -53,7 +53,7 @@ void test3(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   __vector_quad vq = *((__vector_quad *)vqp);
   __vector_pair vp = *((__vector_pair *)vpp);
   __vector_pair res;
-  __builtin_mma_assemble_pair(&res, vc, vc);
+  __builtin_vsx_assemble_pair(&res, vc, vc);
   *((__vector_pair *)resp) = res;
 }
 
@@ -61,7 +61,7 @@ void test3(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[VPP:%.*]] to <256 x i1>*
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, <256 x i1>* [[TMP0]], align 32
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.pair(<256 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[RESP:%.*]] to <16 x i8>*
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP2]], 0
 // CHECK-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[TMP3]], align 16
@@ -72,7 +72,7 @@ void test3(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
 // CHECK-NEXT:    ret void
 //
 void test4(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsigned char *resp) {
-  __builtin_mma_disassemble_pair(resp, (__vector_pair*)vpp);
+  __builtin_vsx_disassemble_pair(resp, (__vector_pair*)vpp);
 }
 
 // CHECK-LABEL: @test5(
@@ -1040,104 +1040,104 @@ void test65(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-LABEL: @test66(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP0]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP0]])
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP1]], i8* [[TMP2]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP1]], i8* [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test66(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(0LL, vpp);
-  __builtin_mma_stxvp(vp, 0LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(0LL, vpp);
+  __builtin_vsx_stxvp(vp, 0LL, vp2);
 }
 
 // CHECK-LABEL: @test67(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[OFFSET:%.*]]
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[TMP3]], i64 [[OFFSET]]
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test67(const __vector_pair *vpp, signed long long offset, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(offset, vpp);
-  __builtin_mma_stxvp(vp, offset, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(offset, vpp);
+  __builtin_vsx_stxvp(vp, offset, vp2);
 }
 
 // CHECK-LABEL: @test68(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 18
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[TMP3]], i64 18
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test68(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(18LL, vpp);
-  __builtin_mma_stxvp(vp, 18LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(18LL, vpp);
+  __builtin_vsx_stxvp(vp, 18LL, vp2);
 }
 
 // CHECK-LABEL: @test69(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 1
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[TMP3]], i64 1
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test69(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(1LL, vpp);
-  __builtin_mma_stxvp(vp, 1LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(1LL, vpp);
+  __builtin_vsx_stxvp(vp, 1LL, vp2);
 }
 
 // CHECK-LABEL: @test70(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 42
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[TMP3]], i64 42
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(42LL, vpp);
-  __builtin_mma_stxvp(vp, 42LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(42LL, vpp);
+  __builtin_vsx_stxvp(vp, 42LL, vp2);
 }
 
 // CHECK-LABEL: @test71(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VPP:%.*]], i64 128
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i1>* [[TMP0]] to i8*
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VP2:%.*]], i64 128
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i1>* [[TMP3]] to i8*
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test71(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(32768LL, vpp);
-  __builtin_mma_stxvp(vp, 32768LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(32768LL, vpp);
+  __builtin_vsx_stxvp(vp, 32768LL, vp2);
 }
 
 // CHECK-LABEL: @test72(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 32799
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <256 x i1>* [[VP2:%.*]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[TMP3]], i64 32799
-// CHECK-NEXT:    tail call void @llvm.ppc.mma.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
+// CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
 void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
-  __vector_pair vp = __builtin_mma_lxvp(32799LL, vpp);
-  __builtin_mma_stxvp(vp, 32799LL, vp2);
+  __vector_pair vp = __builtin_vsx_lxvp(32799LL, vpp);
+  __builtin_vsx_stxvp(vp, 32799LL, vp2);
 }
 
 // CHECK-LABEL: @test73(
@@ -1146,7 +1146,7 @@ void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <512 x i1>, <512 x i1>* [[TMP0]], align 64, [[TBAA2:!tbaa !.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[TMP2]], i64 8
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP3]])
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> [[TMP1]], <256 x i1> [[TMP4]], <16 x i8> [[VC:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[RESP:%.*]] to <512 x i1>*
 // CHECK-NEXT:    store <512 x i1> [[TMP5]], <512 x i1>* [[TMP6]], align 64, [[TBAA2]]
@@ -1154,7 +1154,7 @@ void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
 //
 void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_mma_lxvp(8LL, vpp);
+  __vector_pair vp = __builtin_vsx_lxvp(8LL, vpp);
   __builtin_mma_pmxvf64gernn(&vq, vp, vc, 0, 0);
   *((__vector_quad *)resp) = vq;
 }
@@ -1164,7 +1164,7 @@ void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[VQP:%.*]] to <512 x i1>*
 // CHECK-NEXT:    [[TMP1:%.*]] = load <512 x i1>, <512 x i1>* [[TMP0]], align 64, [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> [[TMP1]], <256 x i1> [[TMP3]], <16 x i8> [[VC:%.*]])
 // CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[RESP:%.*]] to <512 x i1>*
 // CHECK-NEXT:    store <512 x i1> [[TMP4]], <512 x i1>* [[TMP5]], align 64, [[TBAA2]]
@@ -1172,7 +1172,7 @@ void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 //
 void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_mma_lxvp(0LL, vpp);
+  __vector_pair vp = __builtin_vsx_lxvp(0LL, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
   *((__vector_quad *)resp) = vq;
 }
@@ -1183,7 +1183,7 @@ void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 // CHECK-NEXT:    [[TMP1:%.*]] = load <512 x i1>, <512 x i1>* [[TMP0]], align 64, [[TBAA2:!tbaa !.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i1>* [[VPP:%.*]] to i8*
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[TMP2]], i64 [[OFFS:%.*]]
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* [[TMP3]])
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1> [[TMP1]], <256 x i1> [[TMP4]], <16 x i8> [[VC:%.*]])
 // CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[RESP:%.*]] to <512 x i1>*
 // CHECK-NEXT:    store <512 x i1> [[TMP5]], <512 x i1>* [[TMP6]], align 64, [[TBAA2]]
@@ -1191,7 +1191,7 @@ void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
 //
 void test75(unsigned char *vqp, signed long long offs, const __vector_pair *vpp, vector unsigned char vc, unsigned char *resp) {
   __vector_quad vq = *((__vector_quad *)vqp);
-  __vector_pair vp = __builtin_mma_lxvp(offs, vpp);
+  __vector_pair vp = __builtin_vsx_lxvp(offs, vpp);
   __builtin_mma_xvf64gernp(&vq, vp, vc);
   *((__vector_quad *)resp) = vq;
 }

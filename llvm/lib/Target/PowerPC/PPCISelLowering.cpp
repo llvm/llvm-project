@@ -10614,7 +10614,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
 
   case Intrinsic::ppc_mma_disassemble_acc:
-  case Intrinsic::ppc_mma_disassemble_pair: {
+  case Intrinsic::ppc_vsx_disassemble_pair: {
     int NumVecs = 2;
     SDValue WideVec = Op.getOperand(1);
     if (IntrinsicID == Intrinsic::ppc_mma_disassemble_acc) {
