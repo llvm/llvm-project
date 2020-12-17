@@ -175,8 +175,9 @@ public:
   };
 
 protected:
-  uint64_t markSectionStart(SecType Type);
-  std::error_code addNewSection(SecType Sec, uint64_t SectionStart);
+  uint64_t markSectionStart(SecType Type, uint32_t LayoutIdx);
+  std::error_code addNewSection(SecType Sec, uint32_t LayoutIdx,
+                                uint64_t SectionStart);
   template <class SecFlagType>
   void addSectionFlag(SecType Type, SecFlagType Flag) {
     for (auto &Entry : SectionHdrLayout) {
@@ -193,9 +194,11 @@ protected:
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
 
-  // Dispatch section writer for each section.
+  // Dispatch section writer for each section. \p LayoutIdx is the sequence
+  // number indicating where the section is located in SectionHdrLayout.
   virtual std::error_code
-  writeOneSection(SecType Type, const StringMap<FunctionSamples> &ProfileMap);
+  writeOneSection(SecType Type, uint32_t LayoutIdx,
+                  const StringMap<FunctionSamples> &ProfileMap);
 
   // Helper function to write name table.
   virtual std::error_code writeNameTable() override;
@@ -209,7 +212,7 @@ protected:
   std::error_code writeProfileSymbolListSection();
 
   // Specifiy the order of sections in section header table. Note
-  // the order of sections in the profile may be different that the
+  // the order of sections in SecHdrTable may be different that the
   // order in SectionHdrLayout. sample Reader will follow the order
   // in SectionHdrLayout to read each section.
   SmallVector<SecHdrTableEntry, 8> SectionHdrLayout;
@@ -224,7 +227,6 @@ private:
   std::error_code writeSecHdrTable();
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
-  SecHdrTableEntry &getEntryInLayout(SecType Type);
   std::error_code compressAndOutput();
 
   // We will swap the raw_ostream held by LocalBufStream and that
@@ -241,7 +243,10 @@ private:
   // The location in the output stream where the SecHdrTable should be
   // written to.
   uint64_t SecHdrTableOffset;
-  // Initial Section Flags setting.
+  // The table contains SecHdrTableEntry entries in order of how they are
+  // populated in the writer. It may be different from the order in
+  // SectionHdrLayout which specifies the sequence in which sections will
+  // be read.
   std::vector<SecHdrTableEntry> SecHdrTable;
 
   // FuncOffsetTable maps function name to its profile offset in SecLBRProfile
