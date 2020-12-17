@@ -119,6 +119,14 @@ Modified Compiler Flags
   `nonnull` attribute on `this` for configurations that need it to be nullable.
 - ``-gsplit-dwarf`` no longer implies ``-g2``.
 
+Removed Compiler Flags
+-------------------------
+
+The following options no longer exist.
+
+- clang-cl's ``/Zd`` flag no longer exist. But ``-gline-tables-only`` still
+  exists and does the same thing.
+
 New Pragmas in Clang
 --------------------
 
