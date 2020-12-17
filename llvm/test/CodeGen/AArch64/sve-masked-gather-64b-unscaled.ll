@@ -59,6 +59,17 @@ define <vscale x 2 x half> @masked_gather_nxv2f16(i8* %base, <vscale x 2 x i64> 
   ret <vscale x 2 x half> %vals
 }
 
+define <vscale x 2 x bfloat> @masked_gather_nxv2bf16(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) #0 {
+; CHECK-LABEL: masked_gather_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d]
+; CHECK-NEXT:    ret
+  %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
+  %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x bfloat*>
+  %vals = call <vscale x 2 x bfloat> @llvm.masked.gather.nxv2bf16(<vscale x 2 x bfloat*> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x bfloat> undef)
+  ret <vscale x 2 x bfloat> %vals
+}
+
 define <vscale x 2 x float> @masked_gather_nxv2f32(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f32:
 ; CHECK:       // %bb.0:
@@ -121,5 +132,7 @@ declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*>, i32,
 declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
 declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 2 x half> @llvm.masked.gather.nxv2f16(<vscale x 2 x half*>, i32, <vscale x 2 x i1>, <vscale x 2 x half>)
+declare <vscale x 2 x bfloat> @llvm.masked.gather.nxv2bf16(<vscale x 2 x bfloat*>, i32, <vscale x 2 x i1>, <vscale x 2 x bfloat>)
 declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
 declare <vscale x 2 x double> @llvm.masked.gather.nxv2f64(<vscale x 2 x double*>, i32, <vscale x 2 x i1>, <vscale x 2 x double>)
+attributes #0 = { "target-features"="+sve,+bf16" }

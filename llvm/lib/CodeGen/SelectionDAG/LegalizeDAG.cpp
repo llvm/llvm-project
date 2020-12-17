@@ -4453,9 +4453,8 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Op = Node->getOperand(IsStrict ? 1 : 0);
     SDValue Chain = IsStrict ? Node->getOperand(0) : SDValue();
     EVT VT = Node->getValueType(0);
-    const ConstantSDNode *Trunc =
-        cast<ConstantSDNode>(Node->getOperand(IsStrict ? 2 : 1));
-    assert(Trunc->isNullValue() &&
+    assert(cast<ConstantSDNode>(Node->getOperand(IsStrict ? 2 : 1))
+               ->isNullValue() &&
            "Unable to expand as libcall if it is not normal rounding");
 
     RTLIB::Libcall LC = RTLIB::getFPROUND(Op.getValueType(), VT);

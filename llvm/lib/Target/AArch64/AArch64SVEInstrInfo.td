@@ -1196,6 +1196,10 @@ let Predicates = [HasSVE] in {
           (UUNPKLO_ZZ_D ZPR:$Zs)>;
     def : Pat<(nxv2bf16 (extract_subvector (nxv4bf16 ZPR:$Zs), (i64 2))),
           (UUNPKHI_ZZ_D ZPR:$Zs)>;
+    def : Pat<(nxv4bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 0))),
+          (UUNPKLO_ZZ_S ZPR:$Zs)>;
+    def : Pat<(nxv4bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 4))),
+          (UUNPKHI_ZZ_S ZPR:$Zs)>;
   }
 
   def : Pat<(nxv4f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 0))),

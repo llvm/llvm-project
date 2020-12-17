@@ -1236,11 +1236,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #endif
       is_same<typename __is_pathable<_Source>::__char_type, char>::value,
       "u8path(Source const&) requires Source have a character type of type "
-      "'char'"
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
-      " or 'char8_t'"
-#endif
-      );
+      "'char' or 'char8_t'");
   return path(__s);
 }
 
@@ -1254,10 +1250,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #endif
       is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
       "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
-      " or 'char8_t'"
-#endif
-      );
+      " or 'char8_t'");
   return path(__f, __l);
 }
 
