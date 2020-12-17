@@ -52,11 +52,22 @@ static void genObjectList(const Fortran::parser::OmpObjectList &objectList,
 template <typename Op>
 static void createBodyOfOp(Op &op, Fortran::lower::FirOpBuilder &firOpBuilder,
                            mlir::Location &loc) {
-  firOpBuilder.createBlock(&op.getRegion());
+  if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
+    unsigned int numIVs = op.step().size();
+    SmallVector<Type, 8> argTypes(numIVs, firOpBuilder.getIndexType());
+    firOpBuilder.createBlock(&op.getRegion(), {}, argTypes);
+  } else {
+    firOpBuilder.createBlock(&op.getRegion());
+  }
   auto &block = op.getRegion().back();
   firOpBuilder.setInsertionPointToStart(&block);
-  // Ensure the block is well-formed.
-  firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
+  if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
+    mlir::ValueRange results;
+    firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
+  } else {
+    // Ensure the block is well-formed.
+    firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
+  }
   // Reset the insertion point to the start of the first block.
   firOpBuilder.setInsertionPointToStart(&block);
 }
@@ -110,11 +121,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                     std::get<std::optional<Fortran::parser::OmpObjectList>>(
                         flushConstruct.t))
               genObjectList(*ompObjectList, converter, operandRange);
-            if (std::get<std::optional<
-                    std::list<Fortran::parser::OmpMemoryOrderClause>>>(
-                    flushConstruct.t))
-              TODO(converter.getCurrentLocation(),
-                   "Handle OmpMemoryOrderClause");
+            // FIXME: Add support for handling memory order clause. Adding
+            // a TODO will invoke a crash, so commented it for now.
+            // if (std::get<std::optional<
+            //        std::list<Fortran::parser::OmpMemoryOrderClause>>>(
+            //        flushConstruct.t))
             converter.getFirOpBuilder().create<mlir::omp::FlushOp>(
                 converter.getCurrentLocation(), operandRange);
           },
@@ -129,30 +140,22 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       standaloneConstruct.u);
 }
 
-static void
-genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-  const auto &beginBlockDirective =
-      std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t);
-  const auto &blockDirective =
-      std::get<Fortran::parser::OmpBlockDirective>(beginBlockDirective.t);
-
+template <typename Directive>
+static void createParallelOp(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::pft::Evaluation &eval,
+                             const Directive &directive) {
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
-  if (blockDirective.v == llvm::omp::OMPD_parallel) {
-
     mlir::Value ifClauseOperand, numThreadsClauseOperand;
     SmallVector<Value, 4> privateClauseOperands, firstprivateClauseOperands,
         sharedClauseOperands, copyinClauseOperands, allocatorOperands,
         allocateOperands;
     Attribute defaultClauseOperand, procBindClauseOperand;
-
-    const auto &parallelOpClauseList =
-        std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
-    for (const auto &clause : parallelOpClauseList.v) {
+    const auto &opClauseList =
+        std::get<Fortran::parser::OmpClauseList>(directive.t);
+    for (const auto &clause : opClauseList.v) {
       if (const auto &ifClause =
               std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
         auto &expr =
@@ -162,7 +165,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       } else if (const auto &numThreadsClause =
                      std::get_if<Fortran::parser::OmpClause::NumThreads>(
                          &clause.u)) {
-        // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
         numThreadsClauseOperand = fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
       } else if (const auto &privateClause =
@@ -221,8 +223,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         privateClauseOperands, firstprivateClauseOperands, sharedClauseOperands,
         copyinClauseOperands, allocateOperands, allocatorOperands,
         procBindClauseOperand.dyn_cast_or_null<StringAttr>());
-    // Handle attribute based clauses.
-    for (const auto &clause : parallelOpClauseList.v) {
+    for (const auto &clause : opClauseList.v) {
       if (const auto &defaultClause =
               std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
         const auto &ompDefaultClause{defaultClause->v};
@@ -269,11 +270,172 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       }
     }
     createBodyOfOp<omp::ParallelOp>(parallelOp, firOpBuilder, currentLocation);
+}
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::OmpBlockDirective>(beginBlockDirective.t);
+
+  if (blockDirective.v == llvm::omp::OMPD_parallel) {
+    createParallelOp<Fortran::parser::OmpBeginBlockDirective>(
+        converter, eval,
+        std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t));
   } else if (blockDirective.v == llvm::omp::OMPD_master) {
-    auto masterOp =
-        firOpBuilder.create<mlir::omp::MasterOp>(currentLocation, argTy);
+    auto &firOpBuilder = converter.getFirOpBuilder();
+    auto currentLocation = converter.getCurrentLocation();
+    auto masterOp = firOpBuilder.create<mlir::omp::MasterOp>(currentLocation);
     createBodyOfOp<omp::MasterOp>(masterOp, firOpBuilder, currentLocation);
   }
+}
+
+static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
+
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+  SmallVector<Value, 4> lowerBound, upperBound, step, privateClauseOperands,
+      firstPrivateClauseOperands, lastPrivateClauseOperands, linearVars,
+      linearStepVars;
+  mlir::Value scheduleChunkClauseOperand;
+  mlir::Attribute scheduleClauseOperand, collapseClauseOperand,
+      noWaitClauseOperand, orderedClauseOperand, orderClauseOperand;
+  const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+      std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
+  if (llvm::omp::OMPD_parallel_do ==
+      std::get<Fortran::parser::OmpLoopDirective>(
+          std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t)
+          .v) {
+    createParallelOp<Fortran::parser::OmpBeginLoopDirective>(
+        converter, eval,
+        std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t));
+  } else {
+    for (const auto &clause : wsLoopOpClauseList.v) {
+      if (const auto &privateClause =
+              std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
+        const Fortran::parser::OmpObjectList &ompObjectList = privateClause->v;
+        genObjectList(ompObjectList, converter, privateClauseOperands);
+      } else if (const auto &firstPrivateClause =
+                     std::get_if<Fortran::parser::OmpClause::Firstprivate>(
+                         &clause.u)) {
+        const Fortran::parser::OmpObjectList &ompObjectList =
+            firstPrivateClause->v;
+        genObjectList(ompObjectList, converter, firstPrivateClauseOperands);
+      }
+    }
+  }
+  for (const auto &clause : wsLoopOpClauseList.v) {
+    if (const auto &lastPrivateClause =
+            std::get_if<Fortran::parser::OmpClause::Lastprivate>(&clause.u)) {
+      const Fortran::parser::OmpObjectList &ompObjectList =
+          lastPrivateClause->v;
+      genObjectList(ompObjectList, converter, lastPrivateClauseOperands);
+    }
+  }
+  // FIXME: Can be done in a better way ?
+  auto &doConstructEval =
+      eval.getFirstNestedEvaluation().getFirstNestedEvaluation();
+  auto *doStmt = doConstructEval.getIf<Fortran::parser::NonLabelDoStmt>();
+
+  const auto &loopControl =
+      std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
+  if (const auto *bounds =
+          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u)) {
+    Fortran::lower::StatementContext stmtCtx;
+    lowerBound.push_back(fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
+    upperBound.push_back(fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
+    if (bounds->step) {
+      step.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+    }
+    // If `step` is not present, assume it as `1`.
+    else {
+      step.push_back(firOpBuilder.createIntegerConstant(
+          currentLocation, firOpBuilder.getIntegerType(32), 1));
+    }
+  }
+  // FIXME: Add support for following clauses:
+  // 1. linear
+  // 2. order
+  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
+      currentLocation, lowerBound, upperBound, step, privateClauseOperands,
+      firstPrivateClauseOperands, lastPrivateClauseOperands, linearVars,
+      linearStepVars, scheduleClauseOperand.dyn_cast_or_null<StringAttr>(),
+      scheduleChunkClauseOperand,
+      collapseClauseOperand.dyn_cast_or_null<IntegerAttr>(),
+      noWaitClauseOperand.dyn_cast_or_null<UnitAttr>(),
+      orderedClauseOperand.dyn_cast_or_null<IntegerAttr>(),
+      orderClauseOperand.dyn_cast_or_null<StringAttr>(),
+      firOpBuilder.getUnitAttr() /* Inclusive stop */);
+
+  // Handle attribute based clauses.
+  for (const auto &clause : wsLoopOpClauseList.v) {
+    if (const auto &collapseClause =
+            std::get_if<Fortran::parser::OmpClause::Collapse>(&clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
+      const auto collapseValue = Fortran::evaluate::ToInt64(*expr);
+      wsLoopOp.collapse_valAttr(firOpBuilder.getI64IntegerAttr(*collapseValue));
+    } else if (const auto &orderedClause =
+                   std::get_if<Fortran::parser::OmpClause::Ordered>(
+                       &clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(orderedClause->v);
+      const auto orderedValue = Fortran::evaluate::ToInt64(*expr);
+      wsLoopOp.ordered_valAttr(firOpBuilder.getI64IntegerAttr(*orderedValue));
+    } else if (const auto &scheduleClause =
+                   std::get_if<Fortran::parser::OmpClause::Schedule>(
+                       &clause.u)) {
+      const auto &scheduleType = scheduleClause->v;
+      const auto &scheduleKind =
+          std::get<Fortran::parser::OmpScheduleClause::ScheduleType>(
+              scheduleType.t);
+      switch (scheduleKind) {
+      case Fortran::parser::OmpScheduleClause::ScheduleType::Static:
+        wsLoopOp.schedule_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseScheduleKind(omp::ClauseScheduleKind::Static)));
+        break;
+      case Fortran::parser::OmpScheduleClause::ScheduleType::Dynamic:
+        wsLoopOp.schedule_valAttr(
+            firOpBuilder.getStringAttr(omp::stringifyClauseScheduleKind(
+                omp::ClauseScheduleKind::Dynamic)));
+        break;
+      case Fortran::parser::OmpScheduleClause::ScheduleType::Guided:
+        wsLoopOp.schedule_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseScheduleKind(omp::ClauseScheduleKind::Guided)));
+        break;
+      case Fortran::parser::OmpScheduleClause::ScheduleType::Auto:
+        wsLoopOp.schedule_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseScheduleKind(omp::ClauseScheduleKind::Auto)));
+        break;
+      case Fortran::parser::OmpScheduleClause::ScheduleType::Runtime:
+        wsLoopOp.schedule_valAttr(
+            firOpBuilder.getStringAttr(omp::stringifyClauseScheduleKind(
+                omp::ClauseScheduleKind::Runtime)));
+        break;
+      }
+    }
+  }
+  // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
+  // i.e
+  // !$omp do
+  // <...>
+  // !$omp end do nowait
+  if (const auto &endClauseList =
+          std::get<std::optional<Fortran::parser::OmpEndLoopDirective>>(
+              loopConstruct.t)) {
+    const auto &clauseList =
+        std::get<Fortran::parser::OmpClauseList>((*endClauseList).t);
+    for (const auto &clause : clauseList.v)
+      if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
+        wsLoopOp.nowaitAttr(firOpBuilder.getUnitAttr());
+  }
+  createBodyOfOp<omp::WsLoopOp>(wsLoopOp, firOpBuilder, currentLocation);
 }
 
 void Fortran::lower::genOpenMPConstruct(
@@ -292,7 +454,7 @@ void Fortran::lower::genOpenMPConstruct(
             TODO(converter.getCurrentLocation(), "OpenMPSectionsConstruct");
           },
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPLoopConstruct");
+            genOMP(converter, eval, loopConstruct);
           },
           [&](const Fortran::parser::OpenMPDeclarativeAllocate
                   &execAllocConstruct) {
