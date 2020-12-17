@@ -6644,15 +6644,30 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   }
 
   // Extract constant bits from a subvector broadcast.
-  if (Op.getOpcode() == X86ISD::SUBV_BROADCAST) {
-    SmallVector<APInt, 16> SubEltBits;
-    if (getTargetConstantBitsFromNode(Op.getOperand(0), EltSizeInBits,
-                                      UndefElts, SubEltBits, AllowWholeUndefs,
-                                      AllowPartialUndefs)) {
-      UndefElts = APInt::getSplat(NumElts, UndefElts);
-      while (EltBits.size() < NumElts)
-        EltBits.append(SubEltBits.begin(), SubEltBits.end());
-      return true;
+  if (Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
+    SDValue Ptr = MemIntr->getBasePtr();
+    if (const Constant *Cst = getTargetConstantFromBasePtr(Ptr)) {
+      Type *CstTy = Cst->getType();
+      unsigned CstSizeInBits = CstTy->getPrimitiveSizeInBits();
+      if (!CstTy->isVectorTy() || (SizeInBits % CstSizeInBits) != 0)
+        return false;
+      unsigned SubEltSizeInBits = CstTy->getScalarSizeInBits();
+      unsigned NumSubElts = CstSizeInBits / SubEltSizeInBits;
+      unsigned NumSubVecs = SizeInBits / CstSizeInBits;
+      APInt UndefSubElts(NumSubElts, 0);
+      SmallVector<APInt, 64> SubEltBits(NumSubElts * NumSubVecs,
+                                        APInt(SubEltSizeInBits, 0));
+      for (unsigned i = 0; i != NumSubElts; ++i) {
+        if (!CollectConstantBits(Cst->getAggregateElement(i), SubEltBits[i],
+                                 UndefSubElts, i))
+          return false;
+        for (unsigned j = 1; j != NumSubVecs; ++j)
+          SubEltBits[i + (j * NumSubElts)] = SubEltBits[i];
+      }
+      UndefSubElts = APInt::getSplat(NumSubVecs * UndefSubElts.getBitWidth(),
+                                     UndefSubElts);
+      return CastBitData(UndefSubElts, SubEltBits);
     }
   }
 
@@ -8802,17 +8817,19 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
         }
         if (SplatBitSize > 64) {
           // Load the vector of constants and broadcast it.
-          MVT CVT = VT.getScalarType();
           Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize,
                                              *Ctx);
           SDValue VCP = DAG.getConstantPool(VecC, PVT);
           unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
+          MVT VVT = MVT::getVectorVT(VT.getScalarType(), NumElm);
           Align Alignment = cast<ConstantPoolSDNode>(VCP)->getAlign();
-          Ld = DAG.getLoad(
-              MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
-              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-              Alignment);
-          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
+          SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+          SDValue Ops[] = {DAG.getEntryNode(), VCP};
+          MachinePointerInfo MPI =
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+          return DAG.getMemIntrinsicNode(
+              X86ISD::SUBV_BROADCAST_LOAD, dl, Tys, Ops, VVT, MPI, Alignment,
+              MachineMemOperand::MOLoad);
         }
       }
     }
@@ -30929,6 +30946,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VBROADCAST_LOAD)
   NODE_NAME_CASE(VBROADCASTM)
   NODE_NAME_CASE(SUBV_BROADCAST)
+  NODE_NAME_CASE(SUBV_BROADCAST_LOAD)
   NODE_NAME_CASE(VPERMILPV)
   NODE_NAME_CASE(VPERMILPI)
   NODE_NAME_CASE(VPERM2X128)
@@ -38057,6 +38075,34 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Src, 0,
                                                TLO.DAG, DL, ExtSizeInBits));
     }
+    case X86ISD::SUBV_BROADCAST_LOAD: {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
+      EVT MemVT = MemIntr->getMemoryVT();
+      if (ExtSizeInBits == MemVT.getStoreSizeInBits()) {
+        SDLoc DL(Op);
+        SDValue Ld =
+            TLO.DAG.getLoad(MemVT, DL, MemIntr->getChain(),
+                            MemIntr->getBasePtr(), MemIntr->getMemOperand());
+        TLO.DAG.makeEquivalentMemoryOrdering(SDValue(MemIntr, 1),
+                                             Ld.getValue(1));
+        return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Ld, 0,
+                                                 TLO.DAG, DL, ExtSizeInBits));
+      } else if ((ExtSizeInBits % MemVT.getStoreSizeInBits()) == 0) {
+        SDLoc DL(Op);
+        EVT BcstVT = EVT::getVectorVT(*TLO.DAG.getContext(), VT.getScalarType(),
+                                      ExtSizeInBits / VT.getScalarSizeInBits());
+        SDVTList Tys = TLO.DAG.getVTList(BcstVT, MVT::Other);
+        SDValue Ops[] = {MemIntr->getOperand(0), MemIntr->getOperand(1)};
+        SDValue Bcst =
+            TLO.DAG.getMemIntrinsicNode(X86ISD::SUBV_BROADCAST_LOAD, DL, Tys,
+                                        Ops, MemVT, MemIntr->getMemOperand());
+        TLO.DAG.makeEquivalentMemoryOrdering(SDValue(MemIntr, 1),
+                                             Bcst.getValue(1));
+        return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Bcst, 0,
+                                                 TLO.DAG, DL, ExtSizeInBits));
+      }
+      break;
+    }
       // Byte shifts by immediate.
     case X86ISD::VSHLDQ:
     case X86ISD::VSRLDQ:
@@ -44606,6 +44652,29 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // If we also broadcast this as a subvector to a wider type, then just extract
+  // the lowest subvector.
+  if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
+      (RegVT.is128BitVector() || RegVT.is256BitVector())) {
+    SDValue Ptr = Ld->getBasePtr();
+    SDValue Chain = Ld->getChain();
+    for (SDNode *User : Ptr->uses()) {
+      if (User != N && User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+          cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
+          cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
+          cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
+              MemVT.getSizeInBits() &&
+          !User->hasAnyUseOfValue(1) &&
+          User->getValueSizeInBits(0).getFixedSize() >
+              RegVT.getFixedSizeInBits()) {
+        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
+                                           RegVT.getSizeInBits());
+        Extract = DAG.getBitcast(RegVT, Extract);
+        return DCI.CombineTo(N, Extract, SDValue(User, 1));
+      }
+    }
+  }
+
   // Cast ptr32 and ptr64 pointers to the default address space before a load.
   unsigned AddrSpace = Ld->getAddressSpace();
   if (AddrSpace == X86AS::PTR64 || AddrSpace == X86AS::PTR32_SPTR ||
@@ -49321,7 +49390,8 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
   // extract the lowest subvector instead which should allow
   // SimplifyDemandedVectorElts do more simplifications.
   if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
-                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD))
+                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+                      InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD))
     return extractSubVector(InVec, 0, DAG, SDLoc(N), SizeInBits);
 
   // If we're extracting a broadcasted subvector, just use the source.
@@ -49687,11 +49757,15 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
 }
 
-// Try to find a larger VBROADCAST_LOAD that we can extract from. Limit this to
-// cases where the loads have the same input chain and the output chains are
-// unused. This avoids any memory ordering issues.
-static SDValue combineVBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI) {
+// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract
+// from. Limit this to cases where the loads have the same input chain and the
+// output chains are unused. This avoids any memory ordering issues.
+static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  assert((N->getOpcode() == X86ISD::VBROADCAST_LOAD ||
+          N->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) &&
+         "Unknown broadcast load type");
+
   // Only do this if the chain result is unused.
   if (N->hasAnyUseOfValue(1))
     return SDValue();
@@ -49706,7 +49780,7 @@ static SDValue combineVBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
   // Look at other users of our base pointer and try to find a wider broadcast.
   // The input chain and the size of the memory VT must match.
   for (SDNode *User : Ptr->uses())
-    if (User != N && User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
+    if (User != N && User->getOpcode() == N->getOpcode() &&
         cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
         cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
         cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
@@ -49963,7 +50037,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
   case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
-  case X86ISD::VBROADCAST_LOAD: return combineVBROADCAST_LOAD(N, DAG, DCI);
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
   }
