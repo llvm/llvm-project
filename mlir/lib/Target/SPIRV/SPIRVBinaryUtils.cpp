@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
-#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 
 using namespace mlir;
 
