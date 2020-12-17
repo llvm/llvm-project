@@ -2,6 +2,9 @@
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Testing/Support/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -121,6 +124,100 @@ TEST(ParseConfiguration, MergeConfigurations) {
                        Options.ExtraArgsBefore->end(), ","));
   ASSERT_TRUE(Options.UseColor.hasValue());
   EXPECT_TRUE(*Options.UseColor);
+}
+
+namespace {
+class DiagCollecter {
+public:
+  struct Diag {
+  private:
+    static size_t posToOffset(const llvm::SMLoc Loc,
+                              const llvm::SourceMgr *Src) {
+      return Loc.getPointer() -
+             Src->getMemoryBuffer(Src->FindBufferContainingLoc(Loc))
+                 ->getBufferStart();
+    }
+
+  public:
+    Diag(const llvm::SMDiagnostic &D)
+        : Message(D.getMessage()), Kind(D.getKind()),
+          Pos(posToOffset(D.getLoc(), D.getSourceMgr())) {
+      if (!D.getRanges().empty()) {
+        // Ranges are stored as column numbers on the line that has the error.
+        unsigned Offset = Pos - D.getColumnNo();
+        Range.emplace();
+        Range->Begin = Offset + D.getRanges().front().first,
+        Range->End = Offset + D.getRanges().front().second;
+      }
+    }
+    std::string Message;
+    llvm::SourceMgr::DiagKind Kind;
+    size_t Pos;
+    Optional<llvm::Annotations::Range> Range;
+
+    friend void PrintTo(const Diag &D, std::ostream *OS) {
+      *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")
+          << D.Message << "@" << llvm::to_string(D.Pos);
+      if (D.Range)
+        *OS << ":[" << D.Range->Begin << ", " << D.Range->End << ")";
+    }
+  };
+
+  DiagCollecter() = default;
+  DiagCollecter(const DiagCollecter &) = delete;
+
+  std::function<void(const llvm::SMDiagnostic &)>
+  getCallback(bool Clear = true) & {
+    if (Clear)
+      Diags.clear();
+    return [&](const llvm::SMDiagnostic &Diag) { Diags.emplace_back(Diag); };
+  }
+
+  std::function<void(const llvm::SMDiagnostic &)>
+  getCallback(bool Clear = true) && = delete;
+
+  llvm::ArrayRef<Diag> getDiags() const { return Diags; }
+
+private:
+  std::vector<Diag> Diags;
+};
+
+MATCHER_P(DiagMessage, M, "") { return arg.Message == M; }
+MATCHER_P(DiagKind, K, "") { return arg.Kind == K; }
+MATCHER_P(DiagPos, P, "") { return arg.Pos == P; }
+MATCHER_P(DiagRange, P, "") { return arg.Range && *arg.Range == P; }
+} // namespace
+
+using ::testing::AllOf;
+using ::testing::ElementsAre;
+
+TEST(ParseConfiguration, CollectDiags) {
+  DiagCollecter Collector;
+  auto ParseWithDiags = [&](llvm::StringRef Buffer) {
+    return parseConfigurationWithDiags(llvm::MemoryBufferRef(Buffer, "Options"),
+                                       Collector.getCallback());
+  };
+  llvm::Annotations Options(R"(
+    [[Check]]: llvm-include-order
+  )");
+  llvm::ErrorOr<ClangTidyOptions> ParsedOpt = ParseWithDiags(Options.code());
+  EXPECT_TRUE(!ParsedOpt);
+  EXPECT_THAT(Collector.getDiags(),
+              testing::ElementsAre(AllOf(DiagMessage("unknown key 'Check'"),
+                                         DiagKind(llvm::SourceMgr::DK_Error),
+                                         DiagPos(Options.range().Begin),
+                                         DiagRange(Options.range()))));
+
+  Options = llvm::Annotations(R"(
+    UseColor: [[NotABool]]
+  )");
+  ParsedOpt = ParseWithDiags(Options.code());
+  EXPECT_TRUE(!ParsedOpt);
+  EXPECT_THAT(Collector.getDiags(),
+              testing::ElementsAre(AllOf(DiagMessage("invalid boolean"),
+                                         DiagKind(llvm::SourceMgr::DK_Error),
+                                         DiagPos(Options.range().Begin),
+                                         DiagRange(Options.range()))));
 }
 
 namespace {

@@ -1598,6 +1598,72 @@ TEST_F(StructuralEquivalenceStmtTest, FloatingLiteralDifferentValue) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprSame) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, float: 1)",
+                            "_Generic(0u, unsigned int: 0, float: 1)", Lang_C99,
+                            genericSelectionExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprSignsDiffer) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, float: 1)",
+                            "_Generic(0, int: 0, float: 1)", Lang_C99,
+                            genericSelectionExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprOrderDiffers) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, float: 1)",
+                            "_Generic(0u, float: 1, unsigned int: 0)", Lang_C99,
+                            genericSelectionExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprDependentResultSame) {
+  auto t = makeStmts(
+      R"(
+      template <typename T>
+      void f() {
+        T x;
+        (void)_Generic(x, int: 0, float: 1);
+      }
+      void g() { f<int>(); }
+      )",
+      R"(
+      template <typename T>
+      void f() {
+        T x;
+        (void)_Generic(x, int: 0, float: 1);
+      }
+      void g() { f<int>(); }
+      )",
+      Lang_CXX03, genericSelectionExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       GenericSelectionExprDependentResultOrderDiffers) {
+  auto t = makeStmts(
+      R"(
+      template <typename T>
+      void f() {
+        T x;
+        (void)_Generic(x, float: 1, int: 0);
+      }
+      void g() { f<int>(); }
+      )",
+      R"(
+      template <typename T>
+      void f() {
+        T x;
+        (void)_Generic(x, int: 0, float: 1);
+      }
+      void g() { f<int>(); }
+      )",
+      Lang_CXX03, genericSelectionExpr());
+
+  EXPECT_FALSE(testStructuralMatch(t));
+}
 TEST_F(StructuralEquivalenceStmtTest, IntegerLiteral) {
   auto t = makeWrappedStmts("1", "1", Lang_CXX03, integerLiteral());
   EXPECT_TRUE(testStructuralMatch(t));

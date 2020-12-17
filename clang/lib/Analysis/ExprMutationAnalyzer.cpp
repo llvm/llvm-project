@@ -95,10 +95,6 @@ AST_MATCHER(CXXTypeidExpr, isPotentiallyEvaluated) {
   return Node.isPotentiallyEvaluated();
 }
 
-const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
-                                                          GenericSelectionExpr>
-    genericSelectionExpr;
-
 AST_MATCHER_P(GenericSelectionExpr, hasControllingExpr,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   return InnerMatcher.matches(*Node.getControllingExpr(), Finder, Builder);
