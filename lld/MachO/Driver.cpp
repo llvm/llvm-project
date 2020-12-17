@@ -325,7 +325,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
     // print the .a name here.
     if (config->printEachFile && magic != file_magic::archive)
-      lld::outs() << toString(newFile) << '\n';
+      message(toString(newFile));
     inputFiles.insert(newFile);
   }
   return newFile;
