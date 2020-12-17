@@ -1844,6 +1844,10 @@ static const EnumEntry<unsigned> ElfMipsSymOtherFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MICROMIPS)
 };
 
+static const EnumEntry<unsigned> ElfAArch64SymOtherFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_AARCH64_VARIANT_PCS)
+};
+
 static const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_OPTIONAL),
   LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PLT),
@@ -2474,6 +2478,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     switch (Type) {
     case DT_AARCH64_BTI_PLT:
     case DT_AARCH64_PAC_PLT:
+    case DT_AARCH64_VARIANT_PCS:
       return std::to_string(Value);
     default:
       break;
@@ -4049,9 +4054,22 @@ void GNUStyle<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       printEnum(Symbol.getBinding(), makeArrayRef(ElfSymbolBindings));
   Fields[5].Str =
       printEnum(Symbol.getVisibility(), makeArrayRef(ElfSymbolVisibilities));
-  if (Symbol.st_other & ~0x3)
-    Fields[5].Str +=
-        " [<other: " + to_string(format_hex(Symbol.st_other, 2)) + ">]";
+
+  if (Symbol.st_other & ~0x3) {
+    if (this->Obj.getHeader().e_machine == ELF::EM_AARCH64) {
+      uint8_t Other = Symbol.st_other & ~0x3;
+      if (Other & STO_AARCH64_VARIANT_PCS) {
+        Other &= ~STO_AARCH64_VARIANT_PCS;
+        Fields[5].Str += " [VARIANT_PCS";
+        if (Other != 0)
+          Fields[5].Str.append(" | " + to_hexString(Other, false));
+        Fields[5].Str.append("]");
+      }
+    } else {
+      Fields[5].Str +=
+          " [<other: " + to_string(format_hex(Symbol.st_other, 2)) + ">]";
+    }
+  }
 
   Fields[6].Column += NonVisibilityBitsUsed ? 13 : 0;
   Fields[6].Str = getSymbolSectionNdx(Symbol, SymIndex);
@@ -6583,6 +6601,10 @@ void LLVMStyle<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
         SymOtherFlags.insert(SymOtherFlags.end(),
                              std::begin(ElfMipsSymOtherFlags),
                              std::end(ElfMipsSymOtherFlags));
+    } else if (this->Obj.getHeader().e_machine == EM_AARCH64) {
+      SymOtherFlags.insert(SymOtherFlags.end(),
+                           std::begin(ElfAArch64SymOtherFlags),
+                           std::end(ElfAArch64SymOtherFlags));
     }
     W.printFlags("Other", Symbol.st_other, makeArrayRef(SymOtherFlags), 0x3u);
   }
