@@ -636,6 +636,8 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v8_5a;
   case ARM::ArchKind::ARMV8_6A:
     return Triple::ARMSubArch_v8_6a;
+  case ARM::ArchKind::ARMV8_7A:
+    return Triple::ARMSubArch_v8_7a;
   case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
   case ARM::ArchKind::ARMV8MBaseline:
