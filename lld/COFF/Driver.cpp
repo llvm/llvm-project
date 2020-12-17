@@ -1263,7 +1263,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
   if (args.hasArg(OPT_dash_dash_version)) {
-    lld::outs() << getLLDVersion() << "\n";
+    message(getLLDVersion());
     return;
   }
 
