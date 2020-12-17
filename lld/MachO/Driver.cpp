@@ -34,6 +34,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"

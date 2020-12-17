@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
