@@ -42,3 +42,9 @@ namespace override {
   __attribute__((section("baz"))) // expected-warning {{section does not match}}
   void C::f() {}
 }
+
+// Check for section type conflicts between global variables and function templates
+template <typename> __attribute__((section("template_fn1"))) void template_fn1() {} // expected-note {{declared here}}
+const int const_global_var __attribute__((section("template_fn1"))) = 42;           // expected-error {{'const_global_var' causes a section type conflict with 'template_fn1'}}
+int mut_global_var __attribute__((section("template_fn2"))) = 42;                   // expected-note {{declared here}}
+template <typename> __attribute__((section("template_fn2"))) void template_fn2() {} // expected-error {{'template_fn2' causes a section type conflict with 'mut_global_var'}}
