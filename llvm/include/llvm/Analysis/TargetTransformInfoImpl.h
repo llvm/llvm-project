@@ -369,6 +369,8 @@ public:
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
+  Optional<unsigned> getMaxVScale() const { return None; }
+
   bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
 
   unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }

@@ -770,6 +770,26 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return Options;
 }
 
+unsigned AArch64TTIImpl::getGatherScatterOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+  auto *VT = cast<VectorType>(DataTy);
+  auto LT = TLI->getTypeLegalizationCost(DL, DataTy);
+  ElementCount LegalVF = LT.second.getVectorElementCount();
+  if (!LegalVF.isScalable())
+    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  Optional<unsigned> MaxNumVScale = getMaxVScale();
+  assert(MaxNumVScale && "Expected valid max vscale value");
+
+  unsigned MemOpCost =
+      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
+  unsigned MaxNumElementsPerGather =
+      MaxNumVScale.getValue() * LegalVF.getKnownMinValue();
+  return LT.first * MaxNumElementsPerGather * MemOpCost;
+}
+
 bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }

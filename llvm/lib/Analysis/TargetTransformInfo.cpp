@@ -627,6 +627,10 @@ unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
   return TTIImpl->getMinVectorRegisterBitWidth();
 }
 
+Optional<unsigned> TargetTransformInfo::getMaxVScale() const {
+  return TTIImpl->getMaxVScale();
+}
+
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(bool OptSize) const {
   return TTIImpl->shouldMaximizeVectorBandwidth(OptSize);
 }
