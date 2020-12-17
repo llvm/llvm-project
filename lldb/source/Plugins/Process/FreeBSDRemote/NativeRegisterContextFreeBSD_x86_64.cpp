@@ -288,13 +288,7 @@ NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
 }
 
 uint32_t NativeRegisterContextFreeBSD_x86_64::GetRegisterSetCount() const {
-  uint32_t sets = 0;
-  for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
-    if (GetSetForNativeRegNum(set_index))
-      ++sets;
-  }
-
-  return sets;
+  return k_num_register_sets;
 }
 
 const RegisterSet *
