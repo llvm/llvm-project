@@ -10,9 +10,9 @@ cpp rctx, x2
 // CHECK: dvp rctx, x1      // encoding: [0xa1,0x73,0x0b,0xd5]
 // CHECK: cpp rctx, x2      // encoding: [0xe2,0x73,0x0b,0xd5]
 
-// NOPREDCTRL: CFPRCTX requires predres
+// NOPREDCTRL: CFPRCTX requires: predres
 // NOPREDCTRL-NEXT: cfp
-// NOPREDCTRL: DVPRCTX requires predres
+// NOPREDCTRL: DVPRCTX requires: predres
 // NOPREDCTRL-NEXT: dvp
-// NOPREDCTRL: CPPRCTX requires predres
+// NOPREDCTRL: CPPRCTX requires: predres
 // NOPREDCTRL-NEXT: cpp

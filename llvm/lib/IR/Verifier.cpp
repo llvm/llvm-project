@@ -2961,8 +2961,8 @@ void Verifier::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   Assert(SrcTy->getPointerAddressSpace() != DestTy->getPointerAddressSpace(),
          "AddrSpaceCast must be between different address spaces", &I);
   if (auto *SrcVTy = dyn_cast<VectorType>(SrcTy))
-    Assert(cast<FixedVectorType>(SrcVTy)->getNumElements() ==
-               cast<FixedVectorType>(DestTy)->getNumElements(),
+    Assert(SrcVTy->getElementCount() ==
+               cast<VectorType>(DestTy)->getElementCount(),
            "AddrSpaceCast vector pointer number of elements mismatch", &I);
   visitInstruction(I);
 }

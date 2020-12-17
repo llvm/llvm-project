@@ -283,7 +283,7 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
   switch (type) {
   case N_UNDF:
     return sym.n_value == 0
-               ? symtab->addUndefined(name)
+               ? symtab->addUndefined(name, sym.n_desc & N_WEAK_REF)
                : symtab->addCommon(name, this, sym.n_value,
                                    1 << GET_COMM_ALIGN(sym.n_desc));
   case N_ABS:
@@ -527,7 +527,7 @@ void loadReexport(StringRef path, DylibFile *umbrella) {
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
-    : InputFile(DylibKind, mb) {
+    : InputFile(DylibKind, mb), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
@@ -580,7 +580,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
 }
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
-    : InputFile(DylibKind, interface) {
+    : InputFile(DylibKind, interface), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 

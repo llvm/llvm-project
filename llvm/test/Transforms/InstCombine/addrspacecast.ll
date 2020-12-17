@@ -102,6 +102,16 @@ define <4 x float addrspace(2)*> @combine_addrspacecast_types_vector(<4 x i32 ad
   ret <4 x float addrspace(2)*> %y
 }
 
+define <vscale x 4 x float addrspace(2)*> @combine_addrspacecast_types_scalevector(<vscale x 4 x i32 addrspace(1)*> %x) nounwind {
+; CHECK-LABEL: @combine_addrspacecast_types_scalevector(
+; CHECK-NEXT: bitcast <vscale x 4 x i32 addrspace(1)*> %x to <vscale x 4 x float addrspace(1)*>
+; CHECK-NEXT: addrspacecast <vscale x 4 x float addrspace(1)*> %1 to <vscale x 4 x float addrspace(2)*>
+; CHECK-NEXT: ret
+  %y = addrspacecast <vscale x 4 x i32 addrspace(1)*> %x to <vscale x 4 x float addrspace(2)*>
+  ret <vscale x 4 x float addrspace(2)*> %y
+}
+
+
 define i32 @canonicalize_addrspacecast([16 x i32] addrspace(1)* %arr) {
 ; CHECK-LABEL: @canonicalize_addrspacecast(
 ; CHECK-NEXT: getelementptr [16 x i32], [16 x i32] addrspace(1)* %arr, i32 0, i32 0

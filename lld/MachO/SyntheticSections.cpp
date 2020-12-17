@@ -227,7 +227,8 @@ struct Binding {
 // lastBinding.
 static void encodeBinding(const Symbol *sym, const OutputSection *osec,
                           uint64_t outSecOff, int64_t addend,
-                          Binding &lastBinding, raw_svector_ostream &os) {
+                          bool isWeakBinding, Binding &lastBinding,
+                          raw_svector_ostream &os) {
   using namespace llvm::MachO;
   OutputSegment *seg = osec->parent;
   uint64_t offset = osec->getSegmentOffset() + outSecOff;
@@ -249,8 +250,11 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
     lastBinding.addend = addend;
   }
 
-  os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
-     << sym->getName() << '\0'
+  uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
+  if (!isWeakBinding && sym->isWeakRef())
+    flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
+
+  os << flags << sym->getName() << '\0'
      << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
      << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
   // DO_BIND causes dyld to both perform the binding and increment the offset
@@ -308,10 +312,11 @@ void BindingSection::finalizeContents() {
     encodeDylibOrdinal(b.dysym, lastBinding, os);
     if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.target.offset,
-                    b.addend, lastBinding, os);
+                    b.addend, /*isWeakBinding=*/false, lastBinding, os);
     } else {
       auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.dysym, osec, b.target.offset, b.addend, lastBinding, os);
+      encodeBinding(b.dysym, osec, b.target.offset, b.addend,
+                    /*isWeakBinding=*/false, lastBinding, os);
     }
   }
   if (!bindings.empty())
@@ -341,10 +346,11 @@ void WeakBindingSection::finalizeContents() {
   for (const WeakBindingEntry &b : bindings) {
     if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
-                    b.addend, lastBinding, os);
+                    b.addend, /*isWeakBinding=*/true, lastBinding, os);
     } else {
       auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.symbol, osec, b.target.offset, b.addend, lastBinding, os);
+      encodeBinding(b.symbol, osec, b.target.offset, b.addend,
+                    /*isWeakBinding=*/true, lastBinding, os);
     }
   }
   if (!bindings.empty() || !definitions.empty())
@@ -436,6 +442,7 @@ void StubHelperSection::setup() {
           "Needed to perform lazy binding.");
     return;
   }
+  stubBinder->refState = RefState::Strong;
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
@@ -525,8 +532,11 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
     encodeULEB128(sym.file->ordinal, os);
   }
 
-  os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
-     << sym.getName() << '\0'
+  uint8_t flags = MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
+  if (sym.isWeakRef())
+    flags |= MachO::BIND_SYMBOL_FLAGS_WEAK_IMPORT;
+
+  os << flags << sym.getName() << '\0'
      << static_cast<uint8_t>(MachO::BIND_OPCODE_DO_BIND)
      << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
   return opstreamOffset;
@@ -705,8 +715,9 @@ void SymtabSection::finalizeContents() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       assert(defined->isExternal());
       externalSymbols.push_back({sym, strx});
-    } else if (sym->isInGot() || sym->isInStubs()) {
-      undefinedSymbols.push_back({sym, strx});
+    } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (dysym->isReferenced())
+        undefinedSymbols.push_back({sym, strx});
     }
   }
 
@@ -756,6 +767,8 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       MachO::SET_LIBRARY_ORDINAL(n_desc, dysym->file->ordinal);
+      nList->n_type = MachO::N_EXT;
+      n_desc |= dysym->isWeakRef() ? MachO::N_WEAK_REF : 0;
       nList->n_desc = n_desc;
     }
     ++nList;

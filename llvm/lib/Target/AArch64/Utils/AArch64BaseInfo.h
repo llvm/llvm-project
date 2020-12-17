@@ -338,6 +338,14 @@ struct SysAliasReg : SysAlias {
       : SysAlias(N, E, F), NeedsReg(R) {}
 };
 
+struct SysAliasImm : SysAlias {
+  uint16_t ImmValue;
+  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I)
+      : SysAlias(N, E), ImmValue(I) {}
+  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I, FeatureBitset F)
+      : SysAlias(N, E, F), ImmValue(I) {}
+};
+
 namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;
@@ -351,6 +359,14 @@ namespace AArch64DB {
     using SysAlias::SysAlias;
   };
   #define GET_DB_DECL
+  #include "AArch64GenSystemOperands.inc"
+}
+
+namespace AArch64DBnXS {
+  struct DBnXS : SysAliasImm {
+    using SysAliasImm::SysAliasImm;
+  };
+  #define GET_DBNXS_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -552,7 +568,7 @@ namespace AArch64TLBI {
   struct TLBI : SysAliasReg {
     using SysAliasReg::SysAliasReg;
   };
-  #define GET_TLBI_DECL
+  #define GET_TLBITable_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
