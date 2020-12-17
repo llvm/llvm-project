@@ -382,7 +382,7 @@ public:
     StringRef Mods = getNextModifiers(Proto, Pos);
     while (!Mods.empty()) {
       Types.emplace_back(InTS, Mods);
-      if (Mods.find("!") != StringRef::npos)
+      if (Mods.find('!') != StringRef::npos)
         PolymorphicKeyType = Types.size() - 1;
 
       Mods = getNextModifiers(Proto, Pos);
