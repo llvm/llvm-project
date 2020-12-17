@@ -6,7 +6,7 @@
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
-declare <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8>, <16 x i8>)
+declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
 declare <512 x i1> @llvm.ppc.mma.xvf64gerpp(<512 x i1>, <256 x i1>, <16 x i8>)
 declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1>)
@@ -68,7 +68,7 @@ entry:
   %0 = load <16 x i8>, <16 x i8>* %Src, align 16
   %arrayidx1 = getelementptr inbounds <16 x i8>, <16 x i8>* %Src, i64 1
   %1 = load <16 x i8>, <16 x i8>* %arrayidx1, align 16
-  %2 = tail call <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8> %0, <16 x i8> %1)
+  %2 = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> %0, <16 x i8> %1)
   %3 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %cmp11 = icmp sgt i32 %Len, 2
   br i1 %cmp11, label %for.body.preheader, label %for.cond.cleanup
@@ -165,7 +165,7 @@ entry:
   %0 = load <16 x i8>, <16 x i8>* %Src, align 16
   %arrayidx1 = getelementptr inbounds <16 x i8>, <16 x i8>* %Src, i64 1
   %1 = load <16 x i8>, <16 x i8>* %arrayidx1, align 16
-  %2 = tail call <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8> %0, <16 x i8> %1)
+  %2 = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> %0, <16 x i8> %1)
   %arrayidx2 = getelementptr inbounds <16 x i8>, <16 x i8>* %Src, i64 2
   %3 = load <16 x i8>, <16 x i8>* %arrayidx2, align 16
   %4 = tail call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> %2, <16 x i8> %3)

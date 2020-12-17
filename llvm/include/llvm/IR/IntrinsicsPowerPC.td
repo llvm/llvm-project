@@ -1132,12 +1132,8 @@ def int_ppc_vsx_lxvl :
 def int_ppc_vsx_lxvll :
       Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem,
       IntrArgMemOnly]>;
-def int_ppc_vsx_stxvl :
-      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
-      [IntrWriteMem, IntrArgMemOnly]>;
-def int_ppc_vsx_stxvll :
-      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
-      [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvp :
+      Intrinsic<[llvm_v256i1_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
 
 // Vector store.
 def int_ppc_vsx_stxvw4x : Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
@@ -1148,6 +1144,15 @@ def int_ppc_vsx_stxvw4x_be : Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
                                        [IntrWriteMem, IntrArgMemOnly]>;
 def int_ppc_vsx_stxvd2x_be : Intrinsic<[], [llvm_v2f64_ty, llvm_ptr_ty],
                                        [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvl :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvll :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvp :
+      Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty], [IntrWriteMem,
+      IntrArgMemOnly]>;
 // Vector and scalar maximum.
 def int_ppc_vsx_xvmaxdp : PowerPC_VSX_Vec_DDD_Intrinsic<"xvmaxdp">;
 def int_ppc_vsx_xvmaxsp : PowerPC_VSX_Vec_FFF_Intrinsic<"xvmaxsp">;
@@ -1406,6 +1411,14 @@ def int_ppc_setrnd : GCCBuiltin<"__builtin_setrnd">,
 }
 
 let TargetPrefix = "ppc" in {
+  def int_ppc_vsx_assemble_pair :
+        Intrinsic<[llvm_v256i1_ty],
+                  [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
+
+  def int_ppc_vsx_disassemble_pair :
+        Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty],
+                  [llvm_v256i1_ty], [IntrNoMem]>;
+
   def int_ppc_mma_assemble_acc :
         Intrinsic<[llvm_v512i1_ty],
                   [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty],
@@ -1415,14 +1428,6 @@ let TargetPrefix = "ppc" in {
         Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty],
                   [llvm_v512i1_ty], [IntrNoMem]>;
 
-  def int_ppc_mma_assemble_pair :
-        Intrinsic<[llvm_v256i1_ty],
-                  [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
-
-  def int_ppc_mma_disassemble_pair :
-        Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty],
-                  [llvm_v256i1_ty], [IntrNoMem]>;
-
   def int_ppc_mma_xxmtacc :
         Intrinsic<[llvm_v512i1_ty], [llvm_v512i1_ty], [IntrNoMem]>;
 
@@ -1431,14 +1436,6 @@ let TargetPrefix = "ppc" in {
 
   def int_ppc_mma_xxsetaccz :
         Intrinsic<[llvm_v512i1_ty], [], [IntrNoMem]>;
-
-  def int_ppc_mma_lxvp :
-        Intrinsic<[llvm_v256i1_ty], [llvm_ptr_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
-
-  def int_ppc_mma_stxvp :
-        Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty],
-                  [IntrWriteMem, IntrArgMemOnly]>;
 
   // MMA Reduced-Precision: Outer Product Intrinsic Definitions.
   defm int_ppc_mma_xvi4ger8 :

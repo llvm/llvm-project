@@ -7,7 +7,7 @@
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
-declare <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8>, <16 x i8>)
+declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
 define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, i8* %ptr) {
 ; CHECK-LABEL: intrinsics1:
 ; CHECK:       # %bb.0:
@@ -62,7 +62,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc2)
   %3 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %2, <16 x i8> %vc1, <16 x i8> %vc3)
   %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1> %3, <16 x i8> %vc2, <16 x i8> %vc4, i32 0, i32 0)
-  %5 = tail call <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8> %vc4, <16 x i8> %vc1)
+  %5 = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> %vc4, <16 x i8> %vc1)
   %6 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1> %4, <256 x i1> %5, <16 x i8> %vc1, i32 0, i32 0)
   %7 = bitcast i8* %ptr to <512 x i1>*
   store <512 x i1> %6, <512 x i1>* %7, align 64
@@ -126,7 +126,7 @@ define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc2)
   %3 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1> %2, <16 x i8> %vc1, <16 x i8> %vc3)
   %4 = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1> %3, <16 x i8> %vc2, <16 x i8> %vc4, i32 0, i32 0)
-  %5 = tail call <256 x i1> @llvm.ppc.mma.assemble.pair(<16 x i8> %vc4, <16 x i8> %vc1)
+  %5 = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> %vc4, <16 x i8> %vc1)
   %6 = tail call <512 x i1> @llvm.ppc.mma.pmxvf64gernn(<512 x i1> %4, <256 x i1> %5, <16 x i8> %vc1, i32 0, i32 0)
   %7 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1> %6)
   %8 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %7, 0

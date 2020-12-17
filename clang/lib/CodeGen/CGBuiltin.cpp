@@ -14861,8 +14861,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   // use custom code generation to expand a builtin call with a pointer to a
   // load (if the corresponding instruction accumulates its result) followed by
   // the call to the intrinsic and a store of the result.
-#define MMA_BUILTIN(Name, Types, Accumulate) \
-  case PPC::BI__builtin_mma_##Name:
+#define CUSTOM_BUILTIN(Name, Types, Accumulate) \
+  case PPC::BI__builtin_##Name:
 #include "clang/Basic/BuiltinsPPC.def"
   {
     // The first argument of these two builtins is a pointer used to store their
@@ -14870,9 +14870,9 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     // return values. So, here we emit code extracting these values from the
     // intrinsic results and storing them using that pointer.
     if (BuiltinID == PPC::BI__builtin_mma_disassemble_acc ||
-        BuiltinID == PPC::BI__builtin_mma_disassemble_pair) {
+        BuiltinID == PPC::BI__builtin_vsx_disassemble_pair) {
       unsigned NumVecs = 2;
-      auto Intrinsic = Intrinsic::ppc_mma_disassemble_pair;
+      auto Intrinsic = Intrinsic::ppc_vsx_disassemble_pair;
       if (BuiltinID == PPC::BI__builtin_mma_disassemble_acc) {
         NumVecs = 4;
         Intrinsic = Intrinsic::ppc_mma_disassemble_acc;
@@ -14893,16 +14893,16 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     }
     bool Accumulate;
     switch (BuiltinID) {
-  #define MMA_BUILTIN(Name, Types, Acc) \
-    case PPC::BI__builtin_mma_##Name: \
-      ID = Intrinsic::ppc_mma_##Name; \
+  #define CUSTOM_BUILTIN(Name, Types, Acc) \
+    case PPC::BI__builtin_##Name: \
+      ID = Intrinsic::ppc_##Name; \
       Accumulate = Acc; \
       break;
   #include "clang/Basic/BuiltinsPPC.def"
     }
-    if (BuiltinID == PPC::BI__builtin_mma_lxvp ||
-        BuiltinID == PPC::BI__builtin_mma_stxvp) {
-      if (BuiltinID == PPC::BI__builtin_mma_lxvp) {
+    if (BuiltinID == PPC::BI__builtin_vsx_lxvp ||
+        BuiltinID == PPC::BI__builtin_vsx_stxvp) {
+      if (BuiltinID == PPC::BI__builtin_vsx_lxvp) {
         Ops[1] = Builder.CreateBitCast(Ops[1], Int8PtrTy);
         Ops[0] = Builder.CreateGEP(Ops[1], Ops[0]);
       } else {

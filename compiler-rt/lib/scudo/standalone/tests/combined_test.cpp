@@ -34,12 +34,7 @@ UNUSED static void disableDebuggerdMaybe() {
 }
 
 template <class AllocatorT>
-bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
-                        scudo::uptr Alignment) {
-  if (!Allocator->useMemoryTagging() ||
-      !scudo::systemDetectsMemoryTagFaultsTestOnly())
-    return false;
-
+bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   if (Alignment < MinAlignment)
     Alignment = MinAlignment;
@@ -47,6 +42,14 @@ bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
       scudo::roundUpTo(Size, MinAlignment) +
       ((Alignment > MinAlignment) ? Alignment : scudo::Chunk::getHeaderSize());
   return AllocatorT::PrimaryT::canAllocate(NeededSize);
+}
+
+template <class AllocatorT>
+bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
+                        scudo::uptr Alignment) {
+  return Allocator->useMemoryTagging() &&
+         scudo::systemDetectsMemoryTagFaultsTestOnly() &&
+         isPrimaryAllocation<AllocatorT>(Size, Alignment);
 }
 
 template <class AllocatorT>
@@ -147,9 +150,9 @@ template <class Config> static void testAllocator() {
   }
   Allocator->releaseToOS();
 
-  // Ensure that specifying PatternOrZeroFill returns a pattern-filled block in
-  // the primary allocator, and either pattern or zero filled block in the
-  // secondary.
+  // Ensure that specifying PatternOrZeroFill returns a pattern or zero filled
+  // block. The primary allocator only produces pattern filled blocks if MTE
+  // is disabled, so we only require pattern filled blocks in that case.
   Allocator->setFillContents(scudo::PatternOrZeroFill);
   for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
     for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
@@ -158,7 +161,8 @@ template <class Config> static void testAllocator() {
       EXPECT_NE(P, nullptr);
       for (scudo::uptr I = 0; I < Size; I++) {
         unsigned char V = (reinterpret_cast<unsigned char *>(P))[I];
-        if (AllocatorT::PrimaryT::canAllocate(Size))
+        if (isPrimaryAllocation<AllocatorT>(Size, 1U << MinAlignLog) &&
+            !Allocator->useMemoryTagging())
           ASSERT_EQ(V, scudo::PatternFillByte);
         else
           ASSERT_TRUE(V == scudo::PatternFillByte || V == 0);

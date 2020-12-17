@@ -1295,7 +1295,7 @@ MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   mlirLocationPrint(loc, printToStderr, NULL);
   assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
-  fprintf(stderr, ">> end of diagnostic (userData: %ld)\n", (long)userData);
+  fprintf(stderr, "\n>> end of diagnostic (userData: %ld)\n", (long)userData);
   return mlirLogicalResultSuccess();
 }
 
@@ -1308,15 +1308,31 @@ void testDiagnostics() {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
       ctx, errorHandler, (void *)42, deleteUserData);
-  MlirLocation loc = mlirLocationUnknownGet(ctx);
   fprintf(stderr, "@test_diagnostics\n");
-  mlirEmitError(loc, "test diagnostics");
+  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
+  mlirEmitError(unknownLoc, "test diagnostics");
+  MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
+      ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
+  mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation callSiteLoc = mlirLocationCallSiteGet(
+      mlirLocationFileLineColGet(
+          ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
+      fileLineColLoc);
+  mlirEmitError(callSiteLoc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
-  mlirEmitError(loc, "more test diagnostics");
+  mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("file.c":1:2)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
