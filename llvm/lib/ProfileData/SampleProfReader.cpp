@@ -622,6 +622,11 @@ void SampleProfileReaderExtBinaryBase::collectFuncsFrom(const Module &M) {
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
+  // If there are more than one FuncOffsetTable, the profile read associated
+  // with previous FuncOffsetTable has to be done before next FuncOffsetTable
+  // is read.
+  FuncOffsetTable.clear();
+
   auto Size = readNumber<uint64_t>();
   if (std::error_code EC = Size.getError())
     return EC;
@@ -819,7 +824,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   auto Size = readNumber<uint32_t>();
   if (std::error_code EC = Size.getError())
     return EC;
-  NameTable.reserve(*Size);
+  NameTable.reserve(*Size + NameTable.size());
   for (uint32_t I = 0; I < *Size; ++I) {
     auto Name(readString());
     if (std::error_code EC = Name.getError())
@@ -897,7 +902,8 @@ std::error_code SampleProfileReaderCompactBinary::readNameTable() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTableEntry() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readSecHdrTableEntry(uint32_t Idx) {
   SecHdrTableEntry Entry;
   auto Type = readUnencodedNumber<uint64_t>();
   if (std::error_code EC = Type.getError())
@@ -919,6 +925,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTableEntry() {
     return EC;
   Entry.Size = *Size;
 
+  Entry.LayoutIndex = Idx;
   SecHdrTable.push_back(std::move(Entry));
   return sampleprof_error::success;
 }
@@ -929,7 +936,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTable() {
     return EC;
 
   for (uint32_t i = 0; i < (*EntryNum); i++)
-    if (std::error_code EC = readSecHdrTableEntry())
+    if (std::error_code EC = readSecHdrTableEntry(i))
       return EC;
 
   return sampleprof_error::success;
@@ -951,11 +958,12 @@ std::error_code SampleProfileReaderExtBinaryBase::readHeader() {
 }
 
 uint64_t SampleProfileReaderExtBinaryBase::getSectionSize(SecType Type) {
+  uint64_t Size = 0;
   for (auto &Entry : SecHdrTable) {
     if (Entry.Type == Type)
-      return Entry.Size;
+      Size += Entry.Size;
   }
-  return 0;
+  return Size;
 }
 
 uint64_t SampleProfileReaderExtBinaryBase::getFileSize() {
@@ -1007,7 +1015,7 @@ bool SampleProfileReaderExtBinaryBase::dumpSectionInfo(raw_ostream &OS) {
        << ", Size: " << Entry.Size << ", Flags: " << getSecFlagsStr(Entry)
        << "\n";
     ;
-    TotalSecsSize += getSectionSize(Entry.Type);
+    TotalSecsSize += Entry.Size;
   }
   uint64_t HeaderSize = SecHdrTable.front().Offset;
   assert(HeaderSize + TotalSecsSize == getFileSize() &&
