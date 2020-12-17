@@ -736,7 +736,9 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Narrow in {
 defm VNCLIPU_W : VALU_IV_V_X_I<"vnclipu", 0b101110, uimm5, "w">;
 defm VNCLIP_W : VALU_IV_V_X_I<"vnclip", 0b101111, uimm5, "w">;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Narrow
+} // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, HasStdExtF] in {
 // Vector Single-Width Floating-Point Add/Subtract Instructions
 defm VFADD_V : VALU_FV_V_F<"vfadd", 0b000000>;
 defm VFSUB_V : VALU_FV_V_F<"vfsub", 0b000010>;
@@ -862,7 +864,9 @@ defm VFNCVT_F_X_W : VALU_FV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
 defm VFNCVT_F_F_W : VALU_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
 defm VFNCVT_ROD_F_F_W : VALU_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NarrowCvt
+} // Predicates = [HasStdExtV, HasStdExtF]
 
+let Predicates = [HasStdExtV] in {
 // Vector Single-Width Integer Reduction Instructions
 let RVVConstraint = NoConstraint in {
 defm VREDSUM : VALU_MV_V<"vredsum", 0b000000>;
@@ -884,7 +888,9 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
 defm VWREDSUMU : VALU_IV_V<"vwredsumu", 0b110000>;
 defm VWREDSUM : VALU_IV_V<"vwredsum", 0b110001>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
+} // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, HasStdExtF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
 let RVVConstraint = NoConstraint in {
 defm VFREDOSUM : VALU_FV_V<"vfredosum", 0b000011>;
@@ -902,7 +908,9 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
 defm VFWREDOSUM : VALU_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDSUM : VALU_FV_V<"vfwredsum", 0b110001>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
+} // Predicates = [HasStdExtV, HasStdExtF]
 
+let Predicates = [HasStdExtV] in {
 // Vector Mask-Register Logical Instructions
 defm VMAND_M : VALU_MV_Mask<"vmand", 0b011001, "m">;
 defm VMNAND_M : VALU_MV_Mask<"vmnand", 0b011101, "m">;
@@ -964,7 +972,9 @@ def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd),
 
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, HasStdExtF] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
@@ -973,7 +983,9 @@ def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd),
                       (ins FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
+} // Predicates = [HasStdExtV, HasStdExtF]
 
+let Predicates = [HasStdExtV] in {
 // Vector Slide Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
 defm VSLIDEUP_V : VALU_IV_X_I<"vslideup", 0b001110, uimm5>;
@@ -982,11 +994,18 @@ defm VSLIDEDOWN_V : VALU_IV_X_I<"vslidedown", 0b001111, uimm5>;
 
 let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
 defm VSLIDE1UP_V : VALU_MV_X<"vslide1up", 0b001110>;
-defm VFSLIDE1UP_V : VALU_FV_F<"vfslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
 defm VSLIDE1DOWN_V : VALU_MV_X<"vslide1down", 0b001111>;
-defm VFSLIDE1DOWN_V : VALU_FV_F<"vfslide1down", 0b001111>;
+} // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, HasStdExtF] in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
+defm VFSLIDE1UP_V : VALU_FV_F<"vfslide1up", 0b001110>;
+} // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
+defm VFSLIDE1DOWN_V : VALU_FV_F<"vfslide1down", 0b001111>;
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+let Predicates = [HasStdExtV] in {
 // Vector Register Gather Instruction
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VALU_IV_V_X_I<"vrgather", 0b001100, uimm5>;
