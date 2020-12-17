@@ -2886,11 +2886,15 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     Changed = true;
 
     IRBuilder<> Builder(PBI);
+    // The builder is used to create instructions to eliminate the branch in BB.
+    // If BB's terminator has !annotation metadata, add it to the new
+    // instructions.
+    Builder.CollectMetadataToCopy(BB->getTerminator(),
+                                  {LLVMContext::MD_annotation});
 
     // If we need to invert the condition in the pred block to match, do so now.
     if (InvertPredCond) {
       Value *NewCond = PBI->getCondition();
-
       if (NewCond->hasOneUse() && isa<CmpInst>(NewCond)) {
         CmpInst *CI = cast<CmpInst>(NewCond);
         CI->setPredicate(CI->getInversePredicate());
@@ -2941,8 +2945,9 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       // its potential value. The previous information might have been valid
       // only given the branch precondition.
       // For an analogous reason, we must also drop all the metadata whose
-      // semantics we don't understand.
-      NewBonusInst->dropUnknownNonDebugMetadata();
+      // semantics we don't understand. We *can* preserve !annotation, because
+      // it is tied to the instruction itself, not the value or position.
+      NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
 
       PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
       NewBonusInst->takeName(&BonusInst);
