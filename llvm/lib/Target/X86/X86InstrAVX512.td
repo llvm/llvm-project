@@ -1456,6 +1456,32 @@ defm VBROADCASTF64X4 : avx512_subvec_broadcast_rm<0x1b, "vbroadcastf64x4",
                        EVEX_V512, EVEX_CD8<64, CD8VT4>;
 
 let Predicates = [HasAVX512] in {
+def : Pat<(v8f64 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTF64X4rm addr:$src)>;
+def : Pat<(v16f32 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTF64X4rm addr:$src)>;
+def : Pat<(v8i64 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTI64X4rm addr:$src)>;
+def : Pat<(v16i32 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTI64X4rm addr:$src)>;
+def : Pat<(v32i16 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTI64X4rm addr:$src)>;
+def : Pat<(v64i8 (X86SubVBroadcastld256 addr:$src)),
+          (VBROADCASTI64X4rm addr:$src)>;
+
+def : Pat<(v8f64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF32X4rm addr:$src)>;
+def : Pat<(v16f32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF32X4rm addr:$src)>;
+def : Pat<(v8i64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4rm addr:$src)>;
+def : Pat<(v16i32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4rm addr:$src)>;
+def : Pat<(v32i16 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4rm addr:$src)>;
+def : Pat<(v64i8 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4rm addr:$src)>;
+
 def : Pat<(v16f32 (X86SubVBroadcast (loadv8f32 addr:$src))),
           (VBROADCASTF64X4rm addr:$src)>;
 def : Pat<(v16i32 (X86SubVBroadcast (loadv8i32 addr:$src))),
@@ -1538,6 +1564,19 @@ defm VBROADCASTI32X4Z256 : avx512_subvec_broadcast_rm<0x5a, "vbroadcasti32x4",
 defm VBROADCASTF32X4Z256 : avx512_subvec_broadcast_rm<0x1a, "vbroadcastf32x4",
                            v8f32x_info, v4f32x_info>,
                            EVEX_V256, EVEX_CD8<32, CD8VT4>;
+
+def : Pat<(v4f64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF32X4Z256rm addr:$src)>;
+def : Pat<(v8f32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF32X4Z256rm addr:$src)>;
+def : Pat<(v4i64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
+def : Pat<(v8i32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
+def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
+def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
 
 def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
           (VBROADCASTF32X4Z256rm addr:$src)>;
