@@ -12,6 +12,7 @@ def ScratchOffset : ComplexPattern<i32, 2, "SelectFlatOffset<true>", [], [SDNPWa
 
 def GlobalSAddr : ComplexPattern<i64, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<i32, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
+def ScratchSVAddr : ComplexPattern<i32, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -951,6 +952,22 @@ class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
   (inst getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
 >;
 
+class ScratchLoadSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset))),
+  (inst $vaddr, $saddr, $offset, 0, 0, 0)
+>;
+
+class ScratchStoreSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                             ValueType vt> : GCNPat <
+  (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset)),
+  (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset)
+>;
+
+class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset), vt:$in)),
+  (inst $vaddr, $saddr, $offset, 0, 0, 0, $in)
+>;
+
 let OtherPredicates = [HasFlatAddressSpace] in {
 
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
@@ -1116,6 +1133,11 @@ multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTy
   def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
   }
+
+  def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX11Plus;
+    let AddedComplexity = 27;
+  }
 }
 
 multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
@@ -1127,6 +1149,11 @@ multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
   }
+
+  def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX11Plus;
+    let AddedComplexity = 27;
+  }
 }
 
 multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
@@ -1136,6 +1163,11 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
 
   def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
+  }
+
+  def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX11Plus;
+    let AddedComplexity = 27;
   }
 }
 

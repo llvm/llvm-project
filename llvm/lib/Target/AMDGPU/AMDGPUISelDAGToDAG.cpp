@@ -246,6 +246,8 @@ private:
                          SDValue &VOffset, SDValue &Offset) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
+  bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
+                           SDValue &SAddr, SDValue &Offset) const;
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
@@ -1898,6 +1900,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   return true;
 }
 
+static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
+  if (auto FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
+    SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
+  } else if (SAddr.getOpcode() == ISD::ADD &&
+             isa<FrameIndexSDNode>(SAddr.getOperand(0))) {
+    // Materialize this into a scalar move for scalar address to avoid
+    // readfirstlane.
+    auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
+    SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
+                                              FI->getValueType(0));
+    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, SDLoc(SAddr),
+                                           MVT::i32, TFI, SAddr.getOperand(1)),
+                    0);
+  }
+
+  return SAddr;
+}
+
 // Match (32-bit SGPR base) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
                                             SDValue Addr,
@@ -1914,19 +1934,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
     SAddr = Addr.getOperand(0);
   }
 
-  if (auto FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
-    SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
-  } else if (SAddr.getOpcode() == ISD::ADD &&
-             isa<FrameIndexSDNode>(SAddr.getOperand(0))) {
-    // Materialize this into a scalar move for scalar address to avoid
-    // readfirstlane.
-    auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
-                                              FI->getValueType(0));
-    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, SDLoc(SAddr),
-                                           MVT::i32, TFI, SAddr.getOperand(1)),
-                    0);
-  }
+  SAddr = SelectSAddrFI(CurDAG, SAddr);
 
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
@@ -1953,6 +1961,60 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
 
   Offset = CurDAG->getTargetConstant(COffsetVal, SDLoc(), MVT::i16);
 
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
+                                             SDValue &VAddr, SDValue &SAddr,
+                                             SDValue &Offset) const  {
+  int64_t ImmOffset = 0;
+
+  SDValue LHS, RHS;
+  if (isBaseWithConstantOffset64(Addr, LHS, RHS)) {
+    int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+
+    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+      Addr = LHS;
+      ImmOffset = COffsetVal;
+    } else if (!LHS->isDivergent() && COffsetVal > 0) {
+      SDLoc SL(N);
+      // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
+      //                         (large_offset & MaxOffset);
+      int64_t SplitImmOffset, RemainderOffset;
+      std::tie(SplitImmOffset, RemainderOffset)
+        = TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true);
+
+      if (isUInt<32>(RemainderOffset)) {
+        SDNode *VMov = CurDAG->getMachineNode(
+          AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
+          CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
+        VAddr = SDValue(VMov, 0);
+        SAddr = LHS;
+        Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+        return true;
+      }
+    }
+  }
+
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+
+  LHS = Addr.getOperand(0);
+  RHS = Addr.getOperand(1);
+
+  if (!LHS->isDivergent() && RHS->isDivergent()) {
+    SAddr = LHS;
+    VAddr = RHS;
+  } else if (!RHS->isDivergent() && LHS->isDivergent()) {
+    SAddr = RHS;
+    VAddr = LHS;
+  } else {
+    return false;
+  }
+
+  SAddr = SelectSAddrFI(CurDAG, SAddr);
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
   return true;
 }
 
