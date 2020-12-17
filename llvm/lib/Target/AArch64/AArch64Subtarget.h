@@ -172,6 +172,7 @@ protected:
   bool HasXS = false;
   bool HasWFxT = false;
   bool HasHCX = false;
+  bool HasLS64 = false;
 
   // Arm SVE2 extensions
   bool HasSVE2 = false;
@@ -503,6 +504,7 @@ public:
   bool hasXS() const { return HasXS; }
   bool hasWFxT() const { return HasWFxT; }
   bool hasHCX() const { return HasHCX; }
+  bool hasLS64() const { return HasLS64; }
   bool hasSEL2() const { return HasSEL2; }
   bool hasPMU() const { return HasPMU; }
   bool hasTLB_RMI() const { return HasTLB_RMI; }

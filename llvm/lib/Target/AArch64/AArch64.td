@@ -409,6 +409,9 @@ def FeatureWFxT : SubtargetFeature<"wfxt", "HasWFxT",
 def FeatureHCX : SubtargetFeature<
     "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register">;
 
+def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
+    "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
+
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 

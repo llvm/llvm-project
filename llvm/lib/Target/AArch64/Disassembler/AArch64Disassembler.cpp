@@ -473,6 +473,7 @@ static const unsigned GPR64x8DecoderTable[] = {
   AArch64::X16_X17_X18_X19_X20_X21_X22_X23,
   AArch64::X18_X19_X20_X21_X22_X23_X24_X25,
   AArch64::X20_X21_X22_X23_X24_X25_X26_X27,
+  AArch64::X22_X23_X24_X25_X26_X27_X28_FP,
 };
 
 static DecodeStatus DecodeGPR64x8ClassRegisterClass(MCInst &Inst,

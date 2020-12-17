@@ -155,6 +155,8 @@ def HasXS            : Predicate<"Subtarget->hasXS()">,
                        AssemblerPredicate<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
                        AssemblerPredicate<(all_of FeatureWFxT), "wfxt">;
+def HasLS64          : Predicate<"Subtarget->hasLS64()">,
+                       AssemblerPredicate<(all_of FeatureLS64), "ls64">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -7857,6 +7859,15 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
           (MOVKXi GPR64:$Rd, (trunc_imm imm64_0_65535:$imm), 48)>;
 def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
           (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
+}
+
+let Predicates = [HasLS64] in {
+  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
+                                          (outs GPR64x8:$Rt)>;
+  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64sp:$Rn, GPR64x8:$Rt),
+                                          (outs)>;
+  def ST64BV:   Store64BV<0b011, "st64bv">;
+  def ST64BV0:  Store64BV<0b010, "st64bv0">;
 }
 
 include "AArch64InstrAtomics.td"

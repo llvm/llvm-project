@@ -1570,6 +1570,10 @@ def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
 def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 }
 
+// v8.7a LD64B/ST64B Accelerator Extension system register
+let Requires = [{ {AArch64::FeatureLS64} }] in
+def : RWSysReg<"ACCDATA_EL1",       0b11, 0b000, 0b1101, 0b0000, 0b101>;
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in
