@@ -51,7 +51,7 @@ This is the preferred mode to use. The function parameters are randomized and th
     --output=/tmp/benchmark_result.json
 ```
 
-The `--size-distribution-name` flag is mandatory and points to one of the [predefined distribution](libc/benchmarks/MemorySizeDistributions.h).
+The `--size-distribution-name` flag is mandatory and points to one of the [predefined distribution](MemorySizeDistributions.h).
 
 > Note: These distributions are gathered from several important binaries at Google (servers, databases, realtime and batch jobs) and reflect the importance of focusing on small sizes.
 
