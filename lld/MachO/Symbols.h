@@ -47,7 +47,11 @@ public:
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
 
-  StringRef getName() const { return {name.data, name.size}; }
+  StringRef getName() const {
+    if (nameSize == (uint32_t)-1)
+      nameSize = strlen(nameData);
+    return {nameData, nameSize};
+  }
 
   virtual uint64_t getVA() const { return 0; }
 
@@ -80,20 +84,26 @@ public:
   uint32_t symtabIndex = UINT32_MAX;
 
 protected:
-  Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
+  Symbol(Kind k, StringRefZ name)
+      : symbolKind(k), nameData(name.data), nameSize(name.size) {}
 
   Kind symbolKind;
-  StringRefZ name;
+  const char *nameData;
+  mutable uint32_t nameSize;
 };
 
 class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef,
-          bool isExternal)
+          bool isExternal, bool isPrivateExtern)
       : Symbol(DefinedKind, name), isec(isec), value(value),
-        overridesWeakDef(false), weakDef(isWeakDef), external(isExternal) {}
+        overridesWeakDef(false), privateExtern(isPrivateExtern),
+        weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
+  bool isExternalWeakDef() const {
+    return isWeakDef() && isExternal() && !privateExtern;
+  }
   bool isTlv() const override {
     return !isAbsolute() && isThreadLocalVariables(isec->flags);
   }
@@ -110,6 +120,7 @@ public:
   uint32_t value;
 
   bool overridesWeakDef : 1;
+  bool privateExtern : 1;
 
 private:
   const bool weakDef : 1;
@@ -148,14 +159,17 @@ public:
 //
 // The compiler creates common symbols when it sees tentative definitions.
 // (You can suppress this behavior and let the compiler create a regular
-// defined symbol by passing -fno-common.) When linking the final binary, if
-// there are remaining common symbols after name resolution is complete, the
-// linker converts them to regular defined symbols in a __common section.
+// defined symbol by passing -fno-common. -fno-common is the default in clang
+// as of LLVM 11.0.) When linking the final binary, if there are remaining
+// common symbols after name resolution is complete, the linker converts them
+// to regular defined symbols in a __common section.
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align)
+  CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align,
+               bool isPrivateExtern)
       : Symbol(CommonKind, name), file(file), size(size),
-        align(align != 1 ? align : llvm::PowerOf2Ceil(size)) {
+        align(align != 1 ? align : llvm::PowerOf2Ceil(size)),
+        privateExtern(isPrivateExtern) {
     // TODO: cap maximum alignment
   }
 
@@ -164,6 +178,7 @@ public:
   InputFile *const file;
   const uint64_t size;
   const uint32_t align;
+  const bool privateExtern;
 };
 
 class DylibSymbol : public Symbol {

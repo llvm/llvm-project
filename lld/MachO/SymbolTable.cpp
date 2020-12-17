@@ -38,7 +38,8 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
 }
 
 Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
-                                uint32_t value, bool isWeakDef) {
+                                uint32_t value, bool isWeakDef,
+                                bool isPrivateExtern) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -46,8 +47,13 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
 
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
-      if (isWeakDef)
+      if (isWeakDef) {
+        // Both old and new symbol weak (e.g. inline function in two TUs):
+        // If one of them isn't private extern, the merged symbol isn't.
+        if (defined->isWeakDef())
+          defined->privateExtern &= isPrivateExtern;
         return s;
+      }
       if (!defined->isWeakDef())
         error("duplicate symbol: " + name);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -57,8 +63,9 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  Defined *defined = replaceSymbol<Defined>(s, name, isec, value, isWeakDef,
-                                            /*isExternal=*/true);
+  Defined *defined =
+      replaceSymbol<Defined>(s, name, isec, value, isWeakDef,
+                             /*isExternal=*/true, isPrivateExtern);
   defined->overridesWeakDef = overridesWeakDef;
   return s;
 }
@@ -82,7 +89,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, bool isWeakRef) {
 }
 
 Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
-                               uint32_t align) {
+                               uint32_t align, bool isPrivateExtern) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
@@ -98,7 +105,7 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
     // a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  replaceSymbol<CommonSymbol>(s, name, file, size, align);
+  replaceSymbol<CommonSymbol>(s, name, file, size, align, isPrivateExtern);
   return s;
 }
 
