@@ -8,7 +8,9 @@
 
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -30,6 +32,47 @@ const char *ARMArch[] = {
     "armv8-r",     "armv8r",       "armv8-m.base","armv8m.base",  "armv8-m.main",
     "armv8m.main", "iwmmxt",       "iwmmxt2",     "xscale",       "armv8.1-m.main",
 };
+
+template <ARM::ISAKind ISAKind>
+std::string FormatExtensionFlags(uint64_t Flags) {
+  std::vector<StringRef> Features;
+
+  if (ISAKind == ARM::ISAKind::AARCH64) {
+    // AEK_NONE is not meant to be shown to the user so the target parser
+    // does not recognise it. It is relevant here though.
+    if (Flags & AArch64::AEK_NONE)
+      Features.push_back("none");
+    AArch64::getExtensionFeatures(Flags, Features);
+  } else {
+    if (Flags & ARM::AEK_NONE)
+      Features.push_back("none");
+    ARM::getExtensionFeatures(Flags, Features);
+  }
+
+  // The target parser also includes every extension you don't have.
+  // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
+  Features.erase(std::remove_if(Features.begin(), Features.end(),
+                                [](StringRef extension) {
+                                  return extension.startswith("-");
+                                }),
+                 Features.end());
+
+  return llvm::join(Features, ", ");
+}
+
+template <ARM::ISAKind ISAKind>
+testing::AssertionResult
+AssertSameExtensionFlags(const char *m_expr, const char *n_expr,
+                         uint64_t ExpectedFlags, uint64_t GotFlags) {
+  if (ExpectedFlags == GotFlags)
+    return testing::AssertionSuccess();
+
+  return testing::AssertionFailure() << llvm::formatv(
+             "Expected extension flags: {0} ({1:x})\n"
+             "     Got extension flags: {2} ({3:x})\n",
+             FormatExtensionFlags<ISAKind>(ExpectedFlags), ExpectedFlags,
+             FormatExtensionFlags<ISAKind>(GotFlags), GotFlags);
+}
 
 struct ARMCPUTestParams {
   ARMCPUTestParams(StringRef CPUName, StringRef ExpectedArch,
@@ -65,7 +108,8 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
   EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
 
   uint64_t default_extensions = ARM::getDefaultExtensions(params.CPUName, AK);
-  EXPECT_EQ(params.ExpectedFlags, default_extensions);
+  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::ARM>,
+                      params.ExpectedFlags, default_extensions);
 
   EXPECT_EQ(params.CPUAttr, ARM::getCPUAttr(AK));
 }
@@ -816,7 +860,8 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 
   uint64_t default_extensions =
       AArch64::getDefaultExtensions(params.CPUName, AK);
-  EXPECT_EQ(params.ExpectedFlags, default_extensions);
+  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::AARCH64>,
+                      params.ExpectedFlags, default_extensions);
 
   unsigned FPUKind = AArch64::getDefaultFPU(params.CPUName, AK);
   EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
