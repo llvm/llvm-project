@@ -26,9 +26,27 @@ extern int a __attribute__((section("foo,zed"))); // expected-warning {{section 
 
 // Not a warning.
 int c;
-int c __attribute__((section("foo,zed")));
+int c __attribute__((section("seg1,sec1")));
 
 // Also OK.
 struct r_debug {};
 extern struct r_debug _r_debug;
 struct r_debug _r_debug __attribute__((nocommon, section(".r_debug,bar")));
+
+// Section type conflicts between functions and variables
+void test3(void) __attribute__((section("seg3,sec3"))); // expected-note {{declared here}}
+void test3(void) {}
+const int const_global_var __attribute__((section("seg3,sec3"))) = 10; // expected-error {{'const_global_var' causes a section type conflict with 'test3'}}
+
+void test4(void) __attribute__((section("seg4,sec4"))); // expected-note {{declared here}}
+void test4(void) {}
+int mut_global_var __attribute__((section("seg4,sec4"))) = 10; // expected-error {{'mut_global_var' causes a section type conflict with 'test4'}}
+
+const int global_seg5sec5 __attribute__((section("seg5,sec5"))) = 10; // expected-note {{declared here}}
+void test5(void) __attribute__((section("seg5,sec5")));               // expected-error {{'test5' causes a section type conflict with 'global_seg5sec5'}}
+void test5(void) {}
+
+void test6(void);
+const int global_seg6sec6 __attribute__((section("seg6,sec6"))) = 10; // expected-note {{declared here}}
+void test6(void) __attribute__((section("seg6,sec6")));               // expected-error {{'test6' causes a section type conflict with 'global_seg6sec6'}}
+void test6(void) {}

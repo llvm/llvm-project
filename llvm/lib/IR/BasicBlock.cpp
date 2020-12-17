@@ -372,7 +372,11 @@ bool BasicBlock::isLegalToHoistInto() const {
   return !Term->isExceptionalTerminator();
 }
 
-BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
+BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
+                                        bool Before) {
+  if (Before)
+    return splitBasicBlockBefore(I, BBName);
+
   assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
@@ -396,6 +400,40 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   // know that incoming branches will be from New, not from Old (this).
   //
   New->replaceSuccessorsPhiUsesWith(this, New);
+  return New;
+}
+
+BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
+  assert(getTerminator() &&
+         "Can't use splitBasicBlockBefore on degenerate BB!");
+  assert(I != InstList.end() &&
+         "Trying to get me to create degenerate basic block!");
+
+  assert((!isa<PHINode>(*I) || getSinglePredecessor()) &&
+         "cannot split on multi incoming phis");
+
+  BasicBlock *New = BasicBlock::Create(getContext(), BBName, getParent(), this);
+  // Save DebugLoc of split point before invalidating iterator.
+  DebugLoc Loc = I->getDebugLoc();
+  // Move all of the specified instructions from the original basic block into
+  // the new basic block.
+  New->getInstList().splice(New->end(), this->getInstList(), begin(), I);
+
+  // Loop through all of the predecessors of the 'this' block (which will be the
+  // predecessors of the New block), replace the specified successor 'this'
+  // block to point at the New block and update any PHI nodes in 'this' block.
+  // If there were PHI nodes in 'this' block, the PHI nodes are updated
+  // to reflect that the incoming branches will be from the New block and not
+  // from predecessors of the 'this' block.
+  for (BasicBlock *Pred : predecessors(this)) {
+    Instruction *TI = Pred->getTerminator();
+    TI->replaceSuccessorWith(this, New);
+    this->replacePhiUsesWith(Pred, New);
+  }
+  // Add a branch instruction from  "New" to "this" Block.
+  BranchInst *BI = BranchInst::Create(this, New);
+  BI->setDebugLoc(Loc);
+
   return New;
 }
 

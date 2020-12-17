@@ -1149,12 +1149,13 @@ These dialect to dialect conversions have their dedicated libraries,
 
 There are also common utilities when targeting SPIR-V from any dialect:
 
-*   [include/mlir/Dialect/SPIRV/Passes.h][MlirSpirvPasses] contains SPIR-V
-    specific analyses and transformations.
-*   [include/mlir/Dialect/SPIRV/SPIRVLowering.h][MlirSpirvLowering] contains
-    type converters and other utility functions.
+*   [include/mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h][MlirSpirvConversion]
+    contains type converters and other utility functions.
+*   [include/mlir/Dialect/SPIRV/Transforms/Passes.h][MlirSpirvPasses] contains
+    SPIR-V specific analyses and transformations.
 
-These common utilities are implemented in the `MLIRSPIRVTransforms` library.
+These common utilities are implemented in the `MLIRSPIRVConversion` and
+`MLIRSPIRVTransforms` library, respectively.
 
 ## Rationale
 
@@ -1406,15 +1407,15 @@ dialect.
 [MlirGpuToSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Conversion/GPUToSPIRV
 [MlirStdToSpirvHeaders]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Conversion/StandardToSPIRV
 [MlirStdToSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Conversion/StandardToSPIRV
-[MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVDialect.h
-[MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVTypes.h
-[MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVOps.h
-[MlirSpirvSerialization]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Serialization.h
-[MlirSpirvBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVBase.td
-[MlirSpirvPasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Passes.h
-[MlirSpirvLowering]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/SPIRVLowering.h
-[MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/TargetAndABI.h
-[MlirSpirvOpsCpp]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Dialect/SPIRV/SPIRVOps.cpp
+[MlirSpirvDialect]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVDialect.h
+[MlirSpirvTypes]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVTypes.h
+[MlirSpirvOpsH]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVOps.h
+[MlirSpirvSerialization]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Target/SPIRV/Serialization.h
+[MlirSpirvBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/IR/SPIRVBase.td
+[MlirSpirvPasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Transforms/Passes.h
+[MlirSpirvConversion]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h
+[MlirSpirvAbi]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/IR/TargetAndABI.h
+[MlirSpirvOpsCpp]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Dialect/SPIRV/IR/SPIRVOps.cpp
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py

@@ -12,10 +12,10 @@
 
 #include "mlir/Target/SPIRV/Deserialization.h"
 
-#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVModule.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
@@ -2778,7 +2778,7 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
 // Pull in auto-generated Deserializer::dispatchToAutogenDeserialization() and
 // various Deserializer::processOp<...>() specializations.
 #define GET_DESERIALIZATION_FNS
-#include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
+#include "mlir/Dialect/SPIRV/IR/SPIRVSerialization.inc"
 } // namespace
 
 namespace mlir {

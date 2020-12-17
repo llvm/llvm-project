@@ -5824,31 +5824,43 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
       else if (C.UsedInSequence.available(ARM::SP)) {
         NumBytesNoStackCalls += Costs.CallDefault;
         C.setCallInfo(MachineOutlinerDefault, Costs.CallDefault);
-        SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
         CandidatesWithoutStackFixups.push_back(C);
-      } else
-        return outliner::OutlinedFunction();
+      }
+
+      // If we outline this, we need to modify the stack. Pretend we don't
+      // outline this by saving all of its bytes.
+      else
+        NumBytesNoStackCalls += SequenceSize;
     }
 
-    // Does every candidate's MBB contain a call?  If so, then we might have a
-    // call in the range.
-    if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
-      // check if the range contains a call.  These require a save + restore of
-      // the link register.
-      if (std::any_of(FirstCand.front(), FirstCand.back(),
-                      [](const MachineInstr &MI) { return MI.isCall(); }))
-        NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
+    // If there are no places where we have to save LR, then note that we don't
+    // have to update the stack. Otherwise, give every candidate the default
+    // call type
+    if (NumBytesNoStackCalls <=
+        RepeatedSequenceLocs.size() * Costs.CallDefault) {
+      RepeatedSequenceLocs = CandidatesWithoutStackFixups;
+      FrameID = MachineOutlinerNoLRSave;
+    } else
+      SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
+  }
 
-      // Handle the last instruction separately.  If it is tail call, then the
-      // last instruction is a call, we don't want to save + restore in this
-      // case.  However, it could be possible that the last instruction is a
-      // call without it being valid to tail call this sequence.  We should
-      // consider this as well.
-      else if (FrameID != MachineOutlinerThunk &&
-               FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
-        NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
-    }
-    RepeatedSequenceLocs = CandidatesWithoutStackFixups;
+  // Does every candidate's MBB contain a call?  If so, then we might have a
+  // call in the range.
+  if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
+    // check if the range contains a call.  These require a save + restore of
+    // the link register.
+    if (std::any_of(FirstCand.front(), FirstCand.back(),
+                    [](const MachineInstr &MI) { return MI.isCall(); }))
+      NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
+
+    // Handle the last instruction separately.  If it is tail call, then the
+    // last instruction is a call, we don't want to save + restore in this
+    // case.  However, it could be possible that the last instruction is a
+    // call without it being valid to tail call this sequence.  We should
+    // consider this as well.
+    else if (FrameID != MachineOutlinerThunk &&
+             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+      NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
   }
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
