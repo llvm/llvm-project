@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -verify-machineinstrs \
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -mattr=+experimental-zfh \
+; RUN:   -mattr=+d -verify-machineinstrs \
 ; RUN:   --riscv-no-aliases < %s | FileCheck %s
 declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64(
   <vscale x 1 x i64>*,

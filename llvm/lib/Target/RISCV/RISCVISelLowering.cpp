@@ -124,23 +124,29 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(RISCVVMVTs::vint64m4_t, &RISCV::VRM4RegClass);
     addRegisterClass(RISCVVMVTs::vint64m8_t, &RISCV::VRM8RegClass);
 
-    addRegisterClass(RISCVVMVTs::vfloat16mf4_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat16mf2_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat16m1_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat16m2_t, &RISCV::VRM2RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat16m4_t, &RISCV::VRM4RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat16m8_t, &RISCV::VRM8RegClass);
+    if (Subtarget.hasStdExtZfh()) {
+      addRegisterClass(RISCVVMVTs::vfloat16mf4_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat16mf2_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat16m1_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat16m2_t, &RISCV::VRM2RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat16m4_t, &RISCV::VRM4RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat16m8_t, &RISCV::VRM8RegClass);
+    }
 
-    addRegisterClass(RISCVVMVTs::vfloat32mf2_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat32m1_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat32m2_t, &RISCV::VRM2RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat32m4_t, &RISCV::VRM4RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat32m8_t, &RISCV::VRM8RegClass);
+    if (Subtarget.hasStdExtF()) {
+      addRegisterClass(RISCVVMVTs::vfloat32mf2_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat32m1_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat32m2_t, &RISCV::VRM2RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat32m4_t, &RISCV::VRM4RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat32m8_t, &RISCV::VRM8RegClass);
+    }
 
-    addRegisterClass(RISCVVMVTs::vfloat64m1_t, &RISCV::VRRegClass);
-    addRegisterClass(RISCVVMVTs::vfloat64m2_t, &RISCV::VRM2RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat64m4_t, &RISCV::VRM4RegClass);
-    addRegisterClass(RISCVVMVTs::vfloat64m8_t, &RISCV::VRM8RegClass);
+    if (Subtarget.hasStdExtD()) {
+      addRegisterClass(RISCVVMVTs::vfloat64m1_t, &RISCV::VRRegClass);
+      addRegisterClass(RISCVVMVTs::vfloat64m2_t, &RISCV::VRM2RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat64m4_t, &RISCV::VRM4RegClass);
+      addRegisterClass(RISCVVMVTs::vfloat64m8_t, &RISCV::VRM8RegClass);
+    }
   }
 
   // Compute derived properties from the register classes.
