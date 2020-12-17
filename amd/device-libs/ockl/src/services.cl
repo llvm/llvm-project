@@ -7,10 +7,13 @@
 
 #include "ockl.h"
 
+// This must match the enumeration defined by the runtime in
+// ROCclr/device/devhcmessages.hpp
 typedef enum {
-    SERVICE_DEFAULT,
-    SERVICE_FUNCTION_CALL,
-    SERVICE_PRINTF,
+    SERVICE_RESERVED = 0,
+    SERVICE_FUNCTION_CALL = 1,
+    SERVICE_PRINTF = 2,
+    SERVICE_FPRINTF = SERVICE_PRINTF,
 } service_id_t;
 
 extern long2
@@ -231,27 +234,51 @@ message_append_args(uint service_id, ulong msg_desc, uint num_args, ulong arg0,
                                    arg4, arg5, arg6);
 }
 
-/*===---  PRINTF  ------------------------------------------------------------*/
+/*===---  FPRINTF  -----------------------------------------------------------*/
 
-/** \brief Begin a new printf message.
- *  \param version          Must be zero.
- *  \return Message descriptor for a new printf invocation.
- */
-ulong
-__ockl_printf_begin(ulong version)
+typedef enum {
+    FPRINTF_CTRL_STDOUT = 0,
+    FPRINTF_CTRL_STDERR = 1
+} fprintf_ctrl_t;
+
+static inline ulong
+begin_fprintf(fprintf_ctrl_t flags)
 {
+    // The two standard output streams stderr and stdout are indicated
+    // using the lowest bits in the control qword. For now, all other
+    // bits are required to be zero.
     const ulong msg_desc = msg_set_begin_flag(0);
+    ulong control = (ulong)flags;
 
-    long2 retval = message_append_args(SERVICE_PRINTF, msg_desc, 1, version, 0,
-                                       0, 0, 0, 0, 0);
+    long2 retval =
+        message_append_args(SERVICE_FPRINTF, msg_desc,
+                            /* num_args = */ 1, control, 0, 0, 0, 0, 0, 0);
     return retval.x;
 }
 
-/** \brief Append up to seven arguments to the printf message.
- *  \param msg_desc  Message descriptor for the current printf.
- *  \param num_args   Number of arguments to be appended (maximum seven).
+/** \brief Begin a new fprintf message for stdout.
+ *  \return Message descriptor for a new printf invocation.
+ */
+ulong
+__ockl_fprintf_stdout_begin()
+{
+    return begin_fprintf(FPRINTF_CTRL_STDOUT);
+}
+
+/** \brief Begin a new fprintf message for stderr.
+ *  \return Message descriptor for a new printf invocation.
+ */
+ulong
+__ockl_fprintf_stderr_begin()
+{
+    return begin_fprintf(FPRINTF_CTRL_STDERR);
+}
+
+/** \brief Append up to seven arguments to the fprintf message.
+ *  \param msg_desc  Message descriptor for the current fprintf.
+ *  \param num_args  Number of arguments to be appended (maximum seven).
  *  \param value0... The argument values to be appended.
- *  \param is_last   If non-zero, this causes the printf to be completed.
+ *  \param is_last   If non-zero, this causes the fprintf to be completed.
  *  \return Value depends on #is_last.
  *
  *  Only the first #num_args arguments are appended to the
@@ -259,36 +286,36 @@ __ockl_printf_begin(ulong version)
  *  undefined if #num_args is greater then seven.
  *
  *  If #is_last is zero, the function returns a message desciptor that
- *  must be used by a subsequent call to any __ockl_printf*
+ *  must be used by a subsequent call to any __ockl_fprintf*
  *  function. If #is_last is non-zero, the function causes the current
- *  printf to be completed on the host-side, and returns the value
- *  returned by that printf.
+ *  fprintf to be completed on the host-side, and returns the value
+ *  returned by that fprintf.
  */
 ulong
-__ockl_printf_append_args(ulong msg_desc, uint num_args, ulong value0,
-                          ulong value1, ulong value2, ulong value3,
-                          ulong value4, ulong value5, ulong value6,
-                          uint is_last)
+__ockl_fprintf_append_args(ulong msg_desc, uint num_args, ulong value0,
+                           ulong value1, ulong value2, ulong value3,
+                           ulong value4, ulong value5, ulong value6,
+                           uint is_last)
 {
     if (is_last) {
         msg_desc = msg_set_end_flag(msg_desc);
     }
 
     long2 retval =
-        message_append_args(SERVICE_PRINTF, msg_desc, num_args, value0, value1,
+        message_append_args(SERVICE_FPRINTF, msg_desc, num_args, value0, value1,
                             value2, value3, value4, value5, value6);
     return retval.x;
 }
 
-/** \brief Append a null-terminated string to the printf message.
- *  \param msg_desc Message descriptor for the current printf.
+/** \brief Append a null-terminated string to the fprintf message.
+ *  \param msg_desc Message descriptor for the current fprintf.
  *  \param data     Pointer to the string.
  *  \param length   Number of bytes, including the null terminator.
- *  \param is_last  If non-zero, this causes the printf to be completed.
+ *  \param is_last  If non-zero, this causes the fprintf to be completed.
  *  \return Value depends on #is_last.
  *
  *  The function appends a single null-terminated string to a current
- *  printf message, including the final null character. The host-side
+ *  fprintf message, including the final null character. The host-side
  *  can use the bytes as a null-terminated string in place, without
  *  having to first copy the string and then append the null
  *  terminator.
@@ -303,14 +330,14 @@ __ockl_printf_append_args(ulong msg_desc, uint num_args, ulong value0,
  *  transmission, the string is null-padded to a multiple of eight.
  *
  *  If #is_last is zero, the function returns a message desciptor that
- *  must be used by a subsequent call to any __ockl_printf*
+ *  must be used by a subsequent call to any __ockl_fprintf*
  *  function. If #is_last is non-zero, the function causes the current
- *  printf to be completed on the host-side, and returns the value
- *  returned by that printf.
+ *  fprintf to be completed on the host-side, and returns the value
+ *  returned by that fprintf.
  */
 ulong
-__ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
-                              uint is_last)
+__ockl_fprintf_append_string_n(ulong msg_desc, const char *data, ulong length,
+                               uint is_last)
 {
     long2 retval = {0, 0};
 
@@ -319,12 +346,39 @@ __ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
     }
 
     if (!data) {
-        retval = message_append_args(SERVICE_PRINTF, msg_desc, 1, 0, 0, 0, 0, 0,
+        retval = message_append_args(SERVICE_FPRINTF, msg_desc, 1, 0, 0, 0, 0, 0,
                                      0, 0);
         return retval.x;
     }
 
-    retval = message_append_bytes(SERVICE_PRINTF, msg_desc, (const uchar *)data,
+    retval = message_append_bytes(SERVICE_FPRINTF, msg_desc, (const uchar *)data,
                                   length);
     return retval.x;
+}
+
+/*===---  PRINTF  ------------------------------------------------------------*/
+/* DEPRECATED. Wrappers that should be removed eventually. */
+
+ulong
+__ockl_printf_begin(ulong ignored /* used to be version */)
+{
+    return __ockl_fprintf_stdout_begin();
+}
+
+ulong
+__ockl_printf_append_args(ulong msg_desc, uint num_args, ulong value0,
+                          ulong value1, ulong value2, ulong value3,
+                          ulong value4, ulong value5, ulong value6,
+                          uint is_last)
+{
+    return __ockl_fprintf_append_args(msg_desc, num_args, value0, value1,
+                                      value2, value3, value4, value5, value6,
+                                      is_last);
+}
+
+ulong
+__ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
+                              uint is_last)
+{
+    return __ockl_fprintf_append_string_n(msg_desc, data, length, is_last);
 }
