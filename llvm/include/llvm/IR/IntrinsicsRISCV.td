@@ -247,6 +247,10 @@ let TargetPrefix = "riscv" in {
   defm vremu : RISCVBinaryAAX;
   defm vrem : RISCVBinaryAAX;
 
+  defm vwmul : RISCVBinaryABX;
+  defm vwmulu : RISCVBinaryABX;
+  defm vwmulsu : RISCVBinaryABX;
+
   defm vfadd : RISCVBinaryAAX;
   defm vfsub : RISCVBinaryAAX;
   defm vfrsub : RISCVBinaryAAX;
