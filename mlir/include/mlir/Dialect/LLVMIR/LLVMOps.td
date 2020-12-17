@@ -407,6 +407,35 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 }
 
 def LLVM_CallOp : LLVM_Op<"call"> {
+  let summary = "Call to an LLVM function.";
+  let description = [{
+
+
+    In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
+    implements this behavior by providing a variadic `call` operation for 0- and
+    1-result functions. Even though MLIR supports multi-result functions, LLVM
+    IR dialect disallows them.
+
+    The `call` instruction supports both direct and indirect calls. Direct calls
+    start with a function name (`@`-prefixed) and indirect calls start with an
+    SSA value (`%`-prefixed). The direct callee, if present, is stored as a
+    function attribute `callee`. The trailing type of the instruction is always
+    the MLIR function type, which may be different from the indirect callee that
+    has the wrapped LLVM IR function type.
+
+    Examples:
+
+    ```mlir
+    // Direct call without arguments and with one result.
+    %0 = llvm.call @foo() : () -> (!llvm.float)
+
+    // Direct call with arguments and without a result.
+    llvm.call @bar(%0) : (!llvm.float) -> ()
+
+    // Indirect call with an argument and without a result.
+    llvm.call %1(%0) : (!llvm.float) -> ()
+    ```
+  }];
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>);
   let results = (outs Variadic<LLVM_Type>);
@@ -656,6 +685,34 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
 
   let summary = "Creates a pointer pointing to a global or a function";
 
+  let description = [{
+    Creates an SSA value containing a pointer to a global variable or constant
+    defined by `llvm.mlir.global`. The global value can be defined after its
+    first referenced. If the global value is a constant, storing into it is not
+    allowed.
+
+    Examples:
+
+    ```mlir
+    func @foo() {
+      // Get the address of a global variable.
+      %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
+
+      // Use it as a regular pointer.
+      %1 = llvm.load %0 : !llvm.ptr<i32>
+
+      // Get the address of a function.
+      %2 = llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
+
+      // The function address can be used for indirect calls.
+      llvm.call %2() : () -> ()
+    }
+
+    // Define the global.
+    llvm.mlir.global @const(42 : i32) : !llvm.i32
+    ```
+  }];
+
   let builders = [
     OpBuilderDAG<(ins "LLVMType":$resType, "StringRef":$name,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
@@ -701,18 +758,85 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   );
   let summary = "LLVM dialect global.";
   let description = [{
-    Can contain an optional initializer region or attribute for simple
-    initializers.
+    Since MLIR allows for arbitrary operations to be present at the top level,
+    global variables are defined using the `llvm.mlir.global` operation. Both
+    global constants and variables can be defined, and the value may also be
+    initialized in both cases.
+
+    There are two forms of initialization syntax. Simple constants that can be
+    represented as MLIR attributes can be given in-line:
+
+    ```mlir
+    llvm.mlir.global @variable(32.0 : f32) : !llvm.float
+    ```
+
+    This initialization and type syntax is similar to `llvm.mlir.constant` and
+    may use two types: one for MLIR attribute and another for the LLVM value.
+    These types must be compatible.
+
+    More complex constants that cannot be represented as MLIR attributes can be
+    given in an initializer region:
+
+    ```mlir
+    // This global is initialized with the equivalent of:
+    //   i32* getelementptr (i32* @g2, i32 2)
+    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+      %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+      %2 = llvm.getelementptr %0[%1]
+         : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+      // The initializer region must end with `llvm.return`.
+      llvm.return %2 : !llvm.ptr<i32>
+    }
+    ```
+
+    Only one of the initializer attribute or initializer region may be provided.
+
+    `llvm.mlir.global` must appear at top-level of the enclosing module. It uses
+    an @-identifier for its value, which will be uniqued by the module with
+    respect to other @-identifiers in it.
 
     Examples:
-      // Initialized using an attribute.
-      llvm.mlir.global @a("abc") : !llvm<"[3 x i8]">
-      // Initialized using a region.
-      llvm.mlir.global constant @b() : !llvm<"i32*"> {
-        %0 = llvm.constant(0 : i32) : !llvm.i32
-        %1 = llvm.inttoptr %0 : !llvm.i32 to !llvm<"i32*">
-        llvm.return %1 : !llvm<"i32*">
-      }
+
+    ```mlir
+    // Global values use @-identifiers.
+    llvm.mlir.global constant @cst(42 : i32) : !llvm.i32
+
+    // Non-constant values must also be initialized.
+    llvm.mlir.global @variable(32.0 : f32) : !llvm.float
+
+    // Strings are expected to be of wrapped LLVM i8 array type and do not
+    // automatically include the trailing zero.
+    llvm.mlir.global @string("abc") : !llvm.array<3 x i8>
+
+    // For strings globals, the trailing type may be omitted.
+    llvm.mlir.global constant @no_trailing_type("foo bar")
+
+    // A complex initializer is constructed with an initializer region.
+    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+      %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+      %2 = llvm.getelementptr %0[%1]
+         : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+      llvm.return %2 : !llvm.ptr<i32>
+    }
+    ```
+
+    Similarly to functions, globals have a linkage attribute. In the custom
+    syntax, this attribute is placed between `llvm.mlir.global` and the optional
+    `constant` keyword. If the attribute is omitted, `external` linkage is
+    assumed by default.
+
+    Examples:
+
+    ```mlir
+    // A constant with internal linkage will not participate in linking.
+    llvm.mlir.global internal constant @cst(42 : i32) : !llvm.i32
+
+    // By default, "external" linkage is assumed and the global participates in
+    // symbol resolution at link-time.
+    llvm.mlir.global @glob(0 : f32) : !llvm.float
+    ```
   }];
   let regions = (region AnyRegion:$initializer);
 
@@ -752,7 +876,35 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func",
     [AutomaticAllocationScope, IsolatedFromAbove, FunctionLike, Symbol]> {
-  let summary = "LLVM dialect function, has wrapped LLVM IR function type";
+  let summary = "LLVM dialect function.";
+
+  let description = [{
+    MLIR functions are defined by an operation that is not built into the IR
+    itself. The LLVM dialect provides an `llvm.func` operation to define
+    functions compatible with LLVM IR. These functions have LLVM dialect
+    function type but use MLIR syntax to express it. They are required to have
+    exactly one result type. LLVM function operation is intended to capture
+    additional properties of LLVM functions, such as linkage and calling
+    convention, that may be modeled differently by the built-in MLIR function.
+
+    ```mlir
+    // The type of @bar is !llvm<"i64 (i64)">
+    llvm.func @bar(%arg0: !llvm.i64) -> !llvm.i64 {
+      llvm.return %arg0 : !llvm.i64
+    }
+
+    // Type type of @foo is !llvm<"void (i64)">
+    // !llvm.void type is omitted
+    llvm.func @foo(%arg0: !llvm.i64) {
+      llvm.return
+    }
+
+    // A function with `internal` linkage.
+    llvm.func internal @internal_func() {
+      llvm.return
+    }
+    ```
+  }];
 
   let arguments = (ins DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
                    OptionalAttr<FlatSymbolRefAttr>:$personality,
@@ -805,6 +957,24 @@ def LLVM_NullOp
     : LLVM_Op<"mlir.null", [NoSideEffect]>,
       LLVM_Builder<"$res = llvm::ConstantPointerNull::get("
                    "    cast<llvm::PointerType>($_resultType));"> {
+  let summary = "Defines a value containing a null pointer to LLVM type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
+    explicitly created as SSA values using `llvm.mlir.null`. This operation has
+    no operands or attributes, and returns a null value of a wrapped LLVM IR
+    pointer type.
+
+    Examples:
+
+    ```mlir
+    // Null pointer to i8.
+    %0 = llvm.mlir.null : !llvm.ptr<i8>
+
+    // Null pointer to a function with signature void().
+    %1 = llvm.mlir.null : !llvm.ptr<func<void ()>>
+    ```
+  }];
+
   let results = (outs LLVM_AnyPointer:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -812,14 +982,59 @@ def LLVM_NullOp
 
 def LLVM_UndefOp : LLVM_Op<"mlir.undef", [NoSideEffect]>,
                    LLVM_Builder<"$res = llvm::UndefValue::get($_resultType);"> {
+  let summary = "Creates an undefined value of LLVM dialect type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class undefined values. Such values
+    must be created as SSA values using `llvm.mlir.undef`. This operation has no
+    operands or attributes. It creates an undefined value of the specified LLVM
+    IR dialect type wrapping an LLVM IR structure type.
+
+    Example:
+
+    ```mlir
+    // Create a structure with a 32-bit integer followed by a float.
+    %0 = llvm.mlir.undef : !llvm.struct<(i32, float)>
+    ```
+  }];
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
 }
+
 def LLVM_ConstantOp
     : LLVM_Op<"mlir.constant", [NoSideEffect]>,
       LLVM_Builder<"$res = getLLVMConstant($_resultType, $value, $_location);">
 {
+  let summary = "Defines a constant of LLVM type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class constant values. Therefore,
+    all constants must be created as SSA values before being used in other
+    operations. `llvm.mlir.constant` creates such values for scalars and
+    vectors. It has a mandatory `value` attribute, which may be an integer,
+    floating point attribute; dense or sparse attribute containing integers or
+    floats. The type of the attribute is one of the corresponding MLIR builtin
+    types. It may be omitted for `i64` and `f64` types that are implied. The
+    operation produces a new SSA value of the specified LLVM IR dialect type.
+    The type of that value _must_ correspond to the attribute type converted to
+    LLVM IR.
+
+    Examples:
+
+    ```mlir
+    // Integer constant, internal i32 is mandatory
+    %0 = llvm.mlir.constant(42 : i32) : !llvm.i32
+
+    // It's okay to omit i64.
+    %1 = llvm.mlir.constant(42) : !llvm.i64
+
+    // Floating point constant.
+    %2 = llvm.mlir.constant(42.0 : f32) : !llvm.float
+
+    // Splat dense vector constant.
+    %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x float>
+    ```
+  }];
+
   let arguments = (ins AnyAttr:$value);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
