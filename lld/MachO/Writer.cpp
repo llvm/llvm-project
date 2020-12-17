@@ -43,6 +43,7 @@ public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
   void scanRelocations();
+  void scanSymbols();
   void createOutputSections();
   void createLoadCommands();
   void assignAddresses(OutputSegment *);
@@ -424,6 +425,17 @@ void Writer::scanRelocations() {
   }
 }
 
+void Writer::scanSymbols() {
+  for (const macho::Symbol *sym : symtab->getSymbols()) {
+    if (const auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->overridesWeakDef)
+        in.weakBinding->addNonWeakDefinition(defined);
+    } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      dysym->file->refState = std::max(dysym->file->refState, dysym->refState);
+    }
+  }
+}
+
 void Writer::createLoadCommands() {
   in.header->addLoadCommand(make<LCDyldInfo>(
       in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
@@ -463,10 +475,10 @@ void Writer::createLoadCommands() {
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      // TODO: dylibs that are only referenced by weak refs should also be
-      // loaded via LC_LOAD_WEAK_DYLIB.
       LoadCommandType lcType =
-          dylibFile->forceWeakImport ? LC_LOAD_WEAK_DYLIB : LC_LOAD_DYLIB;
+          dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
+              ? LC_LOAD_WEAK_DYLIB
+              : LC_LOAD_DYLIB;
       in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName,
                                               dylibFile->compatibilityVersion,
                                               dylibFile->currentVersion));
@@ -699,11 +711,7 @@ void Writer::run() {
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
-
-  for (const macho::Symbol *sym : symtab->getSymbols())
-    if (const auto *defined = dyn_cast<Defined>(sym))
-      if (defined->overridesWeakDef)
-        in.weakBinding->addNonWeakDefinition(defined);
+  scanSymbols();
 
   // Sort and assign sections to their respective segments. No more sections nor
   // segments may be created after these methods run.

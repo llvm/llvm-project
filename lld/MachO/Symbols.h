@@ -116,7 +116,11 @@ private:
   const bool external : 1;
 };
 
-// Indicates whether & how a dylib symbol is referenced.
+// This enum does double-duty: as a symbol property, it indicates whether & how
+// a dylib symbol is referenced. As a DylibFile property, it indicates the kind
+// of referenced symbols contained within the file. If there are both weak
+// and strong references to the same file, we will count the file as
+// strongly-referenced.
 enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
 
 class Undefined : public Symbol {

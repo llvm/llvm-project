@@ -527,7 +527,7 @@ void loadReexport(StringRef path, DylibFile *umbrella) {
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
-    : InputFile(DylibKind, mb) {
+    : InputFile(DylibKind, mb), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
@@ -580,7 +580,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
 }
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
-    : InputFile(DylibKind, interface) {
+    : InputFile(DylibKind, interface), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
