@@ -1840,29 +1840,10 @@ example:
     Variables that are identified as requiring a protector will be arranged
     on the stack such that they are adjacent to the stack protector guard.
 
-    If a function that has an ``ssp`` attribute is inlined into a
-    function that doesn't have an ``ssp`` attribute, then the resulting
-    function will have an ``ssp`` attribute.
-``sspreq``
-    This attribute indicates that the function should *always* emit a
-    stack smashing protector. This overrides the ``ssp`` function
-    attribute.
-
-    Variables that are identified as requiring a protector will be arranged
-    on the stack such that they are adjacent to the stack protector guard.
-    The specific layout rules are:
-
-    #. Large arrays and structures containing large arrays
-       (``>= ssp-buffer-size``) are closest to the stack protector.
-    #. Small arrays and structures containing small arrays
-       (``< ssp-buffer-size``) are 2nd closest to the protector.
-    #. Variables that have had their address taken are 3rd closest to the
-       protector.
-
-    If a function that has an ``sspreq`` attribute is inlined into a
-    function that doesn't have an ``sspreq`` attribute or which has an
-    ``ssp`` or ``sspstrong`` attribute, then the resulting function will have
-    an ``sspreq`` attribute.
+    A function with the ``ssp`` attribute but without the ``alwaysinline``
+    attribute cannot be inlined into a function without a
+    ``ssp/sspreq/sspstrong`` attribute. If inlined, the caller will get the
+    ``ssp`` attribute.
 ``sspstrong``
     This attribute indicates that the function should emit a stack smashing
     protector. This attribute causes a strong heuristic to be used when
@@ -1887,9 +1868,31 @@ example:
 
     This overrides the ``ssp`` function attribute.
 
-    If a function that has an ``sspstrong`` attribute is inlined into a
-    function that doesn't have an ``sspstrong`` attribute, then the
-    resulting function will have an ``sspstrong`` attribute.
+    A function with the ``sspstrong`` attribute but without the
+    ``alwaysinline`` attribute cannot be inlined into a function without a
+    ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
+    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.
+``sspreq``
+    This attribute indicates that the function should *always* emit a stack
+    smashing protector. This overrides the ``ssp`` and ``sspstrong`` function
+    attributes.
+
+    Variables that are identified as requiring a protector will be arranged
+    on the stack such that they are adjacent to the stack protector guard.
+    The specific layout rules are:
+
+    #. Large arrays and structures containing large arrays
+       (``>= ssp-buffer-size``) are closest to the stack protector.
+    #. Small arrays and structures containing small arrays
+       (``< ssp-buffer-size``) are 2nd closest to the protector.
+    #. Variables that have had their address taken are 3rd closest to the
+       protector.
+
+    A function with the ``sspreq`` attribute but without the ``alwaysinline``
+    attribute cannot be inlined into a function without a
+    ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
+    ``sspreq`` attribute.
+
 ``strictfp``
     This attribute indicates that the function was called from a scope that
     requires strict floating-point semantics.  LLVM will not attempt any
