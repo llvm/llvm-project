@@ -623,7 +623,7 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::error_code readSecHdrTableEntry();
+  std::error_code readSecHdrTableEntry(uint32_t Idx);
   std::error_code readSecHdrTable();
 
   std::error_code readFuncMetadata();
