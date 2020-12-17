@@ -285,7 +285,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
-          symtab->addUndefined(sym.getName());
+          symtab->addUndefined(sym.getName(), /*isWeakRef=*/false);
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol. We should also
@@ -723,7 +723,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
 
-  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"));
+  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                       /*isWeakRef=*/false);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
