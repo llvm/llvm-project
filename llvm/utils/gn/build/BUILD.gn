@@ -72,9 +72,13 @@ config("compiler_defaults") {
     ldflags += [ "-mmacosx-version-min=10.10" ]
   }
 
+  assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
+         "Unexpected symbol_level")
   if (host_os != "win") {
-    if (is_debug) {
+    if (symbol_level == 2) {
       cflags += [ "-g" ]
+    } else if (symbol_level == 1) {
+      cflags += [ "-g1" ]
     }
     if (is_optimized) {
       cflags += [ "-O3" ]
@@ -88,11 +92,14 @@ config("compiler_defaults") {
       "-fvisibility-inlines-hidden",
     ]
   } else {
-    if (is_debug) {
+    if (symbol_level != 0) {
       cflags += [
         "/Zi",
         "/FS",
       ]
+      if (symbol_level == 1 && is_clang) {
+        cflags += [ "-gline-tables-only" ]
+      }
       ldflags += [ "/DEBUG" ]
 
       # Speed up links with ghash on windows.
