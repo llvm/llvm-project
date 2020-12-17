@@ -136,7 +136,7 @@ private:
   unsigned fileIndex(llvm::StringRef Name);
   llvm::StringMap<unsigned> NameToIndex; // Values are file indexes.
   // Maps a file's index to that of the files it includes.
-  llvm::DenseMap<unsigned, SmallVector<unsigned>> IncludeChildren;
+  llvm::DenseMap<unsigned, llvm::SmallVector<unsigned>> IncludeChildren;
 };
 
 /// Returns a PPCallback that visits all inclusions in the main file.
