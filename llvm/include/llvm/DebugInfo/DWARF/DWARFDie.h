@@ -463,6 +463,11 @@ inline bool operator==(const std::reverse_iterator<DWARFDie::iterator> &LHS,
   return LHS.equals(RHS);
 }
 
+inline bool operator!=(const std::reverse_iterator<DWARFDie::iterator> &LHS,
+                       const std::reverse_iterator<DWARFDie::iterator> &RHS) {
+  return !(LHS == RHS);
+}
+
 inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rbegin() const {
   return llvm::make_reverse_iterator(end());
 }
