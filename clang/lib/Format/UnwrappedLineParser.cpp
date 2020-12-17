@@ -2050,6 +2050,13 @@ void UnwrappedLineParser::parseTryCatch() {
       nextToken();
       if (FormatTok->is(tok::l_paren))
         parseParens();
+      if (FormatTok->Previous && FormatTok->Previous->is(tok::identifier) &&
+          FormatTok->is(tok::l_brace)) {
+        do {
+          nextToken();
+        } while (!FormatTok->is(tok::r_brace));
+        nextToken();
+      }
 
       // In case identifiers were removed by clang-tidy, what might follow is
       // multiple commas in sequence - after the first identifier.

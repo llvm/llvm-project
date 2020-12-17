@@ -2727,6 +2727,29 @@ TEST_F(FormatTest, FormatTryCatch) {
                "    throw;\n"
                "  }\n"
                "};\n");
+  verifyFormat("class A {\n"
+               "  int a;\n"
+               "  A() try : a(0), b{1} {\n"
+               "  } catch (...) {\n"
+               "    throw;\n"
+               "  }\n"
+               "};\n");
+  verifyFormat("class A {\n"
+               "  int a;\n"
+               "  A() try : a(0), b{1}, c{2} {\n"
+               "  } catch (...) {\n"
+               "    throw;\n"
+               "  }\n"
+               "};\n");
+  verifyFormat("class A {\n"
+               "  int a;\n"
+               "  A() try : a(0), b{1}, c{2} {\n"
+               "    { // New scope.\n"
+               "    }\n"
+               "  } catch (...) {\n"
+               "    throw;\n"
+               "  }\n"
+               "};\n");
 
   // Incomplete try-catch blocks.
   verifyIncompleteFormat("try {} catch (");
@@ -7756,8 +7779,8 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
   verifyFormat("co_yield -1;");
   verifyFormat("co_return -1;");
 
-  // Check that * is not treated as a binary operator when we set PointerAlignment
-  // as PAS_Left after a keyword and not a declaration.
+  // Check that * is not treated as a binary operator when we set
+  // PointerAlignment as PAS_Left after a keyword and not a declaration.
   FormatStyle PASLeftStyle = getLLVMStyle();
   PASLeftStyle.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("co_return *a;", PASLeftStyle);
