@@ -376,7 +376,9 @@ protected:
   bool HasDot6Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
-  bool HasAtomicFaddInsts;
+  bool HasAtomicFaddRtnInsts;
+  bool HasAtomicFaddNoRtnInsts;
+  bool HasAtomicPkFaddNoRtnInsts;
   bool EnableSRAMECC;
   bool DoesNotSupportSRAMECC;
   bool HasNoSdstCMPX;
@@ -415,6 +417,7 @@ protected:
   bool HasFlatSegmentOffsetBug;
   bool HasImageStoreD16Bug;
   bool HasImageGather4D16Bug;
+  bool HasGFX11ExtraVGPRs;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable;
@@ -901,8 +904,16 @@ public:
     return HasPkFmacF16Inst;
   }
 
-  bool hasAtomicFaddInsts() const {
-    return HasAtomicFaddInsts;
+  bool hasAtomicFaddRtnInsts() const {
+    return HasAtomicFaddRtnInsts;
+  }
+
+  bool hasAtomicFaddNoRtnInsts() const {
+    return HasAtomicFaddNoRtnInsts;
+  }
+
+  bool hasAtomicPkFaddNoRtnInsts() const {
+    return HasAtomicPkFaddNoRtnInsts;
   }
 
   bool isSRAMECCEnabled() const {
@@ -1143,6 +1154,11 @@ public:
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
+
+  bool hasGFX11ExtraVGPRs() const { return HasGFX11ExtraVGPRs; }
+
+  /// Return true if the target has the S_DELAY_ALU instruction.
+  bool hasDelayAlu() const { return GFX11Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

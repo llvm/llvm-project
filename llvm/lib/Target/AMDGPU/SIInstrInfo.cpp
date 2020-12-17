@@ -875,6 +875,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
+    // TODO-GFX11: Implement this without SDWA.
     auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
       .addImm(0) // src0_modifiers
       .addReg(NewSrcReg)

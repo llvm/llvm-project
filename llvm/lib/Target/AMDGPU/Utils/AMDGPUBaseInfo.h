@@ -512,13 +512,14 @@ bool isValidDfmtNfmt(unsigned Val, const MCSubtargetInfo &STI);
 
 bool isValidNfmt(unsigned Val, const MCSubtargetInfo &STI);
 
-int64_t getUnifiedFormat(const StringRef Name);
+int64_t getUnifiedFormat(const StringRef Name, const MCSubtargetInfo &STI);
 
-StringRef getUnifiedFormatName(unsigned Id);
+StringRef getUnifiedFormatName(unsigned Id, const MCSubtargetInfo &STI);
 
-bool isValidUnifiedFormat(unsigned Val);
+bool isValidUnifiedFormat(unsigned Val, const MCSubtargetInfo &STI);
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt);
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+                             const MCSubtargetInfo &STI);
 
 bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI);
 

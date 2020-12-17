@@ -477,6 +477,9 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
 
+  if (STI->getFeatureBits().test(FeatureGFX11ExtraVGPRs))
+    return IsWave32 ? 24 : 12;
+
   if (hasGFX10_3Insts(*STI))
     return IsWave32 ? 16 : 8;
 
@@ -496,7 +499,10 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (!isGFX10Plus(*STI))
     return 256;
-  return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
+  bool IsWave32 = STI->getFeatureBits().test(FeatureWavefrontSize32);
+  if (STI->getFeatureBits().test(FeatureGFX11ExtraVGPRs))
+    return IsWave32 ? 1536 : 768;
+  return IsWave32 ? 1024 : 512;
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
@@ -871,27 +877,44 @@ void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt) {
   Nfmt = (Format >> NFMT_SHIFT) & NFMT_MASK;
 }
 
-int64_t getUnifiedFormat(const StringRef Name) {
-  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
-    if (Name == UfmtSymbolic[Id])
-      return Id;
+int64_t getUnifiedFormat(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX11Plus(STI)) {
+    for (int Id = UfmtGFX11::UFMT_FIRST; Id <= UfmtGFX11::UFMT_LAST; ++Id) {
+      if (Name == UfmtSymbolicGFX11[Id])
+        return Id;
+    }
+  } else {
+    for (int Id = UfmtGFX10::UFMT_FIRST; Id <= UfmtGFX10::UFMT_LAST; ++Id) {
+      if (Name == UfmtSymbolicGFX10[Id])
+        return Id;
+    }
   }
   return UFMT_UNDEF;
 }
 
-StringRef getUnifiedFormatName(unsigned Id) {
-  return isValidUnifiedFormat(Id) ? UfmtSymbolic[Id] : "";
+StringRef getUnifiedFormatName(unsigned Id, const MCSubtargetInfo &STI) {
+  if(isValidUnifiedFormat(Id, STI))
+    return isGFX10(STI) ? UfmtSymbolicGFX10[Id] : UfmtSymbolicGFX11[Id];
+  return "";
 }
 
-bool isValidUnifiedFormat(unsigned Id) {
-  return Id <= UFMT_LAST;
+bool isValidUnifiedFormat(unsigned Id, const MCSubtargetInfo &STI) {
+  return isGFX10(STI) ? Id <= UfmtGFX10::UFMT_LAST : Id <= UfmtGFX11::UFMT_LAST;
 }
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt) {
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+                             const MCSubtargetInfo &STI) {
   int64_t Fmt = encodeDfmtNfmt(Dfmt, Nfmt);
-  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
-    if (Fmt == DfmtNfmt2UFmt[Id])
-      return Id;
+  if (isGFX11Plus(STI)) {
+    for (int Id = UfmtGFX11::UFMT_FIRST; Id <= UfmtGFX11::UFMT_LAST; ++Id) {
+      if (Fmt == DfmtNfmt2UFmtGFX11[Id])
+        return Id;
+    }
+  } else {
+    for (int Id = UfmtGFX10::UFMT_FIRST; Id <= UfmtGFX10::UFMT_LAST; ++Id) {
+      if (Fmt == DfmtNfmt2UFmtGFX10[Id])
+        return Id;
+    }
   }
   return UFMT_UNDEF;
 }

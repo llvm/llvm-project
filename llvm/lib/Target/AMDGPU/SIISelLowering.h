@@ -368,6 +368,7 @@ public:
                               MachineBasicBlock *BB) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool hasAtomicFaddRtnForTy(SDValue &Op) const;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;

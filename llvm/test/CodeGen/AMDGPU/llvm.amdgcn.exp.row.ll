@@ -34,6 +34,7 @@ define amdgpu_kernel void @zero_i32() #0 {
 ; CHECK-LABEL: zero_i32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) instskip(NEXT) instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    exp pos0 v0, v0, v0, off row_en
@@ -87,6 +88,7 @@ define amdgpu_kernel void @id_row_i32() #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x63
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    exp pos0 v0, off, off, off done row_en
 ; CHECK-NEXT:    s_endpgm

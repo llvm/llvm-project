@@ -66,6 +66,9 @@ class DS_Real <DS_Pseudo ds, string opName = ds.Mnemonic> :
   let OtherPredicates = ds.OtherPredicates;
   let AsmMatchConverter  = ds.AsmMatchConverter;
 
+  let Constraints = ds.Constraints;
+  let DisableEncoding = ds.DisableEncoding;
+
   // encoding fields
   bits<8> vdst;
   bits<1> gds;
@@ -153,6 +156,19 @@ multiclass DS_1A2D_Off8_NORET_mc <string opName, RegisterClass rc = VGPR_32> {
   }
 }
 
+class DS_0A1D_RET_GDS<string opName, RegisterClass rc = VGPR_32, RegisterClass src = rc>
+: DS_Pseudo<opName,
+  (outs rc:$vdst),
+  (ins src:$data0, offset:$offset),
+  " $vdst, $data0$offset gds"> {
+
+  let has_addr = 0;
+  let has_data1 = 0;
+  let has_gds = 0;
+  let gdsValue = 1;
+  let AsmMatchConverter = "cvtDSGds";
+}
+
 class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
@@ -223,6 +239,14 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
+class DS_BVH_STACK<string opName>
+: DS_Pseudo<opName,
+  (outs VGPR_32:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, VGPR_32:$data0, VReg_128:$data1, offset:$offset, gds:$gds),
+  " $vdst, $addr, $data0, $data1$offset$gds"> {
+  let Constraints = "$addr = $addr_in";
+  let DisableEncoding = "$addr_in";
+}
 
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset>
 : DS_Pseudo<opName,
@@ -634,6 +658,19 @@ let SubtargetPredicate = HasLDSFPAtomics, OtherPredicates = [HasDsSrc2Insts] in 
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Instruction definitions for GFX11 and newer.
+//===----------------------------------------------------------------------===//
+
+let SubtargetPredicate = isGFX11Plus in {
+
+def DS_ADD_GS_REG : DS_0A1D_RET_GDS<"ds_add_gs_reg", VReg_64, VGPR_32>;
+def DS_SUB_GS_REG : DS_0A1D_RET_GDS<"ds_sub_gs_reg", VReg_64, VGPR_32>;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
+
+} // let SubtargetPredicate = isGFX11Plus
+
 //===----------------------------------------------------------------------===//
 // DS Patterns
 //===----------------------------------------------------------------------===//
@@ -1006,7 +1043,7 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op, DS_Pseudo ps, int ef, strin
 // GFX11.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
+let AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11" in {
   multiclass DS_Real_gfx11<bits<8> op>  {
     def _gfx11 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11<op, !cast<DS_Pseudo>(NAME),
                                               SIEncodingFamily.GFX11>;
@@ -1016,8 +1053,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
      def _gfx11 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11<op, backing_pseudo, SIEncodingFamily.GFX11, real_name>,
                MnemonicAlias<backing_pseudo.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
   }
-
-} // End AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11"
+} // End AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11"
 
 defm DS_STORE_B32                        : DS_Real_Renamed_gfx11<0x00d, DS_WRITE_B32, "ds_store_b32">;
 defm DS_STORE_2ADDR_B32                  : DS_Real_Renamed_gfx11<0x00e, DS_WRITE2_B32, "ds_store_2addr_b32">;
@@ -1072,11 +1108,9 @@ defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11<0x070>;
 defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11<0x079>;
-/* TODO:
 defm DS_ADD_GS_REG                       : DS_Real_gfx11<0x07a>;
 defm DS_SUB_GS_REG                       : DS_Real_gfx11<0x07b>;
 defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
-*/
 
 //===----------------------------------------------------------------------===//
 // GFX10.

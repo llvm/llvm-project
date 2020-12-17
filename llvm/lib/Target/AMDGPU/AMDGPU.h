@@ -261,6 +261,9 @@ extern char &SIMemoryLegalizerID;
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
 
+void initializeSIInsertDelayAluPass(PassRegistry &);
+extern char &SIInsertDelayAluID;
+
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 

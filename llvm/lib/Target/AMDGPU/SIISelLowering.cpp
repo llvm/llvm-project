@@ -4351,6 +4351,12 @@ bool SITargetLowering::hasBitPreservingFPLogic(EVT VT) const {
   return isTypeLegal(VT.getScalarType());
 }
 
+bool SITargetLowering::hasAtomicFaddRtnForTy(SDValue &Op) const {
+  if (Op.getValue(0).getValueType() == MVT::f32)
+    return Subtarget->hasAtomicFaddRtnInsts();
+  return false;
+}
+
 bool SITargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   // This currently forces unfolding various combinations of fsub into fma with
   // free fneg'd operands. As long as we have fast FMA (controlled by
@@ -7160,7 +7166,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
-      if (!Op.getValue(0).use_empty()) {
+      if (!Op.getValue(0).use_empty() && !hasAtomicFaddRtnForTy(Op)) {
         DiagnosticInfoUnsupported
           NoFpRet(DAG.getMachineFunction().getFunction(),
                   "return versions of fp atomics not supported",
@@ -7307,7 +7313,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
   }
   case Intrinsic::amdgcn_global_atomic_fadd: {
-    if (!Op.getValue(0).use_empty()) {
+    if (!Op.getValue(0).use_empty() && !hasAtomicFaddRtnForTy(Op)) {
       DiagnosticInfoUnsupported
         NoFpRet(DAG.getMachineFunction().getFunction(),
                 "return versions of fp atomics not supported",
@@ -11867,7 +11873,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // TODO: Do have these for flat. Older targets also had them for buffers.
     unsigned AS = RMW->getPointerAddressSpace();
 
-    if (AS == AMDGPUAS::GLOBAL_ADDRESS && Subtarget->hasAtomicFaddInsts()) {
+    if (AS == AMDGPUAS::GLOBAL_ADDRESS &&
+        Subtarget->hasAtomicFaddNoRtnInsts()) {
       if (!fpModeMatchesGlobalFPAtomicMode(RMW))
         return AtomicExpansionKind::CmpXChg;
 
