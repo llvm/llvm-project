@@ -6500,6 +6500,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-target-feature");
       CmdArgs.push_back("-outline-atomics");
     }
+  } else if (Triple.isAArch64() &&
+             getToolChain().IsAArch64OutlineAtomicsDefault(Args)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+outline-atomics");
   }
 
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
