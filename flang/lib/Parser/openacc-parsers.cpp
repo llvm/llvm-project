@@ -28,8 +28,8 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                    maybe(parenthesized(scalarIntExpr)))) ||
     "ATTACH" >> construct<AccClause>(construct<AccClause::Attach>(
                     parenthesized(Parser<AccObjectList>{}))) ||
-    "BIND" >>
-        construct<AccClause>(construct<AccClause::Bind>(parenthesized(name))) ||
+    "BIND" >> construct<AccClause>(
+                  construct<AccClause::Bind>(Parser<AccBindClause>{})) ||
     "CAPTURE" >> construct<AccClause>(construct<AccClause::Capture>()) ||
     "COLLAPSE" >> construct<AccClause>(construct<AccClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
@@ -166,6 +166,10 @@ TYPE_PARSER(sourced(construct<AccReductionOperator>(
         ".EQV." >> pure(AccReductionOperator::Operator::Eqv),
         ".NEQV." >> pure(AccReductionOperator::Operator::Neqv)))))
 
+// 2.15.1 Bind clause
+TYPE_PARSER(sourced(construct<AccBindClause>(parenthesized(name))) ||
+    sourced(construct<AccBindClause>(parenthesized(scalarDefaultCharExpr))))
+
 // 2.5.14 Default clause
 TYPE_PARSER(construct<AccDefaultClause>(
     parenthesized(first("NONE" >> pure(AccDefaultClause::Arg::None),
@@ -287,8 +291,10 @@ TYPE_PARSER(construct<OpenACCStandaloneDeclarativeConstruct>(
     sourced(Parser<AccDeclarativeDirective>{}), Parser<AccClauseList>{}))
 
 TYPE_PARSER(
-    startAccLine >> sourced(construct<OpenACCDeclarativeConstruct>(
-                        Parser<OpenACCStandaloneDeclarativeConstruct>{})))
+    startAccLine >> first(sourced(construct<OpenACCDeclarativeConstruct>(
+                              Parser<OpenACCStandaloneDeclarativeConstruct>{})),
+                        sourced(construct<OpenACCDeclarativeConstruct>(
+                            Parser<OpenACCRoutineConstruct>{}))))
 
 // OpenACC constructs
 TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
@@ -297,7 +303,6 @@ TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
             construct<OpenACCConstruct>(Parser<OpenACCCombinedConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCLoopConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCStandaloneConstruct>{}),
-            construct<OpenACCConstruct>(Parser<OpenACCRoutineConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCCacheConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{})))
