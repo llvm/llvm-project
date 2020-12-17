@@ -208,6 +208,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8_5A";
   case llvm::ARM::ArchKind::ARMV8_6A:
     return "8_6A";
+  case llvm::ARM::ArchKind::ARMV8_7A:
+    return "8_7A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:

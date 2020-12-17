@@ -535,6 +535,10 @@ def HasV8_6aOps   : SubtargetFeature<"v8.6a", "HasV8_6aOps", "true",
                                    [HasV8_5aOps, FeatureBF16,
                                     FeatureMatMulInt8]>;
 
+def HasV8_7aOps   : SubtargetFeature<"v8.7a", "HasV8_7aOps", "true",
+                                   "Support ARM v8.7a instructions",
+                                   [HasV8_6aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
@@ -819,6 +823,19 @@ def ARMv85a   : Architecture<"armv8.5-a", "ARMv85a",  [HasV8_5aOps,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
 def ARMv86a   : Architecture<"armv8.6-a", "ARMv86a",  [HasV8_6aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
+def ARMv87a   : Architecture<"armv8.7-a", "ARMv86a",  [HasV8_7aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,
