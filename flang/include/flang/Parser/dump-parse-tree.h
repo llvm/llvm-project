@@ -462,7 +462,7 @@ public:
   NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
   NODE(parser, OmpDeclareTargetSpecifier)

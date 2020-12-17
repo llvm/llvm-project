@@ -2174,8 +2174,9 @@ class OMPClauseEnqueue : public ConstOMPClauseVisitor<OMPClauseEnqueue> {
 
 public:
   OMPClauseEnqueue(EnqueueVisitor *Visitor) : Visitor(Visitor) {}
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };
