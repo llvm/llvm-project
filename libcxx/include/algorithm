@@ -367,20 +367,20 @@ template <class RandomAccessIterator, class Compare>
     stable_sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                    // constexpr in C++20
     partial_sort(RandomAccessIterator first, RandomAccessIterator middle, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                    // constexpr in C++20
     partial_sort(RandomAccessIterator first, RandomAccessIterator middle, RandomAccessIterator last, Compare comp);
 
 template <class InputIterator, class RandomAccessIterator>
-    RandomAccessIterator
+    constexpr RandomAccessIterator    // constexpr in C++20
     partial_sort_copy(InputIterator first, InputIterator last,
                       RandomAccessIterator result_first, RandomAccessIterator result_last);
 
 template <class InputIterator, class RandomAccessIterator, class Compare>
-    RandomAccessIterator
+    constexpr RandomAccessIterator    // constexpr in C++20
     partial_sort_copy(InputIterator first, InputIterator last,
                       RandomAccessIterator result_first, RandomAccessIterator result_last, Compare comp);
 
@@ -491,35 +491,35 @@ template <class InputIterator1, class InputIterator2, class OutputIterator, clas
                              InputIterator2 first2, InputIterator2 last2, OutputIterator result, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                                   // constexpr in C++20
     push_heap(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                                   // constexpr in C++20
     push_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                                   // constexpr in C++20
     pop_heap(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                                   // constexpr in C++20
     pop_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                                   // constexpr in C++20
     make_heap(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                                   // constexpr in C++20
     make_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                                   // constexpr in C++20
     sort_heap(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                                   // constexpr in C++20
     sort_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
@@ -5000,7 +5000,7 @@ is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 // push_heap
 
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void
 __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
           typename iterator_traits<_RandomAccessIterator>::difference_type __len)
 {
@@ -5027,7 +5027,7 @@ __sift_up(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5036,7 +5036,7 @@ push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
@@ -5046,7 +5046,7 @@ push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 // pop_heap
 
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void
 __sift_down(_RandomAccessIterator __first, _RandomAccessIterator /*__last*/,
             _Compare __comp,
             typename iterator_traits<_RandomAccessIterator>::difference_type __len,
@@ -5078,7 +5078,7 @@ __sift_down(_RandomAccessIterator __first, _RandomAccessIterator /*__last*/,
     value_type __top(_VSTD::move(*__start));
     do
     {
-        // we are not in heap-order, swap the parent with it's largest child
+        // we are not in heap-order, swap the parent with its largest child
         *__start = _VSTD::move(*__child_i);
         __start = __child_i;
 
@@ -5101,7 +5101,7 @@ __sift_down(_RandomAccessIterator __first, _RandomAccessIterator /*__last*/,
 }
 
 template <class _Compare, class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
            typename iterator_traits<_RandomAccessIterator>::difference_type __len)
@@ -5114,7 +5114,7 @@ __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5123,7 +5123,7 @@ pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare _
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
@@ -5133,7 +5133,7 @@ pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 // make_heap
 
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void
 __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
@@ -5149,7 +5149,7 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5158,7 +5158,7 @@ make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
@@ -5168,7 +5168,7 @@ make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 // sort_heap
 
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX17 void
 __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
@@ -5177,7 +5177,7 @@ __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5186,7 +5186,7 @@ sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
@@ -5196,7 +5196,7 @@ sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 // partial_sort
 
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX17 void
 __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
              _Compare __comp)
 {
@@ -5214,7 +5214,7 @@ __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _R
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
              _Compare __comp)
@@ -5224,7 +5224,7 @@ partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last)
 {
@@ -5235,7 +5235,7 @@ partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
 // partial_sort_copy
 
 template <class _Compare, class _InputIterator, class _RandomAccessIterator>
-_RandomAccessIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator
 __partial_sort_copy(_InputIterator __first, _InputIterator __last,
                     _RandomAccessIterator __result_first, _RandomAccessIterator __result_last, _Compare __comp)
 {
@@ -5258,7 +5258,7 @@ __partial_sort_copy(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _RandomAccessIterator
 partial_sort_copy(_InputIterator __first, _InputIterator __last,
                   _RandomAccessIterator __result_first, _RandomAccessIterator __result_last, _Compare __comp)
@@ -5268,7 +5268,7 @@ partial_sort_copy(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _RandomAccessIterator
 partial_sort_copy(_InputIterator __first, _InputIterator __last,
                   _RandomAccessIterator __result_first, _RandomAccessIterator __result_last)
