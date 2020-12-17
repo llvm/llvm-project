@@ -7,7 +7,7 @@
 ; instruction has !annotation metadata.
 define i1 @fold_to_new_instruction(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{.+}} @fold_to_new_instruction({{.+}}
-; CHECK-NEXT:    [[C:%.*]] = icmp uge i8* [[A:%.*]], [[B:%[a-z]*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8* [[A:%.*]], [[B:%[a-z]*]], !annotation [[ANN:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a.c = bitcast i8* %a to i32*, !annotation !0
