@@ -144,25 +144,15 @@ public:
     }
   }
 
-  std::string getName() const {
-    return Name;
-  }
+  std::string getName() const { return Name; }
 
-  std::string getFilterClass() {
-    return FilterClass;
-  }
+  std::string getFilterClass() const { return FilterClass; }
 
-  ListInit *getRowFields() const {
-    return RowFields;
-  }
+  ListInit *getRowFields() const { return RowFields; }
 
-  ListInit *getColFields() const {
-    return ColFields;
-  }
+  ListInit *getColFields() const { return ColFields; }
 
-  ListInit *getKeyCol() const {
-    return KeyCol;
-  }
+  ListInit *getKeyCol() const { return KeyCol; }
 
   const std::vector<ListInit*> &getValueCols() const {
     return ValueCols;
