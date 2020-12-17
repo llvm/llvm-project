@@ -310,10 +310,13 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   const bool SpillToAGPR = EnableSpillVGPRToAGPR && ST.hasMAIInsts();
   std::unique_ptr<RegScavenger> RS;
 
+  bool NewReservedRegs = false;
+
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
   // handled as SpilledToReg in regular PrologEpilogInserter.
-  if ((TRI->spillSGPRToVGPR() && (HasCSRs || FuncInfo->hasSpilledSGPRs())) ||
-      SpillVGPRToAGPR) {
+  const bool HasSGPRSpillToVGPR = TRI->spillSGPRToVGPR() &&
+                                  (HasCSRs || FuncInfo->hasSpilledSGPRs());
+  if (HasSGPRSpillToVGPR || SpillVGPRToAGPR) {
     // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
     // are spilled to VGPRs, in which case we can eliminate the stack usage.
     //
@@ -338,6 +341,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
               TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
           if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
                                                 TRI->isAGPR(MRI, VReg))) {
+            NewReservedRegs = true;
             if (!RS)
               RS.reset(new RegScavenger());
 
@@ -354,6 +358,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
         if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
+          NewReservedRegs = true;
           bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(MI, FI, nullptr);
           (void)Spilled;
           assert(Spilled && "failed to spill SGPR to VGPR when allocated");
@@ -381,6 +386,10 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
   SaveBlocks.clear();
   RestoreBlocks.clear();
+
+  // Updated the reserved registers with any VGPRs added for SGPR spills.
+  if (NewReservedRegs)
+    MRI.freezeReservedRegs(MF);
 
   return MadeChange;
 }
