@@ -4402,39 +4402,6 @@ TypeSystemClang::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
-CompilerType TypeSystemClang::CreateTypedefType(
-    const CompilerType &type, const char *typedef_name,
-    const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {
-  if (type && typedef_name && typedef_name[0]) {
-    TypeSystemClang *ast =
-        llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
-    if (!ast)
-      return CompilerType();
-    clang::ASTContext &clang_ast = ast->getASTContext();
-    clang::QualType qual_type(ClangUtil::GetQualType(type));
-
-    clang::DeclContext *decl_ctx =
-        TypeSystemClang::DeclContextGetAsDeclContext(compiler_decl_ctx);
-    if (!decl_ctx)
-      decl_ctx = ast->getASTContext().getTranslationUnitDecl();
-
-    clang::TypedefDecl *decl =
-        clang::TypedefDecl::CreateDeserialized(clang_ast, 0);
-    decl->setDeclContext(decl_ctx);
-    decl->setDeclName(&clang_ast.Idents.get(typedef_name));
-    decl->setTypeSourceInfo(clang_ast.getTrivialTypeSourceInfo(qual_type));
-
-    SetOwningModule(decl, TypePayloadClang(payload).GetOwningModule());
-    decl->setAccess(clang::AS_public); // TODO respect proper access specifier
-
-    decl_ctx->addDecl(decl);
-
-    // Get a uniqued clang::QualType for the typedef decl type
-    return ast->GetType(clang_ast.getTypedefType(decl));
-  }
-  return CompilerType();
-}
-
 CompilerType
 TypeSystemClang::GetPointeeType(lldb::opaque_compiler_type_t type) {
   if (type) {
@@ -4516,7 +4483,7 @@ TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
 CompilerType TypeSystemClang::CreateTypedef(
     lldb::opaque_compiler_type_t type, const char *typedef_name,
     const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {
-  if (type) {
+  if (type && typedef_name && typedef_name[0]) {
     clang::ASTContext &clang_ast = getASTContext();
     clang::QualType qual_type(GetQualType(type));
 
@@ -4525,10 +4492,11 @@ CompilerType TypeSystemClang::CreateTypedef(
     if (!decl_ctx)
       decl_ctx = getASTContext().getTranslationUnitDecl();
 
-    clang::TypedefDecl *decl = clang::TypedefDecl::Create(
-        clang_ast, decl_ctx, clang::SourceLocation(), clang::SourceLocation(),
-        &clang_ast.Idents.get(typedef_name),
-        clang_ast.getTrivialTypeSourceInfo(qual_type));
+    clang::TypedefDecl *decl =
+        clang::TypedefDecl::CreateDeserialized(clang_ast, 0);
+    decl->setDeclContext(decl_ctx);
+    decl->setDeclName(&clang_ast.Idents.get(typedef_name));
+    decl->setTypeSourceInfo(clang_ast.getTrivialTypeSourceInfo(qual_type));
     decl_ctx->addDecl(decl);
     SetOwningModule(decl, TypePayloadClang(payload).GetOwningModule());
 
