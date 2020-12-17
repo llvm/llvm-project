@@ -2365,11 +2365,13 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
 }
 
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
-    opaque_compiler_type_t type, const char *name, bool omit_empty_base_classes,
-    std::vector<uint32_t> &child_indexes) {
+    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   return m_swift_ast_context->GetIndexOfChildMemberWithName(
-      ReconstructType(type), name, omit_empty_base_classes, child_indexes);
+      ReconstructType(type), name, exe_ctx, omit_empty_base_classes,
+      child_indexes);
 }
+
 size_t
 TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumTemplateArguments(ReconstructType(type));
