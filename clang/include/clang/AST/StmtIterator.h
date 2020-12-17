@@ -104,12 +104,13 @@ public:
     return tmp;
   }
 
-  bool operator==(const DERIVED& RHS) const {
-    return stmt == RHS.stmt && DGI == RHS.DGI && RawVAPtr == RHS.RawVAPtr;
+  friend bool operator==(const DERIVED &LHS, const DERIVED &RHS) {
+    return LHS.stmt == RHS.stmt && LHS.DGI == RHS.DGI &&
+           LHS.RawVAPtr == RHS.RawVAPtr;
   }
 
-  bool operator!=(const DERIVED& RHS) const {
-    return stmt != RHS.stmt || DGI != RHS.DGI || RawVAPtr != RHS.RawVAPtr;
+  friend bool operator!=(const DERIVED &LHS, const DERIVED &RHS) {
+    return !(LHS == RHS);
   }
 
   REFERENCE operator*() const {

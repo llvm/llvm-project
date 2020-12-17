@@ -149,8 +149,8 @@ struct CHIArg {
   // The instruction (VN) which uses the values flowing out of CHI.
   Instruction *I;
 
-  bool operator==(const CHIArg &A) { return VN == A.VN; }
-  bool operator!=(const CHIArg &A) { return !(*this == A); }
+  bool operator==(const CHIArg &A) const { return VN == A.VN; }
+  bool operator!=(const CHIArg &A) const { return !(*this == A); }
 };
 
 using CHIIt = SmallVectorImpl<CHIArg>::iterator;
