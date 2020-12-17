@@ -61,6 +61,12 @@ enum OpenMPDirectiveKindEx {
 struct OpenMPDirectiveKindExWrapper {
   OpenMPDirectiveKindExWrapper(unsigned Value) : Value(Value) {}
   OpenMPDirectiveKindExWrapper(OpenMPDirectiveKind DK) : Value(unsigned(DK)) {}
+  bool operator==(OpenMPDirectiveKindExWrapper V) const {
+    return Value == V.Value;
+  }
+  bool operator!=(OpenMPDirectiveKindExWrapper V) const {
+    return Value != V.Value;
+  }
   bool operator==(OpenMPDirectiveKind V) const { return Value == unsigned(V); }
   bool operator!=(OpenMPDirectiveKind V) const { return Value != unsigned(V); }
   bool operator<(OpenMPDirectiveKind V) const { return Value < unsigned(V); }

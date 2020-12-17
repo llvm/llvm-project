@@ -881,8 +881,8 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
 
   std::string uname = std::string(DropNameScope(udt.Name));
 
-  CompilerType ct = m_clang.CreateTypedefType(ToCompilerType(qt), uname.c_str(),
-                                              ToCompilerDeclContext(*scope), 0);
+  CompilerType ct = ToCompilerType(qt).CreateTypedef(
+      uname.c_str(), ToCompilerDeclContext(*scope), 0);
   clang::TypedefNameDecl *tnd = m_clang.GetAsTypedefDecl(ct);
   DeclStatus status;
   status.resolved = true;

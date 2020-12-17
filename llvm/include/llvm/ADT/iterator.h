@@ -142,28 +142,30 @@ public:
     return tmp;
   }
 
+#ifndef __cpp_impl_three_way_comparison
   bool operator!=(const DerivedT &RHS) const {
-    return !static_cast<const DerivedT *>(this)->operator==(RHS);
+    return !(static_cast<const DerivedT &>(*this) == RHS);
   }
+#endif
 
   bool operator>(const DerivedT &RHS) const {
     static_assert(
         IsRandomAccess,
         "Relational operators are only defined for random access iterators.");
-    return !static_cast<const DerivedT *>(this)->operator<(RHS) &&
-           !static_cast<const DerivedT *>(this)->operator==(RHS);
+    return !(static_cast<const DerivedT &>(*this) < RHS) &&
+           !(static_cast<const DerivedT &>(*this) == RHS);
   }
   bool operator<=(const DerivedT &RHS) const {
     static_assert(
         IsRandomAccess,
         "Relational operators are only defined for random access iterators.");
-    return !static_cast<const DerivedT *>(this)->operator>(RHS);
+    return !(static_cast<const DerivedT &>(*this) > RHS);
   }
   bool operator>=(const DerivedT &RHS) const {
     static_assert(
         IsRandomAccess,
         "Relational operators are only defined for random access iterators.");
-    return !static_cast<const DerivedT *>(this)->operator<(RHS);
+    return !(static_cast<const DerivedT &>(*this) < RHS);
   }
 
   PointerT operator->() { return &static_cast<DerivedT *>(this)->operator*(); }
@@ -260,12 +262,16 @@ public:
     return *static_cast<DerivedT *>(this);
   }
 
-  bool operator==(const DerivedT &RHS) const { return I == RHS.I; }
-  bool operator<(const DerivedT &RHS) const {
+  friend bool operator==(const iterator_adaptor_base &LHS,
+                         const iterator_adaptor_base &RHS) {
+    return LHS.I == RHS.I;
+  }
+  friend bool operator<(const iterator_adaptor_base &LHS,
+                        const iterator_adaptor_base &RHS) {
     static_assert(
         BaseT::IsRandomAccess,
         "Relational operators are only defined for random access iterators.");
-    return I < RHS.I;
+    return LHS.I < RHS.I;
   }
 
   ReferenceT operator*() const { return *I; }

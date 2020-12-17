@@ -665,14 +665,6 @@ public:
 
   // Creating related types
 
-  /// Using the current type, create a new typedef to that type using
-  /// "typedef_name" as the name and "decl_ctx" as the decl context.
-  /// \param opaque_payload is an opaque TypePayloadClang.
-  static CompilerType
-  CreateTypedefType(const CompilerType &type, const char *typedef_name,
-                    const CompilerDeclContext &compiler_decl_ctx,
-                    uint32_t opaque_payload);
-
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) override;
 
@@ -720,6 +712,9 @@ public:
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
 
+  /// Using the current type, create a new typedef to that type using
+  /// "typedef_name" as the name and "decl_ctx" as the decl context.
+  /// \param opaque_payload is an opaque TypePayloadClang.
   CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
                              const char *name,
                              const CompilerDeclContext &decl_ctx,

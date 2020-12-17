@@ -805,6 +805,9 @@ bool testAArch64CPU(StringRef CPUName, StringRef ExpectedArch,
   else
     pass &= (ExtKind == ExpectedFlags);
 
+  unsigned FPUKind = AArch64::getDefaultFPU(CPUName, AK);
+  pass &= ARM::getFPUName(FPUKind).equals(ExpectedFPU);
+
   pass &= AArch64::getCPUAttr(AK).equals(CPUAttr);
 
   return pass;

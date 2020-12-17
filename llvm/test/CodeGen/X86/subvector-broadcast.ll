@@ -770,9 +770,9 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ;
 ; X86-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,0,2,0,3,0,4,0]
+; X86-AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [1,0,2,0,3,0,4,0,1,0,2,0,3,0,4,0]
+; X86-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
 ; X86-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; X86-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X86-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; X86-AVX512-NEXT:    vmovdqu %ymm0, ga4
@@ -821,9 +821,9 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ;
 ; X64-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,2,3,4]
+; X64-AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [1,2,3,4,1,2,3,4]
+; X64-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vmovdqu %ymm0, {{.*}}(%rip)
@@ -860,9 +860,9 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ;
 ; X86-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; X86-AVX512-NEXT:    vbroadcastf64x4 {{.*#+}} zmm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; X86-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
 ; X86-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
 ; X86-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
 ; X86-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
 ; X86-AVX512-NEXT:    vmovupd %ymm0, ga2
@@ -886,9 +886,9 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ;
 ; X64-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; X64-AVX512-NEXT:    vbroadcastf64x4 {{.*#+}} zmm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; X64-AVX512-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vmovupd %ymm0, {{.*}}(%rip)
@@ -915,23 +915,23 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ; X86-AVX1-NEXT:    movl %esp, %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [1,2,3,4,1,2,3,4]
+; X86-AVX1-NEXT:    # ymm3 = mem[0,1,0,1]
 ; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm4
-; X86-AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm5, %xmm5
+; X86-AVX1-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
-; X86-AVX1-NEXT:    vpaddd 8(%ebp), %xmm3, %xmm5
-; X86-AVX1-NEXT:    vpaddd 24(%ebp), %xmm3, %xmm3
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
-; X86-AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
-; X86-AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; X86-AVX1-NEXT:    vpaddd 8(%ebp), %xmm3, %xmm4
+; X86-AVX1-NEXT:    vpaddd 24(%ebp), %xmm3, %xmm5
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
+; X86-AVX1-NEXT:    vandps %ymm3, %ymm2, %ymm2
+; X86-AVX1-NEXT:    vandps %ymm3, %ymm4, %ymm3
 ; X86-AVX1-NEXT:    vmovdqu %xmm0, ha4
 ; X86-AVX1-NEXT:    vmovups %ymm1, hb4
 ; X86-AVX1-NEXT:    vmovups %ymm3, hc4+32
@@ -947,13 +947,13 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ; X86-AVX2-NEXT:    movl %esp, %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [1,2,3,4,1,2,3,4]
+; X86-AVX2-NEXT:    # ymm3 = mem[0,1,0,1]
 ; X86-AVX2-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm3
 ; X86-AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpaddd 8(%ebp), %ymm3, %ymm4
 ; X86-AVX2-NEXT:    vpaddd %ymm3, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpaddd 8(%ebp), %ymm3, %ymm4
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm4, %ymm3
 ; X86-AVX2-NEXT:    vmovdqu %xmm0, ha4
@@ -967,12 +967,11 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ;
 ; X86-AVX512-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X86-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm3 = [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
+; X86-AVX512-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X86-AVX512-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm4
-; X86-AVX512-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
-; X86-AVX512-NEXT:    vpand %ymm4, %ymm1, %ymm1
-; X86-AVX512-NEXT:    vshufi32x4 {{.*#+}} zmm3 = zmm3[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X86-AVX512-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; X86-AVX512-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; X86-AVX512-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
 ; X86-AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm2
 ; X86-AVX512-NEXT:    vmovdqu %xmm0, ha4
@@ -983,24 +982,24 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ;
 ; X64-AVX1-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
 ; X64-AVX1:       # %bb.0: # %entry
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,2,3,4]
+; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [1,2,3,4,1,2,3,4]
+; X64-AVX1-NEXT:    # ymm4 = mem[0,1,0,1]
 ; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm5
 ; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm5
-; X64-AVX1-NEXT:    vandps %ymm5, %ymm1, %ymm1
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm6
-; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm6
+; X64-AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm5
 ; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm3, %ymm3
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
-; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm6
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
+; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm5
 ; X64-AVX1-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vandps %ymm5, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vandps %ymm5, %ymm3, %ymm3
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; X64-AVX1-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
 ; X64-AVX1-NEXT:    vmovups %ymm1, {{.*}}(%rip)
 ; X64-AVX1-NEXT:    vmovups %ymm3, hc4+{{.*}}(%rip)
@@ -1010,9 +1009,9 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ;
 ; X64-AVX2-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
 ; X64-AVX2:       # %bb.0: # %entry
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,2,3,4]
+; X64-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm4 = [1,2,3,4,1,2,3,4]
+; X64-AVX2-NEXT:    # ymm4 = mem[0,1,0,1]
 ; X64-AVX2-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm4, %ymm4
 ; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm3, %ymm3
@@ -1028,12 +1027,11 @@ define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <
 ;
 ; X64-AVX512-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,3,4]
+; X64-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm3 = [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
+; X64-AVX512-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm3, %ymm4
-; X64-AVX512-NEXT:    vpaddd %ymm4, %ymm1, %ymm1
-; X64-AVX512-NEXT:    vpand %ymm4, %ymm1, %ymm1
-; X64-AVX512-NEXT:    vshufi32x4 {{.*#+}} zmm3 = zmm3[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; X64-AVX512-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; X64-AVX512-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)

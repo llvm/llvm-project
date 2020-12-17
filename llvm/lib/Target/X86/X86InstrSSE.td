@@ -7016,6 +7016,11 @@ def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
                            Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
 
 let Predicates = [HasAVX, NoVLX] in {
+def : Pat<(v4f64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v8f32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+
 def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
           (VBROADCASTF128 addr:$src)>;
 def : Pat<(v8f32 (X86SubVBroadcast (loadv4f32 addr:$src))),
@@ -7025,6 +7030,15 @@ def : Pat<(v8f32 (X86SubVBroadcast (loadv4f32 addr:$src))),
 // NOTE: We're using FP instructions here, but execution domain fixing can
 // convert to integer when profitable.
 let Predicates = [HasAVX, NoVLX] in {
+def : Pat<(v4i64 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v8i32 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128 addr:$src)>;
+
 def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
           (VBROADCASTF128 addr:$src)>;
 def : Pat<(v8i32 (X86SubVBroadcast (loadv4i32 addr:$src))),
