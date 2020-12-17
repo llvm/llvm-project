@@ -19870,7 +19870,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   }
 
   if (VT == MVT::f128)
-    return LowerF128Call(Op, DAG, RTLIB::getSINTTOFP(SrcVT, VT));
+    return SDValue();
 
   SDValue ValueToStore = Src;
   if (SrcVT == MVT::i64 && Subtarget.hasSSE2() && !Subtarget.is64Bit())
@@ -20311,7 +20311,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
   if (DstVT == MVT::f128)
-    return LowerF128Call(Op, DAG, RTLIB::getUINTTOFP(SrcVT, DstVT));
+    return SDValue();
 
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
@@ -21391,10 +21391,8 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   SDValue In = Op.getOperand(IsStrict ? 1 : 0);
   MVT SVT = In.getSimpleValueType();
 
-  if (VT == MVT::f128) {
-    RTLIB::Libcall LC = RTLIB::getFPEXT(SVT, VT);
-    return LowerF128Call(Op, DAG, LC);
-  }
+  if (VT == MVT::f128)
+    return SDValue();
 
   assert(SVT == MVT::v2f32 && "Only customize MVT::v2f32 type legalization!");
 
@@ -21408,31 +21406,12 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
-
-  MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(IsStrict ? 1 : 0);
-  MVT SVT = In.getSimpleValueType();
-
   // It's legal except when f128 is involved
-  if (SVT != MVT::f128)
+  if (In.getSimpleValueType() != MVT::f128)
     return Op;
 
-  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, VT);
-
-  // FP_ROUND node has a second operand indicating whether it is known to be
-  // precise. That doesn't take part in the LibCall so we can't directly use
-  // LowerF128Call.
-
-  SDLoc dl(Op);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  MakeLibCallOptions CallOptions;
-  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, LC, VT, In, CallOptions,
-                                                dl, Chain);
-
-  if (IsStrict)
-    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
-
-  return Tmp.first;
+  return SDValue();
 }
 
 static SDValue LowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) {
@@ -29717,25 +29696,6 @@ SDValue X86TargetLowering::LowerGC_TRANSITION(SDValue Op,
   SDValue NOOP(DAG.getMachineNode(X86::NOOP, SDLoc(Op), VTs, Ops), 0);
 
   return NOOP;
-}
-
-SDValue X86TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
-                                         RTLIB::Libcall Call) const {
-
-  bool IsStrict = Op->isStrictFPOpcode();
-  unsigned Offset = IsStrict ? 1 : 0;
-  SmallVector<SDValue, 2> Ops(Op->op_begin() + Offset, Op->op_end());
-
-  SDLoc dl(Op);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  MakeLibCallOptions CallOptions;
-  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, Call, MVT::f128, Ops,
-                                                CallOptions, dl, Chain);
-
-  if (IsStrict)
-    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
-
-  return Tmp.first;
 }
 
 // Custom split CVTPS2PH with wide types.

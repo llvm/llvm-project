@@ -610,6 +610,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
   setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
 
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
+
   if (Subtarget.has64BitSupport()) {
     // They also have instructions for converting between i64 and fp.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
@@ -1184,8 +1187,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType(ISD::LOAD, MVT::f128, MVT::v4i32);
       AddPromotedToType(ISD::STORE, MVT::f128, MVT::v4i32);
 
-      setOperationAction(ISD::FADD, MVT::f128, Expand);
-      setOperationAction(ISD::FSUB, MVT::f128, Expand);
+      // Set FADD/FSUB as libcall to avoid the legalizer to expand the
+      // fp_to_uint and int_to_fp.
+      setOperationAction(ISD::FADD, MVT::f128, LibCall);
+      setOperationAction(ISD::FSUB, MVT::f128, LibCall);
+
       setOperationAction(ISD::FMUL, MVT::f128, Expand);
       setOperationAction(ISD::FDIV, MVT::f128, Expand);
       setOperationAction(ISD::FNEG, MVT::f128, Expand);
@@ -1198,6 +1204,19 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FSQRT, MVT::f128, Expand);
       setOperationAction(ISD::FMA, MVT::f128, Expand);
       setOperationAction(ISD::FCOPYSIGN, MVT::f128, Expand);
+
+      setTruncStoreAction(MVT::f128, MVT::f64, Expand);
+      setTruncStoreAction(MVT::f128, MVT::f32, Expand);
+
+      // Expand the fp_extend if the target type is fp128.
+      setOperationAction(ISD::FP_EXTEND, MVT::f128, Expand);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f128, Expand);
+
+      // Expand the fp_round if the source type is fp128.
+      for (MVT VT : {MVT::f32, MVT::f64}) {
+        setOperationAction(ISD::FP_ROUND, VT, Custom);
+        setOperationAction(ISD::STRICT_FP_ROUND, VT, Custom);
+      }
     }
 
     if (Subtarget.hasP9Altivec()) {
@@ -8381,7 +8400,7 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
 
   // FP to INT conversions are legal for f128.
   if (SrcVT == MVT::f128)
-    return Op;
+    return Subtarget.hasP9Vector() ? Op : SDValue();
 
   // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
   // PPC (the libcall is not available).
@@ -8734,7 +8753,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
   // Conversions to f128 are legal.
   if (Op.getValueType() == MVT::f128)
-    return Op;
+    return Subtarget.hasP9Vector() ? Op : SDValue();
 
   // Don't handle ppc_fp128 here; let it be lowered to a libcall.
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
@@ -10950,6 +10969,15 @@ SDValue PPCTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
+SDValue PPCTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
+  bool IsStrict = Op->isStrictFPOpcode();
+  if (Op.getOperand(IsStrict ? 1 : 0).getValueType() == MVT::f128 &&
+      !Subtarget.hasP9Vector())
+    return SDValue();
+
+  return Op;
+}
+
 // Custom lowering for fpext vf32 to v2f64
 SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
@@ -11086,6 +11114,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INSERT_VECTOR_ELT:  return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::MUL:                return LowerMUL(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
+  case ISD::STRICT_FP_ROUND:
+  case ISD::FP_ROUND:
+    return LowerFP_ROUND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
   // For counter-based loop handling.
