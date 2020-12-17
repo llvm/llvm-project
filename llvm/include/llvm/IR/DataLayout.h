@@ -388,7 +388,7 @@ public:
 
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
     ArrayRef<unsigned> NonIntegralSpaces = getNonIntegralAddressSpaces();
-    return find(NonIntegralSpaces, AddrSpace) != NonIntegralSpaces.end();
+    return is_contained(NonIntegralSpaces, AddrSpace);
   }
 
   bool isNonIntegralPointerType(PointerType *PT) const {
