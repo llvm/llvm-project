@@ -303,8 +303,9 @@ NativeRegisterContextFreeBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
   }
 }
 
-llvm::Optional<enum NativeRegisterContextFreeBSD_x86_64::RegSetKind>
-NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
+llvm::Optional<NativeRegisterContextFreeBSD_x86_64::RegSetKind>
+NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
+    uint32_t reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     if (reg_num >= k_first_gpr_i386 && reg_num <= k_last_gpr_i386)
@@ -341,7 +342,7 @@ NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
   llvm_unreachable("Register does not belong to any register set");
 }
 
-Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
+Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(RegSetKind set) {
   switch (set) {
   case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
@@ -382,7 +383,7 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
   llvm_unreachable("NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet");
 }
 
-Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
+Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(RegSetKind set) {
   switch (set) {
   case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
@@ -428,7 +429,7 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  llvm::Optional<enum RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  llvm::Optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
@@ -437,7 +438,7 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  enum RegSetKind set = opt_set.getValue();
+  RegSetKind set = opt_set.getValue();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -494,7 +495,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     return error;
   }
 
-  llvm::Optional<enum RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  llvm::Optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
@@ -503,7 +504,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     return error;
   }
 
-  enum RegSetKind set = opt_set.getValue();
+  RegSetKind set = opt_set.getValue();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -610,7 +611,7 @@ llvm::Error NativeRegisterContextFreeBSD_x86_64::CopyHardwareWatchpointsFrom(
 }
 
 uint8_t *
-NativeRegisterContextFreeBSD_x86_64::GetOffsetRegSetData(uint32_t set,
+NativeRegisterContextFreeBSD_x86_64::GetOffsetRegSetData(RegSetKind set,
                                                          size_t reg_offset) {
   uint8_t *base;
   switch (set) {
@@ -625,6 +626,8 @@ NativeRegisterContextFreeBSD_x86_64::GetOffsetRegSetData(uint32_t set,
     break;
   case YMMRegSet:
     llvm_unreachable("GetRegSetData() is unsuitable for this regset.");
+  case MPXRegSet:
+    llvm_unreachable("MPX regset should have returned error");
   }
   assert(reg_offset >= m_regset_offsets[set]);
   return base + (reg_offset - m_regset_offsets[set]);
