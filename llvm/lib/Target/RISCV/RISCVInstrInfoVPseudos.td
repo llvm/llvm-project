@@ -700,6 +700,44 @@ class VPatBinaryMask<string intrinsic_name,
                    ToFPR32<op2_type, op2_kind, "rs2">.ret,
                    (mask_type V0), (NoX0 GPR:$vl), sew)>;
 
+multiclass VPatUSLoad<string intrinsic,
+                      string inst,
+                      LLVMType type,
+                      LLVMType mask_type,
+                      int sew,
+                      LMULInfo vlmul,
+                      VReg reg_class>
+{
+    defvar Intr = !cast<Intrinsic>(intrinsic);
+    defvar Pseudo = !cast<Instruction>(inst#"_V_"#vlmul.MX);
+    def : Pat<(type (Intr GPR:$rs1, GPR:$vl)),
+                    (Pseudo $rs1, (NoX0 GPR:$vl), sew)>;
+    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
+    defvar PseudoMask = !cast<Instruction>(inst#"_V_"#vlmul.MX#"_MASK");
+    def : Pat<(type (IntrMask (type GetVRegNoV0<reg_class>.R:$merge),
+                               GPR:$rs1, (mask_type V0), GPR:$vl)),
+                    (PseudoMask $merge,
+                                $rs1, (mask_type V0), (NoX0 GPR:$vl), sew)>;
+}
+
+multiclass VPatUSStore<string intrinsic,
+                       string inst,
+                       LLVMType type,
+                       LLVMType mask_type,
+                       int sew,
+                       LMULInfo vlmul,
+                       VReg reg_class>
+{
+    defvar Intr = !cast<Intrinsic>(intrinsic);
+    defvar Pseudo = !cast<Instruction>(inst#"_V_"#vlmul.MX);
+    def : Pat<(Intr (type reg_class:$rs3), GPR:$rs1, GPR:$vl),
+                    (Pseudo $rs3, $rs1, (NoX0 GPR:$vl), sew)>;
+    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
+    defvar PseudoMask = !cast<Instruction>(inst#"_V_"#vlmul.MX#"_MASK");
+    def : Pat<(IntrMask (type reg_class:$rs3), GPR:$rs1, (mask_type V0), GPR:$vl),
+              (PseudoMask $rs3, $rs1, (mask_type V0), (NoX0 GPR:$vl), sew)>;
+}
+
 multiclass VPatBinary<string intrinsic,
                       string inst,
                       string kind,
@@ -1033,6 +1071,10 @@ def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>
 // 7. Vector Loads and Stores
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// 7.4 Vector Unit-Stride Instructions
+//===----------------------------------------------------------------------===//
+
 // Pseudos Unit-Stride Loads and Stores
 foreach eew = EEWList in {
   defm PseudoVLE # eew : VPseudoUSLoad;
@@ -1123,6 +1165,24 @@ defm "" : VPatUSLoadStoreSDNodes<AddrFI>;
 
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinarySDNode<add, "PseudoVADD">;
+
+//===----------------------------------------------------------------------===//
+// 7. Vector Loads and Stores
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// 7.4 Vector Unit-Stride Instructions
+//===----------------------------------------------------------------------===//
+
+foreach vti = AllVectors in
+{
+  defm : VPatUSLoad<"int_riscv_vle",
+                    "PseudoVLE" # vti.SEW,
+                    vti.Vector, vti.Mask, vti.SEW, vti.LMul, vti.RegClass>;
+  defm : VPatUSStore<"int_riscv_vse",
+                     "PseudoVSE" # vti.SEW,
+                     vti.Vector, vti.Mask, vti.SEW, vti.LMul, vti.RegClass>;
+}
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions

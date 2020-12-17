@@ -1224,3 +1224,27 @@ OMP_LAST_TRAIT_PROPERTY(
 #undef __OMP_REQUIRES_TRAIT
 #undef OMP_REQUIRES_TRAIT
 ///}
+
+
+/// Assumption clauses
+///
+///{
+
+#ifdef OMP_ASSUME_CLAUSE
+#define __OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList, HasExpression) \
+OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList, HasExpression)
+#else
+#define __OMP_ASSUME_CLAUSE(...)
+#endif
+
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("ext_"), true, false, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("absent"), false, true, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("contains"), false, true, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("holds"), false, false, true)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_openmp"), false, false, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_openmp_routines"), false, false, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_parallelism"), false, false, false)
+
+#undef __OMP_ASSUME_CLAUSE
+#undef OMP_ASSUME_CLAUSE
+///}

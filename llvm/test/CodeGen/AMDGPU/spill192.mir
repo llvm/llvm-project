@@ -30,7 +30,7 @@ body: |
   ; EXPANDED:   successors: %bb.1(0x80000000)
   ; EXPANDED:   liveins: $vgpr0
   ; EXPANDED:   S_NOP 0, implicit-def renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
-  ; EXPANDED:   $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, undef $vgpr0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+  ; EXPANDED:   $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, $vgpr0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
   ; EXPANDED:   $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
   ; EXPANDED:   $vgpr0 = V_WRITELANE_B32 $sgpr6, 2, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
   ; EXPANDED:   $vgpr0 = V_WRITELANE_B32 $sgpr7, 3, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
