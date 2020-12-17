@@ -124,7 +124,7 @@ let TargetPrefix = "riscv" in {
   class RISCVBinaryAAXMask
        : Intrinsic<[llvm_anyvector_ty],
                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
-                    llvm_anyvector_ty, llvm_anyint_ty],
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                    [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
@@ -141,7 +141,7 @@ let TargetPrefix = "riscv" in {
   class RISCVBinaryABXMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
-                     llvm_anyvector_ty, llvm_anyint_ty],
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
@@ -149,7 +149,8 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, vector_in/scalar_in, V0, vl)
   class RISCVBinaryWithV0
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
+                    [LLVMMatchType<0>, llvm_any_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
@@ -158,8 +159,9 @@ let TargetPrefix = "riscv" in {
   // Output: (mask type output)
   // Input: (vector_in, vector_in/scalar_in, V0, vl)
   class RISCVBinaryMOutWithV0
-        :Intrinsic<[llvm_anyvector_ty],
-                   [llvm_anyvector_ty, llvm_any_ty, LLVMMatchType<0>,
+        :Intrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                   [llvm_anyvector_ty, llvm_any_ty,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                     llvm_anyint_ty],
                    [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
@@ -168,7 +170,7 @@ let TargetPrefix = "riscv" in {
   // Output: (mask type output)
   // Input: (vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryMOut
-        : Intrinsic<[llvm_anyvector_ty],
+        : Intrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                     [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
