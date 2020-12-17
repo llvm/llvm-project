@@ -17,54 +17,43 @@ using namespace mlir;
 /// Include the definitions of the loop-like interfaces.
 #include "mlir/Interfaces/ViewLikeInterface.cpp.inc"
 
-static LogicalResult verifyOpWithOffsetSizesAndStridesPart(
-    OffsetSizeAndStrideOpInterface op, StringRef name,
-    unsigned expectedNumElements, StringRef attrName, ArrayAttr attr,
-    llvm::function_ref<bool(int64_t)> isDynamic, ValueRange values) {
+LogicalResult mlir::verifyListOfOperandsOrIntegers(
+    Operation *op, StringRef name, unsigned expectedNumElements, ArrayAttr attr,
+    ValueRange values, llvm::function_ref<bool(int64_t)> isDynamic) {
   /// Check static and dynamic offsets/sizes/strides breakdown.
   if (attr.size() != expectedNumElements)
-    return op.emitError("expected ")
+    return op->emitError("expected ")
            << expectedNumElements << " " << name << " values";
   unsigned expectedNumDynamicEntries =
       llvm::count_if(attr.getValue(), [&](Attribute attr) {
         return isDynamic(attr.cast<IntegerAttr>().getInt());
       });
   if (values.size() != expectedNumDynamicEntries)
-    return op.emitError("expected ")
+    return op->emitError("expected ")
            << expectedNumDynamicEntries << " dynamic " << name << " values";
   return success();
 }
 
 LogicalResult mlir::verify(OffsetSizeAndStrideOpInterface op) {
   std::array<unsigned, 3> ranks = op.getArrayAttrRanks();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "offset", ranks[0],
-          OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
-          op.static_offsets(), ShapedType::isDynamicStrideOrOffset,
-          op.offsets())))
+  if (failed(verifyListOfOperandsOrIntegers(
+          op, "offset", ranks[0], op.static_offsets(), op.offsets(),
+          ShapedType::isDynamicStrideOrOffset)))
     return failure();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "size", ranks[1],
-          OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
-          op.static_sizes(), ShapedType::isDynamic, op.sizes())))
+  if (failed(verifyListOfOperandsOrIntegers(op, "size", ranks[1],
+                                            op.static_sizes(), op.sizes(),
+                                            ShapedType::isDynamic)))
     return failure();
-  if (failed(verifyOpWithOffsetSizesAndStridesPart(
-          op, "stride", ranks[2],
-          OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
-          op.static_strides(), ShapedType::isDynamicStrideOrOffset,
-          op.strides())))
+  if (failed(verifyListOfOperandsOrIntegers(
+          op, "stride", ranks[2], op.static_strides(), op.strides(),
+          ShapedType::isDynamicStrideOrOffset)))
     return failure();
   return success();
 }
 
-/// Print a list with either (1) the static integer value in `arrayAttr` if
-/// `isDynamic` evaluates to false or (2) the next value otherwise.
-/// This allows idiomatic printing of mixed value and integer attributes in a
-/// list. E.g. `[%arg0, 7, 42, %arg42]`.
-static void
-printListOfOperandsOrIntegers(OpAsmPrinter &p, ValueRange values,
-                              ArrayAttr arrayAttr,
-                              llvm::function_ref<bool(int64_t)> isDynamic) {
+void mlir::printListOfOperandsOrIntegers(
+    OpAsmPrinter &p, ValueRange values, ArrayAttr arrayAttr,
+    llvm::function_ref<bool(int64_t)> isDynamic) {
   p << '[';
   unsigned idx = 0;
   llvm::interleaveComma(arrayAttr, p, [&](Attribute a) {
@@ -95,18 +84,9 @@ void mlir::printOffsetsSizesAndStrides(OpAsmPrinter &p,
   p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
 }
 
-/// Parse a mixed list with either (1) static integer values or (2) SSA values.
-/// Fill `result` with the integer ArrayAttr named `attrName` where `dynVal`
-/// encode the position of SSA values. Add the parsed SSA values to `ssa`
-/// in-order.
-//
-/// E.g. after parsing "[%arg0, 7, 42, %arg42]":
-///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
-///   2. `ssa` is filled with "[%arg0, %arg1]".
-static ParseResult
-parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
-                              StringRef attrName, int64_t dynVal,
-                              SmallVectorImpl<OpAsmParser::OperandType> &ssa) {
+ParseResult mlir::parseListOfOperandsOrIntegers(
+    OpAsmParser &parser, OperationState &result, StringRef attrName,
+    int64_t dynVal, SmallVectorImpl<OpAsmParser::OperandType> &ssa) {
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.

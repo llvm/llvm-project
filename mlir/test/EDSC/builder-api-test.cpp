@@ -56,7 +56,7 @@ static FuncOp makeFunction(StringRef name, ArrayRef<Type> results = {},
                            ArrayRef<Type> args = {}) {
   auto &ctx = globalContext();
   auto function = FuncOp::create(UnknownLoc::get(&ctx), name,
-                                 FunctionType::get(args, results, &ctx));
+                                 FunctionType::get(&ctx, args, results));
   function.addEntryBlock();
   return function;
 }
@@ -277,7 +277,7 @@ TEST_FUNC(builder_blocks) {
 
 TEST_FUNC(builder_cond_branch) {
   auto f = makeFunction("builder_cond_branch", {},
-                        {IntegerType::get(1, &globalContext())});
+                        {IntegerType::get(&globalContext(), 1)});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
@@ -390,8 +390,8 @@ TEST_FUNC(insertion_in_block) {
 
 TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
   using namespace edsc::op;
-  auto i1Type = IntegerType::get(1, &globalContext());
-  auto i8Type = IntegerType::get(8, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), 1);
+  auto i8Type = IntegerType::get(&globalContext(), 8);
   auto memrefType = MemRefType::get({}, i1Type, {}, 0);
   auto f = makeFunction("zero_and_std_sign_extendi_op", {},
                         {memrefType, memrefType});
@@ -414,7 +414,7 @@ TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
 }
 
 TEST_FUNC(operator_or) {
-  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), /*width=*/1);
   auto f = makeFunction("operator_or", {}, {i1Type, i1Type});
 
   OpBuilder builder(f.getBody());
@@ -435,7 +435,7 @@ TEST_FUNC(operator_or) {
 }
 
 TEST_FUNC(operator_and) {
-  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), /*width=*/1);
   auto f = makeFunction("operator_and", {}, {i1Type, i1Type});
 
   OpBuilder builder(f.getBody());
@@ -536,7 +536,7 @@ TEST_FUNC(fptrunc_f32_bf16) {
 
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
-  auto i32Type = IntegerType::get(32, &globalContext());
+  auto i32Type = IntegerType::get(&globalContext(), 32);
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, i32Type, {}, 0);
   auto f = makeFunction("select_op", {}, {memrefType});

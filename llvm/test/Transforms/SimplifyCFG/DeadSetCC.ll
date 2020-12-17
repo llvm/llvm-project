@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | \
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | \
 ; RUN:   not grep "icmp eq"
 
 ; Check that simplifycfg deletes a dead 'seteq' instruction when it

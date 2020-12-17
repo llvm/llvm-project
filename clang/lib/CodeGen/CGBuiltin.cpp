@@ -1832,6 +1832,47 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   return RValue::get(BufAddr.getPointer());
 }
 
+static bool isSpecialUnsignedMultiplySignedResult(
+    unsigned BuiltinID, WidthAndSignedness Op1Info, WidthAndSignedness Op2Info,
+    WidthAndSignedness ResultInfo) {
+  return BuiltinID == Builtin::BI__builtin_mul_overflow &&
+         Op1Info.Width == Op2Info.Width && Op2Info.Width == ResultInfo.Width &&
+         !Op1Info.Signed && !Op2Info.Signed && ResultInfo.Signed;
+}
+
+static RValue EmitCheckedUnsignedMultiplySignedResult(
+    CodeGenFunction &CGF, const clang::Expr *Op1, WidthAndSignedness Op1Info,
+    const clang::Expr *Op2, WidthAndSignedness Op2Info,
+    const clang::Expr *ResultArg, QualType ResultQTy,
+    WidthAndSignedness ResultInfo) {
+  assert(isSpecialUnsignedMultiplySignedResult(
+             Builtin::BI__builtin_mul_overflow, Op1Info, Op2Info, ResultInfo) &&
+         "Cannot specialize this multiply");
+
+  llvm::Value *V1 = CGF.EmitScalarExpr(Op1);
+  llvm::Value *V2 = CGF.EmitScalarExpr(Op2);
+
+  llvm::Value *HasOverflow;
+  llvm::Value *Result = EmitOverflowIntrinsic(
+      CGF, llvm::Intrinsic::umul_with_overflow, V1, V2, HasOverflow);
+
+  // The intrinsic call will detect overflow when the value is > UINT_MAX,
+  // however, since the original builtin had a signed result, we need to report
+  // an overflow when the result is greater than INT_MAX.
+  auto IntMax = llvm::APInt::getSignedMaxValue(ResultInfo.Width);
+  llvm::Value *IntMaxValue = llvm::ConstantInt::get(Result->getType(), IntMax);
+
+  llvm::Value *IntMaxOverflow = CGF.Builder.CreateICmpUGT(Result, IntMaxValue);
+  HasOverflow = CGF.Builder.CreateOr(HasOverflow, IntMaxOverflow);
+
+  bool isVolatile =
+      ResultArg->getType()->getPointeeType().isVolatileQualified();
+  Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
+  CGF.Builder.CreateStore(CGF.EmitToMemory(Result, ResultQTy), ResultPtr,
+                          isVolatile);
+  return RValue::get(HasOverflow);
+}
+
 /// Determine if a binop is a checked mixed-sign multiply we can specialize.
 static bool isSpecialMixedSignMultiply(unsigned BuiltinID,
                                        WidthAndSignedness Op1Info,
@@ -3951,6 +3992,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return EmitCheckedMixedSignMultiply(*this, LeftArg, LeftInfo, RightArg,
                                           RightInfo, ResultArg, ResultQTy,
                                           ResultInfo);
+
+    if (isSpecialUnsignedMultiplySignedResult(BuiltinID, LeftInfo, RightInfo,
+                                              ResultInfo))
+      return EmitCheckedUnsignedMultiplySignedResult(
+          *this, LeftArg, LeftInfo, RightArg, RightInfo, ResultArg, ResultQTy,
+          ResultInfo);
 
     WidthAndSignedness EncompassingInfo =
         EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});

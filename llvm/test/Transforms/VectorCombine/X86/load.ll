@@ -299,6 +299,51 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref_minalign(<8 x i16>* align 2 
   ret <8 x i16> %r
 }
 
+define <4 x i32> @gep01_bitcast_load_i32_insert_v4i32(<16 x i8>* align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i32_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[GEP]] to i32*
+; CHECK-NEXT:    [[S:%.*]] = load i32, i32* [[B]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i64 0, i64 1
+  %b = bitcast i8* %gep to i32*
+  %s = load i32, i32* %b, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(<16 x i8>* align 1 dereferenceable(20) %p) {
+; CHECK-LABEL: @gep012_bitcast_load_i32_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[P:%.*]], i64 0, i64 12
+; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[GEP]] to i32*
+; CHECK-NEXT:    [[S:%.*]] = load i32, i32* [[B]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i64 0, i64 12
+  %b = bitcast i8* %gep to i32*
+  %s = load i32, i32* %b, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(<16 x i8>* align 1 dereferenceable(20) %p) {
+; CHECK-LABEL: @gep013_bitcast_load_i32_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[P:%.*]], i64 0, i64 13
+; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[GEP]] to i32*
+; CHECK-NEXT:    [[S:%.*]] = load i32, i32* [[B]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i64 0, i64 13
+  %b = bitcast i8* %gep to i32*
+  %s = load i32, i32* %b, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep10_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(32) %p) {

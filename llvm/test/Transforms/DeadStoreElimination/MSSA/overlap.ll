@@ -96,3 +96,36 @@ else:
   load i8, i8* %a1
   ret void
 }
+
+; Variation on the previous test case, where only the store to %a0 is dead,
+; but not the one to %a1. This tests for a potential caching bug.
+define void @test4(i1 %c) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    [[A0:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 0
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 1
+; CHECK-NEXT:    store i8 1, i8* [[A1]], align 1
+; CHECK-NEXT:    store i8 1, i8* [[A0]], align 1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    store [2 x i8] zeroinitializer, [2 x i8]* [[A]], align 1
+; CHECK-NEXT:    br label [[ELSE]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[A1]], align 1
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [2 x i8]
+  %a0 = getelementptr [2 x i8], [2 x i8]* %a, i32 0, i32 0
+  %a1 = getelementptr [2 x i8], [2 x i8]* %a, i32 0, i32 1
+  store i8 1, i8* %a1
+  store i8 1, i8* %a0
+  br i1 %c, label %if, label %else
+
+if:
+  store [2 x i8] zeroinitializer, [2 x i8]* %a
+  br label %else
+
+else:
+  load i8, i8* %a1
+  ret void
+}

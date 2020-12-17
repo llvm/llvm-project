@@ -215,7 +215,7 @@ static TupleType generateExtractSlicesOpResultType(VectorType vectorType,
     // Create Vector type and add to 'vectorTypes[i]'.
     vectorTypes[i] = VectorType::get(sliceSizes, vectorType.getElementType());
   }
-  return TupleType::get(vectorTypes, builder.getContext());
+  return builder.getTupleType(vectorTypes);
 }
 
 // UnrolledVectorState aggregates per-operand/result vector state required for

@@ -2176,7 +2176,7 @@ def fir_DispatchOp : fir_Op<"dispatch",
     p.printOptionalAttrDict(getAttrs(), {"fn_type", "method"});
     auto resTy{getResultTypes()};
     llvm::SmallVector<mlir::Type, 8> argTy(getOperandTypes());
-    p << " : " << mlir::FunctionType::get(argTy, resTy, getContext());
+    p << " : " << mlir::FunctionType::get(getContext(), argTy, resTy);
   }];
 
   let extraClassDeclaration = [{

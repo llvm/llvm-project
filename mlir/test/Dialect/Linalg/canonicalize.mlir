@@ -351,3 +351,42 @@ func @linalg_effects(%a : tensor<?x?xf32>, %b : memref<?x?xf32>, %c : tensor<?x?
                outs(%b : memref<?x?xf32>)
   return
 }
+// -----
+
+func @init_tensor_canonicalize() -> (tensor<4x5x?xf32>) {
+  %c6 = constant 6 : index
+  %0 = linalg.init_tensor [4, 5, %c6] : tensor<4x5x?xf32>
+  return %0 : tensor<4x5x?xf32>
+}
+// CHECK: func @init_tensor_canonicalize
+// CHECK:   %[[T0:.+]] = linalg.init_tensor [4, 5, 6] : tensor<4x5x6xf32>
+// CHECK:   %[[T1:.+]] = tensor_cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
+// CHECK:   return %[[T1]]
+
+// -----
+
+func @init_tensor_static_dim() -> (index, index) {
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c6 = constant 6 : index
+  %0 = linalg.init_tensor [4, 5, %c6] : tensor<4x5x?xf32>
+  %1 = dim %0, %c2 : tensor<4x5x?xf32>
+  %2 = dim %0, %c0 : tensor<4x5x?xf32>
+  return %1, %2 : index, index
+}
+//      CHECK: func @init_tensor_static_dim
+//  CHECK-DAG:   %[[C4:.+]] = constant 4 : index
+//  CHECK-DAG:   %[[C6:.+]] = constant 6 : index
+//      CHECK:   return %[[C6]], %[[C4]]
+
+// -----
+
+func @init_tensor_dynamic_dim(%arg0 : index) -> (index) {
+  %c2 = constant 2 : index
+  %0 = linalg.init_tensor [4, 5, %arg0] : tensor<4x5x?xf32>
+  %1 = dim %0, %c2 : tensor<4x5x?xf32>
+  return %1 : index
+}
+//      CHECK: func @init_tensor_dynamic_dim
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
+//      CHECK:   return %[[ARG0]]

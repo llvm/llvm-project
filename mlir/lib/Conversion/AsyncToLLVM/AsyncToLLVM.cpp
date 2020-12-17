@@ -53,52 +53,52 @@ namespace {
 struct AsyncAPI {
   static FunctionType addOrDropRefFunctionType(MLIRContext *ctx) {
     auto ref = LLVM::LLVMType::getInt8PtrTy(ctx);
-    auto count = IntegerType::get(32, ctx);
-    return FunctionType::get({ref, count}, {}, ctx);
+    auto count = IntegerType::get(ctx, 32);
+    return FunctionType::get(ctx, {ref, count}, {});
   }
 
   static FunctionType createTokenFunctionType(MLIRContext *ctx) {
-    return FunctionType::get({}, {TokenType::get(ctx)}, ctx);
+    return FunctionType::get(ctx, {}, {TokenType::get(ctx)});
   }
 
   static FunctionType createGroupFunctionType(MLIRContext *ctx) {
-    return FunctionType::get({}, {GroupType::get(ctx)}, ctx);
+    return FunctionType::get(ctx, {}, {GroupType::get(ctx)});
   }
 
   static FunctionType emplaceTokenFunctionType(MLIRContext *ctx) {
-    return FunctionType::get({TokenType::get(ctx)}, {}, ctx);
+    return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
 
   static FunctionType awaitTokenFunctionType(MLIRContext *ctx) {
-    return FunctionType::get({TokenType::get(ctx)}, {}, ctx);
+    return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
 
   static FunctionType awaitGroupFunctionType(MLIRContext *ctx) {
-    return FunctionType::get({GroupType::get(ctx)}, {}, ctx);
+    return FunctionType::get(ctx, {GroupType::get(ctx)}, {});
   }
 
   static FunctionType executeFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
     auto resume = resumeFunctionType(ctx).getPointerTo();
-    return FunctionType::get({hdl, resume}, {}, ctx);
+    return FunctionType::get(ctx, {hdl, resume}, {});
   }
 
   static FunctionType addTokenToGroupFunctionType(MLIRContext *ctx) {
-    auto i64 = IntegerType::get(64, ctx);
-    return FunctionType::get({TokenType::get(ctx), GroupType::get(ctx)}, {i64},
-                             ctx);
+    auto i64 = IntegerType::get(ctx, 64);
+    return FunctionType::get(ctx, {TokenType::get(ctx), GroupType::get(ctx)},
+                             {i64});
   }
 
   static FunctionType awaitAndExecuteFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
     auto resume = resumeFunctionType(ctx).getPointerTo();
-    return FunctionType::get({TokenType::get(ctx), hdl, resume}, {}, ctx);
+    return FunctionType::get(ctx, {TokenType::get(ctx), hdl, resume}, {});
   }
 
   static FunctionType awaitAllAndExecuteFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
     auto resume = resumeFunctionType(ctx).getPointerTo();
-    return FunctionType::get({GroupType::get(ctx), hdl, resume}, {}, ctx);
+    return FunctionType::get(ctx, {GroupType::get(ctx), hdl, resume}, {});
   }
 
   // Auxiliary coroutine resume intrinsic wrapper.
@@ -690,7 +690,7 @@ public:
     if (!addToGroup.operand().getType().isa<TokenType>())
       return failure();
 
-    auto i64 = IntegerType::get(64, op->getContext());
+    auto i64 = IntegerType::get(op->getContext(), 64);
     rewriter.replaceOpWithNewOp<CallOp>(op, kAddTokenToGroup, i64, operands);
     return success();
   }
