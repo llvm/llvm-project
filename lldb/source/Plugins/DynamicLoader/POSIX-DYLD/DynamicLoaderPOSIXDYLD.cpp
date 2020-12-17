@@ -76,7 +76,8 @@ DynamicLoaderPOSIXDYLD::DynamicLoaderPOSIXDYLD(Process *process)
       m_load_offset(LLDB_INVALID_ADDRESS), m_entry_point(LLDB_INVALID_ADDRESS),
       m_auxv(), m_dyld_bid(LLDB_INVALID_BREAK_ID),
       m_vdso_base(LLDB_INVALID_ADDRESS),
-      m_interpreter_base(LLDB_INVALID_ADDRESS) {}
+      m_interpreter_base(LLDB_INVALID_ADDRESS), m_initial_modules_added(false) {
+}
 
 DynamicLoaderPOSIXDYLD::~DynamicLoaderPOSIXDYLD() {
   if (m_dyld_bid != LLDB_INVALID_BREAK_ID) {
@@ -101,6 +102,7 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
 
   ModuleSP executable_sp = GetTargetExecutable();
   ResolveExecutableModule(executable_sp);
+  m_rendezvous.UpdateExecutablePath();
 
   // find the main process load offset
   addr_t load_offset = ComputeLoadOffset();
@@ -418,14 +420,38 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
 
   ModuleList &loaded_modules = m_process->GetTarget().GetImages();
 
-  if (m_rendezvous.ModulesDidLoad()) {
+  if (m_rendezvous.ModulesDidLoad() || !m_initial_modules_added) {
     ModuleList new_modules;
 
-    E = m_rendezvous.loaded_end();
-    for (I = m_rendezvous.loaded_begin(); I != E; ++I) {
+    // If this is the first time rendezvous breakpoint fires, we need
+    // to take care of adding all the initial modules reported by
+    // the loader.  This is necessary to list ld-linux.so on Linux,
+    // and all DT_NEEDED entries on *BSD.
+    if (m_initial_modules_added) {
+      I = m_rendezvous.loaded_begin();
+      E = m_rendezvous.loaded_end();
+    } else {
+      I = m_rendezvous.begin();
+      E = m_rendezvous.end();
+      m_initial_modules_added = true;
+    }
+    for (; I != E; ++I) {
       ModuleSP module_sp =
           LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
       if (module_sp.get()) {
+        if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
+                &m_process->GetTarget()) == m_interpreter_base &&
+            module_sp != m_interpreter_module.lock()) {
+          // If this is a duplicate instance of ld.so, unload it.  We may end up
+          // with it if we load it via a different path than before (symlink
+          // vs real path).
+          // TODO: remove this once we either fix library matching or avoid
+          // loading the interpreter when setting the rendezvous breakpoint.
+          UnloadSections(module_sp);
+          loaded_modules.Remove(module_sp);
+          continue;
+        }
+
         loaded_modules.AppendIfNeeded(module_sp);
         new_modules.Append(module_sp);
       }
@@ -544,6 +570,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
                                                     true /* notify */)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);
+    m_interpreter_module = module_sp;
     return module_sp;
   }
   return nullptr;

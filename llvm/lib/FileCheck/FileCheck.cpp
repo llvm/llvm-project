@@ -1004,7 +1004,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
       // Parse string variable or legacy @LINE expression.
       if (!IsNumBlock) {
-        size_t VarEndIdx = MatchStr.find(":");
+        size_t VarEndIdx = MatchStr.find(':');
         size_t SpacePos = MatchStr.substr(0, VarEndIdx).find_first_of(" \t");
         if (SpacePos != StringRef::npos) {
           SM.PrintMessage(SMLoc::getFromPointer(MatchStr.data() + SpacePos),
