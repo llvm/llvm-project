@@ -144,9 +144,9 @@ public:
     }
   }
 
-  std::string getName() const { return Name; }
+  const std::string &getName() const { return Name; }
 
-  std::string getFilterClass() const { return FilterClass; }
+  const std::string &getFilterClass() const { return FilterClass; }
 
   ListInit *getRowFields() const { return RowFields; }
 
@@ -190,7 +190,7 @@ private:
 public:
   MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec):
                   Target(Target), InstrMapDesc(IMRec) {
-    const std::string FilterClass = InstrMapDesc.getFilterClass();
+    const std::string &FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
 
