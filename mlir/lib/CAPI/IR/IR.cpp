@@ -116,6 +116,10 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
       FileLineColLoc::get(unwrap(filename), line, col, unwrap(context)));
 }
 
+MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
+  return wrap(CallSiteLoc::get(unwrap(callee), unwrap(caller)));
+}
+
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
 }
