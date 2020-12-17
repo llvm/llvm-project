@@ -92,7 +92,8 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[llvm_anyvector_ty ],
                     [LLVMMatchType<0>,
                      LLVMPointerType<LLVMMatchType<0>>,
-                     llvm_anyvector_ty, llvm_anyint_ty],
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic;
   // For unit stride store
   // Input: (vector_in, pointer, vl)
@@ -108,7 +109,8 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[],
                     [llvm_anyvector_ty,
                      LLVMPointerType<LLVMMatchType<0>>,
-                     llvm_anyvector_ty, llvm_anyint_ty],
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first source vector.
   // Input: (vector_in, vector_in/scalar_in, vl)
