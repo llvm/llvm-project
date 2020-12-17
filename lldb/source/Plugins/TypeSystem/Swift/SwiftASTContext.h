@@ -602,12 +602,6 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) override;
 
-  // Lookup a child given a name. This function will match base class names
-  // and member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   const char *name,
-                                   bool omit_empty_base_classes) override;
-
   // Lookup a child member given a name. This function will match member names
   // only and will descend into "clang_type" children in search for the first
   // member in this class, or any base class that matches "name".

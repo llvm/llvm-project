@@ -242,6 +242,13 @@ public:
   }
   bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
+
+  /// Lookup a child given a name. This function will match base class names
+  /// and member names in \p type only, not descendants.
+  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                                   const char *name,
+                                   bool omit_empty_base_classes) override;
+
   /// \}
 protected:
   /// Used in the logs.
