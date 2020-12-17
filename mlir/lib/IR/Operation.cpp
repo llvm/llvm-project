@@ -178,7 +178,7 @@ Operation::Operation(Location location, OperationName name,
     if (hasSingleResult)
       resultType = resultTypes.front();
     else
-      resultType = TupleType::get(resultTypes, location->getContext());
+      resultType = TupleType::get(location->getContext(), resultTypes);
   }
 }
 

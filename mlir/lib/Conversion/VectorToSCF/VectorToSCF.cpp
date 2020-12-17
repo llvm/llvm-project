@@ -584,7 +584,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
       std::swap(ivsStorage.back(), ivsStorage[coalescedIdx]);
 
     ArrayRef<Value> ivs(ivsStorage);
-    Value pos = std_index_cast(IntegerType::get(32, ctx), ivs.back());
+    Value pos = std_index_cast(IntegerType::get(ctx, 32), ivs.back());
     Value inVector = local(ivs.drop_back());
     auto loadValue = [&](ArrayRef<Value> indices) {
       Value vector = vector_insert_element(remote(indices), inVector, pos);
@@ -671,7 +671,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
     ArrayRef<Value> ivs(ivsStorage);
     Value pos =
-        std_index_cast(IntegerType::get(32, op->getContext()), ivs.back());
+        std_index_cast(IntegerType::get(op->getContext(), 32), ivs.back());
     auto storeValue = [&](ArrayRef<Value> indices) {
       Value scalar = vector_extract_element(local(ivs.drop_back()), pos);
       remote(indices) = scalar;

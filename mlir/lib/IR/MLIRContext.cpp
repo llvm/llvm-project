@@ -772,25 +772,23 @@ getCachedIntegerType(unsigned width,
   }
 }
 
-IntegerType IntegerType::get(unsigned width, MLIRContext *context) {
-  return get(width, IntegerType::Signless, context);
+IntegerType IntegerType::get(MLIRContext *context, unsigned width) {
+  return get(context, width, IntegerType::Signless);
 }
 
-IntegerType IntegerType::get(unsigned width,
-                             IntegerType::SignednessSemantics signedness,
-                             MLIRContext *context) {
+IntegerType IntegerType::get(MLIRContext *context, unsigned width,
+                             IntegerType::SignednessSemantics signedness) {
   if (auto cached = getCachedIntegerType(width, signedness, context))
     return cached;
   return Base::get(context, width, signedness);
 }
 
-IntegerType IntegerType::getChecked(unsigned width, Location location) {
-  return getChecked(width, IntegerType::Signless, location);
+IntegerType IntegerType::getChecked(Location location, unsigned width) {
+  return getChecked(location, width, IntegerType::Signless);
 }
 
-IntegerType IntegerType::getChecked(unsigned width,
-                                    SignednessSemantics signedness,
-                                    Location location) {
+IntegerType IntegerType::getChecked(Location location, unsigned width,
+                                    SignednessSemantics signedness) {
   if (auto cached =
           getCachedIntegerType(width, signedness, location->getContext()))
     return cached;

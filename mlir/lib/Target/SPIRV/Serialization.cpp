@@ -1267,7 +1267,7 @@ LogicalResult Serializer::prepareBasicType(
     }
     typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
     auto getConstantOp = [&](uint32_t id) {
-      auto attr = IntegerAttr::get(IntegerType::get(32, type.getContext()), id);
+      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
       return prepareConstantInt(loc, attr);
     };
     operands.push_back(elementTypeID);

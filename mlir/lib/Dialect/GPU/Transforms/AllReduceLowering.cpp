@@ -31,7 +31,7 @@ struct GpuAllReduceRewriter {
       : funcOp(funcOp_), reduceOp(reduceOp_), rewriter(rewriter_),
         loc(reduceOp.getLoc()), valueType(reduceOp.value().getType()),
         indexType(IndexType::get(reduceOp.getContext())),
-        int32Type(IntegerType::get(/*width=*/32, reduceOp.getContext())) {}
+        int32Type(IntegerType::get(reduceOp.getContext(), /*width=*/32)) {}
 
   /// Creates an all_reduce across the workgroup.
   ///

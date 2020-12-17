@@ -2522,8 +2522,8 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
 
     // Update the function signature in-place.
     rewriter.updateRootInPlace(funcOp, [&] {
-      funcOp.setType(FunctionType::get(result.getConvertedTypes(), newResults,
-                                       funcOp.getContext()));
+      funcOp.setType(FunctionType::get(funcOp.getContext(),
+                                       result.getConvertedTypes(), newResults));
     });
     return success();
   }

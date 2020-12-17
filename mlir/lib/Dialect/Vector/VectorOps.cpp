@@ -1426,7 +1426,7 @@ static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
 static ArrayAttr makeI64ArrayAttr(ArrayRef<int64_t> values,
                                   MLIRContext *context) {
   auto attrs = llvm::map_range(values, [context](int64_t v) -> Attribute {
-    return IntegerAttr::get(IntegerType::get(64, context), APInt(64, v));
+    return IntegerAttr::get(IntegerType::get(context, 64), APInt(64, v));
   });
   return ArrayAttr::get(llvm::to_vector<8>(attrs), context);
 }
@@ -2767,7 +2767,7 @@ static ParseResult parseTupleOp(OpAsmParser &parser, OperationState &result) {
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonTypeList(types) ||
       parser.resolveOperands(operandInfos, types, loc, result.operands) ||
-      parser.addTypeToList(TupleType::get(types, ctx), result.types));
+      parser.addTypeToList(TupleType::get(ctx, types), result.types));
 }
 
 static void print(OpAsmPrinter &p, TupleOp op) {

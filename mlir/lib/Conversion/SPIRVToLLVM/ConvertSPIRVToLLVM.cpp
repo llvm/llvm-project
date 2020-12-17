@@ -407,8 +407,7 @@ public:
     // cover all possible corner cases.
     if (isSignedIntegerOrVector(srcType) ||
         isUnsignedIntegerOrVector(srcType)) {
-      auto *context = rewriter.getContext();
-      auto signlessType = IntegerType::get(getBitWidth(srcType), context);
+      auto signlessType = rewriter.getIntegerType(getBitWidth(srcType));
 
       if (srcType.isa<VectorType>()) {
         auto dstElementsAttr = constOp.value().cast<DenseIntElementsAttr>();
