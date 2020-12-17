@@ -1263,6 +1263,28 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoEmptyValueDescription) {
   // clang-format on
 }
 
+TEST_F(PrintOptionInfoTest, PrintOptionInfoMultilineValueDescription) {
+  std::string Output =
+      runTest(cl::ValueRequired,
+              cl::values(clEnumValN(OptionValue::Val, "v1",
+                                    "This is the first enum value\n"
+                                    "which has a really long description\n"
+                                    "thus it is multi-line."),
+                         clEnumValN(OptionValue::Val, "",
+                                    "This is an unnamed enum value option\n"
+                                    "Should be indented as well")));
+
+  // clang-format off
+  EXPECT_EQ(Output,
+            ("  --" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1                 -   This is the first enum value\n"
+             "                            which has a really long description\n"
+             "                            thus it is multi-line.\n"
+             "    =<empty>            -   This is an unnamed enum value option\n"
+             "                            Should be indented as well\n").str());
+  // clang-format on
+}
+
 class GetOptionWidthTest : public ::testing::Test {
 public:
   enum class OptionValue { Val };
