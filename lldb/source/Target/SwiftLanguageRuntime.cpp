@@ -257,9 +257,11 @@ public:
     return {};
   }
 
-  llvm::Optional<size_t> GetIndexOfChildMemberWithName(
-      CompilerType type, const char *name, ExecutionContext *exe_ctx,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  llvm::Optional<size_t>
+  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
+                                ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                llvm::MutableArrayRef<uint32_t> child_indexes) {
     STUB_LOG();
     return {};
   }
@@ -2152,8 +2154,9 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type, ValueObject *valobj) {
 }
 
 llvm::Optional<size_t> SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
-    CompilerType type, const char *name, ExecutionContext *exe_ctx,
-    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+    CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes,
+    llvm::MutableArrayRef<uint32_t> child_indexes) {
   FORWARD(GetIndexOfChildMemberWithName, type, name, exe_ctx,
           omit_empty_base_classes, child_indexes);
 }
